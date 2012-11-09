@@ -223,8 +223,7 @@ type
   @param FieldHandle a handler to field description structure.
   @return a SQL undepended type.
 }
-function ConvertASATypeToSQLType(const SQLType: SmallInt;
-  const Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
+function ConvertASATypeToSQLType(const SQLType: SmallInt; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts a ASA native type into String.
@@ -233,8 +232,8 @@ function ConvertASATypeToSQLType(const SQLType: SmallInt;
 }
 function ConvertASATypeToString( SQLType: SmallInt): String;
 
-function ConvertASAJDBCToSqlType(const FieldType: SmallInt; const
-  Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
+function ConvertASAJDBCToSqlType(const FieldType: SmallInt;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 {
 procedure TSQLTimeStampToASADateTime( DT: TSQLTimeStamp; const ASADT: PZASASQLDateTime);
 function ASADateTimeToSQLTimeStamp( ASADT: PZASASQLDateTime): TSQLTimeStamp;
@@ -268,7 +267,7 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses Variants, ZMessages, ZDbcCachedResultSet, Math, ZDbcUtils;
+uses Variants, ZMessages, ZDbcCachedResultSet, Math, ZEncoding;
 
 { TZASASQLDA }
 
@@ -572,10 +571,10 @@ begin
   CheckIndex(Index);
   if FSQLDA.sqlvar[Index].sqlType and $FFFE <> DT_TIMESTAMP_STRUCT then
     Result := ConvertASATypeToSQLType(FSQLDA.sqlvar[Index].sqlType,
-      FConSettings.ClientCodePage.Encoding, FConSettings.UTF8AsWideString)
+      FConSettings.CPType)
   else
     Result := ConvertASATypeToSQLType( FDeclType[Index].sqlType,
-      FConSettings.ClientCodePage.Encoding, FConSettings.UTF8AsWideString)
+      FConSettings.CPType)
 end;
 
 {**
@@ -1099,11 +1098,7 @@ begin
     varDate       : UpdateDateTime( Index, Value);
     varStrArg,
     varString     : UpdateString(Index, AnsiString(Value));
-    varOleStr     :
-      if FConSettings.ClientCodePage.Encoding = ceAnsi then
-        UpdateString(Index, AnsiString(Value))
-      else
-        UpdateString(Index, UTF8Encode(Value));
+    varOleStr     : UpdateString(Index, FPlainDriver.ZPlainString(WideString(Value), FConSettings));
     varBoolean    : UpdateBoolean( Index, Value);
     varByte       : UpdateByte( Index, Value);
     varInt64      : UpdateLong( Index, Value);
@@ -1132,15 +1127,12 @@ var
   BlobSize: Integer;
 begin
   CheckIndex( Index);
-  Stream.Position := 0;
-  BlobSize := Stream.Size;
+  stream.Position := 0;
+  BlobSize := stream.Size;
   case BlobType of
-    stAsciiStream:
-        SetFieldType( Index, DT_LONGVARCHAR or 1, BlobSize);
-    stUnicodeStream:
-       SetFieldType( Index, DT_LONGNVARCHAR or 1, BlobSize);
-    stBinaryStream:
-       SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
+    stAsciiStream:   SetFieldType( Index, DT_LONGVARCHAR or 1, BlobSize);
+    stUnicodeStream: SetFieldType( Index, DT_LONGNVARCHAR or 1, BlobSize);
+    stBinaryStream:  SetFieldType( Index, DT_LONGBINARY or 1, BlobSize);
     else
       CreateException( SUnsupportedParameterType);
   end;
@@ -1159,8 +1151,8 @@ begin
       DT_LONGVARCHAR, DT_LONGNVARCHAR,
       DT_LONGBINARY:
         begin
-          Stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
-          Stream.Position := 0;
+          stream.ReadBuffer( PZASABlobStruct( sqlData).arr[0], BlobSize);
+          stream.Position := 0;
           PZASABlobStruct( sqlData).stored_len := BlobSize;
           PZASABlobStruct( sqlData).untrunc_len := BlobSize;
         end;
@@ -1942,7 +1934,7 @@ end;
   @return a SQL undepended type.
 }
 function ConvertASATypeToSQLType(const SQLType: SmallInt;
-  const Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case SQLType and $FFFE of
     DT_NOTYPE:
@@ -1960,12 +1952,12 @@ begin
     DT_DATE:
       Result := stDate;
     DT_VARIABLE, DT_STRING, DT_FIXCHAR, DT_VARCHAR, DT_NSTRING, DT_NFIXCHAR, DT_NVARCHAR:
-      if (Encoding = ceUTF8) and UTF8AsWideString then
+      if (CtrlsCPType = cCP_UTF16) then
         Result := stUnicodeString
       else
         Result := stString;
     DT_LONGVARCHAR, DT_LONGNVARCHAR:
-      if (Encoding = ceUTF8) and UTF8AsWideString then
+      if (CtrlsCPType = cCP_UTF16) then
         Result := stUnicodeStream
       else
         Result := stAsciiStream;
@@ -2066,12 +2058,12 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertASAJDBCToSqlType(const FieldType: SmallInt; const
-  Encoding: TZCharEncoding; Const UTF8AsWideString: Boolean): TZSQLType;
+function ConvertASAJDBCToSqlType(const FieldType: SmallInt;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
     1, 12, -8, -9:
-      if (Encoding = ceUTF8) and UTF8AsWideString then
+      if (CtrlsCPType = cCP_UTF16) then
         Result := stUnicodeString
       else
         Result := stString;
@@ -2084,7 +2076,7 @@ begin
     2, 3: Result := stDouble;  //BCD Feld
     11, 93: Result := stTimestamp;
     -1, -10:
-      if (Encoding = ceUTF8) and UTF8AsWideString then
+      if (CtrlsCPType = cCP_UTF16) then
         Result := stUnicodeStream
       else
         Result := stAsciiStream;
@@ -2300,12 +2292,8 @@ begin
           ParamSqlData.UpdateString( i,
             PlainDriver.ZPlainString(SoftVarManager.GetAsString( InParamValues[i]), ConSettings));
         stUnicodeString:
-          if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-            ParamSqlData.UpdateString( i,
-              UTF8Encode(SoftVarManager.GetAsUnicodeString( InParamValues[i])))
-          else
-            ParamSqlData.UpdateString( i,
-              AnsiString(SoftVarManager.GetAsUnicodeString( InParamValues[i])));
+          ParamSqlData.UpdateString( i,
+            PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString( InParamValues[i]), ConSettings));
         stBytes:
           ParamSqlData.UpdateBytes( i,
             StrToBytes(AnsiString(SoftVarManager.GetAsString( InParamValues[i]))));
@@ -2325,21 +2313,11 @@ begin
             TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
             if not TempBlob.IsEmpty then
             begin
-              if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) and
-                  ( ConSettings.ClientCodePage.Encoding = ceUTF8 )
-                  and ConSettings.AutoEncode then
-                TempStream := GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length)
+              if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) then
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings)
               else
-                if ( InParamTypes[i] = stAsciiStream ) then
-                begin
-                  {$IFNDEF DELPHI12_UP}
-                  if ConSettings.AutoEncode then
-                    TempBlob.SetString(PlainDriver.ZPlainString(TempBlob.GetString, ConSettings));
-                  {$ENDIF}
-                  TempStream := TempBlob.GetStream;
-                end
-                else
-                  TempStream := TempBlob.GetStream;
+                TempStream := TempBlob.GetStream;
               if Assigned(TempStream) then
               begin
                 ParamSqlData.WriteBlob(I, TempStream, InParamTypes[i]);

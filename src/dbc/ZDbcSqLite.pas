@@ -227,6 +227,7 @@ begin
   FMetadata := TZSQLiteDatabaseMetadata.Create(Self, Url);
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
+  CheckCharEncoding('UTF-8');
   Open;
 end;
 

@@ -164,8 +164,8 @@ type
     procedure ReadBlob;
   public
     constructor Create( ResultSet: TZASAResultSet; ColID: Integer);
-    constructor CreateWithStream(Stream: TStream);
-    constructor CreateWithData(Data: Pointer; Size: Integer);
+    constructor CreateWithStream(Stream: TStream; Connection: IZConnection);
+    constructor CreateWithData(Data: Pointer; Size: Integer; Connection: IZConnection);
 
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
@@ -183,7 +183,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, Math, ZdbcLogging, ZPlainASAConstants, ZDbcUtils;
+  SysUtils, Math, ZdbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
 
 { TZASAResultSet }
 
@@ -268,6 +268,7 @@ end;
 function TZASAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Blob: IZASABlob;
+  TempStream: TStream;
 begin
   Result := nil;
   CheckClosed;
@@ -280,11 +281,22 @@ begin
   Blob := TZASABlob.Create( Self, ColumnIndex - 1);
   if FCachedBlob then
     Blob.ReadBlob;
-  {$IFNDEF DELPHI12_UP}
-  if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
-      ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
-    Blob.SetString(AnsiToStringEx(Blob.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
-  {$ENDIF}
+  if ( GetMetadata.GetColumnType(ColumnIndex) in [stUnicodeStream, stAsciiStream] ) then
+  begin
+    case GetMetaData.GetColumnType(ColumnIndex) of
+      stAsciiStream:
+        begin
+          TempStream := GetValidatedAnsiStream(Blob.GetString, ConSettings, True);
+          Blob.SetStream(TempStream);
+        end
+      else
+      begin
+        TempStream := GetValidatedUnicodeStream(Blob.GetBuffer, Blob.Length, ConSettings, True);
+        Blob.SetStream(TempStream, True);
+      end;
+    end;
+    TempStream.Free;
+  end;
   Result := Blob;
 end;
 
@@ -690,7 +702,8 @@ begin
 
       case FieldSqlType of
         stString,
-        stUnicodeString: Precision := GetFieldSize(FieldSqlType, GetFieldLength(I)-4, ConSettings.ClientCodePage.CharWidth, True);
+        stUnicodeString: Precision := GetFieldSize(FieldSqlType, ConSettings,
+          GetFieldLength(I)-4, ConSettings.ClientCodePage.CharWidth, @ColumnDisplaySize, True);
       end;
 
       ReadOnly := False;
@@ -826,7 +839,7 @@ end;
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar(ColumnIndex, PChar(ZStringFromUnicode(Value)));
+  FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
@@ -953,7 +966,7 @@ begin
     GetMem( Dt, BlobSize);
     System.Move( BlobData^, Dt^, BlobSize);
   end;
-  Result := TZASABlob.CreateWithData( Dt, BlobSize);
+  Result := TZASABlob.CreateWithData( Dt, BlobSize, FConnection);
 end;
 
 {**
@@ -964,20 +977,23 @@ end;
 constructor TZASABlob.Create( ResultSet: TZASAResultSet; ColID: Integer);
 begin
   inherited Create;
+  FConnection := ResultSet.GetStatement.GetConnection;
   FBlobRead := False;
   FResultSet := ResultSet;
   FColID := ColID;
 end;
 
-constructor TZASABlob.CreateWithStream(Stream: TStream);
+constructor TZASABlob.CreateWithStream(Stream: TStream; Connection: IZConnection);
 begin
-  inherited CreateWithStream( Stream);
+  inherited CreateWithStream(Stream, Connection);
   FBlobRead := true;
 end;
 
-constructor TZASABlob.CreateWithData(Data: Pointer; Size: Integer);
+constructor TZASABlob.CreateWithData(Data: Pointer; Size: Integer;
+  Connection: IZConnection);
 begin
   inherited Create;
+  FConnection := Connection;
   BlobData := Data;
   BlobSize := Size;
   Updated := False;

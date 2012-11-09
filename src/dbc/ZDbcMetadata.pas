@@ -123,6 +123,7 @@ type
     FUrl: TZURL;
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
+    FConSettings: PZConSettings;
     function GetInfo: TStrings;
     function GetURLString: String;
   protected
@@ -149,7 +150,7 @@ type
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
-
+    property ConSettings: PZConSettings read FConSettings;
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; virtual;
@@ -1752,6 +1753,7 @@ begin
   FCachedResultSets := TZHashMap.Create;
   FDatabaseInfo := CreateDatabaseInfo;
   FDatabase := Url.Database;
+  FConSettings := IZConnection(FConnection).GetConSettings;
   FillWildcards;
 end;
 

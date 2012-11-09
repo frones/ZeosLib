@@ -178,7 +178,6 @@ type
     function GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
     function GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function ReadUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
     function GetValue(ColumnIndex: Integer): TZVariant;
@@ -220,7 +219,8 @@ const
 
 implementation
 
-uses Math, ZMessages, ZSysUtils, ZDbcUtils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses Math, ZMessages, ZSysUtils, ZDbcUtils
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZRowAccessor }
 
@@ -669,7 +669,7 @@ begin
               Result := 1;
           end
           else if FColumnTypes[ColumnIndex] = stAsciiStream then
-            {$IFDEF DELPHI12_UP}
+            {$IFDEF WITH_UNITANSISTRINGS}
             Result := AnsiStrings.AnsiCompareStr(Blob1.GetString, Blob2.GetString)
             {$ELSE}
             Result := AnsiCompareStr(Blob1.GetString, Blob2.GetString)
@@ -1568,45 +1568,6 @@ begin
 {$ENDIF}
   TempBlob := GetBlobObject(FBuffer, ColumnIndex);
   if (TempBlob <> nil) and not TempBlob.IsEmpty then
-    Result := TempBlob.GetStream
-  else
-    Result := nil;
-  IsNull := Result = nil;
-end;
-
-{**
-  Gets the value of a column in the current row as a WideString-stream of
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  as a stream of Unicode characters.
-  The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large<code>LONGVARCHAR</code>values.  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be Java UTF-8,
-  as specified in the Java virtual machine specification.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>ReadXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream in Java UTF-8 byte format; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
-function TZRowAccessor.ReadUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-var
-  TempBlob: IZBlob;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stUnicodeStream);
-{$ENDIF}
-  TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-  if (TempBlob <> nil) and not TempBlob.IsEmpty then
     Result := TempBlob.GetUnicodeStream
   else
     Result := nil;
@@ -1674,7 +1635,7 @@ begin
   IsNull := Result = nil;
   if Result = nil then
   begin
-    Result := TZAbstractBlob.CreateWithStream(nil);
+    Result := TZAbstractBlob.CreateWithStream(nil, nil);
     SetBlobObject(FBuffer, ColumnIndex, Result);
   end;
 end;
@@ -2394,7 +2355,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  GetBlob(ColumnIndex, IsNull).SetStream(Value);
+  GetBlob(ColumnIndex, IsNull).SetStream(Value, True);
 end;
 
 {**

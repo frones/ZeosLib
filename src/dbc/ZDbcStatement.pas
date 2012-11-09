@@ -465,7 +465,7 @@ begin
     {$IFDEF DELPHI12_UP}
     FaSQL := GetEncodedSQL(Value);
     {$ELSE}
-    FaSQL := ZStringFromUnicode(Value);
+    FaSQL := ZPlainString(Value);
     {$ENDIF}
     FWSQL := Value;
   end;
@@ -477,7 +477,7 @@ begin
   begin
     {$IFNDEF DELPHI12_UP}
     FASQL := GetEncodedSQL(Value);
-    FWSQL := ZUnicodeFromString(Value);
+    FWSQL := ZDbcUnicodeString(Value, ConSettings.CTRL_CP);
     {$else}
     FASQL := Value;
     FWSQL := ZDbcString(Value);
@@ -1698,7 +1698,7 @@ end;
 procedure TZAbstractPreparedStatement.SetAsciiStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stAsciiStream, TZAbstractBlob.CreateWithStream(Value));
+  SetBlob(ParameterIndex, stAsciiStream, TZAbstractBlob.CreateWithStream(Value, GetConnection));
 end;
 
 {**
@@ -1722,7 +1722,7 @@ end;
 procedure TZAbstractPreparedStatement.SetUnicodeStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stUnicodeStream, TZAbstractBlob.CreateWithStream(Value));
+  SetBlob(ParameterIndex, stUnicodeStream, TZAbstractBlob.CreateWithStream(Value, GetConnection));
 end;
 
 {**
@@ -1743,7 +1743,7 @@ end;
 procedure TZAbstractPreparedStatement.SetBinaryStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stBinaryStream, TZAbstractBlob.CreateWithStream(Value));
+  SetBlob(ParameterIndex, stBinaryStream, TZAbstractBlob.CreateWithStream(Value, GetConnection));
 end;
 
 {**
@@ -2634,7 +2634,7 @@ begin
       Inc(ParamIndex);
     end
     else
-      Result := Result + ZUnicodeFromString(Tokens[I]);
+      Result := Result + ZPlainUnicodeString(Tokens[I]);
   end;
 end;
 

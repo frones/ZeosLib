@@ -220,6 +220,10 @@ implementation
 uses
   Math;
 
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
+
 { TZEFunction }
 
 {**

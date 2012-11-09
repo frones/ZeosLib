@@ -1612,7 +1612,7 @@ begin
           Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION', GetIntByName('PRECISION'));
         Result.UpdateIntByName('LENGTH', GetIntByName('LENGTH'));
@@ -2122,7 +2122,7 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -2271,50 +2271,51 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetCrossReference(const PrimaryCatalog: string;
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
+var KeySeq: Integer;
 begin
-    Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
-                                                ForeignCatalog, ForeignSchema, ForeignTable);
-
-    with GetStatement.ExecuteQuery(
-      Format('exec sp_fkeys %s, %s, %s, %s, %s, %s',
-      [AQSNull(PrimaryTable), AQSNull(PrimarySchema), AQSNull(PrimaryCatalog),
-       AQSNull(ForeignTable), AQSNull(ForeignSchema), AQSNull(ForeignCatalog)])) do
+  Result:=inherited UncachedGetCrossReference(PrimaryCatalog, PrimarySchema, PrimaryTable,
+                                              ForeignCatalog, ForeignSchema, ForeignTable);
+  KeySeq := 0;
+  with GetStatement.ExecuteQuery(
+    Format('exec sp_fkeys %s, %s, %s, %s, %s, %s',
+    [AQSNull(PrimaryTable), AQSNull(PrimarySchema), AQSNull(PrimaryCatalog),
+     AQSNull(ForeignTable), AQSNull(ForeignSchema), AQSNull(ForeignCatalog)])) do
+  begin
+    while Next do
     begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdateStringByName('PKTABLE_CAT',
-          GetStringByName('PKTABLE_QUALIFIER'));
-        Result.UpdateStringByName('PKTABLE_SCHEM',
-          GetStringByName('PKTABLE_OWNER'));
-        Result.UpdateStringByName('PKTABLE_NAME',
-          GetStringByName('PKTABLE_NAME'));
-        Result.UpdateStringByName('PKCOLUMN_NAME',
-          GetStringByName('PKCOLUMN_NAME'));
-        Result.UpdateStringByName('FKTABLE_CAT',
-          GetStringByName('FKTABLE_QUALIFIER'));
-        Result.UpdateStringByName('FKTABLE_SCHEM',
-          GetStringByName('FKTABLE_OWNER'));
-        Result.UpdateStringByName('FKTABLE_NAME',
-          GetStringByName('FKTABLE_NAME'));
-        Result.UpdateStringByName('FKCOLUMN_NAME',
-          GetStringByName('FKCOLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
-        Result.UpdateShortByName('UPDATE_RULE',
-          GetShortByName('UPDATE_RULE'));
-        Result.UpdateShortByName('DELETE_RULE',
-          GetShortByName('DELETE_RULE'));
-        Result.UpdateStringByName('FK_NAME',
-          GetStringByName('FK_NAME'));
-        Result.UpdateStringByName('PK_NAME',
-          GetStringByName('PK_NAME'));
-        Result.UpdateIntByName('DEFERRABILITY', 0);
-        Result.InsertRow;
-      end;
-      Close;
+      Inc(KeySeq);
+      Result.MoveToInsertRow;
+      Result.UpdateStringByName('PKTABLE_CAT',
+        GetStringByName('PKTABLE_QUALIFIER'));
+      Result.UpdateStringByName('PKTABLE_SCHEM',
+        GetStringByName('PKTABLE_OWNER'));
+      Result.UpdateStringByName('PKTABLE_NAME',
+        GetStringByName('PKTABLE_NAME'));
+      Result.UpdateStringByName('PKCOLUMN_NAME',
+        GetStringByName('PKCOLUMN_NAME'));
+      Result.UpdateStringByName('FKTABLE_CAT',
+        GetStringByName('FKTABLE_QUALIFIER'));
+      Result.UpdateStringByName('FKTABLE_SCHEM',
+        GetStringByName('FKTABLE_OWNER'));
+      Result.UpdateStringByName('FKTABLE_NAME',
+        GetStringByName('FKTABLE_NAME'));
+      Result.UpdateStringByName('FKCOLUMN_NAME',
+        GetStringByName('FKCOLUMN_NAME'));
+      Result.UpdateShortByName('KEY_SEQ', KeySeq);
+      Result.UpdateShortByName('UPDATE_RULE',
+        GetShortByName('UPDATE_RULE'));
+      Result.UpdateShortByName('DELETE_RULE',
+        GetShortByName('DELETE_RULE'));
+      Result.UpdateStringByName('FK_NAME',
+        GetStringByName('FK_NAME'));
+      Result.UpdateStringByName('PK_NAME',
+        GetStringByName('PK_NAME'));
+      Result.UpdateIntByName('DEFERRABILITY', 0);
+      Result.InsertRow;
     end;
-    Result.BeforeFirst;
+    Close;
+  end;
+  Result.BeforeFirst;
 end;
 
 {**
@@ -2374,7 +2375,7 @@ begin
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -2693,7 +2694,7 @@ begin
           Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION',
@@ -3227,7 +3228,7 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -3703,7 +3704,7 @@ begin
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -3916,7 +3917,7 @@ begin
         Result.UpdateStringByName('JAVA_CLASS',
           GetStringByName('JAVA_CLASS'));
         Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.InsertRow;

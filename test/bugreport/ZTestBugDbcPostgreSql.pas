@@ -357,24 +357,11 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    if not (Connection.GetEncoding = ceAnsi) then
-      if Connection.UTF8StringAsWideField or
-         ( (Connection.GetConSettings.CPType = cGET_ACP) and Connection.GetConSettings.AutoEncode) then
-        CheckEquals('Абракадабра', ResultSet.GetString(2))
-      else
-        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
-    else
-      if (Connection.GetConSettings.CPType = cCP_UTF8) and Connection.GetConSettings.AutoEncode then
-        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
-      else
-        CheckEquals('Абракадабра', ResultSet.GetString(2));
-
+    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
     MoveToInsertRow;
     UpdateIntByName('id', 2);
-    if Connection.UTF8StringAsWideField or (Connection.GetEncoding = ceAnsi)then
-      UpdateStringByName('fld', '\Победа\')
-    else
-      UpdateStringByName('fld', UTF8Encode(WideString('\Победа\')));
+
+    UpdateStringByName('fld', GetDBTestString('\Победа\', Connection.GetConSettings));
     InsertRow;
     Close;
   end;
@@ -384,31 +371,11 @@ begin
   begin
     Check(Next);
     CheckEquals(1, ResultSet.GetInt(1));
-    if (Connection.GetEncoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
-      if Connection.UTF8StringAsWideField or
-      ( (Connection.GetConSettings.CPType = cGET_ACP) and Connection.GetConSettings.AutoEncode) then
-        CheckEquals('Абракадабра', ResultSet.GetString(2))
-      else
-        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
-    else
-      if (Connection.GetConSettings.CPType = cCP_UTF8) and Connection.GetConSettings.AutoEncode then
-        CheckEquals(UTF8Encode(WideString('Абракадабра')), ResultSet.GetString(2))
-      else
-        CheckEquals('Абракадабра', ResultSet.GetString(2));
+    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
 
     Check(Next);
     CheckEquals(2, ResultSet.GetInt(1));
-    if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}]) then
-      if Connection.UTF8StringAsWideField or
-      ( (Connection.GetConSettings.CPType = cGET_ACP) and Connection.GetConSettings.AutoEncode) then
-        CheckEquals('\Победа\', ResultSet.GetString(2))
-      else
-        CheckEquals(UTF8Encode(WideString('\Победа\')), ResultSet.GetString(2))
-    else
-      if (Connection.GetConSettings.CPType = cCP_UTF8) and Connection.GetConSettings.AutoEncode then
-        CheckEquals(UTF8Encode(WideString('\Победа\')), ResultSet.GetString(2))
-      else
-        CheckEquals('\Победа\', ResultSet.GetString(2));
+    CheckEquals('\Победа\', ResultSet.GetString(2), Connection.GetConSettings);
     Close;
   end;
 
@@ -535,8 +502,7 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-    and Connection.UTF8StringAsWideField then
+  if (Connection.GetConSettings.CPType = cCP_UTF16) then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
@@ -548,8 +514,7 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-    and Connection.UTF8StringAsWideField then
+  if (Connection.GetConSettings.CPType = cCP_UTF16) then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
@@ -596,8 +561,7 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-    and Connection.UTF8StringAsWideField then
+  if (Connection.GetConSettings.CPType = cCP_UTF16) then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
@@ -609,8 +573,7 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
   //Client_Character_set sets column-type!!!!
-  if ( Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}] )
-    and Connection.UTF8StringAsWideField then
+  if (Connection.GetConSettings.CPType = cCP_UTF16) then
     CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
   else
     CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));

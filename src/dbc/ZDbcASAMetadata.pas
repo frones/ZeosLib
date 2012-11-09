@@ -1383,7 +1383,7 @@ begin
         end;
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
+            ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION',
@@ -1853,7 +1853,7 @@ begin
           GetStringByName('COLUMN_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
+            ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -2104,48 +2104,50 @@ end;
 }
 function TZASADatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+var KeySeq: Integer;
 begin
-    Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
+  Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
-    with GetStatement.ExecuteQuery(
-      Format('exec sp_jdbc_exportkey %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table)])) do
+  KeySeq := 0;
+  with GetStatement.ExecuteQuery(
+    Format('exec sp_jdbc_exportkey %s, %s, %s',
+    [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table)])) do
+  begin
+    while Next do
     begin
-      while Next do
-      begin
-        Result.MoveToInsertRow;
-        Result.UpdateStringByName('PKTABLE_CAT',
-          '');
-        Result.UpdateStringByName('PKTABLE_SCHEM',
-          GetStringByName('PKTABLE_SCHEM'));
-        Result.UpdateStringByName('PKTABLE_NAME',
-          GetStringByName('PKTABLE_NAME'));
-        Result.UpdateStringByName('PKCOLUMN_NAME',
-          GetStringByName('PKCOLUMN_NAME'));
-        Result.UpdateStringByName('FKTABLE_CAT',
-          '');
-        Result.UpdateStringByName('FKTABLE_SCHEM',
-          GetStringByName('FKTABLE_SCHEM'));
-        Result.UpdateStringByName('FKTABLE_NAME',
-          GetStringByName('FKTABLE_NAME'));
-        Result.UpdateStringByName('FKCOLUMN_NAME',
-          GetStringByName('FKCOLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
-        Result.UpdateShortByName('UPDATE_RULE',
-          GetShortByName('UPDATE_RULE'));
-        Result.UpdateShortByName('DELETE_RULE',
-          GetShortByName('DELETE_RULE'));
-        Result.UpdateStringByName('FK_NAME',
-          GetStringByName('FK_NAME'));
-        Result.UpdateStringByName('PK_NAME',
-          GetStringByName('PK_NAME'));
-        Result.UpdateIntByName('DEFERRABILITY',
-          GetIntByName('DEFERRABILITY'));
-        Result.InsertRow;
-      end;
-      Close;
+      Inc(KeySeq);
+      Result.MoveToInsertRow;
+      Result.UpdateStringByName('PKTABLE_CAT',
+        '');
+      Result.UpdateStringByName('PKTABLE_SCHEM',
+        GetStringByName('PKTABLE_SCHEM'));
+      Result.UpdateStringByName('PKTABLE_NAME',
+        GetStringByName('PKTABLE_NAME'));
+      Result.UpdateStringByName('PKCOLUMN_NAME',
+        GetStringByName('PKCOLUMN_NAME'));
+      Result.UpdateStringByName('FKTABLE_CAT',
+        '');
+      Result.UpdateStringByName('FKTABLE_SCHEM',
+        GetStringByName('FKTABLE_SCHEM'));
+      Result.UpdateStringByName('FKTABLE_NAME',
+        GetStringByName('FKTABLE_NAME'));
+      Result.UpdateStringByName('FKCOLUMN_NAME',
+        GetStringByName('FKCOLUMN_NAME'));
+      Result.UpdateShortByName('KEY_SEQ', KeySeq);
+      Result.UpdateShortByName('UPDATE_RULE',
+        GetShortByName('UPDATE_RULE'));
+      Result.UpdateShortByName('DELETE_RULE',
+        GetShortByName('DELETE_RULE'));
+      Result.UpdateStringByName('FK_NAME',
+        GetStringByName('FK_NAME'));
+      Result.UpdateStringByName('PK_NAME',
+        GetStringByName('PK_NAME'));
+      Result.UpdateIntByName('DEFERRABILITY',
+        GetIntByName('DEFERRABILITY'));
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
@@ -2330,7 +2332,7 @@ begin
           GetStringByName('TYPE_NAME'));
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
+            ConSettings.CPType)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -2546,7 +2548,7 @@ begin
           GetStringByName('JAVA_CLASS'));
         Result.UpdateShortByName('DATA_TYPE',
           Ord(ConvertASAJDBCToSqlType(GetShortByName('DATA_TYPE'),
-            GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField)));
+            ConSettings.CPType)));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.InsertRow;

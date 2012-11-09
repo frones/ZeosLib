@@ -71,7 +71,6 @@ type
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
 
-    procedure SetASQL(const Value: ZAnsiString); override;
     procedure InternalExecuteStatement(SQL: ZAnsiString);
     procedure FetchResults; virtual;
 
@@ -154,7 +153,7 @@ implementation
 
 uses
   Types, ZDbcLogging, ZDbcCachedResultSet, ZDbcDbLibUtils, ZDbcDbLibResultSet,
-  ZVariant{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  ZVariant{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 constructor TZUpdateCount.Create(ACount: Integer);
 begin
@@ -196,16 +195,6 @@ begin
   inherited Destroy;
 end;
 
-procedure TZDBLibStatement.SetASQL(const Value: ZAnsiString);
-begin
-  if FDBLibConnection.GetProvider = dpMsSQL then
-    //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
-    inherited SetASQL({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(Value, '\'#13, '\\'#13, [rfReplaceAll]))
-  else
-    //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
-    inherited SetASQL({$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}StringReplace(Value, ' AND NULL IS NULL', '', [rfReplaceAll]));
-end;
-
 {**
   Executes a Statement.
   Used internally to execute statements.
@@ -214,13 +203,21 @@ end;
   @sql string containing the statements to execute
 }
 procedure TZDBLibStatement.InternalExecuteStatement(SQL: ZAnsiString);
+var Ansi: ZAnsiString;
 begin
+  if FDBLibConnection.GetProvider = dpMsSQL then
+    //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
+    Ansi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(SQL, '\'#13, '\\'#13, [rfReplaceAll])
+  else
+    //This one is to avoid sybase error: Invalid operator for datatype op: is null type: VOID TYPE
+    Ansi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(SQL, ' AND NULL IS NULL', '', [rfReplaceAll]);
+
   FHandle := FDBLibConnection.GetConnectionHandle;
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
 
-  if FPlainDriver.dbcmd(FHandle, PAnsiChar(SQL)) <> DBSUCCEED then
+  if FPlainDriver.dbcmd(FHandle, PAnsiChar(Ansi)) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then

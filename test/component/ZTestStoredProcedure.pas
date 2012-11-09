@@ -594,8 +594,7 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
@@ -604,8 +603,7 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -626,8 +624,7 @@ begin
   CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -657,16 +654,14 @@ begin
   CheckEquals('P5', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Fields[1].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
   CheckEquals(2, ord(StoredProc.Fields.Count));
 
   CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -723,8 +718,7 @@ begin
 
   CheckEquals('P11', StoredProc.Params[10].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[10].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[10].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[10].DataType));
@@ -767,32 +761,28 @@ begin
 
   CheckEquals('P21', StoredProc.Params[20].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[20].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[20].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Params[20].DataType));
 
   CheckEquals('P22', StoredProc.Params[21].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[21].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[21].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Params[21].DataType));
 
   CheckEquals('P23', StoredProc.Params[22].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[22].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[22].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Params[22].DataType));
 
   CheckEquals('P24', StoredProc.Params[23].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[23].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Params[23].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Params[23].DataType));
@@ -803,8 +793,7 @@ begin
 
   CheckEquals('P26', StoredProc.Params[25].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[25].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_FTWIDESTRING}ftWideString{$ELSE}ftString{$ENDIF}), ord(StoredProc.Params[25].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[25].DataType));
@@ -828,62 +817,16 @@ begin
   StoredProc.Params[7].AsFloat := SQLTime;
   StoredProc.Params[8].AsFloat := SQLTime;
   StoredProc.Params[9].AsInteger := 40000;
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    StoredProc.Params[10].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
-  else
-    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-      (not ((Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-      Connection.DbcConnection.GetConSettings.AutoEncode)) then
-      StoredProc.Params[10].AsString := UTF8Encode(WideString(Str1))
-    else
-      StoredProc.Params[10].AsString := AnsiString(Str1);
+  StoredProc.Params[10].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
   StoredProc.Params[11].AsDate := SQLTime;
   StoredProc.Params[12].AsTime := SQLTime;
   StoredProc.Params[13].AsSmallInt := 40;
   StoredProc.Params[14].AsDateTime := SQLTime;
   StoredProc.Params[15].AsDateTime := SQLTime;
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    StoredProc.Params[20].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
-  else
-    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-      (not ((Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-      Connection.DbcConnection.GetConSettings.AutoEncode)) then
-      StoredProc.Params[20].AsString := UTF8Encode(WideString(Str1))
-    else
-      StoredProc.Params[20].AsString := AnsiString(Str1);
-
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    StoredProc.Params[21].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
-  else
-    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-      (not ((Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-      Connection.DbcConnection.GetConSettings.AutoEncode)) then
-      StoredProc.Params[21].AsString := UTF8Encode(WideString(Str1))
-    else
-      StoredProc.Params[21].AsString := AnsiString(Str1);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    StoredProc.Params[22].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
-  else
-    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-      (not ((Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-      Connection.DbcConnection.GetConSettings.AutoEncode)) then
-      StoredProc.Params[22].AsString := UTF8Encode(WideString(Str1))
-    else
-      StoredProc.Params[22].AsString := AnsiString(Str1);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
-    StoredProc.Params[23].{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := {$IFDEF WITH_FTWIDESTRING}WideString{$ENDIF}(Str1)
-  else
-    if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-      (not ((Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
-      Connection.DbcConnection.GetConSettings.AutoEncode)) then
-      StoredProc.Params[23].AsString := UTF8Encode(WideString(Str1))
-    else
-      StoredProc.Params[23].AsString := AnsiString(Str1);
+  StoredProc.Params[20].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[21].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[22].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
+  StoredProc.Params[23].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
   StoredProc.Params[24].Value := StrToBytes('121415');
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
@@ -935,8 +878,7 @@ begin
 
   CheckEquals('P11', StoredProc.Fields[10].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[10].AsString, Connection.DbcConnection.GetConSettings);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_FTWIDESTRING}ftWideString{$ELSE}ftString{$ENDIF}), ord(StoredProc.Fields[10].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[10].DataType));
@@ -979,8 +921,7 @@ begin
 
   CheckEquals('P21', StoredProc.Fields[20].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[20].AsString, Connection.DbcConnection.GetConSettings);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[20].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Fields[20].DataType));
@@ -988,24 +929,21 @@ begin
 
   CheckEquals('P22', StoredProc.Fields[21].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[21].AsString, Connection.DbcConnection.GetConSettings);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[21].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Fields[21].DataType));
 
   CheckEquals('P23', StoredProc.Fields[22].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[22].AsString, Connection.DbcConnection.GetConSettings);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[22].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Fields[22].DataType));
 
   CheckEquals('P24', StoredProc.Fields[23].DisplayName);
   CheckEquals(Str1, StoredProc.Fields[23].AsString, Connection.DbcConnection.GetConSettings);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_WIDEMEMO}ftWideMemo{$ELSE}ftMemo{$ENDIF}), ord(StoredProc.Fields[23].DataType))
   else
     CheckEquals(ord(ftMemo), ord(StoredProc.Fields[23].DataType));
@@ -1018,8 +956,7 @@ begin
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);
   CheckEquals('a', StoredProc.Fields[25].AsString);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord({$IFDEF WITH_FTWIDESTRING}ftWideString{$ELSE}ftString{$ENDIF}), ord(StoredProc.Fields[25].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[25].DataType));
@@ -1245,8 +1182,7 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[2].DataType));
   CheckEquals('@p3', StoredProc.Params[3].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[3].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[3].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[3].DataType));
@@ -1255,8 +1191,7 @@ begin
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
   CheckEquals('@p5', StoredProc.Params[5].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[5].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[5].DataType));
@@ -1277,8 +1212,7 @@ begin
   CheckEquals(ord(ftString), ord(StoredProc.Params[3].DataType));
   {$ENDIF}
   CheckEquals(ord(ftInteger), ord(StoredProc.Params[4].DataType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[5].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[5].DataType));
@@ -1308,16 +1242,14 @@ begin
   CheckEquals('@p5', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Fields[1].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
   CheckEquals(2, ord(StoredProc.Fields.Count));
 
   CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -1344,8 +1276,7 @@ begin
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[1].DataType));
   CheckEquals('P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
@@ -1354,8 +1285,7 @@ begin
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
   CheckEquals('P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -1376,8 +1306,7 @@ begin
   CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
   {$ENDIF}
   //CheckEquals(ord(ftInteger), ord(StoredProc.Params[3].DataType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -1407,16 +1336,14 @@ begin
   CheckEquals('P5', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Fields[1].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
   CheckEquals(2, ord(StoredProc.Fields.Count));
 
  // CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
@@ -1430,15 +1357,13 @@ begin
   CheckEquals(2, StoredProc.Params.Count);
   CheckEquals('X', StoredProc.Params[0].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[0].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[0].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[0].DataType));
   CheckEquals('ReturnValue', StoredProc.Params[1].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[1].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[1].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[1].DataType));
@@ -1452,14 +1377,12 @@ begin
 
   StoredProc.Open;
   CheckEquals(2, StoredProc.Fields.Count);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Fields[0].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[0].DataType));
   CheckEquals('X', StoredProc.Fields[0].DisplayName);
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Fields[1].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Fields[1].DataType));
@@ -1542,8 +1465,7 @@ begin
 
   CheckEquals('ABTEST.P3', StoredProc.Params[2].Name);
   CheckEquals(ord(ptInput), ord(StoredProc.Params[2].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[2].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[2].DataType));
@@ -1554,24 +1476,21 @@ begin
 
   CheckEquals('ABTEST.P5', StoredProc.Params[4].Name);
   CheckEquals(ord(ptOutput), ord(StoredProc.Params[4].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[4].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[4].DataType));
 
   CheckEquals('myfuncInOutReturn.X', StoredProc.Params[5].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[5].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[5].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[5].DataType));
 
   CheckEquals('myfuncInOutReturn.ReturnValue', StoredProc.Params[6].Name);
   CheckEquals(ord(ptResult), ord(StoredProc.Params[6].ParamType));
-  if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
-    ( Connection.DbcConnection.UTF8StringAsWideField) then
+  if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(ftWideString), ord(StoredProc.Params[6].DataType))
   else
     CheckEquals(ord(ftString), ord(StoredProc.Params[6].DataType));

@@ -143,8 +143,7 @@ procedure UnloadOracleVars(Variables: PZSQLVars);
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Precision, Scale: Integer; const CharEncoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean): TZSQLType;
+  Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts Oracle internal date into TDateTime
@@ -237,7 +236,7 @@ function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcGenericResolver, ZDbcUtils;
+  ZDbcGenericResolver, ZDbcUtils, ZEncoding;
 
 {**
   Calculates size of SQLVars record.
@@ -440,11 +439,7 @@ begin
                   PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
               vtUnicodeString:
                 StrLCopy(PAnsiChar(CurrentVar.Data),
-                {$IFDEF DELPHI12_UP}
                   PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
-                {$ELSE}
-                  PAnsiChar(PlainDriver.ZStringFromUnicode(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
-                {$ENDIF}
             end;
           end;
         SQLT_VST:
@@ -468,16 +463,8 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (CurrentVar.TypeCode = SQLT_CLOB) then
-                if (Connection.GetEncoding = ceUTF8) and Connection.GetConSettings.AutoEncode then
-                  TempStream := ZDbcUtils.GetValidatedUnicodeStream(TempBlob.GetBuffer, TempBlob.Length)
-                else
-                begin
-                  {$IFNDEF DELPHI12_UP}
-                  if Connection.GetConSettings.AutoEncode then
-                    TempBlob.SetString(PlainDriver.ZPlainString(TempBlob.GetString, Connection.GetConSettings));
-                  {$ENDIF}
-                  TempStream := TempBlob.GetStream;
-                end
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings)
               else
                 TempStream := TempBlob.GetStream;
             end
@@ -524,8 +511,7 @@ end;
   @result the SQLType field type value
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
-  Precision, Scale: Integer; const CharEncoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean): TZSQLType;
+  Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   TypeName := UpperCase(TypeName);
   Result := stUnknown;
@@ -567,7 +553,7 @@ begin
         Result := stLong  {!!in fact, unusable}
     end;
   end;
-  if ( CharEncoding = ceUTF8) and UTF8StringAsWideField then
+  if ( CtrlsCPType = cCP_UTF16 ) then
     case result of
       stString: Result := stUnicodeString;
       stAsciiStream: if not (TypeName = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530

@@ -443,7 +443,7 @@ var
 
 implementation
 
-uses SysUtils, ZPlainLoader,{$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
+uses SysUtils, ZPlainLoader, ZEncoding, {$IFDEF FPC}DOS{$ELSE}Windows{$ENDIF};
 
 procedure AddSybaseCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
@@ -479,7 +479,7 @@ begin
   PlainDriver.AddCodePage('ISO1LATIN1', 25, ceAnsi, zCP_L1_ISO_8859_1); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
   PlainDriver.AddCodePage('ISO9LATIN1', 26, ceAnsi, zCP_L9_ISO_8859_15); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
   PlainDriver.AddCodePage('ISO_1', 27, ceAnsi, zCP_L1_ISO_8859_1); {ISO8859-1, ISO Latin 1, Western}
-  PlainDriver.AddCodePage('ISO_BINENG', 28, ceAnsi, zCP_ACP); {Bin‰re Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groﬂ- und Kleinschreibung}
+  PlainDriver.AddCodePage('ISO_BINENG', 28, ceAnsi, zCP_us_ascii); {Bin‰re Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groﬂ- und Kleinschreibung}
 end;
 
 procedure AddmMSCodePages(PlainDriver: TZAbstractPlainDriver);

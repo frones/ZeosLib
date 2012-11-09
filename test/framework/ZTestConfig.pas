@@ -109,6 +109,8 @@ const
   ENABLE_KEY               = 'enable';
   SKIP_CLOSED_KEY          = 'skip.closed';
   ACTIVE_CONNECTIONS_KEY   = 'connections';
+  EXTENDED_TEST_KEY       =  'extended.test';
+  SKIP_NON_ZEOS_ISSUES     = 'skip.non.zeos.issues';
 
 const
   { Names of the connection configuration keys. }
@@ -125,6 +127,7 @@ const
   DATABASE_CREATE_SCRIPTS_KEY = 'create.scripts';
   DATABASE_DROP_SCRIPTS_KEY   = 'drop.scripts';
   DATABASE_PROPERTIES_KEY     = 'properties';
+  DATABASE_CHARACTERSETS_KEY  = 'charactersets';
 
 const
   { SQL script delimiters }

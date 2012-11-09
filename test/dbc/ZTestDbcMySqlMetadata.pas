@@ -182,6 +182,8 @@ procedure TZTestMySqlMetadataCase.TestGetColumnPrivileges;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipNonZeosIssues then Exit;
+
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
   CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
@@ -248,9 +250,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_resume', ResultSet.GetStringByName('COLUMN_NAME'));
-  //EgonHugeist: the ClientCharacter-set sets now the Stream-Type
-  if (Connection.GetClientCodePageInformations^.Encoding in [ceUTF8, ceUTF16{$IFNDEF MSWINDOWS}, ceUTF32{$ENDIF}])
-    and Connection.UTF8StringAsWideField then
+  if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
     CheckEquals(ord(stUnicodeStream), ResultSet.GetIntByName('DATA_TYPE'))
   else
     CheckEquals(ord(stAsciiStream), ResultSet.GetIntByName('DATA_TYPE'));
@@ -362,6 +362,9 @@ begin
     The result sql is:
     SELECT host,db,table_name,grantor,user,table_priv from mysql.tables_priv
     WHERE table_name LIKE 'people';}
+
+  if SkipNonZeosIssues then Exit;
+
   ResultSet := Metadata.GetTablePrivileges('', '', 'people');
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
   CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));

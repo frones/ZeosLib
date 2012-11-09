@@ -1987,13 +1987,11 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 {const
   VARHDRSZ = 4;
 }var
-  TypeOid, AttTypMod, CharWidth: Integer;
+  TypeOid, AttTypMod: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
-    CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
     if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
     begin
@@ -2067,7 +2065,8 @@ begin
         if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
         begin
           if AttTypMod <> -1 then
-            Result.UpdateInt(7, GetFieldSize(SQLType, (AttTypMod - 4), CharWidth))
+            Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
+              ConSettings.ClientCodePage.CharWidth))
           else Result.UpdateInt(7, 0);
         end
         else if (PgType = 'numeric') or (PgType = 'decimal') then

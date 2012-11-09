@@ -1129,7 +1129,7 @@ function TZMySQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  I, CharWidth: Integer;
+  I: Integer;
   MySQLType: TZSQLType;
   TempCatalog, TempColumnNamePattern, TempTableNamePattern: string;
 
@@ -1146,8 +1146,6 @@ var
 
 begin
     Res:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
-    CharWidth := GetConnection.GetClientCodePageInformations.CharWidth;
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, ColumnNamePattern,
       TempCatalog, TempColumnNamePattern);
@@ -1192,9 +1190,8 @@ begin
             Res.UpdateString(4, GetString(ColumnIndexes[1]));
 
             ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
-              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
-              CharWidth, TypeName, TypeInfoSecond, MySQLType, ColumnSize,
-              ColumnDecimals);
+              ConSettings, TypeName,
+              TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals);
             Res.UpdateInt(5, Ord(MySQLType));
             Res.UpdateString(6, TypeName);
             Res.UpdateInt(7, ColumnSize);
@@ -2378,7 +2375,7 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
 var
   LCatalog, SQL, TypeName, Temp: string;
   ParamList, Params, Names, Returns: TStrings;
-  I, ColumnSize, Precision, CharWidth: Integer;
+  I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
@@ -2463,8 +2460,6 @@ begin
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-  CharWidth := GetConnection.GetClientCodePageInformations.CharWidth;
-
   SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
     IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
@@ -2521,8 +2516,8 @@ begin
             Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
             Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
-              GetConnection.GetEncoding, GetConnection.UTF8StringAsWideField,
-              CharWidth, TypeName, Temp, FieldType, ColumnSize, Precision);
+              ConSettings, TypeName, Temp,
+              FieldType, ColumnSize, Precision);
             { process COLUMN_NAME }
             if Params[1] = '' then
               if Params[0] = 'RETURNS' then

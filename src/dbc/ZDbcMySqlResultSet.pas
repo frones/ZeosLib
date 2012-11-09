@@ -105,9 +105,6 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
-    function GetAsciiStream(ColumnIndex: Integer): TStream; override;
-    function GetUnicodeStream(ColumnIndex: Integer): TStream; override;
-    function GetBinaryStream(ColumnIndex: Integer): TStream; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     function MoveAbsolute(Row: Integer): Boolean; override;
@@ -186,7 +183,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql;
+  Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding;
 
 { TZMySQLResultSetMetadata }
 
@@ -654,95 +651,6 @@ begin
 end;
 
 {**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a stream of ASCII characters. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <char>LONGVARCHAR</char> values.
-  The JDBC driver will
-  do any necessary conversion from the database format into ASCII.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream of one-byte ASCII characters; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
-function TZMySQLResultSet.GetAsciiStream(ColumnIndex: Integer): TStream;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stAsciiStream);
-{$ENDIF}
-  Result := TStringStream.Create(InternalGetString(ColumnIndex));
-end;
-
-{**
-  Gets the value of a column in the current row as a stream of
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  as a stream of Unicode characters.
-  The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large<code>LONGVARCHAR</code>values.  The JDBC driver will
-  do any necessary conversion from the database format into Unicode.
-  The byte format of the Unicode stream must be Java UTF-8,
-  as specified in the Java virtual machine specification.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream in Java UTF-8 byte format; if the value is SQL
-    <code>NULL</code>, the value returned is <code>null</code>
-}
-function TZMySQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stUnicodeStream);
-{$ENDIF}
-  Result := TStringStream.Create(InternalGetString(ColumnIndex));
-end;
-
-{**
-  Gets the value of a column in the current row as a stream of
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a binary stream of
-  uninterpreted bytes. The value can then be read in chunks from the
-  stream. This method is particularly
-  suitable for retrieving large <code>LONGVARBINARY</code> values.
-
-  <P><B>Note:</B> All the data in the returned stream must be
-  read prior to getting the value of any other column. The next
-  call to a <code>getXXX</code> method implicitly closes the stream.  Also, a
-  stream may return <code>0</code> when the method
-  <code>InputStream.available</code>
-  is called whether there is data available or not.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return a Java input stream that delivers the database column value
-    as a stream of uninterpreted bytes;
-    if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
-}
-function TZMySQLResultSet.GetBinaryStream(ColumnIndex: Integer): TStream;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stBinaryStream);
-{$ENDIF}
-  Result := TStringStream.Create(InternalGetString(ColumnIndex));
-end;
-
-{**
   Returns the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Blob</code> object
   in the Java programming language.
@@ -762,17 +670,19 @@ begin
   try
     if not IsNull(ColumnIndex) then
     begin
-      {$IFNDEF DELPHI12_UP}
-      if ConSettings.AutoEncode and (ConSettings.OS_CP <> ConSettings.ClientCodePage.CP) and
-          ( GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
-        Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), ConSettings.ClientCodePage.CP, ConSettings.OS_CP))
-      else
-      {$ENDIF}
-       Stream := TStringStream.Create(InternalGetString(ColumnIndex));
-      Result := TZAbstractBlob.CreateWithStream(Stream)
+      case GetMetaData.GetColumnType(ColumnIndex) of
+        stAsciiStream: Stream := GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True);
+        stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
+        else
+          Stream := TStringStream.Create(InternalGetString(ColumnIndex));
+      end;
+      if not Assigned(Stream) then //improve TZTestCompMySQLBugReport.Test1045286
+        Stream := TMemoryStream.Create;
+      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
+        GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream);
     end
     else
-      Result := TZAbstractBlob.CreateWithStream(nil);
+      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
   finally
     if Assigned(Stream) then
       Stream.Free;
@@ -1347,11 +1257,16 @@ end;
     <code>NULL</code>, the value returned is <code>null</code>
 }
 function TZMySQLPreparedResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
+var
+  WS: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  Result := TStringStream.Create(InternalGetString(ColumnIndex));
+  WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));
+  Result := TMemoryStream.Create;
+  Result.Write(PWideChar(WS)^, Length(WS) *2);
+  Result.Position := 0;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1412,20 +1327,17 @@ begin
   try
     if not LastWasNull then
     begin
-      if TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) = stBinaryStream then
-        Stream := GetBinaryStream(ColumnIndex)
+      case GetMetadata.GetColumnType(ColumnIndex) of
+        stBinaryStream: Stream := GetBinaryStream(ColumnIndex);
+        stUnicodeStream: Stream := GetUnicodeStream(ColumnIndex);
       else
-      {$IFNDEF DELPHI12_UP}
-      if ConSettings.AutoEncode and (ConSettings.OS_CP <> ConSettings.ClientCodePage.CP) and
-          ( GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
-        Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), ConSettings.ClientCodePage.CP, ConSettings.OS_CP))
-      else
-      {$ENDIF}
-       Stream := TStringStream.Create(InternalGetString(ColumnIndex));
-        Result := TZAbstractBlob.CreateWithStream(Stream)
+        Stream := ZEncoding.GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True);
+      end;
+      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
+        GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream)
     end
     else
-      Result := TZAbstractBlob.CreateWithStream(nil);
+      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
   finally
     if Assigned(Stream) then
       Stream.Free;

@@ -421,29 +421,33 @@ var
   end;
 begin
   StrStream := TMemoryStream.Create;
-  if ( ConSettings.ClientCodePage.Encoding = ceUTF8 ) then
-    if ConSettings.UTF8AsWideString then
-    begin
-      WS := WideString(OrgStr);
-      StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-      StrStream.Position := 0;
-    end
-    else
+  case ConSettings.CPType of
+    cGET_ACP:
       if ConSettings.AutoEncode then
-        if (ConSettings.CPType = cGET_ACP) or (ConSettings.CPType = cCP_UTF16) then
-          SetAnsiStream(ZAnsiString(OrgStr))
-        else
+        if ConSettings.CTRL_CP = 65001 then
           SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+        else
+          SetAnsiStream(ZAnsiString(OrgStr))
       else
-        SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
-  else //ceAnsi
-    if ConSettings.AutoEncode then
-      if (ConSettings.CPType = cCP_UTF8) then
+        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+          SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+        else
+          SetAnsiStream(ZAnsiString(OrgStr));
+    cCP_UTF8:
+      if ConSettings.AutoEncode then
         SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
       else
-        SetAnsiStream(ZAnsiString(OrgStr))
-    else
-      SetAnsiStream(ZAnsiString(OrgStr));
+        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+          SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+        else
+          SetAnsiStream(ZAnsiString(OrgStr));
+    cCP_UTF16:
+      begin
+        WS := WideString(OrgStr);
+        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
+        StrStream.Position := 0;
+      end;
+  end;
   try
     CheckEquals(StrStream, ActualLobStream, Msg);
   finally

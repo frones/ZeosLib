@@ -282,14 +282,11 @@ type
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
     function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload;
     function GetClientCodePageInformations: PZCodePage;
-    function GetUTF8StringAsWideField: Boolean;
-    procedure SetUTF8StringAsWideField(const Value: Boolean);
     function GetAutoEncodeStrings: Boolean;
     procedure SetAutoEncodeStrings(const Value: Boolean);
     property AutoEncodeStrings: Boolean read GetAutoEncodeStrings write SetAutoEncodeStrings;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
-    property UTF8StringAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
   end;
 
   {** Database metadata interface. }
@@ -657,9 +654,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
     function GetString(ColumnIndex: Integer): String;
-    {$IFDEF DELPHI12_UP}
-    function GetAnsiString(ColumnIndex: Integer): AnsiString;
-    {$ENDIF}
+    function GetBinaryString(ColumnIndex: Integer): ZAnsiString;
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): ShortInt;
@@ -687,9 +682,7 @@ type
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PChar;
     function GetStringByName(const ColumnName: string): String;
-    {$IFDEF DELPHI12_UP}
-    function GetAnsiStringByName(const ColumnName: string): AnsiString;
-    {$ENDIF}
+    function GetBinaryStringByName(const ColumnName: string): ZAnsiString;
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): ShortInt;
@@ -772,9 +765,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
-    {$IFDEF DELPHI12_UP}
-    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
-    {$ENDIF}
+    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: ZAnsiString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
@@ -801,9 +792,7 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
-    {$IFDEF DELPHI12_UP}
-    procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
-    {$ENDIF}
+    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: ZAnsiString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
@@ -831,7 +820,7 @@ type
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;
-    function GetClientCodePage: PZCodePage;
+    function GetConSettings: PZConsettings;
   end;
 
   {** ResultSet metadata interface. }
@@ -870,6 +859,7 @@ type
     function IsEmpty: Boolean;
     function IsUpdated: Boolean;
     function Length: LongInt;
+    function WasDecoded: Boolean;
 
     function GetString: ZAnsiString;
     procedure SetString(const Value: ZAnsiString);
@@ -879,7 +869,7 @@ type
     procedure SetBytes(const Value: TByteDynArray);
     function GetUnicodeStream: TStream;
     function GetStream: TStream;
-    procedure SetStream(Value: TStream);
+    procedure SetStream(Value: TStream; Encoded: Boolean = False);
     function GetBuffer: Pointer;
     procedure SetBuffer(Buffer: Pointer; Length: Integer);
 

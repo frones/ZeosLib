@@ -58,7 +58,6 @@
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
  {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
- {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}// Variant does support TByteDynArray
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
 {$ENDIF}
 
@@ -112,7 +111,6 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_INLINE_ANSISTRLCOMP}
-  {$UNDEF WITH_TBYTEDYNARRAYTOVARIANT} //bug on using it
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
@@ -122,7 +120,6 @@
   {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
-  {$UNDEF WITH_TBYTEDYNARRAYTOVARIANT} //bug on using it
 {$ENDIF}
 
 // Compilation directives for Delphi XE
@@ -175,12 +172,14 @@
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
   {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
+  {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
+  {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
-  {$DEFINE WITH_TBYTEDYNARRAYTOVARIANT}
   {$DEFINE WITH_FORMATSETTINGS}
+  {$DEFINE WITH_UNICODEFROMLOCALECHARS}
   {$IFDEF WIN64}
     {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on x64
   {$ENDIF}
@@ -197,7 +196,7 @@
 {$IFDEF VER150BELOW}
   {$UNDEF WITH_WIDEMEMO}
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
-  {$UNDEF WITH_TBYTEDYNARRAYTOVARIANT} //D7 Does not support TByteDynArray as Variant
+  {$UNDEF WITH_WIDEFIELDS}
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}

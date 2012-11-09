@@ -82,6 +82,7 @@ type
     procedure TestAssignToProperties_Properties_NoHost;
     procedure TestSemicolons;
     procedure TestUnixPathDelimiter;
+    procedure TestSFTicket8_HostPort_NoDB_Properties;
   end;
 
 implementation
@@ -419,6 +420,34 @@ begin
     CheckEquals('root', ZURL.UserName);
     CheckEquals('passwd', ZURL.Password);
     CheckEquals('zdbc:oracle:////model/test/test.db?username=root;password=passwd;rolename=public', ZURL.URL);
+  finally
+    ZURL.Free;
+  end;
+end;
+
+{ SourceForge.net Ticket #8:
+TZURL.SetURL(const Value: string); maybe parse error.
+
+e.g.
+Value = 'localhost:3306?username=root;password=test'
+
+HostName will be "localhost:3306" and Port will be 0
+}
+procedure TZURLTest.TestSFTicket8_HostPort_NoDB_Properties;
+var
+  ZURL: TZURL;
+begin
+  ZURL := TZURL.Create;
+  try
+    ZURL.URL := 'zdbc:firebird-2.0://localhost:3306?username=root;password=test';
+    CheckEquals('zdbc', ZURL.Prefix);
+    CheckEquals('firebird-2.0', ZURL.Protocol);
+    CheckEquals('localhost', ZURL.HostName);
+    CheckEquals(3306, ZURL.Port);
+    CheckEquals('', ZURL.Database);
+    CheckEquals('root', ZURL.UserName);
+    CheckEquals('test', ZURL.Password);
+    CheckEquals('zdbc:firebird-2.0://localhost:3306?username=root;password=test', ZURL.URL);
   finally
     ZURL.Free;
   end;

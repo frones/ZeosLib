@@ -537,7 +537,7 @@ type
 
 implementation
 
-uses ZPlainLoader;
+uses ZPlainLoader, ZEncoding;
 
 { TZSQLiteBaseDriver }
 

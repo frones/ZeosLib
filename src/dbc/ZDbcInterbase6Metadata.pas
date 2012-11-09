@@ -1475,8 +1475,7 @@ begin
 
         Result.UpdateInt(6,
           Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName,
-            GetConnection.GetClientCodePageInformations^.Encoding,
-            GetConnection.UTF8StringAsWideField))); //DATA_TYPE
+            ConSettings.CPType))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
         Result.UpdateNull(9);    //BUFFER_LENGTH
@@ -1673,14 +1672,12 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   SQL, Where, ColumnName, DefaultValue: String;
-  TypeName, SubTypeName, FieldScale, CharWidth: integer;
+  TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
   SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
-
-    CharWidth := GetConnection.GetClientCodePageInformations^.CharWidth;
 
     LTableNamePattern := ConstructNameCondition(TableNamePattern,
       'a.RDB$RELATION_NAME');
@@ -1792,8 +1789,7 @@ begin
         Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
         SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName
-          , GetConnection.GetClientCodePageInformations^.Encoding,
-          GetConnection.UTF8StringAsWideField);
+          , ConSettings.CPType);
         Result.UpdateInt(5, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
@@ -1816,7 +1812,8 @@ begin
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
           16   : Result.UpdateInt(7, GetInt(ColumnIndexes[9]));
-          37, 38: Result.UpdateInt(7, GetFieldSize(SQLType, GetInt(ColumnIndexes[10]), CharWidth, True)); //FireBird return Char*Bytes for Varchar
+          37, 38: Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings,
+            GetInt(ColumnIndexes[10]), ConSettings.ClientCodePage.CharWidth, nil, True)); //FireBird return Char*Bytes for Varchar
         else
           Result.UpdateInt(7, GetInt(ColumnIndexes[10]));
         end;
@@ -2673,8 +2670,7 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateString(1, GetString(2));
         Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0,
-          Self.GetConnection.GetClientCodePageInformations^.Encoding,
-          GetConnection.UTF8StringAsWideField)));
+          ConSettings.CPType)));
         Result.UpdateInt(3, 9);
         Result.UpdateInt(7, Ord(ntNoNulls));
         Result.UpdateBoolean(8, false);

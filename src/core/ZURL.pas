@@ -348,7 +348,7 @@ begin
     if Pos('//', AValue) = 1 then
     begin
       Delete(AValue, 1, 2);
-      if (Pos(':', AValue) > 0) and (Pos(':', AValue) < Pos('/', AValue))  then
+      if (Pos(':', AValue) > 0) and ((Pos(':', AValue) < Pos('/', AValue)) or (Pos('/', AValue)=0)) then
         AHostName := Copy(AValue, 1, Pos(':', AValue) - 1)
       else if Pos('/', AValue) > 0 then
         AHostName := Copy(AValue, 1, Pos('/', AValue) - 1)

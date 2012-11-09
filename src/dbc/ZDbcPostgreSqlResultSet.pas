@@ -58,8 +58,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF DELPHI12_UP} AnsiStrings, {$ENDIF} SysUtils,
-  Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZPlainPostgreSqlDriver, ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility;
 
 type
@@ -137,8 +136,8 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql, ZDbcUtils,
-  ZDbcPostgreSqlUtils;
+  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql, ZDbcUtils, ZEncoding,
+  ZDbcPostgreSqlUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLResultSet }
 
@@ -261,12 +260,11 @@ begin
 
         if ColumnType in [stString, stUnicodeString] then
           if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
-            Precision := GetFieldSize(ColumnType, 255, ConSettings.ClientCodePage^.CharWidth, True)
+            Precision := GetFieldSize(ColumnType, ConSettings, 255,
+              ConSettings.ClientCodePage^.CharWidth, nil, True)
           else
-          begin
-            ColumnDisplaySize := Precision;
-            Precision := GetFieldSize(ColumnType, Precision, ConSettings.ClientCodePage^.CharWidth);
-          end;
+            Precision := GetFieldSize(ColumnType, ConSettings, Precision,
+              ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize);
       end;
     end;
 
@@ -344,7 +342,7 @@ begin
     FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex));
   {$ENDIF}
   if FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042 then
-    Result := TrimRight(Result);
+    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}TrimRight(Result);
 end;
 
 {**
@@ -630,6 +628,7 @@ var
   BlobOid: Oid;
   Stream: TStream;
   Connection: IZConnection;
+  WS: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -655,24 +654,26 @@ begin
     begin
       Stream := nil;
       try
-        if GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream then
-          Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex), Self.FHandle))
-        else
-          {$IFNDEF DELPHI12_UP}
-          if Connection.AutoEncodeStrings and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
-              ( Connection.GetConSettings.OS_CP <> Connection.GetConSettings.ClientCodePage.CP ) then
-            Stream := TStringStream.Create(AnsiToStringEx(InternalGetString(ColumnIndex), Connection.GetConSettings.ClientCodePage.CP, Connection.GetConSettings.OS_CP))
+        case GetMetadata.GetColumnType(ColumnIndex) of
+          stBinaryStream:
+            Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex), Self.FHandle));
+          stAsciiStream:
+            Stream := GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True);
           else
-          {$ENDIF}
-            Stream := TStringStream.Create(InternalGetString(ColumnIndex));
-        Result := TZAbstractBlob.CreateWithStream(Stream);
+            begin
+              WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));
+              Stream := WideStringStream(Ws);
+            end;
+        end;
+        Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
+          GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream);
       finally
         if Assigned(Stream) then
           Stream.Free;
       end;
     end
     else
-      Result := TZAbstractBlob.CreateWithStream(nil);
+      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
   end;
 end;
 
@@ -749,7 +750,7 @@ constructor TZPostgreSQLBlob.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Data: Pointer; Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid;
   Chunk_Size: Integer);
 begin
-  inherited CreateWithData(Data, Size);
+  inherited CreateWithData(Data, Size, nil);
   FHandle := Handle;
   FBlobOid := BlobOid;
   FPlainDriver := PlainDriver;

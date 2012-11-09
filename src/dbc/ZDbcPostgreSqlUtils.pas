@@ -172,7 +172,7 @@ begin
   if (TypeName = 'interval') or (TypeName = 'char') or (TypeName = 'bpchar')
     or (TypeName = 'varchar') or (TypeName = 'bit') or (TypeName = 'varbit')
   then//EgonHugeist: Highest Priority Client_Character_set!!!!
-    if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+    if (Connection.GetConSettings.CPType = cCP_UTF16) then
       Result := stUnicodeString
     else
       Result := stString
@@ -233,10 +233,9 @@ begin
   else
     Result := stUnknown;
 
-  if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+  if (Connection.GetConSettings.CPType = cCP_UTF16) then
     if Result = stAsciiStream then
-       if Connection.UTF8StringAsWideField then
-         Result := stUnicodeStream;
+      Result := stUnicodeStream;
 end;
 
 {**
@@ -252,7 +251,7 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
 begin
   case TypeOid of
     1186,18,1042,1043:  { interval/char/bpchar/varchar }
-      if ( Connection.GetEncoding = ceUTF8 ) and Connection.UTF8StringAsWideField then
+      if (Connection.GetConSettings.CPType = cCP_UTF16) then
           Result := stUnicodeString
         else
           Result := stString;
@@ -296,10 +295,9 @@ begin
       Result := stUnknown;
   end;
 
-  if Connection.GetClientCodePageInformations^.Encoding = ceUTF8 then
+  if (Connection.GetConSettings.CPType = cCP_UTF16) then
     if Result = stAsciiStream then
-      if Connection.UTF8StringAsWideField then
-        Result := stUnicodeStream;
+      Result := stUnicodeStream;
 end;
 
 function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: boolean): string;

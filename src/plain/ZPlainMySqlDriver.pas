@@ -424,8 +424,8 @@ type
   end;
 
 implementation
-uses SysUtils, ZPlainLoader{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+
+uses SysUtils, ZPlainLoader, ZEncoding;
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
@@ -438,8 +438,8 @@ begin
   {MySQL 3.23-4.1}
   { MultiByte }
   AddCodePage('big5', 1, ceAnsi, zCP_Big5, '', 2); {Big5 Traditional Chinese}
-  AddCodePage('ujis', 10, ceAnsi, $ffff, '', 3); {EUC-JP Japanese}
-  AddCodePage('sjis', 11, ceAnsi, $ffff, '', 2); {Shift-JIS Japanese}
+  AddCodePage('ujis', 10, ceAnsi, zCP_EUC_JP, '', 3); {EUC-JP Japanese}
+  AddCodePage('sjis', 11, ceAnsi, zCP_SHIFTJS, '', 2); {Shift-JIS Japanese}
   AddCodePage('gbk', 19, ceAnsi, zCP_GB2312, '', 2); {GBK Simplified Chinese}
   AddCodePage('utf8', 22, ceUTF8, zCP_UTF8, '', 3); {UTF-8 Unicode}
   AddCodePage('ucs2', 23, ceUTF16, zCP_UTF16, 'utf8', 2); {UCS-2 Unicode}
@@ -457,12 +457,12 @@ begin
   AddCodePage('swe7', 8, ceAnsi, zCP_x_IA5_Swedish); {7bit Swedish}
   AddCodePage('ascii', 9, ceAnsi, zCP_us_ascii); {US ASCII}
   AddCodePage('hebrew', 12, ceAnsi, zCP_L8_ISO_8859_8); {ISO 8859-8 Hebrew}
-  AddCodePage('tis620', 13); {TIS620 Thai}
+  AddCodePage('tis620', 13, ceAnsi, zCP_IBM_Thai); {TIS620 Thai}
   AddCodePage('koi8u', 15, ceAnsi, zCP_KOI8U); {KOI8-U Ukrainian}
   AddCodePage('greek', 17, ceAnsi, zCP_L7_ISO_8859_7); {ISO 8859-7 Greek}
   AddCodePage('cp1250', 18, ceAnsi, zCP_WIN1250); {Windows Central European}
   AddCodePage('latin5', 20, ceAnsi, zCP_L5_ISO_8859_9); {ISO 8859-9 Turkish}
-  AddCodePage('armscii8', 21, ceAnsi, zCP_ACP); {ARMSCII-8 Armenian}
+  AddCodePage('armscii8', 21, ceAnsi, zCP_us_ascii); {ARMSCII-8 Armenian}
   AddCodePage('cp866', 24, ceAnsi, zCP_DOS866); {DOS Russian}
   AddCodePage('keybcs2', 25); {DOS Kamenicky Czech-Slovak}
   AddCodePage('macce', 26, ceAnsi, zCP_x_mac_ce); {Mac Central European}

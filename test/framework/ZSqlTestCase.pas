@@ -61,7 +61,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
+  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
+  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 type
@@ -121,6 +122,8 @@ type
     FCreateScripts: TStringDynArray;
     FDropScripts: TStringDynArray;
     FProperties: TStringDynArray;
+    FExtendedTest: Boolean;
+    FSkipNonZeosIssues: Boolean;
     function GetProtocol : string;
   protected
     property Connections: TObjectList read FConnections write FConnections;
@@ -167,6 +170,7 @@ type
     property CreateScripts: TStringDynArray read FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts;
     property Properties: TStringDynArray read FProperties;
+    property SkipNonZeosIssues: Boolean read FSkipNonZeosIssues;
   end;
 
   {** Implements a test case which runs all active connections. }
@@ -239,12 +243,140 @@ procedure TZAbstractSQLTestCase.LoadConfiguration;
   end;
 
 var
-  I: Integer;
+  I, j, iDataBases: Integer;
   _ConnectionName, Temp: string;
   ActiveConnections: TStringDynArray;
-  Current: TZConnectionConfig;
+  Current, MyCurrent: TZConnectionConfig;
+  CharacterSets: TStringDynArray;
+
+  function CreateChildConnectionConfiguration(const MyCurrent: TZConnectionConfig;
+    const Suffix: String): TZConnectionConfig;
+  var
+    I: Integer;
+    Props: TStringDynArray;
+  begin
+    Result := TZConnectionConfig.Create;
+    Result.Name := MyCurrent.Name+'_'+Suffix;
+    Result.Alias := MyCurrent.Alias;
+    Result.Protocol := MyCurrent.Protocol;
+    Result.HostName := MyCurrent.HostName;
+    Result.Port := MyCurrent.Port;
+    Result.Database := MyCurrent.Database;
+    Result.UserName := MyCurrent.UserName;
+    Result.Password := MyCurrent.Password;
+    Result.Rebuild := False;
+    for i := 0 to high(MyCurrent.Properties) do
+    begin
+      SetLength(Props, Length(Props)+1);
+      Props[High(Props)] := MyCurrent.Properties[i];
+    end;
+    Result.Properties := Props;
+  end;
+
+  function PropPos(const Current: TZConnectionConfig; const AProp: String): Integer;
+  var
+    I: Integer;
+  begin
+    Result := -1;
+    for i := 0 to high(Current.Properties) do
+      if StartsWith(UpperCase(Current.Properties[i]), UpperCase(AProp)) then
+      begin
+        Result := i;
+        Break;
+      end;
+  end;
+
+  procedure SetProperty(const Current: TZConnectionConfig; const AProp, NewValue: String);
+  var
+    I: Integer;
+  begin
+    I := PropPos(Current, AProp);
+    if I > -1 then
+      Current.Properties[i] := AProp+'='+NewValue
+    else
+    begin
+      SetLength(Current.FProperties, Length(Current.FProperties) +1);
+      Current.Properties[High(Current.Properties)] := AProp+'='+NewValue;
+    end;
+  end;
+
+  procedure SetCharacterSets(const Current: TZConnectionConfig);
+  var
+    iCharacterSets: Integer;
+    MyCurrent: TZConnectionConfig;
+  begin
+    for iCharacterSets := 0 to high(CharacterSets) do
+    begin
+      MyCurrent := CreateChildConnectionConfiguration(Current, CharacterSets[iCharacterSets]);
+      SetProperty(MyCurrent, 'codepage',CharacterSets[iCharacterSets]);
+      FConnections.Add(MyCurrent);
+    end;
+  end;
+
+  procedure SetAutoEncodings(const Current: TZConnectionConfig);
+  var MyCurrent: TZConnectionConfig;
+  begin
+    MyCurrent := CreateChildConnectionConfiguration(Current, 'AutoEncodeStrings');
+    SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
+    FConnections.Add(MyCurrent);
+    SetCharacterSets(MyCurrent);
+    {autoencodings off is default so nothing must be added...}
+  end;
+
+  procedure SetCtrlsCPTypes(const Current: TZConnectionConfig);
+  const CPTypes: array[0..2] of String = ('GET_ACP', 'CP_UTF8', 'CP_UTF16');
+  var
+    iCtrlsCPs: Integer;
+    MyCurrent: TZConnectionConfig;
+  begin
+    for iCtrlsCPs := 0 to High(CPTypes) do
+    begin
+      {$IFDEF DELPHI12_UP}
+      if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //not supported, will be resettet to UTF16
+        continue
+      else
+        if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //default no self subcreation needed
+        begin
+          SetCharacterSets(Current);
+          continue;
+        end;
+      {$ELSE}
+        {$IFNDEF WITH_WIDEFIELDS}
+        if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //not supported, will be resettet to GET_ACP
+          continue
+        else
+          if (CPTypes[iCtrlsCPs] = 'GET_ACP') then //default no self subcreation needed
+          begin
+            SetCharacterSets(Current);
+            continue;
+          end;
+        {$ELSE}
+          {$IFDEF FPC}
+          if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //default no self subcreation needed
+            continue;
+          {$ELSE}
+          if (CPTypes[iCtrlsCPs] = 'GET_ACP') then //default no self subcreation needed
+            continue;
+          {$ENDIF}
+        {$ENDIF}
+      {$ENDIF}
+      MyCurrent := CreateChildConnectionConfiguration(Current, CPTypes[iCtrlsCPs]);
+      SetProperty(MyCurrent, 'controls_cp',CPTypes[iCtrlsCPs]);
+      FConnections.Add(MyCurrent);
+      if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //autoencoding is allways true
+        SetCharacterSets(MyCurrent)
+      else
+        SetAutoEncodings(MyCurrent);
+    end;
+  end;
 begin
   inherited LoadConfiguration;
+
+  FExtendedTest := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    EXTENDED_TEST_KEY, FALSE_VALUE));
+  FSkipNonZeosIssues := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    SKIP_NON_ZEOS_ISSUES, FALSE_VALUE));
+
 
   { Resets a connection configuration list. }
   if not Assigned(FConnections) then
@@ -284,7 +416,25 @@ begin
       DATABASE_DROP_SCRIPTS_KEY, ''), LIST_DELIMITERS);
     Current.Properties := SplitStringToArray(ReadProperty(_ConnectionName,
       DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
+    {$IFDEF FPC}
+    if Current.Protocol = 'ado' then
+    begin
+      Current.Free;
+      continue;
+    end;
+    {$ENDIF}
+
     FConnections.Add(Current);
+
+    {child settings on demand}
+    if FExtendedTest then
+    begin
+      CharacterSets := SplitStringToArray(ReadProperty(_ConnectionName,
+        DATABASE_CHARACTERSETS_KEY, ''), LIST_DELIMITERS);
+      if PropPos(Current, 'codepage') > -1 then //add a empty dummy value to get the autodetecting running for PG for example
+        SetLength(CharacterSets, Length(CharacterSets)+1);
+      SetCtrlsCPTypes(Current);
+    end;
   end;
 end;
 
@@ -432,7 +582,7 @@ var
   Ansi: ZAnsiString;
 begin
   Result := TMemoryStream.Create;
-  if ( ConSettings.CPType = cCP_UTF16 ) and ( ConSettings.ClientCodePage.Encoding = ceUTF8 ) then
+  if ( ConSettings.CPType = cCP_UTF16 ) then
   begin
     if isUTF8Encoded then
       WS := UTF8ToString(ZAnsiString(Value))

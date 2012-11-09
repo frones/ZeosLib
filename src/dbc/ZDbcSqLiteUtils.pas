@@ -68,8 +68,7 @@ uses
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer; CharEncoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean): TZSQLType;
+  var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Checks for possible sql errors.
@@ -109,7 +108,7 @@ function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Int
 
 implementation
 
-uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+uses ZMessages{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Convert string SQLite field type to SQLType
@@ -119,8 +118,7 @@ uses ZMessages{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
   @result the SQLType field type value
 }
 function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
-  var Decimals: Integer; CharEncoding: TZCharEncoding;
-  const UTF8StringAsWideField: Boolean): TZSQLType;
+  var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 var
   P1, P2: Integer;
   Temp: string;
@@ -208,16 +206,24 @@ begin
       Result := stLong;
   end;
 
-  if ((Result = stString) or (Result = stUnicodeString)) then
-    if (Precision = 0) then
-      Precision := 255 {$IFNDEF DELPHI12_UP}* 4{$ENDIF}//UTF8 assumes 4Byte/Char
-    else
-      Precision := Precision{$IFNDEF DELPHI12_UP} *4{$ENDIF};//UTF8 assumes 4Byte/Char
+  if ( CtrlsCPType = cCP_UTF16 ) then
+    case Result of
+      stString:  Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
+    end;
 
-  case Result of
-    stString: if UTF8StringAsWideField then Result := stUnicodeString;
-    stAsciiStream: if UTF8StringAsWideField then Result := stUnicodeStream;
-  end;
+  if (Result = stString) then
+    if (Precision = 0) then
+      Precision := 255 *{$IFDEF DELPHI12_UP}2{$ELSE}4{$ENDIF}//UTF8 assumes 4Byte/Char
+    else
+      Precision := Precision*{$IFDEF DELPHI12_UP}2{$ELSE}4{$ENDIF};//UTF8 assumes 4Byte/Char
+
+  if (Result = stUnicodeString) then
+    if (Precision = 0) then
+      Precision := 255 * 2 //UTF8 assumes 4Byte/Char -> 2 * UnicodeChar
+    else
+      Precision := Precision * 2;//UTF8 assumes 4Byte/Char
+
 end;
 
 {**
@@ -291,7 +297,7 @@ function NewDecodeString(Value:ansistring):ansistring;
     srcbuffer : PAnsichar;
   begin
     value := copy(value,3,length(value)-4);
-    value := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}AnsiLowercase(value);
+    value := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowercase(value);
     i := length(value) div 2;
     srcbuffer := PAnsiChar(value);
     setlength(result,i);

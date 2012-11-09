@@ -875,7 +875,8 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader, Classes{$IFDEF DELPHI12_UP},AnsiStrings{$ENDIF};
+uses SysUtils, ZPlainLoader, Classes, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLBaseDriver }
 
@@ -895,7 +896,7 @@ begin
   AddCodePage('UNICODE', Ord(csUNICODE_PODBC), ceUTF8, zCP_UTF8, '', 4); {UNICODE 	Unicode (UTF-8)}
   AddCodePage('MULE_INTERNAL', Ord(csMULE_INTERNAL), ceAnsi, $ffff, '', 4); { Mule internal code 	Multilingual Emacs }
   {SingleByte}
-  AddCodePage('SQL_ASCII', Ord(csSQL_ASCII), ceAnsi, zCP_ACP); {unspecified (see text) 	any}
+  AddCodePage('SQL_ASCII', Ord(csSQL_ASCII), ceAnsi, zCP_us_ascii); {unspecified (see text) 	any}
   AddCodePage('LATIN1', Ord(csLATIN1), ceAnsi, zCP_WIN1252); { ISO 8859-1, ECMA 94 	Western European }
   AddCodePage('LATIN2', Ord(csLATIN2), ceAnsi, zCP_L2_ISO_8859_2);  { 	ISO 8859-2, ECMA 94 	Central European }
   AddCodePage('LATIN3', Ord(csLATIN3), ceAnsi, zCP_L3_ISO_8859_3);  { ISO 8859-3, ECMA 94 	South European }
@@ -1087,8 +1088,8 @@ var
 begin
   if ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) then
   begin
-    Len := (Length(value)-{$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)) div 2; //GetLength of binary result
-    Ansi := AnsiString(Copy(value, {$IFDEF DELPHI12_UP}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)+1, Length(value))); //remove the first 'x'sign-byte
+    Len := (Length(value)-{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)) div 2; //GetLength of binary result
+    Ansi := AnsiString(Copy(value, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)+1, Length(value))); //remove the first 'x'sign-byte
     SetLength(Result, Len); //Set length of binary-result
     HexToBin(PAnsiChar(Ansi), PAnsichar(Result), Len); //convert hex to binary
   end
@@ -1676,9 +1677,9 @@ begin
   ResetCodePage(Ord(csUNICODE_PODBC), 'UTF8', Ord(csUTF8), ceUTF8, zCP_UTF8, '', 4); { Unicode, 8-bit 	all }
   AddCodePage('BIG5', Ord(csBIG5), ceAnsi, zCP_Big5, '', 2); { Big Five 	Traditional Chinese }
   AddCodePage('GB18030', Ord(csGB18030), ceAnsi, zCP_GB18030, '', 2); { National Standard 	Chinese }
-  AddCodePage('GBK', Ord(csGBK), ceAnsi, $ffff, '', 2); { Extended National Standard 	Simplified Chinese }
+  AddCodePage('GBK', Ord(csGBK), ceAnsi, zCP_GB2312, '', 2); { Extended National Standard 	Simplified Chinese }
   AddCodePage('SJIS', Ord(csSJIS), ceAnsi, zCP_SHIFTJS, '', 2); { Shift JIS 	Japanese }
-  AddCodePage('UHC', Ord(csUHC), ceAnsi, $ffff, '', 2); { Unified Hangul Code 	Korean }
+  AddCodePage('UHC', Ord(csUHC), ceAnsi, zCP_EUCKR, '', 2); { Unified Hangul Code 	Korean }
   {SingleByte}
   ResetCodePage(Ord(csALT), 'WIN866', Ord(csWIN866), ceAnsi, zCP_DOS866); { Windows CP866 	Cyrillic } //No longer in use
   AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_DOS874); { Windows CP874 	Thai }

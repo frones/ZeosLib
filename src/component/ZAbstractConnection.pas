@@ -314,7 +314,7 @@ implementation
 
 uses ZMessages, ZClasses, ZAbstractRODataset, ZSysUtils,
       // Modified by cipto 8/2/2007 10:00:22 AM
-      ZSequence, ZAbstractDataset;
+      ZSequence, ZAbstractDataset, ZEncoding;
 
 var
   SqlHourGlassLock: Integer;
@@ -328,9 +328,15 @@ var
 }
 constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   FUTF8StringAsWideField := True;
+  FControlsCodePage := cCP_UTF16;
   {$ELSE}
+    {$IFDEF FPC}
+    FControlsCodePage := cCP_UTF8;
+    {$ELSE}
+    FControlsCodePage := cGET_ACP;
+    {$ENDIF}
   FUTF8StringAsWideField := False;
   {$ENDIF}
   FURL := TZURL.Create;
@@ -523,29 +529,63 @@ begin
     else
       Value.Values['codepage'] := FClientCodepage;
 
-    {$IF (defined(MSWINDOWS) and not defined(WINCE)) or defined(DELPHI) or defined(WITH_LCONVENCODING)}
+    { check autoencodestrings }
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV) and not defined(UNICODE)}
     if Connected then
-    begin
       DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
-      FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
-    end
-    else
-      FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
+    FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
     {$ELSE}
-    Value.Values['AutoEncodeStrings'] := '';
+      {$IFDEF UNICODE}
+      Value.Values['AutoEncodeStrings'] := 'ON';
+      {$ELSE}
+      Value.Values['AutoEncodeStrings'] := '';
+      {$ENDIF}
     {$IFEND}
 
     if Value.IndexOf('controls_cp') = -1 then
-    {$IFDEF DELPHI12_UP}
-    Value.values['controls_cp'] := 'CP_UTF16';
-    {$ELSE}
-    case FControlsCodePage of
-      cCP_UTF16: Value.values['controls_cp'] := {$IFDEF WITH_WIDEFIELDS}'CP_UTF16'{$ELSE}'CP_UTF8'{$ENDIF};
-      cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
-      cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
-    end;
-    {$ENDIF}
-
+      {$IFDEF UNICODE}
+      if ControlsCodePage = cCP_UTF16 then
+        Value.values['controls_cp'] := 'CP_UTF16'
+      else
+        Value.values['controls_cp'] := 'GET_ACP'
+      {$ELSE}
+      case ControlsCodePage of //automated check..
+        cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
+        cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
+        cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
+      end
+      {$ENDIF}
+    else
+      {$IFDEF UNICODE}
+      if Value.values['controls_cp'] = 'CP_UTF8' then
+      begin
+        Value.values['controls_cp'] := 'CP_UTF16';
+        FControlsCodePage := cCP_UTF16;
+      end;
+      {$ELSE}
+        {$IFNDEF WITH_WIDEFIELDS}
+        if Value.values['controls_cp'] = 'CP_UTF16' then
+        begin
+          FControlsCodePage := cGET_ACP;
+          Value.values['controls_cp'] := 'GET_ACP';
+        end;
+        {$ELSE}
+        if Value.values['controls_cp'] = 'GET_ACP' then
+          FControlsCodePage := cGET_ACP
+        else
+          if Value.values['controls_cp'] = 'CP_UTF8' then
+            FControlsCodePage := cCP_UTF8
+          else
+            if Value.values['controls_cp'] = 'CP_UTF16' then
+              FControlsCodePage := cCP_UTF16
+            else
+              case ControlsCodePage of //automated check..
+                cCP_UTF16: Value.values['controls_cp'] := 'CP_UTF16';
+                cCP_UTF8: Value.values['controls_cp'] := 'CP_UTF8';
+                cGET_ACP: Value.values['controls_cp'] := 'GET_ACP';
+              end;
+        {$ENDIF}
+      {$ENDIF}
     FURL.Properties.Text := Value.Text;
   end
   else
@@ -1447,10 +1487,10 @@ end;
 
 function TZAbstractConnection.GetAutoEncode: Boolean;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   Result := True;
   {$ELSE}
-    {$IF (defined(MSWINDOWS) and not defined(WINCE)) or defined(DELPHI) or defined(WITH_LCONVENCODING)}
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
     if Self.Connected then
     begin
       Result := DbcConnection.GetConSettings.AutoEncode;
@@ -1466,8 +1506,8 @@ end;
 
 procedure TZAbstractConnection.SetAutoEncode(Value: Boolean);
 begin
-  {$IFNDEF DELPHI12_UP}
-    {$IF (defined(MSWINDOWS) and not defined(WINCE)) or defined(DELPHI) or defined(WITH_LCONVENCODING)}
+  {$IFNDEF UNICODE}
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_LIBICONV)}
     if Value then
       FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
     else
@@ -1509,7 +1549,7 @@ begin
   {$IF not defined(WITH_FTWIDESTRING)}
   Result := False;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     Result := True;
     {$ELSE}
     Result := FUTF8StringAsWideField;
@@ -1522,35 +1562,88 @@ begin
   {$IF not defined(WITH_WIDEFIELDS))}
   FUTF8StringAsWideField := False;
   {$ELSE}
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     FUTF8StringAsWideField := True;
     {$ELSE}
     FUTF8StringAsWideField := Value;
     {$ENDIF}
   {$IFEND}
-  if Assigned(DbcConnection) then
-    DbcConnection.UTF8StringAsWideField := FUTF8StringAsWideField;
 end;
 
 procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePage);
   procedure SetValue;
   begin
-    {$IFDEF DELPHI12_UP}
-    Properties.values['controls_cp'] := 'CP_UTF16';
-    {$ELSE}
+    {$IFDEF UNICODE}
     case Value of
-      cCP_UTF16: Properties.values['controls_cp'] := {$IFDEF WITH_WIDEFIELDS}'CP_UTF16'{$ELSE}'CP_UTF8'{$ENDIF};
-      cCP_UTF8: Properties.values['controls_cp'] := 'CP_UTF8';
-      cGET_ACP: Properties.values['controls_cp'] := 'GET_ACP';
+      cCP_UTF16:
+        begin
+          Properties.values['controls_cp'] := 'CP_UTF16';
+          FControlsCodePage := Value;
+        end;
+      cCP_UTF8:
+        begin
+          Properties.values['controls_cp'] := 'CP_UTF16';
+          FControlsCodePage := cCP_UTF16;
+        end;
+      cGET_ACP:
+        begin
+          Properties.values['controls_cp'] := 'GET_ACP';
+          FControlsCodePage := Value;
+        end;
     end;
+    {$ELSE}
+      {$IFDEF WITH_WIDEFIELDS}
+      case Value of
+        cCP_UTF16:
+          begin
+            Properties.values['controls_cp'] := 'CP_UTF16';
+            FControlsCodePage := Value;
+          end;
+        cCP_UTF8:
+          begin
+            Properties.values['controls_cp'] := 'CP_UTF8';
+            FControlsCodePage := Value;
+          end;
+        cGET_ACP:
+          if ZDefaultSystemCodePage = zCP_UTF8 then
+          begin
+            Properties.values['controls_cp'] := 'CP_UTF8';
+            FControlsCodePage := cCP_UTF8;
+          end
+          else
+          begin
+            Properties.values['controls_cp'] := 'GET_ACP';
+            FControlsCodePage := Value;
+          end;
+      end;
+      {$ELSE} //D7 or old FPC
+      case Value of
+        cCP_UTF16:
+          begin
+            Properties.values['controls_cp'] := 'CP_UTF8';
+            FControlsCodePage := cCP_UTF8;
+          end;
+        cCP_UTF8:
+          begin
+            Properties.values['controls_cp'] := 'CP_UTF8';
+            FControlsCodePage := Value;
+          end;
+        cGET_ACP:
+          if ZDefaultSystemCodePage = zCP_UTF8 then
+          begin
+            Properties.values['controls_cp'] := 'CP_UTF8';
+            FControlsCodePage := cCP_UTF8;
+          end
+          else
+          begin
+            Properties.values['controls_cp'] := 'GET_ACP';
+            FControlsCodePage := Value;
+          end;
+      end;
+      {$ENDIF}
     {$ENDIF}
-    {$IFDEF WITH_WIDEFIELDS}
-      if Value <> cCP_UTF16 then
-    {$ENDIF}
-      FControlsCodePage := Value;
   end;
 begin
-  {$IFNDEF DELPHI12_UP}
   if Value <> FControlsCodePage then
     if Connected then
     begin
@@ -1559,7 +1652,6 @@ begin
       Connected := True;
     end
     else
-  {$ENDIF}
       SetValue;
 end;
 

@@ -678,6 +678,9 @@ var
 begin
   if SkipClosed then Exit;
 
+  {$IFDEF FPC}
+  Check(False, 'Purpose of Test804640 currently not supported for FPC');
+  {$ELSE}
   Query := TZQuery.Create(nil);
   try
     CheckEquals(False, Query.CachedUpdates);
@@ -708,6 +711,7 @@ begin
   finally
     Query.Free;
   end;
+  {$ENDIF}
 end;
 
 {**

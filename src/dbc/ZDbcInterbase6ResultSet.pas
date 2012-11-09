@@ -134,7 +134,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, ZDbcUtils;
+  SysUtils, ZDbcUtils, ZEncoding;
 
 { TZInterbase6ResultSet }
 
@@ -249,6 +249,7 @@ var
   Size: Integer;
   Buffer: Pointer;
   BlobId: TISC_QUAD;
+  TempStream: TStream;
 begin
   Result := nil;
   CheckClosed;
@@ -265,12 +266,27 @@ begin
       with FIBConnection do
         ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
           BlobId, Size, Buffer);
-      Result := TZAbstractBlob.CreateWithData(Buffer, Size);
-      {$IFNDEF DELPHI12_UP}
-      if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
-          ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
-        Result.SetString(AnsiToStringEx(Result.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
-      {$ENDIF}
+
+      case GetMetaData.GetColumnType(ColumnIndex) of
+        stBinaryStream:
+          Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
+        stAsciiStream:
+          begin
+            Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
+            TempStream := GetValidatedAnsiStream(Result.GetString, Consettings, True);
+            if Assigned(TempStream) then
+            begin
+              Result.SetStream(TempStream);
+              TempStream.Free;
+            end;
+          end;
+        else
+          begin
+            TempStream := GetValidatedUnicodeStream(Buffer, Size, ConSettings, True);
+            Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection);
+            TempStream.Free;
+          end;
+      end;
     finally
       FreeMem(Buffer, Size);
     end;
@@ -643,10 +659,8 @@ begin
           Precision := MaxLenghtBytes;
         end
         else
-        begin
-          ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
-          Precision := GetFieldSize(ColumnType, MaxLenghtBytes, ConSettings.ClientCodePage^.CharWidth, True);
-        end;
+          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+            ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')

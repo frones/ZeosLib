@@ -117,7 +117,8 @@ type
 
 implementation
 
-uses ZMessages, ZDbcLogging, ZDbcDBLibUtils;
+uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZDBLibResultSet }
 
@@ -176,9 +177,9 @@ begin
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
     if Self.FDBLibConnection.FreeTDS then
-      ColumnInfo.ColumnType := ConvertFreeTDSToSqlType(ColType)
+      ColumnInfo.ColumnType := ConvertFreeTDSToSqlType(ColType, ConSettings.CPType)
     else
-      ColumnInfo.ColumnType := ConvertDBLibToSqlType(ColType);
+      ColumnInfo.ColumnType := ConvertDBLibToSqlType(ColType, ConSettings.CPType);
     ColumnInfo.Currency := (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEY]) or
       (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEY4]) or
       (ColType = FPlainDriver.GetVariables.datatypes[Z_SQLMONEYN]);;
@@ -668,6 +669,8 @@ function TZDBLibResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   DL: Integer;
   Data: Pointer;
+  TempStream: TStream;
+  TempAnsi: ZAnsiString;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
@@ -676,12 +679,18 @@ begin
   DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
   Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   LastWasNull := Data = nil;
-  Result := TZAbstractBlob.CreateWithData(Data, DL);
-  {$IFNDEF DELPHI12_UP}
-  if ConSettings.AutoEncode and ( GetMetadata.GetColumnType(ColumnIndex) = stAsciiStream ) and
-      ( ConSettings.OS_CP <> ConSettings.ClientCodePage.CP ) then
-    Result.SetString(AnsiToStringEx(Result.GetString, ConSettings.ClientCodePage.CP, ConSettings.OS_CP));
-  {$ENDIF}
+  Result := TZAbstractBlob.CreateWithData(Data, DL, FDBLibConnection);
+  if (GetMetaData.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream]) then
+  begin
+    TempAnsi := Result.GetString;
+    TempAnsi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempAnsi, #0, '', [rfReplaceAll]);
+    if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
+      TempStream := ZEncoding.GetValidatedAnsiStream(TempAnsi, ConSettings, True)
+    else
+      TempStream := ZEncoding.GetValidatedUnicodeStream(TempAnsi, ConSettings, True);
+    Result.SetStream(TempStream);
+    TempStream.Free;
+  end;
 end;
 
 {**

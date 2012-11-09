@@ -289,8 +289,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding;
 
 { TZAbstractCachedResultSet }
 
@@ -1458,7 +1457,7 @@ begin
     Stream.Size.}
   if Assigned(Value) then
   begin
-    TempStream := ZDbcUtils.GetValidatedUnicodeStream(TMemoryStream(Value).Memory, Value.Size);
+    TempStream := GetValidatedUnicodeStream(TMemoryStream(Value).Memory, Value.Size, ConSettings, False);
     FRowAccessor.SetUnicodeStream(ColumnIndex, TempStream);
     TempStream.Free;
   end
