@@ -341,10 +341,10 @@ begin
 
 
     //mssql specific parameters
-    if FProvider = dpMsSQL then
+    if ( FProvider = dpMsSQL ) then
     begin
-      if StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
-        or StrToBoolEx(Info.Values['secure']) then
+      if ( StrToBoolEx(Info.Values['NTAuth']) or StrToBoolEx(Info.Values['trusted'])
+        or StrToBoolEx(Info.Values['secure']) ) and ( not FFreeTDS ) then
       begin
         GetPlainDriver.dbsetlsecure(LoginRec);
         LogMessage := LogMessage + ' USING WINDOWS AUTHENTICATION';
