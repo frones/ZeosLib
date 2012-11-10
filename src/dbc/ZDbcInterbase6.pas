@@ -510,7 +510,10 @@ begin
         end
         else
           if GetString(6) = 'NONE' then
-            ConSettings.ClientCodePage.CharWidth := 1;
+          begin
+            CheckCharEncoding('NONE');
+            ConSettings.AutoEncode := True;
+          end;
       Close;
     end;
   finally

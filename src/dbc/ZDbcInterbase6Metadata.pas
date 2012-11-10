@@ -1812,8 +1812,13 @@ begin
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
           16   : Result.UpdateInt(7, GetInt(ColumnIndexes[9]));
-          37, 38: Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings,
-            GetInt(ColumnIndexes[10]), ConSettings.ClientCodePage.CharWidth, nil, True)); //FireBird return Char*Bytes for Varchar
+          37, 38: UpdateNull(7);
+            {if ( ConSettings.ClientCodePage.ID = 0 ) then //CharcterSet 'NONE'
+              Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings,
+                GetInt(ColumnIndexes[10]), GetConnection.GetIZPlainDriver.ValidateCharEncoding(SubTypeName).CharWidth, nil, True)) //FireBird return Char*Bytes for Varchar
+            else
+              Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings,
+                GetInt(ColumnIndexes[10]), ConSettings.ClientCodePage.CharWidth, nil, True)); //FireBird return Char*Bytes for Varchar}
         else
           Result.UpdateInt(7, GetInt(ColumnIndexes[10]));
         end;

@@ -668,7 +668,8 @@ begin
     begin
       Url := TZURL.Create;
       Url.Protocol :=  Connection.Protocol;
-      SDyn := DriverManager.GetDriver(Url.URL).GetSupportedClientCodePages(Url, {$IFNDEF UNICODE}Connection.AutoEncodeStrings, {$ENDIF} True);
+      SDyn := DriverManager.GetDriver(Url.URL).GetSupportedClientCodePages(Url,
+        {$IFNDEF UNICODE}Connection.AutoEncodeStrings, {$ENDIF}True, Connection.ControlsCodePage);
       Url.Free;
       for i := 0 to high(SDyn) do
         List.Append(SDyn[i]);

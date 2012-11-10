@@ -202,13 +202,16 @@ type
     FConSettings: PZConSettings;
   protected
     function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String; overload;
+    function ZDbcString(const Ansi: ZAnsiString; FromCP: Word): String; overload;
     function ZDbcString(const Ansi: ZAnsiString; const Encoding: TZCharEncoding = ceDefault): String; overload;
     function ZDbcUnicodeString(const AStr: ZAnsiString): ZWideString; overload;
     function ZDbcUnicodeString(const AStr: ZAnsiString; const FromCP: Word): ZWideString; overload;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString; overload;
+    function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString; overload;
     function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString; overload;
     function ZPlainString(const AStr: WideString; const Encoding: TZCharEncoding = ceDefault): ZAnsiString; overload;
     function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): ZAnsiString; overload;
+    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString; overload;
     function ZPlainUnicodeString(const AStr: String): WideString;
     procedure SetConSettingsFromInfo(Info: TStrings);
     property ConSettings: PZConSettings read FConSettings write FConSettings;
@@ -444,6 +447,29 @@ begin
       end;
 end;
 
+function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString; FromCP: Word): String;
+var
+  CurrentCP: Word;
+  CurrentEncoding: TZCharEncoding;
+begin
+  if FromCP = FConsettings.ClientCodePage.CP then
+    Result := ZDbcString(Ansi, ConSettings)
+  else
+  begin
+    CurrentCP := FConsettings.ClientCodePage.CP;
+    CurrentEncoding := FConsettings.ClientCodePage.Encoding;
+    CurrentEncoding := FConSettings.ClientCodePage.Encoding;
+    if ( FromCP = zCP_UTF8 ) then
+      FConSettings.ClientCodePage.Encoding := ceUTF8
+    else
+      FConSettings.ClientCodePage.Encoding := ceAnsi;
+    FConsettings.ClientCodePage.CP := FromCP;
+    Result := ZDbcString(Ansi, FConSettings);
+    FConsettings.ClientCodePage.CP := CurrentCP;
+    FConSettings.ClientCodePage.Encoding := CurrentEncoding;
+  end;
+end;
+
 function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString;
   const Encoding: TZCharEncoding = ceDefault): String;
 var
@@ -597,6 +623,28 @@ begin
   end;
 end;
 
+function TZCodePagedObject.ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString;
+var
+  CurrentCP: Word;
+  CurrentEncoding: TZCharEncoding;
+begin
+  if ToCP = ConSettings.ClientCodePage.CP then
+    Result := ZPlainString(AStr)
+  else
+  begin
+    CurrentCP := ConSettings.ClientCodePage.CP;
+    CurrentEncoding := ConSettings.ClientCodePage.Encoding;
+    ConSettings.ClientCodePage.CP := ToCP;
+    if ( ToCP = zCP_UTF8 ) then
+      ConSettings.ClientCodePage.Encoding := ceUTF8
+    else
+      ConSettings.ClientCodePage.Encoding := ceAnsi;
+    Result := ZPlainString(AStr, ConSettings);
+    ConSettings.ClientCodePage.CP := CurrentCP;
+    ConSettings.ClientCodePage.Encoding := CurrentEncoding;
+  end;
+end;
+
 function TZCodePagedObject.ZPlainString(const AStr: String;
   const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
 var
@@ -650,6 +698,27 @@ begin
   {$ELSE}
   Result := WideToAnsi(AStr, ConSettings.ClientCodePage.CP);
   {$ENDIF}
+end;
+
+function TZCodePagedObject.ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString;
+var
+  CurrentCP: Word;
+  CurrentEncoding: TZCharEncoding;
+begin
+  if ToCP = ConSettings.ClientCodePage.CP then
+    Result := ZPlainString(AStr)
+  else
+  begin
+    CurrentCP := ConSettings.ClientCodePage.CP;
+    CurrentEncoding := ConSettings.ClientCodePage.Encoding;
+    if ( ToCP = zCP_UTF8 ) then
+      ConSettings.ClientCodePage.Encoding := ceUTF8
+    else
+      ConSettings.ClientCodePage.Encoding := ceAnsi;
+    Result := ZPlainString(AStr, ConSettings);
+    ConSettings.ClientCodePage.CP := CurrentCP;
+    ConSettings.ClientCodePage.Encoding := CurrentEncoding;
+  end;
 end;
 
 function TZCodePagedObject.ZPlainUnicodeString(const AStr: String): WideString;

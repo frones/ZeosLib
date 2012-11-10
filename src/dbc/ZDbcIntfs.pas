@@ -201,7 +201,8 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function GetSupportedClientCodePages(const Url: TZURL;
-      Const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} SupportedsOnly: Boolean): TStringDynArray;
+      Const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} SupportedsOnly: Boolean;
+      CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function Connect(const Url: string; Info: TStrings): IZConnection; overload;
     function Connect(const Url: TZURL): IZConnection; overload;
     function GetClientVersion(const Url: string): Integer;

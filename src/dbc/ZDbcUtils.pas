@@ -175,7 +175,7 @@ function WideStringStream(const AString: WideString): TStream;
 
 implementation
 
-uses ZMessages, ZSysUtils;
+uses ZMessages, ZSysUtils, ZEncoding;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -472,14 +472,14 @@ begin
   BinToHex(Value, PAnsiChar(HexVal), Len);
 
   if ODBC then
-    Result := '0x'+WideString(HexVal)
+    Result := '0x'+ZWideString(HexVal)
   else
-    Result := 'x'#39+WideString(HexVal)+#39;
+    Result := 'x'#39+ZWideString(HexVal)+#39;
 end;
 
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZAnsiString;
 var
-  HexVal: AnsiString;
+  HexVal: ZAnsiString;
 begin
   SetLength(HexVal,Len * 2 );
   BinToHex(Value, PAnsiChar(HexVal), Len);
@@ -492,7 +492,7 @@ end;
 
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   Result := GetSQLHexWideString(Value, Len, ODBC);
   {$ELSE}
   Result := GetSQLHexAnsiString(Value, Len, ODBC);
@@ -526,22 +526,25 @@ begin
     if SQLType = stString then
       //the RowAccessor assumes SizeOf(Char)*Precision+SizeOf(Char)
       //the Field assumes Precision*SizeOf(Char)
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       if ConSettings.ClientCodePage.CharWidth >= 2 then //All others > 3 are UTF8
         Result := TempPrecision * 2 //add more mem for a reserved thirt byte
       else //two and one byte AnsiChars are one WideChar
         Result := TempPrecision
       {$ELSE}
-        {if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
+        if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
           Result := TempPrecision * 4
-        else}
+        else
           Result := TempPrecision * CharWidth
       {$ENDIF}
     else //stUnicodeString
       //UTF8 can pickup LittleEndian/BigEndian 4 Byte Chars
       //the RowAccessor assumes 2*Precision+2!
       //the Field assumes 2*Precision ??Does it?
-      Result := TempPrecision * 2;
+      if CharWidth > 2 then
+        Result := TempPrecision * 2
+      else
+        Result := TempPrecision;
   end
   else
     Result := Precision;

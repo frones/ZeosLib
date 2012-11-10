@@ -93,7 +93,8 @@ type
 
     function GetSupportedProtocols: TStringDynArray;
     function GetSupportedClientCodePages(const Url: TZURL;
-      Const {$IFNDEF UNICODE}AutoEncode, {$ENDIF} SupportedsOnly: Boolean): TStringDynArray;
+      Const {$IFNDEF UNICODE}AutoEncode, {$ENDIF} SupportedsOnly: Boolean;
+      CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
     function Connect(const Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
@@ -321,13 +322,15 @@ end;
   For example: ASCII, UTF8...
 }
 function TZAbstractDriver.GetSupportedClientCodePages(const Url: TZURL;
-  Const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} SupportedsOnly: Boolean): TStringDynArray;
+  Const {$IFNDEF UNICODE}AutoEncode,{$ENDIF} SupportedsOnly: Boolean;
+  CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
 var
   Plain: IZPlainDriver;
 begin
   Plain := GetPlainDriverFromCache(Url.Protocol, '');
   if Assigned(Plain) then
-  Result := Plain.GetSupportedClientCodePages({$IFNDEF UNICODE}AutoEncode,{$ENDIF} not SupportedsOnly);
+  Result := Plain.GetSupportedClientCodePages({$IFNDEF UNICODE}AutoEncode,{$ENDIF}
+    not SupportedsOnly, CtrlsCPType);
 end;
 
 {**

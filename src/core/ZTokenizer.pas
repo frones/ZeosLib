@@ -971,7 +971,6 @@ begin
     else
          Break;
   end;
-  SetLength(FChildren, 0);
   FParent := nil;
   inherited Destroy;
 end;
