@@ -1812,7 +1812,7 @@ begin
         case TypeName of
           7, 8 : Result.UpdateInt(7, 0);
           16   : Result.UpdateInt(7, GetInt(ColumnIndexes[9]));
-          37, 38: UpdateNull(7);
+          37, 38: UpdateNull(7);  //the defaults of the resultsets will be used if null
             {if ( ConSettings.ClientCodePage.ID = 0 ) then //CharcterSet 'NONE'
               Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings,
                 GetInt(ColumnIndexes[10]), GetConnection.GetIZPlainDriver.ValidateCharEncoding(SubTypeName).CharWidth, nil, True)) //FireBird return Char*Bytes for Varchar
