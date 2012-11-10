@@ -457,7 +457,6 @@ begin
   else
   begin
     CurrentCP := FConsettings.ClientCodePage.CP;
-    CurrentEncoding := FConsettings.ClientCodePage.Encoding;
     CurrentEncoding := FConSettings.ClientCodePage.Encoding;
     if ( FromCP = zCP_UTF8 ) then
       FConSettings.ClientCodePage.Encoding := ceUTF8
@@ -711,6 +710,7 @@ begin
   begin
     CurrentCP := ConSettings.ClientCodePage.CP;
     CurrentEncoding := ConSettings.ClientCodePage.Encoding;
+    ConSettings.ClientCodePage.CP := ToCP;
     if ( ToCP = zCP_UTF8 ) then
       ConSettings.ClientCodePage.Encoding := ceUTF8
     else
