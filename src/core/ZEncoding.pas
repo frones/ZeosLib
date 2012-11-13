@@ -62,7 +62,7 @@ uses
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}
-  {$IF not defined(WITH_UNICODEFROMLOCALECHARS) and defined(DELPHI) or (defined(FPC) and not defined(WITH_WIDEMOVEPROC_CP))}
+  {$IF defined(MSWINDOWS) and not (defined(WITH_UNICODEFROMLOCALECHARS) or defined(WITH_WIDEMOVEPROC_CP))}
   Windows,
   {$IFEND}
   ZCompatibility;
