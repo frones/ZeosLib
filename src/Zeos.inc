@@ -349,6 +349,12 @@
 // For Version 6.5.0 you should uncomment the following line
 {$DEFINE USE_METADATA}
 
+//Default. To validate an optimal updatecount of 1. Comment this define if this
+//dafault behavior isn't wanted. On the other hand you can suppress this
+//validation by adding the line ValidateUpdateCount=-1 or FALSE or OFF into the
+// TZDataSetCompoent.Properties(TStrings)
+{$DEFINE WITH_VALIDATE_UPDATE_COUNT}
+
 // A large database may have many tables, colums and/or procedures!!!
 // Therefore there is the ability to show a warning
 // before retrieving a list of these database objects
@@ -367,3 +373,4 @@
 // Compile test applications with a graphical user interface (GUI)
 // Comment this definition if you want to compile console test applications
 {.$DEFINE TESTGUI}
+

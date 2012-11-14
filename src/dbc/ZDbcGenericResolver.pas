@@ -870,9 +870,10 @@ begin
                             or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
       lUpdateCount := Statement.ExecuteUpdatePrepared;
-      if  (lValidateUpdateCount)
-      and (lUpdateCount <> 1   ) then
+      {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+      if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
         raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+      {$ENDIF}
     end;
   finally
     FreeAndNil(SQLParams);
