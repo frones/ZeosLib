@@ -387,14 +387,10 @@ begin
       stString:
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
       stUnicodeString:
-        {$IFDEF WITH_UNITANSISTRINGS}
         if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          Result := 'N'+AnsiStrings.AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
+          Result := 'N'+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
         else
-          Result := AnsiStrings.AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings),'''');
-        {$ELSE}
-        Result := 'N'+AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''');
-        {$ENDIF}
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings),'''');
       stBytes:
         begin
           TempBytes := StrToBytes(AnsiString(SoftVarManager.GetAsString(Value)));

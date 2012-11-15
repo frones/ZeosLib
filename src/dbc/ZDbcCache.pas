@@ -95,7 +95,7 @@ type
   PZRowBuffer = ^TZRowBuffer;
 
   {** Implements a column buffer accessor. }
-  TZRowAccessor = class(TObject)
+  TZRowAccessor = class(TZCodePagedObject)
   private
     FRowSize: Integer;
     FColumnsSize: Integer;
@@ -120,7 +120,7 @@ type
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
 
   public
-    constructor Create(ColumnsInfo: TObjectList);
+    constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
     destructor Destroy; override;
 
     function AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
@@ -228,11 +228,12 @@ uses Math, ZMessages, ZSysUtils, ZDbcUtils
   Creates this object and assignes the main properties.
   @param ColumnsInfo a collection with column information.
 }
-constructor TZRowAccessor.Create(ColumnsInfo: TObjectList);
+constructor TZRowAccessor.Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
 var
   I: Integer;
   Current: TZColumnInfo;
 begin
+  Self.ConSettings := ConSettings;
   FBuffer := nil;
   FColumnCount := ColumnsInfo.Count;
   FColumnsSize := 0;
@@ -633,7 +634,7 @@ begin
         Result := CompareBool(PWordBool(ValuePtr1)^, PWordBool(ValuePtr2)^);
       stDate, stTime, stTimestamp:
         Result := CompareFloat(PDateTime(ValuePtr1)^, PDateTime(ValuePtr2)^);
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       stUnicodeString,stString:
         Result := WideCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
       {$ELSE}
@@ -944,7 +945,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stString:
+      stString{$IFDEF UNICODE}, stUnicodeString{$ENDIF}:
         Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
       else
       begin
@@ -992,8 +993,8 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
-      stString{$IFDEF DELPHI12_UP},{$ELSE}: Result := PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);{$ENDIF}
-      stUnicodeString, stUnicodeStream: Result := {$IFDEF DELPHI12_UP}({$ELSE}UTF8ToAnsi(UTF8Encode{$ENDIF}(GetUnicodeString(ColumnIndex, IsNull))); //wide down to Ansi
+      stString: Result := PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+      stUnicodeString, stUnicodeStream: Result := ZDbcString(GetUnicodeString(ColumnIndex, IsNull)); //wide down to expect codpage Ansi
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
@@ -1033,7 +1034,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stUnicodeString{$IFDEF DELPHI12_UP}, stString{$ENDIF}:
+      stUnicodeString{$IFDEF UNICODE}, stString{$ENDIF}:
         Result := PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeStream:
         begin
@@ -1041,6 +1042,9 @@ begin
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
             Result := TempBlob.GetUnicodeString;
         end;
+      {$IFNDEF UNICODE}
+      stString: Result := ZDbcUnicodeString(GetString(ColumnIndex, IsNull), ConSettings.CTRL_CP);
+      {$ENDIF}
       else
         Result := WideString(GetString(ColumnIndex, IsNull));
     end;
@@ -1402,8 +1406,10 @@ begin
               + 1 + SizeOf(SmallInt) + I];
           end;
         end;
+      stBinaryStream:
+        Result := GetBlob(ColumnIndex, IsNull).GetBytes;
       else
-        Result := StrToBytes(AnsiString(GetString(ColumnIndex, IsNull)));
+        Result := StrToBytes(ZAnsiString(GetString(ColumnIndex, IsNull)));
     end;
     IsNull := False;
   end
@@ -1774,12 +1780,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if (FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0)
-    and (FColumnTypes[ColumnIndex - 1] in [stAsciiStream, stBinaryStream,
-    stUnicodeStream]) then
-  begin
+  if (FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0) and 
+  	(FColumnTypes[ColumnIndex - 1] in [stAsciiStream, stBinaryStream, stUnicodeStream]) then
     SetBlobObject(FBuffer, ColumnIndex, nil);
-  end;
   FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 1;
 end;
 
@@ -2118,21 +2121,32 @@ begin
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
-    {$IFNDEF DELPHI12_UP}
+    {$IFNDEF UNICODE}
     stString:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         StrPLCopy(PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
           Value, FColumnLengths[ColumnIndex - 1]- 1);
       end;
-    {$ENDIF}
-    stUnicodeString{$IFDEF DELPHI12_UP}, stString{$ENDIF}: SetUnicodeString(ColumnIndex, Value);
+	{$ENDIF}
+    stUnicodeString, stUnicodeStream {$IFDEF UNICODE}, stString{$ENDIF}:
+      {$IFDEF UNICODE}
+      SetUnicodeString(ColumnIndex, Value);
+      {$ELSE}
+      SetUnicodeString(ColumnIndex, ZDbcUnicodeString(Value, ConSettings.CTRL_CP));
+      {$ENDIF}
     stBytes: SetBytes(ColumnIndex, StrToBytes(AnsiString(Value)));
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    stAsciiStream, stUnicodeStream, stBinaryStream:
-      GetBlob(ColumnIndex, IsNull).SetString(AnsiString(Value));
+    stAsciiStream:
+      {$IFDEF UNICODE}
+      GetBlob(ColumnIndex, IsNull).SetString(ZPlainString(Value, ConSettings, ConSettings.CTRL_CP));
+      {$ELSE}
+      GetBlob(ColumnIndex, IsNull).SetString(Value);
+    {$ENDIF}
+    stBinaryStream:
+      GetBlob(ColumnIndex, IsNull).SetString(ZAnsiString(Value));
   end;
 end;
 
@@ -2147,6 +2161,7 @@ end;
   @param x the new column value
 }
 procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: WideString);
+var IsNull: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -2163,8 +2178,10 @@ begin
         else
           PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := #0;
       end;
+    stUnicodeStream:
+      GetBlob(ColumnIndex, IsNull).SetUnicodeString(Value);
     else
-      SetString(ColumnIndex, {$IFNDEF DELPHI12_UP}UTF8Decode{$ENDIF}(Value));
+      SetString(ColumnIndex, ZDbcString(Value));
   end;
 end;
 

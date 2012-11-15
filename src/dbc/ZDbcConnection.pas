@@ -287,9 +287,8 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF}
-  {$IFDEF MSWINDOWS}, Windows{$ENDIF};
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+  {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }
 

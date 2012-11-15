@@ -219,7 +219,7 @@ var
 begin
   ColumnsInfo := GetColumnsInfoCollection;
   try
-    Result := TZRowAccessor.Create(ColumnsInfo);
+    Result := TZRowAccessor.Create(ColumnsInfo, @ConSettingsDummy);
     Result.Alloc;
   finally
     ColumnsInfo.Free;
@@ -861,7 +861,7 @@ begin
 
   Collection := GetColumnsInfoCollection;
   try
-    RowAccessor := TZRowAccessor.Create(Collection);
+    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy);
     try
       RowAccessor.Dispose;
     finally

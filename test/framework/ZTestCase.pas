@@ -156,7 +156,7 @@ uses
 {$ELSE}
   Windows,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConfig, Math;
+  SysUtils, ZSysUtils, ZTestConfig, Math, ZEncoding;
 
 {$IFDEF FPC}
 function CallerAddr: Pointer;
@@ -393,27 +393,38 @@ procedure TZAbstractTestCase.CheckEquals(Expected, Actual: String; ConSettings: 
 var Temp: String;
 {$ENDIF}
 begin
-  {$IFDEF UNICODE}
-  CheckEquals(Expected, Actual, _Message);
-  {$ELSE}
-    if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-      if (ConSettings.CPType = cCP_UTF8) then
+  {$IFNDEF UNICODE}
+  if ConSettings.ClientCodePage.Encoding = ceUTF8 then
+    if (ConSettings.CPType = cCP_UTF8) then
+      Temp := UTF8Encode(WideString(Expected))
+    else //cGET_ACP / cCP_UTF16
+      if Consettings.CTRL_CP = zCP_UTF8 then
         Temp := UTF8Encode(WideString(Expected))
-      else //cGET_ACP / cCP_UTF16
+      else
         if ConSettings.AutoEncode or ( ConSettings.CPType = cCP_UTF16 ) then
           Temp := Expected
         else
           Temp := UTF8Encode(WideString(Expected))
-    else //ceAnsi
-      if ( ConSettings.CPType = cGET_ACP ) or ( ConSettings.CPType = cCP_UTF16 ) then //ftWideString returns a decoded value
+  else //ceAnsi
+    if ( ConSettings.CPType = cGET_ACP ) or ( ConSettings.CPType = cCP_UTF16 ) then //ftWideString returns a decoded value
+      if Consettings.CTRL_CP = zCP_UTF8 then
+        Temp := UTF8Encode(WideString(Expected))
+      else
         Temp := Expected
-      else //cCP_UTF8
+    else
+      //cCP_UTF8
+      if ConSettings.CPType = cCP_UTF16 then
+        if Consettings.CTRL_CP = zCP_UTF8 then
+          Temp := UTF8Encode(WideString(Expected))
+        else
+          Temp := Expected
+      else
         if ConSettings.AutoEncode then
           Temp := UTF8Encode(WideString(Expected))
         else
           Temp := Expected;
-  CheckEquals(Temp, Actual, _Message)
   {$ENDIF}
+  CheckEquals({$IFNDEF UNICODE}Temp{$ELSE}Expected{$ENDIF}, Actual, _Message)
 end;
 
 {**

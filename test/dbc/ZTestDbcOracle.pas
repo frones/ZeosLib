@@ -427,14 +427,14 @@ begin
   CheckEquals(ZAnsiString('Test string'), ResultSet.GetBlob(2).GetString);
   CheckEquals(ZAnsiString('Test string'), ResultSet.GetBlob(3).GetString);
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    ResultSet.GetBlob(4).GetString);
+    String(ResultSet.GetBlob(4).GetString));
 
   Check(ResultSet.Next);
   CheckEquals(3, ResultSet.GetInt(1));
   CheckEquals('111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111',
-    ResultSet.GetBlob(2).GetString);
+    String(ResultSet.GetBlob(2).GetString));
   CheckEquals('111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111',
-    ResultSet.GetBlob(3).GetString);
+    String(ResultSet.GetBlob(3).GetString));
   Check(ResultSet.IsNull(4));
 
   ResultSet.Close;
@@ -452,11 +452,11 @@ begin
   Check(ResultSet.Next);
   CheckEquals(2, ResultSet.GetInt(1));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    ResultSet.GetBlob(2).GetString);
+    String(ResultSet.GetBlob(2).GetString));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    ResultSet.GetBlob(3).GetString);
+    String(ResultSet.GetBlob(3).GetString));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    ResultSet.GetBlob(4).GetString);
+    String(ResultSet.GetBlob(4).GetString));
 
   Check(ResultSet.Next);
   CheckEquals(3, ResultSet.GetInt(1));

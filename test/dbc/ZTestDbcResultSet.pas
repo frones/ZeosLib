@@ -272,7 +272,7 @@ begin
   Check(not Blob.IsEmpty, 'IsEmpty');
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(Length(FString), Blob.Length, 'Length');
-  ResultString := Blob.GetString;
+  ResultString := String(Blob.GetString);
   CheckEquals(FString, ResultString, 'Strings comapre');
   Blob := nil;
 
