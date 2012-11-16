@@ -728,7 +728,7 @@ var
   CurrentEncoding: TZCharEncoding;
 begin
   if ToCP = ConSettings.ClientCodePage.CP then
-    Result := ZPlainString(AStr)
+    Result := ZPlainString(AStr, ConSettings)
   else
   begin
     CurrentCP := ConSettings.ClientCodePage.CP;
@@ -805,7 +805,7 @@ var
   CurrentEncoding: TZCharEncoding;
 begin
   if ToCP = ConSettings.ClientCodePage.CP then
-    Result := ZPlainString(AStr)
+    Result := ZPlainString(AStr, ConSettings)
   else
   begin
     CurrentCP := ConSettings.ClientCodePage.CP;
