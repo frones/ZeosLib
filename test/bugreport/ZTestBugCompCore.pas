@@ -207,6 +207,8 @@ procedure ZTestCompCoreBugReport.Test000002;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -234,6 +236,8 @@ procedure ZTestCompCoreBugReport.Test000001;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -277,6 +281,8 @@ var
   TextStream: TMemoryStream;
   BinaryStream: TMemoryStream;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -327,6 +333,8 @@ procedure ZTestCompCoreBugReport.Test707364;
 var
   Processor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
@@ -349,6 +357,8 @@ var
   Query: TZQuery;
   RecNo: Integer;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -380,6 +390,8 @@ procedure ZTestCompCoreBugReport.Test722651;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -428,6 +440,8 @@ procedure ZTestCompCoreBugReport.Test000003;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -454,6 +468,8 @@ procedure ZTestCompCoreBugReport.Test773022;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -510,6 +526,8 @@ procedure ZTestCompCoreBugReport.Test772926;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -579,6 +597,8 @@ procedure ZTestCompCoreBugReport.Test793351;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -627,6 +647,8 @@ var
   FieldDefs: TFieldDefs;
   CalcField: TField;
 begin
+  if SkipTest then Exit;
+
 //  if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -676,6 +698,8 @@ var
   FieldDefs: TFieldDefs;
   CalcField: TField;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   {$IFDEF FPC}
@@ -731,6 +755,8 @@ var
   Query: TZQuery;
   RefreshQuery: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -783,6 +809,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := TZConnection.Create(nil);
@@ -802,6 +830,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -830,6 +860,8 @@ var
   Connection: TZConnection;
   SQLProcessor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -857,6 +889,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -902,6 +936,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -987,6 +1023,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1019,6 +1057,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1063,6 +1103,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1093,6 +1135,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1121,6 +1165,8 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1145,6 +1191,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1182,6 +1230,8 @@ procedure ZTestCompCoreBugReport.Test880459;
 var
   Processor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
@@ -1211,6 +1261,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1247,6 +1299,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1279,6 +1333,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1317,6 +1373,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1380,6 +1438,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1427,6 +1487,8 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1514,6 +1576,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1541,24 +1605,29 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
-  Query.SQL.Text := 'Insert into number_values(n_id, n_money) values(999999,643.11)';
-  Query.ExecSQL;
-
   try
-    Query.SQL.Text := 'select n_money from number_values where n_id=999999';
-    Query.Open;
-    // uses format to avoid local separator differences 
-    CheckEquals(trim(Format('%8.2f', [643.11])),Query.Fields[0].AsString);
+    Query.Connection := Connection;
+    Query.SQL.Text := 'Insert into number_values(n_id, n_money) values(999999,643.11)';
+    Query.ExecSQL;
 
-    Query.Close;
+    try
+      Query.SQL.Text := 'select n_money from number_values where n_id=999999';
+      Query.Open;
+      // uses format to avoid local separator differences
+      CheckEquals(trim(Format('%8.2f', [643.11])),Query.Fields[0].AsString);
+
+      Query.Close;
+    finally
+      Query.SQL.Text := 'delete from number_values where n_id=999999';
+      Query.execSql;
+    end;
   finally
-    Query.SQL.Text := 'delete from number_values where n_id=999999';
-    Query.execSql;
     Query.Free;
     Connection.Free;
   end;
@@ -1573,6 +1642,8 @@ var
   Connection: TZConnection;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
@@ -1611,6 +1682,8 @@ procedure ZTestCompCoreBugReport.Test996283;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
@@ -1648,6 +1721,8 @@ procedure ZTestCompCoreBugReport.Test1004534;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
@@ -1677,6 +1752,8 @@ procedure ZTestCompCoreBugReport.Test1012751;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1700,6 +1777,8 @@ procedure ZTestCompCoreBugReport.Test1022415;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1723,6 +1802,8 @@ procedure ZTestCompCoreBugReport.Test1049821;
 var
   Processor: TZSQLProcessor;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
@@ -1747,6 +1828,8 @@ procedure ZTestCompCoreBugReport.Test1045500;
 var
   Metadata: TZSQLMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Metadata := TZSQLMetadata.Create(nil);
@@ -1769,6 +1852,8 @@ procedure ZTestCompCoreBugReport.Test1036916;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZQuery.Create(nil);
@@ -1821,6 +1906,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1841,6 +1928,7 @@ begin
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
+      SL.Free;
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       try
@@ -1866,10 +1954,10 @@ begin
         on E:Exception do
             Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
-      StrStream1.Free;
     end;
   finally
     Query.Free;
+    StrStream1.Free;
   end;
 end;
 {**
@@ -1877,6 +1965,8 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test1004584;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
@@ -1909,60 +1999,9 @@ var
     inc(RowCounter);
   end;
 
-  procedure CheckAnsi;
-  begin
-    Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 5);
-    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, 125)+'%', #39)
-    else
-      if StartsWith(Connection.Protocol, 'oracle')  then
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(str2, 1, Length(Str2) div 2)+'%', #39)
-      else
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str2+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 1);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str3+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str4+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str5+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Str6+'%', #39);
-    Query.Open;
-  end;
-
-  procedure CheckUTF8;
-  begin
-    Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 5);
-    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
-      Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, 125)+'%', #39)
-    else
-      if StartsWith(Connection.Protocol, 'oracle') then
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Copy(Utf8Encode(Str2), 1, Length(Utf8Encode(Str2)) div 2)+'%', #39)
-      else
-        Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 1);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str4)+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str5)+'%', #39);
-    Query.Open;
-    CheckEquals(True, Query.RecordCount = 2);
-    Query.SQL.Text := 'select * from string_values where s_varchar like '+AnsiQuotedStr('%'+Utf8Encode(Str6)+'%', #39);
-    Query.Open;
-  end;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   Connection.Connect;
@@ -1979,25 +2018,29 @@ begin
     InsertValues(str5, str5, str5, str5);
     InsertValues(str6, str6, str6, str6);
 
-    if Connection.DbcConnection.GetEncoding = ceUTF8 then
-      if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 then
-        CheckAnsi
-      else
-        if Connection.DbcConnection.GetConSettings.AutoEncode then
-          if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
-            CheckUTF8
-          else
-            CheckAnsi
-        else
-          CheckUTF8
+    Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 5);
+    if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
+      Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , False, 125)+'%'''
     else
-      if Connection.DbcConnection.GetConSettings.AutoEncode then
-        if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
-          CheckUTF8
-        else
-          CheckAnsi
+      if StartsWith(Connection.Protocol, 'oracle') then
+        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), Connection.DbcConnection.GetConSettings)+'%'''
       else
-        CheckAnsi;
+        Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 1);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str3+'%''', Connection.DbcConnection.GetConSettings);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str4+'%''', Connection.DbcConnection.GetConSettings);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str5+'%''', Connection.DbcConnection.GetConSettings);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    Query.SQL.Text := 'select * from string_values where s_varchar like '+GetDBTestString('''%'+Str6+'%''', Connection.DbcConnection.GetConSettings);
+    Query.Open;
   finally
     for i := TestRowID to TestRowID+RowCounter do
     begin

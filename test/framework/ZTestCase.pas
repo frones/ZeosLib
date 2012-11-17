@@ -79,7 +79,7 @@ type
   private
     FDecimalSeparator: Char;
     FSuppressTestOutput: Boolean;
-
+    FSkipTest: Boolean;
   protected
     {$IFDEF FPC}
     frefcount : longint;
@@ -104,6 +104,7 @@ type
     procedure LoadConfiguration; virtual;
 
     { Configuration properties accessing methods. }
+    function GetSkipTest: Boolean; virtual;
     function ReadProperty(const Group, Key, Default: string): string;
     function ReadGroupProperty(const Key, Default: string): string;
     function ReadInheritProperty(const Key, Default: string): string;
@@ -123,10 +124,13 @@ type
       const Msg: string = ''); overload;
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
+    (*{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+    procedure CheckEquals(Expected, Actual: RawByteString; Msg: string = ''); overload;
+    {$IFEND}*)
+
 
     { Measurement methods. }
     function GetTickCount: Cardinal;
-
   public
     constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ELSE} overload;{$ENDIF}
     destructor Destroy; override;
@@ -138,6 +142,7 @@ type
     procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
     class function Suite : CTZAbstractTestCase;
     {$ENDIF}
+    property SkipTest: Boolean read GetSkipTest;
   end;
 
   {** Implements a generic test case. }
@@ -151,7 +156,7 @@ uses
 {$ELSE}
   Windows,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConfig;
+  SysUtils, ZSysUtils, ZTestConfig, Math;
 
 {$IFDEF FPC}
 function CallerAddr: Pointer;
@@ -280,6 +285,12 @@ begin
   inherited Destroy;
 end;
 
+function TZAbstractTestCase.GetSkipTest: Boolean;
+begin
+  Check(True);
+  Result := FSkipTest;
+end;
+
 {**
   Loads a configuration from the configuration file.
 }
@@ -296,8 +307,8 @@ begin
   {$IFDEF WITH_FORMATSETTINGS}Formatsettings.{$ELSE}SysUtils.{$ENDIF}DecimalSeparator := FDecimalSeparator;
 
   { Defines a 'suppress test output' setting. }
-  Temp := ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE);
-  FSuppressTestOutput := StrToBoolEx(Temp);
+  FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
+  FSkipTest := StrToBoolEx(ReadInheritProperty(SKIP_TEST_KEY, FALSE_VALUE));
 end;
 
 {**
@@ -378,26 +389,30 @@ end;
 }
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
   _Message: string = '');
+{$IFNDEF UNICODE}
+var Temp: String;
+{$ENDIF}
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   CheckEquals(Expected, Actual, _Message);
   {$ELSE}
     if ConSettings.ClientCodePage.Encoding = ceUTF8 then
       if (ConSettings.CPType = cCP_UTF8) then
-        CheckEquals(UTF8Encode(WideString(Expected)), Actual, _Message)
+        Temp := UTF8Encode(WideString(Expected))
       else //cGET_ACP / cCP_UTF16
         if ConSettings.AutoEncode or ( ConSettings.CPType = cCP_UTF16 ) then
-          CheckEquals(Expected, Actual, _Message)
+          Temp := Expected
         else
-          CheckEquals(UTF8Encode(WideString(Expected)), Actual, _Message)
+          Temp := UTF8Encode(WideString(Expected))
     else //ceAnsi
       if ( ConSettings.CPType = cGET_ACP ) or ( ConSettings.CPType = cCP_UTF16 ) then //ftWideString returns a decoded value
-        CheckEquals(Expected, Actual, _Message)
+        Temp := Expected
       else //cCP_UTF8
         if ConSettings.AutoEncode then
-          CheckEquals(UTF8Encode(WideString(Expected)), Actual, _Message)
+          Temp := UTF8Encode(WideString(Expected))
         else
-          CheckEquals(Expected, Actual, _Message)
+          Temp := Expected;
+  CheckEquals(Temp, Actual, _Message)
   {$ENDIF}
 end;
 
@@ -515,6 +530,16 @@ begin
   if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
 end;
 
+(*{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: RawByteString;
+  Msg: string = '');
+begin
+  if MemLCompAnsi(PAnsiChar(Expected), PAnsiChar(Actual), Max(Length(Expected),Length(Actual))) then
+    Check(True)
+  else
+    CheckEquals(String(Expected), String(Actual), Msg);
+end;
+{$IFEND}*)
 
 {**
   Prints a debug message to standard output.

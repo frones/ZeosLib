@@ -1217,8 +1217,9 @@ begin
     N := 0;
     if Pos('?', SSQL) > 0 then
     begin
+      TempSQL := ''; //init for FPC
       Tokens := Connection.GetDriver.GetTokenizer.
-        TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+        TokenizeBufferToList(SSQL, [toUnifyWhitespaces]);
       try
         for I := 0 to Tokens.Count - 1 do
         begin

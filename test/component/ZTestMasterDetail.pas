@@ -142,6 +142,8 @@ end;
 }
 procedure TZTestMasterDetailCase.TestDataSource;
 begin
+  if SkipTest then Exit;
+
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
   MasterQuery.Open;
 
@@ -165,6 +167,8 @@ end;
 }
 procedure TZTestMasterDetailCase.TestMasterFields;
 begin
+  if SkipTest then Exit;
+
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
   MasterQuery.Open;
 
@@ -194,6 +198,8 @@ var
   SQLMonitor: TZSQLMonitor;
   CommitCount, I: Integer;
 begin
+  if SkipTest then Exit;
+
   SQLMonitor := TZSQLMonitor.Create(nil);
   SQLMonitor.Active := True;
   MasterQuery.SQL.Text := 'SELECT * FROM default_values ORDER BY d_id';
@@ -279,11 +285,17 @@ var
   CommitCount, I: Integer;
 
 begin
+  if SkipTest then Exit;
+
   SQLMonitor := TZSQLMonitor.Create(nil);
   SQLMonitor.Active := True;
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
   MasterQuery.Options := MasterQuery.Options + [doDontSortOnPost];
   MasterQuery.Open;
+
+  CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
 
   DetailQuery.SQL.Text := 'SELECT * FROM people';
   DetailQuery.MasterSource := MasterDataSource;
@@ -298,13 +310,13 @@ begin
     MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
     MasterQuery.FieldByName('dep_shname').AsString := 'abc';
     MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
+
     CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
 
     DetailQuery.Append;
     DetailQuery.FieldByName('p_id').AsInteger := TestRowID;
     DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID;
 
-    DetailQuery.FieldByName('p_name').AsString := GetDBTestString('üהצצהü', Connection.DbcConnection.GetConSettings);
     DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
     DetailQuery.FieldByName('p_end_work').AsDateTime := now;
     DetailQuery.FieldByName('p_picture').AsString := '';

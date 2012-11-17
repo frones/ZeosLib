@@ -56,8 +56,8 @@ unit ZTestDbcMySqlMetadata;
 interface
 {$I ZDbc.inc}
 
-uses SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZTestDefinitions, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcMySql,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
+uses SysUtils, ZDbcIntfs, ZCompatibility, ZTestDefinitions, ZDbcResultSet,
+ ZDbcMySql,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
@@ -128,6 +128,8 @@ procedure TZTestMySqlMetadataCase.TestGetBestRowIdentifier;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetBestRowIdentifier('', '', 'people', 0, false);
   CheckEquals(1, ResultSet.FindColumn('SCOPE'));
   CheckEquals(2, ResultSet.FindColumn('COLUMN_NAME'));
@@ -157,6 +159,8 @@ var
   DBFound: boolean;
   TableName: string;
 begin
+  if SkipTest then Exit;
+
   DBFound := False;
   ResultSet := Metadata.GetCatalogs;
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
@@ -182,6 +186,8 @@ procedure TZTestMySqlMetadataCase.TestGetColumnPrivileges;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   if SkipNonZeosIssues then Exit;
 
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
@@ -225,6 +231,8 @@ procedure TZTestMySqlMetadataCase.TestGetColumns;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetColumns('', '', 'people', 'p_r%');
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
   CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
@@ -299,6 +307,8 @@ procedure TZTestMySqlMetadataCase.TestGetProcedureColumns;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetProcedureColumns('', '', '', '');
   CheckEquals(1, ResultSet.FindColumn('PROCEDURE_CAT'));
   CheckEquals(2, ResultSet.FindColumn('PROCEDURE_SCHEM'));
@@ -325,6 +335,8 @@ procedure TZTestMySqlMetadataCase.TestGetProcedures;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetProcedures('', '', '');
   CheckEquals(1, ResultSet.FindColumn('PROCEDURE_CAT'));
   CheckEquals(2, ResultSet.FindColumn('PROCEDURE_SCHEM'));
@@ -343,6 +355,8 @@ procedure TZTestMySqlMetadataCase.TestGetSchemas;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetSchemas;
   CheckEquals(1, ResultSet.FindColumn('TABLE_SCHEM'));
   Check(not ResultSet.Next);
@@ -357,6 +371,8 @@ procedure TZTestMySqlMetadataCase.TestGetTablePrivileges;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   { To grant privileges:
     grant select on zeoslib.people to root@localhost;
     The result sql is:
@@ -393,6 +409,8 @@ procedure TZTestMySqlMetadataCase.TestGetTables;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetTables('', '', 'people', nil);
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
   CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
@@ -417,6 +435,8 @@ procedure TZTestMySqlMetadataCase.TestGetTableTypes;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetTableTypes;
   CheckEquals(1, ResultSet.FindColumn('TABLE_TYPE'));
 

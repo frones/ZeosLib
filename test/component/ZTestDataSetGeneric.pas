@@ -136,6 +136,8 @@ var
   Table: TZTable;
   ROQuery: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Table := TZTable.Create(nil);
   ROQuery := TZReadOnlyQuery.Create(nil);
@@ -212,6 +214,8 @@ var
   StrStream1, BinStream1: TMemoryStream;
   s:string;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -366,7 +370,7 @@ begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8Decode(Ansi);
+        WS := UTF8ToString(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
@@ -403,12 +407,14 @@ end;
 procedure TZGenericTestDbcResultSet.TestRealPreparedStatement;
 var
   Ansi: AnsiString;
-  WS: WideString;
+  WS: ZWideString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
   s:string;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -564,7 +570,7 @@ begin
         StrStream.position := 0;
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8Decode(Ansi);
+        WS := UTF8ToString(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
@@ -606,6 +612,8 @@ var
   Query: TZQuery;
   s:string;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -691,6 +699,8 @@ procedure TZGenericTestDbcResultSet.TestQuery;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -710,6 +720,8 @@ procedure TZGenericTestDbcResultSet.TestQueryExecSql;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -770,6 +782,8 @@ procedure TZGenericTestDbcResultSet.TestReadOnlyQuery;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -788,6 +802,8 @@ procedure TZGenericTestDbcResultSet.TestRealPrepReadOnlyQuery;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   Query.Options:= Query.Options + [doPreferPrepared];
   try
@@ -803,12 +819,14 @@ end;
 procedure TZGenericTestDbcResultSet.TestQueryUpdate;
 var
   Sql_: string;
-  WS: WideString;
+  WS: ZWideString;
   Ansi: AnsiString;
   Query: TZQuery;
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -917,7 +935,7 @@ begin
       begin
         SetLength(Ansi,StrStream.Size);
         StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8Decode(Ansi);
+        WS := UTF8ToString(Ansi);
         StrStream.Clear;
         StrStream.Write(PWideChar(WS)^, Length(WS)*2);
         StrStream.Position := 0;
@@ -1258,6 +1276,8 @@ procedure TZGenericTestDbcResultSet.TestReadOnlyQueryExecSql;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1319,6 +1339,8 @@ procedure TZGenericTestDbcResultSet.TestQueryFilter;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1422,6 +1444,8 @@ var
   Query: TZReadOnlyQuery;
   ResData : boolean; 
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1445,6 +1469,8 @@ procedure TZGenericTestDbcResultSet.TestReadOnlyQueryFilter;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1461,6 +1487,8 @@ procedure TZGenericTestDbcResultSet.TestFilterExpression;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1492,6 +1520,8 @@ var
   FieldDirs: TBooleanDynArray;
   OnlyDataFields: Boolean;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1528,6 +1558,8 @@ procedure TZGenericTestDbcResultSet.TestSmartOpen;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1593,6 +1625,8 @@ procedure TZGenericTestDbcResultSet.TestPrepare;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZReadOnlyQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1636,6 +1670,8 @@ procedure TZGenericTestDbcResultSet.TestTimeFilterExpression;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1668,6 +1704,8 @@ var
   Query: TZQuery;
   Date_came,Date_out : TDateTime;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1715,6 +1753,8 @@ procedure TZGenericTestDbcResultSet.TestTimeLocateExpression;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1739,6 +1779,8 @@ procedure TZGenericTestDbcResultSet.TestDateTimeLocateExpression;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1760,6 +1802,8 @@ procedure TZGenericTestDbcResultSet.TestDoubleFloatParams;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1806,6 +1850,8 @@ var
   TextLob, BinLob: String;
   TempConnection: TZConnection;
 begin
+  if SkipTest then Exit;
+
   TempConnection := nil;
   BinStream:=nil;
   BinStream1:=nil;

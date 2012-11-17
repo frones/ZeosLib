@@ -59,7 +59,7 @@ interface
 
 uses
   Types, Classes, SysUtils, Contnrs,
-  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZPlainDriver;
+  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -175,7 +175,7 @@ function WideStringStream(const AString: WideString): TStream;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding;
+uses ZMessages, ZSysUtils;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -532,9 +532,9 @@ begin
       else //two and one byte AnsiChars are one WideChar
         Result := TempPrecision
       {$ELSE}
-        if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
+        {if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
           Result := TempPrecision * 4
-        else
+        else}
           Result := TempPrecision * CharWidth
       {$ENDIF}
     else //stUnicodeString

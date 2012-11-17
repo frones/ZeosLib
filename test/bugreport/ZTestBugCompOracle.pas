@@ -112,6 +112,8 @@ procedure ZTestCompOracleBugReport.TestNum1;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   try
@@ -130,6 +132,8 @@ procedure ZTestCompOracleBugReport.TestNestedDataSetFields;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   try

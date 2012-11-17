@@ -62,7 +62,7 @@ uses
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}
-  {$IF not defined(WITH_UNICODEFROMLOCALECHARS) and (defined(DELPHI) or defined (MSWINDOWS))}
+  {$IF not defined(WITH_UNICODEFROMLOCALECHARS) and defined(DELPHI) or (defined(FPC) and not defined(WITH_WIDEMOVEPROC_CP))}
   Windows,
   {$IFEND}
   ZCompatibility;
@@ -271,29 +271,8 @@ const
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
   out PlainConvert, DbcConvert: TConvertEncodingFunction);
-{$ENDIF}
 
-{$IFDEF WITH_LIBICONV}
-type
-  iconv_t = pointer;
-
-  TIConvCPInfo = record
-   CP: word;
-   Name: String;
-  end;
-
-  {$if (not defined(bsd) and not defined(beos)) or (defined(darwin) and not defined(cpupowerpc32))}
-  function iconv_open(tocode: PAnsiChar; fromcode: PAnsiChar):iconv_t;cdecl;external libiconvname name 'iconv_open';
-  function iconv(cd: iconv_t; inbuf: PPAnsiChar; inbytesleft: psize_t; __outbuf: PPAnsiChar; outbytesleft: psize_t): size_t; cdecl; external libiconvname name 'iconv';
-  function iconv_close(cd: iconv_t): cint; cdecl; external libiconvname name 'iconv_close';
-  {$ELSE}
-  function iconv_open(tocode: PAnsiChar; fromcode: PAnsiChar):iconv_t;cdecl;external libiconvname name 'libiconv_open';
-  function iconv(cd: iconv_t; inbuf: PPAnsiChar; inbytesleft: psize_t; __outbuf: PPAnsiChar; outbytesleft: psize_t): size_t; cdecl; external libiconvname name 'libiconv';
-  function iconv_close(cd: iconv_t): cint; cdecl; external libiconvname name 'libiconv_close';
-  {$IFEND}
-{$ENDIF}
-
-{$IF defined(DELPHI) or defined (MSWINDOWS)}
+{$ELSE}
 
 {$IFDEF WITH_UNICODEFROMLOCALECHARS}
 const
@@ -316,10 +295,9 @@ function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
   ZAnsiString;
-function StringToAnsiEx(const s: String; const {$IFNDEF DELPHI12_UP}FromCP, {$ENDIF} ToCP: Word): ZAnsiString;
-function AnsiToStringEx(const s: ZAnsiString;
-  const FromCP{$IFNDEF DELPHI12_UP}, ToCP{$ENDIF}: Word): String;
-{$IFEND}
+function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} ToCP: Word): ZAnsiString;
+function AnsiToStringEx(const s: ZAnsiString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String;
+{$ENDIF}
 
 {**
   Returns the current system codepage of AnsiString
@@ -361,7 +339,7 @@ implementation
 
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
 
-{$IF defined(DELPHI) or defined (MSWINDOWS)}
+{$IFNDEF WITH_LCONVENCODING}
 const
   ZFullMultiByteCodePages: array[0..21] of Word = (50220, 50221, 50222, 50225,
     50227, 50229, 52936, 54936, 54936, 57002, 57003, 57004, 57005, 57006,
@@ -380,145 +358,157 @@ end;
 
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
+{$IFNDEF WITH_WIDEMOVEPROCS_WITH_CP}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
+{$ENDIF}
 begin
   Result := '';
   case CP of
     zCP_UTF8: Result := UTF8ToString(s);
     zCP_NONE: Result := {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}(s);
     else
-      if ( IsFullMultiByteCodePage(CP) ) then //dwFlags must be set to 0!!!
-      begin
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        ulen := Length(s);
-        wlen := UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
-        if wlen = 0 then exit;
-        SetLength(result, wlen);
-        UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, PWideChar(Result), wlen);
-        {$ELSE}
-        l := MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
-        if l = 0 then Exit;
-        SetLength(Result, l - 1); //Set Result-Length
-        MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]),
-          - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
-        {$ENDIF}
-      end
-      else
-      begin
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        ulen := Length(s);
-        wlen := UnicodeFromLocaleChars(cp, MB_PRECOMPOSED, PAnsiChar(S), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
-        if wlen = 0 then exit;
-        SetLength(result, wlen);
-        UnicodeFromLocaleChars(cp, MB_PRECOMPOSED, PAnsiChar(S), ulen, PWideChar(Result), wlen);
-        {$ELSE}
-        l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
-        if l = 0 then Exit;
-        SetLength(Result, l - 1);
-        MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
-          - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
-        {$ENDIF}
-      end;
+      {$IFDEF WITH_WIDEMOVEPROCS_WITH_CP} //FPC2.7+
+      WidestringManager.Ansi2WideMoveProc(PAnsiChar(s), CP, Result, Length(s));
+      {$ELSE}
+        {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+        if ( IsFullMultiByteCodePage(CP) ) then //dwFlags must be set to 0!!!
+        begin
+          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+          ulen := Length(s);
+          wlen := UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
+          if wlen = 0 then exit;
+          SetLength(result, wlen);
+          UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, PWideChar(Result), wlen);
+          {$ELSE}
+          l := MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
+          if l = 0 then Exit;
+          SetLength(Result, l - 1); //Set Result-Length
+          MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]),
+            - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
+          {$ENDIF}
+        end
+        else
+        begin
+          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+          ulen := Length(s);
+          wlen := UnicodeFromLocaleChars(cp, MB_PRECOMPOSED, PAnsiChar(S), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
+          if wlen = 0 then exit;
+          SetLength(result, wlen);
+          UnicodeFromLocaleChars(cp, MB_PRECOMPOSED, PAnsiChar(S), ulen, PWideChar(Result), wlen);
+          {$ELSE}
+          l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
+          if l = 0 then Exit;
+          SetLength(Result, l - 1);
+          MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
+            - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
+          {$ENDIF}
+        end;
+        {$ELSE} //FPC.6-
+          Result := ZWideString(s); //random success!
+        {$IFEND}
+      {$ENDIF}
   end;
 end;
 
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
   ZAnsiString;
+{$IFNDEF WITH_WIDEMOVEPROCS_WITH_CP}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
+{$ENDIF}
 begin
   Result := '';
   case CP of
     zCP_UTF8: Result := UTF8Encode(ws);
     zCP_NONE: Result := ZAnsiString(WS);
     else
-      if ( IsFullMultiByteCodePage(CP)) then //dwFlags MUST be Set to 0!!!!
-      begin
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        wlen := Length(ws);
-        ulen := LocaleCharsFromUnicode(CP, 0, PWideChar(WS), wlen, NIL, 0, NIL, NIL);
-        setlength(Result, ulen);
-        LocaleCharsFromUnicode(CP, 0, PWideChar(WS), wlen, PAnsiChar(Result), ulen, NIL, NIL);
-        {$ELSE}
-        l := WideCharToMultiByte(CP,0, @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
-        if l = 0 then Exit;
-        SetLength(Result, l - 1); //SetResult Length
-        WideCharToMultiByte(CP,0, @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
-        {$ENDIF}
-      end
-      else
-      begin
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        wlen := Length(ws);
-        ulen := LocaleCharsFromUnicode(CP, WC_COMPOSITECHECK or
-          WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-          PWideChar(WS), wlen, NIL, 0, NIL, NIL);
-        setlength(Result, ulen);
-        LocaleCharsFromUnicode(CP, WC_COMPOSITECHECK or
-          WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-          PWideChar(WS), wlen, PAnsiChar(Result), ulen, NIL, NIL);
-        {$ELSE}
-        l := WideCharToMultiByte(CP,
-          WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-          @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
-        if l = 0 then Exit;
-        SetLength(Result, l - 1); //SetResult Length
-        WideCharToMultiByte(CP,
-          WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-          @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
-        {$ENDIF}
-      end;
+      {$IFDEF WITH_WIDEMOVEPROCS_WITH_CP} //FPC2.7+
+      WidestringManager.Wide2AnsiMoveProc(PWideChar(WS), Result, CP, Length(WS));
+      {$ELSE}
+        {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+        if ( IsFullMultiByteCodePage(CP)) then //dwFlags MUST be Set to 0!!!!
+        begin
+          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+          wlen := Length(ws);
+          ulen := LocaleCharsFromUnicode(CP, 0, PWideChar(WS), wlen, NIL, 0, NIL, NIL);
+          setlength(Result, ulen);
+          LocaleCharsFromUnicode(CP, 0, PWideChar(WS), wlen, PAnsiChar(Result), ulen, NIL, NIL);
+          {$ELSE}
+          l := WideCharToMultiByte(CP,0, @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
+          if l = 0 then Exit;
+          SetLength(Result, l - 1); //SetResult Length
+          WideCharToMultiByte(CP,0, @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
+          {$ENDIF}
+        end
+        else
+        begin
+          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+          wlen := Length(ws);
+          ulen := LocaleCharsFromUnicode(CP, WC_COMPOSITECHECK or
+            WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+            PWideChar(WS), wlen, NIL, 0, NIL, NIL);
+          setlength(Result, ulen);
+          LocaleCharsFromUnicode(CP, WC_COMPOSITECHECK or
+            WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+            PWideChar(WS), wlen, PAnsiChar(Result), ulen, NIL, NIL);
+          {$ELSE}
+          l := WideCharToMultiByte(CP,
+            WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+            @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
+          if l = 0 then Exit;
+          SetLength(Result, l - 1); //SetResult Length
+          WideCharToMultiByte(CP,
+            WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
+            @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
+          {$ENDIF}
+        end;
+        {$ELSE} //FPC2.6-
+        Result := ZAnsiString(WS); //random success
+        {$IFEND}
+      {$ENDIF}
   end;
 end;
 
 function AnsiToStringEx(const s: ZAnsiString;
-  const FromCP{$IFNDEF DELPHI12_UP}, ToCP{$ENDIF}: Word): String;
+  const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String;
 begin
   if s = '' then
     Result := ''
   else
-    if ( FromCP = zCP_NONE ) {$IFNDEF DELPHI12_UP} or ( FromCP = ToCP ){$ENDIF}then
+    if ( FromCP = zCP_NONE ) {$IFNDEF UNICODE} or ( FromCP = ToCP ){$ENDIF}then
       Result := String(s)
     else
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       if FromCP = zCP_UTF8 then
         result := UTF8ToString(s)
       else
         Result := AnsiToWide(s, FromCP);
       {$ELSE} //Ansi-Compiler
-        {$IFDEF MSWINDOWS}
         Result := WideToAnsi(AnsiToWide(s, FromCP), ToCP);
-        {$ELSE}
-        Result := String(S);
-        {$ENDIF}
       {$ENDIF}
 end;
 
-function StringToAnsiEx(const s: String; const {$IFNDEF DELPHI12_UP}FromCP, {$ENDIF} ToCP: Word): ZAnsiString;
+function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP, {$ENDIF} ToCP: Word): ZAnsiString;
 begin
   if s = '' then
     Result := ''
   else
-    if ( ToCP = zCP_NONE ) {$IFNDEF DELPHI12_UP} or ( FromCP = ToCP ){$ENDIF}then
+    if ( ToCP = zCP_NONE ) {$IFNDEF UNICODE} or ( FromCP = ToCP ){$ENDIF}then
       Result := ZAnsiString(s)
     else
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       if ToCP = zCP_UTF8 then
         result := UTF8Encode(s)
       else
         Result := WideToAnsi(s, ToCP);
       {$ELSE} //Ansi-Compiler
-        {$IFDEF MSWINDOWS}
         Result := WideToAnsi(AnsiToWide(s, FromCP), ToCP);
-        {$ELSE}
-        Result := ZAnsiString(S);
-        {$ENDIF}
       {$ENDIF}
 end;
-{$IFEND}
 
-{$IFDEF WITH_LCONVENCODING}
+{$ELSE}
+
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 var
   I: Integer;
@@ -659,7 +649,7 @@ function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
 begin
   Result := ceDefault;
   {EgonHugeist:
-    Step one: Findout, wat's comming in! To avoid User-Bugs
+    Step one: Findout, wat's comming in! To avoid User-Bugs as good as possible
       it is possible that a PAnsiChar OR a PWideChar was written into
       the Stream!!!  And these chars could be trunced with changing the
       Stream.Size.
@@ -675,7 +665,9 @@ begin
         etAnsi:
           { Sure this isn't right in all cases!
             Two/four byte WideChars causing the same result!
-            Leads to pain! Is there a way to get a better test?}
+            Leads to pain! Is there a way to get a better test?
+            I've to start from the premise the function which calls this func
+            should decide wether ansi or unicode}
           Result := ceAnsi;
         etUTF8: Result := ceUTF8; //Exact!
       end
@@ -709,33 +701,21 @@ begin
       ceDefault: Ansi := PAnsiChar(Bytes);
       ceAnsi:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then
-          if ( ConSettings.CTRL_CP <> zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
+          if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
             Ansi := PAnsiChar(Bytes)  //should be exact
           else
-            {$IF defined(DELPHI) or defined (MSWINDOWS)}
             Ansi := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
-            {$ELSE}
-            Ansi := PAnsiChar(Bytes) //trust in compatible results
-            {$IFEND}
         else  //Database expects UTF8
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
             Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
           else
-            {$IF defined(DELPHI) or defined (MSWINDOWS)}
             Ansi := UTF8Encode(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP));
-            {$ELSE}
-            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))); //Can't localize the ansi CP
-            {$IFEND}
       ceUTF8:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
           {$IFDEF WITH_LCONVENCODING}
           Ansi := Consettings.PlainConvertFunc(String(PAnsiChar(Bytes)))
           {$ELSE}
-            {$IF defined(DELPHI) or defined (MSWINDOWS)}
-            Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
-            {$ELSE}
-            Ansi := ZAnsiString(UTF8ToAnsi(PAnsiChar(Bytes))) //tust in compatible results
-            {$IFEND}
+          Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
           {$ENDIF}
          else //UTF8 Expected
            Ansi := PAnsiChar(Bytes);
@@ -747,11 +727,7 @@ begin
             {$IFDEF WITH_LCONVENCODING}
             Ansi := Consettings.PlainConvertFunc(UTF8Encode(WS))
             {$ELSE}
-              {$IF defined(DELPHI) or defined (MSWINDOWS)}
-              Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
-              {$ELSE}
-              Ansi := ZAnsiString(WS) //no idea what to do now
-              {$IFEND}
+            Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
             {$ENDIF}
           else
             Ansi := UTF8Encode(WS);
@@ -792,14 +768,7 @@ begin
       {$IFDEF WITH_LCONVENCODING}
       Result := TStringStream.Create(Consettings.DbcConvertFunc(Ansi))
       {$ELSE}
-        {$IF defined(DELPHI) or defined (MSWINDOWS)}
-        Result := TStringStream.Create(WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP))
-        {$ELSE}
-        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          Result := TStringStream.Create(UTF8ToAnsi(Ansi)) //random success
-        else
-          Result := TStringStream.Create(Ansi)
-        {$IFEND}
+      Result := TStringStream.Create(WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP))
       {$ENDIF}
   else
     Result := nil; // not done yet  and not needed. Makes the compiler happy
@@ -819,11 +788,7 @@ begin
     {$IFDEF WITH_LCONVENCODING}
     Ansi := Consettings.PlainConvertFunc(UTF8Encode(WS));
     {$ELSE}
-      {$IF defined(DELPHI) or defined (MSWINDOWS)}
-      Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
-      {$ELSE}
-      Ansi := ZAnsiString(WS); //no idea what to do here
-      {$IFEND}
+    Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
     {$ENDIF}
 
     Result := TMemoryStream.Create;
@@ -870,11 +835,7 @@ begin
               if ( ConSettings.CTRL_CP = zCP_UTF8) then
                 WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))) //random success
               else
-                {$IF defined(DELPHI) or defined (MSWINDOWS)}
                 WS := AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP);
-                {$ELSE}
-                WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))); //random success
-                {$IFEND}
             end;
         ceAnsi: //We've to start from the premisse we've got a Unicode string i there
           begin
@@ -914,11 +875,7 @@ begin
       {$IFDEF WITH_LCONVENCODING}
       WS := UTF8ToString(Consettings.DbcConvertFunc(Ansi))
       {$ELSE}
-        {$IF defined(DELPHI) or defined (MSWINDOWS)}
-        WS := AnsiToWide(Ansi, ConSettings.ClientCodePage.CP)
-        {$ELSE}
-        WS := UTF8ToString(AnsiToUTF8(String(Ansi))) //random success
-        {$IFEND}
+      WS := AnsiToWide(Ansi, ConSettings.ClientCodePage.CP)
       {$ENDIF}
     else
       case DetectUTF8Encoding(Ansi) of
@@ -927,11 +884,7 @@ begin
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
             WS := UTF8ToString(AnsiToUTF8(String(Ansi))) //random success
           else
-            {$IF defined(DELPHI) or defined (MSWINDOWS)}
             WS := AnsiToWide(Ansi, ConSettings.CTRL_CP);
-            {$ELSE}
-            WS := UTF8ToString(AnsiToUTF8(String(Ansi))); //random success
-            {$IFEND}
       end;
 
     Len := Length(WS)*2;

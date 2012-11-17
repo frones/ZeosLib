@@ -257,7 +257,11 @@ begin
           FieldPrecision, FieldDecimals, ConSettings.CPType);
       end;
       if ColumnType = stString then
-        ColumnDisplaySize := FieldPrecision div {$IFDEF DELPHI12_UP}2{$ELSE}4{$ENDIF};
+        if Zencoding.ZDefaultSystemCodePage = zCP_UTF8 then
+          ColumnDisplaySize := FieldPrecision div 4
+        else
+          ColumnDisplaySize := FieldPrecision div 2;
+
       if ColumnType = stUnicodeString then
         ColumnDisplaySize := FieldPrecision div 2;
 

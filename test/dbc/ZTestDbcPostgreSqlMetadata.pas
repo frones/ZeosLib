@@ -117,6 +117,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetVersionColumns;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetVersionColumns('', '', '');
   with ResultSet do
   begin
@@ -173,6 +175,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetBestRowIdentifier;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetBestRowIdentifier('', '', 'people', 0, false);
   with ResultSet do
   begin
@@ -205,6 +209,8 @@ var
   DBFound: boolean;
   TableName: string;
 begin
+  if SkipTest then Exit;
+
   DBFound := False;
   ResultSet := Metadata.GetCatalogs;
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
@@ -230,6 +236,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetColumnPrivileges;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
   with ResultSet do
   begin
@@ -263,6 +271,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetColumns;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetColumns('', '', 'people', 'p_r%');
   with ResultSet do
   begin
@@ -340,6 +350,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetProcedureColumns;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetProcedureColumns('', '', 'procedure1', '');
   with ResultSet do
   begin
@@ -398,6 +410,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetProcedures;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetProcedures('', '', 'procedure%');
   with ResultSet do
   begin
@@ -426,6 +440,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetSchemas;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetSchemas;
   CheckEquals(1, ResultSet.FindColumn('TABLE_SCHEM'));
   ResultSet.Close;
@@ -439,6 +455,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetTablePrivileges;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   { To grant privileges
     grant select on people to root }
   ResultSet := Metadata.GetTablePrivileges('', '', 'people');
@@ -472,6 +490,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetTables;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetTables('', '', 'people', nil);
   with ResultSet do
   begin
@@ -504,6 +524,8 @@ const
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetTableTypes;
   with ResultSet do
   begin
@@ -542,6 +564,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetPrimaryKeys;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetPrimaryKeys('', '', 'people');
   with ResultSet do
   begin
@@ -571,6 +595,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetImportedKeys;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetImportedKeys('', '', 'people');
   with ResultSet do
   begin
@@ -618,6 +644,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetExportedKeys;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetExportedKeys('', '', 'department');
   with ResultSet do
   begin
@@ -695,6 +723,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetCrossReference;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetCrossReference('', '', 'department', '', '', 'people');
   with ResultSet do
   begin
@@ -740,6 +770,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetTypeInfo;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetTypeInfo;
   with ResultSet do
   begin
@@ -756,6 +788,8 @@ procedure TZTestPostgreSqlMetadataCase.TestGetIndexInfo;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   ResultSet := Metadata.GetIndexInfo('', '', 'department', True, True);
   with ResultSet do
   begin
@@ -794,8 +828,10 @@ end;
 
 procedure TZTestPostgreSqlMetadataCase.TestIdentifierQuoting;
 begin
-      Check(Metadata.GetIdentifierConvertor.Quote('A9A')=Metadata.GetDatabaseInfo.GetIdentifierQuoteString[1]+'A9A'+Metadata.GetDatabaseInfo.GetIdentifierQuoteString[length(Metadata.GetDatabaseInfo.GetIdentifierQuoteString)]);
-      Check(Metadata.GetIdentifierConvertor.Quote('a9A')=Metadata.GetDatabaseInfo.GetIdentifierQuoteString[1]+'a9A'+Metadata.GetDatabaseInfo.GetIdentifierQuoteString[length(Metadata.GetDatabaseInfo.GetIdentifierQuoteString)]);
+  if SkipTest then Exit;
+
+  Check(Metadata.GetIdentifierConvertor.Quote('A9A')=Metadata.GetDatabaseInfo.GetIdentifierQuoteString[1]+'A9A'+Metadata.GetDatabaseInfo.GetIdentifierQuoteString[length(Metadata.GetDatabaseInfo.GetIdentifierQuoteString)]);
+  Check(Metadata.GetIdentifierConvertor.Quote('a9A')=Metadata.GetDatabaseInfo.GetIdentifierQuoteString[1]+'a9A'+Metadata.GetDatabaseInfo.GetIdentifierQuoteString[length(Metadata.GetDatabaseInfo.GetIdentifierQuoteString)]);
 end;
 
 initialization

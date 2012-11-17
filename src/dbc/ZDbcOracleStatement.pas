@@ -727,6 +727,8 @@ begin
 
     PrepareOracleStatement(FPlainDriver, ASQL, LogSQL, FHandle, FErrorHandle,
       StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
+    //make sure eventual old buffers are cleaned
+    FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
     AllocateOracleSQLVars(FInVars, FOracleParamsCount);
     FInVars^.ActualNum := FOracleParamsCount;
 
@@ -755,6 +757,7 @@ begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
   end;
 end;
+
 
 procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
@@ -1052,6 +1055,7 @@ end;
 
 destructor TZOracleCallableStatement.Destroy;
 begin
+  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
   PackageIncludedList.Free;
   inherited;
 end;

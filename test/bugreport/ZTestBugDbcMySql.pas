@@ -119,6 +119,8 @@ var
   Statement: IZStatement;
   PrStatement: IZPreparedStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -147,6 +149,8 @@ var
   Statement: IZStatement;
   MetaData: IZResultSetMetaData;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   {test statement}
@@ -178,6 +182,8 @@ var
   Statement: IZStatement;
   MetaData: IZResultSetMetaData;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -212,6 +218,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   {create statement}
@@ -252,6 +260,8 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -282,6 +292,8 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -312,6 +324,8 @@ procedure TZTestDbcMySQLBugReport.Test924861;
 var
   Connection: IZConnection;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   try
@@ -332,6 +346,8 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;

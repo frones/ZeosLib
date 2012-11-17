@@ -297,6 +297,8 @@ var
   Blob: IZBlob;
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
    Blob := GetBlob(14, WasNull);
@@ -321,6 +323,8 @@ end;
 }
 procedure TZTestRowAccessorCase.TestRowAccesorNull;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
    Check(not IsNull(1), 'Not Null boolen column');
@@ -452,6 +456,8 @@ var
   RowBuffer1: PZRowBuffer;
   RowBuffer2: PZRowBuffer;
 begin
+  if SkipTest then Exit;
+
   RowBuffer1 := AllocMem(RowAccessor.RowSize);
   RowBuffer2 := AllocMem(RowAccessor.RowSize);
   RowAccessor.InitBuffer(RowBuffer1);
@@ -566,6 +572,8 @@ var
   BufferChar: array[0..100] of Char;
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     try
@@ -589,6 +597,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorBigDecimal;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(8, WasNull), 'GetBoolean');
@@ -615,6 +625,8 @@ var
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     try
@@ -639,6 +651,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorBoolean;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(1, WasNull), 'GetBoolean');
@@ -660,6 +674,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorByte;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(2, WasNull), 'GetBoolean');
@@ -692,6 +708,8 @@ var
   ByteArray: TByteDynArray;
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     ByteArray := GetBytes(10, WasNull);
@@ -714,6 +732,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorDate;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(FDate, AnsiSqlDateToDateTime(GetString(11, WasNull)), 0);
@@ -729,6 +749,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorDouble;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(7, WasNull), 'GetBoolean');
@@ -750,6 +772,8 @@ procedure TZTestRowAccessorCase.TestFillRowAccessor;
 var
   RowAccessor: TZRowAccessor;
 begin
+  if SkipTest then Exit;
+
   RowAccessor := GetRowAccessor;
   FillRowAccessor(RowAccessor);
   RowAccessor.Dispose;
@@ -763,6 +787,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorFloat;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(6, WasNull), 'GetBoolean');
@@ -784,6 +810,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorInteger;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(4, WasNull), 'GetBoolean');
@@ -805,6 +833,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorLong;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(5, WasNull), 'GetBoolean');
@@ -827,6 +857,8 @@ var
   Collection: TObjectList;
   RowAccessor: TZRowAccessor;
 begin
+  if SkipTest then Exit;
+
   Collection := GetColumnsInfoCollection;
   try
     RowAccessor := TZRowAccessor.Create(Collection);
@@ -844,6 +876,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorShort;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(True, GetBoolean(3, WasNull), 'GetBoolean');
@@ -865,6 +899,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorString;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(False, GetBoolean(9, WasNull), 'GetBoolean');
@@ -896,6 +932,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorTime;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(FTime, AnsiSqlDateToDateTime(GetString(12, WasNull)), 3, 'GetString');
@@ -911,6 +949,8 @@ procedure TZTestRowAccessorCase.TestRowAccessorTimestamp;
 var
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     CheckEquals(FormatDateTime('yyyy-mm-dd hh:mm:ss', FTimeStamp),
@@ -931,6 +971,8 @@ var
   ResultString: string;
   WasNull: Boolean;
 begin
+  if SkipTest then Exit;
+
   with RowAccessor do
   begin
     try

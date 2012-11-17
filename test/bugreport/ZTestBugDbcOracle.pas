@@ -105,6 +105,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;

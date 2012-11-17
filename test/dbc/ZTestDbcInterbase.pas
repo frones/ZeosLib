@@ -144,6 +144,8 @@ end;
 
 procedure TZTestDbcInterbaseCase.TestConnection;
 begin
+  if SkipTest then Exit;
+
   CheckEquals(True, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -173,6 +175,8 @@ procedure TZTestDbcInterbaseCase.TestStatement;
 var
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -189,6 +193,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -217,6 +223,8 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
+  if SkipTest then Exit;
+
   Connection := CreateDbcConnection;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -266,6 +274,8 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
+  if SkipTest then Exit;
+
   Connection := CreateDbcConnection;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -376,6 +386,8 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -412,6 +424,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -449,6 +463,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -493,6 +509,8 @@ var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
 begin
+  if SkipTest then Exit;
+
   // Doesn't run with ExecutePrepared. RegisterOutParameter does also not work.
   // Has to be called with an ExecuteQueryPrepared, then has to be fetched and
   // afterwards the Resultes have to be retrieved via result set columns.
@@ -534,33 +552,35 @@ var
     ThisTime : TDateTime; 
     oldTimeFormat: string; 
 begin 
-    Statement := Connection.CreateStatement; 
-    CheckNotNull(Statement); 
-    Statement.SetResultSetType(rtScrollInsensitive); 
-    Statement.SetResultSetConcurrency(rcUpdatable); 
-    Statement.ExecuteUpdate('delete from DATE_VALUES where D_ID=4'); 
-    ResultSet := Statement.ExecuteQuery('select D_ID, D_DATE, D_TIME, D_DATETIME, D_TIMESTAMP from DATE_VALUES'); 
-    CheckNotNull(ResultSet); 
-    OldTimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:mm:ss.zzz';
-    ThisTime := now;
-    ResultSet.MoveToInsertRow;
-    ResultSet.UpdateInt(1, 4);
-    ResultSet.UpdateDate(2,ThisTime);
-    ResultSet.UpdateTime(3,ThisTime);
-    ResultSet.UpdateTimestamp(4,ThisTime);
-    ResultSet.UpdateTimestamp(5,ThisTime);
-    ResultSet.InsertRow;
-    ResultSet.Last;
-    Check(ResultSet.GetInt(1) <> 0);
-    CheckEquals(Trunc(ThisTime), ResultSet.GetDate(2));
-    CheckEquals(RoundTo(Frac(ThisTime),-11), RoundTo(ResultSet.GetTime(3),-11));
-    CheckEquals(ThisTime, ResultSet.GetTimeStamp(4));
-    CheckEquals(ThisTime, ResultSet.GetTimeStamp(5));
-    ResultSet.DeleteRow;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := OldTimeFormat;
-    ResultSet.Close;
-    Statement.Close;
+  if SkipTest then Exit;
+
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+  Statement.ExecuteUpdate('delete from DATE_VALUES where D_ID=4');
+  ResultSet := Statement.ExecuteQuery('select D_ID, D_DATE, D_TIME, D_DATETIME, D_TIMESTAMP from DATE_VALUES');
+  CheckNotNull(ResultSet);
+  OldTimeFormat := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:mm:ss.zzz';
+  ThisTime := now;
+  ResultSet.MoveToInsertRow;
+  ResultSet.UpdateInt(1, 4);
+  ResultSet.UpdateDate(2,ThisTime);
+  ResultSet.UpdateTime(3,ThisTime);
+  ResultSet.UpdateTimestamp(4,ThisTime);
+  ResultSet.UpdateTimestamp(5,ThisTime);
+  ResultSet.InsertRow;
+  ResultSet.Last;
+  Check(ResultSet.GetInt(1) <> 0);
+  CheckEquals(Trunc(ThisTime), ResultSet.GetDate(2),'Failure field 2');
+  CheckEquals(RoundTo(Frac(ThisTime),-10), RoundTo(ResultSet.GetTime(3),-10),'Failure field 3');
+  CheckEquals(ThisTime, ResultSet.GetTimeStamp(4),'Failure field 4');
+  CheckEquals(ThisTime, ResultSet.GetTimeStamp(5),'Failure field 5');
+  ResultSet.DeleteRow;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := OldTimeFormat;
+  ResultSet.Close;
+  Statement.Close;
 end;
 
 // There should be no
@@ -572,6 +592,8 @@ const
 var
   PreparedStatement: IZPreparedStatement;
 begin
+  if SkipTest then Exit;
+
   PreparedStatement := Connection.PrepareStatement(CSQLd);
   CheckNotNull(PreparedStatement);
   PreparedStatement.ExecutePrepared;

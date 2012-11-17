@@ -56,7 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -81,10 +82,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  Variants, ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
 
 const
 
@@ -122,19 +120,28 @@ var
   Query: TZQuery;
   RowCounter: Integer;
   I: Integer;
-  procedure InsertValues(s_char, s_varchar, s_nchar, s_nvarchar: String);
+  procedure InsertValues(TestString: String);
   begin
     Query.ParamByName('s_id').AsInteger := TestRowID+RowCounter;
-    Query.ParamByName('s_char').AsString := GetDBTestString(s_char, Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_varchar').AsString := GetDBTestString(s_varchar, Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nchar').AsString := GetDBTestString(s_nchar, Connection.DbcConnection.GetConSettings);
-    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(s_nvarchar, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_char').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_varchar').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_nchar').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
+    Query.ParamByName('s_nvarchar').AsString := GetDBTestString(TestString, Connection.DbcConnection.GetConSettings);
 
     Query.ExecSQL;
     inc(RowCounter);
   end;
 
+  procedure CheckColumnValues(TestString: String);
+  begin
+    CheckEquals(TestString, Query.FieldByName('s_char').AsString, Connection.DbcConnection.GetConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_varchar').AsString, Connection.DbcConnection.GetConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_nchar').AsString, Connection.DbcConnection.GetConSettings);
+    CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, Connection.DbcConnection.GetConSettings);
+  end;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   Connection.Connect;
@@ -142,52 +149,49 @@ begin
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
-    InsertValues(str2, str2, str2, str2);
-    InsertValues(str3, str3, str3, str3);
-    InsertValues(str4, str4, str4, str4);
-    InsertValues(str5, str5, str5, str5);
-    InsertValues(str6, str6, str6, str6);
+    InsertValues(str2);
+    InsertValues(str3);
+    InsertValues(str4);
+    InsertValues(str5);
+    InsertValues(str6);
 
-    if Connection.DbcConnection.AutoEncodeStrings or Connection.UTF8StringsAsWideField then
-    begin
-      Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 5);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Str2+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 1);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Str3+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Str4+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Str5+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Str6+'%', #39);
-      Query.Open;
-    end
-    else
-    begin
-      Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 5);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Utf8Encode(Str2)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 1);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Utf8Encode(Str3)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Utf8Encode(Str4)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Utf8Encode(Str5)+'%', #39);
-      Query.Open;
-      CheckEquals(True, Query.RecordCount = 2);
-      Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+Utf8Encode(Str6)+'%', #39);
-      Query.Open;
-    end;
+    Query.SQL.Text := 'select * from string_values where s_id > '+IntToStr(TestRowID-1);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 5);
+
+    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str2, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 1);
+    CheckColumnValues(Str2);
+
+    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str3, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    CheckColumnValues(Str2);
+    Query.Next;
+    CheckColumnValues(Str3);
+
+    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str4, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    CheckColumnValues(Str2);
+    Query.Next;
+    CheckColumnValues(Str4);
+
+    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str5, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    CheckColumnValues(Str2);
+    Query.Next;
+    CheckColumnValues(Str5);
+
+    Query.SQL.Text := 'select * from string_values where s_char like '+AnsiQuotedStr('%'+GetDBValidString(Str6, Connection.DbcConnection.GetConSettings)+'%', #39);
+    Query.Open;
+    CheckEquals(True, Query.RecordCount = 2);
+    CheckColumnValues(Str2);
+    Query.Next;
+    CheckColumnValues(Str6);
+
   finally
     for i := TestRowID to TestRowID+RowCounter do
     begin

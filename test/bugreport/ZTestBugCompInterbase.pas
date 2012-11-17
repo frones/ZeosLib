@@ -99,7 +99,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase, ZEncoding;
 
 { ZTestCompInterbaseBugReport }
 
@@ -125,6 +125,8 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test1004584;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
@@ -148,6 +150,8 @@ var
   Error: Boolean;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Error := True;
   Query := TZQuery.Create(nil);
   try
@@ -197,6 +201,8 @@ var
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
+  if SkipTest then Exit;
+
 {$IFNDEF LINUX}
   Query := TZQuery.Create(nil);
   ROQuery := TZReadOnlyQuery.Create(nil);;
@@ -252,6 +258,8 @@ procedure ZTestCompInterbaseBugReport.Test789879;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -277,6 +285,8 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test833489;
 begin
+  if SkipTest then Exit;
+
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
@@ -291,6 +301,8 @@ var
   Temp: boolean;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Temp := False;
   Query := TZQuery.Create(nil);
   try
@@ -321,6 +333,8 @@ var
   Ansi: AnsiString;
   WS: WideString;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
 
   Query.Connection := Connection;
@@ -359,7 +373,7 @@ begin
       StrStream.position := 0;
       SetLength(Ansi,StrStream.Size);
       StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-      WS := UTF8Decode(Ansi);
+      WS := UTF8ToString(Ansi);
       StrStream.Clear;
       StrStream.Write(PWideChar(WS)^, Length(WS)*2);
       StrStream.Position := 0;
@@ -388,6 +402,8 @@ procedure ZTestCompInterbaseBugReport.Test864622;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -411,6 +427,8 @@ procedure ZTestCompInterbaseBugReport.Test886194;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -437,6 +455,8 @@ procedure ZTestCompInterbaseBugReport.Test886854;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -483,6 +503,8 @@ procedure ZTestCompInterbaseBugReport.Test897631;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
   // Query.RequestLive := True;
@@ -511,6 +533,8 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
+  if SkipTest then Exit;
+
   Error := True;
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
@@ -558,6 +582,8 @@ var
   Error: boolean;
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Error := True;
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
@@ -582,7 +608,6 @@ begin
   end;
 end;
 const
-  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
   Str3 = 'ќдной из наиболее';
 
@@ -592,6 +617,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   SL := TStringList.Create;
   StrStream1 := TMemoryStream.Create;
@@ -651,6 +678,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -744,6 +773,8 @@ var
     iqry.ExecSQL;
   end;
 begin
+  if SkipTest then Exit;
+
   { prepared insert statement }
   iqry:= TZQuery.Create(nil);
   iqry.Connection:= Connection;
@@ -784,13 +815,13 @@ begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
         iqry.ParamByName('i1').AsInteger:= RowID;
-        iqry.ParamByName('s1').AsString:= S1;
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, FConnection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+1;
-        iqry.ParamByName('s1').AsString:= S2;
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, FConnection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+2;
-        iqry.ParamByName('s1').AsString:= S3;
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, FConnection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.Unprepare;
 
@@ -798,23 +829,40 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
-          FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(String(UTF8ToString(S1)), iqry.Fields[0].AsString)
+        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) then
+        begin
+          if not  (FConnection.DbcConnection.AutoEncodeStrings) then
+            CheckEquals(S1, iqry.Fields[0].AsString)
+          else
+            if ZDefaultSystemCodePage = zCP_WIN1252 then
+              CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString);
+          iqry.Next;
+          if not  (FConnection.DbcConnection.AutoEncodeStrings) then
+            CheckEquals(S2, iqry.Fields[0].AsString)
+          else
+            if ZDefaultSystemCodePage = zCP_WIN1251 then
+              CheckEquals(UTF8ToAnsi(S2), iqry.Fields[0].AsString); //i can't display the russian chars right
+          iqry.Next;
+          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString);
+        end
         else
-          CheckEquals(S1, iqry.Fields[0].AsString);
-        iqry.Next;
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
-          FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(String(UTF8ToString(S2)), iqry.Fields[0].AsString)
-        else
-          CheckEquals(S2, iqry.Fields[0].AsString);
-        iqry.Next;
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) and
-          FConnection.DbcConnection.AutoEncodeStrings then
-          CheckEquals(String(UTF8ToString(S3)), iqry.Fields[0].AsString)
-        else
+        begin //CPType = cCP_UTF8
+          if ( ZDefaultSystemCodePage = zCP_WIN1252 ) and
+             ( FConnection.DbcConnection.AutoEncodeStrings ) then
+            CheckEquals(S1, iqry.Fields[0].AsString)
+          else
+            if not (FConnection.DbcConnection.AutoEncodeStrings) then
+              CheckEquals(S1, iqry.Fields[0].AsString);
+          iqry.Next;
+          if ( ZDefaultSystemCodePage = zCP_WIN1251 ) and
+              ( FConnection.DbcConnection.AutoEncodeStrings ) then
+            CheckEquals(S2, iqry.Fields[0].AsString)
+          else
+            if not (FConnection.DbcConnection.AutoEncodeStrings) then
+              CheckEquals(S2, iqry.Fields[0].AsString);
+          iqry.Next;
           CheckEquals(S3, iqry.Fields[0].AsString);
+        end;
       end;
     end;
   finally

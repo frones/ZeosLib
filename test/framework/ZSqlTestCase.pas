@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
+  {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB,
   {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
@@ -124,7 +124,12 @@ type
     FProperties: TStringDynArray;
     FExtendedTest: Boolean;
     FSkipNonZeosIssues: Boolean;
+    FSkip_cGet_ACP: Boolean;
+    FSkip_cGet_UTF8: Boolean;
+    FSkip_cGet_UTF16: Boolean;
+    FSkipSetup: Boolean;
     function GetProtocol : string;
+    function GetSkipNonZeosIssues: Boolean;
   protected
     property Connections: TObjectList read FConnections write FConnections;
     property TraceList: TStrings read FTraceList write FTraceList;
@@ -143,7 +148,11 @@ type
     procedure StartSQLTrace;
     procedure StopSQLTrace;
 
-    function GetDBTestString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+    procedure CheckStringFieldType(Actual: TFieldType; ConSettings: PZConSettings);
+    procedure CheckMemoFieldType(Actual: TFieldType; ConSettings: PZConSettings);
+
+    function GetDBTestString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False; MaxLen: Integer = -1): String;
+    function GetDBValidString(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
     function GetDBTestStream(const Value: String; ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): TStream;
   public
     destructor Destroy; override;
@@ -170,7 +179,11 @@ type
     property CreateScripts: TStringDynArray read FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts;
     property Properties: TStringDynArray read FProperties;
-    property SkipNonZeosIssues: Boolean read FSkipNonZeosIssues;
+    property SkipNonZeosIssues: Boolean read GetSkipNonZeosIssues;
+    property Skip_cGet_ACP: Boolean read FSkip_cGet_ACP;
+    property Skip_cGet_UTF8: Boolean read FSkip_cGet_UTF8;
+    property Skip_cGet_UTF16: Boolean read FSkip_cGet_UTF16;
+    property SkipSetup: Boolean read FSkipSetup;
   end;
 
   {** Implements a test case which runs all active connections. }
@@ -222,6 +235,12 @@ begin
     Result := FProtocol;
 end;
 
+function TZAbstractSQLTestCase.GetSkipNonZeosIssues: boolean;
+begin
+  Check(True);
+  Result := FSkipNonZeosIssues
+end;
+
 {**
   Loads a configuration from the configuration file.
 }
@@ -243,10 +262,10 @@ procedure TZAbstractSQLTestCase.LoadConfiguration;
   end;
 
 var
-  I, j, iDataBases: Integer;
+  I: Integer;
   _ConnectionName, Temp: string;
   ActiveConnections: TStringDynArray;
-  Current, MyCurrent: TZConnectionConfig;
+  Current: TZConnectionConfig;
   CharacterSets: TStringDynArray;
 
   function CreateChildConnectionConfiguration(const MyCurrent: TZConnectionConfig;
@@ -328,46 +347,47 @@ var
   var
     iCtrlsCPs: Integer;
     MyCurrent: TZConnectionConfig;
-  begin
-    for iCtrlsCPs := 0 to High(CPTypes) do
+
+    procedure CloneConfig;
     begin
-      {$IFDEF DELPHI12_UP}
-      if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //not supported, will be resettet to UTF16
-        continue
-      else
-        if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //default no self subcreation needed
-        begin
-          SetCharacterSets(Current);
-          continue;
-        end;
-      {$ELSE}
-        {$IFNDEF WITH_WIDEFIELDS}
-        if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //not supported, will be resettet to GET_ACP
-          continue
-        else
-          if (CPTypes[iCtrlsCPs] = 'GET_ACP') then //default no self subcreation needed
-          begin
-            SetCharacterSets(Current);
-            continue;
-          end;
-        {$ELSE}
-          {$IFDEF FPC}
-          if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //default no self subcreation needed
-            continue;
-          {$ELSE}
-          if (CPTypes[iCtrlsCPs] = 'GET_ACP') then //default no self subcreation needed
-            continue;
-          {$ENDIF}
-        {$ENDIF}
-      {$ENDIF}
       MyCurrent := CreateChildConnectionConfiguration(Current, CPTypes[iCtrlsCPs]);
       SetProperty(MyCurrent, 'controls_cp',CPTypes[iCtrlsCPs]);
       FConnections.Add(MyCurrent);
+      {$IFDEF UNICODE}
       if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //autoencoding is allways true
         SetCharacterSets(MyCurrent)
       else
+      {$ENDIF}
         SetAutoEncodings(MyCurrent);
     end;
+  begin
+    for iCtrlsCPs := 0 to 2 do
+    begin
+      {$IFDEF UNICODE}
+      if (CPTypes[iCtrlsCPs] = 'CP_UTF8') then //not supported, will be resettet to UTF16
+        continue;
+      {$ELSE}
+        {$IFNDEF WITH_WIDEFIELDS}
+        if (CPTypes[iCtrlsCPs] = 'CP_UTF16') then //not supported, will be resettet to GET_ACP
+          continue;
+        {$ENDIF}
+      {$ENDIF}
+      if ( CPTypes[iCtrlsCPs] = 'GET_ACP' ) and not FSkip_cGet_ACP then
+        CloneConfig
+      else
+        if ( CPTypes[iCtrlsCPs] = 'CP_UTF8' ) and not FSkip_cGet_UTF8 then
+          CloneConfig
+        else
+          if ( CPTypes[iCtrlsCPs] = 'CP_UTF16' ) and not FSkip_cGet_UTF16 then
+            CloneConfig
+          else
+            {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+            SetAutoEncodings(Current);
+            {$ELSE}
+            SetCharacterSets(Current);
+            {$IFEND}
+
+     end;
   end;
 begin
   inherited LoadConfiguration;
@@ -375,7 +395,13 @@ begin
   FExtendedTest := StrToBoolEx(ReadProperty(COMMON_GROUP,
     EXTENDED_TEST_KEY, FALSE_VALUE));
   FSkipNonZeosIssues := StrToBoolEx(ReadProperty(COMMON_GROUP,
-    SKIP_NON_ZEOS_ISSUES, FALSE_VALUE));
+    SKIP_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
+  FSkip_cGet_ACP := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    SKIP_CGET_ACP_KEY, FALSE_VALUE));
+  FSkip_cGet_UTF8 := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    SKIP_CCP_UTF8_KEY, FALSE_VALUE));
+  FSkip_cGet_UTF16 := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    SKIP_CCP_UTF16_KEY, FALSE_VALUE));
 
 
   { Resets a connection configuration list. }
@@ -526,6 +552,24 @@ begin
   DriverManager.RemoveLoggingListener(Self);
 end;
 
+procedure TZAbstractSQLTestCase.CheckStringFieldType(Actual: TFieldType;
+  ConSettings: PZConSettings);
+begin
+  case ConSettings.CPType of
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftString), Ord(Actual), 'String Field/Parameter-Type');
+    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideString), Ord(Actual), 'String Field/Parameter-Type');{$ENDIF}
+  end;
+end;
+
+procedure TZAbstractSQLTestCase.CheckMemoFieldType(Actual: TFieldType;
+  ConSettings: PZConSettings);
+begin
+  case ConSettings.CPType of
+    cGET_ACP, cCP_UTF8{$IFNDEF WITH_WIDEFIELDS},cCP_UTF16{$ENDIF}: CheckEquals(Ord(ftMemo), Ord(Actual), 'Memo-Field/Parmeter-Type');
+    {$IFDEF WITH_WIDEFIELDS}cCP_UTF16: CheckEquals(Ord(ftWideMemo), Ord(Actual), 'Memo-FieldParameter-Type');{$ENDIF}
+  end;
+end;
+
 {**
   Get a valid String to Test the encoding. If AutoEncodeStrings then the
   Encoding is reverted to get proper test-behavior.
@@ -536,41 +580,86 @@ end;
   {$WARNINGS OFF}
 {$ENDIF}
 function TZAbstractSQLTestCase.GetDBTestString(const Value: String;
-  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False;
+  MaxLen: Integer = -1): String;
+var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSe}String{$ENDIF};
 begin
   Result := Value;
   if ConSettings.CPType = cCP_UTF16 then
     if isUTF8Encoded then
-      Result := UTF8ToString(ZAnsiString(Value))
+      Temp := UTF8ToString(ZAnsiString(Value))
     else
-      Result := Value
+      Temp := Value
   else
     case ConSettings.ClientCodePage.Encoding of
       ceDefault: Result := Value; //Souldn't be possible
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
-            Result := Value
+            Temp := Value
           else
-            Result := UTF8Encode(WideString(Value))
+            Temp := UTF8Encode(WideString(Value))
         else  //Return the expected value to test
           if IsUTF8Encoded then
-            Result := UTF8ToAnsi(Value)
+            Temp := UTF8ToAnsi(Value)
           else
-            Result := Value;
+            Temp := Value;
       else //ceUTF8, ceUTF16, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
-            Result := UTF8ToAnsi(Value)
+            {$IFDEF DELPHI12_UP}
+            Temp := UTF8ToString(Value)
+            {$ELSE}
+            Temp := UTF8ToAnsi(Value)
+            {$ENDIF}
           else
-            Result := Value
+            Temp := Value
         else
           if IsUTF8Encoded then
-            Result := Value
+            Temp := Value
           else
-            Result := UTF8Encode(WideString(Value)); //Return the expected value to test
+            Temp := UTF8Encode(WideString(Value)); //Return the expected value to test
     end;
+  if (MaxLen = -1) then
+  begin
+    SetLength(Result, Length(Temp));
+    System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp)*SizeOf(Char));
+  end
+  else
+  begin
+    SetLength(Result, MaxLen);
+    System.Move(PChar(Temp)^, PChar(Result)^, MaxLen*SizeOf(Char));
+  end;
 end;
+
+function TZAbstractSQLTestCase.GetDBValidString(const Value: String;
+  ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
+var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSe}String{$ENDIF};
+begin
+  Result := Value;
+  if ConSettings.CPType = cCP_UTF16 then
+    if isUTF8Encoded then
+      Temp := UTF8ToString(ZAnsiString(Value))
+    else
+      Temp := Value
+  else
+    case ConSettings.ClientCodePage.Encoding of
+      ceDefault: Result := Value; //Souldn't be possible
+      ceAnsi:
+          if IsUTF8Encoded then
+            Temp := UTF8ToAnsi(Value)
+          else
+            Temp := Value;
+      else //ceUTF8, ceUTF16, ceUTF32
+        if IsUTF8Encoded then
+          Temp := Value
+        else
+          Temp := UTF8Encode(WideString(Value)); //Return the expected value to test
+    end;
+  SetLength(Result, Length(Temp));
+  System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp)*SizeOf(Char));
+end;
+
 {$IFDEF DELPHI12_UP}
   {$WARNINGS ON}
 {$ENDIF}

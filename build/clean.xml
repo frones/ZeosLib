@@ -14,6 +14,7 @@
   <property name="packages.dir" value="${root.dir}/packages"/>
   <property name="src.dir" value="${root.dir}/src"/>
   <property name="test.dir" value="${root.dir}/test"/>
+  <property name="test_env.dir" value="${root.dir}/build/testenv/binaries"/>
   <property name="examples.dir" value="${root.dir}/examples"/>
 
   <target name="main">
@@ -70,8 +71,9 @@
     <antcall target="clean_delphi2009"/>
     <antcall target="clean_delphi2010"/>
     <antcall target="clean_delphiXE"/>
-	<antcall target="clean_delphiXE2"/>	
+    <antcall target="clean_delphiXE2"/>	
     <antcall target="clean_lazarus"/>
+    <antcall target="clean_test_env"/>
   </target>
 
   <target name="clean_delphi7">
@@ -212,6 +214,49 @@
 	<exclude name="build/fbclient*.dll" />
 	<exclude name="build/*.dll" />
 	<exclude name="**/dummy.txt" />
+      </fileset>
+    </delete>
+
+  </target>
+
+  <target name="clean_test_env">
+
+    <echo message="Cleaning Zeos DBO test environment " />
+
+    <delete>
+       <fileset dir="${test_env.dir}">
+	<include name="*.~*" />
+	<include name="*.*~" />
+	<include name="*.dcu" />
+	<include name="*.ppu" />
+	<include name="*.o" />
+	<include name="*.or" />
+	<include name="*.res" />
+	<include name="*.dcp" />
+	<include name="*.dpl" />
+	<include name="*.dsk" />
+	<include name="*.lib" />
+	<include name="*.obj" />
+	<include name="*.exe" />
+	<include name="*.bpl" />
+	<include name="*.bpi" />
+	<include name="*.ilc" />
+	<include name="*.ild" />
+	<include name="*.ilf" />
+	<include name="*.ils" />
+	<include name="*.tds" />
+	<include name="*.csm" />
+	<include name="*.#??" />
+	<include name="*.bat" />
+	<include name="*.map" />
+	<include name="*.log" />
+	<include name="*.compiled" />
+	<exclude name="share/**" />
+	<exclude name="data/**" />
+	<exclude name="libmysql*.dll" />
+	<exclude name="sqlite*.dll" />
+	<exclude name="fbclient*.dll" />
+	<exclude name="*.dll" />
       </fileset>
     </delete>
 

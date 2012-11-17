@@ -148,6 +148,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
@@ -185,6 +187,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
   with (Connection as IZPostgreSQLConnection) do
   begin
@@ -216,6 +220,8 @@ procedure TZTestDbcPostgreSQLBugReport.Test702368;
   ResultSet: IZResultSet;
   Statement: IZStatement;}
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   {Statement := Connection.CreateStatement;
@@ -249,6 +255,8 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TStream;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -319,6 +327,8 @@ var
   Statement: IZStatement;
   MetaData: IZResultSetMetaData;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   {test statement}
@@ -345,6 +355,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -393,6 +405,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -423,6 +437,8 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
@@ -484,6 +500,8 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
@@ -543,6 +561,8 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
@@ -600,6 +620,8 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Metadata := Connection.GetMetadata;
@@ -622,6 +644,8 @@ const
   MinorVersion2: string = 'tst4beta2';
   MinorVersion3: string = '123beta2';
 begin
+  if SkipTest then Exit;
+
   CheckEquals(4, GetMinorVersion(MinorVersion1));
   CheckEquals(0, GetMinorVersion(MinorVersion2));
   CheckEquals(123, GetMinorVersion(MinorVersion3));
@@ -635,6 +659,8 @@ procedure TZTestDbcPostgreSQLBugReport.Test933623;
 var
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Connection.SetAutoCommit(True);
@@ -660,6 +686,8 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
@@ -707,6 +735,8 @@ var
   Statement: IZStatement;
   Blob: IZBlob;
 begin
+  if SkipTest then Exit;
+
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
   ///

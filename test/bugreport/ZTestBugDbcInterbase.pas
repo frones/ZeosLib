@@ -109,6 +109,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -145,6 +147,8 @@ var
   Temp: boolean;
   Statement: IZStatement;
 begin
+  if SkipTest then Exit;
+
   Temp := False;
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -166,6 +170,8 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TStream;
 begin
+  if SkipTest then Exit;
+
   { load data to the stream }
   BinStream := TMemoryStream.Create;
   StrStream := TMemoryStream.Create;
@@ -252,6 +258,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -282,6 +290,8 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -322,6 +332,8 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -377,6 +389,8 @@ var
   PreparedStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Statement := Connection.CreateStatement;
@@ -419,6 +433,8 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
+  if SkipTest then Exit;
+
   Metadata := Connection.GetMetadata;
 
   ResultSet := Metadata.GetTables('', '', 'DEPARTMENT', nil);

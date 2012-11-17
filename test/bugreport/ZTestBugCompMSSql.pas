@@ -113,6 +113,8 @@ procedure TZTestCompMSSqlBugReport.Test728955;
 var
   Query: TZReadOnlyQuery;
 begin
+  if SkipTest then Exit;
+
   if SkipClosed then Exit;
 
   Query := TZReadOnlyQuery.Create(nil);
@@ -139,6 +141,8 @@ end;
 }
 procedure TZTestCompMSSqlBugReport.Test833489;
 begin
+  if SkipTest then Exit;
+
   Connection.Disconnect;
   Connection.AutoCommit := False;
   Connection.Connect;
@@ -148,6 +152,8 @@ procedure TZTestCompMSSqlBugReport.Test907497;
 var
   StoredProc: TZStoredProc;
 begin
+  if SkipTest then Exit;
+
   StoredProc := TZStoredProc.Create(nil);
   try
     StoredProc.Connection := Connection;
@@ -167,6 +173,8 @@ procedure TZTestCompMSSqlBugReport.Test953072;
 var
   Query: TZQuery;
 begin
+  if SkipTest then Exit;
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -186,6 +194,8 @@ var
   Query: TZQuery;
   StoredProc: TZStoredProc;
 begin
+  if SkipTest then Exit;
+
   StoredProc := TZStoredProc.Create(nil);
   Query := TZQuery.Create(nil);
   try

@@ -93,6 +93,7 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to URL
+  ZURL := nil;
   try
     ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0://127.0.0.1:3050/model?username=sysdba;password=masterkey;rolename=public';
@@ -115,6 +116,7 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties
+  ZURL := nil;
   try
     ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
@@ -137,6 +139,7 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to URL using UID and PWD
+  ZURL := nil;
   try
     ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:odbc://localhost/model?UID=admin;PWD=pw;rolename=public';
@@ -159,8 +162,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to URL using UID and PWD in lower case and out of order
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0://127.0.0.1:3050/model?rolename=public;pwd=masterkey;uid=sysdba';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
@@ -180,8 +184,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to properties without port, user, password and properties
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'firebird-2.0';
     ZURL.HostName := '127.0.0.1';
@@ -197,8 +202,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to properties without port, user, password and properties
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'firebird-2.0';
     ZURL.HostName := '127.0.0.1';
@@ -215,8 +221,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignment to properties without hostname, port, user, password and properties
- ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'postgresql';
     ZURL.Database := 'model';
@@ -231,8 +238,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties, setting user and password in properties
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'mysql';
     ZURL.HostName := '127.0.0.1';
@@ -253,8 +261,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties, setting user and password in properties as UID and PWD
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'ado';
     ZURL.HostName := 'localhost';
@@ -274,8 +283,9 @@ procedure TZURLTest.TestEmpty;
 var
   ZURL: TZURL;
 begin
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     CheckEquals('zdbc:://', ZURL.URL);
   finally
     ZURL.Free;
@@ -286,8 +296,9 @@ procedure TZURLTest.TestAssignToProperties_ProtocolOnly;
 var
   ZURL: TZURL;
 begin
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Protocol := 'protocol';
     CheckEquals('zdbc:protocol://', ZURL.URL);
   finally
@@ -299,8 +310,9 @@ procedure TZURLTest.TestAssignToProperties_DatabaseIsFile;
 var
   ZURL: TZURL;
 begin
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0://127.0.0.1/C:\database.fdb?username=sysdba;password=masterkey;rolename=public';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
@@ -320,8 +332,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to URL without hostname
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0:/C:\database.fdb?username=sysdba;password=masterkey;rolename=public';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
@@ -341,8 +354,9 @@ var
   ZURL: TZURL;
 begin
   // Test assignement to properties without hostname
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'oracle';
     ZURL.HostName := '';
@@ -361,6 +375,8 @@ procedure TZURLTest.TestSemicolons;
 var
   ZURLIn, ZURLOut: TZURL;
 begin
+  ZURLIn := nil;
+  ZURLOut := nil;
   try
     ZURLIn := TZURL.Create;
     ZURLIn.Prefix := 'zdbc';
@@ -400,8 +416,9 @@ var
   Temp: String;
 begin
   // Test assignement to properties without hostname and unix path delimiter
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.Prefix := 'zdbc';
     ZURL.Protocol := 'oracle';
     ZURL.HostName := '';
@@ -437,8 +454,9 @@ procedure TZURLTest.TestSFTicket8_HostPort_NoDB_Properties;
 var
   ZURL: TZURL;
 begin
-  ZURL := TZURL.Create;
+  ZURL := nil;
   try
+    ZURL := TZURL.Create;
     ZURL.URL := 'zdbc:firebird-2.0://localhost:3306?username=root;password=test';
     CheckEquals('zdbc', ZURL.Prefix);
     CheckEquals('firebird-2.0', ZURL.Protocol);
