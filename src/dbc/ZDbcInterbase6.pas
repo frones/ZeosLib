@@ -355,8 +355,7 @@ begin
     if URL.Properties.Values['isc_dpb_lc_ctype'] <> '' then //Check if Dev set's it manually
     begin
       FClientCodePage := URL.Properties.Values['isc_dpb_lc_ctype'];
-      Self.CheckCharEncoding(FClientCodePage, True);
-      URL.Properties.Values['isc_dpb_lc_ctype'] := ''; //drop it (setting is optional)
+      CheckCharEncoding(FClientCodePage, True);
     end;
   URL.Properties.Values['isc_dpb_lc_ctype'] := FClientCodePage;
 
@@ -510,9 +509,27 @@ begin
         end
         else
           if GetString(6) = 'NONE' then
-            ConSettings.ClientCodePage.CharWidth := 1;
+          begin
+            if not ( FClientCodePage = 'NONE' ) then
+            begin
+              URL.Properties.Values['isc_dpb_lc_ctype'] := 'NONE';
+              FClientCodePage := 'NONE';
+              {charset 'none' can't converty anything. If another charset was set
+               in attaching then all column collations are returned with this
+               charset. BUT no string converstions where done! So we need a
+               reopen (since we can set the Client-CharacterSet only on
+               connecting) to determine charset 'NONE' corectly. Then the column
+               collations have there proper CharsetID's to encode all strings
+               correctly.}
+              Self.Close;
+              Self.Open;
+              CheckCharEncoding(FClientCodePage);
+            end;
+          end;
       Close;
     end;
+    if FClientCodePage = 'NONE' then
+      ConSettings.AutoEncode := True;
   finally
     StrDispose(DPB);
   end;

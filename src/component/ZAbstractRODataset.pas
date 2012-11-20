@@ -1307,18 +1307,16 @@ begin
           end;
         { Processes blob fields. }
         ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :
-          begin
-            Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
-          end;
+          Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         ftWideString:
           begin
             {$IFDEF WITH_WIDESTRUTILS}
-                WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
-              {$ELSE}
-              //FPC: WideStrings are COM managed fields
-              WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
-              //include null terminator in copy
-              System.Move(PWideChar(WS)^,buffer^,(length(WS)+1)*sizeof(WideChar));
+            WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
+            {$ELSE}
+            //FPC: WideStrings are COM managed fields
+            WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
+            //include null terminator in copy
+            System.Move(PWideChar(WS)^,buffer^,(length(WS)+1)*sizeof(WideChar));
             {$ENDIF}
             Result := not Result;
           end;
@@ -1399,7 +1397,7 @@ begin
     if State in [dsEdit, dsInsert] then
       Field.Validate(Buffer);
 
-    if Buffer <> nil then
+    if Assigned(Buffer) then
     begin
       { Processes DateTime fields. }
       if Field.DataType in [ftDate, ftDateTime] then
@@ -1422,9 +1420,9 @@ begin
       else if Field.DataType = ftWideString then
       begin
         {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
-              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+        RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
         {$ELSE}
-              RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+        RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
         {$ENDIF}
 
       end
@@ -1433,7 +1431,7 @@ begin
         (Length(PAnsiChar(Buffer)) < RowAccessor.GetColumnDataSize(ColumnIndex)) then
       begin
         {$IFDEF DELPHI12_UP}
-              RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(String(PAnsichar(Buffer))));
+        RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(String(PAnsichar(Buffer))));
         {$ELSE}
         System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
            Length(PAnsiChar(Buffer)) + 1);
@@ -1496,13 +1494,11 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
    Result := TRecordBuffer(RowAccessor.Alloc);
 end;
 {$ELSE}
-
 function TZAbstractRODataset.AllocRecordBuffer: PChar;
 begin
   Result := PChar(RowAccessor.Alloc);
@@ -1515,10 +1511,8 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
 {$ELSE}
-
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: PChar);
 {$ENDIF}
 begin
@@ -1769,7 +1763,7 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      RowAccessor := TZRowAccessor.Create(ColumnList);
+      RowAccessor := TZRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
     finally
       ColumnList.Free;
     end;

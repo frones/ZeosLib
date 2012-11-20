@@ -90,6 +90,8 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
+    function GetString(ColumnIndex: Integer): String; override;
+    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): ShortInt; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -287,7 +289,8 @@ begin
           begin
             TempStream := GetValidatedUnicodeStream(Buffer, Size, ConSettings, True);
             Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection, True);
-            TempStream.Free;
+            if Assigned(TempStream) then
+              TempStream.Free;
           end;
       end;
     finally
@@ -549,6 +552,62 @@ begin
 end;
 
 {**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): String;
+begin
+  CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
+    case FSqlData.GetIbSqlType(ColumnIndex -1) of
+      SQL_VARYING, SQL_TEXT:
+        Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1),
+          FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
+      else
+        Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1));
+    end
+  else
+    Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>WideString</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZInterbase6ResultSet.GetUnicodeString(ColumnIndex: Integer): WideString;
+begin
+  CheckClosed;
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
+    case FSqlData.GetIbSqlType(ColumnIndex -1) of
+      SQL_VARYING, SQL_TEXT:
+        Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1),
+          FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
+      else
+        Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1));
+    end
+  else
+    Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1));
+end;
+
+{**
   Moves the cursor to the given row number in
   this <code>ResultSet</code> object.
 
@@ -665,8 +724,12 @@ begin
           Precision := MaxLenghtBytes;
         end
         else
-          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
-            ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
+          if ConSettings.ClientCodePage^.ID = CS_NONE then
+            Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+              FIBConnection.GetPlainDriver.ValidateCharEncoding(GetIbSqlSubType(I)).CharWidth, @ColumnDisplaySize, True)
+          else
+            Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+              ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')

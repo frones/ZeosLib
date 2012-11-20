@@ -58,8 +58,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Types, Classes, Contnrs, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainASADriver, ZSysUtils, ZTokenizer, ZDbcGenericResolver, ZURL,
+  ZCompatibility, Classes, Contnrs, SysUtils, ZDbcIntfs, ZDbcConnection,
+  ZPlainASADriver, ZTokenizer, ZDbcGenericResolver, ZURL,
   ZPlainDriver, ZGenericSqlAnalyser, ZPlainASAConstants;
 
 type
@@ -130,7 +130,7 @@ implementation
 
 uses
   ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcUtils, ZDbcLogging;
+  ZSybaseAnalyser, ZDbcLogging;
 
 { TZASADriver }
 

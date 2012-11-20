@@ -361,6 +361,8 @@ begin
 
   if SkipClosed then Exit;
 
+  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -649,7 +651,9 @@ var
 begin
   if SkipTest then Exit;
 
-//  if SkipClosed then Exit;
+  if SkipClosed then Exit;
+
+  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
 
   Query := TZQuery.Create(nil);
   try
@@ -702,9 +706,8 @@ begin
 
   if SkipClosed then Exit;
 
-  {$IFDEF FPC}
-  Check(False, 'Purpose of Test804640 currently not supported for FPC');
-  {$ELSE}
+  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+
   Query := TZQuery.Create(nil);
   try
     CheckEquals(False, Query.CachedUpdates);
@@ -735,7 +738,6 @@ begin
   finally
     Query.Free;
   end;
-  {$ENDIF}
 end;
 
 {**
@@ -1491,6 +1493,8 @@ begin
 
   if SkipClosed then Exit;
 
+  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
   Query.Connection := Connection;
@@ -1908,6 +1912,7 @@ var
 begin
   if SkipTest then Exit;
 
+  StrStream1 := nil;
   Query := TZQuery.Create(nil);
   try
     Query.Connection := Connection;
@@ -1957,7 +1962,8 @@ begin
     end;
   finally
     Query.Free;
-    StrStream1.Free;
+    if Assigned(StrStream1) then
+      StrStream1.Free;
   end;
 end;
 {**

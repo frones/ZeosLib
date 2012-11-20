@@ -582,7 +582,7 @@ end;
 function TZAbstractSQLTestCase.GetDBTestString(const Value: String;
   ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False;
   MaxLen: Integer = -1): String;
-var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSe}String{$ENDIF};
+var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSE}String{$ENDIF};
 begin
   Result := Value;
   if ConSettings.CPType = cCP_UTF16 then
