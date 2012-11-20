@@ -71,7 +71,7 @@ type
   TZRowUpdateType = (utUnmodified, utModified, utInserted, utDeleted);
   TZRowUpdateTypes = set of TZRowUpdateType;
 
-  TZByteArray = array[0..65535] of Byte;
+  TZByteArray = array[0..4096 * SizeOf(Pointer)] of Byte;
   {** Defines a header for row buffer. }
   {ludob. Notes on alignment:
   Columns contains a record per field with the structure
@@ -114,7 +114,13 @@ type
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
     procedure SetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer;
       Value: IZBlob);
-
+    function InternalGetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer): TByteDynArray;
+    procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
+      Value: TByteDynArray; NewPointer: Boolean = False);
+    procedure InternalSetString(Buffer: PZRowBuffer; ColumnIndex: Integer;
+      Value: String; NewPointer: Boolean = False);
+    procedure InternalSetUnicodeString(Buffer: PZRowBuffer; ColumnIndex: Integer;
+      Value: ZWideString; NewPointer: Boolean = False);
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
@@ -215,7 +221,7 @@ type
   end;
 
 const
-  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TZByteArray); // M.A. RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TByteArray);
+  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TZByteArray);
 
 implementation
 
@@ -261,6 +267,8 @@ begin
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;
     {$endif}
+    if Current.ColumnType in [stBytes, stString, stUnicodeString] then
+      FColumnLengths[I] := Current.Precision;
     if FColumnsSize > SizeOf(TZByteArray)-1 then
       raise EZSQLException.Create(SRowBufferWidthExceeded);
     FHasBlobs := FHasBlobs
@@ -346,11 +354,11 @@ begin
     stBigDecimal:
       Result := SizeOf(Extended);
     stString:
-      Result := SizeOf(Char)*ColumnInfo.Precision + SizeOf(Char);
+      Result := SizeOf(Pointer);
     stUnicodeString:
-      Result := 2 * ColumnInfo.Precision + 2;
+      Result := SizeOf(Pointer);
     stBytes:
-      Result := SizeOf(SmallInt) + ColumnInfo.Precision;
+      Result := SizeOf(Pointer) + SizeOf(SmallInt);
     stDate, stTime, stTimestamp:
       Result := SizeOf(TDateTime);
     stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -422,6 +430,106 @@ begin
   {$ENDIF}
 end;
 
+function TZRowAccessor.InternalGetBytes(Buffer: PZRowBuffer;
+  ColumnIndex: Integer): TByteDynArray;
+var
+  P: PPointer;
+  L: SmallInt;
+begin
+  Result := nil;
+  if ( Buffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 )then
+  begin
+    L := PSmallInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1 + SizeOf(Pointer)])^;
+    SetLength(Result, L);
+    if L > 0 then
+    begin
+      P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+      Move(P^^, Pointer(Result)^, L);
+    end;
+  end;
+end;
+
+procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
+  Value: TByteDynArray; NewPointer: Boolean = False);
+var
+  P: PPointer;
+  L: SmallInt;
+begin
+  if Assigned(Buffer) then
+  begin
+    if NewPointer then
+      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+    P := PPointer(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+    L := Min(Length(Value), FColumnLengths[ColumnIndex - 1]);
+    PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1 + SizeOf(Pointer)])^ := L;
+    if L > 0 then
+    begin
+      ReallocMem(P^, L);
+      System.Move(Pointer(Value)^, P^^, L);
+    end
+    else
+      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
+      begin
+        System.Dispose(P^);
+        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+      end;
+  end;
+end;
+
+procedure TZRowAccessor.InternalSetString(Buffer: PZRowBuffer;
+  ColumnIndex: Integer; Value: String; NewPointer: Boolean = False);
+var
+  C: PPChar;
+  L: SmallInt;
+begin
+  if Assigned(Buffer) then
+  begin
+    if NewPointer then
+      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+    C := PPChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+    L := Min(FColumnLengths[ColumnIndex - 1], Length(Value));
+    if L > 0 then
+    begin
+      ReallocMem(C^, L * SizeOf(Char) + SizeOf(Char));
+      StrPLCopy(PChar(C^), PChar(Value), L);
+    end
+    else
+      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
+      begin
+        System.Dispose(C^);
+        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+      end;
+  end;
+end;
+
+procedure TZRowAccessor.InternalSetUnicodeString(Buffer: PZRowBuffer;
+  ColumnIndex: Integer; Value: ZWideString; NewPointer: Boolean = False);
+var
+  W: PPWideChar;
+  L: SmallInt;
+begin
+  if Assigned(Buffer) then
+  begin
+    if NewPointer then
+      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+    W := PPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+    L := Min(Length(Value), FColumnLengths[ColumnIndex - 1]);
+    if L > 0 then
+    begin
+      Value := System.Copy(Value, 1, L);
+      L := L * 2 + 2;
+      ReallocMem(W^, L);
+      System.Move(PWideChar(Value)^, W^^, L);
+    end
+    else
+      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
+      begin
+        System.Dispose(W^);
+        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+      end;
+  end;
+end;
+
 {**
   Allocates a new row buffer and sets it into the variable.
   @param Buffer a pointer to row buffer.
@@ -482,16 +590,20 @@ begin
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
-    if FHasBlobs then
-      for I := 0 to FColumnCount - 1 do
-      begin
-        if (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream])
-          and (Columns[FColumnOffsets[I]] = 0) then
-        begin
-          Columns[FColumnOffsets[I]] := 1;
-          SetBlobObject(DestBuffer, I + 1, GetBlobObject(SrcBuffer, I + 1));
-        end;
-      end;
+    for I := 0 to FColumnCount - 1 do
+      case FColumnTypes[I] of
+        stAsciiStream, stUnicodeStream, stBinaryStream:
+          if (Columns[FColumnOffsets[I]] = 0) then
+          begin
+            Columns[FColumnOffsets[I]] := 1;
+            SetBlobObject(DestBuffer, I + 1, GetBlobObject(SrcBuffer, I + 1));
+          end;
+      stString: InternalSetString(DestBuffer, I +1,
+        PPChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
+      stUnicodeString: InternalSetUnicodeString(DestBuffer, I +1,
+        PPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
+      stBytes: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
+    end;
   end;
 end;
 
@@ -524,18 +636,22 @@ begin
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
-    if FHasBlobs then
-      for I := 0 to FColumnCount - 1 do
-      begin
-        if (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream])
-          and (Columns[FColumnOffsets[I]] = 0) then
-        begin
-          Columns[FColumnOffsets[I]] := 1;
-          Blob := GetBlobObject(SrcBuffer, I + 1);
-          if Blob <> nil then
-            Blob := Blob.Clone;
-          SetBlobObject(DestBuffer, I + 1, Blob);
-        end;
+    for I := 0 to FColumnCount - 1 do
+      case FColumnTypes[I] of
+        stAsciiStream, stUnicodeStream, stBinaryStream:
+          if (Columns[FColumnOffsets[I]] = 0) then
+          begin
+            Columns[FColumnOffsets[I]] := 1;
+            Blob := GetBlobObject(SrcBuffer, I + 1);
+            if Blob <> nil then
+              Blob := Blob.Clone;
+            SetBlobObject(DestBuffer, I + 1, Blob);
+          end;
+        stString: InternalSetString(DestBuffer, I +1,
+          PPChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
+        stUnicodeString: InternalSetUnicodeString(DestBuffer, I +1,
+          PPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
+        stBytes: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
 end;
@@ -636,23 +752,21 @@ begin
         Result := CompareFloat(PDateTime(ValuePtr1)^, PDateTime(ValuePtr2)^);
       {$IFDEF UNICODE}
       stUnicodeString,stString:
-        Result := WideCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
+        Result := WideCompareStr(PWideChar(ValuePtr1^), PWideChar(ValuePtr2^));
       {$ELSE}
       stString:
-        Result := AnsiStrComp(PAnsiChar(ValuePtr1), PAnsiChar(ValuePtr2));
+        Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^));
       stUnicodeString:
-        Result := WideCompareStr(PWideChar(ValuePtr1), PWideChar(ValuePtr2));
+        Result := WideCompareStr(PWideChar(ValuePtr1^), PWideChar(ValuePtr2^));
       {$ENDIF}
       stBytes:
         begin
-          Length1 := PSmallInt(ValuePtr1)^;
-          Length2 := PSmallInt(ValuePtr2)^;
-          ValuePtr1 := @Buffer1.Columns[FColumnOffsets[ColumnIndex]
-            + 1 + SizeOf(SmallInt)];
-          ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex]
-            + 1 + SizeOf(SmallInt)];
-          Result := CompareStr(BufferToStr(PAnsiChar(ValuePtr1), Length1),
-             BufferToStr(PAnsiChar(ValuePtr2), Length2));
+          Length1 := PSmallInt(@Buffer1.Columns[FColumnOffsets[ColumnIndex]
+            + 1 + SizeOf(Pointer)])^;
+          Length2 := PSmallInt(@Buffer2.Columns[FColumnOffsets[ColumnIndex]
+            + 1 + SizeOf(Pointer)])^;
+          Result := CompareStr(BufferToStr(PAnsiChar(InternalGetBytes(Buffer1, ColumnIndex)), Length1),
+             BufferToStr(PAnsiChar(InternalGetBytes(Buffer2, ColumnIndex)), Length2));
         end;
       stAsciiStream, stBinaryStream, stUnicodeStream:
         begin
@@ -697,18 +811,24 @@ end;
 procedure TZRowAccessor.ClearBuffer(Buffer: PZRowBuffer);
 var
   I: Integer;
+  P: PPointer;
 begin
   with Buffer^ do
   begin
     Index := -1;
     UpdateType := utUnmodified;
     BookmarkFlag := 0;
-    if FHasBlobs then
-      for I := 0 to FColumnCount - 1 do
-      begin
-        if (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream])
-          and (Columns[FColumnOffsets[I]] = 0) then
-          SetBlobObject(Buffer, I + 1, nil);
+    for I := 0 to FColumnCount - 1 do
+      case FColumnTypes[I] of
+        stAsciiStream, stUnicodeStream, stBinaryStream:
+          if (Columns[FColumnOffsets[I]] = 0) then
+            SetBlobObject(Buffer, I + 1, nil);
+        stBytes, stString, stUnicodeString:
+          if PNativeUInt(@Columns[FColumnOffsets[I] +1])^ > 0 then
+          begin
+            P := PPointer(@Columns[FColumnOffsets[I] +1]);
+            System.Dispose(P^);
+          end;
       end;
     FillChar(Columns, FColumnsSize, 0);
     for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
@@ -946,7 +1066,7 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString{$IFDEF UNICODE}, stUnicodeString{$ENDIF}:
-        Result := @FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1];
+        Result := PPChar(FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       else
       begin
         FTemp := GetString(ColumnIndex, IsNull);
@@ -970,12 +1090,14 @@ end;
 }
 function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
 var
+  TempBytes: TByteDynArray;
   TempBlob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   Result := '';
+  TempBytes := nil;
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
@@ -991,7 +1113,7 @@ begin
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
-      stString: Result := PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+      stString: Result := PPChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stUnicodeString, stUnicodeStream: Result := ZDbcString(GetUnicodeString(ColumnIndex, IsNull)); //wide down to expect codpage Ansi
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
@@ -1033,7 +1155,7 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stUnicodeString{$IFDEF UNICODE}, stString{$ENDIF}:
-        Result := PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+        Result := PPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stUnicodeStream:
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1382,9 +1504,6 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TByteDynArray;
-var
-  I: Integer;
-  TempShort: SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -1394,20 +1513,11 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stBytes:
-        begin
-          TempShort := PSmallInt(@FBuffer.Columns[
-            FColumnOffsets[ColumnIndex - 1] + 1])^;
-          SetLength(Result, TempShort);
-          for I := 0 to TempShort - 1 do
-          begin
-            Result[I] := FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]
-              + 1 + SizeOf(SmallInt) + I];
-          end;
-        end;
+        Result := InternalGetBytes(FBuffer, ColumnIndex);
       stBinaryStream:
         Result := GetBlob(ColumnIndex, IsNull).GetBytes;
       else
-        Result := StrToBytes(ZAnsiString(GetString(ColumnIndex, IsNull)));
+        Result := StrToBytes(AnsiString(GetString(ColumnIndex, IsNull)));
     end;
     IsNull := False;
   end
@@ -1778,9 +1888,17 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if (FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0) and 
-  	(FColumnTypes[ColumnIndex - 1] in [stAsciiStream, stBinaryStream, stUnicodeStream]) then
-    SetBlobObject(FBuffer, ColumnIndex, nil);
+  if (FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0) then
+    case FColumnTypes[ColumnIndex - 1] of
+      stAsciiStream, stBinaryStream, stUnicodeStream:
+        SetBlobObject(FBuffer, ColumnIndex, nil);
+      stBytes, stString, stUnicodeString:
+        if PNativeUInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
+        begin
+          System.Dispose(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+          PNativeUInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+        end;
+    end;
   FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 1;
 end;
 
@@ -2070,13 +2188,12 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
-    stString:
+    stString{$IFDEF UNICODE}, stUnicodeString{$ENDIF}:
       begin
         if Value <> nil then
         begin
           FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-          StrLCopy(PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
-              Value, FColumnLengths[ColumnIndex - 1] - 1);
+          SetString(ColumnIndex, Value);
         end
         else
           FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 1;
@@ -2119,15 +2236,12 @@ begin
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
-    {$IFNDEF UNICODE}
     stString:
       begin
+        InternalSetString(FBuffer, ColumnIndex, Value);
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        StrPLCopy(PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]),
-          Value, FColumnLengths[ColumnIndex - 1]- 1);
       end;
-	{$ENDIF}
-    stUnicodeString, stUnicodeStream {$IFDEF UNICODE}, stString{$ENDIF}:
+    stUnicodeString:
       {$IFDEF UNICODE}
       SetUnicodeString(ColumnIndex, Value);
       {$ELSE}
@@ -2137,12 +2251,14 @@ begin
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    stAsciiStream:
-      {$IFDEF UNICODE}
-      GetBlob(ColumnIndex, IsNull).SetString(ZPlainString(Value, ConSettings, ConSettings.CTRL_CP));
-      {$ELSE}
-      GetBlob(ColumnIndex, IsNull).SetString(Value);
+    stUnicodeStream:
+    {$IFDEF UNICODE}
+      GetBlob(ColumnIndex, IsNull).SetUnicodeString(Value);
+    {$ELSE}
+      GetBlob(ColumnIndex, IsNull).SetString(ZDbcUnicodeString(Value, ConSettings.CTRL_CP));
     {$ENDIF}
+    stAsciiStream:
+      GetBlob(ColumnIndex, IsNull).SetString(ZPlainString(Value, ConSettings, ConSettings.CTRL_CP));
     stBinaryStream:
       GetBlob(ColumnIndex, IsNull).SetString(ZAnsiString(Value));
   end;
@@ -2165,16 +2281,10 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
-    stUnicodeString{$IFDEF DELPHI12_UP},stString{$ENDIF}:
+    stUnicodeString{$IFDEF UNICODE},stString{$ENDIF}:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        Value := System.Copy(Value, 1, FColumnLengths[ColumnIndex - 1] div 2);
-        if Length(Value) > 0 then
-               System.Move(PWideString(Value)^,
-                  Pointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
-                  Length(Value) * 2 + 2)
-        else
-          PWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := #0;
+        InternalSetUnicodeString(FBuffer, ColumnIndex, Value);
       end;
     stUnicodeStream:
       GetBlob(ColumnIndex, IsNull).SetUnicodeString(Value);
@@ -2195,27 +2305,17 @@ end;
 }
 procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; Value: TByteDynArray);
 var
-  I: Integer;
-  TempShort: SmallInt;
+  IsNull: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
   if Value <> nil then
   begin
+    FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
     case FColumnTypes[ColumnIndex - 1] of
-      stBytes:
-        begin
-          FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-          TempShort := MinIntValue([High(Value) + 1, FColumnLengths[ColumnIndex - 1]
-            - SizeOf(SmallInt)]);
-          PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempShort;
-          for I := 0 to TempShort - 1 do
-          begin
-            FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1
-              + SizeOf(SmallInt) + I] := Value[I];
-          end;
-        end;
+      stBytes: InternalSetBytes(FBuffer, ColumnIndex, Value);
+      stBinaryStream: GetBlob(ColumnIndex, IsNull).SetBytes(Value);
       else
         SetString(ColumnIndex, String(BytesToStr(Value)));
     end;
