@@ -159,7 +159,16 @@ type
   Psqlite = Pointer;
   Psqlite_func = Pointer;
   Psqlite_vm = Pointer;
+  Psqlite3_stmt = Pointer;
+  Psqlite3_value = Pointer;
 
+  Tsqlite3_destructor_type = procedure(user: pointer); cdecl;
+
+
+  SQLITE_STATIC = procedure(User: Pointer = Nil); cdecl;
+  SQLITE_TRANSIENT = procedure(User: pointer = Pointer(-1)); cdecl;
+
+type
 { ************** Plain API Function types definition ************* }
 
   Tsqlite_callback = function(p1: Pointer; p2: Integer; var p3: PAnsiChar;
@@ -177,20 +186,87 @@ type
   Tsqlite_trace_callback = procedure(p1: Pointer; const p2: PAnsiChar); cdecl;
 
   Tsqlite_open = function(const filename: PAnsiChar;var Qsqlite: Psqlite): Integer; cdecl;
-
   Tsqlite_close = procedure(db: Psqlite); cdecl;
-  Tsqlite_column_count = function(db: Psqlite): Integer; cdecl;
-  Tsqlite_column_bytes = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
 
-  //  NEW : FST  100214
-  Tsqlite_column_rawbytes = function(db: Psqlite; iCol: Integer): integer; cdecl;
-  Tsqlite_column_blob = function(db:PSqlite;iCol:integer):PAnsiChar; cdecl;
+  { prepared statment api}
+  Tsqlite3_prepare = function(
+    db: Psqlite;                // Database handle
+    const zSql: PAnsiChar;      // SQL statement, UTF-8 encoded
+    nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
+    out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
+    out pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+  ): Integer; cdecl;
+  Tsqlite3_prepare_v2 = function(
+    db: Psqlite;                // Database handle
+    const zSql: PAnsiChar;      // SQL statement, UTF-8 encoded
+    nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
+    out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
+    out pzTail: PPAnsichar      // OUT: Pointer to unused portion of zSql
+  ): Integer; cdecl;
+  Tsqlite3_prepare16 = function(
+    db: Psqlite;                // Database handle
+    const zSql: PWideChar;      // SQL statement, UTF-16 encoded
+    nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
+    out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
+    out pzTail: PPWideChar      // OUT: Pointer to unused portion of zSql
+  ): Integer; cdecl;
+  Tsqlite3_prepare16_v2 = function(
+    db: Psqlite;                // Database handle
+    const zSql: PWideChar;      // SQL statement, UTF-16 encoded
+    nBytes: Integer;            // Maximum length of zSql in bytes. -1 = null terminated
+    out ppStmt: Psqlite3_stmt;  // OUT: Statement handle
+    out pzTail: PPWideChar      // OUT: Pointer to unused portion of zSql
+  ): Integer; cdecl;
+
+  Tsqlite3_bind_parameter_count = function(pStmt: Psqlite3_stmt): Integer; cdecl;
+  Tsqlite3_bind_parameter_name = function(pStmt: Psqlite3_stmt; ParamIndex: Integer): PAnsichar; cdecl;
+  Tsqlite3_bind_parameter_index = function(pStmt: Psqlite3_stmt; const zName: PAnsiChar): Integer; cdecl;
+
+  Tsqlite3_clear_bindings = function(pStmt: Psqlite3_stmt): Integer; cdecl;
+  Tsqlite3_column_count = function(pStmt: Psqlite3_stmt): Integer; cdecl;
+  Tsqlite3_column_name = function(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar; cdecl;
+  Tsqlite3_column_name16 = function(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
+
+  Tsqlite3_column_database_name = function(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar; cdecl;
+  Tsqlite3_column_database_name16 = function(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
+  Tsqlite3_column_table_name = function(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar; cdecl;
+  Tsqlite3_column_table_name16 = function(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
+  Tsqlite3_column_origin_name = function(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar; cdecl;
+  Tsqlite3_column_origin_name16 = function(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
+
+  Tsqlite3_column_decltype = function(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar; cdecl;
+  Tsqlite3_column_decltype16 = function(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
+
+  Tsqlite3_step = function(pStmt: Psqlite3_stmt): Integer; cdecl;
+  Tsqlite3_data_count = function (pStmt: Psqlite3_stmt): Integer; cdecl;
+
+  Tsqlite3_bind_blob = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Buffer: Pointer; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer; cdecl;
+  Tsqlite3_bind_double = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Double): Integer; cdecl;
+  Tsqlite3_bind_int = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Integer): Integer; cdecl;
+  Tsqlite3_bind_int64 = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Int64): Integer; cdecl;
+  Tsqlite3_bind_null = function(pStmt: Psqlite3_stmt; ParamIndex: Integer): Integer; cdecl;
+  Tsqlite3_bind_text = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Text: PAnsiChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer; cdecl;
+  Tsqlite3_bind_text16 = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Text: PWideChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer; cdecl;
+  Tsqlite3_bind_value = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Psqlite3_value): Integer; cdecl;
+  Tsqlite3_bind_zeroblob = function(pStmt: Psqlite3_stmt; ParamIndex: Integer; N: Integer): Integer; cdecl;
+
+  Tsqlite3_finalize = function(pStmt: Psqlite3_stmt): Integer; cdecl;
+  Tsqlite3_reset = function(pStmt: Psqlite3_stmt): Integer; cdecl;
+
+  Tsqlite3_column_blob = function(Stmt: Psqlite3_stmt; iCol:integer): Pointer; cdecl;
+  Tsqlite3_column_bytes = function(Stmt: Psqlite3_stmt; iCol: Integer): integer; cdecl;
+  Tsqlite3_column_bytes16 = function(Stmt: Psqlite3_stmt; iCol: Integer): integer; cdecl;
+  Tsqlite3_column_double = function(Stmt: Psqlite3_stmt; iCol: Integer): Double; cdecl;
+  Tsqlite3_column_int = function(Stmt: Psqlite3_stmt; iCol: Integer): Integer; cdecl;
+  Tsqlite3_column_int64 = function(Stmt: Psqlite3_stmt; iCol: Integer): Int64; cdecl;
+  Tsqlite3_column_text = function(Stmt: Psqlite3_stmt; iCol: Integer): PAnsiChar; cdecl;
+  Tsqlite3_column_text16 = function(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
+  Tsqlite3_column_type = function(Stmt: Psqlite3_stmt; iCol: Integer): Integer; cdecl;
+  Tsqlite3_column_value = function(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value; cdecl;
 
   //gets the column type
   Tsqlite_column_type = function(db:PSqlite;iCol:integer):Integer; cdecl;
 
-  Tsqlite_column_name = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
-  Tsqlite_column_decltype = function(db: Psqlite; iCol: Integer): PAnsiChar; cdecl;
   Tsqlite_exec = function(db: Psqlite; const sql: PAnsiChar;
     sqlite_callback: Tsqlite_callback; arg: Pointer;
     var errmsg: PAnsiChar): Integer; cdecl;
@@ -238,63 +314,6 @@ type
   Tsqlite_trace = function(db: Psqlite; callback: Tsqlite_trace_callback;
     ptr: Pointer): Pointer; cdecl;
 
-  Tsqlite_compile = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
-     (*
-      int sqlite3_prepare(
-        sqlite3 *db,            /* Database handle */
-        const char *zSql,       /* SQL statement, UTF-8 encoded */
-        int nByte,              /* Maximum length of zSql in bytes. */
-        sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-        const char **pzTail     /* OUT: Pointer to unused portion of zSql *)
-
-  Tsqlite_compile_v2 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
-    (*
-    int sqlite3_prepare_v2(
-      sqlite3 *db,            /* Database handle */
-      const char *zSql,       /* SQL statement, UTF-8 encoded */
-      int nByte,              /* Maximum length of zSql in bytes. */
-      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-      const char **pzTail     /* OUT: Pointer to unused portion of zSql */
-    ); *)
-  Tsqlite_compile16 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
-    (*
-    int sqlite3_prepare16(
-      sqlite3 *db,            /* Database handle */
-      const void *zSql,       /* SQL statement, UTF-16 encoded */
-      int nByte,              /* Maximum length of zSql in bytes. */
-      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-      const void **pzTail     /* OUT: Pointer to unused portion of zSql */
-    ); *)
-  Tsqlite_compile16_v2 = function(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
-     var ppVm: Psqlite_vm; pzTail: PAnsiChar): Integer; cdecl;
-    (*
-    int sqlite3_prepare16_v2(
-      sqlite3 *db,            /* Database handle */
-      const void *zSql,       /* SQL statement, UTF-16 encoded */
-      int nByte,              /* Maximum length of zSql in bytes. */
-      sqlite3_stmt **ppStmt,  /* OUT: Statement handle */
-      const void **pzTail     /* OUT: Pointer to unused portion of zSql */
-    ); *)
-
-  Tsqlite_step = function(pVm: Psqlite_vm): Integer; cdecl;
-  Tsqlite_finalize = function(vm: Psqlite_vm): Integer; cdecl;
-  Tsqlite_reset = function(vm: Psqlite_vm): Integer; cdecl;
-  Tsqlite_bind = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-    len: Integer; copy: Integer): Integer; cdecl;
-{  Tsqlite_bind_double = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-    len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_int = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-    len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_int64 = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-    len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_null = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-    len: Integer; copy: Integer): Integer; cdecl;
-  Tsqlite_bind_text = function(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-    len: Integer; copy: Integer): Integer; cdecl;}
-
   Tsqlite_progress_handler = procedure(db: Psqlite; p1: Integer;
     callback: Tsqlite_simple_callback; ptr: Pointer); cdecl;
   Tsqlite_commit_hook = function(db: Psqlite; callback: Tsqlite_simple_callback;
@@ -312,18 +331,59 @@ type
 TZSQLite_API = record
   sqlite_open: Tsqlite_open;
   sqlite_close: Tsqlite_close;
-  sqlite_column_count: Tsqlite_column_count;
-  sqlite_column_bytes: Tsqlite_column_bytes;
 
-//  NEW : FST  100214
-  sqlite_column_rawbytes: Tsqlite_column_rawbytes;
-  sqlite_column_blob:TSqlite_column_blob;
+  { prepared statement api }
+  sqlite_prepare: Tsqlite3_prepare;
+  sqlite_prepare_v2: Tsqlite3_prepare_v2;
+  sqlite_prepare16: Tsqlite3_prepare16;
+  sqlite_prepare16_v2: Tsqlite3_prepare16_v2;
 
-  //gets the column type
-  sqlite_column_type:Tsqlite_column_type;
+  sqlite_bind_parameter_count: Tsqlite3_bind_parameter_count;
+  sqlite_bind_parameter_name: Tsqlite3_bind_parameter_name;
+  sqlite_bind_parameter_index: Tsqlite3_bind_parameter_index;
 
-  sqlite_column_name: Tsqlite_column_name;
-  sqlite_column_decltype: Tsqlite_column_decltype;
+  sqlite_clear_bindings: Tsqlite3_clear_bindings;
+  sqlite_column_count: Tsqlite3_column_count;
+  sqlite_column_name: Tsqlite3_column_name;
+  sqlite_column_name16: Tsqlite3_column_name16;
+
+  sqlite_column_database_name: Tsqlite3_column_database_name;
+  sqlite_column_database_name16: Tsqlite3_column_database_name16;
+  sqlite_column_table_name: Tsqlite3_column_table_name;
+  sqlite_column_table_name16: Tsqlite3_column_table_name16;
+  sqlite_column_origin_name: Tsqlite3_column_origin_name;
+  sqlite_column_origin_name16: Tsqlite3_column_origin_name16;
+
+  sqlite_column_decltype: Tsqlite3_column_decltype;
+  sqlite_column_decltype16: Tsqlite3_column_decltype16;
+
+  sqlite_step: Tsqlite3_step;
+  sqlite_data_count: Tsqlite3_data_count;
+
+  sqlite_bind_blob: Tsqlite3_bind_blob;
+  sqlite_bind_double: Tsqlite3_bind_double;
+  sqlite_bind_int: Tsqlite3_bind_int;
+  sqlite_bind_int64: Tsqlite3_bind_int64;
+  sqlite_bind_null: Tsqlite3_bind_null;
+  sqlite_bind_text: Tsqlite3_bind_text;
+  sqlite_bind_text16: Tsqlite3_bind_text16;
+  sqlite_bind_value: Tsqlite3_bind_value;
+  sqlite_bind_zeroblob: Tsqlite3_bind_zeroblob;
+
+  sqlite_finalize: Tsqlite3_finalize;
+  sqlite_reset: Tsqlite3_reset;
+
+  sqlite_column_blob: Tsqlite3_column_blob;
+  sqlite_column_bytes: Tsqlite3_column_bytes;
+  sqlite_column_bytes16: Tsqlite3_column_bytes16;
+  sqlite_column_double: Tsqlite3_column_double;
+  sqlite_column_int: Tsqlite3_column_int;
+  sqlite_column_int64: Tsqlite3_column_int64;
+  sqlite_column_text: Tsqlite3_column_text;
+  sqlite_column_text16: Tsqlite3_column_text16;
+  sqlite_column_type: Tsqlite3_column_type;
+  sqlite_column_value: Tsqlite3_column_value;
+
   sqlite_exec: Tsqlite_exec;
   sqlite_errmsg: Tsqlite_errmsg;
   sqlite_last_insert_rowid: Tsqlite_last_insert_rowid;
@@ -351,11 +411,6 @@ TZSQLite_API = record
   sqlite_aggregate_count: Tsqlite_aggregate_count;
   sqlite_set_authorizer: Tsqlite_set_authorizer;
   sqlite_trace: Tsqlite_trace;
-  sqlite_compile: Tsqlite_compile;
-  sqlite_step: Tsqlite_step;
-  sqlite_finalize: Tsqlite_finalize;
-  sqlite_reset: Tsqlite_reset;
-  sqlite_bind: Tsqlite_bind;
   sqlite_progress_handler: Tsqlite_progress_handler;
   sqlite_commit_hook: Tsqlite_commit_hook;
   sqlite_open_encrypted: Tsqlite_open_encrypted;
@@ -378,7 +433,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): String;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -415,14 +470,66 @@ type
     function Trace(db: Psqlite; callback: Tsqlite_trace_callback;
       ptr: Pointer): Pointer;
 
-    function Compile(db: Psqlite; const zSql: PAnsiChar;nBytes: Integer;
-      var pzTail: PAnsiChar; var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
-    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPAnsiChar;
-      var pazColName: PPAnsiChar): Integer;
-    function Finalize(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Reset(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Bind(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-      len: Integer; copy: Integer): Integer;
+    { Prepared statmenet api }
+    function Prepare(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+    function Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+    function Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPWideChar): Integer;
+    function Prepare16_v2(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPWideChar): Integer;
+
+    function bind_parameter_count(pStmt: Psqlite3_stmt): Integer;
+    function bind_parameter_name(pStmt: Psqlite3_stmt; ParamIndex: Integer): PAnsichar;
+    function bind_parameter_index(pStmt: Psqlite3_stmt; const zName: PAnsiChar): Integer;
+
+    function clear_bindings(pStmt: Psqlite3_stmt): Integer;
+    function column_count(pStmt: Psqlite3_stmt): Integer;
+    function column_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+
+    function column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_database_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+    function column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_table_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+    function column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_origin_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+
+    function column_decltype(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_decltype16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+
+    function Step(Stmt: Psqlite3_stmt; var pN: Integer;
+      var pazValue, pazColName: PPAnsiChar): Integer; overload;
+    function Step(Stmt: Psqlite3_stmt): Integer; overload;
+    function data_count(pStmt: Psqlite3_stmt): Integer;
+
+    function bind_blob(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+      const Buffer: Pointer; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+    function bind_double(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Double): Integer;
+    function bind_int(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Integer): Integer;
+    function bind_int64(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Int64): Integer;
+    function bind_null(pStmt: Psqlite3_stmt; ParamIndex: Integer): Integer;
+    function bind_text(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+      const Text: PAnsiChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+    function bind_text16(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+      const Text: PWideChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+    function bind_value(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Psqlite3_value): Integer;
+    function bind_zeroblob(pStmt: Psqlite3_stmt; ParamIndex: Integer; N: Integer): Integer;
+
+    function finalize(pStmt: Psqlite3_stmt): Integer;
+    function reset(pStmt: Psqlite3_stmt): Integer;
+
+    function column_blob(Stmt: Psqlite3_stmt; iCol:integer): TStream;
+    function column_bytes(Stmt: Psqlite3_stmt; iCol: Integer): integer;
+    function column_bytes16(Stmt: Psqlite3_stmt; iCol: Integer): integer;
+    function column_double(Stmt: Psqlite3_stmt; iCol: Integer): Double;
+    function column_int(Stmt: Psqlite3_stmt; iCol: Integer): Integer;
+    function column_int64(Stmt: Psqlite3_stmt; iCol: Integer): Int64;
+    function column_text(Stmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_text16(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+    function column_type(Stmt: Psqlite3_stmt; iCol: Integer): String;
+    function column_value(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value;
 
     procedure ProgressHandler(db: Psqlite; p1: Integer;
       callback: Tsqlite_simple_callback; ptr: Pointer);
@@ -433,12 +540,6 @@ type
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
-
-//  NEW : FST  100214
-    function getBlob(pVm: Psqlite_vm; columnID: integer): TMemoryStream;
-
-    //gets the datatype of field.
-    function GetColumnDataType(stmt:Psqlite_vm; iCol:Integer):String;
   end;
 
   {** Implements a base driver for SQLite}
@@ -460,7 +561,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): String;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -497,15 +598,66 @@ type
     function Trace(db: Psqlite; callback: Tsqlite_trace_callback;
       ptr: Pointer): Pointer;
 
-    function Compile(db: Psqlite; const zSql: PAnsiChar;
-      nBytes: Integer;var pzTail: PAnsiChar;
-      var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
-    function Step(pVm: Psqlite_vm; var pN: Integer; var pazValue: PPAnsiChar;
-      var pazColName: PPAnsiChar): Integer;
-    function Finalize(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Reset(vm: Psqlite_vm; var pzErrMsg: PAnsiChar): Integer;
-    function Bind(vm: Psqlite_vm; idx: Integer; const value: PAnsiChar;
-      len: Integer; copy: Integer): Integer;
+    { Prepared statmenet api }
+    function Prepare(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+    function Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
+    function Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPWideChar): Integer;
+    function Prepare16_v2(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
+      out ppStmt: Psqlite3_stmt; pzTail: PPWideChar): Integer;
+
+    function bind_parameter_count(pStmt: Psqlite3_stmt): Integer;
+    function bind_parameter_name(pStmt: Psqlite3_stmt; ParamIndex: Integer): PAnsichar;
+    function bind_parameter_index(pStmt: Psqlite3_stmt; const zName: PAnsiChar): Integer;
+
+    function clear_bindings(pStmt: Psqlite3_stmt): Integer;
+    function column_count(pStmt: Psqlite3_stmt): Integer;
+    function column_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+
+    function column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_database_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+    function column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_table_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+    function column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_origin_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+
+    function column_decltype(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_decltype16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+
+    function Step(Stmt: Psqlite3_stmt; var pN: Integer;
+      var pazValue, pazColName: PPAnsiChar): Integer; overload;
+    function Step(Stmt: Psqlite3_stmt): Integer; overload;
+    function data_count(pStmt: Psqlite3_stmt): Integer;
+
+    function bind_blob(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+      const Buffer: Pointer; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+    function bind_double(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Double): Integer;
+    function bind_int(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Integer): Integer;
+    function bind_int64(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Int64): Integer;
+    function bind_null(pStmt: Psqlite3_stmt; ParamIndex: Integer): Integer;
+    function bind_text(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Text: PAnsiChar; N: Integer;
+      ValDestructor: Tsqlite3_destructor_type): Integer;
+    function bind_text16(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Text: PWideChar; N: Integer;
+      ValDestructor: Tsqlite3_destructor_type): Integer;
+    function bind_value(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Psqlite3_value): Integer;
+    function bind_zeroblob(pStmt: Psqlite3_stmt; ParamIndex: Integer; N: Integer): Integer;
+
+    function finalize(pStmt: Psqlite3_stmt): Integer;
+    function reset(pStmt: Psqlite3_stmt): Integer;
+
+    function column_blob(Stmt: Psqlite3_stmt; iCol:integer): TStream;
+    function column_bytes(Stmt: Psqlite3_stmt; iCol: Integer): integer;
+    function column_bytes16(Stmt: Psqlite3_stmt; iCol: Integer): integer;
+    function column_double(Stmt: Psqlite3_stmt; iCol: Integer): Double;
+    function column_int(Stmt: Psqlite3_stmt; iCol: Integer): Integer;
+    function column_int64(Stmt: Psqlite3_stmt; iCol: Integer): Int64;
+    function column_text(Stmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+    function column_text16(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+    function column_type(Stmt: Psqlite3_stmt; iCol: Integer): String;
+    function column_value(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value;
 
     procedure ProgressHandler(db: Psqlite; p1: Integer;
       callback: Tsqlite_simple_callback; ptr: Pointer);
@@ -517,11 +669,6 @@ type
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
 
-//  NEW : FST  100214
-    function getBlob(pVm: Psqlite_vm; columnID: integer): TMemoryStream;
-
-    //gets the datatype of field.
-    function GetColumnDataType(stmt:Psqlite_vm; iCol:Integer):String;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -578,12 +725,6 @@ begin
   Result := SQLite_API.sqlite_aggregate_count(func);
 end;
 
-function TZSQLiteBaseDriver.Bind(vm: Psqlite_vm; idx: Integer;
-  const value: PAnsiChar; len, copy: Integer): Integer;
-begin
-  Result := SQLite_API.sqlite_bind(vm, idx, value, len, copy);
-end;
-
 procedure TZSQLiteBaseDriver.BusyHandler(db: Psqlite;
   callback: Tsqlite_busy_callback; ptr: Pointer);
 begin
@@ -606,15 +747,6 @@ begin
   Result := SQLite_API.sqlite_commit_hook(db, callback, ptr);
 end;
 
-function TZSQLiteBaseDriver.Compile(db: Psqlite; const zSql: PAnsiChar;
-  nBytes: Integer;var pzTail: PAnsiChar;
-  var ppVm: Psqlite_vm; var pzErrmsg: PAnsiChar): Integer;
-
-begin
-  Result := SQLite_API.sqlite_compile(db, zSql, -1, ppVm, nil);
-  pzErrmsg := nil;
-end;
-
 function TZSQLiteBaseDriver.Complete(const sql: PAnsiChar): Integer;
 begin
   Result := SQLite_API.sqlite_complete(sql);
@@ -634,7 +766,7 @@ begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLiteBaseDriver.ErrorString(code: Integer): PAnsiChar;
+function TZSQLiteBaseDriver.ErrorString(code: Integer): String;
 begin
    case code of
     SQLITE_OK:         Result := 'not an error';
@@ -675,13 +807,6 @@ function TZSQLiteBaseDriver.Execute(db: Psqlite; const sql: PAnsiChar;
 begin
   errmsg:= nil;
   Result := SQLite_API.sqlite_exec(db, sql, sqlite_callback, arg, errmsg);
-end;
-
-function TZSQLiteBaseDriver.Finalize(vm: Psqlite_vm;
-  var pzErrMsg: PAnsiChar): Integer;
-begin
-   Result := SQLite_API.sqlite_finalize(vm);
-   pzErrMsg := nil;
 end;
 
 procedure TZSQLiteBaseDriver.FreeMem(ptr: Pointer);
@@ -806,13 +931,6 @@ begin
   end;
 end;
 
-function TZSQLiteBaseDriver.Reset(vm: Psqlite_vm;
-  var pzErrMsg: PAnsiChar): Integer;
-begin
-  Result := SQLite_API.sqlite_reset(vm);
-  pzErrMsg := nil;
-end;
-
 function TZSQLiteBaseDriver.SetAuthorizer(db: Psqlite;
   callback: Tsqlite_auth_callback; pUserData: Pointer): Integer;
 begin
@@ -843,50 +961,118 @@ begin
   Result := SQLite_API.sqlite_set_result_string(func, arg, len, nil);
 end;
 
-
-//  NEW : FST  100214
-function TZSQLiteBaseDriver.getBlob(pVm:Psqlite_vm;columnID:integer):TMemoryStream;
-var P : Pointer;
-    len : integer;
+{ Prepared statmenet api }
+function TZSQLiteBaseDriver.Prepare(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+  out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
 begin
-   result := TMemoryStream.Create;
-   P := SQLite_API.sqlite_column_blob(pVm,columnID-1);
-   len := SQLite_API.sqlite_column_rawbytes(pVm,ColumnID-1);
-   result.WriteBuffer(P^,len);
+  Result := SQLite_API.sqlite_prepare(db, zSql, nBytes, ppStmt, pzTail);
 end;
 
-function TZSQLiteBaseDriver.GetColumnDataType(stmt:Psqlite_vm; iCol:Integer):String;
+function TZSQLiteBaseDriver.Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
+  out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
 begin
-  if Assigned(SQLite_API.sqlite_column_type) then begin
-    case SQLite_API.sqlite_column_type(stmt,iCol) of
-      SQLITE_INTEGER:
-         Result:='INT(19)';
-      SQLITE_FLOAT:
-         Result:='FLOAT(16)';
-      SQLITE3_TEXT:
-         RESULT := 'CHAR'; //EgonHugeist: Need to boil down this type  !
-                           //Else Metadatainformations are not readable !
-         //Result:='VARCHAR';
-      SQLITE_BLOB:
-         Result:='BLOB';
-      SQLITE_NULL: Result := '';
-    end
-  end else
-    Result:='';
+  Result := SQLite_API.sqlite_prepare(db, zSql, nBytes, ppStmt, pzTail);
 end;
 
-function TZSQLiteBaseDriver.Step(pVm: Psqlite_vm; var pN: Integer;
+function TZSQLiteBaseDriver.Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
+  out ppStmt: Psqlite3_stmt; pzTail: PPWideChar): Integer;
+begin
+  Result := SQLite_API.sqlite_prepare16(db, zSql, nBytes, ppStmt, pzTail);
+end;
+
+function TZSQLiteBaseDriver.Prepare16_v2(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
+  out ppStmt: Psqlite3_stmt; pzTail: PPWideChar): Integer;
+begin
+  Result := SQLite_API.sqlite_prepare16_v2(db, zSql, nBytes, ppStmt, pzTail);
+end;
+
+function TZSQLiteBaseDriver.bind_parameter_count(pStmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_parameter_count(pStmt);
+end;
+
+function TZSQLiteBaseDriver.bind_parameter_name(pStmt: Psqlite3_stmt; ParamIndex: Integer): PAnsichar;
+begin
+  Result := SQLite_API.sqlite_bind_parameter_name(pStmt, ParamIndex);
+end;
+
+function TZSQLiteBaseDriver.bind_parameter_index(pStmt: Psqlite3_stmt; const zName: PAnsiChar): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_parameter_index(pStmt, ZName);
+end;
+
+function TZSQLiteBaseDriver.clear_bindings(pStmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_clear_bindings(pStmt);
+end;
+
+function TZSQLiteBaseDriver.column_count(pStmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_column_count(pStmt);
+end;
+
+function TZSQLiteBaseDriver.column_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+begin
+  Result := SQLite_API.sqlite_column_name(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+begin
+  Result := SQLite_API.sqlite_column_name16(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+begin
+  Result := SQLite_API.sqlite_column_database_name(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_database_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+begin
+  Result := SQLite_API.sqlite_column_database_name16(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+begin
+  Result := SQLite_API.sqlite_column_table_name(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_table_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+begin
+  Result := SQLite_API.sqlite_column_table_name16(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+begin
+  Result := SQLite_API.sqlite_column_origin_name(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_origin_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+begin
+  Result := SQLite_API.sqlite_column_origin_name16(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_decltype(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+begin
+  Result := SQLite_API.sqlite_column_decltype(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_decltype16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+begin
+  Result := SQLite_API.sqlite_column_decltype16(pStmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.Step(Stmt: Psqlite3_stmt; var pN: Integer;
   var pazValue, pazColName: PPAnsiChar): Integer;
 var
-    i: Integer;
-    val,cname,ctype: PAnsiChar;
-    pazValue0, pazColName0, pazColType: PPAnsiChar;
+  i: Integer;
+  val, cname,ctype: PAnsiChar;
+  pazValue0, pazColName0, pazColType: PPAnsiChar;
 begin
   pazValue0 := nil; // satisfy compiler
-  Result := SQLite_API.sqlite_step(pVm);
+  Result := SQLite_API.sqlite_step(Stmt);
   if (Result = SQLITE_ROW) or (Result = SQLITE_DONE) then
   begin
-    pN:= SQLite_API.sqlite_column_count(pVm);
+    pN:= SQLite_API.sqlite_column_count(Stmt);
     if Result = SQLITE_ROW then
     begin
       pazValue:= AllocMem(SizeOf(PPAnsiChar)*(pN+1));
@@ -901,16 +1087,16 @@ begin
     begin
       if Result = SQLITE_ROW then
       begin
-        cname:= SQLite_API.sqlite_column_name(pVm, i);
-        ctype:= SQLite_API.sqlite_column_decltype(pVm, i);
-        val  := SQLite_API.sqlite_column_bytes(pVm, i);
+        cname:= SQLite_API.sqlite_column_name(Stmt, i);
+        ctype:= SQLite_API.sqlite_column_decltype(Stmt, i);
+        val  := SQLite_API.sqlite_column_text(Stmt, i);
         pazValue0^ := val;
         inc(pazValue0);
       end
       else
       begin
-        cname:= SQLite_API.sqlite_column_name(pVm, i);
-        ctype:= SQLite_API.sqlite_column_decltype(pVm, i);
+        cname:= SQLite_API.sqlite_column_name(Stmt, i);
+        ctype:= SQLite_API.sqlite_column_decltype(Stmt, i);
       end;
       pazColName0^:= cname;
       pazColType^ := ctype;
@@ -923,6 +1109,145 @@ begin
     if Result = SQLITE_DONE then
          pazValue := nil;
   end;
+end;
+
+function TZSQLiteBaseDriver.Step(Stmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_step(Stmt);
+end;
+
+function TZSQLiteBaseDriver.data_count(pStmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_data_count(pStmt);
+end;
+
+function TZSQLiteBaseDriver.bind_blob(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+  const Buffer: Pointer; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_blob(pStmt, ParamIndex, Buffer, N, ValDestructor);
+end;
+
+function TZSQLiteBaseDriver.bind_double(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Double): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_double(pStmt, ParamIndex, Value);
+end;
+
+function TZSQLiteBaseDriver.bind_int(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Integer): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_int(pStmt, ParamIndex, Value);
+end;
+
+function TZSQLiteBaseDriver.bind_int64(pStmt: Psqlite3_stmt; ParamIndex: Integer; Value: Int64): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_int64(pStmt, ParamIndex, Value);
+end;
+
+function TZSQLiteBaseDriver.bind_null(pStmt: Psqlite3_stmt; ParamIndex: Integer): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_null(pStmt, ParamIndex);
+end;
+
+function TZSQLiteBaseDriver.bind_text(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+  const Text: PAnsiChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_text(pStmt, ParamIndex, Text, N, ValDestructor);
+end;
+
+function TZSQLiteBaseDriver.bind_text16(pStmt: Psqlite3_stmt; ParamIndex: Integer;
+  const Text: PWideChar; N: Integer; ValDestructor: Tsqlite3_destructor_type): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_text16(pStmt, ParamIndex, Text, N, ValDestructor);
+end;
+
+function TZSQLiteBaseDriver.bind_value(pStmt: Psqlite3_stmt; ParamIndex: Integer; const Value: Psqlite3_value): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_value(pStmt, ParamIndex, Value);
+end;
+
+function TZSQLiteBaseDriver.bind_zeroblob(pStmt: Psqlite3_stmt; ParamIndex: Integer; N: Integer): Integer;
+begin
+  Result := SQLite_API.sqlite_bind_zeroblob(pStmt, ParamIndex, N);
+end;
+
+function TZSQLiteBaseDriver.finalize(pStmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_finalize(pStmt);
+end;
+
+function TZSQLiteBaseDriver.reset(pStmt: Psqlite3_stmt): Integer;
+begin
+  Result := SQLite_API.sqlite_reset(pStmt);
+end;
+
+function TZSQLiteBaseDriver.column_blob(Stmt: Psqlite3_stmt; iCol:integer): TStream;
+var
+  P : Pointer;
+  len : integer;
+begin
+  result := TMemoryStream.Create;
+  P := SQLite_API.sqlite_column_blob(Stmt, iCol-1);
+  len := SQLite_API.sqlite_column_bytes(Stmt, iCol-1);
+  result.WriteBuffer(P^,len);
+end;
+
+function TZSQLiteBaseDriver.column_bytes(Stmt: Psqlite3_stmt; iCol: Integer): integer;
+begin
+  Result := SQLite_API.sqlite_column_bytes(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_bytes16(Stmt: Psqlite3_stmt; iCol: Integer): integer;
+begin
+  Result := SQLite_API.sqlite_column_bytes16(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_double(Stmt: Psqlite3_stmt; iCol: Integer): Double;
+begin
+  Result := SQLite_API.sqlite_column_double(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_int(Stmt: Psqlite3_stmt; iCol: Integer): Integer;
+begin
+  Result := SQLite_API.sqlite_column_int(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_int64(Stmt: Psqlite3_stmt; iCol: Integer): Int64;
+begin
+  Result := SQLite_API.sqlite_column_int64(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_text(Stmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
+begin
+  Result := SQLite_API.sqlite_column_text(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_text16(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar;
+begin
+  Result := SQLite_API.sqlite_column_text16(Stmt, iCol);
+end;
+
+function TZSQLiteBaseDriver.column_type(Stmt: Psqlite3_stmt; iCol: Integer): String;
+begin
+  if Assigned(SQLite_API.sqlite_column_type) then
+    case SQLite_API.sqlite_column_type(stmt, iCol) of
+      SQLITE_INTEGER:
+         Result:='INT(19)';
+      SQLITE_FLOAT:
+         Result:='FLOAT(16)';
+      SQLITE3_TEXT:
+         //RESULT := 'CHAR'; //EgonHugeist: Need to boil down this type  !
+                           //Else Metadatainformations are not readable !
+         Result:='VARCHAR';
+      SQLITE_BLOB:
+         Result:='BLOB';
+      SQLITE_NULL: Result := '';
+    end
+  else
+    Result:='';
+end;
+
+function TZSQLiteBaseDriver.column_value(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value;
+begin
+  Result := SQLite_API.sqlite_column_value(stmt, iCol);
 end;
 
 function TZSQLiteBaseDriver.Trace(db: Psqlite;
@@ -955,18 +1280,60 @@ begin
   begin
   @SQLite_API.sqlite_open                   := GetAddress('sqlite3_open');
   @SQLite_API.sqlite_close                  := GetAddress('sqlite3_close');
+
+  { prepared Statment api }
+  { prepared statement api }
+  @SQLite_API.sqlite_prepare                := GetAddress('sqlite3_prepare');
+  @SQLite_API.sqlite_prepare_v2             := GetAddress('sqlite3_prepare_v2');
+  @SQLite_API.sqlite_prepare16              := GetAddress('sqlite3_prepare16');
+  @SQLite_API.sqlite_prepare16_v2           := GetAddress('sqlite3_prepare16_v2');
+
+  @SQLite_API.sqlite_bind_parameter_count   := GetAddress('sqlite3_bind_parameter_count');
+  @SQLite_API.sqlite_bind_parameter_name    := GetAddress('sqlite3_bind_parameter_name');
+  @SQLite_API.sqlite_bind_parameter_index   := GetAddress('sqlite3_bind_parameter_index');
+
+  @SQLite_API.sqlite_clear_bindings         := GetAddress('sqlite3_clear_bindings');
+
   @SQLite_API.sqlite_column_count           := GetAddress('sqlite3_column_count');
-  @SQLite_API.sqlite_column_bytes           := GetAddress('sqlite3_column_text');
-
-//  NEW : FST  100214
-  @SQLite_API.sqlite_column_rawbytes        := GetAddress('sqlite3_column_bytes');
+  @SQLite_API.sqlite_column_bytes           := GetAddress('sqlite3_column_bytes');
+  @SQLite_API.sqlite_column_bytes16         := GetAddress('sqlite3_column_bytes16');
   @SQLite_API.sqlite_Column_blob            := GetAddress('sqlite3_column_blob');
-
-  //gets the column type
+  @SQLite_API.sqlite_column_double          := GetAddress('sqlite3_column_double');
+  @SQLite_API.sqlite_column_int             := GetAddress('sqlite3_column_int');
+  @SQLite_API.sqlite_column_int64           := GetAddress('sqlite3_column_int64');
+  @SQLite_API.sqlite_column_text            := GetAddress('sqlite3_column_text');
+  @SQLite_API.sqlite_column_text16          := GetAddress('sqlite3_column_text16');
   @SQLite_API.sqlite_column_type            := GetAddress('sqlite3_column_type');
-
+  @SQLite_API.sqlite_column_value           := GetAddress('sqlite3_column_value');
   @SQLite_API.sqlite_column_name            := GetAddress('sqlite3_column_name');
+  @SQLite_API.sqlite_column_name16          := GetAddress('sqlite3_column_name16');
+
+  @SQLite_API.sqlite_column_database_name   := GetAddress('sqlite3_column_database_name');
+  @SQLite_API.sqlite_column_database_name16 := GetAddress('sqlite3_column_database_name16');
+  @SQLite_API.sqlite_column_table_name      := GetAddress('sqlite3_column_table_name');
+  @SQLite_API.sqlite_column_table_name16    := GetAddress('sqlite3_column_table_name16');
+  @SQLite_API.sqlite_column_origin_name     := GetAddress('sqlite3_column_origin_name');
+  @SQLite_API.sqlite_column_origin_name16   := GetAddress('sqlite3_column_origin_name16');
+
   @SQLite_API.sqlite_column_decltype        := GetAddress('sqlite3_column_decltype');
+  @SQLite_API.sqlite_column_decltype16      := GetAddress('sqlite3_column_decltype16');
+
+  @SQLite_API.sqlite_step                   := GetAddress('sqlite3_step');
+  @SQLite_API.sqlite_data_count             := GetAddress('sqlite3_data_count');
+
+  @SQLite_API.sqlite_bind_blob              := GetAddress('sqlite3_bind_blob');
+  @SQLite_API.sqlite_bind_double            := GetAddress('sqlite3_bind_double');
+  @SQLite_API.sqlite_bind_int               := GetAddress('sqlite3_bind_int');
+  @SQLite_API.sqlite_bind_int64             := GetAddress('sqlite3_bind_int64');
+  @SQLite_API.sqlite_bind_null              := GetAddress('sqlite3_bind_null');
+  @SQLite_API.sqlite_bind_text              := GetAddress('sqlite3_bind_text');
+  @SQLite_API.sqlite_bind_text16            := GetAddress('sqlite3_bind_text16');
+  @SQLite_API.sqlite_bind_value             := GetAddress('sqlite3_bind_value');
+  @SQLite_API.sqlite_bind_zeroblob          := GetAddress('sqlite3_bind_zeroblob');
+
+  @SQLite_API.sqlite_finalize               := GetAddress('sqlite3_finalize');
+  @SQLite_API.sqlite_reset                  := GetAddress('sqlite3_reset');
+
   @SQLite_API.sqlite_exec                   := GetAddress('sqlite3_exec');
   @SQLite_API.sqlite_last_insert_rowid      := GetAddress('sqlite3_last_insert_rowid');
   @SQLite_API.sqlite_changes                := GetAddress('sqlite3_changes');
@@ -993,11 +1360,6 @@ begin
   @SQLite_API.sqlite_aggregate_count        := GetAddress('sqlite3_aggregate_count');
   @SQLite_API.sqlite_set_authorizer         := GetAddress('sqlite3_set_authorizer');
   @SQLite_API.sqlite_trace                  := GetAddress('sqlite3_trace');
-  @SQLite_API.sqlite_compile                := GetAddress('sqlite3_prepare');
-  @SQLite_API.sqlite_step                   := GetAddress('sqlite3_step');
-  @SQLite_API.sqlite_finalize               := GetAddress('sqlite3_finalize');
-  @SQLite_API.sqlite_reset                  := GetAddress('sqlite3_reset');
-//  @SQLite_API.sqlite_bind                   := GetAddress('sqlite3_bind');
   @SQLite_API.sqlite_progress_handler       := GetAddress('sqlite3_progress_handler');
   @SQLite_API.sqlite_commit_hook            := GetAddress('sqlite3_commit_hook');
 //  @SQLite_API.sqlite_open_encrypted         := GetAddress('sqlite3_open_encrypted');

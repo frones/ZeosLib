@@ -96,6 +96,34 @@ type
       Handle: Psqlite);
   end;
 
+  {** Implements CAPI Prepared SQL Statement. }
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement)
+  private
+    FErrorCode: Integer;
+    FHandle: Psqlite;
+    FStmtHandle: Psqlite3_stmt;
+    FPlainDriver: IZSQLitePlainDriver;
+    function CreateResultSet(const SQL: string; StmtHandle: Psqlite_vm;
+       ColumnCount: Integer; ColumnNames: PPAnsiChar;
+       ColumnValues: PPAnsiChar): IZResultSet;
+  protected
+    procedure SetASQL(const Value: ZAnsiString); override;
+    procedure SetWSQL(const Value: ZWideString); override;
+    procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+  public
+    constructor Create(PlainDriver: IZSQLitePlainDriver;
+      Connection: IZConnection; const SQL: string; Info: TStrings; Handle: Psqlite);
+
+    procedure Prepare; override;
+    procedure Unprepare; override;
+
+    function ExecuteQueryPrepared: IZResultSet; override;
+    function ExecuteUpdatePrepared: Integer; override;
+    function ExecutePrepared: Boolean; override;
+  end;
+
+
 implementation
 
 uses
@@ -133,15 +161,14 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
-  Self.SSQL := SQL;
-  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SSQL, FHandle,
+  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SQL, FHandle,
     StmtHandle, ColumnCount, ColumnNames, ColumnValues);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
   { Creates a cached result set. }
   CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
     NativeResultSet.GetMetaData);
-  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SSQL,
+  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
     CachedResolver,GetConnection.GetConSettings);
 
   { Fetches all rows to prevent blocking. }
@@ -162,20 +189,16 @@ end;
 function TZSQLiteStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
-  SQLTail: PAnsiChar;
-  StmtHandle: Psqlite_vm;
+  StmtHandle: Psqlite3_stmt;
   ColumnCount: Integer;
   ColumnValues: PPAnsiChar;
   ColumnNames: PPAnsiChar;
 begin
-  ErrorMessage := '';
-  SQLTail := '';
   ColumnCount := 0;
   ASQL := SQL; //preprepares SQL
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
-    StmtHandle, ErrorMessage);
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, LogSQL);
+  ErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL),
+    StmtHandle, nil);
+  CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcExecute, LogSQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
 
   try
@@ -183,7 +206,7 @@ begin
       ColumnValues, ColumnNames);
     CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcOther, 'FETCH');
   except
-    FPlainDriver.Finalize(StmtHandle, ErrorMessage);
+    FPlainDriver.Finalize(StmtHandle);
     raise;
   end;
 
@@ -205,9 +228,8 @@ end;
 function TZSQLiteStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
+  ErrorMessage: PAnsichar;
 begin
-  ErrorMessage := '';
   ASQL := SQL; //preprepares SQL
   ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage);
   CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
@@ -239,22 +261,18 @@ end;
 function TZSQLiteStatement.Execute(const SQL: ZAnsiString): Boolean;
 var
   ErrorCode: Integer;
-  ErrorMessage: PAnsiChar;
-  SQLTail: PAnsiChar;
   StmtHandle: Psqlite_vm;
   ColumnCount: Integer;
   ColumnValues: PPAnsiChar;
   ColumnNames: PPAnsiChar;
 begin
-  ErrorMessage := '';
-  SQLTail := '';
   ColumnCount := 0;
   ColumnValues:=nil;
   ColumnNames:=nil;
   ASQL := SQL; //preprapares SQL
-  ErrorCode := FPlainDriver.Compile(FHandle, PAnsiChar(ASQL), Length(ASQL), SQLTail,
-    StmtHandle, ErrorMessage);
-  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcExecute, SSQL);
+  ErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL),
+    StmtHandle, nil);
+  CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcExecute, SSQL);
   DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
 
   try
@@ -262,7 +280,7 @@ begin
       ColumnValues, ColumnNames);
     CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcOther, 'FETCH');
   except
-    FPlainDriver.Finalize(StmtHandle, ErrorMessage);
+    FPlainDriver.Finalize(StmtHandle);
     raise;
   end;
 
@@ -282,8 +300,8 @@ begin
       Freemem(ColumnNames);
     Result := False;
     LastUpdateCount := FPlainDriver.Changes(FHandle);
-    ErrorCode := FPlainDriver.Finalize(StmtHandle, ErrorMessage);
-    CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage, lcOther,
+    ErrorCode := FPlainDriver.Finalize(StmtHandle);
+    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcOther,
       'Finalize SQLite VM');
   end;
 end;
@@ -304,6 +322,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtForwardOnly;
+  Prepare;
 end;
 
 {**
@@ -324,11 +343,9 @@ end;
 function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
 var
   Value: TZVariant;
-  TempBytes: TByteDynArray;
   TempBlob: IZBlob;
   TempStream: TStream;
 begin
-  TempBytes := nil;
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
@@ -385,4 +402,292 @@ begin
   end;
 end;
 
+
+procedure BindingDestructor(Value: PAnsiChar); cdecl;
+begin
+  StrDispose(Value);
+end;
+
+{ TZSQLiteCAPIPreparedStatement }
+
+function TZSQLiteCAPIPreparedStatement.CreateResultSet(const SQL: string;
+  StmtHandle: Psqlite_vm; ColumnCount: Integer; ColumnNames: PPAnsiChar;
+  ColumnValues: PPAnsiChar): IZResultSet;
+var
+  CachedResolver: TZSQLiteCachedResolver;
+  NativeResultSet: TZSQLiteResultSet;
+  CachedResultSet: TZCachedResultSet;
+begin
+  { Creates a native result set. }
+  Self.SSQL := SQL;
+  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SSQL, FHandle,
+    StmtHandle, ColumnCount, ColumnNames, ColumnValues, False);
+  NativeResultSet.SetConcurrency(rcReadOnly);
+
+  { Creates a cached result set. }
+  CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
+    NativeResultSet.GetMetaData);
+  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SSQL,
+    CachedResolver,GetConnection.GetConSettings);
+
+  { Fetches all rows to prevent blocking. }
+  CachedResultSet.SetType(rtScrollInsensitive);
+  CachedResultSet.Last;
+  CachedResultSet.BeforeFirst;
+  CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+
+  Result := CachedResultSet;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.SetASQL(const Value: ZAnsiString);
+begin
+  if ( ASQL <> Value ) and Prepared then
+    Unprepare;
+  inherited SetASQL(Value);
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.SetWSQL(const Value: ZWideString);
+begin
+  if ( WSQL <> Value ) and Prepared then
+    Unprepare;
+  inherited SetWSQL(Value);
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
+begin
+  if FPlainDriver.bind_parameter_count(FStmtHandle) <> InParamCount then
+    raise Exception.Create('Invalid InParamCount');
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
+var
+  Value: TZVariant;
+  TempBlob: IZBlob;
+  TempStream: TStream;
+  I, L: Integer;
+  TempAnsi: ZAnsiString;
+
+  Function AsPAnsiChar(Const S : ZAnsiString; Len: Integer) : PAnsiChar;
+  begin
+    Result := {$IFDEF UNICODE}AnsiStrAlloc{$ELSE}StrAlloc{$ENDIF}(Len);
+    System.Move(PAnsiChar(S)^, Result^, Len);
+  end;
+
+begin
+  FErrorcode := FPlainDriver.clear_bindings(FStmtHandle);
+  CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcBindPrepStmt, SSQL);
+  for i := 1 to InParamCount do
+  begin
+    Value := InParamValues[i-1];
+    if DefVarManager.IsNull(Value)  then
+      FErrorcode := FPlainDriver.bind_null(FStmtHandle, I)
+    else
+    begin
+      case InParamTypes[I-1] of
+        stBoolean:
+          if SoftVarManager.GetAsBoolean(Value) then
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
+          else
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              StrNew(PAnsichar('N')), 1, @BindingDestructor);
+        stByte, stShort, stInteger:
+          FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
+            SoftVarManager.GetAsInteger(Value));
+        stLong:
+          FErrorcode := FPlainDriver.bind_int64(FStmtHandle, i,
+            SoftVarManager.GetAsInteger(Value));
+        stBigDecimal, stFloat, stDouble:
+          FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
+            SoftVarManager.GetAsFloat(Value));
+        stBytes:
+          begin
+            TempAnsi := ZAnsiString(SoftVarManager.GetAsString(Value));
+            L := Length(TempAnsi);
+            FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
+              AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
+          end;
+        stString:
+          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
+              -1, @BindingDestructor);
+        stUnicodeString:
+          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
+               -1, @BindingDestructor);
+        stDate:
+          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            StrNew(PAnsichar(ZAnsiString(FormatDateTime('yyyy-mm-dd',
+            SoftVarManager.GetAsDateTime(Value))))),
+                -1, @BindingDestructor);
+        stTime:
+          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            StrNew(PAnsichar(ZAnsiString(FormatDateTime('hh:mm:ss',
+            SoftVarManager.GetAsDateTime(Value))))),
+                -1, @BindingDestructor);
+        stTimestamp:
+          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            StrNew(PAnsichar(ZAnsiString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            SoftVarManager.GetAsDateTime(Value))))),
+                -1, @BindingDestructor);
+        { works equal but selects from data which was written in string format
+          won't match! e.G. TestQuery etc. On the other hand-> i've prepared
+          this case on the resultsets too. JULIAN_DAY_PRECISION?}
+        {stDate, stTime, stTimestamp:
+          FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
+            SoftVarManager.GetAsDateTime(Value));}
+        stAsciiStream, stUnicodeStream, stBinaryStream:
+          begin
+            TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+            if not TempBlob.IsEmpty then
+              if InParamTypes[I-1] = stBinaryStream then
+              begin
+                TempAnsi := TempBlob.GetString;
+                FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
+                  AsPAnsiChar(TempAnsi, TempBlob.Length), TempBlob.Length,
+                    @BindingDestructor)
+              end
+              else
+              begin
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings);
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+                FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+                  StrNew(PAnsiChar(TempBlob.GetString)),
+                  TempBlob.Length, @BindingDestructor);
+              end
+            else
+              FErrorcode := FPlainDriver.bind_null(FStmtHandle, I);
+          end;
+      end;
+    end;
+    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcBindPrepStmt, SSQL);
+  end;
+end;
+
+constructor TZSQLiteCAPIPreparedStatement.Create(PlainDriver: IZSQLitePlainDriver;
+  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: Psqlite);
+begin
+  inherited Create(Connection, SQL, Info);
+  FHandle := Handle;
+  FPlainDriver := PlainDriver;
+  ResultSetType := rtForwardOnly;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.Prepare;
+begin
+  FErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL), FStmtHandle, nil);
+  CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcPrepStmt, SSQL);
+  inherited Prepare;
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.Unprepare;
+begin
+  ClearParameters;
+  if Assigned(FStmtHandle) then
+    FErrorCode := FPlainDriver.Finalize(FStmtHandle)
+  else
+    FErrorCode := SQLITE_OK;
+  FStmtHandle := nil;
+  CheckSQLiteError(FPlainDriver, FErrorCode, nil,
+    lcUnprepStmt, 'Unprepare SQLite Statment');
+  inherited UnPrepare;
+end;
+
+function TZSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+var
+  ColumnCount: Integer;
+  ColumnValues: PPAnsiChar;
+  ColumnNames: PPAnsiChar;
+begin
+  if Not Prepared then
+     Prepare;
+  { after reading the last row we reset the statment. So we don't need this here }
+  ColumnValues := nil;
+  ColumnNames := nil;
+  ColumnCount := 0;
+  try
+    BindInParameters;
+    FErrorCode := FPlainDriver.Step(FStmtHandle, ColumnCount,
+      ColumnValues, ColumnNames);
+    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcOther, SCanNotRetrieveResultsetData);
+  except
+    if ColumnValues <> nil then
+      FreeMem(ColumnValues);
+    ColumnValues := nil;
+    if ColumnNames <> nil then
+      FreeMem(ColumnNames);
+    ColumnNames := nil;
+    Unprepare;
+    raise;
+  end;
+
+  Result := CreateResultSet(SSQL, FStmtHandle, ColumnCount, ColumnNames,
+    ColumnValues);
+end;
+
+function TZSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
+begin
+  if Not Prepared then
+     Prepare;
+  BindInParameters;
+
+  Result := 0;
+  try
+    FErrorCode := FPlainDriver.Step(FStmtHandle);
+    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcExecPrepStmt, SSQL);
+    Result := FPlainDriver.Changes(FHandle);
+  finally
+    FErrorCode := FPlainDriver.reset(FStmtHandle);
+    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcOther, 'Reset');
+    LastUpdateCount := Result;
+  end;
+end;
+
+function TZSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
+var
+  ColumnCount: Integer;
+  ColumnValues: PPAnsiChar;
+  ColumnNames: PPAnsiChar;
+begin
+  if Not Prepared then
+     Prepare;
+
+  ColumnCount := 0;
+  ColumnValues:=nil;
+  ColumnNames:=nil;
+  try
+    BindInParameters;
+
+    FErrorCode := FPlainDriver.Step(FStmtHandle, ColumnCount,
+      ColumnValues, ColumnNames);
+    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcExecPrepStmt, 'Step');
+  except
+    UnPrepare;
+    raise;
+  end;
+
+  { Process queries with result sets }
+  if ColumnCount <> 0 then
+  begin
+    Result := True;
+    LastResultSet := CreateResultSet(SSQL, FStmtHandle, ColumnCount, ColumnNames,
+      ColumnValues);
+  end
+  { Processes regular query. }
+  else
+  begin
+    if assigned(ColumnValues) then
+      Freemem(ColumnValues);
+    if assigned(ColumnNames) then
+      Freemem(ColumnNames);
+    Result := False;
+    LastUpdateCount := FPlainDriver.Changes(FHandle);
+    FErrorCode := FPlainDriver.reset(FStmtHandle);
+    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcOther, 'Reset');
+  end;
+end;
+
 end.
+

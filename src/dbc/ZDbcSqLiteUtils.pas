@@ -242,7 +242,7 @@ var
 begin
   if ErrorMessage <> nil then
   begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
     Error := trim(UTF8ToUnicodeString(ErrorMessage));
   {$ELSE}
     {$IFNDEF FPC}
@@ -258,8 +258,7 @@ begin
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
   begin
     if Error = '' then
-      Error := String(StrPas(PlainDriver.ErrorString(ErrorCode)));
-
+      Error := PlainDriver.ErrorString(ErrorCode);
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, Error);
     raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1, [Error]));

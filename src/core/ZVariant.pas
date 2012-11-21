@@ -68,6 +68,9 @@ const
   FLOAT_COMPARE_PRECISION = 1.0e-5;
   FLOAT_COMPARE_PRECISION_SINGLE = 1.5e-5;
 
+  {FPC - Compatibility for SQLite (currently) }
+  JULIAN_DAY_DISTANCE = 2415018.5; //distance from "julian day 0" (January 1, 4713 BC 12:00AM) to "1899-12-30 00:00AM"}
+
 type
   {** Defines variant types. }
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtFloat, vtString,

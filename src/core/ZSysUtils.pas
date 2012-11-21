@@ -130,7 +130,10 @@ function EndsWith(const Str, SubStr: string): Boolean;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Str: AnsiString; Def: Extended): Extended;
+{$IFDEF WITH_RAWBYTESTRING}
+function SQLStrToFloatDef(Str: RawByteString; Def: Extended): Extended; overload;
+{$ENDIF}
+function SQLStrToFloatDef(Str: String; Def: Extended): Extended; overload;
 
 {**
   Converts SQL string into float value.
@@ -518,31 +521,92 @@ begin
   end;
 end;
 
+function ConvertMoneyToFloat(MoneyString: String): String;
+var
+  I: Integer;
+begin
+  if MoneyString = '' then
+    Result := ''
+  else
+  begin
+    if CharInSet(Char(MoneyString[1]), ['0'..'9', '-']) then
+      Result := MoneyString
+    else
+      for i := 1 to Length(MoneyString) do
+        if CharInSet(Char(MoneyString[I]), ['0'..'9', '-']) then
+        begin
+          if I > 1 then
+          begin //Money type
+            Result := Copy(MoneyString, I, Length(MoneyString)-i+1);
+            if Pos(',', Result) > 0 then
+              if Pos('.', Result) > 0  then
+              begin
+                Result := Copy(Result, 1, Pos(',', Result)-1);
+                while Pos('.', Result) > 0  do
+                  Result := Copy(Result, 1, Pos('.', Result)-1)+Copy(Result, Pos('.', Result)+1, Length(Result)); //remove ThousandSeparator
+                Result := Result + '.'+Copy(MoneyString, Pos(',', MoneyString)+1, Length(MoneyString));
+              end
+              else
+                Result[Pos(',', Result)] := '.';
+          end;
+          Break;
+        end;
+  end;
+end;
 {**
   Converts SQL string into float value.
   @param Str an SQL string with comma delimiter.
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Str: AnsiString; Def: Extended): Extended;
+{$IFDEF WITH_RAWBYTESTRING}
+function SQLStrToFloatDef(Str: RawByteString; Def: Extended): Extended;
 var
   OldDecimalSeparator: Char;
   OldThousandSeparator: Char;
   AString: String;
 begin
-  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-  AString := String(Str);
-  if Pos('$', AString) = 1 then
-    AString := Copy(AString, 2, Pred(Length(AString)));
-  If AString = '' then
+  if Str = '' then
     Result := Def
   else
+  begin
+    OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+    OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
+    if not CharInSet(Char(String(Str)[1]), ['0'..'9', '-']) then
+      AString := ConvertMoneyToFloat(String(Str))
+    else
+      AString := String(Str);
     Result := StrToFloatDef(AString, Def);
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+  end;
+end;
+{$ENDIF}
+
+function SQLStrToFloatDef(Str: String; Def: Extended): Extended;
+var
+  OldDecimalSeparator: Char;
+  OldThousandSeparator: Char;
+  AString: String;
+begin
+  if Str = '' then
+    Result := Def
+  else
+  begin
+    OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+    OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
+    if not CharInSet(Char(Str[1]), ['0'..'9', '-']) then
+      AString := ConvertMoneyToFloat(Str)
+    else
+      AString := Str;
+    Result := StrToFloatDef(AString, Def);
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+  end;
 end;
 
 {**
