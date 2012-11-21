@@ -166,10 +166,6 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
-
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
@@ -1258,25 +1254,6 @@ begin
     FPostgreSQLConnection.UnregisterPreparedStmtName(FPlanName);
   end;
 end;
-
-function TZPostgreSQLCAPIPreparedStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
-begin
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //Preprepares the SQL and Sets the AnsiSQL
-  Result := ExecuteQueryPrepared;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
-begin
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //Preprepares the SQL and Sets the AnsiSQL
-  Result := ExecuteUpdatePrepared;
-end;
-
-function TZPostgreSQLCAPIPreparedStatement.Execute(const SQL: ZAnsiString): Boolean;
-begin
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //Preprepares the SQL and Sets the AnsiSQL
-  Result := ExecutePrepared;
-end;
-
 
 function TZPostgreSQLCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
