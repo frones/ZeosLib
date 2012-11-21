@@ -332,7 +332,6 @@ begin
     {$ELSE}
     FControlsCodePage := cGET_ACP;
     {$ENDIF}
-  FUTF8StringAsWideField := False;
   {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
