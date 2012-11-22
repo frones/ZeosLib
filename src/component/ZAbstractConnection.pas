@@ -524,7 +524,7 @@ begin
       Value.Values['codepage'] := FClientCodepage;
 
     { check autoencodestrings }
-    {$IF (defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP)) and not defined(UNICODE)}
+    {$IF (defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)) and not defined(UNICODE)}
     if Connected then
       DbcConnection.AutoEncodeStrings := Value.Values['AutoEncodeStrings'] = 'ON';
     FAutoEncode := Value.Values['AutoEncodeStrings'] = 'ON';
@@ -1483,7 +1483,7 @@ begin
   {$IFDEF UNICODE}
   Result := True;
   {$ELSE}
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP)}
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
     if Connected then
     begin
       Result := DbcConnection.GetConSettings.AutoEncode;
@@ -1500,7 +1500,7 @@ end;
 procedure TZAbstractConnection.SetAutoEncode(Value: Boolean);
 begin
   {$IFNDEF UNICODE}
-    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(WITH_WIDEMOVEPROCS_WITH_CP)}
+    {$IF defined(MSWINDOWS) or defined(WITH_LCONVENCODING) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
     if Value then
       FURL.Properties.Values['AutoEncodeStrings'] := 'ON'
     else

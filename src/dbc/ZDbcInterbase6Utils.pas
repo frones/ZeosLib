@@ -3026,7 +3026,7 @@ begin
                           FDefaults[Index] := TempAnsi;
                         end
                         else
-                          Result := {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}AnsiString{$ELSE}ZAnsiString{$ENDIF}(FDefaults[Index]);
+                          Result := {$IFDEF WITH_FPC_STRING_CONVERSATION}AnsiString{$ELSE}ZAnsiString{$ENDIF}(FDefaults[Index]);
 
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,

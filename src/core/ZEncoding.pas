@@ -358,7 +358,7 @@ end;
 
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
-{$IFNDEF WITH_WIDEMOVEPROCS_WITH_CP}
+{$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
 {$ENDIF}
@@ -368,7 +368,7 @@ begin
     zCP_UTF8: Result := UTF8ToString(s);
     zCP_NONE: Result := {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}(s);
     else
-      {$IFDEF WITH_WIDEMOVEPROCS_WITH_CP} //FPC2.7+
+      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
       WidestringManager.Ansi2WideMoveProc(PAnsiChar(s), CP, Result, Length(s));
       {$ELSE}
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -413,7 +413,7 @@ end;
 
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
   ZAnsiString;
-{$IFNDEF WITH_WIDEMOVEPROCS_WITH_CP}
+{$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
 {$ENDIF}
@@ -423,7 +423,7 @@ begin
     zCP_UTF8: Result := UTF8Encode(ws);
     zCP_NONE: Result := ZAnsiString(WS);
     else
-      {$IFDEF WITH_WIDEMOVEPROCS_WITH_CP} //FPC2.7+
+      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
       WidestringManager.Wide2AnsiMoveProc(PWideChar(WS), Result, CP, Length(WS));
       {$ELSE}
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
