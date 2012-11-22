@@ -349,7 +349,7 @@ begin
             AddCurrent
           else
             if AutoEncode then
-              {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) }
+              {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) }
               AddCurrent //result are ?valid? but does that makes sence for all if not CP_UTF8?
               {$ELSE}
                 {$IFDEF WITH_LCONVENCODING} //Lazarus only
@@ -366,7 +366,7 @@ begin
             AddCurrent
           else
             if AutoEncode then
-              {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) }
+              {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) }
               AddCurrent //All charsets can be converted to UTF8 if a valid WideString-Manager does exists
               {$ELSE}
                 {$IFDEF WITH_LCONVENCODING} //Lazarus only
@@ -377,7 +377,7 @@ begin
             else Continue;
         {$ENDIF}
         else
-          {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(UNICODE)}
+          {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(UNICODE)}
           AddCurrent; //all remaining charset can be converted to wide if a valid WideString-Manager does exists
           {$ELSE}
             {$IFDEF WITH_LCONVENCODING} //Lazarus only
