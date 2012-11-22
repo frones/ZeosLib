@@ -260,14 +260,6 @@ begin
    else
       raise Exception.Create('Unknown MySQL data type!');
    end;
-  { Fix by the HeidiSql team. - See their SVN repository rev.775 and 900}
-  { SHOW FULL PROCESSLIST on 4.x servers can return veeery long FIELD_TYPE_VAR_STRINGs.
-  The following helps avoid excessive row buffer allocation later on. }
-  if (Result = stString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
-     Result := stAsciiStream;
-
-  if (Result = stUnicodeString) and (PlainDriver.GetFieldLength(FieldHandle) > 8192) then
-     Result := stUnicodeStream;
 end;
 
 {**
