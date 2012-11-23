@@ -505,14 +505,14 @@ end;
 procedure TZRowAccessor.InternalSetUnicodeString(Buffer: PZRowBuffer;
   ColumnIndex: Integer; Value: ZWideString; NewPointer: Boolean = False);
 var
-  W: PPWideChar;
+  W: ZPPWideChar;
   L: SmallInt;
 begin
   if Assigned(Buffer) then
   begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
-    W := PPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+    W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     L := Min(Length(Value), FColumnLengths[ColumnIndex - 1]);
     if L > 0 then
     begin
@@ -601,7 +601,7 @@ begin
       stString: InternalSetString(DestBuffer, I +1,
         PPChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
       stUnicodeString: InternalSetUnicodeString(DestBuffer, I +1,
-        PPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
+        ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
       stBytes: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
     end;
   end;
@@ -650,7 +650,7 @@ begin
         stString: InternalSetString(DestBuffer, I +1,
           PPChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
         stUnicodeString: InternalSetUnicodeString(DestBuffer, I +1,
-          PPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
+          ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^, True);
         stBytes: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -1155,7 +1155,7 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stUnicodeString{$IFDEF UNICODE}, stString{$ENDIF}:
-        Result := PPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+        Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stUnicodeStream:
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
