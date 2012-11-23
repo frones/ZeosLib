@@ -135,11 +135,11 @@ type
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
 
-    function DefineObject(defnpp:POCIDefine; errhp:POCIError;
-      _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
+    function DefineObject(defnpp: POCIDefine; errhp: POCIError;
+      _type: POCIHandle; pgvpp, pvszsp, indpp, indszp: pointer): sword;
     function ObjectPin(hndl: POCIEnv; err: POCIError;
-      object_ref:POCIHandle;corhdl:POCIHandle;
-      pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;
+      object_ref: POCIHandle; corhdl:POCIHandle; pin_option: ub2;
+      pin_duration: OCIDuration; lock_option: pub2; _object: pointer):sword;
     function ObjectFree(hndl: POCIEnv; err: POCIError;
       instance:POCIHandle;flags :ub2):sword;
 
@@ -349,7 +349,7 @@ type
       _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
     function ObjectPin(hndl: POCIEnv; err: POCIError;
       object_ref:POCIHandle;corhdl:POCIHandle;
-      pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;
+      pin_option:ub2; pin_duration:OCIDuration;lock_option: pub2;_object:pointer):sword;
     function ObjectFree(hndl: POCIEnv; err: POCIError;
       instance:POCIHandle;flags :ub2):sword;
 
@@ -976,7 +976,7 @@ end;
 
 function TZOracle9iPlainDriver.ObjectPin(hndl: POCIEnv; err: POCIError;
   object_ref:POCIHandle;corhdl:POCIHandle;
-  pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;
+  pin_option:ub2; pin_duration:OCIDuration;lock_option:pub2;_object:pointer):sword;
 begin
   Result:=OracleAPI.OCIObjectPin(hndl, err, object_ref, corhdl,
     pin_option, pin_duration, lock_option, _object);
