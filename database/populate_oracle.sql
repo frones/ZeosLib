@@ -51,3 +51,9 @@ TO_BLOB('0102030405060708090001020304050607080900'),
 TO_BLOB('0102030405060708090001020304050607080900'),
 TO_BLOB('0102030405060708090001020304050607080900'));
 INSERT INTO binary_values VALUES(3, NULL, NULL, NULL);
+
+INSERT INTO customers VALUES (1,
+            address_tab(
+              address_t('101 First', 'Redwood Shores', 'CA', '94065'),
+              address_t('123 Maple', 'Mill Valley',    'CA', '90952')
+            )         );
