@@ -847,7 +847,7 @@ begin
             ,lcExecute, FSQL);
           CheckOracleError(FPlainDriver, FErrorHandle,
             FPlainDriver.ObjectPin(Connection.GetConnectionHandle, FErrorHandle,
-              ptype, nil, OCI_PIN_ANY, OCI_DURATION_SESSION, OCI_LOCK_NONE,
+              ptype, nil, OCI_PIN_ANY, OCI_DURATION_SESSION, pub2(OCI_LOCK_NONE),
                 @addr_tdo) ,lcExecute, FSQL);
         end;
       else

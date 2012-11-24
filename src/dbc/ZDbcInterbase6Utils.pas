@@ -693,34 +693,27 @@ begin
   Result := ZDbcIntfs.stUnknown;
 
   case SqlType of
-    RDB_BOOLEAN: Result := stBoolean;
-    RDB_VARCHAR2, RDB_VARCHAR, RDB_CSTRING, RDB_CSTRING2:
+    blr_bool, blr_not_nullable: Result := stBoolean;
+    blr_varying2, blr_varying, blr_cstring, blr_cstring2, blr_domain_name,
+    blr_domain_name2, blr_column_name, blr_column_name2:
       Result := stString;
-    RDB_CHAR, RDB_CHAR2:
-      begin
-        case SqlSubType of
-          CS_NONE: Result := stString;
-          CS_BINARY: Result := stBytes;
-          CS_ASCII: Result := stString;
-          CS_UNICODE_FSS: Result := stString;//stUnicodeString;
-        else
-          // Bug 1177394: Bug using View
-          Result := stString;
-        end;
+    blr_text, blr_text2:
+      case SqlSubType of
+        CS_BINARY: Result := stBytes;
+      else
+        Result := stString;
       end;
-    RDB_D_FLOAT: Result := stDouble;
-    RDB_FLOAT: Result := stFloat;
-    RDB_DOUBLE: Result := stDouble;
-    RDB_BLOB_ID, RDB_QUAD: Result := stLong;
-    RDB_INT64:
-      begin
-        case SqlSubType of
-          RDB_NUMBERS_NONE: Result := stLong;
-          RDB_NUMBERS_NUMERIC: Result := stDouble;
-          RDB_NUMBERS_DECIMAL: Result := stBigDecimal;
-        end;
+    blr_d_float: Result := stDouble;
+    blr_float: Result := stFloat;
+    blr_double: Result := stDouble;
+    blr_blob_id, blr_quad: Result := stLong;
+    blr_int64:
+      case SqlSubType of
+        RDB_NUMBERS_NONE: Result := stLong;
+        RDB_NUMBERS_NUMERIC: Result := stDouble;
+        RDB_NUMBERS_DECIMAL: Result := stBigDecimal;
       end;
-    RDB_INTEGER:
+    blr_long:
       begin
         case SqlSubType of
           RDB_NUMBERS_NONE: Result := stInteger;
@@ -728,7 +721,7 @@ begin
           RDB_NUMBERS_DECIMAL: Result := stBigDecimal;
         end;
       end;
-    RDB_SMALLINT:
+    blr_short:
       begin
         case SqlSubType of
           RDB_NUMBERS_NONE: Result := stShort;
@@ -736,10 +729,10 @@ begin
           RDB_NUMBERS_DECIMAL: Result := stDouble;
         end;
       end;
-    RDB_DATE: Result := stDate;
-    RDB_TIME: Result := stTime;
-    RDB_TIMESTAMP: Result := stTimestamp;
-    RDB_BLOB:
+    blr_sql_date: Result := stDate;
+    blr_sql_time: Result := stTime;
+    blr_timestamp: Result := stTimestamp;
+    blr_blob, blr_blob2:
       begin
         case SqlSubType of
           { Blob Subtypes }
@@ -3033,7 +3026,7 @@ begin
                           FDefaults[Index] := TempAnsi;
                         end
                         else
-                          Result := {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}AnsiString{$ELSE}ZAnsiString{$ENDIF}(FDefaults[Index]);
+                          Result := {$IFDEF WITH_FPC_STRING_CONVERSATION}AnsiString{$ELSE}ZAnsiString{$ENDIF}(FDefaults[Index]);
 
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,

@@ -63,8 +63,6 @@ interface
 
 resourcestring
 
-  WUnsupportedCodePage = 'Warning high riscly selected CopdePage/CharacterSet in dependency of your Compiler!'#13#13' Possible String-DataLoss!';
-  EUnsupportedCodePage = 'Error on setting the select CopdePage/CharacterSet! May be not supported!';
 // -> ms, 09/05/2005
 {$IFDEF PORTUGUESE}
   SSQLError1 = 'Erro SQL: %s';
@@ -555,7 +553,7 @@ resourcestring
 
   SUnKnownParamDataType = 'TRANSLATE: Unknown Param.DataType';
   SFieldReadOnly          = 'Translate : Readonly field can''t be assigned a value: %d';
-  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.'; 
+  SInvalidUpdateCount     = 'Translate : %d record(s) updated. Only one record should have been updated.';
 
   SRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 {$ELSE}

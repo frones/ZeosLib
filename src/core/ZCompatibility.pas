@@ -395,7 +395,7 @@ end;
 }
 function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString;
   ConSettings: PZConSettings): String;
-{$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+{$IFDEF WITH_FPC_STRING_CONVERSATION}
 var TempAnsi: ZAnsiString;
 {$ENDIF}
 begin
@@ -415,7 +415,7 @@ begin
             {$IFDEF WITH_LCONVENCODING}
             Result := ConSettings.DbcConvertFunc(Ansi);
             {$ELSE}
-              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
                 //avoid string conversations -> move memory
                 TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
@@ -437,7 +437,7 @@ begin
                 etUSASCII: Result := Ansi;
                 etAnsi:
                   if ConSettings.CTRL_CP = zCP_UTF8 then
-                    {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                    {$IFDEF WITH_FPC_STRING_CONVERSATION}
                     begin
                       //avoid string conversations -> move memory
                       TempAnsi := AnsiToUTF8(Ansi); //hope we've compatible results ))):
@@ -453,7 +453,7 @@ begin
                   if ConSettings.CTRL_CP = zCP_UTF8 then
                     Result := Ansi
                   else
-                    {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                    {$IFDEF WITH_FPC_STRING_CONVERSATION}
                     begin
                       //avoid string conversations -> move memory
                       TempAnsi := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
@@ -468,7 +468,7 @@ begin
               {$IFDEF WITH_LCONVENCODING}
               Result := ConSettings.DbcConvertFunc(Ansi)
               {$ELSE}
-                {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                {$IFDEF WITH_FPC_STRING_CONVERSATION}
                 begin
                   //avoid string conversations -> move memory
                   TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
@@ -548,7 +548,7 @@ begin
 end;
 
 function TZCodePagedObject.ZDbcString(const AStr: ZWideString; const Encoding: TZCharEncoding = ceDefault): String;
-{$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+{$IFDEF WITH_FPC_STRING_CONVERSATION}
 var
   TempAnsi: ZAnsiString;
 {$ENDIF}
@@ -557,7 +557,7 @@ begin
   Result := AStr;
   {$ELSE}
     {$IFNDEF WITH_LCONVENCODING}
-      {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+      {$IFDEF WITH_FPC_STRING_CONVERSATION}
       begin
         //avoid string conversations -> move memory
         TempAnsi := WideToAnsi(AStr, FConSettings.CTRL_CP);
@@ -568,7 +568,7 @@ begin
       Result := WideToAnsi(AStr, FConSettings.CTRL_CP);
       {$ENDIF}
     {$ELSE}
-      {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+      {$IFDEF WITH_FPC_STRING_CONVERSATION}
       begin
         //avoid string conversations -> move memory
         TempAnsi := UTF8Encode;
@@ -637,7 +637,7 @@ EgonHugeist:
 }
 function TZCodePagedObject.ZPlainString(const AStr: String;
   ConSettings: PZConSettings): ZAnsiString;
-{$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+{$IFDEF WITH_FPC_STRING_CONVERSATION}
 var
   TempAnsi: ZAnsiString;
 {$ENDIF}
@@ -652,7 +652,7 @@ begin
             Result := AStr
           else
             if ( ConSettings.CTRL_CP = zCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then //avoid "no success" for expected Codepage UTF8 of the Controls
-              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
                 //avoid string conversations -> move memory
                 TempAnsi := AnsiToUTF8(AStr);
@@ -663,7 +663,7 @@ begin
               Result := AnsiToUTF8(AStr)
               {$ENDIF}
             else
-              {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+              {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
                 //avoid string conversations -> move memory
                 TempAnsi := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8);
@@ -697,7 +697,7 @@ begin
               {$IFDEF WITH_LCONVENCODING}
               Result := ConSettings.PlainConvertFunc(AStr);
               {$ELSE}
-                {$IFDEF WITH_FPC_RAWBYTE_CONVERSATION_BUG}
+                {$IFDEF WITH_FPC_STRING_CONVERSATION}
                 begin
                   if ConSettings.ClientCodePage.CP = zCP_NONE then
                     TempAnsi := UTF8ToAnsi(AStr) //hope it's compatible we don't know the server CP here!!
@@ -846,7 +846,7 @@ begin
       ConSettings.CPType := cCP_UTF16;
     ConSettings.AutoEncode := True;
     {$ELSE}
-      {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING)}
+      {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
       ConSettings.AutoEncode := Info.Values['AutoEncodeStrings'] = 'ON'; //compatibitity Option for existing Applications;
       {$ELSE}
       ConSettings.AutoEncode := False;
@@ -865,7 +865,7 @@ begin
       else
         if Info.values['controls_cp'] = 'CP_UTF16' then
         begin
-          {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING)}
+          {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING)}
           ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
           ConSettings.CTRL_CP := ZDefaultSystemCodePage;
           ConSettings.AutoEncode := True;
