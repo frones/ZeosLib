@@ -62,7 +62,7 @@ uses
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}
-  {$IF defined(MSWINDOWS) and not (defined(WITH_UNICODEFROMLOCALECHARS) or defined(WITH_WIDEMOVEPROC_CP))}
+  {$IF defined(MSWINDOWS) and not (defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER))}
   Windows,
   {$IFEND}
   ZCompatibility;
@@ -704,12 +704,20 @@ begin
           if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
             Ansi := PAnsiChar(Bytes)  //should be exact
           else
+            {$IFDEF WITH_LCONVENCODING}
+            Ansi := Consettings.PlainConvertFunc(AnsiToUTF8(PAnsiChar(Bytes)))  //no other possibility
+            {$ELSE}
             Ansi := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
+            {$ENDIF}
         else  //Database expects UTF8
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
             Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
           else
+            {$IFDEF WITH_LCONVENCODING}
+            Ansi := AnsiToUTF8(PAnsiChar(Bytes));
+            {$ELSE}
             Ansi := UTF8Encode(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP));
+            {$ENDIF}
       ceUTF8:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
           {$IFDEF WITH_LCONVENCODING}
@@ -832,10 +840,14 @@ begin
           case Consettings.ClientCodePage.Encoding of
             ceUTF8: WS := UTF8ToString(PAnsiChar(Bytes));
             ceAnsi:
+              {$IFDEF WITH_LCONVENCODING}
+              WS := ZWideString(PAnsiChar(Bytes)); //cast means random success
+              {$ELSE}
               if ( ConSettings.CTRL_CP = zCP_UTF8) then
-                WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))) //random success
+                WS := ZWideString(PAnsiChar(Bytes)) //random success
               else
                 WS := AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP);
+             {$ENDIF}
             end;
         ceAnsi: //We've to start from the premisse we've got a Unicode string i there
           begin
@@ -881,10 +893,14 @@ begin
       case DetectUTF8Encoding(Ansi) of
         etUSASCII, etUTF8: WS := UTF8ToString(Ansi);
         etAnsi:
+          {$IFDEF WITH_LCONVENCODING}
+          WS := ZWideString(Ansi); //random success
+          {$ELSE}
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
-            WS := UTF8ToString(AnsiToUTF8(String(Ansi))) //random success
+            WS := ZWideString(Ansi) //random success
           else
             WS := AnsiToWide(Ansi, ConSettings.CTRL_CP);
+         {$ENDIF}
       end;
 
     Len := Length(WS)*2;
