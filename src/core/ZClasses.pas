@@ -62,10 +62,10 @@ uses
 
 const
   ZEOS_MAJOR_VERSION = 7;
-  ZEOS_MINOR_VERSION = 0;
-  ZEOS_SUB_VERSION = 1;
-  ZEOS_STATUS = 'beta';
-  ZEOS_VERSION = '7.0.1-beta';
+  ZEOS_MINOR_VERSION = 1;
+  ZEOS_SUB_VERSION = 0;
+  ZEOS_STATUS = 'alfa';
+  ZEOS_VERSION = '7.1.0-alfa';
 {$IFDEF ENABLE_POOLED}
   {Pooled Protocol Prefix, including final dot}
   PooledPrefix = 'pooled.';
