@@ -106,23 +106,26 @@ type
   POCIBind = POCIHandle;
   POCIDescribe = POCIHandle;
   POCITrans = POCIHandle;
+  POCITable = POCIHandle;
 
   { Descriptor Types }
   POCIDescriptor = Pointer;
   PPOCIDescriptor = ^POCIDescriptor;
-  POCISnapshot = POCIDescriptor;
-  POCILobLocator = POCIDescriptor;
-  POCIParam = POCIDescriptor;
-  POCIRowid = POCIDescriptor;
+  POCISnapshot = POCIDescriptor;          //OCI snapshot descriptor
+  POCILobLocator = POCIDescriptor;        //OCI Lob Locator descriptor
+  POCIParam = POCIDescriptor;             //OCI Parameter descriptor
+  POCIRowid = POCIDescriptor;             //OCI ROWID descriptor
   POCIComplexObjectComp = POCIDescriptor;
   POCIAQEnqOptions = POCIDescriptor;
   POCIAQDeqOptions = POCIDescriptor;
   POCIAQMsgProperties = POCIDescriptor;
   POCIAQAgent = POCIDescriptor;
   POCIDate = POCIDescriptor;
-  POCIDateTime = POCIDescriptor;
+  POCIDateTime = POCIDescriptor;          //OCI DateTime descriptor
   POCINumber = POCIDescriptor;
   POCIString = POCIDescriptor;
+  POCIInterval = POCIDescriptor;          //OCI Interval descriptor
+  POCIResult = POCIDescriptor;            //OCI Result Set Descriptor
 
   OCIDuration = ub2;
 
@@ -191,20 +194,20 @@ const
 
   { OCI Descriptor Types }
   OCI_DTYPE_FIRST               = 50;
-  OCI_DTYPE_LOB                 = 50;
+  OCI_DTYPE_LOB                 = 50; //lob  locator
   OCI_DTYPE_SNAP                = 51;
   OCI_DTYPE_RSET                = 52;
-  OCI_DTYPE_PARAM               = 53;
+  OCI_DTYPE_PARAM               = 53; //a parameter descriptor obtained from ocigparm
   OCI_DTYPE_ROWID               = 54;
   OCI_DTYPE_COMPLEXOBJECTCOMP   = 55;
-  OCI_DTYPE_FILE                = 56;
-  OCI_DTYPE_AQENQ_OPTIONS       = 57;
-  OCI_DTYPE_AQDEQ_OPTIONS       = 58;
-  OCI_DTYPE_AQMSG_PROPERTIES    = 59;
-  OCI_DTYPE_AQAGENT             = 60;
+  OCI_DTYPE_FILE                = 56; //File Lob locator
+  OCI_DTYPE_AQENQ_OPTIONS       = 57; //enqueue options
+  OCI_DTYPE_AQDEQ_OPTIONS       = 58; //dequeue options
+  OCI_DTYPE_AQMSG_PROPERTIES    = 59; //message properties
+  OCI_DTYPE_AQAGENT             = 60; //aq agent
   OCI_DTYPE_LOCATOR             = 61;
-  OCI_DTYPE_DATETIME            = 62;
-  OCI_DTYPE_INTERVAL            = 63;
+  OCI_DTYPE_INTERVAL_YM         = 62; //Interval year month
+  OCI_DTYPE_INTERVAL_DS         = 63; //Interval day second
   OCI_DTYPE_AQNFY_DESCRIPTOR    = 64;
   OCI_DTYPE_LAST                = 64;
   OCI_DTYPE_DATE                = 65;  { Date }
@@ -407,56 +410,56 @@ const
   OCI_AUTH        = $08;               // Change the password but do not login
 
   { OCI Data Types }
-  SQLT_CHR = 1  ;
-  SQLT_NUM = 2  ;
-  SQLT_INT = 3  ;
-  SQLT_FLT = 4  ;
-  SQLT_STR = 5  ;
-  SQLT_VNU = 6  ;
-  SQLT_PDN = 7  ;
-  SQLT_LNG = 8  ;
-  SQLT_VCS = 9  ;
-  SQLT_NON = 10 ;
-  SQLT_RID = 11 ;
-  SQLT_DAT = 12 ;
-  SQLT_VBI = 15 ;
-  SQLT_BFLOAT = 21 ;
-  SQLT_BDOUBLE = 22 ;
-  SQLT_BIN = 23 ;
-  SQLT_LBI = 24 ;
+  SQLT_CHR = 1  ;       //(ORANET TYPE) character string
+  SQLT_NUM = 2  ;       //(ORANET TYPE) oracle numeric
+  SQLT_INT = 3  ;       //(ORANET TYPE) integer
+  SQLT_FLT = 4  ;       //(ORANET TYPE) Floating point number
+  SQLT_STR = 5  ;       //zero terminated string
+  SQLT_VNU = 6  ;       //NUM with preceding length byte
+  SQLT_PDN = 7  ;       //(ORANET TYPE) Packed Decimal Numeric
+  SQLT_LNG = 8  ;       //long
+  SQLT_VCS = 9  ;       //Variable character string
+  SQLT_NON = 10 ;       //Null/empty PCC Descriptor entry
+  SQLT_RID = 11 ;       //rowid
+  SQLT_DAT = 12 ;       //date in oracle format
+  SQLT_VBI = 15 ;       //binary in VCS format
+  SQLT_BFLOAT = 21 ;    //Native Binary float
+  SQLT_BDOUBLE = 22 ;   //NAtive binary double
+  SQLT_BIN = 23 ;       //binary data(DTYBIN)
+  SQLT_LBI = 24 ;       //long binary
   _SQLT_PLI = 29;
-  SQLT_UIN = 68 ;
-  SQLT_SLS = 91 ;
-  SQLT_LVC = 94 ;
-  SQLT_LVB = 95 ;
-  SQLT_AFC = 96 ;
-  SQLT_AVC = 97 ;
-  SQLT_IBFLOAT = 100;
-  SQLT_IBDOUBLE = 101;
-  SQLT_CUR = 102;
-  SQLT_RDD = 104;
-  SQLT_LAB = 105;
-  SQLT_OSL = 106;
-  SQLT_NTY = 108;
-  SQLT_REF = 110;
-  SQLT_CLOB = 112;
-  SQLT_BLOB = 113;
-  SQLT_BFILEE = 114;
-  SQLT_CFILEE = 115;
-  SQLT_RSET = 116;
-  SQLT_NCO = 122;
-  SQLT_VST = 155;
-  SQLT_ODT = 156;
+  SQLT_UIN = 68 ;       //unsigned integer
+  SQLT_SLS = 91 ;       //Display sign leading separate
+  SQLT_LVC = 94 ;       //Longer longs (char)
+  SQLT_LVB = 95 ;       //Longer long binary
+  SQLT_AFC = 96 ;       //Ansi fixed char
+  SQLT_AVC = 97 ;       //Ansi Var char
+  SQLT_IBFLOAT = 100;   //binary float canonical
+  SQLT_IBDOUBLE = 101;  //binary double canonical
+  SQLT_CUR = 102;       //cursor  type
+  SQLT_RDD = 104;       //rowid descriptor
+  SQLT_LAB = 105;       //label type
+  SQLT_OSL = 106;       //oslabel type
+  SQLT_NTY = 108;       //named object type
+  SQLT_REF = 110;       //ref typ
+  SQLT_CLOB = 112;      //character lob
+  SQLT_BLOB = 113;      //binary lob
+  SQLT_BFILEE = 114;    //binary file lob
+  SQLT_CFILEE = 115;    //character file lob
+  SQLT_RSET = 116;      //result set type
+  SQLT_NCO = 122;       //named collection type (varray or nested table)
+  SQLT_VST = 155;       //OCIString type
+  SQLT_ODT = 156;       //OCIDate type
 
   { datetimes and intervals }
-  SQLT_DATE = 184;
-  SQLT_TIME = 185;
-  SQLT_TIME_TZ = 186;
-  SQLT_TIMESTAMP = 187;
-  SQLT_TIMESTAMP_TZ = 188;
-  SQLT_INTERVAL_YM = 189;
-  SQLT_INTERVAL_DS = 190;
-  SQLT_TIMESTAMP_LTZ = 232;
+  SQLT_DATE = 184;            //ANSI Date
+  SQLT_TIME = 185;            //TIME
+  SQLT_TIME_TZ = 186;         //TIME WITH TIME ZONE
+  SQLT_TIMESTAMP = 187;       //TIMESTAMP
+  SQLT_TIMESTAMP_TZ = 188;    //TIMESTAMP WITH TIME ZONE
+  SQLT_INTERVAL_YM = 189;     //INTERVAL YEAR TO MONTH
+  SQLT_INTERVAL_DS = 190;     //INTERVAL DAY TO SECOND
+  SQLT_TIMESTAMP_LTZ = 232;   //TIMESTAMP WITH LOCAL TZ
 
   _SQLT_REC = 250;
   _SQLT_TAB = 251;
@@ -971,6 +974,216 @@ type
 
   TOCIClientVersion = procedure(major_version, minor_version, update_num,
       patch_num, port_update_num: psword); cdecl;
+
+(*****************************************************************************/
+ *           FUNCTIONS WHICH OPERATE ONLY ON NESTED TABLE OCITable*()        */
+ *****************************************************************************/
+
+ *---------------------------- OCITableSize ---------------------------------*)
+
+  TOCITableSize = function(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                    size: psb4): sword; cdecl;
+(*
+   NAME: OCITableSize - OCITable return current SIZe of the given
+                   nested table (not including deleted elements)
+   PARAMETERS:
+        env(IN) - pointer to OCI environment handle
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        tbl (IN) - nested table whose number of elements is returned
+        size (OUT) - current number of elements in the nested table. The count
+                does not include deleted elements.
+   DESCRIPTION:
+        Returns the count of elements in the given nested table.
+
+        The count returned by OCITableSize() will be decremented upon
+        deleting elements from the nested table. So, this count DOES NOT
+        includes any "holes" created by deleting elements.
+        For example:
+
+            OCITableSize(...);
+            // assume 'size' returned is equal to 5
+            OCITableDelete(...); // delete one element
+            OCITableSize(...);
+            // 'size' returned will be equal to 4
+
+        To get the count plus the count of deleted elements use
+        OCICollSize(). Continuing the above example,
+
+            OCICollSize(...)
+            // 'size' returned will still be equal to 5
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          error during loading of nested table into object cache
+          any of the input parameters is null
+ */
+
+/*---------------------- OCITableExists ---------------------------------*)
+
+  TOCITableExists = function(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4; exists: PBoolean): sword; cdecl;
+(*
+   NAME: OCITableExists - OCITable test whether element at the given index
+                    EXIsts
+   PARAMETERS:
+        env (IN/OUT) - OCI environment handle initialized in object mode.
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        tbl (IN) - table in which the given index is checked
+        index (IN) - index of the element which is checked for existence
+        exists (OUT) - set to TRUE if element at given 'index' exists
+                else set to FALSE
+   DESCRIPTION:
+        Test whether an element exists at the given 'index'.
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          any of the input parameters is null
+ */
+
+/*--------------------------- OCITableDelete -------------------------------*)
+
+  TOCITableDelete = function(hndl: POCIEnv; err: POCIError; index: sb4;
+                      tbl: POCITable): sword; cdecl;
+(*
+   NAME: OCITableDelete - OCITable DELete element at the specified index
+   PARAMETERS:
+        env (IN/OUT) - OCI environment handle initialized in object mode.
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        index (IN) - index of the element which must be deleted
+        tbl (IN) - table whose element is deleted
+   DESCRIPTION:
+        Delete the element at the given 'index'. Note that the position
+        ordinals of the remaining elements of the table is not changed by the
+        delete operation. So delete creates "holes" in the table.
+
+        An error is returned if the element at the specified 'index' has
+        been previously deleted.
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          any of the input parameters is null
+          given index is not valid
+ */
+
+/*--------------------------- OCITableFirst ---------------------------------*)
+
+ TOCITableFirst = function(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4): sword; cdecl;
+(*
+   NAME: OCITableFirst - OCITable return FirST index of table
+   PARAMETERS:
+        env (IN/OUT) - OCI environment handle initialized in object mode.
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        tbl (IN) - table which is scanned
+        index (OUT) - first index of the element which exists in the given
+                table is returned
+   DESCRIPTION:
+        Return the first index of the element which exists in the given
+        table.
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          table is empty
+ */
+
+/*---------------------------- OCITableLast ---------------------------------*)
+
+  TOCITableLast = function(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4): sword; cdecl;
+(*
+   NAME: OCITableFirst - OCITable return LaST index of table
+   PARAMETERS:
+        env (IN/OUT) - OCI environment handle initialized in object mode.
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        tbl (IN) - table which is scanned
+        index (OUT) - last index of the element which exists in the given
+                table is returned
+   DESCRIPTION:
+        Return the last index of the element which exists in the given
+        table.
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          table is empty
+ */
+
+/*---------------------------- OCITableNext ---------------------------------*)
+
+  TOCITableNext = function(hndl: POCIEnv; err: POCIError; index: sb4;
+                       const tbl: POCITable; next_index: psb4;
+                       exists: PBoolean): sword; cdecl;
+(*
+   NAME: OCITableNext - OCITable return NeXT available index of table
+   PARAMETERS:
+        env (IN/OUT) - OCI environment handle initialized in object mode.
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        index (IN) - starting at 'index' the index of the next element
+                which exists is returned
+        tbl (IN) - table which is scanned
+        next_index (OUT) - index of the next element which exists
+                is returned
+        exists (OUT) - FALSE if no next index available else TRUE
+   DESCRIPTION:
+        Return the smallest position j, greater than 'index', such that
+        exists(j) is TRUE.
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          no next index available
+ */
+
+/*---------------------------- OCITablePrev ---------------------------------*)
+
+  TOCITablePrev = function(hndl: POCIEnv; err: POCIError; index: sb4;
+                       const tbl: POCITable; prev_index: psb4;
+                       exists: PBoolean): sword; cdecl;
+(*
+   NAME: OCITablePrev - OCITable return PReVious available index of table
+   PARAMETERS:
+        env (IN/OUT) - OCI environment handle initialized in object mode.
+        err (IN/OUT) - error handle. If there is an error, it is
+                recorded in 'err' and this function returns OCI_ERROR.
+                The error recorded in 'err' can be retrieved by calling
+                OCIErrorGet().
+        index (IN) - starting at 'index' the index of the previous element
+                which exists is returned
+        tbl (IN) - table which is scanned
+        prev_index (OUT) - index of the previous element which exists
+                is returned
+        exists (OUT) - FALSE if no next index available else TRUE
+   DESCRIPTION:
+        Return the largest position j, less than 'index', such that
+        exists(j) is TRUE.
+   RETURNS:
+        OCI_SUCCESS if the function completes successfully.
+        OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
+        OCI_ERROR if
+          no previous index available
+ *)
 
 type
   OracleOCI_API = record

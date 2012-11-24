@@ -668,7 +668,7 @@ begin
               end
               {$ELSE}
                 {$IFDEF WITH_LCONVENCODING}
-                Result := AnsiToUTF8(AStr);
+                Result := AnsiToUTF8(AStr)
                 {$ELSE}
                 Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
                 {$ENDIF}
