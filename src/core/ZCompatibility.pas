@@ -556,7 +556,9 @@ begin
   {$IFDEF UNICODE}
   Result := AStr;
   {$ELSE}
-    {$IFNDEF WITH_LCONVENCODING}
+    {$IFDEF WITH_LCONVENCODING}
+    Result := UTF8Encode(AStr);
+    {$ELSE}
       {$IFDEF WITH_FPC_STRING_CONVERSATION}
       begin
         //avoid string conversations -> move memory
@@ -566,17 +568,6 @@ begin
       end
       {$ELSE}
       Result := WideToAnsi(AStr, FConSettings.CTRL_CP);
-      {$ENDIF}
-    {$ELSE}
-      {$IFDEF WITH_FPC_STRING_CONVERSATION}
-      begin
-        //avoid string conversations -> move memory
-        TempAnsi := UTF8Encode;
-        SetLength(Result, Length(TempAnsi));
-        Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-      end
-      {$ELSE}
-      Result := UTF8Encode;
       {$ENDIF}
     {$ENDIF}
   {$ENDIF}
