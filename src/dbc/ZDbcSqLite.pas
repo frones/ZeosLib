@@ -406,16 +406,8 @@ function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
     Open;
-  if Assigned(Info) then
-    if StrToBoolEx(Info.Values['preferprepared']) then
-      Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL,
-        Info, FHandle)
-    else
-      Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL,
-        Info, FHandle)
-  else
-    Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL,
-      Info, FHandle);
+  Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL,
+    Info, FHandle);
 end;
 
 {**

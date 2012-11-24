@@ -263,7 +263,7 @@ var
 begin
   StrFrom := ZPlainString(Value, ConSettings);
   Outbuffer := EscapeString(Handle, StrFrom, ConSettings, True);
-  {$IFDEF UNICODE}
+  {$IFDEF DELPHI12_UP}
   Result := ZDbcString(OutBuffer, ConSettings);
   {$ELSE}
   Result := ZDbcUnicodeString(Outbuffer, ConSettings.ClientCodePage.CP);

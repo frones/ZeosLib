@@ -74,14 +74,12 @@ type
   {** Implements SQLite ResultSet. }
   TZSQLiteResultSet = class(TZAbstractResultSet)
   private
-    FFetchingReady: Boolean;
     FHandle: Psqlite;
     FStmtHandle: Psqlite_vm;
     FColumnCount: Integer;
     FColumnNames: PPAnsiChar;
     FColumnValues: PPAnsiChar;
     FPlainDriver: IZSQLitePlainDriver;
-    FFreeHandle: Boolean;
   protected
     procedure Open; override;
     procedure FreeHandle;
@@ -89,8 +87,7 @@ type
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; Handle: Psqlite; StmtHandle: Psqlite_vm;
-      ColumnCount: Integer; ColumnNames: PPAnsiChar; ColumnValues: PPAnsiChar;
-      AllowFreeHandle: Boolean = True);
+      ColumnCount: Integer; ColumnNames: PPAnsiChar; ColumnValues: PPAnsiChar);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -182,7 +179,7 @@ end;
 constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   Statement: IZStatement; SQL: string; Handle: Psqlite;
   StmtHandle: Psqlite_vm; ColumnCount: Integer; ColumnNames: PPAnsiChar;
-  ColumnValues: PPAnsiChar; AllowFreeHandle: Boolean = True);
+  ColumnValues: PPAnsiChar);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -195,8 +192,6 @@ begin
   FColumnCount := ColumnCount;
   FColumnNames := ColumnNames;
   FColumnValues := ColumnValues;
-  FFreeHandle := AllowFreeHandle;
-  FFetchingReady := False;
 
   Open;
 end;
@@ -258,7 +253,7 @@ begin
       end
       else
       begin
-        ColumnType := ConvertSQLiteTypeToSQLType(ZDbcString(FPlainDriver.column_decltype(FStmtHandle,I-1)),
+        ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.GetColumnDataType(FStmtHandle,I-1),
           FieldPrecision, FieldDecimals, ConSettings.CPType);
       end;
       if ColumnType = stString then
@@ -289,23 +284,16 @@ end;
 procedure TZSQLiteResultSet.FreeHandle;
 var
   ErrorCode: Integer;
+  ErrorMessage: PAnsiChar;
 begin
-  if FFreeHandle then
-  begin
-    if Assigned(FStmtHandle) then
-      ErrorCode := FPlainDriver.Finalize(FStmtHandle)
-    else
-      ErrorCode := SQLITE_OK;
-    FStmtHandle := nil;
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil,
-      lcOther, 'FINALIZE SQLite VM');
-  end
+  ErrorMessage := nil;
+  if Assigned(FStmtHandle) then
+    ErrorCode := FPlainDriver.Finalize(FStmtHandle, ErrorMessage)
   else
-  begin
-    ErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
-    FFetchingReady := True;
-  end;
+    ErrorCode := SQLITE_OK;
+  FStmtHandle := nil;
+  CheckSQLiteError(FPlainDriver, ErrorCode, ErrorMessage,
+    lcOther, 'FINALIZE SQLite VM');
 end;
 
 {**
@@ -570,7 +558,6 @@ end;
 function TZSQLiteResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
   Value: string;
-  TempDate: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -579,12 +566,7 @@ begin
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
   else
-  begin
-    TempDate := Trunc(SQLStrToFloatDef(Value, 0));
     Result := Trunc(TimestampStrToDateTime(Value));
-    if ( Result = 0 ) and not ( TempDate = 0 ) then
-      Result := TempDate;
-  end;
   LastWasNull := Result = 0;
 end;
 
@@ -600,7 +582,6 @@ end;
 function TZSQLiteResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
   Value: string;
-  TempTime: TDateTime;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -609,13 +590,7 @@ begin
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
   else
-  begin
-    TempTime := Frac(SQLStrToFloatDef(Value, 0));
     Result := Frac(TimestampStrToDateTime(Value));
-    if ( Result = 0 ) and not ( TempTime = 0 ) then
-      Result := TempTime;
-  end;
-  LastWasNull := Result = 0;
 end;
 
 {**
@@ -630,22 +605,16 @@ end;
 }
 function TZSQLiteResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Value: string;
-  TempTimeStamp: TDateTime;
+  Temp: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Value := String(InternalGetString(ColumnIndex));
-  if IsMatch('????-??-??*', Value) then
-    Result := AnsiSQLDateToDateTime(Value)
+  Temp := String(InternalGetString(ColumnIndex));
+  if IsMatch('????-??-??*', Temp) then
+    Result := AnsiSQLDateToDateTime(Temp)
   else
-  begin
-    TempTimeStamp := SQLStrToFloatDef(Value, 0);
-    Result := TimestampStrToDateTime(Value);
-    if ( Result = 0 ) and not ( TempTimeStamp = 0 ) then
-      Result := TempTimeStamp;
-  end;
+    Result := TimestampStrToDateTime(Temp);
   LastWasNull := Result = 0;
 end;
 
@@ -686,7 +655,7 @@ begin
         if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
           Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
         else
-          Stream := FPlaindriver.column_blob(FStmtHandle,columnIndex);
+          Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
       end;
       Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
     end
@@ -743,7 +712,7 @@ begin
     if FColumnValues <> nil then
       FreeMem(FColumnValues, Sizeof(PPAnsiChar) * (fColumnCount + 1));
     FColumnValues := nil;
-    if Assigned(FStmtHandle) and not FFetchingReady then
+    if Assigned(FStmtHandle) then
     begin
      //ZPlainSQLLiteDriver.Step : AllocMem(SizeOf(PPAnsiChar)*(pN+1)*2); // Leak, if not freed [HD, 05.10.2007]
       if FColumnNames <> nil then

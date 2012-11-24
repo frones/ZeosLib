@@ -652,7 +652,6 @@ function TZAbstractResultSet.GetBinaryString(ColumnIndex: Integer): ZAnsiString;
 begin
   Result := InternalGetString(ColumnIndex);
 end;
-
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
