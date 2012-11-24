@@ -861,6 +861,7 @@ type
     function IsUpdated: Boolean;
     function Length: LongInt;
     function WasDecoded: Boolean;
+    function Connection: IZConnection;
 
     function GetString: ZAnsiString;
     procedure SetString(const Value: ZAnsiString);

@@ -319,6 +319,7 @@ type
     destructor Destroy; override;
 
     function WasDecoded: Boolean;
+    function Connection: IZConnection;
     function IsEmpty: Boolean; virtual;
     function IsUpdated: Boolean; virtual;
     function Length: LongInt; virtual;
@@ -2905,6 +2906,15 @@ end;
 function TZAbstractBlob.WasDecoded: Boolean;
 begin
   Result := FDecoded;
+end;
+
+{**
+  Returns the IZConnection which is propable needed to handle the encoding
+  @return <code>IZConnection</code> if assigned
+}
+function TZAbstractBlob.Connection: IZConnection;
+begin
+  Result := FConnection;
 end;
 
 {**

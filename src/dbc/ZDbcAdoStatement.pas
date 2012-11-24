@@ -358,7 +358,11 @@ begin
       stUnicodeStream:
         begin
           if Assigned(B) then
+          begin
+            if B.Connection = nil then
+              B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Self.GetConnection, B.WasDecoded);
             DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+          end;
           SQLType := stUnicodeString;
         end;
       stBinaryStream:
