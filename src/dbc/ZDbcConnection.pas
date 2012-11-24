@@ -288,6 +288,7 @@ end;
 implementation
 
 uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
+  {$IFDEF WITH_LCONVENCODING}, ZEncoding{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }

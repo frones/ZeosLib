@@ -462,7 +462,11 @@ begin
                       Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
                     end;
                     {$ELSE}
-                    Result := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
+                      {$IFDEF WITH_LCONVENCODING}
+                      Result := Ansi;
+                      {$ELSE}
+                      Result := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
+                      {$ENDIF}
                     {$ENDIF}
               end
             else
@@ -663,7 +667,11 @@ begin
                 Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
               end
               {$ELSE}
-              Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+                {$IFDEF WITH_LCONVENCODING}
+                Result := AnsiToUTF8(AStr);
+                {$ELSE}
+                Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+                {$ENDIF}
               {$ENDIF}
         else
           Result := AStr;
