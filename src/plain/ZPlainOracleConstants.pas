@@ -793,7 +793,7 @@ type
 
   TOCIObjectPin = function(hndl: POCIEnv; err: POCIError;
     object_ref:POCIHandle;corhdl:POCIHandle;
-    pin_option:ub2; pin_duration:OCIDuration;lock_option:ub2;_object:pointer):sword;cdecl;
+    pin_option:ub2; pin_duration:OCIDuration;lock_option:pub2;_object:pointer):sword;cdecl;
 
   TOCIObjectFree = function(hndl: POCIEnv; err: POCIError;
     instance:POCIHandle;flags :ub2):sword;cdecl;
