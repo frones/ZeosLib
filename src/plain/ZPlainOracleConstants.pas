@@ -119,7 +119,6 @@ type
   POCIAQDeqOptions = POCIDescriptor;
   POCIAQMsgProperties = POCIDescriptor;
   POCIAQAgent = POCIDescriptor;
-  POCIDate = POCIDescriptor;
   POCIDateTime = POCIDescriptor;          //OCI DateTime descriptor
   POCINumber = POCIDescriptor;
   PPOCINumber = ^POCINumber;
@@ -1351,7 +1350,8 @@ type
  *)
 
 (*------------------------- OCINumberToText ---------------------------------*)
-  Poratext = PansiChar;
+  Poratext = PAnsiChar;
+  PPoratext = PPAnsiChar;
 
   TOCINumberToText = function(err: POCIError; const number: POCINumber;
                           const fmt: Poratext; fmt_length: ub4;
@@ -2188,38 +2188,36 @@ type
           any of the number arguments is null
           'number' is <= 0
           'base' is <= 0
- */
+ *)
 
-/*****************************************************************************/
-/*                             ORACLE DATE TYPE                              */
-/*****************************************************************************/
+(*****************************************************************************
+ *                             ORACLE DATE TYPE                              *
+ *****************************************************************************)
 
-struct OCITime
-{
-  ub1 OCITimeHH;                          /* hours; range is 0 <= hours <=23 */
-  ub1 OCITimeMI;                     /* minutes; range is 0 <= minutes <= 59 */
-  ub1 OCITimeSS;                     /* seconds; range is 0 <= seconds <= 59 */
-};
-typedef struct OCITime OCITime;
+  POCITime = ^TOCITime;
+  TOCITime = record
+    OCITimeHH: ub1;                     // hours; range is 0 <= hours <=23
+    OCITimeMI: ub1;                     // minutes; range is 0 <= minutes <= 59
+    OCITimeSS: ub1;                     // seconds; range is 0 <= seconds <= 59
+  end;
 
-/*
+(*
  * OCITime - OCI TiMe portion of date
  *
  * This structure should be treated as an opaque structure as the format
  * of this structure may change. Use OCIDateGetTime/OCIDateSetTime
  * to manipulate time portion of OCIDate.
- */
+ *)
 
-struct OCIDate
-{
-  sb2 OCIDateYYYY;         /* gregorian year; range is -4712 <= year <= 9999 */
-  ub1 OCIDateMM;                          /* month; range is 1 <= month < 12 */
-  ub1 OCIDateDD;                             /* day; range is 1 <= day <= 31 */
-  OCITime OCIDateTime;                                               /* time */
-};
-typedef struct OCIDate OCIDate;
+  POCIDate = ^TOCIDate;
+  TOCIDate = record
+    OCIDateYYYY: sb2;         // gregorian year; range is -4712 <= year <= 9999
+    OCIDateMM: ub1;           // month; range is 1 <= month < 12
+    OCIDateDD: ub1;           // day; range is 1 <= day <= 31
+    OCIDateTime: TOCITime;    // time
+  end;
 
-/*
+(*
  * OCIDate - OCI oracle Date representation in C
  *
  * OCIDate represents the C mapping of Oracle date.
@@ -2230,9 +2228,9 @@ typedef struct OCIDate OCIDate;
  *
  * For binding variables of type OCIDate in OCI calls (OCIBindByName(),
  * OCIBindByPos(), and OCIDefineByPos()) use the type code SQLT_ODT.
- */
+ *)
 
-/*
+(*
    EXAMPLE
 
    The following example shows how to manipulate an attribute of type
@@ -2279,9 +2277,9 @@ typedef struct OCIDate OCIDate;
                 sizeof(LANG)-1, &strlen, str) != OCI_SUCCESS)
        /o error handling code o/
 
- */
+ *)
 
-/*--------------------------- OCIDateGetTime --------------------------------*/
+(*--------------------------- OCIDateGetTime --------------------------------*/
 /* void OCIDateGetTime(/o_ const OCIDate *date, ub1 *hour, ub1 *min,
                            ub1 *sec _o/); */
 #define OCIDateGetTime(date, hour, min, sec) \
@@ -2367,13 +2365,13 @@ typedef struct OCIDate OCIDate;
         Set the date with the given year, month, day inforamtion.
    RETURNS:
         NONE
- */
+ *)
 
-/*--------------------------- OCIDateAssign ---------------------------------*/
+(*--------------------------- OCIDateAssign ---------------------------------*)
 
-sword OCIDateAssign(    OCIError *err, const OCIDate *from,
-                        OCIDate *to    );
-/*
+  TOCIDateAssign = function(err: POCIError; const from: POCIDate;
+                        _to: POCIDate): sword; cdecl;
+(*
    NAME: OCIDateAssign - OCIDate Assignment
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2386,15 +2384,15 @@ sword OCIDateAssign(    OCIError *err, const OCIDate *from,
         Performs date assignment.
    RETURNS:
         OCI_SUCCESS
- */
+ *)
 
-/*--------------------------- OCIDateToText ---------------------------------*/
+(*--------------------------- OCIDateToText ---------------------------------*)
 
-sword OCIDateToText(    OCIError *err, const OCIDate *date,
-                        const oratext *fmt, ub1 fmt_length,
-                        const oratext *lang_name, ub4 lang_length,
-                        ub4 *buf_size, oratext *buf    );
-/*
+  TOCIDateToText = function(err: POCIError; const date: POCIDate;
+                        const fmt: poratext; fmt_length: ub1;
+                        const lang_name: poratext; lang_length: ub4;
+                        buf_size: pub4; buf: poratext): sword; cdecl;
+(*
    NAME: OCIDateToText - OCIDate convert date TO String
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2431,15 +2429,15 @@ sword OCIDateToText(    OCIError *err, const OCIDate *date,
           invalid format
           unknown language
           overflow error
- */
+ *)
 
-/*---------------------------- OCIDateFromText ------------------------------*/
+(*---------------------------- OCIDateFromText ------------------------------*)
 
-sword OCIDateFromText(    OCIError *err, const oratext *date_str,
-                        ub4 d_str_length, const oratext *fmt, ub1 fmt_length,
-                        const oratext *lang_name, ub4 lang_length,
-                        OCIDate *date    );
-/*
+  TOCIDateFromText = function(err: POCIError; const date_str: poratext;
+                        d_str_length: ub4; const fmt: poratext; fmt_length: ub1;
+                        const lang_name: poratext; lang_length: ub4;
+                        date: POCIDate): sword; cdecl;
+(*
    NAME: OCIDateFromText - OCIDate convert String TO Date
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2470,13 +2468,13 @@ sword OCIDateFromText(    OCIError *err, const oratext *date_str,
           unknown language
           invalid input string
           <to be discovered>
- */
+ *)
 
-/*----------------------------- OCIDateCompare ------------------------------*/
+(*----------------------------- OCIDateCompare ------------------------------*)
 
-sword OCIDateCompare(    OCIError *err, const OCIDate *date1,
-                     const OCIDate *date2, sword *result    );
-/*
+  TOCIDateCompare = function(err: POCIError; const date1: POCIDate;
+                     const date2: POCIDate; _result: psword): sword; cdecl;
+(*
    NAME: OCIDateCompare - OCIDate CoMPare dates
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2496,13 +2494,13 @@ sword OCIDateCompare(    OCIError *err, const OCIDate *date1,
         OCI_ERROR if
           invalid date
           <to be discovered>
- */
+ *)
 
-/*------------------------- OCIDateAddMonths --------------------------------*/
+(*------------------------- OCIDateAddMonths --------------------------------*)
 
-sword OCIDateAddMonths(    OCIError *err, const OCIDate *date, sb4 num_months,
-                           OCIDate *result    );
-/*
+  TOCIDateAddMonths = function(err: POCIError; const date: POCIDate;
+                          num_months: sb4; _result: POCIDate): sword; cdecl;
+(*
    NAME: OCIDateAddMonths - OCIDate ADd or subtract Months
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2527,13 +2525,13 @@ sword OCIDateAddMonths(    OCIError *err, const OCIDate *date, sb4 num_months,
         OCI_ERROR if
           invalid date
           <to be discovered>
- */
+ *)
 
-/*--------------------------- OCIDateAddDays --------------------------------*/
+(*--------------------------- OCIDateAddDays --------------------------------*)
 
-sword OCIDateAddDays(    OCIError *err, const OCIDate *date, sb4 num_days,
-                         OCIDate *result    );
-/*
+  TOCIDateAddDays = function(err: POCIError; const date: POCIDate; num_days: sb4;
+                         _result: POCIDate):sword; cdecl;
+(*
    NAME: OCIDateAddDays - OCIDate ADd or subtract Days
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2553,13 +2551,13 @@ sword OCIDateAddDays(    OCIError *err, const OCIDate *date, sb4 num_days,
         OCI_ERROR if
           invalid date
           <to be discovered>
- */
+ *)
 
-/*--------------------------- OCIDateLastDay --------------------------------*/
+(*--------------------------- OCIDateLastDay --------------------------------*)
 
-sword OCIDateLastDay(    OCIError *err, const OCIDate *date,
-                         OCIDate *last_day    );
-/*
+  TOCIDateLastDay = function(err: POCIError; const date: POCIDate;
+                         last_day: POCIDate): sword; cdecl;
+(*
    NAME: OCIDateLastDay - OCIDate get date of the LaST day of the month
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2577,13 +2575,13 @@ sword OCIDateLastDay(    OCIError *err, const OCIDate *date,
         OCI_ERROR if
           invalid date
           <to be discovered>
- */
+ *)
 
-/*----------------------- OCIDateDaysBetween --------------------------------*/
+(*----------------------- OCIDateDaysBetween --------------------------------*)
 
-sword OCIDateDaysBetween(    OCIError *err, const OCIDate *date1,
-                             const OCIDate *date2, sb4 *num_days    );
-/*
+  TOCIDateDaysBetween = function(err: POCIError; const date1: POCIDate;
+                             const dtae2: POCIDate; num_days: psb4): sword; cdecl;
+(*
    NAME: OCIDateDaysBetween - OCIDate get number of days BeTWeen two dates
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2601,15 +2599,15 @@ sword OCIDateDaysBetween(    OCIError *err, const OCIDate *date1,
         OCI_ERROR if
           invalid date
           <to be discovered>
- */
+ *)
 
-/*------------------------ OCIDateZoneToZone --------------------------------*/
+(*------------------------ OCIDateZoneToZone --------------------------------*)
 
-sword OCIDateZoneToZone(    OCIError *err, const OCIDate *date1,
-                            const oratext *zon1,
-                            ub4 zon1_length, const oratext *zon2,
-                            ub4 zon2_length, OCIDate *date2    );
-/*
+  TOCIDateZoneToZone = function(err: POCIError; const date1: POCIDate;
+                            const zon1: poratext;
+                            zon1_length: ub4; const zon2: poratext;
+                            zon2_length: ub4; dtae2: POCIDate): sword; cdecl;
+(*
    NAME: OCIDateZoneToZone - OCIDate convert date from one Zone TO another Zone
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -2633,14 +2631,14 @@ sword OCIDateZoneToZone(    OCIError *err, const OCIDate *date1,
           invald input time zone
           invald output time zone
           <to be discovered>
- */
+ *)
 
-/*--------------------------- OCIDateNextDay --------------------------------*/
+(*--------------------------- OCIDateNextDay --------------------------------*)
 
-sword OCIDateNextDay(    OCIError *err, const OCIDate *date,
-                         const oratext *day_p, ub4 day_length,
-                         OCIDate *next_day    );
-/*
+  TOCIDateNextDay = function(err: POCIError; const dtae: POCIDate;
+                         const day_p: poratext; day_length: ub4;
+                         next_day: POCIDate): sword; cdecl;
+(*
    NAME: OCIDateNextDay - OCIDate get date of Next DaY
    PARAMETERS:
         err (IN/OUT) - error handle. If there is an error, it is
@@ -3071,23 +3069,36 @@ sword OCIRawAllocSize(    OCIEnv *env, OCIError *err, const OCIRaw *raw,
         OCI_SUCCESS if the function completes successfully.
         OCI_INVALID_HANDLE if 'env' or 'err' is NULL.
         OCI_ERROR upon error
- */
+ *)
 
-/*****************************************************************************/
-/*                     OBJECT REFERENCE OPERATIONS                           */
-/*****************************************************************************/
+(*****************************************************************************
+ *                     OBJECT REFERENCE OPERATIONS                           *
+ *****************************************************************************)
 
-/*
+(*
  * See the definition of OCIRef in oro.h.
  *
  * For binding variables of type OCIRef* in OCI calls (OCIBindByName(),
  * OCIBindByPos() and OCIDefineByPos()) use the code SQLT_REF.
  *
- */
+ *)
 
-/*---------------------------- OCIRefClear ----------------------------------*/
-void OCIRefClear(    OCIEnv *env, OCIRef *ref    );
-/*
+(*------------------------- OBJECT REFERENCE (REF) --------------------------*)
+
+  PPOCIRef = ^POCIRef;
+  POCIRef = Pointer;
+(*
+ * OCIRef - OCI object REFerence
+ *
+ * In the Oracle object runtime environment, an object is identified by an
+ * object reference (ref) which contains the object identifier plus other
+ * runtime information.  The contents of a ref is opaque to clients.  Use
+ * OCIObjectNew() to construct a ref.
+ *)
+
+(*---------------------------- OCIRefClear ----------------------------------*)
+  TOCIRefClear = procedure(env: POCIEnv; ref: POCIRef);
+(*
    NAME: OCIRefClear - OCIRef CLeaR or nullify a ref
    PARAMETERS:
         env (IN)     - pointer to OCI environment handle
@@ -3103,12 +3114,13 @@ void OCIRefClear(    OCIEnv *env, OCIRef *ref    );
 
         If a null pointer value is passed as a ref,
         then this function is a no-op.
- */
+ *)
 
-/*--------------------------- OCIRefAssign ----------------------------------*/
-sword OCIRefAssign(    OCIEnv *env, OCIError *err, const OCIRef *source,
-                       OCIRef **target    );
-/*
+(*--------------------------- OCIRefAssign ----------------------------------*)
+
+  TOCIRefAssign = function(env: POCIEnv; err: POCIError; const source: POCIRef;
+                       target: PPOCIRef): sword; cdecl;
+(*
    NAME: OCIRefAssign - OCIRef CoPY a ref to another
    PARAMETERS:
         env (IN/OUT) - OCI environment handle initialized in object mode.
@@ -4103,6 +4115,103 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
           no previous index available
  *)
 
+ POCIType = Pointer;
+ PPOCIType = ^POCIType;
+ POCIInd = Pointer;
+(*---------------------------------orid.h------------------------------------*
+ *                           PUBLIC FUNCTIONS                                *
+ *---------------------------------------------------------------------------*)
+
+(*-------------------------- OCIObjectSetAttr ----------------------------*)
+  TOCIObjectSetAttr = function(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: pointer; tdo: POCIType; const names: PPAnsiChar;
+                  const lengths: pub4; const name_count: ub4;
+                  const indexes: pub4; const index_count: ub4;
+                  const null_status: POCIInd; const attr_null_struct: Pointer;
+                  const attr_value: Pointer): sword; cdecl;
+(*
+   NAME: OCIObjectSetAttr - ORID SET value
+   PARAMETERS:
+        env  (IN) - OCI environment handle initialized in object mode
+        err  (IN) - error handle. If there is an error, it is
+                        recorded in 'err' and this function returns OCI_ERROR.
+                        The error recorded in 'err' can be retrieved by calling
+                        OCIErrorGet().
+        instance    (IN) - pointer to an ADT instance
+        null_struct (IN) - the null structure of the ADT instance or array
+        tdo         (IN) - pointer to the TDO
+        names       (IN) - array of attribute names. This is used to specify
+                           the names of the attributes in the path expression.
+        lengths     (IN) - array of lengths of attribute names.
+        name_count  (IN) - number of element in the array 'names'.
+        indexes     (IN) [OPTIONAL] - currently NOT SUPPORTED, pass (ub4 * )0.
+        index_count (IN) [OPTIONAL] - currently NOT SUPPORTED, pass (ub4)0.
+        attr_null_status (IN) - the null status of the attribute if the type of
+                                 attribute is primitive.
+        attr_null_struct (IN) - the null structure of an ADT or collection
+                                 attribute.
+        attr_value       (IN) - pointer to the attribute value.
+   REQUIRES:
+   DESCRIPTION:
+        This function set the attribute of the given object with the given
+        value.  The position of the attribute is specified as a path
+        expression which is an array of names and an array of indexes.
+   RETURNS:
+        one of OROSTA*
+   EXAMPLES:
+        For path expression stanford.cs.stu[5].addr, the arrays will look like
+          names = {"stanford", "cs", "stu", "addr"}
+          lengths = {8, 2, 3, 4}
+          indexes = {5}
+
+        Also see the above example.
+ */
+
+(*-------------------------- OCIObjectGetAttr ----------------------------*)
+  TOCIObjectGetAttr = function(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: Pointer; tdo: POCIType;
+                  const names: PPoratext; const lengths: pub4;
+                  const name_count: ub4; const indexes: pub4;
+                  const index_count: ub4; attr_null_status: POCIInd;
+                  attr_null_struct, attr_value: PPointer;
+                  attr_tdo: PPOCIType): sword; cdecl;
+(*
+   NAME: OCIObjectGetAttr - ORID GET value
+   PARAMETERS:
+        env  (IN) - OCI environment handle initialized in object mode
+        err  (IN) - error handle. If there is an error, it is
+                        recorded in 'err' and this function returns OCI_ERROR.
+                        The error recorded in 'err' can be retrieved by calling
+                        OCIErrorGet().
+        instance    (IN) - pointer to an ADT instance
+        null_struct (IN) - the null structure of the ADT instance or array
+        tdo         (IN) - pointer to the TDO
+        names       (IN) - array of attribute names. This is used to specify
+                           the names of the attributes in the path expression.
+        lengths     (IN) - array of lengths of attribute names.
+        name_count  (IN) - number of element in the array 'names'.
+        indexes     (IN) [OPTIONAL] - currently NOT SUPPORTED, pass (ub4 * )0.
+        index_count (IN) [OPTIONAL] - currently NOT SUPPORTED, pass (ub4)0.
+        attr_null_status (OUT) - the null status of the attribute if the type
+                                 of attribute is primitive.
+        attr_null_struct (OUT) - the null structure of an ADT or collection
+                                 attribute.
+        attr_value       (OUT) - pointer to the attribute value.
+        attr_tdo         (OUT) - pointer to the TDO of the attribute.
+   REQUIRES:
+      - a valid OCI environment handle must be given.
+   DESCRIPTION:
+        This function gets a value from an ADT instance or from an array.
+        If the parameter 'instance' points to an ADT instance, then the path
+        expression specifies the location of the attribute in the ADT.
+        It is assumed that the object is pinned and that the value returned
+        is valid until the object is unpinned.
+   RETURNS:
+        one of OROSTA*
+   EXAMPLES:
+        See example in OCIObjectSetAttr(). Also see the above example.
+ *)
+
 type
   OracleOCI_API = record
     OCIPasswordChange:      TOCIPasswordChange;
@@ -4231,6 +4340,22 @@ type
     OCINumberLn:            TOCINumberLn;
     OCINumberLog:           TOCINumberLog;
 
+    { OCI oracle Date }
+    OCIDateAssign:          TOCIDateAssign;
+    OCIDateToText:          TOCIDateToText;
+    OCIDateFromText:        TOCIDateFromText;
+    OCIDateCompare:         TOCIDateCompare;
+    OCIDateAddMonths:       TOCIDateAddMonths;
+    OCIDateAddDays:         TOCIDateAddDays;
+    OCIDateLastDay:         TOCIDateLastDay;
+    OCIDateDaysBetween:     TOCIDateDaysBetween;
+    OCIDateZoneToZone:      TOCIDateZoneToZone;
+    OCIDateNextDay:         TOCIDateNextDay;
+
+    { OBJECT REFERENCE (REF) }
+    OCIRefClear:            TOCIRefClear;
+    OCIRefAssign:           TOCIRefAssign;
+
     OCITableSize:           TOCITableSize;
     OCITableExists:         TOCITableExists;
     OCITableDelete:         TOCITableDelete;
@@ -4238,6 +4363,10 @@ type
     OCITableLast:           TOCITableLast;
     OCITableNext:           TOCITableNext;
     OCITablePrev:           TOCITablePrev;
+
+    { Oracle Object Interface for Dynamic Data Access }
+    OCIObjectSetAttr:       TOCIObjectSetAttr;
+    OCIObjectGetAttr:       TOCIObjectGetAttr;
   end;
 
 implementation

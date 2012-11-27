@@ -372,6 +372,19 @@ type
       const tbl: POCITable; next_index: psb4; exists: PBoolean): sword;
     function TablePrev(hndl: POCIEnv; err: POCIError; index: sb4;
       const tbl: POCITable; prev_index: psb4; exists: PBoolean): sword;
+    function ObjectSetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: pointer; tdo: POCIType; const names: PPAnsiChar;
+                  const lengths: pub4; const name_count: ub4;
+                  const indexes: pub4; const index_count: ub4;
+                  const null_status: POCIInd; const attr_null_struct: Pointer;
+                  const attr_value: Pointer): sword; cdecl;
+    function ObjectGetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: Pointer; tdo: POCIType;
+                  const names: PPoratext; const lengths: pub4;
+                  const name_count: ub4; const indexes: pub4;
+                  const index_count: ub4; attr_null_status: POCIInd;
+                  attr_null_struct, attr_value: PPointer;
+                  attr_tdo: PPOCIType): sword;
   end;
 
   {** Implements a driver for Oracle 9i }
@@ -685,6 +698,20 @@ type
       const tbl: POCITable; next_index: psb4; exists: PBoolean): sword;
     function TablePrev(hndl: POCIEnv; err: POCIError; index: sb4;
       const tbl: POCITable; prev_index: psb4; exists: PBoolean): sword;
+
+    function ObjectSetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: pointer; tdo: POCIType; const names: PPAnsiChar;
+                  const lengths: pub4; const name_count: ub4;
+                  const indexes: pub4; const index_count: ub4;
+                  const null_status: POCIInd; const attr_null_struct: Pointer;
+                  const attr_value: Pointer): sword; cdecl;
+    function ObjectGetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: Pointer; tdo: POCIType;
+                  const names: PPoratext; const lengths: pub4;
+                  const name_count: ub4; const indexes: pub4;
+                  const index_count: ub4; attr_null_status: POCIInd;
+                  attr_null_struct, attr_value: PPointer;
+                  attr_tdo: PPOCIType): sword;
   end;
 
 implementation
@@ -1230,8 +1257,8 @@ end;
 function TZOracle9iPlainDriver.DefineObject(defnpp: POCIDefine;
   errhp: POCIError; _type: POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
 begin
-  Result:=OracleAPI.OCIDefineObject(defnpp,
-           errhp, _type, pgvpp, pvszsp, indpp, indszp);
+  Result := OracleAPI.OCIDefineObject(defnpp, errhp, _type, pgvpp, pvszsp,
+    indpp, indszp);
 end;
 
 function TZOracle9iPlainDriver.ObjectPin(hndl: POCIEnv; err: POCIError;
@@ -1840,6 +1867,28 @@ function TZOracle9iPlainDriver.TablePrev(hndl: POCIEnv; err: POCIError;
   index: sb4; const tbl: POCITable; prev_index: psb4; exists: PBoolean): sword;
 begin
   Result := OracleAPI.OCITablePrev(hndl, err, index, tbl, prev_index, exists);
+end;
+
+function TZOracle9iPlainDriver.ObjectSetAttr(env: POCIEnv; err: POCIError;
+  instance: Pointer; null_struct: pointer; tdo: POCIType;
+  const names: PPAnsiChar; const lengths: pub4; const name_count: ub4;
+  const indexes: pub4; const index_count: ub4; const null_status: POCIInd;
+  const attr_null_struct: Pointer; const attr_value: Pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectSetAttr(env, err, instance, null_struct, tdo,
+    names, lengths, name_count, indexes, index_count, null_status,
+    attr_null_struct, attr_value);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetAttr(env: POCIEnv; err: POCIError;
+  instance: Pointer; null_struct: Pointer; tdo: POCIType;
+  const names: PPoratext; const lengths: pub4; const name_count: ub4;
+  const indexes: pub4; const index_count: ub4; attr_null_status: POCIInd;
+  attr_null_struct, attr_value: PPointer; attr_tdo: PPOCIType): sword;
+begin
+  Result := OracleAPI.OCIObjectGetAttr(env, err, instance, null_struct, tdo,
+    names, lengths, name_count, indexes, index_count, attr_null_status,
+    attr_null_struct, attr_value, attr_tdo);
 end;
 
 function TZOracle9iPlainDriver.ServerAttach(srvhp: POCIServer;
