@@ -360,7 +360,8 @@ DELIMITER ;
 /* Grant privileges to columns                                  */
 /*==============================================================*/
 
-/* grant update(p_resume, p_redundant) on zeoslib.people to root@localhost; */
+/* grant update(p_resume, p_redundant) on zeoslib.people to root@localhost; 
+*/
 
 /*==============================================================*/
 /* Grant privileges to table                                    */

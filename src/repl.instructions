@@ -1,7 +1,7 @@
 Replace all copyright info
 --------------------------
 1. Edit repl.txt
-2. Make sure ls, xargs, gawk and mv programs are available from command line
+2. Make sure ls, gawk and mv programs are available from command line
 3. For each src subdirectory:
    a. cd into directory
    b. ls -1|xargs -I {} echo "gawk -f ../repl.awk {}>{}.1">x.bat

@@ -17,4 +17,4 @@ USEUNIT("..\..\test\bugreport\ZTestBugCompCore.pas");
 //---------------------------------------------------------------------------
 This file is used by the project manager only and should be treated like the project file
 
-main
+main
