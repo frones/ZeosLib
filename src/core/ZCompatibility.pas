@@ -8,7 +8,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2006 Zeos Development Group       }
+{    Copyright (c) 1999-2012 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -40,12 +40,10 @@
 {                                                         }
 { The project web site is located on:                     }
 {   http://zeos.firmos.at  (FORUM)                        }
-{   http://zeosbugs.firmos.at (BUGTRACKER)                }
-{   svn://zeos.firmos.at/zeos/trunk (SVN Repository)      }
+{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
+{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
 {                                                         }
 {   http://www.sourceforge.net/projects/zeoslib.          }
-{   http://www.zeoslib.sourceforge.net                    }
-{                                                         }
 {                                                         }
 {                                                         }
 {                                 Zeos Development Group. }
@@ -461,7 +459,11 @@ begin
                       Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
                     end;
                     {$ELSE}
-                    Result := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
+                      {$IFDEF WITH_LCONVENCODING}
+                      Result := Ansi;
+                      {$ELSE}
+                      Result := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
+                      {$ENDIF}
                     {$ENDIF}
               end
             else
@@ -556,7 +558,9 @@ begin
   {$IFDEF UNICODE}
   Result := AStr;
   {$ELSE}
-    {$IFNDEF WITH_LCONVENCODING}
+    {$IFDEF WITH_LCONVENCODING}
+    Result := UTF8Encode(AStr);
+    {$ELSE}
       {$IFDEF WITH_FPC_STRING_CONVERSATION}
       begin
         //avoid string conversations -> move memory
@@ -566,17 +570,6 @@ begin
       end
       {$ELSE}
       Result := WideToAnsi(AStr, FConSettings.CTRL_CP);
-      {$ENDIF}
-    {$ELSE}
-      {$IFDEF WITH_FPC_STRING_CONVERSATION}
-      begin
-        //avoid string conversations -> move memory
-        TempAnsi := UTF8Encode;
-        SetLength(Result, Length(TempAnsi));
-        Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-      end
-      {$ELSE}
-      Result := UTF8Encode;
       {$ENDIF}
     {$ENDIF}
   {$ENDIF}
@@ -671,7 +664,11 @@ begin
                 Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
               end
               {$ELSE}
-              Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+                {$IFDEF WITH_LCONVENCODING}
+                Result := AnsiToUTF8(AStr)
+                {$ELSE}
+                Result := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8)
+                {$ENDIF}
               {$ENDIF}
         else
           Result := AStr;
