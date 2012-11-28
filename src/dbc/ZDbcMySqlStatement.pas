@@ -986,9 +986,7 @@ var
   InParams: ZAnsiString;
 begin
   InParams := GenerateInParamsStr;
-  Result := 'SELECT '+ZPlainString(SQL);
-  if InParams <> '' then
-    Result := Result + '('+InParams+')';
+  Result := 'SELECT '+ZPlainString(SQL)+'('+InParams+')';
   Result := Result + ' AS ReturnValue';
 end;
 
