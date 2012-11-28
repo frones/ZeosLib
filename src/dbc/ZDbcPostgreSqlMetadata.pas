@@ -9,7 +9,7 @@
 {*********************************************************}
 
 {@********************************************************}
-{    Copyright (c) 1999-2012 Zeos Development Group       }
+{    Copyright (c) 1999-2006 Zeos Development Group       }
 {                                                         }
 { License Agreement:                                      }
 {                                                         }
@@ -41,10 +41,12 @@
 {                                                         }
 { The project web site is located on:                     }
 {   http://zeos.firmos.at  (FORUM)                        }
-{   http://sourceforge.net/p/zeoslib/tickets/ (BUGTRACKER)}
-{   svn://svn.code.sf.net/p/zeoslib/code-0/trunk (SVN)    }
+{   http://zeosbugs.firmos.at (BUGTRACKER)                }
+{   svn://zeos.firmos.at/zeos/trunk (SVN Repository)      }
 {                                                         }
 {   http://www.sourceforge.net/projects/zeoslib.          }
+{   http://www.zeoslib.sourceforge.net                    }
+{                                                         }
 {                                                         }
 {                                                         }
 {                                 Zeos Development Group. }
@@ -1982,9 +1984,7 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-{const
-  VARHDRSZ = 4;
-}var
+var
   TypeOid, AttTypMod: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
@@ -2014,12 +2014,9 @@ begin
         + ' ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
         + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
       if SchemaPattern <> '' then
-      begin
-        SQL := SQL + ' AND n.nspname LIKE '
-          + EscapeString(SchemaPattern);
-      end else begin
-         SQL := SQL + ' AND pg_table_is_visible (c.oid) ';
-      end;
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
+      //else
+         //SQL := SQL + ' AND pg_table_is_visible (c.oid) '; omit: because of Speed decrease: http://zeos.firmos.at/viewtopic.php?p=16646&sid=130
     end
     else
     begin
