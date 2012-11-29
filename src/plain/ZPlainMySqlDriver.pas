@@ -68,6 +68,7 @@ const
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   WINDOWS_DLL_LOCATION = 'libmysql.dll';
   WINDOWS_DLL_LOCATION_EMBEDDED = 'libmysqld.dll';
+  WINDOWS_MARIADB_LOCATION = 'libmariadb.dll';
   {$ENDIF}
   WINDOWS_DLL41_LOCATION = 'libmysql41.dll';
   WINDOWS_DLL41_LOCATION_EMBEDDED = 'libmysqld41.dll';
@@ -81,6 +82,7 @@ const
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   LINUX_DLL_LOCATION = 'libmysqlclient'+SharedSuffix;
   LINUX_DLL_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix;
+  LINUX_MARIADB_LOCATION = 'libmariadb'+SharedSuffix;
   {$ENDIF}
   LINUX_DLL41_LOCATION = 'libmysqlclient'+SharedSuffix+'.14';
   LINUX_DLL41_LOCATION_EMBEDDED = 'libmysqld'+SharedSuffix+'.14';
@@ -1356,10 +1358,16 @@ constructor TZMySQL5PlainDriver.Create(Tokenizer: IZTokenizer);
 begin
   inherited Create(Tokenizer);
   {$IFNDEF UNIX}
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    FLoader.AddLocation(WINDOWS_MARIADB_LOCATION);
+  {$ENDIF}
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
   {$ELSE}
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    FLoader.AddLocation(LINUX_MARIADB_LOCATION);
+  {$ENDIF}
     FLoader.AddLocation(LINUX_DLL50_LOCATION);
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
     FLoader.AddLocation(LINUX_DLL55_LOCATION);
