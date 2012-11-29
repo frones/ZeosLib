@@ -1,10 +1,11 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="3">
+  <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
+    <AddToProjectUsesSection Value="True"/>
     <CompilerOptions>
-      <Version Value="10"/>
+      <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
         <OtherUnitFiles Value="..\..\src\component;lib\$(TargetCPU)-$(TargetOS)"/>
@@ -27,7 +28,7 @@
     </CompilerOptions>
     <Description Value="Zeos Database Components
 "/>
-    <Version Major="7"/>
+    <Version Major="7" Minor="1"/>
     <Files Count="6">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>
@@ -59,19 +60,19 @@
     <RequiredPkgs Count="7">
       <Item1>
         <PackageName Value="zplain"/>
-        <MinVersion Major="7" Valid="True"/>
+        <MinVersion Major="7" Minor="1" Valid="True"/>
       </Item1>
       <Item2>
         <PackageName Value="zparsesql"/>
-        <MinVersion Major="7" Valid="True"/>
+        <MinVersion Major="7" Minor="1" Valid="True"/>
       </Item2>
       <Item3>
         <PackageName Value="zdbc"/>
-        <MinVersion Major="7" Valid="True"/>
+        <MinVersion Major="7" Minor="1" Valid="True"/>
       </Item3>
       <Item4>
         <PackageName Value="zcore"/>
-        <MinVersion Major="7" Valid="True"/>
+        <MinVersion Major="7" Minor="1" Valid="True"/>
       </Item4>
       <Item5>
         <PackageName Value="LCL"/>
@@ -91,8 +92,8 @@
       <Version Value="2"/>
       <IgnoreBinaries Value="False"/>
     </PublishOptions>
-    <CustomOptions Childs="ExternHelp">
-      <_ExternHelp Childs="Count"/>
+    <CustomOptions Items="ExternHelp" Version="2">
+      <_ExternHelp Items="Count"/>
     </CustomOptions>
   </Package>
 </CONFIG>
