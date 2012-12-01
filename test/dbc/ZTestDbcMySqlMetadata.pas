@@ -96,7 +96,7 @@ implementation
 }
 function TZTestMySqlMetadataCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysqld-4.1,mysql-5,mysqld-5';
+  Result := 'mysql,mysql-4.1,mysqld-4.1,mysql-5,mysqld-5,MariaDB-5';
 end;
 
 {**
