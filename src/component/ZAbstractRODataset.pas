@@ -107,7 +107,6 @@ type
     procedure RecordChanged(Field: TField); override;
   public
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
-
   end;
 
 {$WARNINGS OFF}
@@ -313,6 +312,9 @@ type
 {$ELSE}
     function AllocRecordBuffer: PChar; override;
     procedure FreeRecordBuffer(var Buffer: PChar); override;
+{$ENDIF}
+{$IFDEF WITH_FTDATASETSUPPORT}
+    function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; override;
 {$ENDIF}
     procedure CloseBlob(Field: TField); override;
     function CreateStatement(const SQL: string; Properties: TStrings):
@@ -1323,6 +1325,10 @@ begin
             StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
           end;
+        {$IFDEF WITH_FTDATASETSUPPORT}
+        ftDataSet:
+          Result := not RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
+        {$ENDIF}
         { Processes all other fields. }
         else
           begin
@@ -2939,6 +2945,13 @@ begin
   if Result = nil then
     Result := TMemoryStream.Create;
 end;
+
+{$IFDEF WITH_FTDATASETSUPPORT}
+function TZAbstractRODataset.CreateNestedDataSet(DataSetField: TDataSetField): TDataSet;
+begin
+  Result := inherited CreateNestedDataSet(DataSetField);
+end;
+{$ENDIF}
 
 {**
   Closes the specified BLOB field.

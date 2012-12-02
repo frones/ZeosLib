@@ -132,9 +132,20 @@ type
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+    function BindObject(bindp: POCIBind; errhp: POCIError;
+                    const _type: POCIType; pgvpp: PPointer;
+                    pvszsp: pub4; indpp: PPointer;
+                    indszp: pub4): sword;
 
     function DefineObject(defnpp: POCIDefine; errhp: POCIError;
       _type: POCIHandle; pgvpp, pvszsp, indpp, indszp: pointer): sword;
+
+    function ObjectGetObjectRef(env: POCIEnv; err: POCIError; _object: Pointer;
+                                out object_ref: POCIRef): sword;
+    function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
+                       typecode: OCITypeCode; tdo: POCIType; table: Pointer;
+                       duration: OCIDuration; value: byte;
+                       instance: PPointer): sword;
     function ObjectPin(hndl: POCIEnv; err: POCIError;
       object_ref: POCIHandle; corhdl:POCIHandle; pin_option: ub2;
       pin_duration: OCIDuration; lock_option: pub2; _object: pointer):sword;
@@ -385,6 +396,9 @@ type
                   const index_count: ub4; attr_null_status: POCIInd;
                   attr_null_struct, attr_value: PPointer;
                   attr_tdo: PPOCIType): sword;
+    {ort.h}
+    function TypeTypeCode(env: POCIEnv; err: POCIError;
+                  const tdo: POCIType): OCITypeCode;
   end;
 
   {** Implements a driver for Oracle 9i }
@@ -458,10 +472,21 @@ type
       value_sz: sb4; dty: ub2; indp: Pointer; alenp: Pointer; rcodep: Pointer;
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
-    icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+      icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+    function BindObject(bindp: POCIBind; errhp: POCIError;
+                    const _type: POCIType; pgvpp: PPointer;
+                    pvszsp: pub4; indpp: PPointer;
+                    indszp: pub4): sword;
 
     function DefineObject(defnpp:POCIDefine; errhp:POCIError;
       _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
+
+    function ObjectGetObjectRef(env: POCIEnv; err: POCIError; _object: Pointer;
+                                out object_ref: POCIRef): sword;
+    function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
+                       typecode: OCITypeCode; tdo: POCIType; table: Pointer;
+                       duration: OCIDuration; value: byte;
+                       instance: PPointer): sword;
     function ObjectPin(hndl: POCIEnv; err: POCIError;
       object_ref:POCIHandle;corhdl:POCIHandle;
       pin_option:ub2; pin_duration:OCIDuration;lock_option: pub2;_object:pointer):sword;
@@ -712,6 +737,9 @@ type
                   const index_count: ub4; attr_null_status: POCIInd;
                   attr_null_struct, attr_value: PPointer;
                   attr_tdo: PPOCIType): sword;
+    {ort.h}
+    function TypeTypeCode(env: POCIEnv; err: POCIError;
+                  const tdo: POCIType): OCITypeCode;
   end;
 
 implementation
@@ -1070,10 +1098,13 @@ begin
     @OracleAPI.OCIBindByPos       := GetAddress('OCIBindByPos');
     @OracleAPI.OCIBindByName      := GetAddress('OCIBindByName');
     @OracleAPI.OCIBindDynamic     := GetAddress('OCIBindDynamic');
+    @OracleAPI.OCIBindObject      := GetAddress('OCIBindObject');
 
     @OracleAPI.OCIDefineObject    := GetAddress('OCIDefineObject');
+    @OracleAPI.OCIObjectNew       := GetAddress('OCIObjectNew');
     @OracleAPI.OCIObjectPin       := GetAddress('OCIObjectPin');
     @OracleAPI.OCIObjectFree      := GetAddress('OCIObjectFree');
+    @OracleAPI.OCIObjectGetObjectRef := GetAddress('OCIObjectGetObjectRef');
 
     @OracleAPI.OCILobAppend       := GetAddress('OCILobAppend');
     @OracleAPI.OCILobAssign       := GetAddress('OCILobAssign');
@@ -1176,6 +1207,12 @@ begin
     @OracleAPI.OCITableLast       := GetAddress('OCITableLast');
     @OracleAPI.OCITableNext       := GetAddress('OCITableNext');
     @OracleAPI.OCITablePrev       := GetAddress('OCITablePrev');
+
+    @OracleAPI.OCIObjectGetAttr   := GetAddress('OCIObjectGetAttr');
+    @OracleAPI.OCIObjectSetAttr   := GetAddress('OCIObjectSetAttr');
+
+    {ort.h}
+    @OracleAPI.OCITypeTypeCode    := GetAddress('OCITypeTypeCode');
   end;
 end;
 
@@ -1254,6 +1291,15 @@ begin
     ocbfp);
 end;
 
+function TZOracle9iPlainDriver.BindObject(bindp: POCIBind; errhp: POCIError;
+                const _type: POCIType; pgvpp: PPointer;
+                pvszsp: pub4; indpp: PPointer;
+                indszp: pub4): sword;
+begin
+  Result := OracleAPI.OCIBindObject(bindp, errhp, _type, pgvpp, pvszsp, indpp,
+    indszp);
+end;
+
 function TZOracle9iPlainDriver.DefineObject(defnpp: POCIDefine;
   errhp: POCIError; _type: POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
 begin
@@ -1261,11 +1307,25 @@ begin
     indpp, indszp);
 end;
 
+function TZOracle9iPlainDriver.ObjectGetObjectRef(env: POCIEnv; err: POCIError;
+  _object: Pointer; out object_ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectGetObjectRef(env, err, _object, object_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectNew(env: POCIEnv; err: POCIError;
+  const svc: POCISvcCtx; typecode: OCITypeCode; tdo: POCIType; table: Pointer;
+  duration: OCIDuration; value: byte; instance: PPointer): sword;
+begin
+  Result := OracleAPI.OCIObjectNew(env, err, svc, typecode, tdo, table,
+    duration, value, instance);
+end;
+
 function TZOracle9iPlainDriver.ObjectPin(hndl: POCIEnv; err: POCIError;
   object_ref:POCIHandle;corhdl:POCIHandle;
   pin_option:ub2; pin_duration:OCIDuration;lock_option:pub2;_object:pointer):sword;
 begin
-  Result:=OracleAPI.OCIObjectPin(hndl, err, object_ref, corhdl,
+  Result := OracleAPI.OCIObjectPin(hndl, err, object_ref, corhdl,
     pin_option, pin_duration, lock_option, _object);
 end;
 
@@ -1889,6 +1949,13 @@ begin
   Result := OracleAPI.OCIObjectGetAttr(env, err, instance, null_struct, tdo,
     names, lengths, name_count, indexes, index_count, attr_null_status,
     attr_null_struct, attr_value, attr_tdo);
+end;
+
+{ort.h}
+function TZOracle9iPlainDriver.TypeTypeCode(env: POCIEnv; err: POCIError;
+              const tdo: POCIType): OCITypeCode;
+begin
+  Result := OracleAPI.OCITypeTypeCode(env, err, tdo);
 end;
 
 function TZOracle9iPlainDriver.ServerAttach(srvhp: POCIServer;

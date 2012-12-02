@@ -1879,6 +1879,7 @@ begin
         stTimestamp: RowAccessor.SetTimestamp(I, ResultSet.GetTimestamp(I));
         stAsciiStream, stBinaryStream, stUnicodeStream:
           RowAccessor.SetBlob(I, ResultSet.GetBlob(I));
+        stDataSet: RowAccessor.SetDataSet(i, ResultSet.GetDataSet(I));
 
       end;
       if ResultSet.WasNull then

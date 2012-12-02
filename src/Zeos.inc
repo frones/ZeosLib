@@ -57,6 +57,7 @@
  {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
+ {$DEFINE WITH_FTDATASETSUPPORT} //ftDataSet is supported
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -350,7 +351,7 @@
 //Default. To validate an optimal updatecount of 1. Comment this define if this
 //dafault behavior isn't wanted. On the other hand you can suppress this
 //validation by adding the line ValidateUpdateCount=-1 or FALSE or OFF into the
-// TZDataSetCompoent.Properties(TStrings)
+// TZDataSet-Component.Properties(TStrings)
 {$DEFINE WITH_VALIDATE_UPDATE_COUNT}
 
 // A large database may have many tables, colums and/or procedures!!!
