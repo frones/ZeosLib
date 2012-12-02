@@ -186,7 +186,9 @@
 {$IFDEF BDS4_UP}
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
-  {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
+  {$IFNDEF DELPHI12_UP}                 // since D2009 deprecated and won't be called any more
+    {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
+  {$ENDIF}
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
   {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
 {$ENDIF}

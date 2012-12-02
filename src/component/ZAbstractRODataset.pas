@@ -110,7 +110,6 @@ type
 
   end;
 
-{$WARNINGS OFF}
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
   TZAbstractRODataset = class(TWideDataSet)
@@ -474,7 +473,6 @@ type
     property Filter;
     property Filtered;
   end;
-{$WARNINGS ON}
 
 implementation
 
@@ -1492,11 +1490,13 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
+
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
    Result := TRecordBuffer(RowAccessor.Alloc);
 end;
 {$ELSE}
+
 function TZAbstractRODataset.AllocRecordBuffer: PChar;
 begin
   Result := PChar(RowAccessor.Alloc);
@@ -1509,8 +1509,10 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
+
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: TRecordBuffer);
 {$ELSE}
+
 procedure TZAbstractRODataset.FreeRecordBuffer(var Buffer: PChar);
 {$ENDIF}
 begin
