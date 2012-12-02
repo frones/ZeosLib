@@ -1376,7 +1376,7 @@ begin
     FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
   {$ELSE}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
-    FLoader.AddLocation(LINUX_MARIADB_LOCATION);
+    FLoader.AddLocation(MARIADB_LOCATION);
   {$ENDIF}
     FLoader.AddLocation(LINUX_DLL50_LOCATION);
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
