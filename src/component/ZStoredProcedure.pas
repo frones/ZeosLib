@@ -88,7 +88,7 @@ type
   {$IFDEF WITH_IPROVIDER}
     function PSIsSQLBased: Boolean; override;
     procedure PSExecute; override;
-    {$IFDEF BDS4_UP}
+    {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     {$ELSE}
     function PSGetTableName: string; override;
@@ -493,7 +493,6 @@ begin
 end;
 
 {$IFDEF WITH_IPROVIDER}
-
 {**
   Checks if dataset can execute SQL queries?
   @returns <code>True</code> if the query can execute SQL.
@@ -507,7 +506,7 @@ end;
   Gets the name of the stored procedure.
   @returns the name of this stored procedure.
 }
-{$IFDEF BDS4_UP}
+{$IFDEF WITH_IPROVIDERWIDE}
 function TZStoredProc.PSGetTableNameW: WideString;
 {$ELSE}
 function TZStoredProc.PSGetTableName: string;
@@ -532,7 +531,6 @@ procedure TZStoredProc.PSSetCommandText(const ACommandText: string);
 begin
   StoredProcName := ACommandText;
 end;
-
 {$ENDIF}
 
 end.

@@ -154,9 +154,16 @@
   {$DEFINE DELPHI17_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
-  {$DEFINE D17_STARTER_EDITION}
 {$ENDIF}
 // END of per Delphi version defines
+
+{$IFDEF BDS4_UP}
+  {$DEFINE WIDE_DATASET}                // TWidedataset exists
+  {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
+  {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
+  {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
+  {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
+{$ENDIF}
 
 {$IFDEF DELPHI12_UP}
   {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
@@ -172,7 +179,8 @@
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
-  {$UNDEF WITH_INLINE_ANSICOMPARETEXT}
+  {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
+  {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
@@ -183,32 +191,20 @@
   {$ENDIF}
 {$ENDIF}
 
-{$IFDEF BDS4_UP}
-  {$DEFINE WIDE_DATASET}                // TWidedataset exists
-  {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
-  {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
-  {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
-  {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
-{$ENDIF}
-
 {$IFDEF VER150BELOW}
   {$UNDEF WITH_WIDEMEMO}
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
-  {$UNDEF WITH_WIDEFIELDS}
+  {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}
-  {$DEFINE WITH_SYSTEMCLASSES}
-  {$DEFINE WITH_MAXLISTSIZE_DEPRECATED}
-{$ENDIF}
-
-{$IFDEF D17_STARTER_EDITION}
-{$UNDEF WITH_IPROVIDERWIDE}
-{$UNDEF BDS4_UP}
+  {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
+  {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
-  {$DEFINE WITH_TVALUEBUFFER}
+  {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
+  {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
 {$ENDIF}
 // Debug/release compiler options
