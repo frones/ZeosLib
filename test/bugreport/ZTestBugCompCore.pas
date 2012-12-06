@@ -361,7 +361,7 @@ begin
 
   if SkipClosed then Exit;
 
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  {$IFDEF FPC} if Not IncludeNonZeosIssues then Exit; {$ENDIF}
 
   Query := TZQuery.Create(nil);
   try
@@ -653,7 +653,7 @@ begin
 
   if SkipClosed then Exit;
 
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  {$IFDEF FPC} if Not IncludeNonZeosIssues then Exit; {$ENDIF}
 
   Query := TZQuery.Create(nil);
   try
@@ -706,7 +706,7 @@ begin
 
   if SkipClosed then Exit;
 
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  {$IFDEF FPC} if Not IncludeNonZeosIssues then Exit; {$ENDIF}
 
   Query := TZQuery.Create(nil);
   try
@@ -1493,7 +1493,7 @@ begin
 
   if SkipClosed then Exit;
 
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  {$IFDEF FPC} if Not IncludeNonZeosIssues then Exit; {$ENDIF}
 
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
