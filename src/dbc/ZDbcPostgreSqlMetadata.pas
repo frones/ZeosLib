@@ -1982,9 +1982,7 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-{const
-  VARHDRSZ = 4;
-}var
+var
   TypeOid, AttTypMod: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
@@ -2014,12 +2012,9 @@ begin
         + ' ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
         + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
       if SchemaPattern <> '' then
-      begin
-        SQL := SQL + ' AND n.nspname LIKE '
-          + EscapeString(SchemaPattern);
-      end else begin
-         SQL := SQL + ' AND pg_table_is_visible (c.oid) ';
-      end;
+        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
+      //else
+         //SQL := SQL + ' AND pg_table_is_visible (c.oid) '; omit: because of Speed decrease: http://zeos.firmos.at/viewtopic.php?p=16646&sid=130
     end
     else
     begin

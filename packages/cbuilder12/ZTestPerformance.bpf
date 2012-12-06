@@ -10,4 +10,4 @@ USEUNIT("..\..\test\performance\ZTestOldZeosPerformance.pas");
 USEUNIT("..\..\test\performance\ZTestPlainPerformance.pas");
 This file is used by the project manager only and should be treated like the project file
 
-main
+main

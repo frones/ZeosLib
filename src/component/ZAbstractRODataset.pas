@@ -109,7 +109,6 @@ type
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
   end;
 
-{$WARNINGS OFF}
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
   TZAbstractRODataset = class(TWideDataSet)
@@ -476,7 +475,6 @@ type
     property Filter;
     property Filtered;
   end;
-{$WARNINGS ON}
 
 implementation
 
