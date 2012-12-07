@@ -195,12 +195,21 @@ end;
 }
 procedure TZTestSysUtilsCase.TestSqlStrToFloatDef;
 begin
+{$IFNDEF FPC}
   CheckEquals(11.11, SqlStrToFloatDef('12,75', 11.11));
   CheckEquals(12.75, SqlStrToFloatDef('12.75', 11.11));
   CheckEquals(0.1275, SqlStrToFloatDef('12.75e-2', 11.11));
   CheckEquals(11.11, SqlStrToFloatDef('12.75float', 11.11));
   CheckEquals(11.11, SqlStrToFloatDef('', 11.11));
   CheckEquals(11.11, SqlStrToFloatDef('111,125.33', 11.11));
+{$ELSE}
+  CheckEquals(11.11, SqlStrToFloatDef(String('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(String('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef(String('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(String('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(String(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(String('111,125.33'), 11.11));
+{$ENDIF}
 end;
 
 {**

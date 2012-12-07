@@ -677,13 +677,13 @@ end;
   @param Columns a collection of key columns.
   @param NewRowAccessor an accessor object to new column values.
 }
-function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList; 
-  NewRowAccessor: TZRowAccessor): string; 
-var 
-  I: Integer; 
-  Current: TZResolverParameter; 
-  TableName: string; 
-  Temp1, Temp2: string; 
+function TZGenericCachedResolver.FormInsertStatement(Columns: TObjectList;
+  NewRowAccessor: TZRowAccessor): string;
+var
+  I: Integer;
+  Current: TZResolverParameter;
+  TableName: string;
+  Temp1, Temp2: string;
   l1: Integer; 
 
   procedure Append(const app: String); 
@@ -694,14 +694,14 @@ var
     Inc(l1, length(app)); 
   end; 
 
-begin 
-  TableName := DefineTableName; 
+begin
+  TableName := DefineTableName;
   DefineInsertColumns(Columns);
-  if Columns.Count = 0 then 
-  begin 
-    Result := ''; 
+  if Columns.Count = 0 then
+  begin
+    Result := '';
     Exit;
-  end; 
+  end;
 
   Temp1 := '';    l1 := 0; 
   SetLength(Temp2, 2 * Columns.Count - 1); 
@@ -828,20 +828,18 @@ begin
         SQL := FormInsertStatement(SQLParams, NewRowAccessor);
             If Assigned(InsertStatement) and (SQL <> InsertStatement.GetSQL) then
               InsertStatement := nil;
-            If (not Assigned(InsertStatement)) and (Trim(SQL) <> '') then 
-              InsertStatement := CreateResolverStatement(SQL); 
-            If Assigned(InsertStatement) then 
-              Statement := InsertStatement;
+            If not Assigned(InsertStatement) then
+              InsertStatement := CreateResolverStatement(SQL);
+            Statement := InsertStatement;
           end;
       utDeleted:
           begin
         SQL := FormDeleteStatement(SQLParams, OldRowAccessor);
             If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
               DeleteStatement := nil;
-            If (not Assigned(DeleteStatement)) and (Trim(SQL) <> '') then 
-              DeleteStatement := CreateResolverStatement(SQL); 
-            If Assigned(DeleteStatement) then 
-              Statement := DeleteStatement; 
+            If not Assigned(DeleteStatement) then
+              DeleteStatement := CreateResolverStatement(SQL);
+            Statement := DeleteStatement;
           end;
       utModified:
           begin
@@ -850,10 +848,9 @@ begin
                exit;
             If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
               UpdateStatement := nil;
-            If (not Assigned(UpdateStatement)) and (Trim(SQL) <> '') then 
-              UpdateStatement := CreateResolverStatement(SQL); 
-            If Assigned(UpdateStatement) then 
-              Statement := UpdateStatement; 
+            If not Assigned(UpdateStatement) then
+              UpdateStatement := CreateResolverStatement(SQL);
+            Statement := UpdateStatement;
           end;
       else
         Exit;

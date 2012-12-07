@@ -369,13 +369,9 @@ begin
             if InParamTypes[ParamIndex] = stBinaryStream then
               Result := EncodeString(TempBlob.GetString)
             else
-            begin
-              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-              TempBlob.SetStream(TempStream);
-              TempStream.Free;
-              Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
-            end
+              Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
+                GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                TempBlob.Length, TempBlob.WasDecoded, ConSettings), #39)
           else
             Result := 'NULL';
         end;
