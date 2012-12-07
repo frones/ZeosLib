@@ -366,7 +366,6 @@ function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempStream: TStream;
 begin
   TempBytes := nil;
 
@@ -414,15 +413,24 @@ begin
             if ParamType = stBinaryStream then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
-            begin
-              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-              TempBlob.SetStream(TempStream);
-              TempStream.Free;
               if ParamType = stUnicodeStream then
-                Result := 'N'+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''')
+              {$IFDEF WITH_UNITANSISTRINGS}
+                Result := 'N'+AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
               else
-                Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr({$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempBlob.GetString, #0, '', [rfReplaceAll]), '''');
-            end;
+                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+              {$ELSE}
+                Result := 'N'+AnsiQuotedStr(StringReplace(
+                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+              else
+                Result := AnsiQuotedStr(StringReplace(
+                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+              {$ENDIF}
           end
           else
             Result := 'NULL';

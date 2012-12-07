@@ -675,7 +675,7 @@ begin
       case TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) of
         stAsciiStream:
           if ConSettings.AutoEncode then
-            Stream := GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True)
+            Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True))
           else
             Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);

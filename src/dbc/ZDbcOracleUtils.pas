@@ -461,8 +461,8 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (CurrentVar.TypeCode = SQLT_CLOB) then
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings)
+                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings))
               else
                 TempStream := TempBlob.GetStream;
             end

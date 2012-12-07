@@ -1359,7 +1359,7 @@ begin
             if FBlobType = stUnicodeStream then
               Stream := ZEncoding.GetValidatedUnicodeStream(AnsiTemp, Connection.GetConSettings, True)
             else
-              Stream := ZEncoding.GetValidatedAnsiStream(AnsiTemp, Connection.GetConSettings, True);
+              Stream := TStringStream.Create(GetValidatedAnsiString(AnsiTemp, Connection.GetConSettings, True));
             ReallocMem(Buf, Stream.Size);
             Move(TMemoryStream(Stream).Memory^, PAnsichar(Buf)^, Stream.Size);
             OffSet := Stream.Size;
