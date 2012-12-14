@@ -6207,7 +6207,6 @@ sword OCIObjectGetNewOID(OCIEnv *env, OCIError *err, OCISvcCtx *svc,
     }
   {------------------------ OCITypeTypeCode --------------------------------- }
   { ** OBSOLETE **  }
-(* Const before type ignored *)
   TOCITypeTypeCode = function(env: POCIEnv; err: POCIError;
     const tdo: POCIType): OCITypeCode; cdecl;
 
@@ -6320,7 +6319,6 @@ sword OCIObjectGetNewOID(OCIEnv *env, OCIError *err, OCISvcCtx *svc,
     }
   {------------------------- OCITypeMethods --------------------------------- }
   { ** OBSOLETE **  }
-(* Const before type ignored *)
   TOCITypeMethods = function(env: POCIEnv; err: POCIError;
     const tdo: POCIType): ub4; cdecl;
 
@@ -6350,7 +6348,6 @@ sword OCIObjectGetNewOID(OCIEnv *env, OCIError *err, OCISvcCtx *svc,
   {-------------------------------------------------------------------------- }
   {------------------------ OCITypeElemName --------------------------------- }
   { ** OBSOLETE **  }
-(* Const before type ignored *)
   TOCITypeElemName = function(env: POCIEnv; err: POCIError;
     const elem: POCITypeElem; out n_length:Pub4): poratext; cdecl;
 
@@ -6450,7 +6447,6 @@ sword OCIObjectGetNewOID(OCIEnv *env, OCIError *err, OCISvcCtx *svc,
     }
   {------------------------- OCITypeElemFlags ------------------------------- }
   { ** OBSOLETE **  }
-(* Const before type ignored *)
   TOCITypeElemFlags = function(env: POCIEnv; err: POCIError;
     const elem: POCITypeElem): ub4; cdecl;
 
@@ -6641,7 +6637,6 @@ sword OCIObjectGetNewOID(OCIEnv *env, OCIError *err, OCISvcCtx *svc,
     }
   {----------------------- OCITypeElemExtTypeCode ---------------------------- }
   { ** OBSOLETE **  }
-(* Const before type ignored *)
   TOCITypeElemExtTypeCode = function(env: POCIEnv; err: POCIError;
     const elem: POCITypeElem): OCITypeCode; cdecl;
 
@@ -7100,7 +7095,6 @@ sword OCIObjectGetNewOID(OCIEnv *env, OCIError *err, OCISvcCtx *svc,
     }
   {------------------------ OCITypeMethodOrder ------------------------------- }
   { ** OBSOLETE **  }
-(* Const before type ignored *)
   TOCITypeMethodOrder = function(env: POCIEnv; err: POCIError;
     const tdo: POCIType; out mdo: PPOCITypeMethod): sword; cdecl;
 
@@ -7800,6 +7794,7 @@ type
 
     {ort.h}
     OCITypeIterNew:         TOCITypeIterNew;
+    OCITypeIterSet:         TOCITypeIterSet;
     OCITypeIterFree:        TOCITypeIterFree;
     OCITypeByName:          TOCITypeByName;
     OCITypeArrayByName:     TOCITypeArrayByName;
