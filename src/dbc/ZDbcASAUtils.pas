@@ -2312,8 +2312,8 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) then
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings)
+                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings))
               else
                 TempStream := TempBlob.GetStream;
               if Assigned(TempStream) then

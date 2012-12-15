@@ -381,7 +381,7 @@ var
           if ( CPTypes[iCtrlsCPs] = 'CP_UTF16' ) and not FSkip_cGet_UTF16 then
             CloneConfig
           else
-            {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+            {$IF defined(MSWINDOWS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
             SetAutoEncodings(Current);
             {$ELSE}
             SetCharacterSets(Current);

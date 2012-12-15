@@ -624,7 +624,7 @@ begin
           stBinaryStream:
             Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex), Self.FHandle));
           stAsciiStream:
-            Stream := GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True);
+            Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
           else
             begin
               WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));

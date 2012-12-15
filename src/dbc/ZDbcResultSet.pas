@@ -908,7 +908,8 @@ begin
     Blob := GetBlob(ColumnIndex);
     if Blob <> nil then
       if Self.GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream then
-        Result := GetValidatedAnsiStream(Blob.GetBuffer, Blob.Length, ConSettings, ConSettings.CTRL_CP)
+        Result := TStringStream.Create(GetValidatedAnsiStringFromBuffer(Blob.GetBuffer,
+          Blob.Length, ConSettings, ConSettings.CTRL_CP))
       else
         Result := Blob.GetStream;
   end;
@@ -2893,7 +2894,7 @@ end;
 }
 function TZAbstractBlob.Clone: IZBlob;
 begin
-  Result := TZAbstractBlob.CreateWithData(FBlobData, FBlobSize, FConnection);
+  Result := TZAbstractBlob.CreateWithData(FBlobData, FBlobSize, FConnection, FDecoded);
 end;
 
 {**
