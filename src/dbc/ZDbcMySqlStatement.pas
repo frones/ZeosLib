@@ -1033,10 +1033,7 @@ begin
       stString:
         Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
       stUnicodeString:
-        if (GetConnection.GetClientCodePageInformations^.Encoding = ceUTF8) then
-          Result := FPlainDriver.EscapeString(FHandle, UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True)
-        else
-          Result := FPlainDriver.EscapeString(FHandle, AnsiString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
       stDate:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),

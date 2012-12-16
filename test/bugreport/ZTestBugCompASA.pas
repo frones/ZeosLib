@@ -56,7 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -64,16 +65,9 @@ uses
 type
 
   {** Implements a bug report test case for ASA components. }
-  ZTestCompASABugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  ZTestCompASABugReport = class(TZSpecificCompSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: TZConnection read FConnection write FConnection;
-
   published
     procedure EmptyTest;
   end;
@@ -93,23 +87,11 @@ begin
   Result := 'ASA7,ASA8,ASA9,ASA12';
 end;
 
-procedure ZTestCompASABugReport.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
 procedure ZTestCompASABugReport.EmptyTest;
 begin
   //drop me if bugs are reported
   Check(True);
 end;
-
-procedure ZTestCompASABugReport.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 
 initialization
   RegisterTest('bugreport',ZTestCompASABugReport.Suite);

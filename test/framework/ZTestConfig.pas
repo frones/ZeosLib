@@ -109,13 +109,15 @@ const
   ENABLE_KEY                   = 'enable';
   SKIP_CLOSED_KEY              = 'skip.closed';
   SKIP_TEST_KEY                = 'skip.test';
+  SKIP_NON_ZEOS_ISSUES_KEY     = 'skip.non_zeos_issues';
   ACTIVE_CONNECTIONS_KEY       = 'connections';
   EXTENDED_TEST_KEY            = 'extended.test';
-  EXTENDED_NON_ZEOS_ISSUES_KEY = 'extended.non.zeos.issues';
   EXTENDED_CGET_ACP_KEY        = 'extended.cget_acp';
   EXTENDED_CCP_UTF8_KEY        = 'extended.ccp_utf8';
   EXTENDED_CCP_UTF16_KEY       = 'extended.ccp_utf16';
-  SKIP_SETUP_KEY               = 'extended.skip_setup';
+  EXTENDED_CODEPAGES_KEY       = 'extended.codepages';
+  EXTENDED_AUTOENCODING_KEY    = 'extended.autoencoding';
+  EXTENDED_REAL_PREPARED_KEY   = 'extended.prefer_real_prepared';
 
 const
   { Names of the connection configuration keys. }

@@ -188,7 +188,7 @@ var
 begin
   if SkipTest then Exit;
 
-  if Not IncludeNonZeosIssues then Exit;
+  if SkipNonZeosIssues then Exit;
 
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
@@ -379,7 +379,7 @@ begin
     SELECT host,db,table_name,grantor,user,table_priv from mysql.tables_priv
     WHERE table_name LIKE 'people';}
 
-  if Not IncludeNonZeosIssues then Exit;
+  if SkipNonZeosIssues then Exit;
 
   ResultSet := Metadata.GetTablePrivileges('', '', 'people');
   CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));

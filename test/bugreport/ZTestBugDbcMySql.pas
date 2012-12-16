@@ -61,15 +61,9 @@ uses
 
 type
   {** Implements a DBC bug report test case for MySql. }
-  TZTestDbcMySQLBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
+  TZTestDbcMySQLBugReport = class(TZSpecificDbcSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure Test702352;
     procedure Test739448;
@@ -90,17 +84,6 @@ uses ZTestCase;
 function TZTestDbcMySQLBugReport.GetSupportedProtocols: string;
 begin
   Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5';
-end;
-
-procedure TZTestDbcMySQLBugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure TZTestDbcMySQLBugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**

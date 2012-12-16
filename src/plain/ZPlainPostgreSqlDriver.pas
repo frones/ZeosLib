@@ -689,6 +689,7 @@ type
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
     procedure LoadApi; override;
+    function ImplementsEmuatedPreparedStatement: Boolean; override;
   public
     constructor Create;
 
@@ -1011,6 +1012,11 @@ begin
     @POSTGRESQL_API.PQfreeCancel        := GetAddress('PQfreeCancel');
     @POSTGRESQL_API.PQcancel            := GetAddress('PQcancel');
   end;
+end;
+
+function TZPostgreSQLBaseDriver.ImplementsEmuatedPreparedStatement: Boolean;
+begin
+  Result := True;
 end;
 
 constructor TZPostgreSQLBaseDriver.Create;

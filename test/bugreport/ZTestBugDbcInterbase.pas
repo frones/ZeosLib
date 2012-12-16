@@ -62,15 +62,9 @@ uses
 type
 
   {** Implements a DBC bug report test case for Interbase. }
-  TZTestDbcInterbaseBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
+  TZTestDbcInterbaseBugReport = class(TZSpecificDbcSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure Test789879;
     procedure Test841559;
@@ -91,17 +85,6 @@ uses ZTestCase, ZTestConsts, ZEncoding;
 function TZTestDbcInterbaseBugReport.GetSupportedProtocols: string;
 begin
   Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
-end;
-
-procedure TZTestDbcInterbaseBugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure TZTestDbcInterbaseBugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 procedure TZTestDbcInterbaseBugReport.Test789879;

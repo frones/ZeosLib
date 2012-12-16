@@ -66,16 +66,9 @@ uses
 type
 
   {** Implements a bug report test case for MySQL components. }
-  TZTestCompMySQLBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  TZTestCompMySQLBugReport = class(TZSpecificCompSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: TZConnection read FConnection write FConnection;
-
   published
     procedure Test735226;
     procedure Test726788;
@@ -127,17 +120,6 @@ begin
   Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5, MariaDB-B';
 end;
 
-procedure TZTestCompMySQLBugReport.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-procedure TZTestCompMySQLBugReport.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 {**
   Test the bug report #735226.
 
@@ -158,9 +140,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM table735226a'
       + ' LEFT JOIN table735226b ON table735226a.referenceid = table735226b.id';
     Query.Open;
@@ -204,9 +185,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM Table726788';
     Query.Open;
     CheckEquals(1, Query.FieldCount);
@@ -235,9 +215,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'DELETE FROM table735299';
     Query.ExecSQL;
@@ -290,9 +269,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'DELETE FROM table735299';
     Query.ExecSQL;
@@ -340,9 +318,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'DELETE FROM table740899';
     Query.ExecSQL;
@@ -391,9 +368,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'DELETE FROM table724542';
     Query.ExecSQL;
@@ -439,9 +415,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'select count(*) as items, sum(c_weight) as total, '+
       ' AVG(c_width) as average from cargo ';
@@ -473,9 +448,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'select * from table733236';
     Query.Open;
@@ -509,11 +483,10 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     UpdateSql := TZUpdateSQL.Create(nil);
     try
-      Query.Connection := Connection;
       // Query.RequestLive := True;
 
       Query.SQL.Text := 'delete from people where p_id >= ' + IntToStr(TEST_ROW_ID);
@@ -597,9 +570,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'set @user_var=0';
     Query.ExecSQL;
 
@@ -629,9 +601,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'delete from table768163';
     Query.ExecSQL;
 
@@ -665,9 +636,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select c_id, c_cost from cargo';
     Query.Open;
     CheckEquals(1, Query.Fields[0].AsInteger);
@@ -697,9 +667,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from table799863';
     Query.Open;
     CheckEquals(Ord(ftSmallInt), Ord(Query.Fields[0].DataType));
@@ -726,13 +695,12 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from table000001';
     Query.Open;
     CheckEquals(2, Query.Fields.Count);
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     {$IFDEF WITH_WIDEMEMO}
       CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
     else
@@ -761,9 +729,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from table817607';
     Query.Open;
     CheckEquals('id', Query.Fields[0].DisplayName);
@@ -792,9 +759,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'update table828147 set txt=''abc''';
     Query.ExecSQL;
 
@@ -856,9 +822,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'update table840608 set name=''PARACETAMOL (GPO)''';
     Query.ExecSQL;
 
@@ -900,9 +865,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'update people set p_name="\"\"\\" where 1=0';
     Query.ExecSQL;
   finally
@@ -932,9 +896,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'UPDATE table849723 SET fld2=''abc''';
     Query.ExecSQL;
 
@@ -989,9 +952,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'DELETE FROM table869609';
     Query.ExecSQL;
 
@@ -1030,9 +992,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT fld1, fld2 FROM table865564';
     Query.Open;
     CheckEquals(1, Query.RecordCount);
@@ -1061,9 +1022,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT idt2, ft2, table881634a.ft1'
       + ' FROM table881634b INNER JOIN table881634a'
       + ' ON (table881634b.ft1 = table881634a.idt1)';
@@ -1071,7 +1031,7 @@ begin
 
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[0].DataType));
     //EgonHugeist: Highest Priority Client_Character_set!!!!
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     begin
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType));
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[2].DataType));
@@ -1101,16 +1061,14 @@ begin
 
   if SkipClosed then Exit;
 
-  MasterQuery := TZQuery.Create(nil);
+  MasterQuery := CreateQuery;
   MasterDataSource := TDataSource.Create(nil);
-  DetailQuery := TZQuery.Create(nil);
+  DetailQuery := CreateQuery;
   try
-    MasterQuery.Connection := Connection;
     MasterQuery.ReadOnly := True;
     MasterQuery.SQL.Text := 'SELECT * FROM table884135a';
     MasterDataSource.DataSet := MasterQuery;
 
-    DetailQuery.Connection := Connection;
     // DetailQuery.RequestLive := True;
     DetailQuery.CachedUpdates := True;
     DetailQuery.SQL.Text := 'SELECT * FROM table884135b';
@@ -1148,9 +1106,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'DELETE FROM table886841';
     Query.ExecSQL;
 
@@ -1184,15 +1141,14 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT a.fld1, b.fld2, 1 + 2 as fld2, a.fld2,'
       + ' c.fld1, b.fld1, c.fld2, ''xyz'' as fld1'
       + ' FROM table894367a as a, table894367b as b, table894367c as c';
     Query.Open;
 
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -1202,7 +1158,7 @@ begin
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftInteger), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
@@ -1214,7 +1170,7 @@ begin
       + ' FROM table894367a as a, table894367b as b, table894367c as c';
     Query.Open;
 
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[0].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[0].DataType));
@@ -1224,7 +1180,7 @@ begin
     CheckEquals(Ord(ftFloat), Ord(Query.Fields[4].DataType));
     CheckEquals(Ord(ftBlob), Ord(Query.Fields[5].DataType));
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[6].DataType));
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[7].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[7].DataType));
@@ -1274,9 +1230,8 @@ var
 begin
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
 
     Query.SQL.Text := 'SELECT "aa\"aa"';
     Query.Open;
@@ -1313,11 +1268,10 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     UpdateSql := TZUpdateSQL.Create(nil);
     try
-      Query.Connection := Connection;
       // Query.RequestLive := True;
 
       Query.SQL.Text := 'delete from `Table 938705`';
@@ -1380,9 +1334,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
 
     Query.SQL.Text := 'INSERT INTO people(bad_column) VALUES(''abc'')';
@@ -1409,9 +1362,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'DELETE FROM table957126';
     Query.ExecSQL;
 
@@ -1451,9 +1403,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT id, fld1, fld2, fld1 as fld3,'
       + ' fld2 as fld4 FROM table735299';
     // Query.RequestLive := True;
@@ -1487,7 +1438,7 @@ begin
   Connection.Database := 'mysql';
   Connection.Connect;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     Query.Connection := Connection;
     Query.SQL.Text := 'DELETE FROM ' + DatabaseName + '.table740899';
@@ -1539,16 +1490,15 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT fld1, fld2 FROM table987022 WHERE 1=0';
     // Query.RequestLive := True;
     Query.CachedUpdates := True;
 
     Query.Open;
     CheckEquals(Ord(ftLargeInt), Ord(Query.Fields[0].DataType));
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
       CheckEquals(Ord(ftWideString), Ord(Query.Fields[1].DataType))
     else
       CheckEquals(Ord(ftString), Ord(Query.Fields[1].DataType));
@@ -1608,13 +1558,12 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   UpdateSQL := TZUpdateSQL.Create(nil);
   try
     UpdateSQL.InsertSQL.Text :=
       'INSERT INTO table989474 VALUES(:CustID_1,:CreateDate_1)';
 
-    Query.Connection := Connection;
     Query.UpdateObject := UpdateSQL;
     // Query.RequestLive := True;
 
@@ -1665,15 +1614,14 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT fld FROM table1045286';
 
     Query.Open;
     CheckEquals(1, Query.RecordCount);
     //Client_Character_set sets column-type!!!!
-    if ( FConnection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+    if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
     {$IFDEF WITH_WIDEMEMO}
       CheckEquals(Ord(ftWideMemo), Ord(Query.Fields[0].DataType))
     else
@@ -1700,11 +1648,10 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     // Query.RequestLive := True;
     Query.CachedUpdates := False;
-    Query.Connection := Connection;
 
     { Remove previously created record }
     Query.SQL.Text := 'DELETE FROM blob_values WHERE b_id=:id';

@@ -64,34 +64,25 @@ uses
   ZCompatibility;
 type
 
-  {** Implements a bug report test case for Oracle components. }
-  ZTestCompSQLiteBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  {** Implements a bug report test case for SQLite components. }
+  ZTestCompSQLiteBugReport = class(TZSpecificCompSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
+  published
+    procedure DummyTest;
+  end;
 
-    property Connection: TZConnection read FConnection write FConnection;
-
+  {** Implements a MBC bug report test case for SQLite components. }
+  ZTestCompSQLiteBugReportMBCs = class(TZSpecificCompSQLBugReportTestCaseMBCs)
+  protected
+    function GetSupportedProtocols: string; override;
   published
     procedure Mantis248_TestNonASCIICharSelect;
   end;
-
 implementation
 
 uses
   Variants, ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
-
-const
-
-  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
-  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
-  Str3 = 'ќдной из наиболее';
-  Str4 = 'тривиальных задач';
-  Str5 = 'решаемых многими';
-  Str6 = 'коллективами программистов';
 
 { ZTestCompSQLiteBugReport }
 
@@ -100,21 +91,30 @@ begin
   Result := 'sqlite,sqlite-3';
 end;
 
-procedure ZTestCompSQLiteBugReport.SetUp;
+procedure ZTestCompSQLiteBugReport.DummyTest;
 begin
-  Connection := CreateDatasetConnection;
+  Check(True);
+  //Remove me if more tests are available
 end;
 
-procedure ZTestCompSQLiteBugReport.TearDown;
+{ ZTestCompSQLiteBugReportMBCs }
+const
+  Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
+  Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
+  Str3 = 'ќдной из наиболее';
+  Str4 = 'тривиальных задач';
+  Str5 = 'решаемых многими';
+  Str6 = 'коллективами программистов';
+
+function ZTestCompSQLiteBugReportMBCs.GetSupportedProtocols: string;
 begin
-  Connection.Disconnect;
-  Connection.Free;
+  Result := 'sqlite,sqlite-3';
 end;
 
 {**
   NUMBER must be froat
 }
-procedure ZTestCompSQLiteBugReport.Mantis248_TestNonASCIICharSelect;
+procedure ZTestCompSQLiteBugReportMBCs.Mantis248_TestNonASCIICharSelect;
 const TestRowID = 248;
 var
   Query: TZQuery;
@@ -142,8 +142,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   Connection.Connect;
   try
     RowCounter := 0;
@@ -204,4 +203,5 @@ end;
 
 initialization
   RegisterTest('bugreport',ZTestCompSQLiteBugReport.Suite);
+  RegisterTest('bugreport',ZTestCompSQLiteBugReportMBCs.Suite);
 end.

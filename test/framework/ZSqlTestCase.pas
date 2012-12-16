@@ -91,6 +91,9 @@ type
     FExtended_cGet_ACP: Boolean;
     FExtended_cGet_UTF8: Boolean;
     FExtended_cGet_UTF16: Boolean;
+    FExtended_Codepages: Boolean;
+    FExtended_AutoEncoding: Boolean;
+    FExtended_RealPrepared: Boolean;
   public
     constructor Create; overload;
     constructor Create(TemplateConfig: TZConnectionConfig; Suffix: String); overload;
@@ -121,6 +124,9 @@ type
     property Include_cGet_ACP: Boolean read FExtended_cGet_ACP;
     property Include_cGet_UTF8: Boolean read FExtended_cGet_UTF8;
     property Include_cGet_UTF16: Boolean read FExtended_cGet_UTF16;
+    property Include_Codepages: Boolean read FExtended_Codepages;
+    property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
+    property Include_RealPrepared: Boolean read FExtended_RealPrepared;
   end;
 
   {** Implements an abstract class for all SQL test cases. }
@@ -145,13 +151,16 @@ type
     FDropScripts: TStringDynArray;
     FProperties: TStringDynArray;
     FExtendedTest: Boolean;
-    FExtendedNonZeosIssues: Boolean;
+    FSkipNonZeosIssues: Boolean;
     FExtended_cGet_ACP: Boolean;
     FExtended_cGet_UTF8: Boolean;
     FExtended_cGet_UTF16: Boolean;
+    FExtended_Codepages: Boolean;
+    FExtended_AutoEncoding: Boolean;
+    FExtended_RealPrepared: Boolean;
     FSkipSetup: Boolean;
     function GetProtocol : string;
-    function GetExtendedNonZeosIssues: Boolean;
+    function GetSkipNonZeosIssues: Boolean;
   protected
     property Connections: TObjectList read FConnections write FConnections;
     property TraceList: TStrings read FTraceList write FTraceList;
@@ -165,6 +174,7 @@ type
     {$ENDIF}
 
     function IsProtocolValid(Name: string): Boolean; virtual;
+    function IsASCIITest: Boolean; virtual;
     function GetSupportedProtocols: string; virtual; abstract;
 
     procedure StartSQLTrace;
@@ -201,10 +211,13 @@ type
     property CreateScripts: TStringDynArray read FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts;
     property Properties: TStringDynArray read FProperties;
-    property IncludeNonZeosIssues: Boolean read GetExtendedNonZeosIssues;
+    property SkipNonZeosIssues: Boolean read GetSkipNonZeosIssues;
     property Include_cGet_ACP: Boolean read FExtended_cGet_ACP;
     property Include_cGet_UTF8: Boolean read FExtended_cGet_UTF8;
     property Include_cGet_UTF16: Boolean read FExtended_cGet_UTF16;
+    property Include_Codepages: Boolean read FExtended_Codepages;
+    property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
+    property Include_RealPrepared: Boolean read FExtended_RealPrepared;
     property SkipSetup: Boolean read FSkipSetup;
   end;
 
@@ -230,7 +243,7 @@ procedure RebuildTestDatabases(TestGroup: string = '');
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZTestConfig, ZSqlProcessor;
+uses ZSysUtils, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL;
 
 function PropPos(const Current: TZConnectionConfig; const AProp: String): Integer;
 var
@@ -287,6 +300,12 @@ begin
     EXTENDED_CCP_UTF8_KEY, FALSE_VALUE));
   FExtended_cGet_UTF16 := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     EXTENDED_CCP_UTF16_KEY, FALSE_VALUE));
+  FExtended_CodePages := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    EXTENDED_CODEPAGES_KEY, FALSE_VALUE));
+  FExtended_AutoEncoding := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
+  FExtended_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    EXTENDED_REAL_PREPARED_KEY, FALSE_VALUE));
 end;
 
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);
@@ -348,11 +367,13 @@ end;
 procedure TZConnectionConfig.CreateExtendedConfigurations(ConnectionsList: TObjectList);
 var
   TempCharacterSets: TStringDynArray;
+
   procedure SetCharacterSets(const Current: TZConnectionConfig);
   var
     iCharacterSets: Integer;
     MyCurrent: TZConnectionConfig;
   begin
+    if FExtended_CodePages then
     for iCharacterSets := 0 to high(Current.CharacterSets) do
       begin
         MyCurrent := TZConnectionConfig.Create(Current, Current.CharacterSets[iCharacterSets]);
@@ -365,12 +386,15 @@ var
     procedure SetAutoEncodings(const Current: TZConnectionConfig);
     var MyCurrent: TZConnectionConfig;
     begin
-      MyCurrent := TZConnectionConfig.Create(Current, 'AutoEncodeStrings');
-//      Writeln(MyCurrent.Name);
-      SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
-      ConnectionsList.Add(MyCurrent);
-      SetCharacterSets(MyCurrent);
-      {autoencodings off is default so nothing must be added...}
+      if Include_AutoEncoding then
+      begin
+        MyCurrent := TZConnectionConfig.Create(Current, 'AutoEncodeStrings');
+//        Writeln(MyCurrent.Name);
+        SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
+        ConnectionsList.Add(MyCurrent);
+        SetCharacterSets(MyCurrent);
+        {autoencodings off is default so nothing must be added...}
+      end;
     end;
 
     procedure SetCtrlsCPTypes(const Current: TZConnectionConfig);
@@ -379,34 +403,56 @@ var
 
       procedure CloneConfig(CPType:String);
       begin
-        MyCurrent := TZConnectionConfig.Create(Current, CPType);
-//        Writeln(MyCurrent.Name);
-        SetProperty(MyCurrent, 'controls_cp',CPType);
-        ConnectionsList.Add(MyCurrent);
-        {$IFDEF UNICODE}
+        if CPType = '' then
+          MyCurrent := Current
+        else
+        begin
+          MyCurrent := TZConnectionConfig.Create(Current, CPType);
+//          Writeln(MyCurrent.Name);
+          SetProperty(MyCurrent, 'controls_cp',CPType);
+          ConnectionsList.Add(MyCurrent);
+        end;
         if (CPType = 'CP_UTF16') then //autoencoding is allways true
           SetCharacterSets(MyCurrent)
         else
-        {$ENDIF}
-          SetAutoEncodings(MyCurrent);
+          {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSATION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+          SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
+          {$ELSE}
+          SetCharacterSets(MyCurrent); //No Autoencoding available
+          {$IFEND}
       end;
     begin
-        if FExtended_cGet_ACP then
-          CloneConfig('GET_ACP');
-        {$IFNDEF UNICODE}
-        if FExtended_cGet_UTF8 then
-          CloneConfig('CP_UTF8');
-        {$ENDIF}
-        {$IF defined(WITH_WIDEFIELDS) or defined(UNICODE)}
-        if FExtended_cGet_UTF16 then
-          CloneConfig('CP_UTF16');
+
+      { GET_ACP is supported for all compiler}
+      if FExtended_cGet_ACP then
+        {$IF defined(DELPHI) and not defined(UNICODE))}
+        CloneConfig(''); //GET_ACP is default for Ansi-Delphi -> no clone!
+        {$ELSE}
+        CloneConfig('GET_ACP');
         {$IFEND}
 
-        {$IF defined(MSWINDOWS) or defined(WITH_WIDEMOVEPROCS_WITH_CP) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
-        SetAutoEncodings(Current);
+      { CP_UTF8 is not supported for Unicode compiler }
+      {$IFNDEF UNICODE}
+      if FExtended_cGet_UTF8 then
+        {$IFDEF FPC}
+        CloneConfig(''); //CP_UTF8 is FPC/LCL default -> no clone!
         {$ELSE}
-        SetCharacterSets(Current);
-        {$IFEND}
+        CloneConfig('CP_UTF8');
+        {$ENDIF}
+      {$ENDIF}
+
+      { CP_UTF16 (Wide-Field) is not supported for D7 and older FPC }
+      {$IFDEF WITH_WIDEFIELDS}
+      if FExtended_cGet_UTF16 then
+        {$IFDEF UNICODE}
+        CloneConfig(''); //CP_UTF16 is default for D12_UP -> no clone!
+        {$ELSE}
+        CloneConfig('CP_UTF16');
+        {$ENDIF}
+      {$ENDIF}
+
+      if not (FExtended_cGet_ACP or FExtended_cGet_UTF8 or FExtended_cGet_UTF16) then
+        CloneConfig('');
     end;
 begin
   TempCharacterSets := SplitStringToArray(TestConfig.ReadProperty(Self.Name,
@@ -414,6 +460,7 @@ begin
   if PropPos(Self, 'codepage') > -1 then //add a empty dummy value to get the autodetecting running for PG for example
     SetLength(TempCharacterSets, Length(TempCharacterSets)+1);
   Self.CharacterSets := TempCharacterSets;
+
   SetCtrlsCPTypes(Self);
 end;
 
@@ -442,10 +489,10 @@ begin
     Result := FProtocol;
 end;
 
-function TZAbstractSQLTestCase.GetExtendedNonZeosIssues: boolean;
+function TZAbstractSQLTestCase.GetSkipNonZeosIssues: boolean;
 begin
   Check(True);
-  Result := FExtendedNonZeosIssues
+  Result := FSkipNonZeosIssues
 end;
 
 {**
@@ -459,21 +506,26 @@ var
   ActiveConnections: TStringDynArray;
   Current: TZConnectionConfig;
   TempTObjectList : TObjectList;
-
+  FURL: TZURL;
 begin
   inherited LoadConfiguration;
 
   FExtendedTest := StrToBoolEx(ReadProperty(COMMON_GROUP,
     EXTENDED_TEST_KEY, FALSE_VALUE));
-  FExtendedNonZeosIssues := StrToBoolEx(ReadProperty(COMMON_GROUP,
-    EXTENDED_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
+  FSkipNonZeosIssues := StrToBoolEx(ReadProperty(COMMON_GROUP,
+    SKIP_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
   FExtended_cGet_ACP := StrToBoolEx(ReadProperty(COMMON_GROUP,
     EXTENDED_CGET_ACP_KEY, FALSE_VALUE));
   FExtended_cGet_UTF8 := StrToBoolEx(ReadProperty(COMMON_GROUP,
     EXTENDED_CCP_UTF8_KEY, FALSE_VALUE));
   FExtended_cGet_UTF16 := StrToBoolEx(ReadProperty(COMMON_GROUP,
     EXTENDED_CCP_UTF16_KEY, FALSE_VALUE));
-
+  FExtended_CodePages := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    EXTENDED_CODEPAGES_KEY, FALSE_VALUE));
+  FExtended_AutoEncoding := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
+  FExtended_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    EXTENDED_REAL_PREPARED_KEY, FALSE_VALUE));
 
   { Resets a connection configuration list. }
   if not Assigned(FConnections) then
@@ -501,9 +553,31 @@ begin
 
     FConnections.Add(Current);
 
-    {child settings on demand}
     if FExtendedTest then
-      Current.CreateExtendedConfigurations(FConnections);
+    begin
+      FURL := TZURL.Create;
+      FURL.Protocol := Current.Protocol;
+
+      {child settings on demand}
+      if FExtended_RealPrepared then
+      begin
+        if not IsASCIITest then
+          Current.CreateExtendedConfigurations(FConnections); //non ASCII test so create childs!
+        if DriverManager.GetDriver(FURL.URL).GetPlainDriver(FURL, False).ImplementsEmuatedPreparedStatement then
+        begin
+          Current := TZConnectionConfig.Create(Current, 'preferprepared');
+          SetProperty(Current, 'preferprepared', 'True');
+          FConnections.Add(Current);
+          if not IsASCIITest then
+            Current.CreateExtendedConfigurations(FConnections); //non ASCII test so create childs!
+        end;
+      end
+      else
+        if not IsASCIITest then
+          Current.CreateExtendedConfigurations(FConnections); //non ASCII test so create childs!
+
+      FURL.Free;
+    end;
   end;
 end;
 
@@ -553,6 +627,15 @@ begin
     end;
   end else
     Result := True;
+end;
+
+{**
+  Is the current test US-ASCII encoded?
+  @return True if Test is ASCII encoded
+}
+function TZAbstractSQLTestCase.IsASCIITest: Boolean;
+begin
+  Result := True;
 end;
 
 {**

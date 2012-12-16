@@ -62,15 +62,9 @@ uses
 type
 
   {** Implements a DBC bug report test case for Oracle }
-  TZTestDbcOracleBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
+  TZTestDbcOracleBugReport = class(TZSpecificDbcSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestNum1;
   end;
@@ -84,17 +78,6 @@ uses ZTestCase, ZTestConsts;
 function TZTestDbcOracleBugReport.GetSupportedProtocols: string;
 begin
   Result := 'oracle-9i';
-end;
-
-procedure TZTestDbcOracleBugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure TZTestDbcOracleBugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**
