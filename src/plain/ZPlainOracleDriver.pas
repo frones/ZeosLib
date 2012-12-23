@@ -140,17 +140,91 @@ type
     function DefineObject(defnpp: POCIDefine; errhp: POCIError;
       _type: POCIHandle; pgvpp, pvszsp, indpp, indszp: pointer): sword;
 
-    function ObjectGetObjectRef(env: POCIEnv; err: POCIError; _object: Pointer;
-                                out object_ref: POCIRef): sword;
+    { > ori.h}
     function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
                        typecode: OCITypeCode; tdo: POCIType; table: Pointer;
-                       duration: OCIDuration; value: byte;
+                       duration: OCIDuration; value: boolean;
                        instance: PPointer): sword;
-    function ObjectPin(hndl: POCIEnv; err: POCIError;
-      object_ref: POCIHandle; corhdl:POCIHandle; pin_option: ub2;
-      pin_duration: OCIDuration; lock_option: pub2; _object: pointer):sword;
+    function ObjectPin(env: POCIEnv; err: POCIError;
+      const object_ref: POCIRef; const corhdl: POCIComplexObject;
+      const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
+      const lock_option: OCILockOpt; _object: PPointer): sword;
+    function ObjectUnpin(env: POCIEnv; err: POCIError;
+      const _object: Pointer): sword;
+    function ObjectPinCountReset(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectLock(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectLockNoWait(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectMarkUpdate(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectUnmark(env: POCIEnv; err: POCIError;
+      const _object:pointer): sword;
+    function ObjectUnmarkByRef(env: POCIEnv; err: POCIError;
+      const ref: POCIRef): sword;
     function ObjectFree(hndl: POCIEnv; err: POCIError;
-      instance:POCIHandle;flags :ub2):sword;
+      instance: POCIHandle;flags :ub2):sword;
+    function ObjectMarkDeleteByRef(env: POCIEnv; err: POCIError;
+      const object_ref:POCIRef): sword;
+    function ObjectMarkDelete(env: POCIEnv; err: POCIError;
+      const instance:pointer): sword;
+    function ObjectFlush(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectRefresh(env: POCIEnv; err: POCIError;
+      _object: pointer): sword;
+    function ObjectCopy(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
+      const source, null_source, target, null_target: pointer; const tdo: POCIType;
+      const duration: OCIDuration; const option: ub1): sword;
+    function ObjectGetTypeRef(env: POCIEnv; err: POCIError;
+      const instance:pointer; out type_ref: POCIRef): sword;
+    function ObjectGetObjectRef(env: POCIEnv; err: POCIError;
+      const _object: pointer; out object_ref: POCIRef): sword;
+    function ObjectMakeObjectRef(env: POCIEnv; err: POCIError;
+      const svc: POCISvcCtx; const table: pointer; const values: PPointer;
+      const array_len: ub4; out object_ref: POCIRef): sword;
+    function ObjectGetPrimaryKeyTypeRef(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx; const table: pointer; out type_ref: POCIRef): sword;
+    function ObjectGetInd(env: POCIEnv; err: POCIError;
+      const instance: pointer; out null_struct: PPointer): sword;
+    function ObjectExists(env: POCIEnv; err: POCIError; const ins: pointer;
+      out exist: PBoolean): sword;
+    function ObjectGetProperty(envh: POCIEnv; errh: POCIError;
+      const obj: pointer; const propertyId: OCIObjectPropId;
+      out _property: pointer; size: Pub4): sword;
+    function ObjectIsLocked(env: POCIEnv; err: POCIError; const ins: pointer;
+      out lock: Pboolean): sword;
+    function ObjectIsDirty(env: POCIEnv; err: POCIError; const ins: pointer;
+      out dirty: PBoolean): sword;
+    function ObjectPinTable(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
+      const object_name: Poratext; const o_n_length:ub4;
+      const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
+      out _object: PPointer): sword;
+    function ObjectArrayPin(env: POCIEnv; err: POCIError;
+      const ref_array: PPOCIRef; const array_size: ub4;
+      const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
+      const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
+      const lock: OCILockOpt; out obj_array: PPointer;
+      out pos: Pub4): sword;
+    function CacheFlush(env: POCIEnv; err: POCIError; const svc:POCISvcCtx;
+      const context: pointer; const get: TOCICacheFlushGet;
+      out ref: PPOCIRef): sword;
+    function CacheRefresh(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx; const option: OCIRefreshOpt; const context: pointer;
+      get: TOCICacheRefreshGet; ref: PPOCIRef): sword;
+    function CacheUnpin(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx): sword;
+    function CacheFree(env: POCIEnv; err: POCIError;
+      const svc: POCISvcCtx): sword;
+    function CacheUnmark(env: POCIEnv; err: POCIError;
+      const svc: POCISvcCtx): sword;
+    function DurationBegin(env: POCIEnv; err: POCIError;
+      svc: POCISvcCtx; const parent: OCIDuration;
+      out dur: POCIDuration): sword;
+    function DurationEnd(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
+      out duration: OCIDuration): sword;
+    { < ori.h}
 
     function TransStart(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
       flags: ub4): sword;
@@ -415,7 +489,7 @@ type
       out tdo: PPOCIType): sword;
     function TypeByRef(env: POCIEnv; err: POCIError; type_ref: POCIRef;
       pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeArrayByRef(env: POCIEnv; err: POCIError; array_len: ub4;
       type_ref: PPOCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
       out tdo: PPOCIType): sword;
@@ -592,17 +666,91 @@ type
     function DefineObject(defnpp:POCIDefine; errhp:POCIError;
       _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
 
-    function ObjectGetObjectRef(env: POCIEnv; err: POCIError; _object: Pointer;
-                                out object_ref: POCIRef): sword;
+    { > ori.h}
     function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
                        typecode: OCITypeCode; tdo: POCIType; table: Pointer;
-                       duration: OCIDuration; value: byte;
+                       duration: OCIDuration; value: boolean;
                        instance: PPointer): sword;
-    function ObjectPin(hndl: POCIEnv; err: POCIError;
-      object_ref:POCIHandle;corhdl:POCIHandle;
-      pin_option:ub2; pin_duration:OCIDuration;lock_option: pub2;_object:pointer):sword;
+    function ObjectPin(env: POCIEnv; err: POCIError;
+      const object_ref: POCIRef; const corhdl: POCIComplexObject;
+      const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
+      const lock_option: OCILockOpt; _object: PPointer): sword;
+    function ObjectUnpin(env: POCIEnv; err: POCIError;
+      const _object: Pointer): sword;
+    function ObjectPinCountReset(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectLock(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectLockNoWait(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectMarkUpdate(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectUnmark(env: POCIEnv; err: POCIError;
+      const _object:pointer): sword;
+    function ObjectUnmarkByRef(env: POCIEnv; err: POCIError;
+      const ref: POCIRef): sword;
     function ObjectFree(hndl: POCIEnv; err: POCIError;
       instance:POCIHandle;flags :ub2):sword;
+    function ObjectMarkDeleteByRef(env: POCIEnv; err: POCIError;
+      const object_ref:POCIRef): sword;
+    function ObjectMarkDelete(env: POCIEnv; err: POCIError;
+      const instance:pointer): sword;
+    function ObjectFlush(env: POCIEnv; err: POCIError;
+      const _object: pointer): sword;
+    function ObjectRefresh(env: POCIEnv; err: POCIError;
+      _object: pointer): sword;
+    function ObjectCopy(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
+      const source, null_source, target, null_target: pointer; const tdo: POCIType;
+      const duration: OCIDuration; const option: ub1): sword;
+    function ObjectGetTypeRef(env: POCIEnv; err: POCIError;
+      const instance:pointer; out type_ref: POCIRef): sword;
+    function ObjectGetObjectRef(env: POCIEnv; err: POCIError;
+      const _object: pointer; out object_ref: POCIRef): sword;
+    function ObjectMakeObjectRef(env: POCIEnv; err: POCIError;
+      const svc: POCISvcCtx; const table: pointer; const values: PPointer;
+      const array_len: ub4; out object_ref: POCIRef): sword;
+    function ObjectGetPrimaryKeyTypeRef(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx; const table: pointer; out type_ref: POCIRef): sword;
+    function ObjectGetInd(env: POCIEnv; err: POCIError;
+      const instance: pointer; out null_struct: PPointer): sword;
+    function ObjectExists(env: POCIEnv; err: POCIError; const ins: pointer;
+      out exist: PBoolean): sword;
+    function ObjectGetProperty(envh: POCIEnv; errh: POCIError;
+      const obj: pointer; const propertyId: OCIObjectPropId;
+      out _property: pointer; size: Pub4): sword;
+    function ObjectIsLocked(env: POCIEnv; err: POCIError; const ins: pointer;
+      out lock: Pboolean): sword;
+    function ObjectIsDirty(env: POCIEnv; err: POCIError; const ins: pointer;
+      out dirty: PBoolean): sword;
+    function ObjectPinTable(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
+      const object_name: Poratext; const o_n_length:ub4;
+      const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
+      out _object: PPointer): sword;
+    function ObjectArrayPin(env: POCIEnv; err: POCIError;
+      const ref_array: PPOCIRef; const array_size: ub4;
+      const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
+      const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
+      const lock: OCILockOpt; out obj_array: PPointer;
+      out pos: Pub4): sword;
+    function CacheFlush(env: POCIEnv; err: POCIError; const svc:POCISvcCtx;
+      const context: pointer; const get: TOCICacheFlushGet;
+      out ref: PPOCIRef): sword;
+    function CacheRefresh(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx; const option: OCIRefreshOpt; const context: pointer;
+      get: TOCICacheRefreshGet; ref: PPOCIRef): sword;
+    function CacheUnpin(env: POCIEnv; err: POCIError;
+      const svc:POCISvcCtx): sword;
+    function CacheFree(env: POCIEnv; err: POCIError;
+      const svc: POCISvcCtx): sword;
+    function CacheUnmark(env: POCIEnv; err: POCIError;
+      const svc: POCISvcCtx): sword;
+    function DurationBegin(env: POCIEnv; err: POCIError;
+      svc: POCISvcCtx; const parent: OCIDuration;
+      out dur: POCIDuration): sword;
+    function DurationEnd(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
+      out duration: OCIDuration): sword;
+    { < ori.h}
 
     function TransStart(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
       flags: ub4): sword;
@@ -867,7 +1015,7 @@ type
       out tdo: PPOCIType): sword;
     function TypeByRef(env: POCIEnv; err: POCIError; type_ref: POCIRef;
       pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeArrayByRef(env: POCIEnv; err: POCIError; array_len: ub4;
       type_ref: PPOCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
       out tdo: PPOCIType): sword;
@@ -1323,50 +1471,82 @@ begin
     @OracleAPI.OCIBindObject      := GetAddress('OCIBindObject');
 
     @OracleAPI.OCIDefineObject    := GetAddress('OCIDefineObject');
-    @OracleAPI.OCIObjectNew       := GetAddress('OCIObjectNew');
-    @OracleAPI.OCIObjectPin       := GetAddress('OCIObjectPin');
-    @OracleAPI.OCIObjectFree      := GetAddress('OCIObjectFree');
-    @OracleAPI.OCIObjectGetObjectRef := GetAddress('OCIObjectGetObjectRef');
 
-    @OracleAPI.OCILobAppend       := GetAddress('OCILobAppend');
-    @OracleAPI.OCILobAssign       := GetAddress('OCILobAssign');
-    @OracleAPI.OCILobCopy         := GetAddress('OCILobCopy');
-    @OracleAPI.OCILobEnableBuffering := GetAddress('OCILobEnableBuffering');
-    @OracleAPI.OCILobDisableBuffering := GetAddress('OCILobDisableBuffering');
-    @OracleAPI.OCILobErase        := GetAddress('OCILobErase');
-    @OracleAPI.OCILobFileExists   := GetAddress('OCILobFileExists');
-    @OracleAPI.OCILobFileGetName  := GetAddress('OCILobFileGetName');
-    @OracleAPI.OCILobFileSetName  := GetAddress('OCILobFileSetName');
-    @OracleAPI.OCILobFlushBuffer  := GetAddress('OCILobFlushBuffer');
-    @OracleAPI.OCILobGetLength    := GetAddress('OCILobGetLength');
-    @OracleAPI.OCILobLoadFromFile := GetAddress('OCILobLoadFromFile');
-    @OracleAPI.OCILobLocatorIsInit := GetAddress('OCILobLocatorIsInit');
-    @OracleAPI.OCILobRead         := GetAddress('OCILobRead');
-    @OracleAPI.OCILobTrim         := GetAddress('OCILobTrim');
-    @OracleAPI.OCILobWrite        := GetAddress('OCILobWrite');
+    { > ori.h }
+    @OracleAPI.OCIObjectNew                   := GetAddress('OCIObjectNew');
+    @OracleAPI.OCIObjectPin                   := GetAddress('OCIObjectPin');
+    @OracleAPI.OCIObjectUnpin                 := GetAddress('OCIObjectUnpin');
+    @OracleAPI.OCIObjectPinCountReset         := GetAddress('OCIObjectPinCountReset');
+    @OracleAPI.OCIObjectLock                  := GetAddress('OCIObjectLock');
+    @OracleAPI.OCIObjectLockNoWait            := GetAddress('OCIObjectLockNoWait');
+    @OracleAPI.OCIObjectMarkUpdate            := GetAddress('OCIObjectMarkUpdate');
+    @OracleAPI.OCIObjectUnmark                := GetAddress('OCIObjectUnmark');
+    @OracleAPI.OCIObjectUnmarkByRef           := GetAddress('OCIObjectUnmarkByRef');
+    @OracleAPI.OCIObjectFree                  := GetAddress('OCIObjectFree');
+    @OracleAPI.OCIObjectMarkDeleteByRef       := GetAddress('OCIObjectMarkDeleteByRef');
+    @OracleAPI.OCIObjectMarkDelete            := GetAddress('OCIObjectMarkDelete');
+    @OracleAPI.OCIObjectFlush                 := GetAddress('OCIObjectFlush');
+    @OracleAPI.OCIObjectRefresh               := GetAddress('OCIObjectRefresh');
+    @OracleAPI.OCIObjectCopy                  := GetAddress('OCIObjectCopy');
+    @OracleAPI.OCIObjectGetTypeRef            := GetAddress('OCIObjectGetTypeRef');
+    @OracleAPI.OCIObjectGetObjectRef          := GetAddress('OCIObjectGetObjectRef');
+    @OracleAPI.OCIObjectMakeObjectRef         := GetAddress('OCIObjectMakeObjectRef');
+    @OracleAPI.OCIObjectGetPrimaryKeyTypeRef  := GetAddress('OCIObjectGetPrimaryKeyTypeRef');
+    @OracleAPI.OCIObjectGetInd                := GetAddress('OCIObjectGetInd');
+    @OracleAPI.OCIObjectExists                := GetAddress('OCIObjectExists');
+    @OracleAPI.OCIObjectGetProperty           := GetAddress('OCIObjectGetProperty');
+    @OracleAPI.OCIObjectIsLocked              := GetAddress('OCIObjectIsLocked');
+    @OracleAPI.OCIObjectIsDirty               := GetAddress('OCIObjectIsDirty');
+    @OracleAPI.OCIObjectPinTable              := GetAddress('OCIObjectPinTable');
+    @OracleAPI.OCIObjectArrayPin              := GetAddress('OCIObjectArrayPin');
+    @OracleAPI.OCICacheFlush                  := GetAddress('OCICacheFlush');
+    @OracleAPI.OCICacheRefresh                := GetAddress('OCICacheRefresh');
+    @OracleAPI.OCICacheUnpin                  := GetAddress('OCICacheUnpin');
+    @OracleAPI.OCICacheFree                   := GetAddress('OCICacheFree');
+    @OracleAPI.OCICacheUnmark                 := GetAddress('OCICacheUnmark');
+    @OracleAPI.OCIDurationBegin               := GetAddress('OCIDurationBegin');
+    @OracleAPI.OCIDurationEnd                 := GetAddress('OCIDurationEnd');
+    { < ori.h }
+
+    @OracleAPI.OCILobAppend                   := GetAddress('OCILobAppend');
+    @OracleAPI.OCILobAssign                   := GetAddress('OCILobAssign');
+    @OracleAPI.OCILobCopy                     := GetAddress('OCILobCopy');
+    @OracleAPI.OCILobEnableBuffering          := GetAddress('OCILobEnableBuffering');
+    @OracleAPI.OCILobDisableBuffering         := GetAddress('OCILobDisableBuffering');
+    @OracleAPI.OCILobErase                    := GetAddress('OCILobErase');
+    @OracleAPI.OCILobFileExists               := GetAddress('OCILobFileExists');
+    @OracleAPI.OCILobFileGetName              := GetAddress('OCILobFileGetName');
+    @OracleAPI.OCILobFileSetName              := GetAddress('OCILobFileSetName');
+    @OracleAPI.OCILobFlushBuffer              := GetAddress('OCILobFlushBuffer');
+    @OracleAPI.OCILobGetLength                := GetAddress('OCILobGetLength');
+    @OracleAPI.OCILobLoadFromFile             := GetAddress('OCILobLoadFromFile');
+    @OracleAPI.OCILobLocatorIsInit            := GetAddress('OCILobLocatorIsInit');
+    @OracleAPI.OCILobRead                     := GetAddress('OCILobRead');
+    @OracleAPI.OCILobTrim                     := GetAddress('OCILobTrim');
+    @OracleAPI.OCILobWrite                    := GetAddress('OCILobWrite');
 
     { For Oracle >= 8.1 }
-    @OracleAPI.OCILobCreateTemporary := GetAddress('OCILobCreateTemporary');
-    @OracleAPI.OCILobFreeTemporary := GetAddress('OCILobFreeTemporary');
-    @OracleAPI.OCILobClose        := GetAddress('OCILobClose');
-    @OracleAPI.OCILobIsOpen       := GetAddress('OCILobIsOpen');
-    @OracleAPI.OCILobIsTemporary  := GetAddress('OCILobIsTemporary');
-    @OracleAPI.OCILobOpen         := GetAddress('OCILobOpen');
+    @OracleAPI.OCILobCreateTemporary          := GetAddress('OCILobCreateTemporary');
+    @OracleAPI.OCILobFreeTemporary            := GetAddress('OCILobFreeTemporary');
+    @OracleAPI.OCILobClose                    := GetAddress('OCILobClose');
+    @OracleAPI.OCILobIsOpen                   := GetAddress('OCILobIsOpen');
+    @OracleAPI.OCILobIsTemporary              := GetAddress('OCILobIsTemporary');
+    @OracleAPI.OCILobOpen                     := GetAddress('OCILobOpen');
 
-    @OracleAPI.OCIDateTimeAssign  := GetAddress('OCIDateTimeAssign');
-    @OracleAPI.OCIDateTimeCheck   := GetAddress('OCIDateTimeCheck');
-    @OracleAPI.OCIDateTimeCompare := GetAddress('OCIDateTimeCompare');
-    @OracleAPI.OCIDateTimeConvert := GetAddress('OCIDateTimeConvert');
-    @OracleAPI.OCIDateTimeFromText := GetAddress('OCIDateTimeFromText');
-    @OracleAPI.OCIDateTimeGetDate := GetAddress('OCIDateTimeGetDate');
-    @OracleAPI.OCIDateTimeGetTime := GetAddress('OCIDateTimeGetTime');
-    @OracleAPI.OCIDateTimeGetTimeZoneOffset := GetAddress('OCIDateTimeGetTimeZoneOffset');
-    @OracleAPI.OCIDateTimeSysTimeStamp := GetAddress('OCIDateTimeSysTimeStamp');
-    @OracleAPI.OCIDateTimeConstruct := GetAddress('OCIDateTimeConstruct');
-    @OracleAPI.OCIDateTimeToText  := GetAddress('OCIDateTimeToText');
-    @OracleAPI.OCIDateTimeGetTimeZoneName := GetAddress('OCIDateTimeGetTimeZoneName');
-    @OracleAPI.OCINlsNumericInfoGet := GetAddress('OCINlsNumericInfoGet');
-    @OracleAPI.OCIClientVersion := GetAddress('OCIClientVersion');
+    @OracleAPI.OCIDateTimeAssign              := GetAddress('OCIDateTimeAssign');
+    @OracleAPI.OCIDateTimeCheck               := GetAddress('OCIDateTimeCheck');
+    @OracleAPI.OCIDateTimeCompare             := GetAddress('OCIDateTimeCompare');
+    @OracleAPI.OCIDateTimeConvert             := GetAddress('OCIDateTimeConvert');
+    @OracleAPI.OCIDateTimeFromText            := GetAddress('OCIDateTimeFromText');
+    @OracleAPI.OCIDateTimeGetDate             := GetAddress('OCIDateTimeGetDate');
+    @OracleAPI.OCIDateTimeGetTime             := GetAddress('OCIDateTimeGetTime');
+    @OracleAPI.OCIDateTimeGetTimeZoneOffset   := GetAddress('OCIDateTimeGetTimeZoneOffset');
+    @OracleAPI.OCIDateTimeSysTimeStamp        := GetAddress('OCIDateTimeSysTimeStamp');
+    @OracleAPI.OCIDateTimeConstruct           := GetAddress('OCIDateTimeConstruct');
+    @OracleAPI.OCIDateTimeToText              := GetAddress('OCIDateTimeToText');
+    @OracleAPI.OCIDateTimeGetTimeZoneName     := GetAddress('OCIDateTimeGetTimeZoneName');
+    @OracleAPI.OCINlsNumericInfoGet           := GetAddress('OCINlsNumericInfoGet');
+    @OracleAPI.OCIClientVersion               := GetAddress('OCIClientVersion');
 
     { For Oracle < 8.1 }
     //@OracleAPI.OCILobClose        := GetAddress('OCILobFileClose');
@@ -1575,33 +1755,230 @@ begin
     indpp, indszp);
 end;
 
-function TZOracle9iPlainDriver.ObjectGetObjectRef(env: POCIEnv; err: POCIError;
-  _object: Pointer; out object_ref: POCIRef): sword;
-begin
-  Result := OracleAPI.OCIObjectGetObjectRef(env, err, _object, object_ref);
-end;
-
+{ > ori.h}
 function TZOracle9iPlainDriver.ObjectNew(env: POCIEnv; err: POCIError;
   const svc: POCISvcCtx; typecode: OCITypeCode; tdo: POCIType; table: Pointer;
-  duration: OCIDuration; value: byte; instance: PPointer): sword;
+  duration: OCIDuration; value: boolean; instance: PPointer): sword;
 begin
   Result := OracleAPI.OCIObjectNew(env, err, svc, typecode, tdo, table,
     duration, value, instance);
 end;
 
-function TZOracle9iPlainDriver.ObjectPin(hndl: POCIEnv; err: POCIError;
-  object_ref:POCIHandle;corhdl:POCIHandle;
-  pin_option:ub2; pin_duration:OCIDuration;lock_option:pub2;_object:pointer):sword;
+function TZOracle9iPlainDriver.ObjectPin(env: POCIEnv; err: POCIError;
+  const object_ref: POCIRef; const corhdl: POCIComplexObject;
+  const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
+  const lock_option: OCILockOpt; _object: PPointer): sword;
 begin
-  Result := OracleAPI.OCIObjectPin(hndl, err, object_ref, corhdl,
+  Result := OracleAPI.OCIObjectPin(env, err, object_ref, corhdl,
     pin_option, pin_duration, lock_option, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectUnpin(env: POCIEnv; err: POCIError;
+  const _object: Pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectUnpin(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectPinCountReset(env: POCIEnv; err: POCIError;
+  const _object: pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectPinCountReset(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectLock(env: POCIEnv; err: POCIError;
+  const _object: pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectLock(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectLockNoWait(env: POCIEnv; err: POCIError;
+  const _object: pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectLockNoWait(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectMarkUpdate(env: POCIEnv; err: POCIError;
+  const _object: pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectMarkUpdate(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectUnmark(env: POCIEnv; err: POCIError;
+  const _object:pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectUnmark(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectUnmarkByRef(env: POCIEnv; err: POCIError;
+  const ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectUnmarkByRef(env, err, ref);
 end;
 
 function TZOracle9iPlainDriver.ObjectFree(hndl: POCIEnv; err: POCIError;
   instance:POCIHandle;flags :ub2):sword;
 begin
-  Result:=OracleAPI.OCIObjectFree(hndl, err, instance, flags);
+  Result := OracleAPI.OCIObjectFree(hndl, err, instance, flags);
 end;
+
+function TZOracle9iPlainDriver.ObjectMarkDeleteByRef(env: POCIEnv;
+  err: POCIError; const object_ref:POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectMarkDeleteByRef(env, err, object_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectMarkDelete(env: POCIEnv; err: POCIError;
+  const instance:pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectMarkDelete(env, err, instance);
+end;
+
+function TZOracle9iPlainDriver.ObjectFlush(env: POCIEnv; err: POCIError;
+  const _object: pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectFlush(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectRefresh(env: POCIEnv; err: POCIError;
+  _object: pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectRefresh(env, err, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectCopy(env: POCIEnv; err: POCIError;
+  const svc: POCISvcCtx; const source, null_source, target, null_target: pointer;
+  const tdo: POCIType; const duration: OCIDuration; const option: ub1): sword;
+begin
+  Result := OracleAPI.OCIObjectCopy(env, err, svc, source, null_source, target,
+    null_target, tdo, duration, option);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetTypeRef(env: POCIEnv; err: POCIError;
+  const instance:pointer; out type_ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectGetTypeRef(env, err, instance, type_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetObjectRef(env: POCIEnv; err: POCIError;
+  const _object: pointer; out object_ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectGetObjectRef(env, err, _object, object_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectMakeObjectRef(env: POCIEnv; err: POCIError;
+  const svc: POCISvcCtx; const table: pointer; const values: PPointer;
+  const array_len: ub4; out object_ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectMakeObjectRef(env, err, svc, table, values,
+    array_len, object_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetPrimaryKeyTypeRef(env: POCIEnv;
+  err: POCIError; const svc:POCISvcCtx; const table: pointer;
+  out type_ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectGetPrimaryKeyTypeRef(env, err, svc, table,
+    type_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetInd(env: POCIEnv; err: POCIError;
+  const instance: pointer; out null_struct: PPointer): sword;
+begin
+  Result := OracleAPI.OCIObjectGetInd(env, err, instance, null_struct);
+end;
+
+function TZOracle9iPlainDriver.ObjectExists(env: POCIEnv; err: POCIError;
+  const ins: pointer; out exist: PBoolean): sword;
+begin
+  Result := OracleAPI.OCIObjectExists(env, err, ins, exist);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetProperty(envh: POCIEnv; errh: POCIError;
+  const obj: pointer; const propertyId: OCIObjectPropId;
+  out _property: pointer; size: Pub4): sword;
+begin
+  Result := OracleAPI.OCIObjectGetProperty(envh, errh, obj, propertyId,
+    _property, size);
+end;
+
+function TZOracle9iPlainDriver.ObjectIsLocked(env: POCIEnv; err: POCIError;
+  const ins: pointer; out lock: Pboolean): sword;
+begin
+  Result := OracleAPI.OCIObjectIsLocked(env, err, ins, lock);
+end;
+
+function TZOracle9iPlainDriver.ObjectIsDirty(env: POCIEnv; err: POCIError;
+  const ins: pointer; out dirty: PBoolean): sword;
+begin
+  Result := OracleAPI.OCIObjectIsDirty(env, err, ins, dirty);
+end;
+
+function TZOracle9iPlainDriver.ObjectPinTable(env: POCIEnv; err: POCIError;
+  const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
+  const object_name: Poratext; const o_n_length:ub4;
+  const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
+  out _object: PPointer): sword;
+begin
+  Result := OracleAPI.OCIObjectPinTable(env, err, svc, schema_name, s_n_length,
+    object_name, o_n_length, scope_obj_ref, pin_duration, _object);
+end;
+
+function TZOracle9iPlainDriver.ObjectArrayPin(env: POCIEnv; err: POCIError;
+  const ref_array: PPOCIRef; const array_size: ub4;
+  const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
+  const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
+  const lock: OCILockOpt; out obj_array: PPointer;
+  out pos: Pub4): sword;
+begin
+  Result := OracleAPI.OCIObjectArrayPin(env, err, ref_array, array_size,
+    cor_array, cor_array_size, pin_option, pin_duration, lock, obj_array, pos);
+end;
+
+function TZOracle9iPlainDriver.CacheFlush(env: POCIEnv; err: POCIError;
+  const svc:POCISvcCtx; const context: pointer; const get: TOCICacheFlushGet;
+  out ref: PPOCIRef): sword;
+begin
+  Result := OracleAPI.OCICacheFlush(env, err, svc, context, get, ref);
+end;
+
+function TZOracle9iPlainDriver.CacheRefresh(env: POCIEnv; err: POCIError;
+  const svc:POCISvcCtx; const option: OCIRefreshOpt; const context: pointer;
+  get: TOCICacheRefreshGet; ref: PPOCIRef): sword;
+begin
+  Result := OracleAPI.OCICacheRefresh(env, err, svc, option, context, get, ref);
+end;
+
+function TZOracle9iPlainDriver.CacheUnpin(env: POCIEnv; err: POCIError;
+  const svc:POCISvcCtx): sword;
+begin
+  Result := OracleAPI.OCICacheUnpin(env, err, svc);
+end;
+
+function TZOracle9iPlainDriver.CacheFree(env: POCIEnv; err: POCIError;
+  const svc: POCISvcCtx): sword;
+begin
+  Result := OracleAPI.OCICacheFree(env, err, svc);
+end;
+
+function TZOracle9iPlainDriver.CacheUnmark(env: POCIEnv; err: POCIError;
+  const svc: POCISvcCtx): sword;
+begin
+  Result := OracleAPI.OCICacheUnmark(env, err, svc);
+end;
+
+function TZOracle9iPlainDriver.DurationBegin(env: POCIEnv; err: POCIError;
+  svc: POCISvcCtx; const parent: OCIDuration;
+  out dur: POCIDuration): sword;
+begin
+  Result := OracleAPI.OCIDurationBegin(env, err, svc, parent, dur);
+end;
+
+function TZOracle9iPlainDriver.DurationEnd(env: POCIEnv; err: POCIError;
+  svc: POCISvcCtx; out duration: OCIDuration): sword;
+begin
+  Result := OracleAPI.OCIDurationEnd(env, err, svc, duration);
+end;
+{ < ori.h}
 
 function TZOracle9iPlainDriver.Break(svchp: POCISvcCtx;
   errhp: POCIError): sword;
@@ -2463,7 +2840,7 @@ end;
 
 function TZOracle9iPlainDriver.TypeByRef(env: POCIEnv; err: POCIError;
   type_ref: POCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-  out tdo: PPOCIType): sword;
+  tdo: PPOCIType): sword;
 begin
   Result := OracleAPI.OCITypeByRef(env, err, type_ref, pin_duration, get_option,
     tdo);
