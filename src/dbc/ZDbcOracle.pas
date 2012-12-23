@@ -87,6 +87,7 @@ type
     function GetServerHandle: POCIServer;
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
+    function GetDescribeHandle: POCIDescribe;
   end;
 
   {** Implements Oracle Database Connection. }
@@ -99,6 +100,7 @@ type
     FServerHandle: POCIServer;
     FSessionHandle: POCISession;
     FTransHandle: POCITrans;
+    FDescibeHandle: POCIDescribe;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -132,6 +134,7 @@ type
     function GetServerHandle: POCIServer;
     function GetSessionHandle: POCISession;
     function GetTransactionHandle: POCITrans;
+    function GetDescribeHandle: POCIDescribe;
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
   end;
@@ -294,6 +297,8 @@ var
 
   procedure CleanupOnFail;
   begin
+    GetPlainDriver.HandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
+    FDescibeHandle := nil;
     GetPlainDriver.HandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
     FContextHandle := nil;
     GetPlainDriver.HandleFree(FErrorHandle, OCI_HTYPE_ERROR);
@@ -330,6 +335,8 @@ begin
   GetPlainDriver.HandleAlloc(FHandle, FServerHandle, OCI_HTYPE_SERVER, 0, nil);
   FContextHandle := nil;
   GetPlainDriver.HandleAlloc(FHandle, FContextHandle, OCI_HTYPE_SVCCTX, 0, nil);
+  FDescibeHandle := nil;
+  GetPlainDriver.HandleAlloc(FHandle, FDescibeHandle, OCI_HTYPE_DESCRIBE, 0, nil);
 
   Status := GetPlainDriver.ServerAttach(FServerHandle, FErrorHandle,
       PAnsiChar(ansistring(Database)), Length(AnsiString(Database)), 0);
@@ -574,6 +581,8 @@ begin
       LogMessage);
 
     { Frees all handlers }
+    GetPlainDriver.HandleFree(FDescibeHandle, OCI_HTYPE_DESCRIBE);
+    FDescibeHandle := nil;
     GetPlainDriver.HandleFree(FSessionHandle, OCI_HTYPE_SESSION);
     FSessionHandle := nil;
     GetPlainDriver.HandleFree(FContextHandle, OCI_HTYPE_SVCCTX);
@@ -706,6 +715,15 @@ end;
 function TZOracleConnection.GetTransactionHandle: POCITrans;
 begin
   Result := FTransHandle;
+end;
+
+{**
+  Gets a reference to Oracle describe handle.
+  @return a reference to Oracle describe handle.
+}
+function TZOracleConnection.GetDescribeHandle: POCIDescribe;
+begin
+  Result := FDescibeHandle;
 end;
 
 function TZOracleConnection.GetClientVersion: Integer;
