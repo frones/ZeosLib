@@ -777,7 +777,6 @@ var
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
   TempColumnNameLen: Integer;
-  ptype, addr_tdo:pointer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -873,17 +872,11 @@ begin
           CurrentVar.ColType := stDataSet;
           CurrentVar.TypeCode := CurrentVar.DataType;
 
-          CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
-                 @ptype, nil, OCI_ATTR_REF_TDO, FErrorHandle)
-            ,lcExecute, FSQL);
+          CurrentVar._Obj := DescribeObject(FplainDriver, FConnection,
+            CurrentVar.Handle, FStmtHandle, nil, 0);
 
-          CheckOracleError(FPlainDriver, FErrorHandle,
-            FPlainDriver.ObjectPin(Connection.GetConnectionHandle, FErrorHandle,
-              ptype, nil, OCI_PIN_ANY, OCI_DURATION_SESSION, pub2(OCI_LOCK_NONE),
-                @addr_tdo) ,lcExecute, FSQL);
           if FPlainDriver.TypeTypeCode(Connection.GetConnectionHandle,
-              FerrorHandle, addr_tdo) = SQLT_NCO then
+              FerrorHandle, CurrentVar._Obj.tdo) = SQLT_NCO then
             CurrentVar.ColType := stDataSet
           else
             CurrentVar.ColType := stBinaryStream;
@@ -908,10 +901,12 @@ begin
       FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
       @CurrentVar.Indicator, nil, nil, OCI_DEFAULT), lcExecute, FSQL);
     if CurrentVar.DataType=SQLT_NTY then
+    begin
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
-        FPlainDriver.DefineObject(CurrentVar.Define, FErrorHandle, addr_tdo,
-           @CurrentVar._Object,nil,nil,nil), lcExecute, FSQL);
+        FPlainDriver.DefineObject(CurrentVar.Define, FErrorHandle, CurrentVar._Obj.tdo,
+           @CurrentVar._Obj.obj_value, nil, nil, nil), lcExecute, FSQL);
+    end;
   end;
 
   { Fills the column info. }

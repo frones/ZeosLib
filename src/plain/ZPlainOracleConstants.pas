@@ -396,6 +396,18 @@ const
   OCI_ATTR_OBJ_SCHEMA           = 135; // schema name
   OCI_ATTR_OBJ_ID               = 136; // top level schema object id
 
+  // for inheritance - part 2
+  OCI_ATTR_IS_FINAL_TYPE        = 279; //is final type ?
+  OCI_ATTR_IS_INSTANTIABLE_TYPE = 280; //is instantiable type ?
+  OCI_ATTR_IS_FINAL_METHOD      = 281; //is final method ?
+  OCI_ATTR_IS_INSTANTIABLE_METHOD = 282; // is instantiable method ?
+  OCI_ATTR_IS_OVERRIDING_METHOD = 283; // is overriding method ?
+
+  OCI_ATTR_DESC_SYNBASE         = 284; //Describe the base object
+
+  OCI_ATTR_CHAR_USED            = 285; //char length semantics
+  OCI_ATTR_CHAR_SIZE            = 286; //char length
+
   { OCI Error Return Values }
   OCI_SUCCESS             = 0;
   OCI_SUCCESS_WITH_INFO   = 1;
@@ -486,6 +498,13 @@ const
   _SQLT_REC = 250;
   _SQLT_TAB = 251;
   _SQLT_BOL = 252;
+
+  { > typecode defines from oro.h }
+  OCI_TYPECODE_VARRAY           = 247;      //SQL VARRAY  OTS PAGED VARRAY
+  OCI_TYPECODE_TABLE            = 248;      //SQL TABLE  OTS MULTISET
+  OCI_TYPECODE_OBJECT           = SQLT_NTY; //SQL/OTS NAMED OBJECT TYPE
+  OCI_TYPECODE_OPAQUE           = 58;       //SQL/OTS Opaque Types
+  OCI_TYPECODE_NAMEDCOLLECTION  = SQLT_NCO;
 
   { OCI Statement Types }
   OCI_STMT_SELECT  = 1;   // select statement
