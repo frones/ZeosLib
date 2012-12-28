@@ -107,7 +107,7 @@ type
     function GetSkipTest: Boolean; virtual;
     function ReadProperty(const Group, Key, Default: string): string;
     function ReadGroupProperty(const Key, Default: string): string;
-    function ReadInheritProperty(const Key, Default: string): string;
+    {$IFDEF WITH_CLASS_VARS}class{$ENDIF} function ReadInheritProperty(const Key, Default: string): string;
 
     { Visual output methods. }
     procedure Print(_Message: string); virtual;
@@ -348,7 +348,7 @@ end;
     was not found in the config file neither in the current
     nor in the "common" group.
 }
-function TZAbstractTestCase.ReadInheritProperty(
+{$IFDEF WITH_CLASS_VARS}class{$ENDIF} function TZAbstractTestCase.ReadInheritProperty(
   const Key, Default: string): string;
 const
   UNKNOWN_VALUE = '';
