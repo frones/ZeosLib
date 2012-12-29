@@ -124,11 +124,6 @@ type
       const Msg: string = ''); overload;
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
-    (*{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-    procedure CheckEquals(Expected, Actual: RawByteString; Msg: string = ''); overload;
-    {$IFEND}*)
-
-
     { Measurement methods. }
     function GetTickCount: Cardinal;
   public

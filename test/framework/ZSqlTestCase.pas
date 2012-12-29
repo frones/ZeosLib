@@ -66,7 +66,7 @@ uses
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 type
-  TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared);
+  TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared, cuAutoEncoded);
   TZConfigUses = set of TZConfigUse;
 
   {** Represents a SQL test database configuration. }
@@ -153,14 +153,7 @@ type
     FCreateScripts: TStringDynArray;
     FDropScripts: TStringDynArray;
     FProperties: TStringDynArray;
-    FExtendedTest: Boolean;
     FSkipNonZeosIssues: Boolean;
-    FExtended_cGet_ACP: Boolean;
-    FExtended_cGet_UTF8: Boolean;
-    FExtended_cGet_UTF16: Boolean;
-    FExtended_Codepages: Boolean;
-    FExtended_AutoEncoding: Boolean;
-    FExtended_RealPrepared: Boolean;
     FSkipSetup: Boolean;
     function GetProtocol : string;
     function GetSkipNonZeosIssues: Boolean;
@@ -178,9 +171,12 @@ type
     procedure Run(TestResult: TTestResult); override;
     {$ENDIF}
 
-    function IsProtocolValid(Name: string): Boolean; virtual;
-    function IsASCIITest: Boolean; virtual;
-    function GetSupportedProtocols: string; virtual; abstract;
+    function IsProtocolValid(Config: TZConnectionConfig): Boolean; virtual;
+    function IsConfigUseValid(Config: TZConnectionConfig): Boolean; virtual;
+    function IsNonASCIITest: Boolean; virtual;
+    function IsRealPreparableTest: Boolean; virtual;
+    function IsAutoEncodableTest: Boolean; virtual;
+    function GetSupportedProtocols: string; virtual;
 
     procedure StartSQLTrace;
     procedure StopSQLTrace;
@@ -217,26 +213,8 @@ type
     property DropScripts: TStringDynArray read FDropScripts;
     property Properties: TStringDynArray read FProperties;
     property SkipNonZeosIssues: Boolean read GetSkipNonZeosIssues;
-    property Include_cGet_ACP: Boolean read FExtended_cGet_ACP;
-    property Include_cGet_UTF8: Boolean read FExtended_cGet_UTF8;
-    property Include_cGet_UTF16: Boolean read FExtended_cGet_UTF16;
-    property Include_Codepages: Boolean read FExtended_Codepages;
-    property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
-    property Include_RealPrepared: Boolean read FExtended_RealPrepared;
     property SkipSetup: Boolean read FSkipSetup;
   end;
-
-  {** Implements a test case which runs all active connections. }
-  TZPortableSQLTestCase = class (TZAbstractSQLTestCase)
-  protected
-    function GetSupportedProtocols: string; override;
-  end;
-
-  {**
-    Implements a test case which runs only for active connection
-    supported by the test.
-  }
-  TZSpecificSQLTestCase = class (TZAbstractSQLTestCase);
 
 {**
   Rebuilds test databases for the active connections
@@ -379,8 +357,26 @@ end;
 }
 procedure TZConnectionConfig.CreateExtendedConfigurations(ConnectionsList: TObjectList);
 var
-  TempCharacterSets: TStringDynArray;
+  TempConfig:TZConnectionConfig;
 
+  Function ProtocolIsRealPreparable(protocol : string) : boolean;
+  var
+    Temp: TStrings;
+    TempName : string;
+  begin
+    Result := False;
+    Temp := SplitString('mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5,postgresql,postgresql-7,postgresql-8,postgresql-9,sqlite,sqlite-3', LIST_DELIMITERS);
+    TempName := Protocol;
+    try
+      {$IFDEF ENABLE_POOLED}
+      If StartsWith(TempName,pooledprefix) then
+        TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
+      {$ENDIF}
+      Result := (Temp.IndexOf(TempName) >= 0);
+    finally
+      Temp.Free;
+    end;
+  end;
   procedure SetCharacterSets(const Current: TZConnectionConfig);
   var
     iCharacterSets: Integer;
@@ -394,88 +390,112 @@ var
         SetProperty(MyCurrent, 'codepage',Current.CharacterSets[iCharacterSets]);
         ConnectionsList.Add(MyCurrent);
       end;
-    end;
+  end;
 
-    procedure SetAutoEncodings(const Current: TZConnectionConfig);
-    var MyCurrent: TZConnectionConfig;
+  procedure SetAutoEncodings(const Current: TZConnectionConfig);
+  var MyCurrent: TZConnectionConfig;
+  begin
+    if Include_AutoEncoding then
     begin
-      if Include_AutoEncoding then
+      MyCurrent := TZConnectionConfig.Create(Current, 'AutoEncodeStrings');
+      MyCurrent.ConfigUses:=MyCurrent.ConfigUses+[cuAutoEncoded];
+      //Writeln(MyCurrent.Name);
+      SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
+      ConnectionsList.Add(MyCurrent);
+      SetCharacterSets(MyCurrent);
+      {autoencodings off is default so nothing must be added...}
+    end;
+  end;
+
+  procedure SetCtrlsCPTypes(const Current: TZConnectionConfig);
+  var
+    MyCurrent: TZConnectionConfig;
+
+    procedure CloneConfig(CPType:String);
+    begin
+      if CPType = '' then
+        MyCurrent := Current
+      else
       begin
-        MyCurrent := TZConnectionConfig.Create(Current, 'AutoEncodeStrings');
+        MyCurrent := TZConnectionConfig.Create(Current, CPType);
+        MyCurrent.ConfigUses:=MyCurrent.ConfigUses+[cuNonAscii];
         //Writeln(MyCurrent.Name);
-        SetProperty(MyCurrent, 'AutoEncodeStrings','ON');
+        SetProperty(MyCurrent, 'controls_cp',CPType);
         ConnectionsList.Add(MyCurrent);
-        SetCharacterSets(MyCurrent);
-        {autoencodings off is default so nothing must be added...}
       end;
-    end;
-
-    procedure SetCtrlsCPTypes(const Current: TZConnectionConfig);
-    var
-      MyCurrent: TZConnectionConfig;
-
-      procedure CloneConfig(CPType:String);
-      begin
-        if CPType = '' then
-          MyCurrent := Current
-        else
-        begin
-          MyCurrent := TZConnectionConfig.Create(Current, CPType);
-          MyCurrent.ConfigUses:=MyCurrent.ConfigUses+[cuNonAscii];
-          //Writeln(MyCurrent.Name);
-          SetProperty(MyCurrent, 'controls_cp',CPType);
-          ConnectionsList.Add(MyCurrent);
-        end;
-        if (CPType = 'CP_UTF16') then //autoencoding is allways true
-          SetCharacterSets(MyCurrent)
-        else
-          {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSATION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
-          SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
-          {$ELSE}
-          SetCharacterSets(MyCurrent); //No Autoencoding available
-          {$IFEND}
-      end;
-    begin
-
-      { GET_ACP is supported for all compiler}
-      if FExtended_cGet_ACP then
-        {$IF defined(DELPHI) and not defined(UNICODE))}
-        CloneConfig(''); //GET_ACP is default for Ansi-Delphi -> no clone!
+      if (CPType = 'CP_UTF16') then //autoencoding is allways true
+        SetCharacterSets(MyCurrent)
+      else
+        {$IF defined(MSWINDOWS) or defined(WITH_FPC_STRING_CONVERSATION) or defined(WITH_LCONVENCODING) or defined(DELPHI)}
+        SetAutoEncodings(MyCurrent); //Allow Autoencoding only if supported!
         {$ELSE}
-        CloneConfig('GET_ACP');
+        SetCharacterSets(MyCurrent); //No Autoencoding available
         {$IFEND}
-
-      { CP_UTF8 is not supported for Unicode compiler }
-      {$IFNDEF UNICODE}
-      if FExtended_cGet_UTF8 then
-        {$IFDEF FPC}
-        CloneConfig(''); //CP_UTF8 is FPC/LCL default -> no clone!
-        {$ELSE}
-        CloneConfig('CP_UTF8');
-        {$ENDIF}
-      {$ENDIF}
-
-      { CP_UTF16 (Wide-Field) is not supported for D7 and older FPC }
-      {$IFDEF WITH_WIDEFIELDS}
-      if FExtended_cGet_UTF16 then
-        {$IFDEF UNICODE}
-        CloneConfig(''); //CP_UTF16 is default for D12_UP -> no clone!
-        {$ELSE}
-        CloneConfig('CP_UTF16');
-        {$ENDIF}
-      {$ENDIF}
-
-      if not (FExtended_cGet_ACP or FExtended_cGet_UTF8 or FExtended_cGet_UTF16) then
-        CloneConfig('');
     end;
-begin
-  TempCharacterSets := SplitStringToArray(TestConfig.ReadProperty(Self.Name,
-    DATABASE_CHARACTERSETS_KEY, ''), LIST_DELIMITERS);
-  if PropPos(Self, 'codepage') > -1 then //add a empty dummy value to get the autodetecting running for PG for example
-    SetLength(TempCharacterSets, Length(TempCharacterSets)+1);
-  Self.CharacterSets := TempCharacterSets;
+  begin
 
-  SetCtrlsCPTypes(Self);
+    { GET_ACP is supported for all compiler}
+    if FExtended_cGet_ACP then
+      {$IF defined(DELPHI) and not defined(UNICODE))}
+      CloneConfig(''); //GET_ACP is default for Ansi-Delphi -> no clone!
+      {$ELSE}
+      CloneConfig('GET_ACP');
+      {$IFEND}
+
+    { CP_UTF8 is not supported for Unicode compiler }
+    {$IFNDEF UNICODE}
+    if FExtended_cGet_UTF8 then
+      {$IFDEF FPC}
+      CloneConfig(''); //CP_UTF8 is FPC/LCL default -> no clone!
+      {$ELSE}
+      CloneConfig('CP_UTF8');
+      {$ENDIF}
+    {$ENDIF}
+
+    { CP_UTF16 (Wide-Field) is not supported for D7 and older FPC }
+    {$IFDEF WITH_WIDEFIELDS}
+    if FExtended_cGet_UTF16 then
+      {$IFDEF UNICODE}
+      CloneConfig(''); //CP_UTF16 is default for D12_UP -> no clone!
+      {$ELSE}
+      CloneConfig('CP_UTF16');
+      {$ENDIF}
+    {$ENDIF}
+
+    if not (FExtended_cGet_ACP or FExtended_cGet_UTF8 or FExtended_cGet_UTF16) then
+      CloneConfig('');
+  end;
+  procedure create_charsets_encodings(ConnectionConfig: TZConnectionConfig);
+  var
+    TempCharacterSets: TStringDynArray;
+  begin
+    TempCharacterSets := SplitStringToArray(TestConfig.ReadProperty(Self.Name,
+      DATABASE_CHARACTERSETS_KEY, ''), LIST_DELIMITERS);
+    if PropPos(ConnectionConfig, 'codepage') > -1 then //add a empty dummy value to get the autodetecting running for PG for example
+      SetLength(TempCharacterSets, Length(TempCharacterSets)+1);
+    ConnectionConfig.CharacterSets := TempCharacterSets;
+
+    SetCtrlsCPTypes(Self);
+  end;
+begin
+  if ExtendedTest then
+  begin
+    create_charsets_encodings(self);
+
+    if Include_RealPrepared then
+    begin
+      if ProtocolIsRealPreparable(self.Protocol) then
+      begin
+        //writeln('create preferprepared');
+        TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
+        SetProperty(TempConfig, 'preferprepared', 'True');
+        ConnectionsList.Add(TempConfig);
+        TempConfig.ConfigUses:=[cuRealPrepared];
+        create_charsets_encodings(TempConfig);
+      end;
+    end;
+  end;
+
 end;
 
 { TZAbstractSQLTestCase }
@@ -537,36 +557,125 @@ end;
   @param Name a protocol name
   @result true if protocol valid
 }
-function TZAbstractSQLTestCase.IsProtocolValid(Name: string): Boolean;
+function TZAbstractSQLTestCase.IsProtocolValid(Config: TZConnectionConfig): Boolean;
 var
   Temp: TStrings;
   TempName : string;
 begin
-  if GetSupportedProtocols <> '' then
-  begin
-    Temp := SplitString(GetSupportedProtocols, LIST_DELIMITERS);
-    TempName := Name;
-    try
-      {$IFDEF ENABLE_POOLED}
-      If StartsWith(TempName,pooledprefix) then
-        TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
-      {$ENDIF}
-      Result := (Temp.IndexOf(TempName) >= 0);
-    finally
-      Temp.Free;
+  if GetSupportedProtocols = '' then
+    Result := True
+  else
+    begin
+      Temp := SplitString(GetSupportedProtocols, LIST_DELIMITERS);
+      TempName := Config.Protocol;
+      try
+        {$IFDEF ENABLE_POOLED}
+        If StartsWith(TempName,pooledprefix) then
+          TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
+        {$ENDIF}
+        Result := (Temp.IndexOf(TempName) >= 0);
+      finally
+        Temp.Free;
+      end;
     end;
-  end else
-    Result := True;
+end;
+
+function TZAbstractSQLTestCase.IsConfigUseValid(
+  Config: TZConnectionConfig): Boolean;
+var selection, Objection: Boolean;
+begin
+  Objection := False;
+  Selection := (cuMainConnection in Config.ConfigUses);  //main configured connections are always valid
+  If (cuNonAscii in Config.ConfigUses) then
+  begin
+    Selection := True;
+    Objection := Objection or Not(isNonASciiTest) //Non Ascii connections are only valid for NonAscii tests
+  end;
+  If (cuRealPrepared in Config.ConfigUses) then
+  begin
+    Selection := True;
+    Objection := Objection or Not(isRealPreparableTest) //PreferRealPrepared connections are only usefull for specific tests
+  end;
+  If (cuAutoEncoded in Config.ConfigUses) then
+  begin
+    Selection := True;
+    Objection := Objection or Not(isAutoEncodableTest) //AutoEncoded connections are only usefull for specific tests
+  end;
+  Result := Selection and not(Objection);
 end;
 
 {**
   Is the current test US-ASCII encoded?
   @return True if Test is ASCII encoded
 }
-function TZAbstractSQLTestCase.IsASCIITest: Boolean;
+function TZAbstractSQLTestCase.IsNonASCIITest: Boolean;
 begin
-  Result := True;
+  Result := False;
 end;
+
+function TZAbstractSQLTestCase.IsRealPreparableTest: Boolean;
+begin
+  Result := False;
+end;
+
+function TZAbstractSQLTestCase.IsAutoEncodableTest: Boolean;
+begin
+  result := False;
+end;
+
+function TZAbstractSQLTestCase.GetSupportedProtocols: string;
+begin
+  result := '';
+end;
+
+{**
+  Loads all configuration from the configuration file.
+}
+{$IFDEF WITH_CLASS_VARS}class{$ENDIF}procedure TZAbstractSQLTestCase.LoadConfigurations;
+
+var
+  I: Integer;
+  Temp: string;
+  ActiveConnections: TStringDynArray;
+  Current: TZConnectionConfig;
+begin
+  { Resets a connection configuration list. }
+  if not Assigned(CVConnectionConfigs) then
+    CVConnectionConfigs := TObjectList.Create
+  else CVConnectionConfigs.Clear;
+
+  { Reads a list with active database connections. }
+  Temp := ReadInheritProperty(ACTIVE_CONNECTIONS_KEY, NONE_VALUE);
+  if UpperCase(Temp) = UpperCase(NONE_VALUE) then
+    Temp := '';
+  ActiveConnections := SplitStringToArray(Temp, LIST_DELIMITERS);
+
+  for I := 0 to High(ActiveConnections) do
+  begin
+    Current := TZConnectionConfig.Create(ActiveConnections[I]);
+    Current.ConfigUses:=[cuMainConnection];
+    //Writeln('Master Connection : '+Current.Name);
+
+    {$IFDEF FPC}
+    if Current.Protocol = 'ado' then
+    begin
+      Current.Free;
+      continue;
+    end;
+    {$ENDIF}
+
+    CVConnectionConfigs.Add(Current);
+    Current.CreateExtendedConfigurations(CVConnectionConfigs);
+  end;
+end;
+
+{$IFNDEF WITH_CLASS_VARS}
+procedure TZAbstractSQLTestCase.LoadConfiguration;
+begin
+  inherited LoadConfiguration;
+  LoadConfigurations;
+end;
+{$ENDIF}
 
 {**
   Sets an active database connection for the test.
@@ -779,19 +888,14 @@ var
   Current: TZConnectionConfig;
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
-  begin
-    Current := TZConnectionConfig(ConnectionConfigs[I]);
-    if not IsProtocolValid(Current.Protocol) then
-      Continue;
-    if not ((cuMainConnection in Current.ConfigUses) or
-            ((cuNonAscii in Current.ConfigUses) and not isAsciiTest)) then
-      Continue;
-
-//    writeln('Using : '+Current.Name);
-    SetActiveConnection(Current);
-
-    inherited RunWithFixture(TestResult);
-  end;
+    if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+    begin
+      Current := TZConnectionConfig(ConnectionConfigs[I]);
+    //writeln('Using : '+Current.Name);
+      SetActiveConnection(Current);
+      inherited RunWithFixture(TestResult);
+    end;
 end;
 {$ELSE}
 {**
@@ -805,19 +909,14 @@ var
   Current: TZConnectionConfig;
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
-  begin
-    Current := TZConnectionConfig(ConnectionConfigs[I]);
-    if not IsProtocolValid(Current.Protocol) then
-      Continue;
-    if not ((cuMainConnection in Current.ConfigUses) or
-            ((cuNonAscii in Current.ConfigUses) and Not isAsciiTest)) then
-      Continue;
-
-//    writeln('Using : '+Current.Name);
-    SetActiveConnection(Current);
-
-    inherited Run(TestResult);
-  end;
+    if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+    begin
+      Current := TZConnectionConfig(ConnectionConfigs[I]);
+      //writeln('Using : '+Current.Name);
+      SetActiveConnection(Current);
+      inherited Run(TestResult);
+    end;
 end;
 {$ENDIF}
 
@@ -952,20 +1051,12 @@ begin
   end;
 end;
 
-{ TZPortableSQLTestCase }
-
-{**
-  Gets a comma separated list of all supported by this test protocols.
-  @returns a list of all supported protocols.
-}
-function TZPortableSQLTestCase.GetSupportedProtocols: string;
-begin
-  Result := '';
-end;
-
 type
   {** Implements a supplementary generic SQL test case. }
-  TZSupplementarySQLTestCase = class (TZPortableSQLTestCase)
+
+  { TZSupplementarySQLTestCase }
+
+  TZSupplementarySQLTestCase = class (TZAbstractSQLTestCase)
   private
     FTestGroup: string;
     FSQLProcessor: TZSQLProcessor;
@@ -1089,28 +1180,26 @@ begin
     LoadConfiguration;
 {$ENDIF}
   for I := 0 to ConnectionConfigs.Count - 1 do
-  begin
-    Current := TZConnectionConfig(ConnectionConfigs[I]);
-    if not (cuMainConnection in Current.ConfigUses) then
-      Continue;
-    if not IsProtocolValid(Current.Protocol) then
-      Continue;
-    //Writeln('Rebuilding '+Current.Name);
-    SetActiveConnection(Current);
-    Connection := CreateDatasetConnection;
-    try
-      FSQLProcessor.Connection := Connection;
-      FSQLProcessor.Delimiter := Current.Delimiter;
-      FSQLProcessor.DelimiterType := Current.DelimiterType;
+    if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
+       IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
+    begin
+      Current := TZConnectionConfig(ConnectionConfigs[I]);
+      //Writeln('Rebuilding '+Current.Name);
+      SetActiveConnection(Current);
+      Connection := CreateDatasetConnection;
+      try
+        FSQLProcessor.Connection := Connection;
+        FSQLProcessor.Delimiter := Current.Delimiter;
+        FSQLProcessor.DelimiterType := Current.DelimiterType;
 
-      if Current.Rebuild then
-      begin
-        ExecuteScripts(Current.DropScripts, False);
-        ExecuteScripts(Current.CreateScripts, True);
+        if Current.Rebuild then
+        begin
+          ExecuteScripts(Current.DropScripts, False);
+          ExecuteScripts(Current.CreateScripts, True);
+        end;
+      finally
+        Connection.Free;
       end;
-    finally
-      Connection.Free;
-    end;
   end;
 end;
 
@@ -1134,85 +1223,7 @@ begin
   end;
 end;
 
-{**
-  Loads all configuration from the configuration file.
-}
-{$IFDEF WITH_CLASS_VARS}class{$ENDIF}procedure TZAbstractSQLTestCase.LoadConfigurations;
-
-var
-  I: Integer;
-  _ConnectionName, Temp: string;
-  ActiveConnections: TStringDynArray;
-  Current: TZConnectionConfig;
-  TempTObjectList : TObjectList;
-  FURL: TZURL;
-  ExtendedTest: Boolean;
-  Extended_RealPrepared: Boolean;
-begin
-
-  ExtendedTest := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
-    EXTENDED_TEST_KEY, FALSE_VALUE));
-  Extended_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
-    EXTENDED_REAL_PREPARED_KEY, FALSE_VALUE));
-    { Resets a connection configuration list. }
-  if not Assigned(CVConnectionConfigs) then
-    CVConnectionConfigs := TObjectList.Create
-  else CVConnectionConfigs.Clear;
-
-  { Reads a list with active database connections. }
-  Temp := ReadInheritProperty(ACTIVE_CONNECTIONS_KEY, NONE_VALUE);
-  if UpperCase(Temp) = UpperCase(NONE_VALUE) then
-    Temp := '';
-  ActiveConnections := SplitStringToArray(Temp, LIST_DELIMITERS);
-
-  for I := 0 to High(ActiveConnections) do
-  begin
-    Current := TZConnectionConfig.Create(ActiveConnections[I]);
-    Current.ConfigUses:=[cuMainConnection];
-    //Writeln('Master Connection : '+Current.Name);
-
-    {$IFDEF FPC}
-    if Current.Protocol = 'ado' then
-    begin
-      Current.Free;
-      continue;
-    end;
-    {$ENDIF}
-
-    CVConnectionConfigs.Add(Current);
-
-    if ExtendedTest then
-    begin
-      FURL := TZURL.Create;
-      FURL.Protocol := Current.Protocol;
-      Current.CreateExtendedConfigurations(CVConnectionConfigs);
-
-      {child settings on demand}
-      if Extended_RealPrepared then
-      begin
-        if DriverManager.GetDriver(FURL.URL).GetPlainDriver(FURL, False).ImplementsEmuatedPreparedStatement then
-        begin
-          Current := TZConnectionConfig.Create(Current, 'preferprepared');
-          SetProperty(Current, 'preferprepared', 'True');
-          CVConnectionConfigs.Add(Current);
-          Current.ConfigUses:=[cuRealPrepared];
-          Current.CreateExtendedConfigurations(CVConnectionConfigs);
-        end;
-      end;
-
-      FURL.Free;
-    end;
-  end;
-end;
-
-{$IFNDEF WITH_CLASS_VARS}
-procedure TZAbstractSQLTestCase.LoadConfiguration;
-begin
-  inherited LoadConfiguration;
-  LoadConfigurations;
-end;
-{$ELSE}
-
+{$IFDEF WITH_CLASS_VARS}
 initialization
   TZAbstractSQLTestCase.LoadConfigurations;
 

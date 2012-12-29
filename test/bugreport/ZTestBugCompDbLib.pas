@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a bug report test case for DbLib components. }
-  ZTestCompDbLibBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  ZTestCompDbLibBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

@@ -65,7 +65,7 @@ uses
 type
 
   {** Implements a bug report test case for ASA components. }
-  ZTestCompASABugReport = class(TZSpecificCompSQLBugReportTestCase)
+  ZTestCompASABugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

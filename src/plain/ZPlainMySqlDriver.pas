@@ -245,7 +245,6 @@ type
     procedure LoadCodePages; override;
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
-    function ImplementsEmuatedPreparedStatement: Boolean; override;
   public
     constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
@@ -632,11 +631,6 @@ begin
   finally
     TmpList.Free;
   end;
-end;
-
-function TZMySQLBaseDriver.ImplementsEmuatedPreparedStatement: Boolean;
-begin
-  Result := True;
 end;
 
 constructor TZMySQLBaseDriver.Create(Tokenizer: IZTokenizer);

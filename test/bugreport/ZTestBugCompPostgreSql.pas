@@ -66,7 +66,7 @@ uses
 type
 
   {** Implements a bug report test case for PostgreSQL components. }
-  TZTestCompPostgreSQLBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  TZTestCompPostgreSQLBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -89,7 +89,7 @@ type
     procedure Test1043252;
   end;
 
-  TZTestCompPostgreSQLBugReportMBCs = class(TZSpecificCompSQLBugReportTestCaseMBCs)
+  TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   public

@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a DBC bug report test case for Interbase. }
-  TZTestDbcInterbaseBugReport = class(TZSpecificDbcSQLBugReportTestCase)
+  TZTestDbcInterbaseBugReport = class(TZAbstractDbcSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

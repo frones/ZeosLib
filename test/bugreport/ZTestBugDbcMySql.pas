@@ -61,7 +61,7 @@ uses
 
 type
   {** Implements a DBC bug report test case for MySql. }
-  TZTestDbcMySQLBugReport = class(TZSpecificDbcSQLBugReportTestCase)
+  TZTestDbcMySQLBugReport = class(TZAbstractDbcSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

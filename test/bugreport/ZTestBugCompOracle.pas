@@ -64,7 +64,7 @@ uses
 type
 
   {** Implements a bug report test case for Oracle components. }
-  ZTestCompOracleBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  ZTestCompOracleBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

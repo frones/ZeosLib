@@ -61,7 +61,7 @@ uses
 type
 
   {** Implements a DBC bug report test case for DB Lib. }
-  ZTestDbcDbLibBugReport = class(TZSpecificDbcSQLBugReportTestCase)
+  ZTestDbcDbLibBugReport = class(TZAbstractDbcSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a DBC bug report test case for Oracle }
-  TZTestDbcOracleBugReport = class(TZSpecificDbcSQLBugReportTestCase)
+  TZTestDbcOracleBugReport = class(TZAbstractDbcSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

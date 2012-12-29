@@ -65,40 +65,40 @@ type
   TZCoreGenericTestCase = class (TZGenericTestCase);
 
   {** Implements a portable SQL test case for core category. }
-  TZCorePortableSQLTestCase = class (TZPortableSQLTestCase);
+  TZCorePortableSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a specific SQL test case for core category. }
-  TZCoreSpecificSQLTestCase = class (TZSpecificSQLTestCase);
+  TZCoreSpecificSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a generic test case for parsesql category. }
   TZParseSQLGenericTestCase = class (TZGenericTestCase);
 
   {** Implements a portable SQL test case for parsesql category. }
-  TZParseSQLPortableSQLTestCase = class (TZPortableSQLTestCase);
+  TZParseSQLPortableSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a specific SQL test case for parsesql category. }
-  TZParseSQLSpecificSQLTestCase = class (TZSpecificSQLTestCase);
+  TZParseSQLSpecificSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a portable SQL test case for plain category. }
-  TZPlainPortableSQLTestCase = class (TZPortableSQLTestCase);
+  TZPlainPortableSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a specific SQL test case for plain category. }
-  TZPlainSpecificSQLTestCase = class (TZSpecificSQLTestCase);
+  TZPlainSpecificSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a generic test case for dbc category. }
   TZDbcGenericTestCase = class (TZGenericTestCase);
 
   {** Implements a portable SQL test case for dbc category. }
-  TZDbcPortableSQLTestCase = class (TZPortableSQLTestCase);
+  TZDbcPortableSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a specific SQL test case for dbc category. }
-  TZDbcSpecificSQLTestCase = class (TZSpecificSQLTestCase);
+  TZDbcSpecificSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a portable SQL test case for component category. }
-  TZComponentPortableSQLTestCase = class (TZPortableSQLTestCase);
+  TZComponentPortableSQLTestCase = class (TZAbstractSQLTestCase);
 
   {** Implements a specific SQL test case for component category. }
-  TZComponentSpecificSQLTestCase = class (TZSpecificSQLTestCase);
+  TZComponentSpecificSQLTestCase = class (TZAbstractSQLTestCase);
 
 implementation
 end.

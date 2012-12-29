@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a bug report test case for core components. }
-  ZTestCompCoreBugReport = class(TZPortableCompSQLBugReportTestCase)
+  ZTestCompCoreBugReport = class(TZAbstractCompSQLBugReportTestCase)
   private
     FUpdateCounter: Integer;
     FErrorCounter: Integer;
@@ -118,7 +118,7 @@ type
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
-  ZTestCompCoreBugReportMBCs = class(TZPortableCompSQLBugReportTestCaseMBCs)
+  ZTestCompCoreBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
   private
     FConnection: TZConnection;
   protected

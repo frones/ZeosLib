@@ -84,7 +84,6 @@ type
       ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
-    function ImplementsEmuatedPreparedStatement: Boolean;
   end;
 
   {ADDED by fduenas 15-06-2006}
@@ -109,7 +108,6 @@ type
     function EscapeString(Handle: Pointer; const Value: ZAnsiString;
       ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload; virtual;
     function GetTokenizer: IZTokenizer;
-    function ImplementsEmuatedPreparedStatement: Boolean; virtual;
   public
     constructor Create;
     constructor CreateWithLibrary(const LibName : String);
@@ -320,14 +318,6 @@ begin
         FCodePages[I].ZAlias := GetUnicodeCodePageName;
       Break;
     end;
-end;
-
-{** Is a emultated Prepared-Statment implemented ?
-  @returns True if a emultated Prepared-Statment is implemented
-}
-function TZAbstractPlainDriver.ImplementsEmuatedPreparedStatement: Boolean;
-begin
-  Result := False;
 end;
 
 function TZAbstractPlainDriver.GetSupportedClientCodePages(

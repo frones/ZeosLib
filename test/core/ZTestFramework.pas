@@ -61,7 +61,7 @@ uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSysUtils, SysUtils, 
 
 type
 
-  {** Implements a test case for TZPortableSQLTestCase. }
+  {** Implements a test case for TZAbstractSQLTestCase. }
   TZTestPortableSQLTestCase = class(TZCorePortableSQLTestCase)
   published
     procedure TestOne;
@@ -69,7 +69,7 @@ type
     procedure TestTree;
   end;
 
-  {** Implements a test case for TZSpecificSQLTestCase. }
+  {** Implements a test case for TZAbstractSQLTestCase. }
   TZTestSpecificSQLTestCase = class(TZCoreSpecificSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;

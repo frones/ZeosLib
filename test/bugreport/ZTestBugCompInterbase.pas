@@ -64,7 +64,7 @@ uses
 type
 
   {** Implements a bug report test case for Interbase components. }
-  ZTestCompInterbaseBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  ZTestCompInterbaseBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -83,7 +83,7 @@ type
     procedure Test1021705;
   end;
 
-  ZTestCompInterbaseBugReportMBCs = class(TZSpecificCompSQLBugReportTestCaseMBCs)
+  ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   published
