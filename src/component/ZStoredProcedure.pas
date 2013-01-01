@@ -73,9 +73,6 @@ type
     procedure SetStoredProcName(const Value: string);
     function GetParamType(const Value: TZProcedureColumnType): TParamType;
   protected
-{    property CallableResultSet: IZCallableStatement read FCallableStatement
-      write FCallableStatement;}
-
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; override;
     procedure SetStatementParams(Statement: IZPreparedStatement;
@@ -330,6 +327,7 @@ var
   Catalog, Schema, ObjectName: string;
   ColumnType: Integer;
 begin
+  CheckConnected;
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
     SQL.Text := Value;

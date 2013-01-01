@@ -352,7 +352,7 @@ var
 begin
   DataSource := GetObjectProp(GetZComponent, 'MasterSource') as TDataSource;
   if (DataSource <> nil) and (DataSource.DataSet <> nil) then
-    {$IFDEF BDS4_UP}
+    {$IFDEF WITH_WIDESTRINGS_GETFIELDNAMES}
     DataSource.DataSet.GetFieldNames(TWideStrings(List));
     {$ELSE}
     DataSource.DataSet.GetFieldNames(List);

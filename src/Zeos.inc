@@ -158,6 +158,7 @@
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
+  {$DEFINE WITH_WIDESTRINGS_GETFIELDNAMES} //overload of GetFieldNames(List: TWideStrings) does exists;
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
@@ -206,6 +207,7 @@
   {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
   {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
+  {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
 {$ENDIF}
 // Debug/release compiler options
 {$D+}
@@ -346,7 +348,7 @@
 //Default. To validate an optimal updatecount of 1. Comment this define if this
 //dafault behavior isn't wanted. On the other hand you can suppress this
 //validation by adding the line ValidateUpdateCount=-1 or FALSE or OFF into the
-// TZDataSetCompoent.Properties(TStrings)
+// TZDataSet-Component.Properties(TStrings)
 {$DEFINE WITH_VALIDATE_UPDATE_COUNT}
 
 // A large database may have many tables, colums and/or procedures!!!
