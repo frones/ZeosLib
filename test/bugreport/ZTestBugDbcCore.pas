@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a DBC bug report test case for core functionality. }
-  TZTestDbcCoreBugReport = class(TZPortableDbcSQLBugReportTestCase)
+  TZTestDbcCoreBugReport = class(TZAbstractDbcSQLBugReportTestCase)
   published
     procedure EmptyTest;
   end;
