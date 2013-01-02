@@ -160,6 +160,7 @@
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
+  {$DEFINE WITH_WIDESTRINGS_GETFIELDNAMES} //overload of GetFieldNames(List: TWideStrings) does exists;
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
@@ -209,6 +210,7 @@
   {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
   {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
+  {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
 {$ENDIF}
 // Debug/release compiler options
 {$D+}
