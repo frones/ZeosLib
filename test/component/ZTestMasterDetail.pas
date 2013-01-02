@@ -58,12 +58,12 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib;
+  ZConnection, ZDataset, ZSqlTestCase, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib;
 
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestMasterDetailCase = class(TZComponentPortableSQLTestCase)
+  TZTestMasterDetailCase = class(TZAbstractSQLTestCase)
   private
     Connection: TZConnection;
     MasterDataSource: TDataSource;
@@ -346,8 +346,6 @@ end;
 procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_ApplyUpdates;
 var
   SQLMonitor: TZSQLMonitor;
-  I: Integer;
-
   procedure SetTheData(Index: Integer);
   begin
     MasterQuery.Append;

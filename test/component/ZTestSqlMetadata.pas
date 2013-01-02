@@ -57,12 +57,12 @@ interface
 {$I ZComponent.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils, ZConnection, ZSqlMetadata, ZTestDefinitions;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils, ZConnection, ZSqlMetadata, ZSqlTestCase;
 
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestSQLMetadataCase = class(TZComponentPortableSQLTestCase)
+  TZTestSQLMetadataCase = class(TZAbstractSQLTestCase)
   private
     Connection: TZConnection;
     Metadata: TZSQLMetadata;

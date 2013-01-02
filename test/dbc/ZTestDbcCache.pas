@@ -61,12 +61,12 @@ uses
 {$ENDIF}
   Types, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCache, ZClasses, ZSysUtils, ZCollections, ZDbcResultSet,
   ZDbcIntfs, ZDbcUtils, SysUtils, Classes, ZDbcResultSetMetadata,
-  Contnrs, ZCompatibility, ZTestDefinitions;
+  Contnrs, ZCompatibility, ZTestCase;
 
 type
 
   {** Implements a test case for TZRowAccessor. }
-  TZTestRowAccessorCase = class(TZDbcGenericTestCase)
+  TZTestRowAccessorCase = class(TZGenericTestCase)
   private
     FRowAccessor: TZRowAccessor;
     FBoolean: Boolean;

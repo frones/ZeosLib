@@ -59,14 +59,14 @@ uses
   Types,
 {$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, SysUtils, ZDbcIntfs,
-  ZTestDefinitions, ZCompatibility;
+  ZSqlTestCase, ZCompatibility;
 
 type
   {** Implements a test case for . }
 
   { TZGenericTestDbcResultSet }
 
-  TZGenericTestDbcResultSet = class(TZComponentPortableSQLTestCase)
+  TZGenericTestDbcResultSet = class(TZAbstractSQLTestCase)
   private
     FConnection: TZConnection;
   protected

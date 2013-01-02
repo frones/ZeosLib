@@ -61,13 +61,13 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZTestDefinitions, ZDbcSQLite,
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcSQLite,
   ZCompatibility;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcSQLiteCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcSQLiteCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected

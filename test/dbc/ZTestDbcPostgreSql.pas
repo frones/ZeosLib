@@ -57,13 +57,13 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcPostgreSql, ZSqlTestCase,
   ZCompatibility;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcPostgreSQLCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcPostgreSQLCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected

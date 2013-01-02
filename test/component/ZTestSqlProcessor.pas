@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSqlStrings, SysUtils, ZTokenizer, ZConnection, ZSqlProcessor,
-  ZTestDefinitions, ZScriptParser;
+  ZSqlTestCase, ZScriptParser;
 
 type
 
@@ -66,7 +66,7 @@ type
 
   { TZTestSQLProcessorCase }
 
-  TZTestSQLProcessorCase = class(TZComponentPortableSQLTestCase)
+  TZTestSQLProcessorCase = class(TZAbstractSQLTestCase)
   private
     FConnection: TZConnection;
     FProcessor: TZSQLProcessor;
@@ -84,7 +84,7 @@ type
   end;
 
   {** Implements a test case for class TZSqlProcessor. }
-  TZTestSQLProcessorMysqlCase = class(TZComponentSpecificSQLTestCase)
+  TZTestSQLProcessorMysqlCase = class(TZAbstractSQLTestCase)
   private
     FConnection: TZConnection;
     FProcessor: TZSQLProcessor;

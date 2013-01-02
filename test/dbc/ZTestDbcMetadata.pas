@@ -57,12 +57,12 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions, ZSqlTestCase,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility;
 
 type
   {** Implements a test case for. }
-  TZGenericTestDbcMetadata = class(TZDbcPortableSQLTestCase)
+  TZGenericTestDbcMetadata = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
     MD: IZDatabaseMetadata;

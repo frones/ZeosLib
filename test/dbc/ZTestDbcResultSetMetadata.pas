@@ -55,13 +55,13 @@ unit ZTestDbcResultSetMetadata;
 
 interface
 {$I ZDbc.inc}
-uses Classes, SysUtils, ZTestDefinitions, ZDbcIntfs, ZClasses,
+uses Classes, SysUtils, ZSqlTestCase, ZDbcIntfs, ZClasses,
   ZCollections, ZDbcResultSet, ZDbcResultSetMetadata,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
  {** Implements a test case for TZAbstractBlob. }
-  TZTestResultSetMetadataCase = class(TZDbcPortableSQLTestCase)
+  TZTestResultSetMetadataCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected

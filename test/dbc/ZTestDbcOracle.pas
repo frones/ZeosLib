@@ -56,13 +56,13 @@ unit ZTestDbcOracle;
 interface
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZTestDefinitions, ZDbcOracle,
+uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcOracle,
   ZCompatibility;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcOracleCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcOracleCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected
@@ -91,7 +91,7 @@ type
 
 implementation
 
-uses Types, ZTestConsts, ZTestCase, ZSqlTestCase;
+uses Types, ZTestConsts, ZTestCase;
 
 { TZTestDbcOracleCase }
 

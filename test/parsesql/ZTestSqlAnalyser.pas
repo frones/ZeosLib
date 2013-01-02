@@ -56,12 +56,12 @@ unit ZTestSqlAnalyser;
 interface
 {$I ZParseSql.inc}
 uses Contnrs, ZClasses, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTokenizer, ZGenericSqlAnalyser,
-  ZSelectSchema, ZTestDefinitions;
+  ZSelectSchema, ZTestCase;
 
 type
 
   {** Implements a test case for Generic SQL Analyser classes. }
-  TZTestStatementAnalyser = class(TZParseSQLGenericTestCase)
+  TZTestStatementAnalyser = class(TZGenericTestCase)
   protected
     FAnalyser: IZStatementAnalyser;
     FTokenizer: IZTokenizer;

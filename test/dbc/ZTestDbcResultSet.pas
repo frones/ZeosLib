@@ -55,12 +55,12 @@ interface
 {$I ZDbc.inc}
 uses
   Classes, SysUtils, Types, ZDbcIntfs, ZClasses, ZCollections,
-  ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestDefinitions,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
+  ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestCase,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
  {** Implements a test case for TZAbstractBlob. }
-  TZTestAbstractBlobCase = class(TZDbcGenericTestCase)
+  TZTestAbstractBlobCase = class(TZGenericTestCase)
   private
     FString: string;
     FBuffer: Pointer;
@@ -77,7 +77,7 @@ type
   end;
 
   {** Implements a test case for TZColumnInfo. }
-  TZTestColumnInfoCase = class(TZDbcGenericTestCase)
+  TZTestColumnInfoCase = class(TZGenericTestCase)
   published
     procedure TestColumnInfo;
   end;

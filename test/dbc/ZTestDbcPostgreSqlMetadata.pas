@@ -57,12 +57,12 @@ interface
 {$I ZDbc.inc}
 uses
   SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZTestDefinitions, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcPostgreSql;
+  ZSqlTestCase, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcPostgreSql;
 
 type
 
  {** Implements a test case for TZMySqlMetadata. }
-  TZTestPostgreSqlMetadataCase = class(TZDbcSpecificSQLTestCase)
+  TZTestPostgreSqlMetadataCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
     FMetadata: IZDatabaseMetadata;

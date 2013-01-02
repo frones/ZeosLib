@@ -57,12 +57,12 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions, SysUtils, Classes, ZVariant;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, SysUtils, Classes, ZVariant;
 
 type
 
   {** Implements a test case for Utilities. }
-  TZTestVariantCase = class(TZCoreGenericTestCase)
+  TZTestVariantCase = class(TZGenericTestCase)
   private
     FManager: IZVariantManager;
   protected

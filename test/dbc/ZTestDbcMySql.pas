@@ -56,13 +56,13 @@ unit ZTestDbcMySql;
 interface
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, ZTestDefinitions, ZDbcMySql,
+uses Classes, SysUtils, ZDbcIntfs, ZSqlTestCase, ZDbcMySql,
   ZCompatibility, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcMySQLCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcMySQLCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected
