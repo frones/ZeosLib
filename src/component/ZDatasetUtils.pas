@@ -693,36 +693,41 @@ begin
   for I := 0 to High(FieldRefs) do
   begin
     ColumnIndex := TField(FieldRefs[I]).FieldNo;
-    case TField(FieldRefs[I]).DataType of
-      ftString:
-        DefVarManager.SetAsString(ResultValues[I],
-          ResultSet.GetString(ColumnIndex));
-      ftBoolean:
-        DefVarManager.SetAsBoolean(ResultValues[I],
-          ResultSet.GetBoolean(ColumnIndex));
-      ftSmallInt, ftInteger, ftAutoInc:
-        DefVarManager.SetAsInteger(ResultValues[I],
-          ResultSet.GetInt(ColumnIndex));
-      ftFloat:
-        DefVarManager.SetAsFloat(ResultValues[I],
-          ResultSet.GetDouble(ColumnIndex));
-      ftLargeInt:
-        DefVarManager.SetAsInteger(ResultValues[I],
-          ResultSet.GetLong(ColumnIndex));
-      ftCurrency:
-        DefVarManager.SetAsFloat(ResultValues[I],
-          ResultSet.GetBigDecimal(ColumnIndex));
-      ftDate, ftTime, ftDateTime:
-        DefVarManager.SetAsDateTime(ResultValues[I],
-          ResultSet.GetTimestamp(ColumnIndex));
-      ftWidestring:
-        DefVarManager.SetAsUnicodeString(ResultValues[I],
-          ResultSet.GetUnicodeString(ColumnIndex));
-      else
-        DefVarManager.SetAsString(ResultValues[I],
-          ResultSet.GetString(ColumnIndex));
-    end;
-    if ResultSet.WasNull then
+    if ColumnIndex >= 0 then
+    begin
+      case TField(FieldRefs[I]).DataType of
+        ftString:
+          DefVarManager.SetAsString(ResultValues[I],
+            ResultSet.GetString(ColumnIndex));
+        ftBoolean:
+          DefVarManager.SetAsBoolean(ResultValues[I],
+            ResultSet.GetBoolean(ColumnIndex));
+        ftSmallInt, ftInteger, ftAutoInc:
+          DefVarManager.SetAsInteger(ResultValues[I],
+            ResultSet.GetInt(ColumnIndex));
+        ftFloat:
+          DefVarManager.SetAsFloat(ResultValues[I],
+            ResultSet.GetDouble(ColumnIndex));
+        ftLargeInt:
+          DefVarManager.SetAsInteger(ResultValues[I],
+            ResultSet.GetLong(ColumnIndex));
+        ftCurrency:
+          DefVarManager.SetAsFloat(ResultValues[I],
+            ResultSet.GetBigDecimal(ColumnIndex));
+        ftDate, ftTime, ftDateTime:
+          DefVarManager.SetAsDateTime(ResultValues[I],
+            ResultSet.GetTimestamp(ColumnIndex));
+        ftWidestring:
+          DefVarManager.SetAsUnicodeString(ResultValues[I],
+            ResultSet.GetUnicodeString(ColumnIndex));
+        else
+          DefVarManager.SetAsString(ResultValues[I],
+            ResultSet.GetString(ColumnIndex));
+      end;
+      if ResultSet.WasNull then
+        ResultValues[I] := NullVariant;
+    end
+    else
       ResultValues[I] := NullVariant;
   end;
 end;
