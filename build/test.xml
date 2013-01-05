@@ -335,9 +335,11 @@
   </target>
 
  <target name="test_element_run_laz">
-    <echo message="Testing ... ${test.suite} ..."/>
+ 	<property environment="env"/>
+   <echo message="Testing ... ${test.suite} ..."/>
     <exec dir="${test.dir}" executable="${test.dir}/ztestall.exe"
        output="${log.file}" append="true">
+	<env key="HEAPTRC" value="disabled"/>
    <arg line="--batch -p --format=plain --suite=${test.suite}"/>
     </exec>
   </target>
