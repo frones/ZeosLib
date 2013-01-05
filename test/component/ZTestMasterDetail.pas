@@ -63,9 +63,8 @@ uses
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestMasterDetailCase = class(TZAbstractSQLTestCase)
+  TZTestMasterDetailCase = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
     MasterDataSource: TDataSource;
     MasterQuery: TZQuery;
     DetailQuery: TZQuery;
@@ -96,22 +95,15 @@ const TestRowID = 1000;
 }
 procedure TZTestMasterDetailCase.SetUp;
 begin
-  Connection := CreateDatasetConnection;
+  inherited SetUp;
 
-  MasterQuery := TZQuery.Create(nil);
-  MasterQuery.Connection := Connection;
-
+  MasterQuery := CreateQuery;
   MasterDataSource := TDataSource.Create(nil);
   MasterDataSource.DataSet := MasterQuery;
 
-  DetailQuery := TZQuery.Create(nil);
-  DetailQuery.Connection := Connection;
-
-  DetailQuery2 := TZQuery.Create(nil);
-  DetailQuery2.Connection := Connection;
-
-  DetailQuery3 := TZQuery.Create(nil);
-  DetailQuery3.Connection := Connection;
+  DetailQuery := CreateQuery;
+  DetailQuery2 := CreateQuery;
+  DetailQuery3 := CreateQuery;
 end;
 
 {**
@@ -133,8 +125,7 @@ begin
 
   MasterDataSource.Free;
 
-  Connection.Disconnect;
-  Connection.Free;
+  inherited TearDown;
 end;
 
 {**

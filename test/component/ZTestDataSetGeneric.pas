@@ -66,15 +66,11 @@ type
 
   { TZGenericTestDbcResultSet }
 
-  TZGenericTestDbcResultSet = class(TZAbstractSQLTestCase)
+  TZGenericTestDbcResultSet = class(TZAbstractCompSQLTestCase)
   private
-    FConnection: TZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
-    property Connection: TZConnection read FConnection write FConnection;
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
@@ -112,23 +108,6 @@ uses
 
 { TZGenericTestDbcResultSet }
 
-{**
-  Create objects and allocate memory for variables
-}
-procedure TZGenericTestDbcResultSet.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-{**
-  Destroy objects and free allocated memory for variables
-}
-procedure TZGenericTestDbcResultSet.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 procedure TZGenericTestDbcResultSet.TestConnection;
 var
   MetadataList: TStrings;
@@ -138,9 +117,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Table := TZTable.Create(nil);
-  ROQuery := TZReadOnlyQuery.Create(nil);
+  Query := TZQuery.Create(nil); // not CreateQuery because here we test unconnected queries
+  Table := TZTable.Create(nil); // not CreateTable because here we test unconnected queries
+  ROQuery := TZReadOnlyQuery.Create(nil); // not CreateReadOnlyQuery because here we test unconnected queries
   MetadataList := TStringList.Create;
   try
     CheckEquals(False, Connection.Connected);
@@ -216,11 +195,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-    // Query.RequestLive := true;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -415,11 +391,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.Options := [doCalcDefaults,doPreferPrepared,doPreferPreparedResolver];
-    // Query.RequestLive := true;
 
     with Query do
     begin
@@ -614,10 +588,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
@@ -701,11 +673,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-    //Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
-    //CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
     TestQueryGeneric(Query);
   finally
     Query.Free;
@@ -722,10 +691,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'UPDATE equipment SET eq_name=eq_name';
@@ -784,11 +751,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-  //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
-  //  CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
     TestQueryGeneric(Query);
   finally
     Query.Free;
@@ -804,12 +768,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   Query.Options:= Query.Options + [doPreferPrepared];
   try
-    Query.Connection := Connection;
-  //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
-  //  CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
     TestQueryGeneric(Query);
   finally
     Query.Free;
@@ -827,10 +788,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
 
@@ -1278,10 +1237,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'UPDATE equipment SET eq_name=eq_name';
@@ -1341,10 +1298,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-  //!!  TestFilterGeneric(Query);
+  { TODO : Enable this test }//TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -1446,10 +1402,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-    Query.SQL.Add('select * from cargo'); 
+    Query.SQL.Add('select * from cargo');
     Query.ExecSQL; 
     Query.Open; 
     Check(Query.RecordCount > 0, 'Query return no records'); 
@@ -1471,10 +1426,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-  //!!  TestFilterGeneric(Query);
+  { TODO : Enable this test }//!!  TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -1489,9 +1443,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
 
     Query.Filter := 'p_id + 1 = 2';
@@ -1522,9 +1475,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT p_id, p_dep_id, p_name FROM people';
     Query.Open;
 
@@ -1560,9 +1512,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from people';
     Check(not (doSmartOpen in Query.Options));
 
@@ -1627,9 +1578,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from people';
 
     Query.Prepare;
@@ -1672,9 +1622,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
     //!! Oracle: depend from local settings
     Query.Filter := 'p_begin_work >= "'+TimeToStr(EncodeTime(8,30,0,50))+'"';
@@ -1706,9 +1655,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM cargo';
     Date_came := EncodeDateTime(2002,12,19,18,30,0,0);
     Query.Filter := 'c_date_came >= "'+DateTimeToStr(Date_came)+'"';
@@ -1755,9 +1703,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
     Query.Open;
     CheckEquals(true, Query.Locate('p_begin_work',EncodeTime(8,30,0,0),[]));
@@ -1781,9 +1728,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM cargo';
     Query.Open;
     CheckEquals(true, Query.Locate('c_date_came',EncodeDateTime(2002,12,19,14,0,0,0),[]));
@@ -1804,9 +1750,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
@@ -1857,9 +1802,8 @@ begin
   BinStream1:=nil;
   TextStreamS:=nil;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
     begin
       TempConnection := TZConnection.Create(nil);

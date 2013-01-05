@@ -60,12 +60,12 @@ uses
   Variants,
 {$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection,
-  ZDbcIntfs, ZBugReport,ZCompatibility;
+  ZDbcIntfs, ZSqlTestCase,ZCompatibility;
 
 type
 
   {** Implements a bug report test case for MSSql components. }
-  TZTestCompMSSqlBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  TZTestCompMSSqlBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
 
@@ -157,9 +157,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from master..sysobjects';
     Query.Open;
     CheckEquals(False, Query.IsEmpty);
@@ -179,11 +178,10 @@ begin
   if SkipTest then Exit;
 
   StoredProc := TZStoredProc.Create(nil);
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     StoredProc.Connection := Connection;
     StoredProc.StoredProcName := 'proc959307';
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from table959307';
 
     StoredProc.ParamByName('@p').AsString := 'xyz';

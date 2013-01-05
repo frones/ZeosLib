@@ -62,16 +62,10 @@ uses
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcMSSqlCase = class(TZAbstractSQLTestCase)
+  TZTestDbcMSSqlCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
-
     procedure TestConnection;
   published
     procedure TestStoredResultSet;
@@ -95,23 +89,6 @@ uses ZSysUtils, ZTestConsts;
 function TZTestDbcMSSqlCase.GetSupportedProtocols: string;
 begin
   Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005';
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcMSSqlCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcMSSqlCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**

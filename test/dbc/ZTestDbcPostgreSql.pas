@@ -63,17 +63,10 @@ uses
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcPostgreSQLCase = class(TZAbstractSQLTestCase)
+  TZTestDbcPostgreSQLCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl(Param: String): string;
-
-    property Connection: IZConnection read FConnection write FConnection;
-
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -97,46 +90,6 @@ uses SysUtils, ZTestConsts;
 function TZTestDbcPostgreSQLCase.GetSupportedProtocols: string;
 begin
   Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
-end;
-
-{**
-  Gets a connection URL string.
-  @return a built connection URL string. 
-}
-function TZTestDbcPostgreSQLCase.GetConnectionUrl(Param: String): string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  TempProperties.Add(Param);
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcPostgreSQLCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcPostgreSQLCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestConnection;

@@ -66,7 +66,6 @@
     <DCCReference Include="$(SystemRoot)\system32\ZPlain.dcp" />
     <DCCReference Include="..\..\..\..\DUnit\src\TestFramework.pas" />
     <DCCReference Include="..\..\test\external\MemCheck.pas" />
-    <DCCReference Include="..\..\test\framework\ZBugReport.pas" />
     <DCCReference Include="..\..\test\framework\ZPerformanceTestCase.pas" />
     <DCCReference Include="..\..\test\framework\ZSqlTestCase.pas" />
     <DCCReference Include="..\..\test\framework\ZTestCase.pas" />

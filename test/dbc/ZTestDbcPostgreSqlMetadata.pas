@@ -62,18 +62,14 @@ uses
 type
 
  {** Implements a test case for TZMySqlMetadata. }
-  TZTestPostgreSqlMetadataCase = class(TZAbstractSQLTestCase)
+  TZTestPostgreSqlMetadataCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
     FMetadata: IZDatabaseMetadata;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
     property Metadata: IZDatabaseMetadata read FMetadata write FMetadata;
-
   published
     procedure TestGetProcedures;
     procedure TestGetProcedureColumns;
@@ -151,7 +147,7 @@ end;
 }
 procedure TZTestPostgreSqlMetadataCase.SetUp;
 begin
-  Connection := CreateDbcConnection;
+  inherited SetUp;
   Metadata := Connection.GetMetadata;
 end;
 
@@ -160,9 +156,8 @@ end;
 }
 procedure TZTestPostgreSqlMetadataCase.TearDown;
 begin
-  Connection.Close;
-  Connection := nil;
   Metadata := nil;
+  inherited TearDown;
 end;
 
 {**

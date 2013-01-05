@@ -64,13 +64,9 @@ uses
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestSortingCase = class(TZAbstractSQLTestCase)
+  TZTestSortingCase = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-
     procedure CheckDatasetColumns(Dataset: TDataset; FieldIndex: Integer;
       Values: array of string);
   published
@@ -83,23 +79,6 @@ implementation
 uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs;
 
 { TZTestSortingCase }
-
-{**
-  Prepares initial data before each test.
-}
-procedure TZTestSortingCase.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-{**
-  Removes data after each test.
-}
-procedure TZTestSortingCase.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
 
 {**
   Checks dataset field values.
@@ -130,7 +109,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
     Query.Connection := Connection;
     Query.SQL.Text := 'select * from people where p_id < 6 order by p_id';
@@ -169,7 +148,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     Query.Connection := Connection;
     // Query.RequestLive := True;

@@ -60,13 +60,13 @@ uses
   Variants,
 {$ENDIF}
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs,
-  ZBugReport, ZCompatibility, ZTestConsts, ZSqlUpdate, ZSqlProcessor,
+  ZSqlTestCase, ZCompatibility, ZTestConsts, ZSqlUpdate, ZSqlProcessor,
   ZAbstractRODataset;
 
 type
 
   {** Implements a bug report test case for MySQL components. }
-  TZTestCompMySQLBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  TZTestCompMySQLBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -1203,9 +1203,8 @@ begin
 
   if SkipClosed then Exit;
 
-  {Test914436Query := TZQuery.Create(nil);
+  {Test914436Query := CreateQuery;
   try
-    Query.Connection := Connection;
 
     Query.SQL.Text := 'SELECT fld1, fld2 FROM table914436';
     Query.Open;

@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -65,7 +65,7 @@ uses
 type
 
   {** Implements a bug report test case for ASA components. }
-  ZTestCompASABugReport = class(TZAbstractCompSQLBugReportTestCase)
+  ZTestCompASABugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -78,7 +78,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  ZTestCase, ZTestConsts, ZSqlUpdate;
 
 { ZTestCompASABugReport }
 

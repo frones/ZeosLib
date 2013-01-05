@@ -60,13 +60,11 @@ uses
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestConnectionCase = class(TZAbstractSQLTestCase)
+  TZTestConnectionCase = class(TZAbstractCompSQLTestCase)
   private
     gloUserName,gloPassword : string;
-    Connection: TZConnection;
   protected
     procedure SetUp; override;
-    procedure TearDown; override;
     procedure ConnLogin(Sender: TObject; var Username:string ; var Password: string);
   published
     procedure TestLibrary;
@@ -86,17 +84,9 @@ uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs;
 }
 procedure TZTestConnectionCase.SetUp;
 begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
-end;
+  inherited SetUp;
 
-{**
-  Removes data after each test.
-}
-procedure TZTestConnectionCase.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
+  Connection.Connect;
 end;
 
 {**

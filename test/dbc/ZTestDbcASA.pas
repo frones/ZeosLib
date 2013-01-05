@@ -62,16 +62,10 @@ uses
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcASACase = class(TZAbstractSQLTestCase)
+  TZTestDbcASACase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl: string;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -96,42 +90,6 @@ uses SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
 function TZTestDbcASACase.GetSupportedProtocols: string;
 begin
   Result := 'ASA7,ASA8,ASA9,ASA12';
-end;
-
-{**
-  Gets a connection URL string.
-  @return a built connection URL string. 
-}
-function TZTestDbcASACase.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-  TempProperties.Free;
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcASACase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcASACase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 procedure TZTestDbcASACase.TestConnection;

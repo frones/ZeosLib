@@ -62,15 +62,10 @@ uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZD
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcOracleCase = class(TZAbstractSQLTestCase)
+  TZTestDbcOracleCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    property Connection: IZConnection read FConnection write FConnection;
-
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -102,23 +97,6 @@ uses Types, ZTestConsts, ZTestCase;
 function TZTestDbcOracleCase.GetSupportedProtocols: string;
 begin
   Result := 'oracle,oracle-9i';
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcOracleCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcOracleCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**

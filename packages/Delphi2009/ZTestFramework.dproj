@@ -71,7 +71,6 @@
 			<DCCReference Include="..\..\test\framework\ZTestConsts.pas"/>
 			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
 			<DCCReference Include="..\..\test\framework\ZTestCase.pas"/>
-			<DCCReference Include="..\..\test\framework\ZBugReport.pas"/>
 			<DCCReference Include="..\..\test\framework\ZPerformanceTestCase.pas"/>
 			<DCCReference Include="..\..\..\..\DUnit\src\TestFramework.pas"/>
 			<DCCReference Include="..\..\test\external\MemCheck.pas"/>

@@ -66,9 +66,8 @@ type
 
   { TZTestSQLProcessorCase }
 
-  TZTestSQLProcessorCase = class(TZAbstractSQLTestCase)
+  TZTestSQLProcessorCase = class(TZAbstractCompSQLTestCase)
   private
-    FConnection: TZConnection;
     FProcessor: TZSQLProcessor;
   protected
     procedure SetUp; override;
@@ -84,9 +83,8 @@ type
   end;
 
   {** Implements a test case for class TZSqlProcessor. }
-  TZTestSQLProcessorMysqlCase = class(TZAbstractSQLTestCase)
+  TZTestSQLProcessorMysqlCase = class(TZAbstractCompSQLTestCase)
   private
-    FConnection: TZConnection;
     FProcessor: TZSQLProcessor;
   protected
     procedure SetUp; override;
@@ -110,9 +108,9 @@ uses Classes, ZCompatibility, ZDbcUtils, ZSysUtils;
 }
 procedure TZTestSQLProcessorCase.SetUp;
 begin
-  FConnection := CreateDatasetConnection;
+  inherited SetUp;
   FProcessor := TZSQLProcessor.Create(nil);
-  FProcessor.Connection := FConnection;
+  FProcessor.Connection := Connection;
 end;
 
 {**
@@ -121,7 +119,7 @@ end;
 procedure TZTestSQLProcessorCase.TearDown;
 begin
   FProcessor.Free;
-  FConnection.Free;
+  inherited TearDown;
 end;
 
 {**
@@ -398,9 +396,9 @@ end;
 }
 procedure TZTestSQLProcessorMysqlCase.SetUp;
 begin
-  FConnection := CreateDatasetConnection;
+  inherited SetUp;
   FProcessor := TZSQLProcessor.Create(nil);
-  FProcessor.Connection := FConnection;
+  FProcessor.Connection := Connection;
 end;
 
 {**
@@ -409,7 +407,7 @@ end;
 procedure TZTestSQLProcessorMysqlCase.TearDown;
 begin
   FProcessor.Free;
-  FConnection.Free;
+  inherited TearDown;
 end;
 
 {**

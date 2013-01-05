@@ -62,9 +62,8 @@ uses
 
 type
   {** Implements a test case for. }
-  TZGenericTestDbcMetadata = class(TZAbstractSQLTestCase)
+  TZGenericTestDbcMetadata = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
     MD: IZDatabaseMetadata;
     Catalog, Schema: string;
     ResultSet: IZResultSet;
@@ -73,8 +72,6 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
     function IsProtocolValid(Config: TZConnectionConfig): Boolean; override;
-    property Connection: IZConnection read FConnection write FConnection;
-
   published
     procedure TestMetadataIdentifierQuoting;
     procedure TestMetadataGetCatalogs;
@@ -108,7 +105,7 @@ uses ZSysUtils, ZTestConsts;
 }
 procedure TZGenericTestDbcMetadata.SetUp;
 begin
-  Connection := CreateDbcConnection;
+  inherited SetUp;
   CheckNotNull(Connection);
   MD := Connection.GetMetadata;
   CheckNotNull(MD);
@@ -129,8 +126,7 @@ procedure TZGenericTestDbcMetadata.TearDown;
 begin
   ResultSet := nil;
   MD := nil;
-  Connection.Close;
-  Connection := nil;
+  inherited TearDown;
 end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataIdentifierQuoting;

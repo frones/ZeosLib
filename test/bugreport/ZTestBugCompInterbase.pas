@@ -57,14 +57,14 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZBugReport, ZCompatibility
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility
   {$IFNDEF LINUX}
     ,DBCtrls
   {$ENDIF};
 type
 
   {** Implements a bug report test case for Interbase components. }
-  ZTestCompInterbaseBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  ZTestCompInterbaseBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -83,7 +83,7 @@ type
     procedure Test1021705;
   end;
 
-  ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
+  ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -97,7 +97,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase, ZEncoding;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding;
 
 { ZTestCompInterbaseBugReport }
 
@@ -606,12 +606,10 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   SL := TStringList.Create;
   StrStream1 := TMemoryStream.Create;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -667,10 +665,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -763,10 +759,9 @@ begin
   if SkipTest then Exit;
 
   { prepared insert statement }
-  iqry:= TZQuery.Create(nil);
-  iqry.Connection:= Connection;
+  iqry:= CreateQuery;
   try
-    Connection.Connect;
+    Connection.Connect; // DbcConnection needed
     if Connection.DbcConnection.GetEncoding = ceUTF8 then
     begin
       if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then

@@ -57,12 +57,12 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZDbcIntfs, ZCompatibility, ZBugReport;
+  ZDbcIntfs, ZCompatibility, ZSqlTestCase;
 
 type
 
   {** Implements a DBC bug report test case for core functionality. }
-  TZTestDbcCoreBugReport = class(TZAbstractDbcSQLBugReportTestCase)
+  TZTestDbcCoreBugReport = class(TZAbstractDbcSQLTestCase)
   published
     procedure EmptyTest;
   end;

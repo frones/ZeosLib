@@ -56,12 +56,12 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility, ZDbcMySql,
-  ZDbcMySqlResultSet;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility, ZDbcMySql,
+  ZDbcMySqlResultSet, ZSqlTestCase;
 
 type
   {** Implements a DBC bug report test case for MySql. }
-  TZTestDbcMySQLBugReport = class(TZAbstractDbcSQLBugReportTestCase)
+  TZTestDbcMySQLBugReport = class(TZAbstractDbcSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -305,7 +305,7 @@ end;
 }
 procedure TZTestDbcMySQLBugReport.Test924861;
 var
-  Connection: IZConnection;
+  Connection: IZConnection;  // Attention : local Connection
 begin
   if SkipTest then Exit;
 

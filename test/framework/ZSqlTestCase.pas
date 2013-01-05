@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB,
-  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF}
+  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataSet,
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 type
@@ -177,6 +177,7 @@ type
     function IsRealPreparableTest: Boolean; virtual;
     function IsAutoEncodableTest: Boolean; virtual;
     function GetSupportedProtocols: string; virtual;
+    function SkipClosed: Boolean;
 
     procedure StartSQLTrace;
     procedure StopSQLTrace;
@@ -193,7 +194,7 @@ type
     procedure Fail(Msg: string; ErrorAddr: Pointer = nil);{$IFNDEF FPC}  override; {$ENDIF}
     procedure LogEvent(Event: TZLoggingEvent);
 
-    { Difference convinience methods. }
+    { Different convenience methods. }
     function CreateDbcConnection: IZConnection;
     function CreateDatasetConnection: TZConnection;
     procedure PrintResultSet(ResultSet: IZResultSet;
@@ -216,6 +217,49 @@ type
     property SkipSetup: Boolean read FSkipSetup;
   end;
 
+  {** Implements a dbc test case which runs all active protocols. }
+  TZAbstractDbcSQLTestCase = class (TZAbstractSQLTestCase)
+  private
+    FConnection: IZConnection;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+    function GetConnectionUrl(Param: String): string;
+
+    property Connection: IZConnection read FConnection write FConnection;
+  end;
+
+  {** Implements a bug test case which runs all active protocols. }
+
+  { TZAbstractCompSQLTestCase }
+
+  TZAbstractCompSQLTestCase = class (TZAbstractSQLTestCase)
+  private
+    FConnection: TZConnection;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+    function IsRealPreparableTest: Boolean; override;
+    function IsAutoEncodableTest: Boolean; override;
+    function CreateQuery: TZQuery;
+    function CreateReadOnlyQuery: TZReadOnlyQuery;
+    function CreateTable: TZTable;
+
+    property Connection: TZConnection read FConnection write FConnection;
+  end;
+
+  {** Implements a bug test case which runs all active protocols with MB-Chars }
+  TZAbstractDbcSQLTestCaseMBCs = class (TZAbstractDbcSQLTestCase)
+  protected
+    function IsNonASCIITest: Boolean; override;
+  end;
+
+  {** Implements a bug test case which runs all active protocols with MB-Chars }
+  TZAbstractCompSQLTestCaseMBCs = class (TZAbstractCompSQLTestCase)
+  protected
+    function IsNonASCIITest: Boolean; override;
+  end;
+
 {**
   Rebuilds test databases for the active connections
   in the specified test group.
@@ -226,7 +270,7 @@ procedure RebuildTestDatabases(TestGroup: string = '');
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL;
+uses ZSysUtils, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
 function PropPos(const Current: TZConnectionConfig; const AProp: String): Integer;
 var
@@ -626,6 +670,12 @@ end;
 function TZAbstractSQLTestCase.GetSupportedProtocols: string;
 begin
   result := '';
+end;
+
+function TZAbstractSQLTestCase.SkipClosed: Boolean;
+begin
+  Check(True);
+  Result := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
 end;
 
 {**
@@ -1201,6 +1251,97 @@ begin
         Connection.Free;
       end;
   end;
+end;
+
+{ TZAbstractDbcSQLTestCase}
+
+procedure TZAbstractDbcSQLTestCase.SetUp;
+begin
+  FConnection := CreateDbcConnection;
+end;
+
+procedure TZAbstractDbcSQLTestCase.TearDown;
+begin
+  FConnection.Close;
+  FConnection := nil;
+end;
+
+function TZAbstractDbcSQLTestCase.GetConnectionUrl(Param: String): string;
+var
+  TempProperties: TStrings;
+  I: Integer;
+begin
+  TempProperties := TStringList.Create;
+  for I := 0 to High(Properties) do
+  begin
+    TempProperties.Add(Properties[I])
+  end;
+  TempProperties.Add(Param);
+  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
+  UserName, Password, Port, TempProperties);
+  TempProperties.Free;
+end;
+
+{ TZAbstractCompSQLTestCase }
+procedure TZAbstractCompSQLTestCase.SetUp;
+begin
+  FConnection := CreateDatasetConnection;
+end;
+
+procedure TZAbstractCompSQLTestCase.TearDown;
+begin
+  FConnection.Disconnect;
+  FConnection.Free;
+end;
+
+function TZAbstractCompSQLTestCase.IsRealPreparableTest: Boolean;
+begin
+  Result:= True;
+end;
+
+function TZAbstractCompSQLTestCase.IsAutoEncodableTest: Boolean;
+begin
+  Result:=True;
+end;
+
+function TZAbstractCompSQLTestCase.CreateQuery: TZQuery;
+begin
+  Result := TZQuery.Create(nil);
+  Result.Connection := FConnection;
+  { do not check for Include_RealPrepared, because it's allways true if set! }
+  if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
+    Result.Options := Result.Options + [doPreferPrepared];
+end;
+
+function TZAbstractCompSQLTestCase.CreateReadOnlyQuery: TZReadOnlyQuery;
+begin
+  Result := TZReadOnlyQuery.Create(nil);
+  Result.Connection := FConnection;
+  { do not check for Include_RealPrepared, because it's allways true if set! }
+  if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
+    Result.Options := Result.Options + [doPreferPrepared];
+end;
+
+function TZAbstractCompSQLTestCase.CreateTable: TZTable;
+begin
+  Result := TZTable.Create(nil);
+  Result.Connection := FConnection;
+  { do not check for Include_RealPrepared, because it's allways true if set! }
+  if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
+    Result.Options := Result.Options + [doPreferPrepared];
+end;
+
+{ TZAbstractDbcSQLTestCaseMBCs }
+
+function TZAbstractDbcSQLTestCaseMBCs.IsNonASCIITest: Boolean;
+begin
+  Result := True;
+end;
+
+{ TZAbstractCompSQLTestCaseMBCs }
+function TZAbstractCompSQLTestCaseMBCs.IsNonASCIITest: Boolean;
+begin
+  Result := True;
 end;
 
 {**
