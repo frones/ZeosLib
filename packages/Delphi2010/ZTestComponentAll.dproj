@@ -20,7 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\test\component;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_BplOutput>build</DCC_BplOutput>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
@@ -48,14 +48,7 @@
 			<DelphiCompile Include="ZTestComponentAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\component\ZTestSqlStrings.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestSqlProcessor.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestStoredProcedure.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestConnection.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestExecuteSql.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestSqlTypes.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestDataSetGeneric.pas"/>
-			<DCCReference Include="..\..\test\component\ZTestData.pas">
+			<DCCReference Include="..\..\test\component\ZTestComponents.pas">
 				<Form>,
   ZTestMidas in &apos;..\..\test\component\ZTestMidas.pas&apos;</Form>
 			</DCCReference>
