@@ -6,7 +6,7 @@
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -20,7 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\test\parsesql;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_BplOutput>build</DCC_BplOutput>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
@@ -47,15 +47,8 @@
 			<DelphiCompile Include="ZTestParseSqlAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\parsesql\ZTestSqlAnalyser.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestSybaseToken.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestMySqlToken.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestPostgreSqlToken.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestScriptParser.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestInterbaseToken.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestOracleToken.pas"/>
-			<DCCReference Include="..\..\test\parsesql\ZTestSqLiteToken.pas"/>
-			<BuildConfiguration Include="Base">
+			<DCCReference Include="..\..\test\parsesql\ZTestParseSql.pas"/>
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
@@ -109,7 +102,7 @@
 						<VersionInfoKeys Name="Comments"/>
 					</VersionInfoKeys>
 					<Language>
-						<Language Name="RootDir">D:\Data\Delphi\ZEOSTesting\packages\delphi12\</Language>
+						<Language Name="RootDir">..\..\..\..\..\Developer\Delphi XE\Components\ZEOS\packages\Delphi2009\</Language>
 					</Language>
 				</Delphi.Personality>
 			</BorlandProject>

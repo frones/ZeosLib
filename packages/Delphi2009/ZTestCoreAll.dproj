@@ -6,7 +6,7 @@
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -20,6 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UnitSearchPath>build;..\..\test\core;..\..\test\core;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_DcpOutput>build</DCC_DcpOutput>
@@ -46,14 +47,8 @@
 			<DelphiCompile Include="ZTestCoreAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\core\ZTestSysUtils.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestList.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestFramework.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestVariant.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestExprToken.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestTokenizer.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestExpression.pas"/>
-			<BuildConfiguration Include="Base">
+			<DCCReference Include="..\..\test\core\ZTestCore.pas"/>
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
