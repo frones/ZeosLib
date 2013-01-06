@@ -110,6 +110,7 @@ const
   SKIP_CLOSED_KEY              = 'skip.closed';
   SKIP_TEST_KEY                = 'skip.test';
   SKIP_NON_ZEOS_ISSUES_KEY     = 'skip.non_zeos_issues';
+  SKIP_REAL_PREPARED_KEY       = 'skip.real_prepared';
   ACTIVE_CONNECTIONS_KEY       = 'connections';
   EXTENDED_TEST_KEY            = 'extended.test';
   EXTENDED_CGET_ACP_KEY        = 'extended.cget_acp';
@@ -117,7 +118,6 @@ const
   EXTENDED_CCP_UTF16_KEY       = 'extended.ccp_utf16';
   EXTENDED_CODEPAGES_KEY       = 'extended.codepages';
   EXTENDED_AUTOENCODING_KEY    = 'extended.autoencoding';
-  EXTENDED_REAL_PREPARED_KEY   = 'extended.prefer_real_prepared';
 
 const
   { Names of the connection configuration keys. }

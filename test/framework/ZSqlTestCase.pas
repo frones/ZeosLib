@@ -95,7 +95,7 @@ type
     FExtended_cGet_UTF16: Boolean;
     FExtended_Codepages: Boolean;
     FExtended_AutoEncoding: Boolean;
-    FExtended_RealPrepared: Boolean;
+    FSkip_RealPrepared: Boolean;
     procedure SetConfigUses(AValue: TZConfigUses);
   public
     constructor Create; overload;
@@ -129,7 +129,7 @@ type
     property Include_cGet_UTF16: Boolean read FExtended_cGet_UTF16;
     property Include_Codepages: Boolean read FExtended_Codepages;
     property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
-    property Include_RealPrepared: Boolean read FExtended_RealPrepared;
+    property Skip_RealPrepared: Boolean read FSkip_RealPrepared;
     property ConfigUses:TZConfigUses read FConfigUses write SetConfigUses;
   end;
 
@@ -337,8 +337,8 @@ begin
     EXTENDED_CODEPAGES_KEY, FALSE_VALUE));
   FExtended_AutoEncoding := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
-  FExtended_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
-    EXTENDED_REAL_PREPARED_KEY, FALSE_VALUE));
+  FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
 end;
 
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);
@@ -388,6 +388,8 @@ begin
   FProperties := SplitStringToArray(TestConfig.ReadProperty(FName,
     DATABASE_PROPERTIES_KEY, ''), LIST_DELIMITERS);
   FConfigUses := [cuMainConnection];
+  FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(FName,
+    SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
 end;
 
 destructor TZConnectionConfig.Destroy;
@@ -525,16 +527,19 @@ begin
   if ExtendedTest then
   begin
     create_charsets_encodings(self);
+  end;
 
-    if Include_RealPrepared then
+  if Not Skip_RealPrepared then
+  begin
+    if ProtocolIsRealPreparable(self.Protocol) then
     begin
-      if ProtocolIsRealPreparable(self.Protocol) then
+      //writeln('create preferprepared');
+      TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
+      SetProperty(TempConfig, 'preferprepared', 'True');
+      ConnectionsList.Add(TempConfig);
+      TempConfig.ConfigUses:=[cuRealPrepared];
+      if ExtendedTest then
       begin
-        //writeln('create preferprepared');
-        TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
-        SetProperty(TempConfig, 'preferprepared', 'True');
-        ConnectionsList.Add(TempConfig);
-        TempConfig.ConfigUses:=[cuRealPrepared];
         create_charsets_encodings(TempConfig);
       end;
     end;
