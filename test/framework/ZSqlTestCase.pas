@@ -791,7 +791,7 @@ end;
   @param Value a string which should be prepared for the Test.
   @return the right or reverted encoded string to check the behavior.
 }
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
   {$WARNINGS OFF}
 {$ENDIF}
 function TZAbstractSQLTestCase.GetDBTestString(const Value: String;
@@ -822,7 +822,7 @@ begin
       else //ceUTF8, ceUTF16, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
-            {$IFDEF DELPHI12_UP}
+            {$IFDEF UNICODE}
             Temp := UTF8ToString(Value)
             {$ELSE}
             Temp := UTF8ToAnsi(Value)
@@ -875,7 +875,7 @@ begin
   System.Move(PChar(Temp)^, PChar(Result)^, Length(Temp)*SizeOf(Char));
 end;
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
   {$WARNINGS ON}
 {$ENDIF}
 

@@ -748,7 +748,7 @@ var
   Procedure AddRecord(ID: Integer; WS: ZWideString);
   begin
     iqry.ParamByName('i1').AsInteger:= ID;
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     iqry.ParamByName('s1').AsString := WS;
     {$ELSE}
     iqry.ParamByName('s1').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := WS;
@@ -777,7 +777,7 @@ begin
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         {$IFDEF WITH_FTWIDESTRING}
-          {$IFDEF DELPHI12_UP}
+          {$IFDEF UNICODE}
           CheckEquals(UTF8ToString(S1), iqry.Fields[0].AsString);
           iqry.Next;
           CheckEquals(UTF8ToString(S2), iqry.Fields[0].AsString);

@@ -94,6 +94,10 @@ type
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
     procedure TestDoubleFloatParams;
+  end;
+
+  TZGenericTestDbcResultSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
+  published
     procedure TestVeryLargeBlobs;
   end;
 
@@ -104,7 +108,7 @@ uses
   Variants,
 {$ENDIF}
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset,
-  ZDatasetUtils, strutils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDbcResultSet }
 
@@ -306,7 +310,7 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+//      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
       Params[7].Value := Null;
@@ -504,7 +508,7 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+//      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
       Params[7].Value := Null;
@@ -1786,7 +1790,9 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
+{ TZGenericTestDbcResultSetMBCs }
+
+procedure TZGenericTestDbcResultSetMBCs.TestVeryLargeBlobs;
 const teststring = '123456ייאא';
 var
   Query: TZQuery;
@@ -1852,16 +1858,16 @@ begin
       if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
         not ( (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
           Connection.DbcConnection.GetConSettings.AutoEncode )  then
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode(teststring),6000)
+        s:={$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(utf8encode(teststring),6000)
       else
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(teststring,6000);
+        s:={$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(teststring,6000);
       TextStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(TextStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile('../../../database/images/horse.jpg');
       setlength(s,BinStream.Size);
       BinStream.Read(s[1],length(s));
-      s := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(s, 10);
+      s := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(s, 10);
       CheckEquals(BinStream.Size * 10, length(s), 'Length of DupeString result');
       BinStream.Position := 0;
       BinStream.Write(s[1],length(s));
@@ -1904,5 +1910,6 @@ end;
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);
+  RegisterTest('component',TZGenericTestDbcResultSetMBCs.Suite);
 end.
 
