@@ -1297,8 +1297,8 @@ begin
         { Processes binary array fields. }
         ftBytes:
           begin
-            System.Move((PAnsiChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, PAnsiChar(Buffer)^,
-              RowAccessor.GetColumnDataSize(ColumnIndex)-2);
+            System.Move(PAnsiChar(RowAccessor.GetBytes(ColumnIndex, Result))^,
+              PAnsiChar(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
         { Processes blob fields. }
@@ -1316,13 +1316,11 @@ begin
             {$ENDIF}
             Result := not Result;
           end;
-        {$IFDEF DELPHI12_UP}
         ftString:
           begin
-            StrCopy(PAnsiChar(Buffer), PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result))));
+            StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
           end;
-        {$ENDIF}
         { Processes all other fields. }
         else
           begin
@@ -1370,6 +1368,9 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
+  {$IFNDEF UNICODE}
+  Temp: String;
+  {$ENDIF}
 begin
   WasNull := False;
   if not Active then
@@ -1395,50 +1396,41 @@ begin
 
     if Assigned(Buffer) then
     begin
-      { Processes DateTime fields. }
-      if Field.DataType in [ftDate, ftDateTime] then
-      begin
-        RowAccessor.SetTimestamp(ColumnIndex, NativeToDateTime(Field.DataType,
-        Buffer));
-      end
-      { Processes Time fields. }
-      else if Field.DataType = ftTime then
-      begin
-        RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType,
-        Buffer));
-      end
-      { Processes binary array fields. }
-      else if Field.DataType = ftBytes then
-      begin
-        RowAccessor.SetBytes(ColumnIndex, VarToBytes(PVariant(Buffer)^));
-      end
-      { Processes widestring fields. }
-      else if Field.DataType = ftWideString then
-      begin
-        {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
-        {$ELSE}
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
-        {$ENDIF}
-
-      end
-      { Processes all other fields. }
-      else if {$IFNDEF DELPHI12_UP}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
-        (Length(PAnsiChar(Buffer)) < RowAccessor.GetColumnDataSize(ColumnIndex)) then
-      begin
-        {$IFDEF DELPHI12_UP}
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(String(PAnsichar(Buffer))));
-        {$ELSE}
-        System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-           Length(PAnsiChar(Buffer)) + 1);
-        {$ENDIF}
-        RowAccessor.SetNotNull(ColumnIndex);
-      end
-      else  //process all others also calculatets
-      begin
-        System.Move(PWideChar(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-        RowAccessor.GetColumnDataSize(ColumnIndex));
-        RowAccessor.SetNotNull(ColumnIndex);
+      case Field.DataType of
+        ftDate, ftDateTime: { Processes Date/DateTime fields. }
+          RowAccessor.SetTimestamp(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
+        ftTime: { Processes Time fields. }
+          RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
+        ftBytes: { Processes binary array fields. }
+          RowAccessor.SetBytes(ColumnIndex, VarToBytes(PVariant(Buffer)^));
+        ftWideString: { Processes widestring fields. }
+          {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
+          RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+          {$ELSE}
+          RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+          {$ENDIF}
+        ftString: { Processes string fields. }
+          {$IFDEF UNICODE}
+          RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
+          {$ELSE}
+          begin
+            SetLength(Temp, StrLen(PAnsiChar(Buffer)));
+            Move(PAnsiChar(Buffer)^, PAnsiChar(Temp)^,StrLen(PAnsiChar(Buffer)));
+            RowAccessor.SetString(ColumnIndex, Temp);
+          end;
+          {$ENDIF}
+          (*if {$IFNDEF UNICODE}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
+          (Length(PAnsiChar(Buffer)) <= RowAccessor.GetColumnDataSize(ColumnIndex)) then
+        begin
+          RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
+          RowAccessor.SetNotNull(ColumnIndex);
+        end *)
+        else  { Processes all other fields. }
+          begin
+            System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
+            RowAccessor.GetColumnDataSize(ColumnIndex));
+            RowAccessor.SetNotNull(ColumnIndex);
+          end;
       end;
     end
     else
