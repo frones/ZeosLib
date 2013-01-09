@@ -1118,8 +1118,8 @@ begin
           if not TempBlob.IsEmpty then
           begin
             if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then
-              TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length,
-                TempBlob.WasDecoded, ConSettings))
+              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length,
+                TempBlob.WasDecoded, ConSettings)
             else
               TempStream := TempBlob.GetStream;
             if Assigned(TempStream) then

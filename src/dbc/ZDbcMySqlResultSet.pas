@@ -669,7 +669,7 @@ begin
     if not IsNull(ColumnIndex) then
     begin
       case GetMetaData.GetColumnType(ColumnIndex) of
-        stAsciiStream: Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
+        stAsciiStream: Stream := GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True);
         stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
         else
           Stream := TStringStream.Create(InternalGetString(ColumnIndex));
@@ -1329,7 +1329,7 @@ begin
         stBinaryStream: Stream := GetBinaryStream(ColumnIndex);
         stUnicodeStream: Stream := GetUnicodeStream(ColumnIndex);
       else
-        Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
+        Stream := ZEncoding.GetValidatedAnsiStream(InternalGetString(ColumnIndex), ConSettings, True);
       end;
       Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
         GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream)

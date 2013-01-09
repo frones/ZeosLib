@@ -276,7 +276,7 @@ begin
         stAsciiStream:
           begin
             Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
-            TempStream := TStringStream.Create(GetValidatedAnsiString(Result.GetString, Consettings, True));
+            TempStream := GetValidatedAnsiStream(Result.GetString, Consettings, True);
             if Assigned(TempStream) then
             begin
               Result.SetStream(TempStream);

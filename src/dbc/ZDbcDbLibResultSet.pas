@@ -683,13 +683,16 @@ begin
     TempAnsi := Result.GetString;
     TempAnsi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempAnsi, #0, '', [rfReplaceAll]);
     if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
-      Result.SetString(ZEncoding.GetValidatedAnsiString(TempAnsi, ConSettings, True))
+    begin
+      TempStream := ZEncoding.GetValidatedAnsiStream(TempAnsi, ConSettings, True);
+      Result.SetStream(TempStream);
+    end
     else
     begin
       TempStream := ZEncoding.GetValidatedUnicodeStream(TempAnsi, ConSettings, True);
       Result.SetStream(TempStream, True);
-      TempStream.Free;
     end;
+    TempStream.Free;
   end;
 end;
 

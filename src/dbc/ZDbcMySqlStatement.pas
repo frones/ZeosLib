@@ -483,6 +483,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  TempStream: TStream;
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;
@@ -542,10 +543,12 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                Result := FPlainDriver.EscapeString(FHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                    ConSettings, True);
+              begin
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+                Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
+              end
             end;
           end
           else
@@ -668,7 +671,7 @@ var
   MyType: TMysqlFieldTypes;
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
-  TempAnsi: ZAnsiString;
+  TempStream: TStream;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
@@ -689,11 +692,9 @@ begin
           FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
         else
         begin
-          TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-          TempBlob := TempBlob.Clone;
-          TempBlob.SetString(TempAnsi);
-          InParamValues[I].VInterface  := TempBlob;
+          TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+          TempBlob.SetStream(TempStream);
+          TempStream.Free;
           FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
         end;
       end
@@ -1005,6 +1006,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  TempStream: TStream;
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;
@@ -1066,10 +1068,12 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                Result := FPlainDriver.EscapeString(FHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                  ConSettings, True);
+              begin
+                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                TempBlob.SetStream(TempStream);
+                TempStream.Free;
+                Result := FPlainDriver.EscapeString(FHandle, TempBlob.GetString, ConSettings, True)
+              end;
             end
           else
             Result := 'NULL';

@@ -650,6 +650,7 @@ function TZAbstractResultSet.GetBinaryString(ColumnIndex: Integer): ZAnsiString;
 begin
   Result := InternalGetString(ColumnIndex);
 end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -908,8 +909,7 @@ begin
     Blob := GetBlob(ColumnIndex);
     if Blob <> nil then
       if Self.GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream then
-        Result := TStringStream.Create(GetValidatedAnsiStringFromBuffer(Blob.GetBuffer,
-          Blob.Length, ConSettings, ConSettings.CTRL_CP))
+        Result := GetValidatedAnsiStream(Blob.GetBuffer, Blob.Length, ConSettings, ConSettings.CTRL_CP)
       else
         Result := Blob.GetStream;
   end;

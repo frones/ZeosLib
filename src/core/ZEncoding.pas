@@ -60,7 +60,7 @@ uses
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}
-  {$IF defined(MSWINDOWS) and not (defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER))}
+  {$IF defined(MSWINDOWS) and not (defined(WITH_UNICODEFROMLOCALECHARS) or defined(WITH_WIDEMOVEPROC_CP))}
   Windows,
   {$IFEND}
   ZCompatibility;
@@ -309,17 +309,17 @@ function ZDefaultSystemCodePage: Word;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings): ZAnsiString; overload;
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings): TStream; overload;
 
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings; ToCP: Word): ZAnsiString; overload;
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings; ToCP: Word): TStream; overload;
 
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  WasDecoded: Boolean; ConSettings: PZConSettings): ZAnsiString; overload;
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  WasDecoded: Boolean; ConSettings: PZConSettings): TStream; overload;
 
-function GetValidatedAnsiString(const Ansi: ZAnsiString;
-  ConSettings: PZConSettings; const FromDB: Boolean): ZAnsiString;
+function GetValidatedAnsiStream(const Ansi: ZAnsiString;
+  ConSettings: PZConSettings; const FromDB: Boolean): TStream; overload;
 
 {**
   GetValidatedUnicodeStream the incoming Stream for his given Memory and
@@ -356,7 +356,7 @@ end;
 
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
-{$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+{$IFNDEF WITH_WIDEMOVEPROCS_WITH_CP}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
 {$ENDIF}
@@ -366,7 +366,7 @@ begin
     zCP_UTF8: Result := UTF8ToString(s);
     zCP_NONE: Result := {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}(s);
     else
-      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+      {$IFDEF WITH_WIDEMOVEPROCS_WITH_CP} //FPC2.7+
       WidestringManager.Ansi2WideMoveProc(PAnsiChar(s), CP, Result, Length(s));
       {$ELSE}
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -411,7 +411,7 @@ end;
 
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
   ZAnsiString;
-{$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+{$IFNDEF WITH_WIDEMOVEPROCS_WITH_CP}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
 {$ENDIF}
@@ -421,7 +421,7 @@ begin
     zCP_UTF8: Result := UTF8Encode(ws);
     zCP_NONE: Result := ZAnsiString(WS);
     else
-      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+      {$IFDEF WITH_WIDEMOVEPROCS_WITH_CP} //FPC2.7+
       WidestringManager.Wide2AnsiMoveProc(PWideChar(WS), Result, CP, Length(WS));
       {$ELSE}
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -679,99 +679,103 @@ end;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings): ZAnsiString;
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings): TStream;
 var
+  Ansi: ZAnsiString;
+  Len: Integer;
   WS: ZWideString;
   Bytes: TByteDynArray;
 begin
-  Result := '';
+  Result := nil;
 
   if Size = 0 then
-    Result := ''
+    Ansi := ''
   else
   begin
     SetLength(Bytes, Size +2);
     System.move(Buffer^, Pointer(Bytes)^, Size);
     case TestEncoding(Bytes, Size, ConSettings) of
-      ceDefault: Result := PAnsiChar(Bytes);
+      ceDefault: Ansi := PAnsiChar(Bytes);
       ceAnsi:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then
           if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
-            Result := PAnsiChar(Bytes)  //should be exact
+            Ansi := PAnsiChar(Bytes)  //should be exact
           else
-            {$IFDEF WITH_LCONVENCODING}
-            Result := Consettings.PlainConvertFunc(AnsiToUTF8(PAnsiChar(Bytes)))  //no other possibility
-            {$ELSE}
-            Result := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
-            {$ENDIF}
+            Ansi := WideToAnsi(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
         else  //Database expects UTF8
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
-            Result := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
+            Ansi := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
           else
-            {$IFDEF WITH_LCONVENCODING}
-            Result := AnsiToUTF8(PAnsiChar(Bytes));
-            {$ELSE}
-            Result := UTF8Encode(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP));
-            {$ENDIF}
+            Ansi := UTF8Encode(AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP));
       ceUTF8:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
           {$IFDEF WITH_LCONVENCODING}
-          Result := Consettings.PlainConvertFunc(String(PAnsiChar(Bytes)))
+          Ansi := Consettings.PlainConvertFunc(String(PAnsiChar(Bytes)))
           {$ELSE}
-          Result := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
+          Ansi := WideToAnsi(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
           {$ENDIF}
          else //UTF8 Expected
-           Result := PAnsiChar(Bytes);
+           Ansi := PAnsiChar(Bytes);
       ceUTF16:
         begin
           SetLength(WS, Size div 2);
           System.Move(PWideChar(Bytes)^, PWideChar(WS)^, Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
             {$IFDEF WITH_LCONVENCODING}
-            Result := Consettings.PlainConvertFunc(UTF8Encode(WS))
+            Ansi := Consettings.PlainConvertFunc(UTF8Encode(WS))
             {$ELSE}
-            Result := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
+            Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP)
             {$ENDIF}
           else
-            Result := UTF8Encode(WS);
+            Ansi := UTF8Encode(WS);
         end;
       else
-        Result := '';
+        Ansi := '';
     end;
     SetLength(Bytes, 0);
   end;
+
+  Len := Length(Ansi);
+  if Len > 0 then
+  begin
+    Result := TMemoryStream.Create;
+    Result.Size := Len;
+    System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Len);
+    Result.Position := 0;
+  end;
 end;
 
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  ConSettings: PZConSettings; ToCP: Word): ZAnsiString;
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings; ToCP: Word): TStream;
 var DB_CP: Word;
 begin
   DB_CP := ConSettings.ClientCodePage.CP;
   ConSettings.ClientCodePage.CP := ToCP;
-  Result := GetValidatedAnsiStringFromBuffer(Buffer, Size, ConSettings);
+  Result := GetValidatedAnsiStream(Buffer, Size, ConSettings);
   ConSettings.ClientCodePage.CP := DB_CP;
 end;
 
-function GetValidatedAnsiString(const Ansi: ZAnsiString;
-  ConSettings: PZConSettings; const FromDB: Boolean): ZAnsiString;
+function GetValidatedAnsiStream(const Ansi: ZAnsiString;
+  ConSettings: PZConSettings; const FromDB: Boolean): TStream; overload;
 begin
   if FromDB then
     if ( ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP ) or not ConSettings.AutoEncode then
-      Result := Ansi
+      Result := TStringStream.Create(Ansi)
     else
       {$IFDEF WITH_LCONVENCODING}
-      Result := Consettings.DbcConvertFunc(Ansi)
+      Result := TStringStream.Create(Consettings.DbcConvertFunc(Ansi))
       {$ELSE}
-      Result := WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP)
+      Result := TStringStream.Create(WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP))
       {$ENDIF}
   else
-    Result := ''; // not done yet  and not needed. Makes the compiler happy
+    Result := nil; // not done yet  and not needed. Makes the compiler happy
 end;
 
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  WasDecoded: Boolean; ConSettings: PZConSettings): ZAnsiString;
+function GetValidatedAnsiStream(const Buffer: Pointer; Size: Cardinal;
+  WasDecoded: Boolean; ConSettings: PZConSettings): TStream;
 var
+  Ansi: ZAnsiString;
   WS: ZWideString;
 begin
   if WasDecoded then
@@ -780,13 +784,18 @@ begin
     System.Move(Buffer^, PWideChar(WS)^, Size);
 
     {$IFDEF WITH_LCONVENCODING}
-    Result := Consettings.PlainConvertFunc(UTF8Encode(WS));
+    Ansi := Consettings.PlainConvertFunc(UTF8Encode(WS));
     {$ELSE}
-    Result := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
+    Ansi := WideToAnsi(WS, ConSettings.ClientCodePage.CP);
     {$ENDIF}
+
+    Result := TMemoryStream.Create;
+    Result.Size := Length(Ansi);
+    System.Move(PAnsiChar(Ansi)^, TMemoryStream(Result).Memory^, Result.Size);
+    Result.Position := 0;
   end
   else
-    Result := GetValidatedAnsiStringFromBuffer(Buffer, Size, ConSettings);
+    Result := GetValidatedAnsiStream(Buffer, Size, ConSettings);
 end;
 {**
   GetValidatedUnicodeStream the incoming Stream for his given Memory and
@@ -821,14 +830,10 @@ begin
           case Consettings.ClientCodePage.Encoding of
             ceUTF8: WS := UTF8ToString(PAnsiChar(Bytes));
             ceAnsi:
-              {$IFDEF WITH_LCONVENCODING}
-              WS := ZWideString(PAnsiChar(Bytes)); //cast means random success
-              {$ELSE}
               if ( ConSettings.CTRL_CP = zCP_UTF8) then
-                WS := ZWideString(PAnsiChar(Bytes)) //random success
+                WS := UTF8ToString(AnsiToUTF8(String(PAnsiChar(Bytes)))) //random success
               else
                 WS := AnsiToWide(PAnsiChar(Bytes), ConSettings.CTRL_CP);
-             {$ENDIF}
             end;
         ceAnsi: //We've to start from the premisse we've got a Unicode string i there
           begin
@@ -874,14 +879,10 @@ begin
       case DetectUTF8Encoding(Ansi) of
         etUSASCII, etUTF8: WS := UTF8ToString(Ansi);
         etAnsi:
-          {$IFDEF WITH_LCONVENCODING}
-          WS := ZWideString(Ansi); //random success
-          {$ELSE}
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
-            WS := ZWideString(Ansi) //random success
+            WS := UTF8ToString(AnsiToUTF8(String(Ansi))) //random success
           else
             WS := AnsiToWide(Ansi, ConSettings.CTRL_CP);
-         {$ENDIF}
       end;
 
     Len := Length(WS)*2;
