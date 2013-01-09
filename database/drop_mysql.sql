@@ -7,6 +7,8 @@
 drop procedure IF EXISTS ABTEST;
 drop procedure IF EXISTS TEST_All_TYPES;
 drop procedure IF EXISTS MultipleVaryingResultSets;
+drop procedure IF EXISTS ALL_PARAMS_IN;
+drop function IF EXISTS SIMPLE_FUNC;
 drop function IF EXISTS FuncReturnInteger;
 drop table IF EXISTS blob_values;
 drop table IF EXISTS date_values;

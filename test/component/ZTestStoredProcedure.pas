@@ -112,6 +112,7 @@ type
     procedure Test_abtest;
     procedure Test_TEST_All_TYPES;
     procedure Test_FuncReturnInteger;
+    procedure Test_ALL_PARAMS_IN;
     procedure MultipleVaryingResultSets;
   end;
 
@@ -915,6 +916,29 @@ begin
   CheckEquals('ReturnValue', StoredProc.Fields[0].DisplayName);
   CheckEquals(Ord(ftInteger), Ord(StoredProc.Fields[0].DataType));
   CheckEquals(210, StoredProc.Fields[0].AsInteger);
+end;
+
+procedure TZTestMySQLStoredProcedure.Test_ALL_PARAMS_IN;
+begin
+  if SkipTest then Exit;
+
+  StoredProc.StoredProcName := 'ALL_PARAMS_IN';
+  CheckEquals(2, StoredProc.Params.Count);
+
+  CheckEquals('p_id', StoredProc.Params[0].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[0].ParamType));
+  CheckEquals(Ord(ftInteger), Ord(StoredProc.Params[0].DataType));
+
+  CheckEquals('p_name', StoredProc.Params[1].Name);
+  CheckEquals(ord(ptInput), ord(StoredProc.Params[1].ParamType));
+  CheckStringFieldType(StoredProc.Params[1].DataType, Connection.DbcConnection.GetConSettings);
+
+  StoredProc.Params[0].AsInteger := 2;
+  StoredProc.Params[1].AsString := 'Yan Pater';
+  StoredProc.Open;
+
+  CheckEquals(8, StoredProc.Fields.Count);
+  CheckEquals(2, StoredProc.RecordCount);
 end;
 
 procedure TZTestMySQLStoredProcedure.MultipleVaryingResultSets;
