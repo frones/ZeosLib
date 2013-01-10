@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
+  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZDbcOracle,
   ZDbcResultSet, ZPlainOracleDriver, ZDbcResultSetMetadata, ZDbcLogging,
   ZCompatibility, ZDbcOracleUtils, ZPlainOracleConstants;
 
@@ -69,6 +69,7 @@ type
     FStmtHandle: POCIStmt;
     FErrorHandle: POCIError;
     FPlainDriver: IZOraclePlainDriver;
+    FConnection: IZOracleConnection;
     FOutVars: PZSQLVars;
   protected
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
@@ -99,6 +100,7 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
+    function GetDataSet(ColumnIndex: Integer): IZDataSet; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
   end;
 
@@ -170,7 +172,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcOracle, ZDbcUtils, ZEncoding;
+  Math, ZMessages, ZDbcUtils, ZEncoding;
 
 { TZOracleAbstractResultSet }
 
@@ -193,6 +195,7 @@ begin
   FErrorHandle := ErrorHandle;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
+  FConnection := Statement.GetConnection as IZOracleConnection;
 
   Open;
 end;
@@ -664,6 +667,42 @@ end;
 
 {**
   Returns the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>IZResultSet</code> object
+  in the Java programming language.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return a <code>IZResultSet</code> object representing the SQL
+    <code>IZResultSet</code> value in the specified column
+}
+function TZOracleAbstractResultSet.GetDataSet(ColumnIndex: Integer): IZDataSet;
+var
+  CurrentVar: PZSQLVar;
+begin
+  Result := nil ;
+{$IFNDEF DISABLE_CHECKING}
+  CheckBlobColumn(ColumnIndex);
+{$ENDIF}
+
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+      Exit;
+
+  GetSQLVarHolder(ColumnIndex);
+  CurrentVar := @FOutVars.Variables[ColumnIndex];
+  Result := nil;
+  if CurrentVar.TypeCode = SQLT_NTY then
+    if CurrentVar.Indicator >= 0 then
+    begin
+      {CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.ResultSetToStmt(CurrentVar._Object,
+          FErrorHandle), lcOther, 'Nested Table to Stmt handle');
+      Result := CreateOracleResultSet(FPlainDriver, GetStatement,
+        'Fetch Nested Table', CurrentVar._Object, FErrorHandle);}
+    end;
+end;
+
+{**
+  Returns the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Blob</code> object
   in the Java programming language.
 
@@ -733,13 +772,12 @@ procedure TZOracleResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
-  Status: Integer;
   Connection: IZOracleConnection;
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
   TempColumnNameLen: Integer;
-  ptype,addr_tdo:pointer;
+  ptype, addr_tdo:pointer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -749,9 +787,9 @@ begin
 
   Connection := GetStatement.GetConnection as IZOracleConnection;
 
-  Status := FPlainDriver.StmtExecute(Connection.GetContextHandle, FStmtHandle,
-    FErrorHandle, 1, 0, nil, nil, OCI_DESCRIBE_ONLY);
-  CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, FSQL);
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.StmtExecute(Connection.GetContextHandle, FStmtHandle,
+    FErrorHandle, 1, 0, nil, nil, OCI_DESCRIBE_ONLY), lcExecute, FSQL);
 
   { Resize SQLVERS structure if needed }
   FPlainDriver.AttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount, nil,
@@ -825,28 +863,30 @@ begin
           CurrentVar.ColType := stAsciiStream;
           CurrentVar.TypeCode := CurrentVar.DataType;
         end;
-      SQLT_BLOB:
-        begin
-          CurrentVar.ColType := stBinaryStream;
-          CurrentVar.TypeCode := CurrentVar.DataType;
-        end;
-      SQLT_BFILEE, SQLT_CFILEE:
+      SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
           CurrentVar.ColType := stBinaryStream;
           CurrentVar.TypeCode := CurrentVar.DataType;
         end;
       SQLT_NTY:
         begin
-          CurrentVar.ColType := stBinaryStream;
+          CurrentVar.ColType := stDataSet;
           CurrentVar.TypeCode := CurrentVar.DataType;
+
           CheckOracleError(FPlainDriver, FErrorHandle,
             FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
                  @ptype, nil, OCI_ATTR_REF_TDO, FErrorHandle)
             ,lcExecute, FSQL);
+
           CheckOracleError(FPlainDriver, FErrorHandle,
             FPlainDriver.ObjectPin(Connection.GetConnectionHandle, FErrorHandle,
               ptype, nil, OCI_PIN_ANY, OCI_DURATION_SESSION, pub2(OCI_LOCK_NONE),
                 @addr_tdo) ,lcExecute, FSQL);
+          if FPlainDriver.TypeTypeCode(Connection.GetConnectionHandle,
+              FerrorHandle, addr_tdo) = SQLT_NCO then
+            CurrentVar.ColType := stDataSet
+          else
+            CurrentVar.ColType := stBinaryStream;
         end;
       else
         CurrentVar.ColType := stUnknown;
@@ -863,11 +903,12 @@ begin
     InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
-    Status := FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
+    CheckOracleError(FPlainDriver, FErrorHandle,
+      FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
       FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
-      @CurrentVar.Indicator, nil, nil, OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, FSQL);
+      @CurrentVar.Indicator, nil, nil, OCI_DEFAULT), lcExecute, FSQL);
     if CurrentVar.DataType=SQLT_NTY then
+      //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.DefineObject(CurrentVar.Define, FErrorHandle, addr_tdo,
            @CurrentVar._Object,nil,nil,nil), lcExecute, FSQL);
@@ -1119,6 +1160,7 @@ begin
   FOutVars := PrepareOracleOutVars(Statement, OutVars, FieldNames, ParamTypes,
                 FunctionResultOffsets);
   inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle);
+  FConnection := Statement.GetConnection as IZOracleConnection;
   MaxRows := 1;
 end;
 

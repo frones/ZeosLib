@@ -184,6 +184,7 @@ type
     function GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+    function GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
@@ -211,6 +212,7 @@ type
     procedure SetUnicodeStream(ColumnIndex: Integer; Value: TStream);
     procedure SetBinaryStream(ColumnIndex: Integer; Value: TStream);
     procedure SetBlob(ColumnIndex: Integer; Value: IZBlob);
+    procedure SetDataSet(ColumnIndex: Integer; Value: IZDataSet);
     procedure SetValue(ColumnIndex: Integer; Value: TZVariant);
 
     property ColumnsSize: Integer read FColumnsSize;
@@ -359,7 +361,7 @@ begin
       Result := SizeOf(Pointer) + SizeOf(SmallInt);
     stDate, stTime, stTimestamp:
       Result := SizeOf(TDateTime);
-    stAsciiStream, stUnicodeStream, stBinaryStream:
+    stAsciiStream, stUnicodeStream, stBinaryStream, stDataSet:
       Result := SizeOf(Pointer);
     else
       Result := 0;
@@ -1753,6 +1755,46 @@ begin
 end;
 
 {**
+  Returns the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>ResultSet</code> object
+  in the Java programming language.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return a <code>ResultSet</code> object representing the SQL
+    <code>ResultSet</code> value in the specified column
+}
+function TZRowAccessor.GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+var
+  Ptr: PPointer;
+  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnIndex(ColumnIndex);
+  if not (FColumnTypes[ColumnIndex - 1] = stDataSet) then
+  begin
+    raise EZSQLException.Create(
+      Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex - 1])]));
+  end;
+{$ENDIF}
+
+begin
+  Ptr := PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+  NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
+
+  {$IFNDEF FPC}
+  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then
+  {$ELSE}
+  if NullPtr^ = 0 then
+  {$ENDIF}
+    Result := IZDataSet(Ptr^)
+  else
+    Result := nil;
+end;
+
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Variant</code> value.
 
@@ -1834,6 +1876,11 @@ begin
         begin
           Result.VType := vtUnicodeString;
           Result.VUnicodeString := GetUnicodeString(ColumnIndex, IsNull);
+        end;
+      stDataSet:
+        begin
+          Result.VType := vtInterface;
+          Result.VInterface := GetDataSet(ColumnIndex, IsNull);
         end;
       else
         Result.VType := vtNull;
@@ -2492,6 +2539,51 @@ begin
   SetBlobObject(FBuffer, ColumnIndex, Value);
 end;
 
+{**
+  Sets the blob wrapper object to the specified column.
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @param Value a ResultSet wrapper object to be set.
+}
+procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; Value: IZDataSet);
+var
+  Ptr: PPointer;
+  NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnIndex(ColumnIndex);
+  if not (FColumnTypes[ColumnIndex - 1] = stDataSet) then
+  begin
+    raise EZSQLException.Create(
+      Format(SCanNotAccessBlobRecord,
+      [ColumnIndex, DefineColumnTypeName(FColumnTypes[ColumnIndex - 1])]));
+  end;
+{$ENDIF}
+
+  Ptr := PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+  NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
+
+  {$IFNDEF FPC}
+  if NullPtr^ = {$IFDEF WIN64}false{$ELSE}0{$ENDIF} then  //M.A. if NullPtr^ = 0 then
+  {$ELSE}
+  if NullPtr^ = 0 then
+  {$ENDIF}
+    IZDataSet(Ptr^) := nil
+  else
+    Ptr^ := nil;
+
+  IZDataSet(Ptr^) := Value;
+
+  if Value <> nil then
+  {$IFNDEF FPC}
+    NullPtr^ := {$IFDEF WIN64}false{$ELSE}0{$ENDIF}  //M.A. NullPtr^ := 0
+  else
+    NullPtr^ := {$IFDEF WIN64}true{$ELSE}1{$ENDIF};  //M.A. NullPtr^ := 1;
+  {$ELSE}
+    NullPtr^ := 0
+  else
+    NullPtr^ := 1;
+  {$ENDIF}
+end;
 {**
   Sets the designated column with a <code>Variant</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the

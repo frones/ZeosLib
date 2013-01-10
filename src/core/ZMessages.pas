@@ -59,6 +59,8 @@ interface
 
 {$I ZCore.inc}
 
+procedure loadmessages();
+
 resourcestring
 
 // -> ms, 09/05/2005
@@ -1898,7 +1900,8 @@ var
 
 implementation
 
-initialization
+procedure loadmessages();
+begin
   SSQLError1 := cSSQLError1;
   SSQLError2 := cSSQLError2;
   SSQLError3 := cSSQLError3;
@@ -2060,7 +2063,10 @@ initialization
   SInvalidUpdateCount := cSInvalidUpdateCount;
 
   SRowBufferWidthExceeded := cSRowBufferWidthExceeded;
+end;
 
+initialization
+  loadmessages;
 end.
 
 

@@ -64,6 +64,7 @@ uses Classes, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants,
   ZTokenizer;
 
 const
+  MARIADB_LOCATION = 'libmariadb'+ SharedSuffix;
 {$IFNDEF UNIX}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   WINDOWS_DLL_LOCATION = 'libmysql.dll';
@@ -413,6 +414,17 @@ type
   { TZNewMySQLD5PlainDriver }
 
   TZMySQLD5PlainDriver = class (TZMySQL5PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    constructor Create(Tokenizer: IZTokenizer);
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
+
+  { TZMariaDB5PlainDriver }
+
+  TZMariaDB5PlainDriver = class (TZMySQL5PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
   public
@@ -1356,10 +1368,16 @@ constructor TZMySQL5PlainDriver.Create(Tokenizer: IZTokenizer);
 begin
   inherited Create(Tokenizer);
   {$IFNDEF UNIX}
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    FLoader.AddLocation(MARIADB_LOCATION);
+  {$ENDIF}
     FLoader.AddLocation(WINDOWS_DLL50_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL51_LOCATION);
     FLoader.AddLocation(WINDOWS_DLL55_LOCATION);
   {$ELSE}
+  {$IFNDEF MYSQL_STRICT_DLL_LOADING}
+    FLoader.AddLocation(MARIADB_LOCATION);
+  {$ENDIF}
     FLoader.AddLocation(LINUX_DLL50_LOCATION);
     FLoader.AddLocation(LINUX_DLL51_LOCATION);
     FLoader.AddLocation(LINUX_DLL55_LOCATION);
@@ -1415,6 +1433,29 @@ end;
 function TZMySQLD5PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Embedded MySQL 5+';
+end;
+
+{ TZMariaDB5PlainDriver }
+function TZMariaDB5PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMariaDB5PlainDriver.Create(FTokenizer);
+end;
+
+constructor TZMariaDB5PlainDriver.Create(Tokenizer: IZTokenizer);
+begin
+  inherited Create(Tokenizer);
+  FLoader.ClearLocations;
+  FLoader.AddLocation(MARIADB_LOCATION);
+end;
+
+function TZMariaDB5PlainDriver.GetProtocol: string;
+begin
+  Result := 'MariaDB-5';
+end;
+
+function TZMariaDB5PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for MariaDB-5.x';
 end;
 
 end.

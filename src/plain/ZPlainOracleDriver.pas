@@ -132,9 +132,20 @@ type
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+    function BindObject(bindp: POCIBind; errhp: POCIError;
+                    const _type: POCIType; pgvpp: PPointer;
+                    pvszsp: pub4; indpp: PPointer;
+                    indszp: pub4): sword;
 
     function DefineObject(defnpp: POCIDefine; errhp: POCIError;
       _type: POCIHandle; pgvpp, pvszsp, indpp, indszp: pointer): sword;
+
+    function ObjectGetObjectRef(env: POCIEnv; err: POCIError; _object: Pointer;
+                                out object_ref: POCIRef): sword;
+    function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
+                       typecode: OCITypeCode; tdo: POCIType; table: Pointer;
+                       duration: OCIDuration; value: byte;
+                       instance: PPointer): sword;
     function ObjectPin(hndl: POCIEnv; err: POCIError;
       object_ref: POCIHandle; corhdl:POCIHandle; pin_option: ub2;
       pin_duration: OCIDuration; lock_option: pub2; _object: pointer):sword;
@@ -268,6 +279,126 @@ type
       out Value: sb4): sword;
     procedure ClientVersion(major_version, minor_version, update_num,
       patch_num, port_update_num: psword);
+
+    function NumberInc(err: POCIError; number: POCINumber): sword;
+    function NumberDec(err: POCIError; number: POCINumber): sword;
+    procedure NumberSetZero(err: POCIError; number: POCINumber);
+    procedure NumberSetPi(err: POCIError; number: POCINumber);
+    function  NumberAdd(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberSub(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberMul(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberDiv(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberMod(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberIntPower(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberShift(err: POCIError; const number: POCINumber;
+      const nDig: sword; _result: POCINumber): sword;
+    function NumberNeg(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberToText(err: POCIError; const number: POCINumber;
+      const fmt: Poratext; fmt_length: ub4; const nls_params: Poratext;
+      nls_p_length: ub4; buf_size: pub4; buf: poratext): sword;
+    function NumberFromText(err: POCIError; const str: poratext;
+      str_length: ub4; const fmt: poratext; fmt_length: ub4;
+      const nls_params: poratext; nls_p_length: ub4; number: POCINumber): sword;
+    function NumberToInt(err: POCIError; const number: POCINumber;
+      rsl_length: uword; rsl_flag: uword; rsl: Pointer): sword;
+    function NumberFromInt(err: POCIError; const inum: Pointer;
+      inum_length: uword; inum_s_flag: uword; number: POCINumber): sword;
+    function NumberToReal(err: POCIError; const number: POCINumber;
+      rsl_length: uword; rsl: Pointer): sword;
+    function NumberToRealArray(err: POCIError; const number: PPOCINumber;
+      elems: uword; rsl_length: uword; rsl: Pointer): sword;
+    function NumberFromReal(err: POCIError; const rnum: Pointer;
+      rnum_length: uword; number: POCINumber): sword;
+    function NumberCmp(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: psword): sword;
+    function NumberSign(err: POCIError; const number: POCINumber;
+      _result: psword): sword;
+    function NumberIsZero(err: POCIError; const number: POCINumber;
+      _Result: pboolean): sword;
+    function NumberIsInt(err: POCIError; const number: POCINumber;
+      _result: Pboolean): sword;
+    function NumberAssign(err: POCIError; const from: POCINumber;
+      _to: POCINumber): sword;
+    function NumberAbs(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberCeil(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberFloor(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberSqrt(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberTrunc(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberPower(err: POCIError; const base: POCINumber;
+      const number: POCINumber; _result: POCINumber): sword;
+    function NumberRound(err: POCIError; const number: POCINumber;
+      decplace: sword; _result: POCINumber): sword;
+    function NumberPrec(err: POCIError; const number: POCINumber;
+      nDigs: sword; _result: POCINumber): sword;
+    function NumberSin(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcSin(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberHypSin(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberCos(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcCos(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberHypCos(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberTan(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcTan(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcTan2(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberHypTan(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberExp(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberLn(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberLog(err: POCIError; const base: POCINumber;
+      const number: POCINumber; _result: POCINumber): sword;
+
+    function TableSize(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                    size: psb4): sword;
+    function TableExists(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4; exists: PBoolean): sword;
+    function TableDelete(hndl: POCIEnv; err: POCIError; index: sb4;
+                      tbl: POCITable): sword;
+    function TableFirst(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4): sword;
+    function TableLast(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4): sword;
+    function TableNext(hndl: POCIEnv; err: POCIError; index: sb4;
+      const tbl: POCITable; next_index: psb4; exists: PBoolean): sword;
+    function TablePrev(hndl: POCIEnv; err: POCIError; index: sb4;
+      const tbl: POCITable; prev_index: psb4; exists: PBoolean): sword;
+    function ObjectSetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: pointer; tdo: POCIType; const names: PPAnsiChar;
+                  const lengths: pub4; const name_count: ub4;
+                  const indexes: pub4; const index_count: ub4;
+                  const null_status: POCIInd; const attr_null_struct: Pointer;
+                  const attr_value: Pointer): sword; cdecl;
+    function ObjectGetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: Pointer; tdo: POCIType;
+                  const names: PPoratext; const lengths: pub4;
+                  const name_count: ub4; const indexes: pub4;
+                  const index_count: ub4; attr_null_status: POCIInd;
+                  attr_null_struct, attr_value: PPointer;
+                  attr_tdo: PPOCIType): sword;
+    {ort.h}
+    function TypeTypeCode(env: POCIEnv; err: POCIError;
+                  const tdo: POCIType): OCITypeCode;
   end;
 
   {** Implements a driver for Oracle 9i }
@@ -341,10 +472,21 @@ type
       value_sz: sb4; dty: ub2; indp: Pointer; alenp: Pointer; rcodep: Pointer;
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
-    icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+      icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+    function BindObject(bindp: POCIBind; errhp: POCIError;
+                    const _type: POCIType; pgvpp: PPointer;
+                    pvszsp: pub4; indpp: PPointer;
+                    indszp: pub4): sword;
 
     function DefineObject(defnpp:POCIDefine; errhp:POCIError;
       _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
+
+    function ObjectGetObjectRef(env: POCIEnv; err: POCIError; _object: Pointer;
+                                out object_ref: POCIRef): sword;
+    function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
+                       typecode: OCITypeCode; tdo: POCIType; table: Pointer;
+                       duration: OCIDuration; value: byte;
+                       instance: PPointer): sword;
     function ObjectPin(hndl: POCIEnv; err: POCIError;
       object_ref:POCIHandle;corhdl:POCIHandle;
       pin_option:ub2; pin_duration:OCIDuration;lock_option: pub2;_object:pointer):sword;
@@ -478,6 +620,126 @@ type
     procedure ClientVersion(major_version, minor_version, update_num,
       patch_num, port_update_num: psword);
 
+    function NumberInc(err: POCIError; number: POCINumber): sword;
+    function NumberDec(err: POCIError; number: POCINumber): sword;
+    procedure NumberSetZero(err: POCIError; number: POCINumber);
+    procedure NumberSetPi(err: POCIError; number: POCINumber);
+    function  NumberAdd(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberSub(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberMul(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberDiv(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberMod(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberIntPower(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberShift(err: POCIError; const number: POCINumber;
+      const nDig: sword; _result: POCINumber): sword;
+    function NumberNeg(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberToText(err: POCIError; const number: POCINumber;
+      const fmt: Poratext; fmt_length: ub4; const nls_params: Poratext;
+      nls_p_length: ub4; buf_size: pub4; buf: poratext): sword;
+    function NumberFromText(err: POCIError; const str: poratext;
+      str_length: ub4; const fmt: poratext; fmt_length: ub4;
+      const nls_params: poratext; nls_p_length: ub4; number: POCINumber): sword;
+    function NumberToInt(err: POCIError; const number: POCINumber;
+      rsl_length: uword; rsl_flag: uword; rsl: Pointer): sword;
+    function NumberFromInt(err: POCIError; const inum: Pointer;
+      inum_length: uword; inum_s_flag: uword; number: POCINumber): sword;
+    function NumberToReal(err: POCIError; const number: POCINumber;
+      rsl_length: uword; rsl: Pointer): sword;
+    function NumberToRealArray(err: POCIError; const number: PPOCINumber;
+      elems: uword; rsl_length: uword; rsl: Pointer): sword;
+    function NumberFromReal(err: POCIError; const rnum: Pointer;
+      rnum_length: uword; number: POCINumber): sword;
+    function NumberCmp(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: psword): sword;
+    function NumberSign(err: POCIError; const number: POCINumber;
+      _result: psword): sword;
+    function NumberIsZero(err: POCIError; const number: POCINumber;
+      _Result: pboolean): sword;
+    function NumberIsInt(err: POCIError; const number: POCINumber;
+      _result: Pboolean): sword;
+    function NumberAssign(err: POCIError; const from: POCINumber;
+      _to: POCINumber): sword;
+    function NumberAbs(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberCeil(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberFloor(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberSqrt(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberTrunc(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberPower(err: POCIError; const base: POCINumber;
+      const number: POCINumber; _result: POCINumber): sword;
+    function NumberRound(err: POCIError; const number: POCINumber;
+      decplace: sword; _result: POCINumber): sword;
+    function NumberPrec(err: POCIError; const number: POCINumber;
+      nDigs: sword; _result: POCINumber): sword;
+    function NumberSin(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcSin(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberHypSin(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberCos(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcCos(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberHypCos(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberTan(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcTan(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberArcTan2(err: POCIError; const number1: POCINumber;
+      const number2: POCINumber; _result: POCINumber): sword;
+    function NumberHypTan(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberExp(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberLn(err: POCIError; const number: POCINumber;
+      _result: POCINumber): sword;
+    function NumberLog(err: POCIError; const base: POCINumber;
+      const number: POCINumber; _result: POCINumber): sword;
+
+    function TableSize(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                    size: psb4): sword;
+    function TableExists(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4; exists: PBoolean): sword;
+    function TableDelete(hndl: POCIEnv; err: POCIError; index: sb4;
+                      tbl: POCITable): sword;
+    function TableFirst(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4): sword;
+    function TableLast(hndl: POCIEnv; err: POCIError; const tbl: POCITable;
+                             index: sb4): sword;
+    function TableNext(hndl: POCIEnv; err: POCIError; index: sb4;
+      const tbl: POCITable; next_index: psb4; exists: PBoolean): sword;
+    function TablePrev(hndl: POCIEnv; err: POCIError; index: sb4;
+      const tbl: POCITable; prev_index: psb4; exists: PBoolean): sword;
+
+    function ObjectSetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: pointer; tdo: POCIType; const names: PPAnsiChar;
+                  const lengths: pub4; const name_count: ub4;
+                  const indexes: pub4; const index_count: ub4;
+                  const null_status: POCIInd; const attr_null_struct: Pointer;
+                  const attr_value: Pointer): sword; cdecl;
+    function ObjectGetAttr(env: POCIEnv; err: POCIError; instance: Pointer;
+                  null_struct: Pointer; tdo: POCIType;
+                  const names: PPoratext; const lengths: pub4;
+                  const name_count: ub4; const indexes: pub4;
+                  const index_count: ub4; attr_null_status: POCIInd;
+                  attr_null_struct, attr_value: PPointer;
+                  attr_tdo: PPOCIType): sword;
+    {ort.h}
+    function TypeTypeCode(env: POCIEnv; err: POCIError;
+                  const tdo: POCIType): OCITypeCode;
   end;
 
 implementation
@@ -836,10 +1098,13 @@ begin
     @OracleAPI.OCIBindByPos       := GetAddress('OCIBindByPos');
     @OracleAPI.OCIBindByName      := GetAddress('OCIBindByName');
     @OracleAPI.OCIBindDynamic     := GetAddress('OCIBindDynamic');
+    @OracleAPI.OCIBindObject      := GetAddress('OCIBindObject');
 
     @OracleAPI.OCIDefineObject    := GetAddress('OCIDefineObject');
+    @OracleAPI.OCIObjectNew       := GetAddress('OCIObjectNew');
     @OracleAPI.OCIObjectPin       := GetAddress('OCIObjectPin');
     @OracleAPI.OCIObjectFree      := GetAddress('OCIObjectFree');
+    @OracleAPI.OCIObjectGetObjectRef := GetAddress('OCIObjectGetObjectRef');
 
     @OracleAPI.OCILobAppend       := GetAddress('OCILobAppend');
     @OracleAPI.OCILobAssign       := GetAddress('OCILobAssign');
@@ -887,6 +1152,113 @@ begin
     //@OracleAPI.OCILobOpen         := GetAddress('OCILobFileOpen');
 
     @OracleAPI.OCIDescribeAny     := GetAddress('OCIDescribeAny');
+
+    { OCI Number mapping }
+    @OracleAPI.OCINumberInc       := GetAddress('OCINumberInc');
+    @OracleAPI.OCINumberDec       := GetAddress('OCINumberDec');
+    @OracleAPI.OCINumberSetZero   := GetAddress('OCINumberSetZero');
+    @OracleAPI.OCINumberSetPi     := GetAddress('OCINumberSetPi');
+    @OracleAPI.OCINumberAdd       := GetAddress('OCINumberAdd');
+    @OracleAPI.OCINumberSub       := GetAddress('OCINumberSub');
+    @OracleAPI.OCINumberMul       := GetAddress('OCINumberMul');
+    @OracleAPI.OCINumberDiv       := GetAddress('OCINumberDiv');
+    @OracleAPI.OCINumberMod       := GetAddress('OCINumberMod');
+    @OracleAPI.OCINumberIntPower  := GetAddress('OCINumberIntPower');
+    @OracleAPI.OCINumberShift     := GetAddress('OCINumberShift');
+    @OracleAPI.OCINumberNeg       := GetAddress('OCINumberNeg');
+    @OracleAPI.OCINumberToText    := GetAddress('OCINumberToText');
+    @OracleAPI.OCINumberFromText  := GetAddress('OCINumberFromText');
+    @OracleAPI.OCINumberToInt     := GetAddress('OCINumberToInt');
+    @OracleAPI.OCINumberFromInt   := GetAddress('OCINumberFromInt');
+    @OracleAPI.OCINumberToReal    := GetAddress('OCINumberToReal');
+    @OracleAPI.OCINumberToRealArray := GetAddress('OCINumberToRealArray');
+    @OracleAPI.OCINumberFromReal  := GetAddress('OCINumberFromReal');
+    @OracleAPI.OCINumberCmp       := GetAddress('OCINumberCmp');
+    @OracleAPI.OCINumberSign      := GetAddress('OCINumberSign');
+    @OracleAPI.OCINumberIsZero    := GetAddress('OCINumberIsZero');
+    @OracleAPI.OCINumberIsInt     := GetAddress('OCINumberIsInt');
+    @OracleAPI.OCINumberAssign    := GetAddress('OCINumberAssign');
+    @OracleAPI.OCINumberAbs       := GetAddress('OCINumberAbs');
+    @OracleAPI.OCINumberCeil      := GetAddress('OCINumberCeil');
+    @OracleAPI.OCINumberFloor     := GetAddress('OCINumberFloor');
+    @OracleAPI.OCINumberSqrt      := GetAddress('OCINumberSqrt');
+    @OracleAPI.OCINumberTrunc     := GetAddress('OCINumberTrunc');
+    @OracleAPI.OCINumberPower     := GetAddress('OCINumberPower');
+    @OracleAPI.OCINumberRound     := GetAddress('OCINumberRound');
+    @OracleAPI.OCINumberPrec      := GetAddress('OCINumberPrec');
+    @OracleAPI.OCINumberSin       := GetAddress('OCINumberSin');
+    @OracleAPI.OCINumberArcSin    := GetAddress('OCINumberArcSin');
+    @OracleAPI.OCINumberHypSin    := GetAddress('OCINumberHypSin');
+    @OracleAPI.OCINumberCos       := GetAddress('OCINumberCos');
+    @OracleAPI.OCINumberArcCos    := GetAddress('OCINumberArcCos');
+    @OracleAPI.OCINumberHypCos    := GetAddress('OCINumberHypCos');
+    @OracleAPI.OCINumberTan       := GetAddress('OCINumberTan');
+    @OracleAPI.OCINumberArcTan    := GetAddress('OCINumberArcTan');
+    @OracleAPI.OCINumberArcTan2   := GetAddress('OCINumberArcTan2');
+    @OracleAPI.OCINumberHypTan    := GetAddress('OCINumberHypTan');
+    @OracleAPI.OCINumberExp       := GetAddress('OCINumberExp');
+    @OracleAPI.OCINumberLn        := GetAddress('OCINumberLn');
+    @OracleAPI.OCINumberLog       := GetAddress('OCINumberLog');
+
+    @OracleAPI.OCITableSize       := GetAddress('OCITableSize');
+    @OracleAPI.OCITableExists     := GetAddress('OCITableExists');
+    @OracleAPI.OCITableDelete     := GetAddress('OCITableDelete');
+    @OracleAPI.OCITableFirst      := GetAddress('OCITableFirst');
+    @OracleAPI.OCITableLast       := GetAddress('OCITableLast');
+    @OracleAPI.OCITableNext       := GetAddress('OCITableNext');
+    @OracleAPI.OCITablePrev       := GetAddress('OCITablePrev');
+
+    @OracleAPI.OCIObjectGetAttr   := GetAddress('OCIObjectGetAttr');
+    @OracleAPI.OCIObjectSetAttr   := GetAddress('OCIObjectSetAttr');
+
+    {ort.h}
+    @OracleAPI.OCITypeIterNew     := GetAddress('OCITypeIterNew');
+    @OracleAPI.OCITypeIterFree    := GetAddress('OCITypeIterFree');
+    @OracleAPI.OCITypeByName      := GetAddress('OCITypeByName');
+    @OracleAPI.OCITypeArrayByName := GetAddress('OCITypeArrayByName');
+    @OracleAPI.OCITypeByRef       := GetAddress('OCITypeByRef');
+    @OracleAPI.OCITypeArrayByRef  := GetAddress('OCITypeArrayByRef');
+    @OracleAPI.OCITypeName        := GetAddress('OCITypeName');
+    @OracleAPI.OCITypeSchema      := GetAddress('OCITypeSchema');
+    @OracleAPI.OCITypeTypeCode    := GetAddress('OCITypeTypeCode');
+    @OracleAPI.OCITypeCollTypeCode:= GetAddress('OCITypeCollTypeCode');
+    @OracleAPI.OCITypeVersion     := GetAddress('OCITypeVersion');
+    @OracleAPI.OCITypeAttrs       := GetAddress('OCITypeAttrs');
+    @OracleAPI.OCITypeMethods     := GetAddress('OCITypeMethods');
+    @OracleAPI.OCITypeElemName    := GetAddress('OCITypeElemName');
+    @OracleAPI.OCITypeElemTypeCode:= GetAddress('OCITypeElemTypeCode');
+    @OracleAPI.OCITypeElemType    := GetAddress('OCITypeElemType');
+    @OracleAPI.OCITypeElemFlags   := GetAddress('OCITypeElemFlags');
+    @OracleAPI.OCITypeElemNumPrec := GetAddress('OCITypeElemNumPrec');
+    @OracleAPI.OCITypeElemNumScale:= GetAddress('OCITypeElemNumScale');
+    @OracleAPI.OCITypeElemLength  := GetAddress('OCITypeElemLength');
+    @OracleAPI.OCITypeElemCharSetID := GetAddress('OCITypeElemCharSetID');
+    @OracleAPI.OCITypeElemCharSetForm := GetAddress('OCITypeElemCharSetForm');
+    @OracleAPI.OCITypeElemParameterizedType := GetAddress('OCITypeElemParameterizedType');
+    @OracleAPI.OCITypeElemExtTypeCode := GetAddress('OCITypeElemExtTypeCode');
+    @OracleAPI.OCITypeAttrByName  := GetAddress('OCITypeAttrByName');
+    @OracleAPI.OCITypeAttrNext    := GetAddress('OCITypeAttrNext');
+    @OracleAPI.OCITypeCollElem    := GetAddress('OCITypeCollElem');
+    @OracleAPI.OCITypeCollSize    := GetAddress('OCITypeCollSize');
+    @OracleAPI.OCITypeCollExtTypeCode := GetAddress('OCITypeCollExtTypeCode');
+    @OracleAPI.OCITypeMethodOverload  := GetAddress('OCITypeMethodOverload');
+    @OracleAPI.OCITypeMethodByName:= GetAddress('OCITypeMethodByName');
+    @OracleAPI.OCITypeMethodNext  := GetAddress('OCITypeMethodNext');
+    @OracleAPI.OCITypeMethodName  := GetAddress('OCITypeMethodName');
+    @OracleAPI.OCITypeMethodEncap := GetAddress('OCITypeMethodEncap');
+    @OracleAPI.OCITypeMethodFlags := GetAddress('OCITypeMethodFlags');
+    @OracleAPI.OCITypeMethodMap   := GetAddress('OCITypeMethodMap');
+    @OracleAPI.OCITypeMethodOrder := GetAddress('OCITypeMethodOrder');
+    @OracleAPI.OCITypeMethodParams:= GetAddress('OCITypeMethodParams');
+    @OracleAPI.OCITypeResult      := GetAddress('OCITypeResult');
+    @OracleAPI.OCITypeParamByPos  := GetAddress('OCITypeParamByPos');
+    @OracleAPI.OCITypeParamByName := GetAddress('OCITypeParamByName');
+    @OracleAPI.OCITypeParamPos    := GetAddress('OCITypeParamPos');
+    @OracleAPI.OCITypeElemParamMode := GetAddress('OCITypeElemParamMode');
+    @OracleAPI.OCITypeElemDefaultValue := GetAddress('OCITypeElemDefaultValue');
+    @OracleAPI.OCITypeVTInit      := GetAddress('OCITypeVTInit');
+    @OracleAPI.OCITypeVTInsert    := GetAddress('OCITypeVTInsert');
+    @OracleAPI.OCITypeVTSelect    := GetAddress('OCITypeVTSelect');
   end;
 end;
 
@@ -965,18 +1337,41 @@ begin
     ocbfp);
 end;
 
+function TZOracle9iPlainDriver.BindObject(bindp: POCIBind; errhp: POCIError;
+                const _type: POCIType; pgvpp: PPointer;
+                pvszsp: pub4; indpp: PPointer;
+                indszp: pub4): sword;
+begin
+  Result := OracleAPI.OCIBindObject(bindp, errhp, _type, pgvpp, pvszsp, indpp,
+    indszp);
+end;
+
 function TZOracle9iPlainDriver.DefineObject(defnpp: POCIDefine;
   errhp: POCIError; _type: POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
 begin
-  Result:=OracleAPI.OCIDefineObject(defnpp,
-           errhp, _type, pgvpp, pvszsp, indpp, indszp);
+  Result := OracleAPI.OCIDefineObject(defnpp, errhp, _type, pgvpp, pvszsp,
+    indpp, indszp);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetObjectRef(env: POCIEnv; err: POCIError;
+  _object: Pointer; out object_ref: POCIRef): sword;
+begin
+  Result := OracleAPI.OCIObjectGetObjectRef(env, err, _object, object_ref);
+end;
+
+function TZOracle9iPlainDriver.ObjectNew(env: POCIEnv; err: POCIError;
+  const svc: POCISvcCtx; typecode: OCITypeCode; tdo: POCIType; table: Pointer;
+  duration: OCIDuration; value: byte; instance: PPointer): sword;
+begin
+  Result := OracleAPI.OCIObjectNew(env, err, svc, typecode, tdo, table,
+    duration, value, instance);
 end;
 
 function TZOracle9iPlainDriver.ObjectPin(hndl: POCIEnv; err: POCIError;
   object_ref:POCIHandle;corhdl:POCIHandle;
   pin_option:ub2; pin_duration:OCIDuration;lock_option:pub2;_object:pointer):sword;
 begin
-  Result:=OracleAPI.OCIObjectPin(hndl, err, object_ref, corhdl,
+  Result := OracleAPI.OCIObjectPin(hndl, err, object_ref, corhdl,
     pin_option, pin_duration, lock_option, _object);
 end;
 
@@ -1266,6 +1661,347 @@ procedure TZOracle9iPlainDriver.ClientVersion(major_version, minor_version,
 begin
   OracleAPI.OCIClientVersion(major_version, minor_version,
     update_num, patch_num, port_update_num);
+end;
+
+function TZOracle9iPlainDriver.NumberInc(err: POCIError; number: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberInc(err, number);
+end;
+
+function TZOracle9iPlainDriver.NumberDec(err: POCIError; number: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberDec(err, number);
+end;
+
+procedure TZOracle9iPlainDriver.NumberSetZero(err: POCIError; number: POCINumber);
+begin
+  OracleAPI.OCINumberSetZero(err, number);
+end;
+
+procedure TZOracle9iPlainDriver.NumberSetPi(err: POCIError; number: POCINumber);
+begin
+  OracleAPI.OCINumberSetPi(err, number);
+end;
+
+function  TZOracle9iPlainDriver.NumberAdd(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberAdd(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberSub(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberSub(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberMul(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberMul(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberDiv(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberDiv(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberMod(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberMod(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberIntPower(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberIntPower(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberShift(err: POCIError; const number: POCINumber;
+  const nDig: sword; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberShift(err, number, nDig, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberNeg(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberNeg(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberToText(err: POCIError; const number: POCINumber;
+  const fmt: Poratext; fmt_length: ub4; const nls_params: Poratext;
+  nls_p_length: ub4; buf_size: pub4; buf: poratext): sword;
+begin
+  Result := OracleAPI.OCINumberToText(err, number, fmt, fmt_length, nls_params,
+    nls_p_length, buf_size, buf);
+end;
+
+function TZOracle9iPlainDriver.NumberFromText(err: POCIError; const str: poratext;
+  str_length: ub4; const fmt: poratext; fmt_length: ub4;
+  const nls_params: poratext; nls_p_length: ub4; number: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberFromText(err, str, str_length, fmt, fmt_length,
+    nls_params, nls_p_length, number);
+end;
+
+function TZOracle9iPlainDriver.NumberToInt(err: POCIError; const number: POCINumber;
+  rsl_length: uword; rsl_flag: uword; rsl: Pointer): sword;
+begin
+  Result := OracleAPI.OCINumberToInt(err, number, rsl_length, rsl_flag, rsl);
+end;
+
+function TZOracle9iPlainDriver.NumberFromInt(err: POCIError; const inum: Pointer;
+  inum_length: uword; inum_s_flag: uword; number: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberFromInt(err, inum, inum_length, inum_s_flag, number);
+end;
+
+function TZOracle9iPlainDriver.NumberToReal(err: POCIError; const number: POCINumber;
+  rsl_length: uword; rsl: Pointer): sword;
+begin
+  Result := OracleAPI.OCINumberToReal(err, number, rsl_length, rsl);
+end;
+
+function TZOracle9iPlainDriver.NumberToRealArray(err: POCIError; const number: PPOCINumber;
+  elems: uword; rsl_length: uword; rsl: Pointer): sword;
+begin
+  Result := OracleAPI.OCINumberToRealArray(err, number, elems, rsl_length, rsl);
+end;
+
+function TZOracle9iPlainDriver.NumberFromReal(err: POCIError; const rnum: Pointer;
+  rnum_length: uword; number: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberFromReal(err, rnum, rnum_length, number);
+end;
+
+function TZOracle9iPlainDriver.NumberCmp(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: psword): sword;
+begin
+  Result := OracleAPI.OCINumberCmp(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberSign(err: POCIError; const number: POCINumber;
+  _result: psword): sword;
+begin
+  Result := OracleAPI.OCINumberSign(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberIsZero(err: POCIError; const number: POCINumber;
+  _Result: pboolean): sword;
+begin
+  Result := OracleAPI.OCINumberIsZero(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberIsInt(err: POCIError; const number: POCINumber;
+  _result: Pboolean): sword;
+begin
+  Result := OracleAPI.OCINumberIsInt(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberAssign(err: POCIError; const from: POCINumber;
+  _to: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberAssign(err, from, _to);
+end;
+
+function TZOracle9iPlainDriver.NumberAbs(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberAbs(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberCeil(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberCeil(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberFloor(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberFloor(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberSqrt(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberSqrt(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberTrunc(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberTrunc(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberPower(err: POCIError; const base: POCINumber;
+  const number: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberPower(err, base, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberRound(err: POCIError; const number: POCINumber;
+  decplace: sword; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberRound(err, number, decplace, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberPrec(err: POCIError; const number: POCINumber;
+  nDigs: sword; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberPrec(err, number, nDigs, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberSin(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberSin(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberArcSin(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberArcSin(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberHypSin(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberHypSin(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberCos(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberCos(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberArcCos(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberArcCos(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberHypCos(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberHypCos(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberTan(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberTan(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberArcTan(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberArcTan(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberArcTan2(err: POCIError; const number1: POCINumber;
+  const number2: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberArcTan2(err, number1, number2, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberHypTan(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberHypTan(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberExp(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberExp(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberLn(err: POCIError; const number: POCINumber;
+  _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberLn(err, number, _result);
+end;
+
+function TZOracle9iPlainDriver.NumberLog(err: POCIError; const base: POCINumber;
+  const number: POCINumber; _result: POCINumber): sword;
+begin
+  Result := OracleAPI.OCINumberLog(err, base, number, _result);
+end;
+
+function TZOracle9iPlainDriver.TableSize(hndl: POCIEnv; err: POCIError;
+  const tbl: POCITable; size: psb4): sword;
+begin
+  Result := OracleAPI.OCITableSize(hndl, err, tbl, size);
+end;
+
+function TZOracle9iPlainDriver.TableExists(hndl: POCIEnv; err: POCIError;
+  const tbl: POCITable; index: sb4; exists: PBoolean): sword;
+begin
+  Result := OracleAPI.OCITableExists(hndl, err, tbl, index, exists);
+end;
+
+function TZOracle9iPlainDriver.TableDelete(hndl: POCIEnv; err: POCIError;
+  index: sb4; tbl: POCITable): sword;
+begin
+  Result := OracleAPI.OCITableDelete(hndl, err, index, tbl);
+end;
+
+function TZOracle9iPlainDriver.TableFirst(hndl: POCIEnv; err: POCIError;
+  const tbl: POCITable; index: sb4): sword;
+begin
+  Result := OracleAPI.OCITableFirst(hndl, err, tbl, index);
+end;
+
+function TZOracle9iPlainDriver.TableLast(hndl: POCIEnv; err: POCIError;
+  const tbl: POCITable; index: sb4): sword;
+begin
+  Result := OracleAPI.OCITableLast(hndl, err, tbl, index);
+end;
+
+function TZOracle9iPlainDriver.TableNext(hndl: POCIEnv; err: POCIError;
+  index: sb4; const tbl: POCITable; next_index: psb4; exists: PBoolean): sword;
+begin
+  Result := OracleAPI.OCITableNext(hndl, err, index, tbl, next_index, exists);
+end;
+
+function TZOracle9iPlainDriver.TablePrev(hndl: POCIEnv; err: POCIError;
+  index: sb4; const tbl: POCITable; prev_index: psb4; exists: PBoolean): sword;
+begin
+  Result := OracleAPI.OCITablePrev(hndl, err, index, tbl, prev_index, exists);
+end;
+
+function TZOracle9iPlainDriver.ObjectSetAttr(env: POCIEnv; err: POCIError;
+  instance: Pointer; null_struct: pointer; tdo: POCIType;
+  const names: PPAnsiChar; const lengths: pub4; const name_count: ub4;
+  const indexes: pub4; const index_count: ub4; const null_status: POCIInd;
+  const attr_null_struct: Pointer; const attr_value: Pointer): sword;
+begin
+  Result := OracleAPI.OCIObjectSetAttr(env, err, instance, null_struct, tdo,
+    names, lengths, name_count, indexes, index_count, null_status,
+    attr_null_struct, attr_value);
+end;
+
+function TZOracle9iPlainDriver.ObjectGetAttr(env: POCIEnv; err: POCIError;
+  instance: Pointer; null_struct: Pointer; tdo: POCIType;
+  const names: PPoratext; const lengths: pub4; const name_count: ub4;
+  const indexes: pub4; const index_count: ub4; attr_null_status: POCIInd;
+  attr_null_struct, attr_value: PPointer; attr_tdo: PPOCIType): sword;
+begin
+  Result := OracleAPI.OCIObjectGetAttr(env, err, instance, null_struct, tdo,
+    names, lengths, name_count, indexes, index_count, attr_null_status,
+    attr_null_struct, attr_value, attr_tdo);
+end;
+
+{ort.h}
+function TZOracle9iPlainDriver.TypeTypeCode(env: POCIEnv; err: POCIError;
+              const tdo: POCIType): OCITypeCode;
+begin
+  Result := OracleAPI.OCITypeTypeCode(env, err, tdo);
 end;
 
 function TZOracle9iPlainDriver.ServerAttach(srvhp: POCIServer;

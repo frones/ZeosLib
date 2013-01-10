@@ -1,1 +1,1 @@
-ant -buildfile release_svn.xml buildTrunk
+ant -Drelease.dir="X:/" -Dtemp.dir="X:/TEMP1" -buildfile release_svn.xml buildTrunk

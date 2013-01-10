@@ -323,6 +323,10 @@ begin
       Result := ftWideString;
     stUnicodeStream:
       Result := {$IFNDEF WITH_WIDEMEMO}ftWideString{$ELSE}ftWideMemo{$ENDIF};
+    {$IFDEF WITH_FTDATASETSUPPORT}
+    stDataSet:
+      Result := ftDataSet;
+    {$ENDIF}
     else
       Result := ftUnknown;
   end;
@@ -367,6 +371,10 @@ begin
     {$IFDEF WITH_WIDEMEMO}
     ftWideMemo:
       Result := stUnicodeStream;
+    {$ENDIF}
+    {$IFDEF WITH_FTDATASETSUPPORT}
+    ftDataSet:
+      Result := stDataSet;
     {$ENDIF}
     else
       Result := stUnknown;
@@ -464,6 +472,10 @@ begin
         RowAccessor.SetTimestamp(FieldIndex, ResultSet.GetTimestamp(ColumnIndex));
       ftMemo, ftBlob {$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
         RowAccessor.SetBlob(FieldIndex, ResultSet.GetBlob(ColumnIndex));
+      {$IFDEF WITH_FTDATASETSUPPORT}
+      ftDataSet:
+        RowAccessor.SetDataSet(FieldIndex, ResultSet.GetDataSet(ColumnIndex));
+      {$ENDIF}
     end;
 
     if ResultSet.WasNull then
@@ -562,6 +574,10 @@ begin
             Stream.Free;
           end;
         end;
+      {$IFDEF WITH_FTDATASETSUPPORT}
+      ftDataSet:
+        ResultSet.UpdateDataSet(ColumnIndex, RowAccessor.GetDataSet(FieldIndex, WasNull));
+      {$ENDIF}
     end;
 
     if WasNull then

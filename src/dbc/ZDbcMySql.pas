@@ -148,11 +148,12 @@ uses
 constructor TZMySQLDriver.Create;
 begin
   inherited Create;
-  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create(Self.GetTokenizer), 'mysql'));
-  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL41PlainDriver.Create(Self.GetTokenizer)));
-  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create(Self.GetTokenizer)));
-  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD41PlainDriver.Create(Self.GetTokenizer)));
-  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD5PlainDriver.Create(Self.GetTokenizer)));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create(GetTokenizer), 'mysql'));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL41PlainDriver.Create(GetTokenizer)));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQL5PlainDriver.Create(GetTokenizer)));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD41PlainDriver.Create(GetTokenizer)));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD5PlainDriver.Create(GetTokenizer)));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMariaDB5PlainDriver.Create(GetTokenizer)));
 end;
 
 {**

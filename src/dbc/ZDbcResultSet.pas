@@ -149,6 +149,7 @@ type
     function GetUnicodeStream(ColumnIndex: Integer): TStream; virtual;
     function GetBinaryStream(ColumnIndex: Integer): TStream; virtual;
     function GetBlob(ColumnIndex: Integer): IZBlob; virtual;
+    function GetDataSet(ColumnIndex: Integer): IZDataSet; virtual;
     function GetValue(ColumnIndex: Integer): TZVariant; virtual;
     function GetDefaultExpression(ColumnIndex: Integer): String; virtual;
 
@@ -177,6 +178,7 @@ type
     function GetUnicodeStreamByName(const ColumnName: string): TStream; virtual;
     function GetBinaryStreamByName(const ColumnName: string): TStream; virtual;
     function GetBlobByName(const ColumnName: string): IZBlob; virtual;
+    function GetDataSetByName(const ColumnName: String): IZDataSet; virtual;
     function GetValueByName(const ColumnName: string): TZVariant; virtual;
 
     //=====================================================================
@@ -251,6 +253,7 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); virtual;
+    procedure UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet); virtual;
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); virtual;
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); virtual;
 
@@ -278,6 +281,7 @@ type
     procedure UpdateAsciiStreamByName(const ColumnName: string; Value: TStream); virtual;
     procedure UpdateUnicodeStreamByName(const ColumnName: string; Value: TStream); virtual;
     procedure UpdateBinaryStreamByName(const ColumnName: string; Value: TStream); virtual;
+    procedure UpdateDataSetByName(const ColumnName: string; Value: IZDataSet); virtual;
     procedure UpdateValueByName(const ColumnName: string; const Value: TZVariant); virtual;
 
     procedure InsertRow; virtual;
@@ -1014,6 +1018,20 @@ end;
 
 {**
   Returns the value of the designated column in the current row
+  of this <code>ResultSet</code> object as a <code>IZResultSet</code> object
+  in the Java programming language.
+
+  @param ColumnIndex the first column is 1, the second is 2, ...
+  @return a <code>IZResultSet</code> object representing the SQL
+    <code>IZResultSet</code> value in the specified column
+}
+function TZAbstractResultSet.GetDataSet(ColumnIndex: Integer): IZDataSet;
+begin
+  Result := nil;
+end;
+
+{**
+  Returns the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>Variant</code> object.
 
   @param ColumnIndex the first column is 1, the second is 2, ...
@@ -1425,6 +1443,11 @@ end;
 function TZAbstractResultSet.GetBlobByName(const ColumnName: string): IZBlob;
 begin
   Result := GetBlob(GetColumnIndex(ColumnName));
+end;
+
+function TZAbstractResultSet.GetDataSetByName(const ColumnName: string): IZDataSet;
+begin
+  Result := GetDataSet(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2210,6 +2233,10 @@ begin
   RaiseReadOnlyException;
 end;
 
+procedure TZAbstractResultSet.UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet);
+begin
+  RaiseReadOnlyException;
+end;
 {**
   Updates the designated column with a character stream value.
   The <code>updateXXX</code> methods are used to update column values in the
@@ -2573,6 +2600,12 @@ procedure TZAbstractResultSet.UpdateBinaryStreamByName(const ColumnName: string;
   Value: TStream);
 begin
   UpdateBinaryStream(GetColumnIndex(ColumnName), Value);
+end;
+
+procedure TZAbstractResultSet.UpdateDataSetByName(const ColumnName: string;
+  Value: IZDataSet);
+begin
+  UpdateDataSet(GetColumnIndex(ColumnName), Value);
 end;
 
 {**

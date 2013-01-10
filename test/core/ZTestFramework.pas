@@ -140,7 +140,7 @@ end;
 }
 function TZTestSpecificSQLTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,postgresq,postgresql-7,postgresql-8,postgresql-9';
+  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5,postgresq,postgresql-7,postgresql-8,postgresql-9';
 end;
 
 {**

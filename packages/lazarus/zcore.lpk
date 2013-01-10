@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 <CONFIG>
-  <Package Version="3">
+  <Package Version="4">
     <Name Value="zcore"/>
+    <AddToProjectUsesSection Value="True"/>
     <CompilerOptions>
-      <Version Value="10"/>
+      <Version Value="11"/>
       <SearchPaths>
         <OtherUnitFiles Value="../../src/core"/>
         <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
@@ -22,7 +23,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
-    <Version Major="7"/>
+    <Version Major="7" Minor="1"/>
     <Files Count="15">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>
@@ -101,8 +102,8 @@
       <Version Value="2"/>
       <IgnoreBinaries Value="False"/>
     </PublishOptions>
-    <CustomOptions Childs="ExternHelp">
-      <_ExternHelp Childs="Count"/>
+    <CustomOptions Items="ExternHelp" Version="2">
+      <_ExternHelp Items="Count"/>
     </CustomOptions>
   </Package>
 </CONFIG>

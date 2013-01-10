@@ -57,6 +57,7 @@
  {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
+ {$DEFINE WITH_FTDATASETSUPPORT} //ftDataSet is supported
 {$ENDIF}
 
 // Compilation directives for Delphi4

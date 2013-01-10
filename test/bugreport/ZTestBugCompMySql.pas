@@ -124,7 +124,7 @@ uses ZTestCase;
 
 function TZTestCompMySQLBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5';
+  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5, MariaDB-B';
 end;
 
 procedure TZTestCompMySQLBugReport.SetUp;

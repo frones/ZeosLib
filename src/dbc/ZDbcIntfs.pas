@@ -56,9 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZClasses, ZCollections, ZSysUtils, ZCompatibility,
-  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant,
-  ZPlainDriver, ZURL;
+  Types, Classes, DB, SysUtils,
+  ZClasses, ZCollections, ZSysUtils, ZCompatibility, ZTokenizer, ZSelectSchema,
+  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
 const
   { Constants from JDBC DatabaseMetadata }
@@ -92,9 +92,10 @@ type
 // Data types
 type
   {** Defines supported SQL types. }
-  TZSQLType = (stUnknown, stBoolean, stByte, stShort, stInteger, stLong, stFloat,
-    stDouble, stBigDecimal, stString, stUnicodeString, stBytes, stDate, stTime,
-    stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream);
+  TZSQLType = (stUnknown, stBoolean, stByte, stShort, stInteger, stLong,
+    stFloat, stDouble, stBigDecimal, stString, stUnicodeString, stBytes,
+    stDate, stTime, stTimestamp, stDataSet,
+    stAsciiStream, stUnicodeStream, stBinaryStream);
 
   {** Defines a transaction isolation level. }
   TZTransactIsolationLevel = (tiNone, tiReadUncommitted, tiReadCommitted,
@@ -157,6 +158,7 @@ type
   IZBlob = interface;
   IZNotification = interface;
   IZSequence = interface;
+  IZDataSet = interface;
 
   {** Driver Manager interface. }
   IZDriverManager = interface(IZInterface)
@@ -671,6 +673,7 @@ type
     function GetUnicodeStream(ColumnIndex: Integer): TStream;
     function GetBinaryStream(ColumnIndex: Integer): TStream;
     function GetBlob(ColumnIndex: Integer): IZBlob;
+    function GetDataSet(ColumnIndex: Integer): IZDataSet;
     function GetValue(ColumnIndex: Integer): TZVariant;
     function GetDefaultExpression(ColumnIndex: Integer): string;
 
@@ -699,6 +702,7 @@ type
     function GetUnicodeStreamByName(const ColumnName: string): TStream;
     function GetBinaryStreamByName(const ColumnName: string): TStream;
     function GetBlobByName(const ColumnName: string): IZBlob;
+    function GetDataSetByName(const ColumnName: String): IZDataSet;
     function GetValueByName(const ColumnName: string): TZVariant;
 
     //=====================================================================
@@ -773,6 +777,7 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream);
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
+    procedure UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
 
@@ -800,6 +805,7 @@ type
     procedure UpdateAsciiStreamByName(const ColumnName: string; Value: TStream);
     procedure UpdateUnicodeStreamByName(const ColumnName: string; Value: TStream);
     procedure UpdateBinaryStreamByName(const ColumnName: string; Value: TStream);
+    procedure UpdateDataSetByName(const ColumnName: string; Value: IZDataSet);
     procedure UpdateValueByName(const ColumnName: string; const Value: TZVariant);
 
     procedure InsertRow;
@@ -820,6 +826,13 @@ type
 
     function GetStatement: IZStatement;
     function GetConSettings: PZConsettings;
+  end;
+
+  {** TDataSet interface}
+  IZDataSet = interface(IZInterface)
+    ['{DBC24011-EF26-4FD8-AC8B-C3E01619494A}']
+    function GetDataSet: TDataSet;
+    function IsEmpty: Boolean;
   end;
 
   {** ResultSet metadata interface. }
