@@ -16,10 +16,17 @@ BEGIN
                                             'CASE_SENSITIVE',
                                             'HIGH_LOAD',
                                             'DEFAULT_VALUES',
-                                            'TABLE_NUM1'
-                                            )
+                                            'TABLE_NUM1',
+                                            'CUSTOMERS')
                order by decode(upper(object_name),'DEPARTMENT',2,'EQUIPMENT',2,1)) LOOP
     execute immediate('DROP TABLE "'||rec.object_name||'"');
+  END LOOP;
+
+  FOR rec in (select OBJECT_NAME 
+                from user_objects
+               where object_type = 'TYPE'
+                 and upper(OBJECT_NAME) in ('ADDRESS_TAB', 'ADDRESS_T')) LOOP
+    execute immediate('DROP TYPE '||rec.object_name);
   END LOOP;
 
   FOR rec in (select OBJECT_NAME 
