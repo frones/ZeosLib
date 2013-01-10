@@ -97,6 +97,7 @@ type
 
   UInt                  = LongWord;
   PUInt                 = ^UInt;
+  ZPPWideChar            = ^PWideChar;//BCB issue: PPWideChar is not part of system
 
   TObjectDynArray       = array of TObject;
 {$IFDEF FPC}

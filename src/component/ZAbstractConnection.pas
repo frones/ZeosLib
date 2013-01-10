@@ -102,13 +102,10 @@ type
   private
     FUseMetaData: Boolean;
     {$IFNDEF UNICODE}FAutoEncode: Boolean;{$ENDIF}
-    FUTF8StringAsWideField: Boolean;
     FControlsCodePage: TZControlsCodePage;
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
     procedure SetVersion(const Value: string);
-    function GetUTF8StringAsWideField: Boolean;
-    procedure SetUTF8StringAsWideField(const Value: Boolean);
     procedure SetControlsCodePage(const Value: TZControlsCodePage);
   protected
     FURL: TZURL;
@@ -264,7 +261,6 @@ type
     procedure HideSQLHourGlass;
   published
     property ControlsCodePage: TZControlsCodePage read FControlsCodePage write SetControlsCodePage;
-    property UTF8StringsAsWideField: Boolean read GetUTF8StringAsWideField write SetUTF8StringAsWideField;
     property AutoEncodeStrings: Boolean read GetAutoEncode write SetAutoEncode default True;
     property ClientCodepage: String read FClientCodepage write SetClientCodePage; //EgonHugeist
     property Catalog: string read FCatalog write FCatalog;
@@ -327,7 +323,6 @@ var
 constructor TZAbstractConnection.Create(AOwner: TComponent);
 begin
   {$IFDEF UNICODE}
-  FUTF8StringAsWideField := True;
   FControlsCodePage := cCP_UTF16;
   {$ELSE}
     {$IFDEF FPC}
@@ -335,7 +330,6 @@ begin
     {$ELSE}
     FControlsCodePage := cGET_ACP;
     {$ENDIF}
-  FUTF8StringAsWideField := False;
   {$ENDIF}
   FURL := TZURL.Create;
   inherited Create(AOwner);
@@ -855,7 +849,6 @@ begin
           SetCatalog(FCatalog);
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
-          SetUTF8StringAsWideField(Self.GetUTF8StringAsWideField);
           Open;
         end;
       except
@@ -1540,32 +1533,6 @@ begin
   FUseMetaData:=AValue;
   if FConnection <> nil then
     FConnection.SetUseMetadata(FUseMetadata);
-end;
-
-function TZAbstractConnection.GetUTF8StringAsWideField: Boolean;
-begin
-  {$IF not defined(WITH_FTWIDESTRING)}
-  Result := False;
-  {$ELSE}
-    {$IFDEF UNICODE}
-    Result := True;
-    {$ELSE}
-    Result := FUTF8StringAsWideField;
-    {$ENDIF}
-  {$IFEND}
-end;
-
-procedure TZAbstractConnection.SetUTF8StringAsWideField(const Value: Boolean);
-begin
-  {$IF not defined(WITH_WIDEFIELDS))}
-  FUTF8StringAsWideField := False;
-  {$ELSE}
-    {$IFDEF UNICODE}
-    FUTF8StringAsWideField := True;
-    {$ELSE}
-    FUTF8StringAsWideField := Value;
-    {$ENDIF}
-  {$IFEND}
 end;
 
 procedure TZAbstractConnection.SetControlsCodePage(const Value: TZControlsCodePage);
