@@ -56,19 +56,13 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZCompatibility, ZBugReport;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+  ZDbcIntfs, ZCompatibility, ZBugReport;
 
 type
 
   {** Implements a DBC bug report test case for core functionality. }
-  TZTestDbcCoreBugReport = class(TZPortableSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
-  protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
+  TZTestDbcCoreBugReport = class(TZPortableDbcSQLBugReportTestCase)
   published
     procedure EmptyTest;
   end;
@@ -76,18 +70,6 @@ type
 implementation
 
 { TZTestDbcCoreBugReport }
-
-procedure TZTestDbcCoreBugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure TZTestDbcCoreBugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
-end;
-
 procedure TZTestDbcCoreBugReport.EmptyTest;
 begin
   Check(True);

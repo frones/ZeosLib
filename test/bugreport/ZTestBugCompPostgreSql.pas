@@ -59,23 +59,16 @@ uses
 {$IFNDEF LINUX}
   DBCtrls,
 {$ENDIF}
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset,
+  ZConnection, ZDbcIntfs, ZBugReport,
   ZCompatibility, SysUtils, ZTestConsts, ZSqlProcessor, ZSqlMetadata;
 
 type
 
   {** Implements a bug report test case for PostgreSQL components. }
-  TZTestCompPostgreSQLBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  TZTestCompPostgreSQLBugReport = class(TZSpecificCompSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: TZConnection read FConnection write FConnection;
-  public
-    procedure TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
   published
     procedure Test707339;
     procedure Test707337;
@@ -94,10 +87,17 @@ type
     procedure Test933623;
     procedure Test994562;
     procedure Test1043252;
+  end;
+
+  TZTestCompPostgreSQLBugReportMBCs = class(TZSpecificCompSQLBugReportTestCaseMBCs)
+  protected
+    function GetSupportedProtocols: string; override;
+  public
+    procedure TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
+  published
     procedure TestStandartConfirmingStringsOn;
     procedure TestStandartConfirmingStringsOff;
   end;
-
 implementation
 
 uses ZSysUtils, ZTestCase;
@@ -107,17 +107,6 @@ uses ZSysUtils, ZTestCase;
 function TZTestCompPostgreSQLBugReport.GetSupportedProtocols: string;
 begin
   Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
-end;
-
-procedure TZTestCompPostgreSQLBugReport.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-procedure TZTestCompPostgreSQLBugReport.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
 end;
 
 {**
@@ -179,9 +168,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select p_id, ''value'' as virt_col from people';
     Query.Open;
     CheckEquals('value', Query.FieldByName('virt_col').AsString);
@@ -207,9 +195,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.ParamCheck := False;
     Query.SQL.Text := 'select p_id::text as txt from people';
     Query.Open;
@@ -232,9 +219,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select now() - now() as timediff';
     Query.Open;
     Check(StartsWith(Query.FieldByName('timediff').AsString, '00:00'));
@@ -257,9 +243,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'delete from test739519';
     Query.ExecSQL;
 
@@ -300,9 +285,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'select count(*) as items, sum(c_weight) as total, '+
       ' AVG(c_width) as average from cargo ';
@@ -333,9 +317,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select p_id || p_name as expr from people where p_id=1';
     Query.Open;
 
@@ -383,14 +366,12 @@ begin
   if SkipTest then Exit;
 
 {$IFNDEF LINUX}
-  Query1 := TZQuery.Create(nil);
-  Query2 := TZQuery.Create(nil);
+  Query1 := CreateQuery;
+  Query2 := CreateQuery;
   DSQuery1 := TDataSource.Create(nil);
   DSQuery2 := TDataSource.Create(nil);
   LookUp := TDBLookupComboBox.Create(nil);;
   try
-    Query1.Connection := Connection;
-    Query2.Connection := Connection;
     Query1.SQL.Text := 'select * from test766053a';
     Query2.SQL.Text := 'select * from test766053b';
     DSQuery1.DataSet := Query1;
@@ -425,9 +406,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select fld1, fld2 from test816846 order by fld1';
     Query.Open;
 
@@ -501,9 +481,8 @@ begin
   if Connection.Protocol <> 'postgresql-7' then
     Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'delete from xyz.test824780';
     Query.ExecSQL;
 
@@ -545,9 +524,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'delete from "insert"';
     Query.ExecSQL;
 
@@ -586,9 +564,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'SELECT d65.f3 as a,t65.f2 as b,t65.f3 as c'
       + ' FROM test894367a as t65, test894367b as d65'
@@ -636,10 +613,8 @@ begin
 
   Connection.AutoCommit := True;
   Connection.TransactIsolationLevel := tiReadCommitted;
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     try
       Query.SQL.Text := 'select * from people where xp_id=1';
       Query.Open;
@@ -703,9 +678,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select p_name as " xxx xxx " from people where p_id=1';
     Query.Open;
 
@@ -740,7 +714,13 @@ begin
   end;
 end;
 
-procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
+{ TZTestCompPostgreSQLBugReportMBCs }
+function TZTestCompPostgreSQLBugReportMBCs.GetSupportedProtocols: string;
+begin
+  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+end;
+
+procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);
 const
   QuoteString1 = String('\'', 1 --''');
   QuoteString2 = String('ТестЁЙ\000');
@@ -761,7 +741,7 @@ begin
   Query.Close;
 end;
 
-procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOn;
+procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStringsOn;
 var
   TempConnection: TZConnection;
   Query: TZQuery;
@@ -780,7 +760,7 @@ begin
   end;
 end;
 
-procedure TZTestCompPostgreSQLBugReport.TestStandartConfirmingStringsOff;
+procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStringsOff;
 var
   TempConnection: TZConnection;
   Query: TZQuery;
@@ -801,4 +781,5 @@ end;
 
 initialization
   RegisterTest('bugreport',TZTestCompPostgreSQLBugReport.Suite);
+  RegisterTest('bugreport',TZTestCompPostgreSQLBugReportMBCs.Suite);
 end.

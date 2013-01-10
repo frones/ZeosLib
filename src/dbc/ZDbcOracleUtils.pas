@@ -64,6 +64,32 @@ const
 
 type
   {** Declares SQL Object }
+
+  POCIObject = ^TOCIObject;
+  TObjFields = array of POCIObject;
+  PObjFields = ^TObjFields;
+  TOCIObject = Record                 // embedded object or table will work recursively
+    type_name:      String;           //object's name (TDO)
+    type_schema:    String;           //object's schema name (TDO)
+    parmdp:         POCIParam;        //Describe attributes of the object OCI_DTYPE_PARAM
+    parmap:         POCIParam;        //Describe attributes of the object OCI_ATTR_COLLECTION_ELEMENT OCI_ATTR_PARAM
+    tdo:            POCIType;         //object's TDO handle
+    typecode:       OCITypeCode;      //object's OCI_ATTR_TYPECODE
+    col_typecode:   OCITypeCode;      //if collection this is its OCI_ATTR_COLLECTION_TYPECODE
+    elem_typecode:  OCITypeCode;      //if collection this is its element's OCI_ATTR_TYPECODE
+    obj_ref:        POCIRef;          //if an embeded object this is ref handle to its TDO
+    obj_ind:        POCIInd;          //Null indictator for object
+    obj_value:      POCIComplexObject;//the actual value from the DB
+    obj_type:       POCIType;         //if an embeded object this is the  OCIType returned by a OCIObjectPin
+    is_final_type:  ub1;              //object's OCI_ATTR_IS_FINAL_TYPE
+    fields:         PObjFields;       //one object for each field/property
+    field_count:    ub2;              //The number of fields Not really needed but nice to have
+    next_subtype:   POCIObject;       //There is strored information about subtypes for inteherited objects
+    stmt_handle:    POCIStmt;         //the Statement-Handle
+    Level:          Integer;          //the instance level
+  end;
+
+  PZSQLVar = ^TZSQLVar;
   TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     Handle:    POCIHandle;
     Define:    POCIHandle;
@@ -79,9 +105,8 @@ type
     TypeCode:  ub2;
     Indicator: sb2;
     Blob:      IZBlob;
-    _Object:   POCIHandle;
+    _Obj:      POCIObject;
   end;
-  PZSQLVar = ^TZSQLVar;
 
   TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     AllocNum:  ub4;
@@ -231,6 +256,9 @@ procedure ExecuteOracleStatement(PlainDriver: IZOraclePlainDriver;
 function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
   Handle: POCIStmt; ErrorHandle: POCIError): ub4;
 
+function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
+  ParamHandle: POCIParam; stmt_handle: POCIHandle; obj: POCIObject; Level: ub2): POCIObject;
+
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
@@ -275,6 +303,27 @@ procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
 var
   I: Integer;
   CurrentVar: PZSQLVar;
+
+  procedure DisposeObject(Obj: POCIObject);
+  var
+    I: Integer;
+  begin
+    if Assigned(Obj.fields) then
+    begin
+      for i := 0 to Obj.field_count-1 do
+        DisposeObject(Obj.fields^[i]);
+      SetLength(Obj.fields^, 0);
+      Dispose(Obj.fields);
+      Obj.fields := nil;
+    end;
+    if Assigned(Obj.next_subtype) then
+    begin
+      DisposeObject(Obj.next_subtype);
+      Obj.next_subtype := nil;
+    end;
+    Dispose(Obj);
+  end;
+
 begin
   if Variables <> nil then
   begin
@@ -282,8 +331,13 @@ begin
     for I := 1 to Variables.ActualNum do
     begin
       CurrentVar := @Variables.Variables[I];
-      if CurrentVar._Object<>nil then
-        PlainDriver.ObjectFree(Handle,ErrorHandle,CurrentVar._Object,0);
+      if Assigned(CurrentVar._Obj) then
+      begin
+        DisposeObject(CurrentVar._Obj);
+        PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar._Obj.obj_type);
+        PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.obj_value, 0);
+        CurrentVar._Obj := nil;
+      end;
       if CurrentVar.Data <> nil then
       begin
         if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
@@ -365,6 +419,7 @@ begin
         else
           Length := SizeOf(POCILobLocator);
       end;
+    stDataSet: ; //Do nothing here!
     stUnknown:
       Exit;
   end;
@@ -461,8 +516,8 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (CurrentVar.TypeCode = SQLT_CLOB) then
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings)
+                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings))
               else
                 TempStream := TempBlob.GetStream;
             end
@@ -784,6 +839,211 @@ begin
   Result := 0;
   PlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @Result, nil,
     OCI_ATTR_ROW_COUNT, ErrorHandle);
+end;
+
+{**
+  recurses down the field's TDOs and saves the little bits it need for later
+  use on a fetch SQLVar._obj
+}
+function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
+  ParamHandle: POCIParam; stmt_handle: POCIHandle; obj: POCIObject; Level: ub2): POCIObject;
+var
+  type_ref: POCIRef;
+
+  function AllocateObject: POCIObject;
+  begin
+    Result := New(POCIObject);
+    Result.parmdp := nil;
+    Result.parmap := nil;
+    Result.tdo := nil;
+    Result.typecode := 0;
+    Result.elem_typecode := 0;
+    Result.obj_ref := nil;
+    Result.obj_ind := nil;
+    Result.obj_value := nil;
+    Result.obj_type := nil;
+    Result.fields := nil;
+    Result.field_count := 0;
+    Result.next_subtype := nil;
+    Result.is_final_type := ub1(0);
+    Result.stmt_handle := stmt_handle;
+    Result.Level := Level;
+  end;
+
+  procedure DescribeObjectByTDO(PlainDriver: IZOraclePlainDriver;
+    Connection: IZConnection; obj: POCIObject);
+  var
+    FConnection: IZOracleConnection;
+    list_attibutes: POCIParam;
+    name: PAnsiChar;
+    temp: ZAnsiString;
+    len: ub4;
+    I: ub2;
+    Fld: POCIObject;
+  begin
+    FConnection := Connection as IZOracleConnection;
+
+    CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+      PlainDriver.DescribeAny(FConnection.GetContextHandle,
+        FConnection.GetErrorHandle, obj.tdo, 0, OCI_OTYPE_PTR, OCI_DEFAULT,
+        OCI_PTYPE_TYPE, FConnection.GetDescribeHandle),
+      lcOther, 'OCIDescribeAny(OCI_PTYPE_TYPE) of OCI_OTYPE_PTR');
+
+    //we have the Actual TDO  so lets see what it is made up of by a describe
+    Len := 0;  //and we store it in the object's paramdp for now
+    CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+      PlainDriver.AttrGet(FConnection.GetDescribeHandle, OCI_HTYPE_DESCRIBE,
+        @obj.parmdp, @Len, OCI_ATTR_PARAM, FConnection.GetErrorHandle),
+      lcOther, 'OCIAttrGet(OCI_HTYPE_DESCRIBE) of OCI_ATTR_PARAM');
+
+    //Get the SchemaName of the Object
+    CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+      PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+        @name, @len, OCI_ATTR_SCHEMA_NAME, FConnection.GetErrorHandle),
+      lcOther, 'OCIAttrGet(OCI_ATTR_SCHEMA_NAME) of OCI_DTYPE_PARAM');
+
+    SetLength(temp, len+1);
+    temp := StrPLCopy(PAnsiChar(temp), name, len);
+    Obj.type_schema := PlainDriver.ZDbcString(temp, Connection.GetConSettings);
+
+    //Get the TypeName of the Object
+    CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+      PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+        @name, @len, OCI_ATTR_NAME, FConnection.GetErrorHandle),
+      lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM');
+
+    SetLength(temp, len+1);
+    temp := StrPLCopy(PAnsiChar(temp), name, len);
+    Obj.type_name := PlainDriver.ZDbcString(temp, Connection.GetConSettings);
+
+    //Get the TypeCode of the Object
+    CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+      PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+        @Obj.typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
+      lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE) of OCI_DTYPE_PARAM');
+
+    if (obj.typecode = OCI_TYPECODE_OBJECT ) or ( obj.typecode = OCI_TYPECODE_OPAQUE) then
+    begin
+      //we will need a reff to the TDO for the pin operation
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @Obj.obj_ref, nil, OCI_ATTR_REF_TDO, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_REF_TDO) of OCI_DTYPE_PARAM');
+
+      //now we'll pin the object
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.ObjectPin(FConnection.GetConnectionHandle, FConnection.GetErrorHandle,
+          Obj.obj_ref, nil, OCI_PIN_LATEST, OCI_DURATION_SESSION, pub2(OCI_LOCK_NONE),
+          @obj.obj_type),
+        lcOther, 'OCIObjectPin(OCI_PIN_LATEST, OCI_DURATION_SESSION, OCI_LOCK_NONE)');
+
+      //is the object the final type or an type-descriptor?
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @Obj.is_final_type, nil, OCI_ATTR_IS_FINAL_TYPE, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_IS_FINAL_TYPE) of OCI_DTYPE_PARAM(SubType)');
+
+      //Get the FieldCount
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @Obj.field_count, nil, OCI_ATTR_NUM_TYPE_ATTRS, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_NUM_TYPE_ATTRS) of OCI_DTYPE_PARAM(SubType)');
+
+      //now get the differnt fields of this object add one field object for property
+      Obj.fields := New(PObjFields);
+      SetLength(Obj.fields^, Obj.field_count);
+
+      //a field is just another instance of an obj not a new struct
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @list_attibutes, nil, OCI_ATTR_LIST_TYPE_ATTRS, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_LIST_TYPE_ATTRS) of OCI_DTYPE_PARAM(SubType)');
+
+      for I := 0 to obj.field_count-1 do
+      begin
+        Fld := AllocateObject;  //allocate a new object
+        Obj.fields^[i] := Fld;  //assign the object to the field-list
+
+        CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+          PlainDriver.ParamGet(list_attibutes, OCI_DTYPE_PARAM,
+            FConnection.GetErrorHandle, Fld.parmdp, I+1),
+          lcOther, 'OCIParamGet(OCI_DTYPE_PARAM) of OCI_DTYPE_PARAM(Element)');
+
+        // get the name of the attribute
+        len := 0;
+        CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+          PlainDriver.AttrGet(Fld.parmdp, OCI_DTYPE_PARAM,
+            @name, @len, OCI_ATTR_NAME, FConnection.GetErrorHandle),
+          lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM(Element)');
+
+        SetLength(temp, len+1);
+        temp := StrPLCopy(PAnsiChar(temp), name, len);
+        Fld.type_name := PlainDriver.ZDbcString(temp, Connection.GetConSettings);
+
+        // get the typeCode of the attribute
+        CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+          PlainDriver.AttrGet(Fld.parmdp, OCI_DTYPE_PARAM,
+            @Fld.typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
+          lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE) of OCI_DTYPE_PARAM(Element)');
+
+        if (fld.typecode = OCI_TYPECODE_OBJECT) or
+           (fld.typecode = OCI_TYPECODE_VARRAY) or
+           (fld.typecode = OCI_TYPECODE_TABLE) or
+           (fld.typecode = OCI_TYPECODE_NAMEDCOLLECTION) then
+          //this is some sort of object or collection so lets drill down some more
+          fld.next_subtype := DescribeObject(PlainDriver, Connection, fld.parmdp,
+            obj.stmt_handle, Fld, obj.Level+1);
+      end;
+    end
+    else
+    begin
+      //this is an embedded table or varray of some form so find out what is in it*/
+
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @obj.col_typecode, nil, OCI_ATTR_COLLECTION_TYPECODE, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_COLLECTION_TYPECODE) of OCI_DTYPE_PARAM');
+
+      //first get what sort of collection it is by coll typecode
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @obj.parmap, nil, OCI_ATTR_COLLECTION_ELEMENT, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_COLLECTION_ELEMENT) of OCI_DTYPE_PARAM');
+
+      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+          @obj.elem_typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
+        lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE of Element) of OCI_DTYPE_PARAM');
+
+      if (obj.elem_typecode = OCI_TYPECODE_OBJECT) or
+         (obj.elem_typecode = OCI_TYPECODE_VARRAY) or
+         (obj.elem_typecode = OCI_TYPECODE_TABLE) or
+         (obj.elem_typecode = OCI_TYPECODE_NAMEDCOLLECTION) then
+        //this is some sort of object or collection so lets drill down some more
+        obj.next_subtype := DescribeObject(PlainDriver, Connection, obj.parmap,
+          obj.stmt_handle, nil, obj.Level+1);
+    end;
+  end;
+begin
+  if Assigned(obj) then
+    Result := obj
+  else
+    Result := AllocateObject;
+
+  //Describe the field (OCIParm) we know it is a object or a collection
+
+  //Get the Actual TDO
+  CheckOracleError(PlainDriver, (Connection as IZOracleConnection).GetErrorHandle,
+    PlainDriver.AttrGet(ParamHandle, OCI_DTYPE_PARAM, @type_ref, nil,
+      OCI_ATTR_REF_TDO, (Connection as IZOracleConnection).GetErrorHandle),
+    lcOther, 'OCIAttrGet OCI_ATTR_REF_TDO of OCI_DTYPE_PARAM');
+
+  CheckOracleError(PlainDriver, (Connection as IZOracleConnection).GetErrorHandle,
+    PlainDriver.TypeByRef((Connection as IZOracleConnection).GetConnectionHandle,
+      (Connection as IZOracleConnection).GetErrorHandle, type_ref,
+      OCI_DURATION_TRANS, OCI_TYPEGET_ALL, @Result.tdo),
+    lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO');
+  DescribeObjectByTDO(PlainDriver, Connection, Result);
 end;
 
 end.

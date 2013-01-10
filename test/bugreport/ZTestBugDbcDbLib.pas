@@ -61,15 +61,9 @@ uses
 type
 
   {** Implements a DBC bug report test case for DB Lib. }
-  ZTestDbcDbLibBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
+  ZTestDbcDbLibBugReport = class(TZSpecificDbcSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure EmptyTest;
   end;
@@ -81,17 +75,6 @@ implementation
 function ZTestDbcDbLibBugReport.GetSupportedProtocols: string;
 begin
   Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
-end;
-
-procedure ZTestDbcDbLibBugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure ZTestDbcDbLibBugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 procedure ZTestDbcDbLibBugReport.EmptyTest;

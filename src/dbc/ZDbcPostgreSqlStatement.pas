@@ -474,10 +474,10 @@ begin
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
       stTime:
         Result := ZAnsiString(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))]));
+          [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
       stTimestamp:
         Result := ZAnsiString(Format('''%s''::timestamp',
-          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
+          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
             SoftVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
@@ -505,16 +505,16 @@ begin
                   Result := (Connection as IZPostgreSQLConnection).EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 begin
-                  TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-                  TempBlob.SetStream(TempStream);
-                  TempStream.Free;
-                  Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, Tempblob.GetString, ConSettings, True);
+                  Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                    ConSettings, True);
                 end;
             end; {case..}
           end
           else
             Result := 'NULL';
+          TempBlob := nil;
         end; {if not TempBlob.IsEmpty then}
     end;
   end;
@@ -662,15 +662,15 @@ begin
       stTime:
         if Escaped then
           Result := ZAnsiString(Format('''%s''::time',
-            [FormatDateTime('hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))]))
+            [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+ZAnsiString(FormatDateTime('hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+ZAnsiString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
       stTimestamp:
         if Escaped then
           Result := ZAnsiString(Format('''%s''::timestamp',
-           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))]))
+           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+ZAnsiString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+ZAnsiString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -696,13 +696,11 @@ begin
                 else
                   Result := FPostgreSQLConnection.EncodeBinary(TempBlob.GetString);
               else
-              begin
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-                TempBlob.SetStream(TempStream);
-                TempStream.Free;
-                Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, Tempblob.GetString, ConSettings, True);
-              end;
+                Result := FPlainDriver.EscapeString(
+                  (Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                  ConSettings, True);
             end; {case..}
             TempBlob := nil;
           end
@@ -1128,9 +1126,9 @@ begin
         stDate:
           UpdateString(ZAnsiString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stTime:
-          UpdateString(ZAnsiString(FormatDateTime('hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(ZAnsiString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stTimestamp:
-          UpdateString(ZAnsiString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(ZAnsiString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1157,11 +1155,8 @@ begin
                     UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex);
                 stAsciiStream, stUnicodeStream:
                   begin
-                    TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                      TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-                    TempBlob.SetStream(TempStream);
-                    TempStream.Free;
-                    UpdateString(Tempblob.GetString, ParamIndex);
+                    UpdateString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings), ParamIndex);
                   end;
               end; {case..}
               TempBlob := nil;
@@ -1453,10 +1448,10 @@ begin
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
       stTime:
         Result := ZAnsiString(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss', SoftVarManager.GetAsDateTime(Value))]));
+          [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
       stTimestamp:
         Result := ZAnsiString(Format('''%s''::timestamp',
-          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss',
+          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
             SoftVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
@@ -1484,11 +1479,10 @@ begin
                   Result := GetConnection.GetEscapeString(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 begin
-                  TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-                  TempBlob.SetStream(TempStream);
-                  TempStream.Free;
-                  Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, TempBlob.GetString, ConSettings, True);
+                  Result := FPlainDriver.EscapeString(
+                    (Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                  TempBlob.Length, TempBlob.WasDecoded, ConSettings), ConSettings, True);
                 end;
             end; {case..}
           end

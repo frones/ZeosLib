@@ -283,17 +283,14 @@ begin
   begin
     case GetMetaData.GetColumnType(ColumnIndex) of
       stAsciiStream:
-        begin
-          TempStream := GetValidatedAnsiStream(Blob.GetString, ConSettings, True);
-          Blob.SetStream(TempStream);
-        end
+        Blob.SetString(GetValidatedAnsiString(Blob.GetString, ConSettings, True));
       else
       begin
         TempStream := GetValidatedUnicodeStream(Blob.GetBuffer, Blob.Length, ConSettings, True);
         Blob.SetStream(TempStream, True);
+        TempStream.Free;
       end;
     end;
-    TempStream.Free;
   end;
   Result := Blob;
 end;

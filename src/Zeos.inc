@@ -159,7 +159,6 @@
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
-  {$DEFINE WITH_WIDESTRINGS_GETFIELDNAMES} //overload of GetFieldNames(List: TWideStrings) does exists;
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface

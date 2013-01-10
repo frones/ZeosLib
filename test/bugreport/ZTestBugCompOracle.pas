@@ -64,19 +64,13 @@ uses
 type
 
   {** Implements a bug report test case for Oracle components. }
-  ZTestCompOracleBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  ZTestCompOracleBugReport = class(TZSpecificCompSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: TZConnection read FConnection write FConnection;
-
   published
     procedure TestNum1;
-    procedure TestNestedDataSetFields;
+    procedure TestNestedDataSetFields1;
+    procedure TestNestedDataSetFields2;
   end;
 
 implementation
@@ -94,17 +88,6 @@ begin
   Result := 'oracle,oracle-9i';
 end;
 
-procedure ZTestCompOracleBugReport.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-procedure ZTestCompOracleBugReport.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 {**
   NUMBER must be froat
 }
@@ -114,8 +97,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM Table_Num1';
     Query.Open;
@@ -128,16 +110,30 @@ begin
   end;
 end;
 
-procedure ZTestCompOracleBugReport.TestNestedDataSetFields;
+procedure ZTestCompOracleBugReport.TestNestedDataSetFields1;
 var
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM SYSTEM.AQ$_QUEUES';
+    Query.Open;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure ZTestCompOracleBugReport.TestNestedDataSetFields2;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'SELECT * FROM customers';
     Query.Open;
   finally
     Query.Free;

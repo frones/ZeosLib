@@ -342,7 +342,6 @@ function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAn
 var
   Value: TZVariant;
   TempBlob: IZBlob;
-  TempStream: TStream;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -386,13 +385,9 @@ begin
             if InParamTypes[ParamIndex] = stBinaryStream then
               Result := EncodeString(TempBlob.GetString)
             else
-            begin
-              TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
-                TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-              TempBlob.SetStream(TempStream);
-              TempStream.Free;
-              Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(TempBlob.GetString, #39);
-            end
+              Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
+                GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                TempBlob.Length, TempBlob.WasDecoded, ConSettings), #39)
           else
             Result := 'NULL';
         end;
@@ -461,7 +456,6 @@ procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
-  TempStream: TStream;
   I, L: Integer;
   TempAnsi: ZAnsiString;
 
@@ -547,13 +541,11 @@ begin
               end
               else
               begin
-                TempStream := GetValidatedAnsiStream(TempBlob.GetBuffer,
+                TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                   TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-                TempBlob.SetStream(TempStream);
-                TempStream.Free;
                 FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-                  StrNew(PAnsiChar(TempBlob.GetString)),
-                  TempBlob.Length, @BindingDestructor);
+                  StrNew(PAnsiChar(TempAnsi)),
+                  Length(TempAnsi), @BindingDestructor);
               end
             else
               FErrorcode := FPlainDriver.bind_null(FStmtHandle, I);

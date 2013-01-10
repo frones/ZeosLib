@@ -62,15 +62,9 @@ uses
 type
 
   {** Implements a DBC bug report test case for ASA. }
-  TZTestDbcASABugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
+  TZTestDbcASABugReport = class(TZSpecificDbcSQLBugReportTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure EmptyTest;
   end;
@@ -84,17 +78,6 @@ uses ZTestCase, ZTestConsts;
 function TZTestDbcASABugReport.GetSupportedProtocols: string;
 begin
   Result := 'ASA7,ASA8,ASA9,ASA12';
-end;
-
-procedure TZTestDbcASABugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure TZTestDbcASABugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 procedure TZTestDbcASABugReport.EmptyTest;
