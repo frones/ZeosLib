@@ -66,7 +66,7 @@ uses
 type
 
   {** Implements a bug report test case for MySQL components. }
-  TZTestCompMySQLBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  TZTestCompMySQLBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

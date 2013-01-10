@@ -56,12 +56,12 @@ interface
 uses
   Types, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
-  Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestDefinitions;
+  Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
 
 type
 
  {** Implements a test case for TZRowAccessor. }
-  TZTestCachedResultSetCase = class(TZDbcGenericTestCase)
+  TZTestCachedResultSetCase = class(TZGenericTestCase)
   private
     FBoolean: Boolean;
     FByte: ShortInt;

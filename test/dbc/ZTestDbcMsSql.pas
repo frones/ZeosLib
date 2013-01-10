@@ -57,12 +57,12 @@ interface
 {$I ZDbc.inc}
 uses
   Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcDbLib, ZDbcDbLibResultSet,
-  ZTestDefinitions, ZCompatibility, ZDbcDbLibMetadata;
+  ZSqlTestCase, ZCompatibility, ZDbcDbLibMetadata;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcMSSqlCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcMSSqlCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected

@@ -28,7 +28,7 @@ uses
 {$IFDEF ENABLE_SQLITE}
   ZTestBugCompSQLite,
 {$ENDIF}
-  {ludob empty test ZTestBugDbcCore,}
+  ZTestBugDbcCore,
   ZTestBugCompCore;
 
 implementation

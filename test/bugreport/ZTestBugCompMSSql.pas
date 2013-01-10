@@ -65,7 +65,7 @@ uses
 type
 
   {** Implements a bug report test case for MSSql components. }
-  TZTestCompMSSqlBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  TZTestCompMSSqlBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
 

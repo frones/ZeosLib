@@ -57,7 +57,7 @@ interface
 {$I ZParseSql.inc}
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZTokenizer, ZScriptParser,
-  ZTestDefinitions;
+  ZTestCase;
 
 type
 
@@ -65,7 +65,7 @@ type
 
   { TZTestSQLScriptParserCase }
 
-  TZTestSQLScriptParserCase = class(TZParseSQLGenericTestCase)
+  TZTestSQLScriptParserCase = class(TZGenericTestCase)
   private
     FParser: TZSQLScriptParser;
   protected

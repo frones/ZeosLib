@@ -65,7 +65,7 @@ uses
 type
 
   {** Implements a bug report test case for SQLite components. }
-  ZTestCompSQLiteBugReport = class(TZSpecificCompSQLBugReportTestCase)
+  ZTestCompSQLiteBugReport = class(TZAbstractCompSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -73,7 +73,7 @@ type
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
-  ZTestCompSQLiteBugReportMBCs = class(TZSpecificCompSQLBugReportTestCaseMBCs)
+  ZTestCompSQLiteBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   published

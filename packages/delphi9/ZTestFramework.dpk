@@ -42,7 +42,6 @@ requires
 contains
   ZTestConfig in '..\..\test\framework\ZTestConfig.pas',
   ZTestConsts in '..\..\test\framework\ZTestConsts.pas',
-  ZTestDefinitions in '..\..\test\framework\ZTestDefinitions.pas',
   ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZBugReport in '..\..\test\framework\ZBugReport.pas',

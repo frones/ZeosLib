@@ -72,6 +72,5 @@
     <DCCReference Include="..\..\test\framework\ZTestCase.pas" />
     <DCCReference Include="..\..\test\framework\ZTestConfig.pas" />
     <DCCReference Include="..\..\test\framework\ZTestConsts.pas" />
-    <DCCReference Include="..\..\test\framework\ZTestDefinitions.pas" />
   </ItemGroup>
 </Project>

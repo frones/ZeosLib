@@ -79,12 +79,17 @@ type
   end;
 
   {** Implements a bug test case which runs all active protocols. }
+
+  { TZAbstractCompSQLBugReportTestCase }
+
   TZAbstractCompSQLBugReportTestCase = class (TZAbstractBugReportTestCase)
   private
     FConnection: TZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
+    function IsRealPreparableTest: Boolean; override;
+    function IsAutoEncodableTest: Boolean; override;
     function CreateQuery: TZQuery;
     function CreateReadOnlyQuery: TZReadOnlyQuery;
     function CreateTable: TZTable;
@@ -92,60 +97,16 @@ type
     property Connection: TZConnection read FConnection write FConnection;
   end;
 
-  {** Implements a bug test case which runs all active protocols. }
-  TZPortableDbcSQLBugReportTestCase = class (TZAbstractDbcSQLBugReportTestCase)
+  {** Implements a bug test case which runs all active protocols with MB-Chars }
+  TZAbstractDbcSQLBugReportTestCaseMBCs = class (TZAbstractDbcSQLBugReportTestCase)
   protected
-    function IsProtocolValid(Name: string): Boolean; override;
-    function GetSupportedProtocols: string; override;
+    function IsNonASCIITest: Boolean; override;
   end;
 
   {** Implements a bug test case which runs all active protocols with MB-Chars }
-  TZPortableDbcSQLBugReportTestCaseMBCs = class (TZPortableDbcSQLBugReportTestCase)
+  TZAbstractCompSQLBugReportTestCaseMBCs = class (TZAbstractCompSQLBugReportTestCase)
   protected
-    function IsASCIITest: Boolean; override;
-  end;
-
-  {** Implements a bug test case which runs all active protocols. }
-  TZPortableCompSQLBugReportTestCase = class (TZAbstractCompSQLBugReportTestCase)
-  protected
-    function IsProtocolValid(Name: string): Boolean; override;
-    function GetSupportedProtocols: string; override;
-  end;
-
-  {** Implements a bug test case which runs all active protocols with MB-Chars }
-  TZPortableCompSQLBugReportTestCaseMBCs = class (TZPortableCompSQLBugReportTestCase)
-  protected
-    function IsASCIITest: Boolean; override;
-  end;
-
-  {**
-    Implements a dbc bug test case which runs only active protocols,
-      specified by user.
-  }
-  TZSpecificDbcSQLBugReportTestCase = class(TZAbstractDbcSQLBugReportTestCase);
-
-  {**
-    Implements a dbc+MultiByte-chars bug test case which runs only active
-      protocols, specified by user.
-  }
-  TZSpecificDbcSQLBugReportTestCaseMBCs = class(TZSpecificDbcSQLBugReportTestCase)
-  protected
-    function IsASCIITest: Boolean; override;
-  end;
-
-  {**
-    Implements a dbc bug test case which runs only active protocols,
-      specified by user.
-  }
-  TZSpecificCompSQLBugReportTestCase = class(TZAbstractCompSQLBugReportTestCase);
-
-  {**
-    Implements a dbc+MultiByte-chars bug test case which runs only active
-      protocols, specified by user.
-  }
-  TZSpecificCompSQLBugReportTestCaseMBCs = class(TZSpecificCompSQLBugReportTestCase)
-  protected
-    function IsASCIITest: Boolean; override;
+    function IsNonASCIITest: Boolean; override;
   end;
 
 implementation
@@ -205,6 +166,16 @@ begin
   FConnection.Free;
 end;
 
+function TZAbstractCompSQLBugReportTestCase.IsRealPreparableTest: Boolean;
+begin
+  Result:= True;
+end;
+
+function TZAbstractCompSQLBugReportTestCase.IsAutoEncodableTest: Boolean;
+begin
+  Result:=True;
+end;
+
 function TZAbstractCompSQLBugReportTestCase.CreateQuery: TZQuery;
 begin
   Result := TZQuery.Create(nil);
@@ -232,71 +203,17 @@ begin
     Result.Options := Result.Options + [doPreferPrepared];
 end;
 
-{ TZPortableDbcSQLBugReportTestCase }
+{ TZAbstractDbcSQLBugReportTestCaseMBCs }
 
-{**
-  Gets a comma separated list of all supported by this test protocols.
-  @returns a list of all supported protocols.
-}
-function TZPortableDbcSQLBugReportTestCase.GetSupportedProtocols: string;
-begin
-  Result := '';
-end;
-
-{**
-  Function check name prototocol
-  @param Name a protocol name
-  @result true if protocol valid
-}
-function TZPortableDbcSQLBugReportTestCase.IsProtocolValid(Name: string): Boolean;
+function TZAbstractDbcSQLBugReportTestCaseMBCs.IsNonASCIITest: Boolean;
 begin
   Result := True;
 end;
 
-{ TZPortableDbcSQLBugReportTestCaseMBCs }
-
-function TZPortableDbcSQLBugReportTestCaseMBCs.IsASCIITest: Boolean;
-begin
-  Result := False;
-end;
-
-{ TZPortableCompSQLBugReportTestCase }
-
-{**
-  Function check name prototocol
-  @param Name a protocol name
-  @result true if protocol valid
-}
-function TZPortableCompSQLBugReportTestCase.IsProtocolValid(Name: string): Boolean;
+{ TZAbstractCompSQLBugReportTestCaseMBCs }
+function TZAbstractCompSQLBugReportTestCaseMBCs.IsNonASCIITest: Boolean;
 begin
   Result := True;
-end;
-
-{**
-  Gets a comma separated list of all supported by this test protocols.
-  @returns a list of all supported protocols.
-}
-function TZPortableCompSQLBugReportTestCase.GetSupportedProtocols: string;
-begin
-  Result := '';
-end;
-
-{ TZPortableCompSQLBugReportTestCaseMBCs }
-function TZPortableCompSQLBugReportTestCaseMBCs.IsASCIITest: Boolean;
-begin
-  Result := False;
-end;
-
-{ TZSpecificDbcSQLBugReportTestCaseMBCs }
-function TZSpecificDbcSQLBugReportTestCaseMBCs.IsASCIITest: Boolean;
-begin
-  Result := False;
-end;
-
-{ TZSpecificComponentSQLBugReportTestCaseMBCs }
-function TZSpecificCompSQLBugReportTestCaseMBCs.IsASCIITest: Boolean;
-begin
-  Result := False;
 end;
 
 end.

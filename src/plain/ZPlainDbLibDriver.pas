@@ -131,7 +131,6 @@ type
   TZDBLibAbstractPlainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
   protected
     DBVariables: TDBVariables;
-    function ImplementsEmuatedPreparedStatement: Boolean; override;
   public
     function dbDead(dbProc: PDBPROCESS): Boolean; virtual; abstract;
     procedure dbLoginFree(Login: PLOGINREC); virtual; abstract;
@@ -571,14 +570,6 @@ begin
   SQLMessages.Add(SQLMessage);
 
   Result := 0;
-end;
-
-{** Is a emultated Prepared-Statment implemented ?
-  @returns True if a emultated Prepared-Statment is implemented
-}
-function TZDBLibAbstractPlainDriver.ImplementsEmuatedPreparedStatement: Boolean;
-begin
-  Result := True;
 end;
 
 constructor TZDBLibAbstractPlainDriver.Create;

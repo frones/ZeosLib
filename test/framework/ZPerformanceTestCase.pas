@@ -65,7 +65,7 @@ type
   TZTestMethod = procedure of object;
 
   {** Implements a abstract performance test case. }
-  TZPerformanceSQLTestCase = class (TZPortableSQLTestCase)
+  TZPerformanceSQLTestCase = class (TZAbstractSQLTestCase)
   private
     FSelectedAPIs: TStrings;
     FSelectedTests: TStrings;

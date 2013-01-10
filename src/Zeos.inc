@@ -58,6 +58,7 @@
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
  {$DEFINE WITH_FTDATASETSUPPORT} //ftDataSet is supported
+ {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -159,6 +160,7 @@
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
+  {$DEFINE WITH_WIDESTRINGS_GETFIELDNAMES} //overload of GetFieldNames(List: TWideStrings) does exists;
   {$DEFINE WIDE_DATASET}                // TWidedataset exists
   {$DEFINE WITH_PWIDECHAR_TOWIDESTRING} // Able to pass pwidechar to a widestring parameter
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
@@ -196,6 +198,7 @@
   {$UNDEF WITH_WIDEMEMO}
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
+  {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}

@@ -54,7 +54,6 @@
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
 			<DCCReference Include="..\..\test\framework\ZTestConfig.pas"/>
-			<DCCReference Include="..\..\test\framework\ZTestDefinitions.pas"/>
 			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestSysUtils.pas"/>
 			<DCCReference Include="..\..\test\core\ZTestList.pas"/>

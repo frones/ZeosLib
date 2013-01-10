@@ -56,13 +56,13 @@ unit ZTestDbcInterbase;
 interface
 {$I ZDbc.inc}
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZSqlTestCase,
   ZCompatibility, DateUtils, Math;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcInterbaseCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcInterbaseCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected

@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a DBC bug report test case for PostgreSQL. }
-  TZTestDbcPostgreSQLBugReport = class(TZSpecificDbcSQLBugReportTestCase)
+  TZTestDbcPostgreSQLBugReport = class(TZAbstractDbcSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -82,7 +82,7 @@ type
     procedure Test_Mantis0000148;
   end;
 
-  TZTestDbcPostgreSQLBugReportMBCs = class(TZSpecificDbcSQLBugReportTestCaseMBCs)
+  TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLBugReportTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   published

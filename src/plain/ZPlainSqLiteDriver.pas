@@ -547,7 +547,6 @@ type
     // procedure LoadApi; override; ->completely done in version dependent child classes
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
-    function ImplementsEmuatedPreparedStatement: Boolean; override;
   public
     constructor Create;
 
@@ -699,11 +698,6 @@ begin
   AddCodePage('UTF-16le', 2, ceUTF16, zCP_UTF16, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16be', 3, ceUTF16, zCP_UTF16BE, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
   AddCodePage('UTF-16', 4, ceUTF16, zCP_UTF16, 'UTF-8'); //Setting this will be ignored by actual Excute of Plaindriver
-end;
-
-function TZSQLiteBaseDriver.ImplementsEmuatedPreparedStatement: Boolean;
-begin
-  Result := True;
 end;
 
 constructor TZSQLiteBaseDriver.Create;

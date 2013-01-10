@@ -58,11 +58,11 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions, ZStoredProcedure;
+  ZConnection, ZDataset, ZSqlTestCase, ZStoredProcedure;
 
 type
   {** Implements a generic test case for class TZStoredProc. }
-  TZTestStoredProcedure = class(TZComponentPortableSQLTestCase)
+  TZTestStoredProcedure = class(TZAbstractSQLTestCase)
   private
     Connection: TZConnection;
     StoredProc: TZStoredProc;
@@ -73,7 +73,7 @@ type
   end;
 
   {** Implements a protocol specific test case for class TZStoredProc. }
-  TZTestStoredProcedureSpecific = class(TZComponentSpecificSQLTestCase)
+  TZTestStoredProcedureSpecific = class(TZAbstractSQLTestCase)
   private
     Connection: TZConnection;
     StoredProc: TZStoredProc;

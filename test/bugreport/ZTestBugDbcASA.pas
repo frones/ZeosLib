@@ -62,7 +62,7 @@ uses
 type
 
   {** Implements a DBC bug report test case for ASA. }
-  TZTestDbcASABugReport = class(TZSpecificDbcSQLBugReportTestCase)
+  TZTestDbcASABugReport = class(TZAbstractDbcSQLBugReportTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

@@ -57,12 +57,12 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility;
 
 type
   {** Implements a test case for. }
-  TZGenericTestDbcMetadata = class(TZDbcPortableSQLTestCase)
+  TZGenericTestDbcMetadata = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
     MD: IZDatabaseMetadata;
@@ -72,7 +72,7 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function IsProtocolValid(Value: string): Boolean; override;
+    function IsProtocolValid(Config: TZConnectionConfig): Boolean; override;
     property Connection: IZConnection read FConnection write FConnection;
 
   published
@@ -527,11 +527,11 @@ begin
   ResultSet.Close;
 end;
 
-function TZGenericTestDbcMetadata.IsProtocolValid(Value: string): Boolean;
+function TZGenericTestDbcMetadata.IsProtocolValid(Config: TZConnectionConfig): Boolean;
 begin
-  Result := not StartsWith(Value, 'interbase')
-    and not StartsWith(Value, 'firebird')
-    and not StartsWith(Value, 'oracle');
+  Result := not StartsWith(Config.Protocol, 'interbase')
+    and not StartsWith(Config.Protocol, 'firebird')
+    and not StartsWith(Config.Protocol, 'oracle');
 end;
 
 initialization

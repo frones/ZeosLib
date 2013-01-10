@@ -61,7 +61,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions, SysUtils, Classes, ZExpression, ZVariables;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, SysUtils, Classes, ZExpression, ZVariables;
 
 type
 
@@ -69,7 +69,7 @@ type
 
   { TZTestExpressionCase }
 
-  TZTestExpressionCase = class(TZCoreGenericTestCase)
+  TZTestExpressionCase = class(TZGenericTestCase)
   published
     procedure TestRegularExpressions;
     procedure TestArrays;

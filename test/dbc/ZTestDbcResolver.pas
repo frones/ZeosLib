@@ -56,12 +56,12 @@ unit ZTestDbcResolver;
 interface
 {$I ZDbc.inc}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZCollections, ZDbcGenericResolver, ZTestDefinitions;
+  ZCollections, ZDbcGenericResolver, ZSqlTestCase;
 
 type
 
  {** Implements a test case for CachedResolver classes. }
-  TZTestCachedResolverCase = class(TZDbcPortableSQLTestCase)
+  TZTestCachedResolverCase = class(TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected

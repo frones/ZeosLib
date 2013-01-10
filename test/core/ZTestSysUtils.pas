@@ -57,13 +57,13 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions, ZSysUtils, SysUtils, ZClasses, ZVariant,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZSysUtils, SysUtils, ZClasses, ZVariant,
   ZMatchPattern;
 
 type
 
   {** Implements a test case for Utilities. }
-  TZTestSysUtilsCase = class(TZCoreGenericTestCase)
+  TZTestSysUtilsCase = class(TZGenericTestCase)
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;

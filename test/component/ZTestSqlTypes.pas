@@ -58,12 +58,12 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions;
+  ZConnection, ZDataset, ZSqlTestCase;
 
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestSQLTypesCase = class(TZComponentPortableSQLTestCase)
+  TZTestSQLTypesCase = class(TZAbstractSQLTestCase)
   private
     Connection: TZConnection;
     Query: TZQuery;
