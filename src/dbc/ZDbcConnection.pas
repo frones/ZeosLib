@@ -629,7 +629,7 @@ end;
 }
 function TZAbstractConnection.GetAutoEncodeStrings: Boolean;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   Result := True;
   {$ELSE}
   Result := ConSettings.AutoEncode;
@@ -638,7 +638,7 @@ end;
 
 procedure TZAbstractConnection.SetAutoEncodeStrings(const Value: Boolean);
 begin
-  {$IFNDEF DELPHI12_UP}
+  {$IFNDEF UNICODE}
   ConSettings.AutoEncode := Value;
   {$ENDIF}
 end;
@@ -1268,7 +1268,7 @@ begin
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := GetDriver.GetTokenizer.GetEscapeString(Value)
     else
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       Result := AnsiQuotedStr(Value, #39)
       {$ELSE}
       Result := ZDbcUnicodeString(GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZPlainString(Value), #39)))
@@ -1277,7 +1277,7 @@ begin
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
       Result := Value
     else
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       Result := AnsiQuotedStr(Value, #39);
       {$ELSE}
       Result := ZDbcUnicodeString(AnsiQuotedStr(ZPlainString(Value), #39));
@@ -1288,7 +1288,7 @@ function TZAbstractConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiSt
 begin
   if GetAutoEncodeStrings then
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
-      Result := {$IFNDEF DELPHI12_UP}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
+      Result := {$IFNDEF UNICODE}GetDriver.GetTokenizer.GetEscapeString{$ENDIF}(Value)
     else
       {$IFDEF WITH_UNITANSISTRINGS}
       AnsiStrings.AnsiQuotedStr(Value, #39)

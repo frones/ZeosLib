@@ -1083,7 +1083,8 @@ begin
         ParamSqlData.UpdateBigDecimal(I,
           SoftVarManager.GetAsFloat(InParamValues[I]));
       stString:
-         if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharSet 'NONE' writes data 'as is'!
+         if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
+            (ParamSqlData.GetIbSqlSubType(I) = CS_NONE) then //CharSet 'NONE' writes data 'as is'!
           ParamSqlData.UpdateString(I,
             PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]),
             ConSettings, PlainDriver.ValidateCharEncoding(ParamSqlData.GetIbSqlSubType(I)).CP))
@@ -1091,7 +1092,8 @@ begin
           ParamSqlData.UpdateString(I,
             PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), ConSettings));
       stUnicodeString:
-        if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharSet 'NONE' writes data 'as is'!
+         if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
+            (ParamSqlData.GetIbSqlSubType(I) = CS_NONE) then //CharSet 'NONE' writes data 'as is'!
           ParamSqlData.UpdateString(I,
             PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(InParamValues[I]),
             ConSettings, PlainDriver.ValidateCharEncoding(ParamSqlData.GetIbSqlSubType(I)).CP))

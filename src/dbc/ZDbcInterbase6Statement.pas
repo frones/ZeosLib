@@ -974,7 +974,7 @@ begin
       stString:
         DefVarManager.SetAsString(Temp, ZDbcString(Value.GetString(I)));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, UTF8ToString(Value.GetString(I)));
+        DefVarManager.SetAsUnicodeString(Temp, ZDbcUnicodeString(Value.GetString(I)));
       stDate:
         DefVarManager.SetAsDateTime(Temp, Value.GetDate(I));
       stTime:
