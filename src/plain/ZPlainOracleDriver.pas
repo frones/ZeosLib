@@ -143,7 +143,7 @@ type
     { > ori.h}
     function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
                        typecode: OCITypeCode; tdo: POCIType; table: Pointer;
-                       duration: OCIDuration; value: boolean;
+                       duration: OCIDuration; value: Longbool;
                        instance: PPointer): sword;
     function ObjectPin(env: POCIEnv; err: POCIError;
       const object_ref: POCIRef; const corhdl: POCIComplexObject;
@@ -177,39 +177,39 @@ type
       const source, null_source, target, null_target: pointer; const tdo: POCIType;
       const duration: OCIDuration; const option: ub1): sword;
     function ObjectGetTypeRef(env: POCIEnv; err: POCIError;
-      const instance:pointer; out type_ref: POCIRef): sword;
+      const instance:pointer; type_ref: POCIRef): sword;
     function ObjectGetObjectRef(env: POCIEnv; err: POCIError;
-      const _object: pointer; out object_ref: POCIRef): sword;
+      const _object: pointer; object_ref: POCIRef): sword;
     function ObjectMakeObjectRef(env: POCIEnv; err: POCIError;
       const svc: POCISvcCtx; const table: pointer; const values: PPointer;
-      const array_len: ub4; out object_ref: POCIRef): sword;
+      const array_len: ub4; object_ref: POCIRef): sword;
     function ObjectGetPrimaryKeyTypeRef(env: POCIEnv; err: POCIError;
-      const svc:POCISvcCtx; const table: pointer; out type_ref: POCIRef): sword;
+      const svc:POCISvcCtx; const table: pointer; type_ref: POCIRef): sword;
     function ObjectGetInd(env: POCIEnv; err: POCIError;
-      const instance: pointer; out null_struct: PPointer): sword;
+      const instance: pointer; null_struct: PPointer): sword;
     function ObjectExists(env: POCIEnv; err: POCIError; const ins: pointer;
-      out exist: PBoolean): sword;
+      exist: PBoolean): sword;
     function ObjectGetProperty(envh: POCIEnv; errh: POCIError;
       const obj: pointer; const propertyId: OCIObjectPropId;
-      out _property: pointer; size: Pub4): sword;
+      _property: pointer; size: Pub4): sword;
     function ObjectIsLocked(env: POCIEnv; err: POCIError; const ins: pointer;
-      out lock: Pboolean): sword;
+      lock: Pboolean): sword;
     function ObjectIsDirty(env: POCIEnv; err: POCIError; const ins: pointer;
-      out dirty: PBoolean): sword;
+      dirty: PBoolean): sword;
     function ObjectPinTable(env: POCIEnv; err: POCIError;
       const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
       const object_name: Poratext; const o_n_length:ub4;
       const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
-      out _object: PPointer): sword;
+      _object: PPointer): sword;
     function ObjectArrayPin(env: POCIEnv; err: POCIError;
       const ref_array: PPOCIRef; const array_size: ub4;
       const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
       const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
-      const lock: OCILockOpt; out obj_array: PPointer;
-      out pos: Pub4): sword;
+      const lock: OCILockOpt; obj_array: PPointer;
+      pos: Pub4): sword;
     function CacheFlush(env: POCIEnv; err: POCIError; const svc:POCISvcCtx;
       const context: pointer; const get: TOCICacheFlushGet;
-      out ref: PPOCIRef): sword;
+      ref: PPOCIRef): sword;
     function CacheRefresh(env: POCIEnv; err: POCIError;
       const svc:POCISvcCtx; const option: OCIRefreshOpt; const context: pointer;
       get: TOCICacheRefreshGet; ref: PPOCIRef): sword;
@@ -221,9 +221,9 @@ type
       const svc: POCISvcCtx): sword;
     function DurationBegin(env: POCIEnv; err: POCIError;
       svc: POCISvcCtx; const parent: OCIDuration;
-      out dur: POCIDuration): sword;
+      dur: POCIDuration): sword;
     function DurationEnd(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
-      out duration: OCIDuration): sword;
+      duration: OCIDuration): sword;
     { < ori.h}
 
     function TransStart(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
@@ -350,7 +350,7 @@ type
     function ResultSetToStmt(rsetdp: POCIHandle; errhp: POCIError): sword;
 
     function GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
-      out Value: sb4): sword;
+      Value: sb4): sword;
     procedure ClientVersion(major_version, minor_version, update_num,
       patch_num, port_update_num: psword);
 
@@ -472,7 +472,7 @@ type
                   attr_tdo: PPOCIType): sword;
     {ort.h}
     function TypeIterNew(env: POCIEnv; err: POCIError; const tdo: POCIType;
-                      out iterator_ort: PPOCITypeIter):sword;
+                      iterator_ort: PPOCITypeIter):sword;
     function TypeIterSet(env: POCIEnv; err: POCIError; const tdo: POCIType;
                               iterator_ort: POCITypeIter): sword;
     function TypeIterFree(env: POCIEnv; err: POCIError;
@@ -481,38 +481,38 @@ type
       schema_name: Poratext; const s_length: ub4; const type_name: Poratext;
       const t_length: ub4; version_name: Poratext; const v_length: ub4;
       const pin_duration: OCIDuration; const get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeArrayByName(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
       array_len: ub4; schema_name:  PPoratext; s_length: Pub4;
       type_name: PPoratext; t_length: Pub4; version_name: PPoratext;
       v_length: Pub4; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeByRef(env: POCIEnv; err: POCIError; type_ref: POCIRef;
       pin_duration: OCIDuration; get_option: OCITypeGetOpt;
       tdo: PPOCIType): sword;
     function TypeArrayByRef(env: POCIEnv; err: POCIError; array_len: ub4;
       type_ref: PPOCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeName(env: POCIEnv; err: POCIError; tdo: POCIType;
-      out n_length: Pub4): poratext;
+      n_length: Pub4): poratext;
     function TypeSchema(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out n_length: Pub4): poratext;
+      n_length: Pub4): poratext;
     function TypeTypeCode(env: POCIEnv; err: POCIError;
                   const tdo: POCIType): OCITypeCode;
     function TypeCollTypeCode(env:POCIEnv; err:POCIError;
       const tdo: POCIType): OCITypeCode;
     function TypeVersion(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out v_length: Pub4): poratext;
+      v_length: Pub4): poratext;
     function TypeAttrs(env: POCIEnv; err: POCIError;
       const tdo:POCIType): ub4;
     function TypeMethods(env: POCIEnv; err: POCIError;
       const tdo: POCIType): ub4;
     function TypeElemName(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out n_length:Pub4): poratext;
+      const elem: POCITypeElem; n_length:Pub4): poratext;
     function TypeElemTypeCode(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): OCITypeCode;
     function TypeElemType(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out elem_tdo:PPOCIType): sword;
+      const elem: POCITypeElem; elem_tdo:PPOCIType): sword;
     function TypeElemFlags(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): ub4;
     function TypeElemNumPrec(env: POCIEnv; err: POCIError;
@@ -526,55 +526,55 @@ type
     function TypeElemCharSetForm(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): ub2;
     function TypeElemParameterizedType(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out type_stored: PPOCIType): sword;
+      const elem: POCITypeElem; type_stored: PPOCIType): sword;
     function TypeElemExtTypeCode(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): OCITypeCode;
     function TypeAttrByName(env: POCIEnv; err: POCIError;
       const tdo: POCIType; const name: Poratext; const n_length: ub4;
-      out elem: PPOCITypeElem): sword;
+      elem: PPOCITypeElem): sword;
     function TypeAttrNext(env: POCIEnv; err: POCIError;
-      iterator_ort: POCITypeIter; out elem: PPOCITypeElem): sword;
+      iterator_ort: POCITypeIter; elem: PPOCITypeElem): sword;
     function TypeCollElem(env: POCIEnv; err: POCIError; const tdo:POCIType;
       element: PPOCITypeElem): sword;
     function TypeCollSize(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out num_elems: Pub4): sword;
+      num_elems: Pub4): sword;
     function TypeCollExtTypeCode(env: POCIEnv; err: POCIError;
-      const tdo:POCIType; out sqt_code: POCITypeCode): sword;
+      const tdo:POCIType; sqt_code: POCITypeCode): sword;
     function TypeMethodOverload(env: POCIEnv; err: POCIError;
       const tdo: POCIType; const method_name: Poratext;
       const m_length: ub4): ub4;
     function TypeMethodByName(env: POCIEnv; err: POCIError;
       const tdo: POCIType; const method_name: Poratext; const m_length: ub4;
-      out mdos: PPOCITypeMethod): sword;
+      mdos: PPOCITypeMethod): sword;
     function TypeMethodNext(env: POCIEnv; err: POCIError;
-      iterator_ort: POCITypeIter; out mdo: PPOCITypeMethod): sword;
+      iterator_ort: POCITypeIter; mdo: PPOCITypeMethod): sword;
     function TypeMethodName(env:POCIEnv; err: POCIError;
-      const mdo: POCITypeMethod; out n_length: Pub4): poratext;
+      const mdo: POCITypeMethod; n_length: Pub4): poratext;
     function TypeMethodEncap(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod): OCITypeEncap;
     function TypeMethodFlags(env: POCIEnv; err: POCIError;
         const mdo:POCITypeMethod): OCITypeMethodFlag;
     function TypeMethodMap(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out mdo: PPOCITypeMethod): sword;
+      mdo: PPOCITypeMethod): sword;
     function TypeMethodOrder(env: POCIEnv; err: POCIError;
-      const tdo: POCIType; out mdo: PPOCITypeMethod): sword;
+      const tdo: POCIType; mdo: PPOCITypeMethod): sword;
     function TypeMethodParams(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod): ub4;
     function TypeResult(env: POCIEnv; err: POCIError;
-      const mdo: POCITypeMethod; out elem: PPOCITypeElem): sword;
+      const mdo: POCITypeMethod; elem: PPOCITypeElem): sword;
     function TypeParamByPos(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod; const position: ub4;
-      out elem: PPOCITypeElem): sword;
+      elem: PPOCITypeElem): sword;
     function TypeParamByName(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-      out elem:PPOCITypeElem): sword;
+      elem:PPOCITypeElem): sword;
     function TypeParamPos(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-      out position: Pub4; out elem: PPOCITypeElem): sword;
+      position: Pub4; elem: PPOCITypeElem): sword;
     function TypeElemParamMode(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): OCITypeParamMode;
     function TypeElemDefaultValue(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out d_v_length: Pub4): poratext;
+      const elem: POCITypeElem; d_v_length: Pub4): poratext;
     function TypeVTInit(env: POCIEnv; err: POCIError): sword;
     function TypeVTInsert(env: POCIEnv; err: POCIError;
       const schema_name: Poratext; const s_n_length: ub4;
@@ -669,7 +669,7 @@ type
     { > ori.h}
     function ObjectNew(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
                        typecode: OCITypeCode; tdo: POCIType; table: Pointer;
-                       duration: OCIDuration; value: boolean;
+                       duration: OCIDuration; value: Longbool;
                        instance: PPointer): sword;
     function ObjectPin(env: POCIEnv; err: POCIError;
       const object_ref: POCIRef; const corhdl: POCIComplexObject;
@@ -703,39 +703,39 @@ type
       const source, null_source, target, null_target: pointer; const tdo: POCIType;
       const duration: OCIDuration; const option: ub1): sword;
     function ObjectGetTypeRef(env: POCIEnv; err: POCIError;
-      const instance:pointer; out type_ref: POCIRef): sword;
+      const instance:pointer; type_ref: POCIRef): sword;
     function ObjectGetObjectRef(env: POCIEnv; err: POCIError;
-      const _object: pointer; out object_ref: POCIRef): sword;
+      const _object: pointer; object_ref: POCIRef): sword;
     function ObjectMakeObjectRef(env: POCIEnv; err: POCIError;
       const svc: POCISvcCtx; const table: pointer; const values: PPointer;
-      const array_len: ub4; out object_ref: POCIRef): sword;
+      const array_len: ub4; object_ref: POCIRef): sword;
     function ObjectGetPrimaryKeyTypeRef(env: POCIEnv; err: POCIError;
-      const svc:POCISvcCtx; const table: pointer; out type_ref: POCIRef): sword;
+      const svc:POCISvcCtx; const table: pointer; type_ref: POCIRef): sword;
     function ObjectGetInd(env: POCIEnv; err: POCIError;
-      const instance: pointer; out null_struct: PPointer): sword;
+      const instance: pointer; null_struct: PPointer): sword;
     function ObjectExists(env: POCIEnv; err: POCIError; const ins: pointer;
-      out exist: PBoolean): sword;
+      exist: PBoolean): sword;
     function ObjectGetProperty(envh: POCIEnv; errh: POCIError;
       const obj: pointer; const propertyId: OCIObjectPropId;
-      out _property: pointer; size: Pub4): sword;
+      _property: pointer; size: Pub4): sword;
     function ObjectIsLocked(env: POCIEnv; err: POCIError; const ins: pointer;
-      out lock: Pboolean): sword;
+      lock: Pboolean): sword;
     function ObjectIsDirty(env: POCIEnv; err: POCIError; const ins: pointer;
-      out dirty: PBoolean): sword;
+      dirty: PBoolean): sword;
     function ObjectPinTable(env: POCIEnv; err: POCIError;
       const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
       const object_name: Poratext; const o_n_length:ub4;
       const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
-      out _object: PPointer): sword;
+      _object: PPointer): sword;
     function ObjectArrayPin(env: POCIEnv; err: POCIError;
       const ref_array: PPOCIRef; const array_size: ub4;
       const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
       const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
-      const lock: OCILockOpt; out obj_array: PPointer;
-      out pos: Pub4): sword;
+      const lock: OCILockOpt; obj_array: PPointer;
+      pos: Pub4): sword;
     function CacheFlush(env: POCIEnv; err: POCIError; const svc:POCISvcCtx;
       const context: pointer; const get: TOCICacheFlushGet;
-      out ref: PPOCIRef): sword;
+      ref: PPOCIRef): sword;
     function CacheRefresh(env: POCIEnv; err: POCIError;
       const svc:POCISvcCtx; const option: OCIRefreshOpt; const context: pointer;
       get: TOCICacheRefreshGet; ref: PPOCIRef): sword;
@@ -747,9 +747,9 @@ type
       const svc: POCISvcCtx): sword;
     function DurationBegin(env: POCIEnv; err: POCIError;
       svc: POCISvcCtx; const parent: OCIDuration;
-      out dur: POCIDuration): sword;
+      dur: POCIDuration): sword;
     function DurationEnd(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
-      out duration: OCIDuration): sword;
+      duration: OCIDuration): sword;
     { < ori.h}
 
     function TransStart(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
@@ -875,7 +875,7 @@ type
       errhp: POCIError; bufp: text; bufsz: ub4; hndltype: ub1; version:pointer): sword;
     function ResultSetToStmt(rsetdp: POCIHandle; errhp: POCIError): sword;
     function GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
-      out Value: sb4): sword;
+      Value: sb4): sword;
     procedure ClientVersion(major_version, minor_version, update_num,
       patch_num, port_update_num: psword);
 
@@ -998,7 +998,7 @@ type
                   attr_tdo: PPOCIType): sword;
     {ort.h}
     function TypeIterNew(env: POCIEnv; err: POCIError; const tdo: POCIType;
-                      out iterator_ort: PPOCITypeIter):sword;
+                      iterator_ort: PPOCITypeIter):sword;
     function TypeIterSet(env: POCIEnv; err: POCIError; const tdo: POCIType;
                               iterator_ort: POCITypeIter): sword;
     function TypeIterFree(env: POCIEnv; err: POCIError;
@@ -1007,38 +1007,38 @@ type
       schema_name: Poratext; const s_length: ub4; const type_name: Poratext;
       const t_length: ub4; version_name: Poratext; const v_length: ub4;
       const pin_duration: OCIDuration; const get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeArrayByName(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
       array_len: ub4; schema_name:  PPoratext; s_length: Pub4;
       type_name: PPoratext; t_length: Pub4; version_name: PPoratext;
       v_length: Pub4; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeByRef(env: POCIEnv; err: POCIError; type_ref: POCIRef;
       pin_duration: OCIDuration; get_option: OCITypeGetOpt;
       tdo: PPOCIType): sword;
     function TypeArrayByRef(env: POCIEnv; err: POCIError; array_len: ub4;
       type_ref: PPOCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-      out tdo: PPOCIType): sword;
+      tdo: PPOCIType): sword;
     function TypeName(env: POCIEnv; err: POCIError; tdo: POCIType;
-      out n_length: Pub4): poratext;
+      n_length: Pub4): poratext;
     function TypeSchema(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out n_length: Pub4): poratext;
+      n_length: Pub4): poratext;
     function TypeTypeCode(env: POCIEnv; err: POCIError;
                   const tdo: POCIType): OCITypeCode;
     function TypeCollTypeCode(env:POCIEnv; err:POCIError;
       const tdo: POCIType): OCITypeCode;
     function TypeVersion(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out v_length: Pub4): poratext;
+      v_length: Pub4): poratext;
     function TypeAttrs(env: POCIEnv; err: POCIError;
       const tdo:POCIType): ub4;
     function TypeMethods(env: POCIEnv; err: POCIError;
       const tdo: POCIType): ub4;
     function TypeElemName(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out n_length:Pub4): poratext;
+      const elem: POCITypeElem; n_length:Pub4): poratext;
     function TypeElemTypeCode(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): OCITypeCode;
     function TypeElemType(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out elem_tdo:PPOCIType): sword;
+      const elem: POCITypeElem; elem_tdo:PPOCIType): sword;
     function TypeElemFlags(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): ub4;
     function TypeElemNumPrec(env: POCIEnv; err: POCIError;
@@ -1052,55 +1052,55 @@ type
     function TypeElemCharSetForm(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): ub2;
     function TypeElemParameterizedType(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out type_stored: PPOCIType): sword;
+      const elem: POCITypeElem; type_stored: PPOCIType): sword;
     function TypeElemExtTypeCode(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): OCITypeCode;
     function TypeAttrByName(env: POCIEnv; err: POCIError;
       const tdo: POCIType; const name: Poratext; const n_length: ub4;
-      out elem: PPOCITypeElem): sword;
+      elem: PPOCITypeElem): sword;
     function TypeAttrNext(env: POCIEnv; err: POCIError;
-      iterator_ort: POCITypeIter; out elem: PPOCITypeElem): sword;
+      iterator_ort: POCITypeIter; elem: PPOCITypeElem): sword;
     function TypeCollElem(env: POCIEnv; err: POCIError; const tdo:POCIType;
       element: PPOCITypeElem): sword;
     function TypeCollSize(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out num_elems: Pub4): sword;
+      num_elems: Pub4): sword;
     function TypeCollExtTypeCode(env: POCIEnv; err: POCIError;
-      const tdo:POCIType; out sqt_code: POCITypeCode): sword;
+      const tdo:POCIType; sqt_code: POCITypeCode): sword;
     function TypeMethodOverload(env: POCIEnv; err: POCIError;
       const tdo: POCIType; const method_name: Poratext;
       const m_length: ub4): ub4;
     function TypeMethodByName(env: POCIEnv; err: POCIError;
       const tdo: POCIType; const method_name: Poratext; const m_length: ub4;
-      out mdos: PPOCITypeMethod): sword;
+      mdos: PPOCITypeMethod): sword;
     function TypeMethodNext(env: POCIEnv; err: POCIError;
-      iterator_ort: POCITypeIter; out mdo: PPOCITypeMethod): sword;
+      iterator_ort: POCITypeIter; mdo: PPOCITypeMethod): sword;
     function TypeMethodName(env:POCIEnv; err: POCIError;
-      const mdo: POCITypeMethod; out n_length: Pub4): poratext;
+      const mdo: POCITypeMethod; n_length: Pub4): poratext;
     function TypeMethodEncap(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod): OCITypeEncap;
     function TypeMethodFlags(env: POCIEnv; err: POCIError;
         const mdo:POCITypeMethod): OCITypeMethodFlag;
     function TypeMethodMap(env: POCIEnv; err: POCIError; const tdo: POCIType;
-      out mdo: PPOCITypeMethod): sword;
+      mdo: PPOCITypeMethod): sword;
     function TypeMethodOrder(env: POCIEnv; err: POCIError;
-      const tdo: POCIType; out mdo: PPOCITypeMethod): sword;
+      const tdo: POCIType; mdo: PPOCITypeMethod): sword;
     function TypeMethodParams(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod): ub4;
     function TypeResult(env: POCIEnv; err: POCIError;
-      const mdo: POCITypeMethod; out elem: PPOCITypeElem): sword;
+      const mdo: POCITypeMethod; elem: PPOCITypeElem): sword;
     function TypeParamByPos(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod; const position: ub4;
-      out elem: PPOCITypeElem): sword;
+      elem: PPOCITypeElem): sword;
     function TypeParamByName(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-      out elem:PPOCITypeElem): sword;
+      elem:PPOCITypeElem): sword;
     function TypeParamPos(env: POCIEnv; err: POCIError;
       const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-      out position: Pub4; out elem: PPOCITypeElem): sword;
+      position: Pub4; elem: PPOCITypeElem): sword;
     function TypeElemParamMode(env: POCIEnv; err: POCIError;
       const elem: POCITypeElem): OCITypeParamMode;
     function TypeElemDefaultValue(env: POCIEnv; err: POCIError;
-      const elem: POCITypeElem; out d_v_length: Pub4): poratext;
+      const elem: POCITypeElem; d_v_length: Pub4): poratext;
     function TypeVTInit(env: POCIEnv; err: POCIError): sword;
     function TypeVTInsert(env: POCIEnv; err: POCIError;
       const schema_name: Poratext; const s_n_length: ub4;
@@ -1758,7 +1758,7 @@ end;
 { > ori.h}
 function TZOracle9iPlainDriver.ObjectNew(env: POCIEnv; err: POCIError;
   const svc: POCISvcCtx; typecode: OCITypeCode; tdo: POCIType; table: Pointer;
-  duration: OCIDuration; value: boolean; instance: PPointer): sword;
+  duration: OCIDuration; value: Longbool; instance: PPointer): sword;
 begin
   Result := OracleAPI.OCIObjectNew(env, err, svc, typecode, tdo, table,
     duration, value, instance);
@@ -1854,20 +1854,20 @@ begin
 end;
 
 function TZOracle9iPlainDriver.ObjectGetTypeRef(env: POCIEnv; err: POCIError;
-  const instance:pointer; out type_ref: POCIRef): sword;
+  const instance:pointer; type_ref: POCIRef): sword;
 begin
   Result := OracleAPI.OCIObjectGetTypeRef(env, err, instance, type_ref);
 end;
 
 function TZOracle9iPlainDriver.ObjectGetObjectRef(env: POCIEnv; err: POCIError;
-  const _object: pointer; out object_ref: POCIRef): sword;
+  const _object: pointer; object_ref: POCIRef): sword;
 begin
   Result := OracleAPI.OCIObjectGetObjectRef(env, err, _object, object_ref);
 end;
 
 function TZOracle9iPlainDriver.ObjectMakeObjectRef(env: POCIEnv; err: POCIError;
   const svc: POCISvcCtx; const table: pointer; const values: PPointer;
-  const array_len: ub4; out object_ref: POCIRef): sword;
+  const array_len: ub4; object_ref: POCIRef): sword;
 begin
   Result := OracleAPI.OCIObjectMakeObjectRef(env, err, svc, table, values,
     array_len, object_ref);
@@ -1875,40 +1875,40 @@ end;
 
 function TZOracle9iPlainDriver.ObjectGetPrimaryKeyTypeRef(env: POCIEnv;
   err: POCIError; const svc:POCISvcCtx; const table: pointer;
-  out type_ref: POCIRef): sword;
+  type_ref: POCIRef): sword;
 begin
   Result := OracleAPI.OCIObjectGetPrimaryKeyTypeRef(env, err, svc, table,
     type_ref);
 end;
 
 function TZOracle9iPlainDriver.ObjectGetInd(env: POCIEnv; err: POCIError;
-  const instance: pointer; out null_struct: PPointer): sword;
+  const instance: pointer; null_struct: PPointer): sword;
 begin
   Result := OracleAPI.OCIObjectGetInd(env, err, instance, null_struct);
 end;
 
 function TZOracle9iPlainDriver.ObjectExists(env: POCIEnv; err: POCIError;
-  const ins: pointer; out exist: PBoolean): sword;
+  const ins: pointer; exist: PBoolean): sword;
 begin
   Result := OracleAPI.OCIObjectExists(env, err, ins, exist);
 end;
 
 function TZOracle9iPlainDriver.ObjectGetProperty(envh: POCIEnv; errh: POCIError;
   const obj: pointer; const propertyId: OCIObjectPropId;
-  out _property: pointer; size: Pub4): sword;
+  _property: pointer; size: Pub4): sword;
 begin
   Result := OracleAPI.OCIObjectGetProperty(envh, errh, obj, propertyId,
     _property, size);
 end;
 
 function TZOracle9iPlainDriver.ObjectIsLocked(env: POCIEnv; err: POCIError;
-  const ins: pointer; out lock: Pboolean): sword;
+  const ins: pointer; lock: Pboolean): sword;
 begin
   Result := OracleAPI.OCIObjectIsLocked(env, err, ins, lock);
 end;
 
 function TZOracle9iPlainDriver.ObjectIsDirty(env: POCIEnv; err: POCIError;
-  const ins: pointer; out dirty: PBoolean): sword;
+  const ins: pointer; dirty: PBoolean): sword;
 begin
   Result := OracleAPI.OCIObjectIsDirty(env, err, ins, dirty);
 end;
@@ -1917,7 +1917,7 @@ function TZOracle9iPlainDriver.ObjectPinTable(env: POCIEnv; err: POCIError;
   const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
   const object_name: Poratext; const o_n_length:ub4;
   const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
-  out _object: PPointer): sword;
+  _object: PPointer): sword;
 begin
   Result := OracleAPI.OCIObjectPinTable(env, err, svc, schema_name, s_n_length,
     object_name, o_n_length, scope_obj_ref, pin_duration, _object);
@@ -1927,8 +1927,8 @@ function TZOracle9iPlainDriver.ObjectArrayPin(env: POCIEnv; err: POCIError;
   const ref_array: PPOCIRef; const array_size: ub4;
   const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
   const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
-  const lock: OCILockOpt; out obj_array: PPointer;
-  out pos: Pub4): sword;
+  const lock: OCILockOpt; obj_array: PPointer;
+  pos: Pub4): sword;
 begin
   Result := OracleAPI.OCIObjectArrayPin(env, err, ref_array, array_size,
     cor_array, cor_array_size, pin_option, pin_duration, lock, obj_array, pos);
@@ -1936,7 +1936,7 @@ end;
 
 function TZOracle9iPlainDriver.CacheFlush(env: POCIEnv; err: POCIError;
   const svc:POCISvcCtx; const context: pointer; const get: TOCICacheFlushGet;
-  out ref: PPOCIRef): sword;
+  ref: PPOCIRef): sword;
 begin
   Result := OracleAPI.OCICacheFlush(env, err, svc, context, get, ref);
 end;
@@ -1968,13 +1968,13 @@ end;
 
 function TZOracle9iPlainDriver.DurationBegin(env: POCIEnv; err: POCIError;
   svc: POCISvcCtx; const parent: OCIDuration;
-  out dur: POCIDuration): sword;
+  dur: POCIDuration): sword;
 begin
   Result := OracleAPI.OCIDurationBegin(env, err, svc, parent, dur);
 end;
 
 function TZOracle9iPlainDriver.DurationEnd(env: POCIEnv; err: POCIError;
-  svc: POCISvcCtx; out duration: OCIDuration): sword;
+  svc: POCISvcCtx; duration: OCIDuration): sword;
 begin
   Result := OracleAPI.OCIDurationEnd(env, err, svc, duration);
 end;
@@ -2250,7 +2250,7 @@ begin
 end;
 
 function TZOracle9iPlainDriver.GetEnvCharsetByteWidth(hndl: POCIEnv; err: POCIError;
-  out Value: sb4): sword;
+  Value: sb4): sword;
 begin
   Result := OracleAPI.OCINlsNumericInfoGet(hndl, err, @value, OCI_NLS_CHARSET_MAXBYTESZ);
 end;
@@ -2800,7 +2800,7 @@ end;
 
 {ort.h}
 function TZOracle9iPlainDriver.TypeIterNew(env: POCIEnv; err: POCIError;
-  const tdo: POCIType; out iterator_ort: PPOCITypeIter): sword;
+  const tdo: POCIType; iterator_ort: PPOCITypeIter): sword;
 begin
   Result := OracleAPI.OCITypeIterNew(env, err, tdo, iterator_ort);
 end;
@@ -2821,7 +2821,7 @@ function TZOracle9iPlainDriver.TypeByName(env: POCIEnv; err: POCIError;
   const svc: POCISvcCtx; schema_name: Poratext; const s_length: ub4;
   const type_name: Poratext; const t_length: ub4; version_name: Poratext;
   const v_length: ub4; const pin_duration: OCIDuration;
-  const get_option: OCITypeGetOpt; out tdo: PPOCIType): sword;
+  const get_option: OCITypeGetOpt; tdo: PPOCIType): sword;
 begin
   Result := OracleAPI.OCITypeByName(env, err, svc, schema_name, s_length,
     type_name, t_length, version_name, v_length, pin_duration, get_option, tdo);
@@ -2831,7 +2831,7 @@ function TZOracle9iPlainDriver.TypeArrayByName(env: POCIEnv; err: POCIError;
   svc: POCISvcCtx; array_len: ub4; schema_name:  PPoratext; s_length: Pub4;
   type_name: PPoratext; t_length: Pub4; version_name: PPoratext;
   v_length: Pub4; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-  out tdo: PPOCIType): sword;
+  tdo: PPOCIType): sword;
 begin
   Result := OracleAPI.OCITypeArrayByName(env, err, svc, array_len, schema_name,
     s_length, type_name, t_length, version_name, v_length, pin_duration,
@@ -2845,22 +2845,23 @@ begin
   Result := OracleAPI.OCITypeByRef(env, err, type_ref, pin_duration, get_option,
     tdo);
 end;
+
 function TZOracle9iPlainDriver.TypeArrayByRef(env: POCIEnv; err: POCIError;
   array_len: ub4; type_ref: PPOCIRef; pin_duration: OCIDuration;
-  get_option: OCITypeGetOpt; out tdo: PPOCIType): sword;
+  get_option: OCITypeGetOpt; tdo: PPOCIType): sword;
 begin
   Result := OracleAPI.OCITypeArrayByRef(env, err, array_len, type_ref,
     pin_duration, get_option, tdo);
 end;
 
 function TZOracle9iPlainDriver.TypeName(env: POCIEnv; err: POCIError;
-  tdo: POCIType; out n_length: Pub4): poratext;
+  tdo: POCIType; n_length: Pub4): poratext;
 begin
   Result := OracleAPI.OCITypeName(env, err, tdo, n_length);
 end;
 
 function TZOracle9iPlainDriver.TypeSchema(env: POCIEnv; err: POCIError;
-  const tdo: POCIType; out n_length: Pub4): poratext;
+  const tdo: POCIType; n_length: Pub4): poratext;
 begin
   Result := OracleAPI.OCITypeSchema(env, err, tdo, n_length);
 end;
@@ -2878,7 +2879,7 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeVersion(env: POCIEnv; err: POCIError;
-  const tdo: POCIType; out v_length: Pub4): poratext;
+  const tdo: POCIType; v_length: Pub4): poratext;
 begin
   Result := OracleAPI.OCITypeVersion(env, err, tdo, v_length);
 end;
@@ -2896,7 +2897,7 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeElemName(env: POCIEnv; err: POCIError;
-  const elem: POCITypeElem; out n_length:Pub4): poratext;
+  const elem: POCITypeElem; n_length:Pub4): poratext;
 begin
   Result := OracleAPI.OCITypeElemName(env, err, elem, n_length);
 end;
@@ -2908,7 +2909,7 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeElemType(env: POCIEnv; err: POCIError;
-  const elem: POCITypeElem; out elem_tdo:PPOCIType): sword;
+  const elem: POCITypeElem; elem_tdo:PPOCIType): sword;
 begin
   Result := OracleAPI.OCITypeElemType(env, err, elem, elem_tdo);
 end;
@@ -2950,7 +2951,7 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeElemParameterizedType(env: POCIEnv;
-  err: POCIError; const elem: POCITypeElem; out type_stored: PPOCIType): sword;
+  err: POCIError; const elem: POCITypeElem; type_stored: PPOCIType): sword;
 begin
   Result := OracleAPI.OCITypeElemParameterizedType(env, err, elem, type_stored);
 end;
@@ -2963,13 +2964,13 @@ end;
 
 function TZOracle9iPlainDriver.TypeAttrByName(env: POCIEnv; err: POCIError;
   const tdo: POCIType; const name: Poratext; const n_length: ub4;
-  out elem: PPOCITypeElem): sword;
+  elem: PPOCITypeElem): sword;
 begin
   Result := OracleAPI.OCITypeAttrByName(env, err, tdo, name, n_length, elem);
 end;
 
 function TZOracle9iPlainDriver.TypeAttrNext(env: POCIEnv; err: POCIError;
-  iterator_ort: POCITypeIter; out elem: PPOCITypeElem): sword;
+  iterator_ort: POCITypeIter; elem: PPOCITypeElem): sword;
 begin
   Result := OracleAPI.OCITypeAttrNext(env, err, iterator_ort, elem);
 end;
@@ -2981,13 +2982,13 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeCollSize(env: POCIEnv; err: POCIError;
-  const tdo: POCIType; out num_elems: Pub4): sword;
+  const tdo: POCIType; num_elems: Pub4): sword;
 begin
   Result := OracleAPI.OCITypeCollSize(env, err, tdo, num_elems);
 end;
 
 function TZOracle9iPlainDriver.TypeCollExtTypeCode(env: POCIEnv; err: POCIError;
-  const tdo:POCIType; out sqt_code: POCITypeCode): sword;
+  const tdo:POCIType; sqt_code: POCITypeCode): sword;
 begin
   Result := OracleAPI.OCITypeCollExtTypeCode(env, err, tdo, sqt_code);
 end;
@@ -3002,20 +3003,20 @@ end;
 
 function TZOracle9iPlainDriver.TypeMethodByName(env: POCIEnv; err: POCIError;
   const tdo: POCIType; const method_name: Poratext; const m_length: ub4;
-  out mdos: PPOCITypeMethod): sword;
+  mdos: PPOCITypeMethod): sword;
 begin
   Result := OracleAPI.OCITypeMethodByName(env, err, tdo, method_name, m_length,
     mdos);
 end;
 
 function TZOracle9iPlainDriver.TypeMethodNext(env: POCIEnv; err: POCIError;
-  iterator_ort: POCITypeIter; out mdo: PPOCITypeMethod): sword;
+  iterator_ort: POCITypeIter; mdo: PPOCITypeMethod): sword;
 begin
   Result := OracleAPI.OCITypeMethodNext(env, err, iterator_ort, mdo);
 end;
 
 function TZOracle9iPlainDriver.TypeMethodName(env:POCIEnv; err: POCIError;
-  const mdo: POCITypeMethod; out n_length: Pub4): poratext;
+  const mdo: POCITypeMethod; n_length: Pub4): poratext;
 begin
   Result := OracleAPI.OCITypeMethodName(env, err, mdo, n_length);
 end;
@@ -3033,13 +3034,13 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeMethodMap(env: POCIEnv; err: POCIError;
-  const tdo: POCIType; out mdo: PPOCITypeMethod): sword;
+  const tdo: POCIType; mdo: PPOCITypeMethod): sword;
 begin
   Result := OracleAPI.OCITypeMethodMap(env, err, tdo, mdo);
 end;
 
 function TZOracle9iPlainDriver.TypeMethodOrder(env: POCIEnv; err: POCIError;
-  const tdo: POCIType; out mdo: PPOCITypeMethod): sword;
+  const tdo: POCIType; mdo: PPOCITypeMethod): sword;
 begin
   Result := OracleAPI.OCITypeMethodOrder(env, err, tdo, mdo);
 end;
@@ -3051,28 +3052,28 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeResult(env: POCIEnv; err: POCIError;
-  const mdo: POCITypeMethod; out elem: PPOCITypeElem): sword;
+  const mdo: POCITypeMethod; elem: PPOCITypeElem): sword;
 begin
   Result := OracleAPI.OCITypeResult(env, err, mdo, elem);
 end;
 
 function TZOracle9iPlainDriver.TypeParamByPos(env: POCIEnv; err: POCIError;
   const mdo: POCITypeMethod; const position: ub4;
-  out elem: PPOCITypeElem): sword;
+  elem: PPOCITypeElem): sword;
 begin
   Result := OracleAPI.OCITypeParamByPos(env, err, mdo, position, elem);
 end;
 
 function TZOracle9iPlainDriver.TypeParamByName(env: POCIEnv; err: POCIError;
   const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-  out elem:PPOCITypeElem): sword;
+  elem:PPOCITypeElem): sword;
 begin
   Result := OracleAPI.OCITypeParamByName(env, err, mdo, name, n_length, elem);
 end;
 
 function TZOracle9iPlainDriver.TypeParamPos(env: POCIEnv; err: POCIError;
   const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-  out position: Pub4; out elem: PPOCITypeElem): sword;
+  position: Pub4; elem: PPOCITypeElem): sword;
 begin
   Result := OracleAPI.OCITypeParamPos(env, err, mdo, name, n_length, position,
     elem);
@@ -3085,7 +3086,7 @@ begin
 end;
 
 function TZOracle9iPlainDriver.TypeElemDefaultValue(env: POCIEnv;
-  err: POCIError; const elem: POCITypeElem; out d_v_length: Pub4): poratext;
+  err: POCIError; const elem: POCITypeElem; d_v_length: Pub4): poratext;
 begin
   Result := OracleAPI.OCITypeElemDefaultValue(env, err, elem, d_v_length);
 end;

@@ -82,6 +82,7 @@ type
     function GetAsDateTimeValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): TDateTime;
     function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function GetFinalObject(Obj: POCIObject): POCIObject;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
@@ -456,6 +457,20 @@ begin
 end;
 
 {**
+  Gets the final object of a type/named-collection/nested-table,array
+
+  @param obj the parent-object
+  @return the Object which contains the final object descriptor
+}
+function TZOracleAbstractResultSet.GetFinalObject(Obj: POCIObject): POCIObject;
+begin
+  if Obj.is_final_type = 1 then
+    Result := Obj
+  else
+    Result := GetFinalObject(Obj.next_subtype); //recursive call
+end;
+
+{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   a <code>boolean</code> in the Java programming language.
@@ -677,6 +692,8 @@ end;
 function TZOracleAbstractResultSet.GetDataSet(ColumnIndex: Integer): IZDataSet;
 var
   CurrentVar: PZSQLVar;
+  type_Ref: POCIRef;
+  //tdo: POCIType;
 begin
   Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
@@ -693,6 +710,39 @@ begin
   if CurrentVar.TypeCode = SQLT_NTY then
     if CurrentVar.Indicator >= 0 then
     begin
+      if CurrentVar._Obj.is_final_type = 1 then
+        // here we've the final object lets's read it to test it
+        // later we only need the reference-pointers to create a new dataset
+      else
+      begin
+        //create a temporary object
+        type_ref := nil;
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.ObjectNew(FConnection.GetConnectionHandle,
+            FConnection.GetErrorHandle, FConnection.GetContextHandle,
+            OCI_TYPECODE_REF, nil, nil, OCI_DURATION_DEFAULT, TRUE, @type_ref),
+          lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO');
+        //Get the type reference
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.ObjectGetTypeRef(FConnection.GetConnectionHandle,
+            FConnection.GetErrorHandle, CurrentVar._Obj.obj_value, type_Ref),
+          lcOther, 'OCIObjectGetTypeRef(obj_value)');
+
+        //Now let's get the new tdo
+        //Excptions????????
+        {CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.TypeByRef(FConnection.GetConnectionHandle,
+            FConnection.GetErrorHandle, type_ref, OCI_DURATION_DEFAULT,
+            OCI_TYPEGET_ALL, @tdo),
+          lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO');}
+        //free the temporary object
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.ObjectFree(FConnection.GetConnectionHandle,
+            FConnection.GetErrorHandle, type_ref, ub2(0)),
+          lcOther, 'ObjectFree()');
+      end;
+
+
       {CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.ResultSetToStmt(CurrentVar._Object,
           FErrorHandle), lcOther, 'Nested Table to Stmt handle');
@@ -813,9 +863,7 @@ begin
 
     case CurrentVar.DataType of
       SQLT_CHR, SQLT_VCS, SQLT_AFC, SQLT_AVC, SQLT_STR, SQLT_VST:
-        begin
-          CurrentVar.ColType := stString
-        end;
+        CurrentVar.ColType := stString;
       SQLT_NUM:
         begin
           FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
