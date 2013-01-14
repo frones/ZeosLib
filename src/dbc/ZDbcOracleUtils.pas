@@ -115,6 +115,18 @@ type
   end;
   PZSQLVars = ^TZSQLVars;
 
+  TZOracleParam = Record
+    pName:string;
+    pSQLType:Integer;
+    pValue: TZVariant;
+    pTypeName: String;
+    pType: ShortInt;
+    pProcIndex: Integer;
+    pParamIndex: Integer;
+    pOutIndex: Integer;
+  End;
+  TZOracleParams = array of TZOracleParam;
+
 {**
   Allocates memory for Oracle SQL Variables.
   @param Variables a pointer to array of variables.
@@ -201,8 +213,8 @@ function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
-  ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-  ParamTypes, FunctionResultOffsets: array of shortInt): IZResultSet; overload;
+  ErrorHandle: POCIError; OutVars: PZSQLVars;
+  Const OracleParams: TZOracleParams): IZResultSet; overload;
 
 {**
   Allocates in memory Oracle handlers for Statement object.
@@ -725,14 +737,14 @@ end;
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-      ParamTypes, FunctionResultOffsets: array of shortInt): IZResultSet;
+      ErrorHandle: POCIError; OutVars: PZSQLVars;
+      Const OracleParams: TZOracleParams): IZResultSet;
 var
   NativeResultSet: TZOracleCallableResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver, Statement,
-    LogSQL, StmtHandle, ErrorHandle, OutVars, FieldNames, ParamTypes, FunctionResultOffsets);
+    LogSQL, StmtHandle, ErrorHandle, OutVars, OracleParams);
   NativeResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
     Statement.GetConnection.GetConSettings);

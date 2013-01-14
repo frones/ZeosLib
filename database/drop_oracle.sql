@@ -48,7 +48,8 @@ BEGIN
                where object_type = 'FUNCTION'
                  and upper(OBJECT_NAME) in ('SIMPLEFUNC',
                                             'SIMPLE_FUNC',
-                                            'MYFUNCINOUTRETURN')) LOOP
+                                            'MYFUNCINOUTRETURN',
+                                            'IS_ACCOUNT_SERVE')) LOOP
     execute immediate('DROP FUNCTION "'||rec.object_name||'"');
   END LOOP;
 

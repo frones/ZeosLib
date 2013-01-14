@@ -143,6 +143,7 @@ type
     procedure Test_simplefunc;
     procedure Test_packaged;
     procedure Test_MYPACKAGE;
+    procedure Test_IS_ACCOUNT_SERVE;
   end;
 
 implementation
@@ -1296,8 +1297,6 @@ begin
 
   CheckEquals('aoutvalueoutvalue', StoredProc.ParamByName('X').AsString);
   CheckEquals('returned string', StoredProc.ParamByName('ReturnValue').AsString);
-  CheckEquals('aoutvalueoutvalue', StoredProc.FieldByName('X').AsString);
-  CheckEquals('returned string', StoredProc.FieldByName('ReturnValue').AsString);
 end;
 
 procedure TZTestOracleStoredProcedure.simple_func(prefix: string);
@@ -1430,13 +1429,30 @@ begin
   CheckEquals(1111, StoredProc.ParamByName('SIMPLE_FUNC.ReturnValue').AsInteger);
   CheckEquals(2222, StoredProc.ParamByName('SIMPLEFUNC.ReturnValue').AsInteger);
 
+  StoredProc.Close;
+  StoredProc.Open;
+
   CheckEquals(600, StoredProc.FieldByName('ABTEST.P4').AsInteger);
   CheckEquals('abcabc', StoredProc.FieldByName('ABTEST.P5').AsString);
-  CheckEquals('myfuncInOutReturnoutvalueoutvalue', StoredProc.FieldByName('myfuncInOutReturn.X').AsString);
+  CheckEquals('myfuncInOutReturnoutvalueoutvalueoutvalue', StoredProc.FieldByName('myfuncInOutReturn.X').AsString);
   CheckEquals('returned string', StoredProc.FieldByName('myfuncInOutReturn.ReturnValue').AsString);
   CheckEquals(1111, StoredProc.FieldByName('SIMPLE_FUNC.ReturnValue').AsInteger);
   CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC.ReturnValue').AsInteger);
 end;
+
+procedure TZTestOracleStoredProcedure.Test_IS_ACCOUNT_SERVE;
+begin
+  StoredProc.StoredProcName := 'IS_ACCOUNT_SERVE';
+  CheckEquals(3, StoredProc.Params.Count);
+  StoredProc.ParamByName('p_MIFARE_ID').AsString := '1a2b3c4d';
+  StoredProc.ExecProc;
+  CheckEquals('OK', StoredProc.ParamByName('P_MSG').AsString);
+  CheckEquals(1, StoredProc.ParamByName('ReturnValue').AsInteger);
+  StoredProc.ExecProc;
+  CheckEquals('OK', StoredProc.ParamByName('P_MSG').AsString);
+  CheckEquals(1, StoredProc.ParamByName('ReturnValue').AsInteger);
+end;
+
 initialization
   RegisterTest('component',TZTestInterbaseStoredProcedure.Suite);
   RegisterTest('component',TZTestDbLibStoredProcedure.Suite);
