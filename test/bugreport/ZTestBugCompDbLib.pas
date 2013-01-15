@@ -56,13 +56,13 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility;
 
 type
 
   {** Implements a bug report test case for DbLib components. }
-  ZTestCompDbLibBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  ZTestCompDbLibBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

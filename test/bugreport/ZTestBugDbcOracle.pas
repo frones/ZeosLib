@@ -56,13 +56,13 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZBugReport, ZCompatibility,
-  ZDbcOracle;
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility,
+  ZDbcOracle, ZSqlTestCase;
 
 type
 
   {** Implements a DBC bug report test case for Oracle }
-  TZTestDbcOracleBugReport = class(TZAbstractDbcSQLBugReportTestCase)
+  TZTestDbcOracleBugReport = class(TZAbstractDbcSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

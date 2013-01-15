@@ -56,13 +56,13 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility, ZSqlUpdate, ZSqlProcessor, ZSqlMetadata;
 
 type
 
   {** Implements a bug report test case for core components. }
-  ZTestCompCoreBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  ZTestCompCoreBugReport = class(TZAbstractCompSQLTestCase)
   private
     FUpdateCounter: Integer;
     FErrorCounter: Integer;
@@ -118,13 +118,8 @@ type
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
-  ZTestCompCoreBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
+  ZTestCompCoreBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   private
-    FConnection: TZConnection;
-  protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-    property Connection: TZConnection read FConnection write FConnection;
   published
     procedure TestUnicodeBehavior;
     procedure TestNonAsciiChars;
@@ -771,7 +766,7 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test795641;
 var
-  Connection: TZConnection;
+  Connection: TZConnection;     // Attention : local Connection
   Query: TZQuery;
 begin
   if SkipTest then Exit;
@@ -792,7 +787,7 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test826886;
 var
-  Connection: TZConnection;
+  Connection: TZConnection;     // Attention : local Connection
   Query: TZQuery;
 begin
   if SkipTest then Exit;
@@ -800,7 +795,8 @@ begin
   if SkipClosed then Exit;
 
   Connection := Self.CreateDatasetConnection;
-  Query := CreateQuery;
+  Query := TZQuery.Create(nil);
+  Query.Connection := Connection;
   Query.SQL.Text := 'update people set p_dep_id=p_dep_id where 1=0';
 
   try
@@ -821,7 +817,7 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test000004;
 var
-  Connection: TZConnection;
+  Connection: TZConnection;       // Attention : local Connection
   SQLProcessor: TZSQLProcessor;
 begin
   if SkipTest then Exit;
@@ -850,14 +846,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test832467;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   // Query.RequestLive := True;
   Query.CachedUpdates := True;
@@ -885,7 +879,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -896,14 +889,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test830804;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.SQL.Text := 'select p_id, p_name, p_resume from people'
     + ' where p_id < 4 order by p_id';
@@ -939,7 +930,6 @@ begin
 
       Query.Close;
     finally
-      Connection.Free;
       Query.Free;
     end
   end else begin
@@ -970,7 +960,6 @@ begin
 
       Query.Close;
     finally
-      Connection.Free;
       Query.Free;
     end;
   end;  
@@ -982,14 +971,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test833197;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people';
 
@@ -1004,7 +991,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1015,14 +1001,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test834798;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people order by p_id';
 
@@ -1049,7 +1033,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1060,14 +1043,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test839540;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people order by p_id';
 
@@ -1080,7 +1061,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1091,14 +1071,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test840218;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people order by p_id';
 
@@ -1109,7 +1087,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1146,14 +1123,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test846377;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.CachedUpdates := True;
   // Query.RequestLive := True;
@@ -1174,7 +1149,6 @@ begin
     Query.First;
     Query.Locate('p_name', 'xyz', [loCaseInsensitive]);
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1215,35 +1189,28 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test000005;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
+  Query := CreateQuery;
   try
-    Query := TZQuery.Create(nil);
-    try
-      Query.Connection := Connection;
-      Query.SQL.Text := 'update people set p_name=p_name where 1=0';
+    Query.SQL.Text := 'update people set p_name=p_name where 1=0';
 
-      try
-        Query.Open;
-        Fail('Should be an exception when DML statement is executed via Query.Open');
-      except
-        on E: Exception do
-        begin
-          if StartsWith(E.Message, 'Access violation') then
-            Fail('Query.Open for DML statement shouldn''t throw Access Violation');
-        end;
+    try
+      Query.Open;
+      Fail('Should be an exception when DML statement is executed via Query.Open');
+    except
+      on E: Exception do
+      begin
+        if StartsWith(E.Message, 'Access violation') then
+          Fail('Query.Open for DML statement shouldn''t throw Access Violation');
       end;
-    finally
-      Query.Free;
     end;
   finally
-    Connection.Free;
+    Query.Free;
   end;
 end;
 
@@ -1253,14 +1220,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test887103;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.BeforeScroll := DataSetBeforeScroll;
   Query.AfterScroll := DataSetAfterScroll;
@@ -1275,7 +1240,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1286,16 +1250,13 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test919401;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   Query.CachedUpdates := True;
   // Query.RequestLive := True;
   Query.SQL.Text := 'select * from people';
@@ -1316,7 +1277,6 @@ begin
     Query.Close;
   finally
     Query.Free;
-    Connection.Free;
   end;
 end;
 
@@ -1326,14 +1286,12 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test926264;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
   Query := CreateQuery;
   Query.CachedUpdates := True;
   // Query.RequestLive := True;
@@ -1379,7 +1337,6 @@ begin
     Check(Query.Eof);
   finally
     Query.EnableControls;
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1390,16 +1347,13 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test953557;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   Query.BeforeScroll := DataSetBeforeScroll;
   Query.AfterScroll := DataSetAfterScroll;
   Query.SQL.Text := 'select * from people';
@@ -1427,7 +1381,6 @@ begin
 
     Query.Close;
   finally
-    Connection.Free;
     Query.Free;
   end;
 end;
@@ -1438,7 +1391,6 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test966267;
 var
-  Connection: TZConnection;
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
@@ -1448,10 +1400,7 @@ begin
 
   {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
 
-  Connection := Self.CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
-  // Query.RequestLive := True;
+  Query := CreateQuery;
   Query.SQL.Text := 'select * from people';
   Query.OnDeleteError := DataSetOnError;
   Query.OnPostError := DataSetOnError;
@@ -1520,7 +1469,6 @@ begin
   finally
     UpdateSQL.Free;
     Query.Free;
-    Connection.Free;
   end;
 end;
 
@@ -1530,16 +1478,13 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test985629;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   Query.SQL.Text := 'select c_cost from cargo order by c_id';
 
   try
@@ -1550,7 +1495,6 @@ begin
     Query.Close;
   finally
     Query.Free;
-    Connection.Free;
   end;
 end;
 
@@ -1559,17 +1503,14 @@ end;
 }
 procedure ZTestCompCoreBugReport.TestFloatPrecision;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'Insert into number_values(n_id, n_money) values(999999,643.11)';
     Query.ExecSQL;
 
@@ -1586,7 +1527,6 @@ begin
     end;
   finally
     Query.Free;
-    Connection.Free;
   end;
 end;
 
@@ -1596,17 +1536,13 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test995080;
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Connection := Self.CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
-  // Query.RequestLive := True;
+  Query := CreateQuery;
   Query.CachedUpdates := True;
   Query.SQL.Text := 'select * from people where 1=0';
 
@@ -1627,7 +1563,6 @@ begin
     Query.Close;
   finally
     Query.Free;
-    Connection.Free;
   end;
 end;
 
@@ -1643,9 +1578,7 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
-  Query.Connection := Connection;
-
+  Query := CreateReadOnlyQuery;
   try
     Check(Query.ParamCheck);
     CheckEquals(0, Query.Params.Count);
@@ -1682,9 +1615,7 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
-  Query.Connection := Connection;
-
+  Query := CreateReadOnlyQuery;
   try
     Check(not Query.Active);
     try
@@ -1876,18 +1807,6 @@ begin
   Connection.Disconnect;
 end;
 
-{ ZTestCompCoreBugReportMBCs }
-procedure ZTestCompCoreBugReportMBCs.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-procedure ZTestCompCoreBugReportMBCs.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 const {Test Strings}
   Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
@@ -1906,10 +1825,8 @@ begin
   if SkipTest then Exit;
 
   StrStream1 := nil;
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -1920,9 +1837,9 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := GetDBTestString(Str3, FConnection.DbcConnection.GetConSettings);
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := GetDBTestString(Str2, FConnection.DbcConnection.GetConSettings);
+      SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
@@ -1938,8 +1855,8 @@ begin
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
 
-        CheckEquals(Str2+LineEnding, StrStream1, FConnection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
-        CheckEquals(Str3, FieldByName('P_NAME').AsString, FConnection.DbcConnection.GetConSettings);
+        CheckEquals(Str2+LineEnding, StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str3, FieldByName('P_NAME').AsString, Connection.DbcConnection.GetConSettings);
 
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
@@ -1980,9 +1897,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
-  Connection.Connect;
+  Query := CreateQuery;
+  Connection.Connect;  //DbcConnection needed
   try
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+

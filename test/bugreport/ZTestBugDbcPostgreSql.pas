@@ -57,12 +57,12 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
-  ZBugReport, ZCompatibility, ZDbcPostgreSql, ZTestConsts;
+  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts;
 
 type
 
   {** Implements a DBC bug report test case for PostgreSQL. }
-  TZTestDbcPostgreSQLBugReport = class(TZAbstractDbcSQLBugReportTestCase)
+  TZTestDbcPostgreSQLBugReport = class(TZAbstractDbcSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -82,7 +82,7 @@ type
     procedure Test_Mantis0000148;
   end;
 
-  TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLBugReportTestCaseMBCs)
+  TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   published

@@ -62,9 +62,8 @@ uses
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestSQLMetadataCase = class(TZAbstractSQLTestCase)
+  TZTestSQLMetadataCase = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
     Metadata: TZSQLMetadata;
   protected
     procedure SetUp; override;
@@ -84,8 +83,7 @@ uses Classes, ZDbcUtils, ZSysUtils, ZTestConsts, ZDbcIntfs;
 }
 procedure TZTestSQLMetadataCase.SetUp;
 begin
-  Connection := CreateDatasetConnection;
-
+  inherited SetUp;
   Metadata := TZSQLMetadata.Create(nil);
   Metadata.Connection := Connection;
 end;
@@ -97,9 +95,7 @@ procedure TZTestSQLMetadataCase.TearDown;
 begin
   Metadata.Close;
   Metadata.Free;
-
-  Connection.Disconnect;
-  Connection.Free;
+  inherited TearDown;
 end;
 
 {**

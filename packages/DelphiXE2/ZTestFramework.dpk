@@ -49,7 +49,6 @@ contains
   ZTestConsts in '..\..\test\framework\ZTestConsts.pas',
   ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
-  ZBugReport in '..\..\test\framework\ZBugReport.pas',
   {$IFNDEF WITH_REPORTMEMORYLEAKSONSHUTDOWN}
   MemCheck in '..\..\test\external\MemCheck.pas',
   {$ENDIF}

@@ -63,9 +63,8 @@ uses
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestSQLTypesCase = class(TZAbstractSQLTestCase)
+  TZTestSQLTypesCase = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
     Query: TZQuery;
   protected
     procedure SetUp; override;
@@ -85,10 +84,8 @@ uses Classes, ZTestConsts, ZSysUtils, ZDbcUtils, ZTestCase;
 }
 procedure TZTestSQLTypesCase.SetUp;
 begin
-  Connection := CreateDatasetConnection;
-
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  inherited SetUp;
+  Query := CreateQuery;
   Query.ParamCheck := True;
 end;
 
@@ -99,8 +96,7 @@ procedure TZTestSQLTypesCase.TearDown;
 begin
   Query.Close;
   Query.Free;
-  Connection.Disconnect;
-  Connection.Free;
+  inherited TearDown;
 end;
 
 {**

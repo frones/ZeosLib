@@ -56,7 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -64,7 +64,7 @@ uses
 type
 
   {** Implements a bug report test case for Oracle components. }
-  ZTestCompOracleBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  ZTestCompOracleBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -79,7 +79,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  ZTestCase, ZTestConsts, ZSqlUpdate;
 
 { ZTestCompOracleBugReport }
 

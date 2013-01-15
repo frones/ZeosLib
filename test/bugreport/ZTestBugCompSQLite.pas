@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZBugReport,
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
     DBCtrls,
   {$ENDIF}
@@ -65,7 +65,7 @@ uses
 type
 
   {** Implements a bug report test case for SQLite components. }
-  ZTestCompSQLiteBugReport = class(TZAbstractCompSQLBugReportTestCase)
+  ZTestCompSQLiteBugReport = class(TZAbstractCompSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -73,7 +73,7 @@ type
   end;
 
   {** Implements a MBC bug report test case for SQLite components. }
-  ZTestCompSQLiteBugReportMBCs = class(TZAbstractCompSQLBugReportTestCaseMBCs)
+  ZTestCompSQLiteBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -82,7 +82,7 @@ type
 implementation
 
 uses
-  Variants, ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase;
+  Variants, ZTestCase, ZTestConsts, ZSqlUpdate;
 
 { ZTestCompSQLiteBugReport }
 
