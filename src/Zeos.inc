@@ -180,8 +180,11 @@
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
-  {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
+{$ENDIF}
+
+{$IFDEF DELPHI14_UP}
+  {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}

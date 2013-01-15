@@ -85,12 +85,12 @@
 
   {$DEFINE WITH_FUNIDIRECTIONAL} // FPC has references a field instead of a setter here.  (at least in 2.6.0)
 
-  {$IF FPC_FULLVERSION>20602} // will be introduced in 2.6.2 (and up to date 2.6.1)
+  {$IF FPC_FULLVERSION>20601} // will be introduced in 2.6.2 (and up to date 2.6.1)
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}              // Have TBookmark
+    {$UNDEF WITH_FPC_FTTIME_BUG}
   {$IFEND}
   {$IF FPC_FULLVERSION>20700}
-    {$UNDEF WITH_FPC_FTTIME_BUG}
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF

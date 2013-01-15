@@ -548,7 +548,7 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
   const bUseResult:boolean): TZColumnInfo;
 var
   FieldFlags: Integer;
-  FieldLength:integer;
+  FieldLength: ULong;
 begin
   if Assigned(FieldHandle) then
   begin

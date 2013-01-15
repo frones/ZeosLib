@@ -327,12 +327,12 @@ var
   Catalog, Schema, ObjectName: string;
   ColumnType: Integer;
 begin
-  CheckConnected;
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
     SQL.Text := Value;
     if ParamCheck and (Value <> '') and not (csLoading in ComponentState) and Assigned(Connection) then
     begin
+      CheckConnected;
       Connection.ShowSQLHourGlass;
       try
         SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
