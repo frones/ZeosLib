@@ -218,12 +218,16 @@ type
   end;
 
   {** Implements a dbc test case which runs all active protocols. }
+
+  { TZAbstractDbcSQLTestCase }
+
   TZAbstractDbcSQLTestCase = class (TZAbstractSQLTestCase)
   private
     FConnection: IZConnection;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
+    function IsRealPreparableTest: Boolean; override;
     function GetConnectionUrl(Param: String): string;
 
     property Connection: IZConnection read FConnection write FConnection;
@@ -536,6 +540,7 @@ begin
       //writeln('create preferprepared');
       TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
       SetProperty(TempConfig, 'preferprepared', 'True');
+      SetProperty(TempConfig, 'preferpreparedresolver', 'True');
       ConnectionsList.Add(TempConfig);
       TempConfig.ConfigUses:=[cuRealPrepared];
       if ExtendedTest then
@@ -1271,6 +1276,11 @@ begin
   FConnection := nil;
 end;
 
+function TZAbstractDbcSQLTestCase.IsRealPreparableTest: Boolean;
+begin
+  Result:= True;
+end;
+
 function TZAbstractDbcSQLTestCase.GetConnectionUrl(Param: String): string;
 var
   TempProperties: TStrings;
@@ -1316,6 +1326,8 @@ begin
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
     Result.Options := Result.Options + [doPreferPrepared];
+  if StrToBoolEx(FConnection.Properties.Values['preferpreparedresolver']) then
+    Result.Options := Result.Options + [doPreferPreparedResolver];
 end;
 
 function TZAbstractCompSQLTestCase.CreateReadOnlyQuery: TZReadOnlyQuery;
@@ -1325,6 +1337,8 @@ begin
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
     Result.Options := Result.Options + [doPreferPrepared];
+  if StrToBoolEx(FConnection.Properties.Values['preferpreparedresolver']) then
+    Result.Options := Result.Options + [doPreferPreparedResolver];
 end;
 
 function TZAbstractCompSQLTestCase.CreateTable: TZTable;
@@ -1334,6 +1348,8 @@ begin
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
     Result.Options := Result.Options + [doPreferPrepared];
+  if StrToBoolEx(FConnection.Properties.Values['preferpreparedresolver']) then
+    Result.Options := Result.Options + [doPreferPreparedResolver];
 end;
 
 { TZAbstractDbcSQLTestCaseMBCs }
