@@ -1050,15 +1050,14 @@ end;
 }
 function TZMySQLPreparedResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
-    full64: Int64;
-    bitmask: Int64;
+  full64, bitmask: Int64;
 Begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
  full64 := bufferasInt64(ColumnIndex);
  bitmask := $FFFFFFFF;
- Result := Integer(full64 and bitmask);
+ Result := Int64(full64 and bitmask);
  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 

@@ -196,7 +196,6 @@ type
       Handle: PZMySQLConnect);
 
     function Execute(const SQL: ZAnsiString): Boolean; override;
-
     function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
 
@@ -589,8 +588,6 @@ begin
 end;
 
 procedure TZMySQLPreparedStatement.Prepare;
-var
-  AnsiSQL: AnsiString;
 begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
@@ -598,8 +595,7 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
       exit;
     end;
-  AnsiSQL := GetEncodedSQL(SQL); //do not spit Tokens twice
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(AnsiSQL), length(AnsiSQL)) <> 0) then
+  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(ASQL), length(ASQL)) <> 0) then
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
       exit;
@@ -680,7 +676,7 @@ begin
   begin
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_VARCHAR then
-      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))+1,false)
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))+1,false)
     else
       if MyType =FIELD_TYPE_BLOB then
       begin
@@ -711,7 +707,7 @@ begin
         FIELD_TYPE_STRING:
           begin
             if MyType = FIELD_TYPE_VARCHAR then
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(UTF8Encode(InParamValues[I].VUnicodeString)))
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))
             else
             if MyType = FIELD_TYPE_BLOB then
             begin
@@ -750,7 +746,7 @@ begin
     checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
     exit;
   end;
- inherited BindInParameters;
+  inherited BindInParameters;
 
   // Send large blobs in chuncks
   For I := 0 to InParamCount - 1 do
