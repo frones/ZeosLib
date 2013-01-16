@@ -289,12 +289,21 @@ const
   WC_ERR_INVALID_CHARS = $80; { error for invalid chars }
 {$ENDIF}
 
+const
+  ZFullMultiByteCodePages: array[0..20] of Word = (zCP_iso_2022_jp,
+    zCP_csISO2022JP, zCP_x_iso_2022_jp, zCP_iso_2022_kr,
+    zCP_x_cp50227, zCP_EUC_TC_ISO220, zCP_hz_gb_2312, zCP_GB18030,
+    zCP_x_iscii_de, zCP_x_iscii_be, zCP_x_iscii_ta, zCP_x_iscii_te,
+    zCP_x_iscii_as, zCP_x_iscii_or, zCP_x_iscii_ka, zCP_x_iscii_ma,
+    zCP_x_iscii_gu, zCP_x_iscii_pa, zCP_UTF7, zCP_UTF8, 42);
+
+function IsFullMultiByteCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function AnsiToWide(const S: ZAnsiString;
-  const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
+  const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
-  ZAnsiString;
-function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} ToCP: Word): ZAnsiString;
-function AnsiToStringEx(const s: ZAnsiString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String;
+  ZAnsiString; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} ToCP: Word): ZAnsiString; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function AnsiToStringEx(const s: ZAnsiString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$ENDIF}
 
 {**
@@ -338,11 +347,6 @@ implementation
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
 
 {$IFNDEF WITH_LCONVENCODING}
-const
-  ZFullMultiByteCodePages: array[0..21] of Word = (50220, 50221, 50222, 50225,
-    50227, 50229, 52936, 54936, 54936, 57002, 57003, 57004, 57005, 57006,
-    57007, 57008, 57009, 57010, 57011, 65000, zCP_UTF8, 42);
-
 function IsFullMultiByteCodePage(CP: Word): Boolean;
 var
   I: Integer;

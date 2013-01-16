@@ -1358,7 +1358,7 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF}
+  {$IFNDEF UNICODE}ASQL := SQL;{$ENDIF}
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);

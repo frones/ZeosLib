@@ -142,7 +142,7 @@ type
       TZWordState which represents either Quoted-String-Data or
       Catalog/Table/Alias/Field name-spaces.
 
-    This State is only neccessary for <code>Delphi12_UP</code> ( 2009 and later)
+    This State is only neccessary for <code>Delphi2009+</code> ( 2009 and later)
     and results of it's mixing nByte-Chars and binary-Data 1Byte-Chars.
   }
   TZEscapeState = class (TZTokenizerState)
@@ -1420,11 +1420,7 @@ function TZTokenizer.TokenizeBuffer(const Buffer: string;
 var
   Stream: TStream;
 begin
-  {$IFDEF DELPHI12_UP}
-  Stream := TStringStream.Create(Buffer, TEncoding.Unicode);
-  {$ELSE}
-  Stream := TStringStream.Create(Buffer);
-  {$ENDIF}
+  Stream := TStringStream.Create(Buffer{$IFDEF WITH_TENCODING_CLASS}, TEncoding.Unicode{$ENDIF});
   try
     Result := TokenizeStream(Stream, Options);
   finally
@@ -1524,11 +1520,7 @@ function TZTokenizer.TokenizeBufferToList(const Buffer: string;
 var
   Stream: TStream;
 begin
-  {$IFDEF DELPHI12_UP}
-  Stream := TStringStream.Create(Buffer, TEncoding.Unicode);
-  {$ELSE}
-  Stream := TStringStream.Create(Buffer);
-  {$ENDIF}
+  Stream := TStringStream.Create(Buffer{$IFDEF WITH_TENCODING_CLASS}, TEncoding.Unicode{$ENDIF});
   try
     Result := TokenizeStreamToList(Stream, Options);
   finally

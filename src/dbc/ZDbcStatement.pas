@@ -119,10 +119,10 @@ type
     property Closed: Boolean read FClosed write FClosed;
 
     {EgonHugeist SSQL only becouse of compatibility to the old code available}
-    property SSQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND} read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF DELPHI12_UP}SetWSQL{$ELSE}SetASQL{$ENDIF};
+    property SSQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND} read {$IFDEF UNICODE}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF UNICODE}SetWSQL{$ELSE}SetASQL{$ENDIF};
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: ZAnsiString read FaSQL write SetASQL;
-    property LogSQL: String read {$IFDEF DELPHI12_UP}FWSQL{$ELSE}FaSQL{$ENDIF};
+    property LogSQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FaSQL{$ENDIF};
     property ChunkSize: Integer read FChunkSize;
     property IsAnsiDriver: Boolean read FIsAnsiDriver;
   public
@@ -460,7 +460,7 @@ procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
   if WSQL <> Value then
   begin
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     FaSQL := GetEncodedSQL(Value);
     {$ELSE}
     FaSQL := ZPlainString(Value);
@@ -473,7 +473,7 @@ procedure TZAbstractStatement.SetASQL(const Value: ZAnsiString);
 begin
   if ASQL <> Value then
   begin
-    {$IFNDEF DELPHI12_UP}
+    {$IFNDEF UNICODE}
     FASQL := GetEncodedSQL(Value);
     FWSQL := ZDbcUnicodeString(Value, ConSettings.CTRL_CP);
     {$else}
@@ -722,7 +722,7 @@ begin
     begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
-          Result := Result + {$IFDEF DELPHI12_UP}ZPlainString{$ENDIF}(SQLTokens[i].Value);
+          Result := Result + {$IFDEF UNICODE}ZPlainString{$ENDIF}(SQLTokens[i].Value);
         ttQuoted,
         ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value);
@@ -732,7 +732,7 @@ begin
     end;
   end
   else
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     Result := ZPlainString(SQL);
     {$ELSE}
     Result := SQL;
@@ -1110,7 +1110,7 @@ constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FSQL := SQL;
-  {$IFDEF DELPHI12_UP}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
+  {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
   FInParamCount := 0;
   SetInParamCount(0);
   FPrepared := False;
@@ -2661,7 +2661,7 @@ begin
     else
       Result := Result + ZPlainString(Tokens[I]);
   end;
-  {$IFNDEF DELPHI12_UP}
+  {$IFNDEF UNICODE}
   if GetConnection.AutoEncodeStrings then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
