@@ -6,3 +6,6 @@ go
 
 DROP TABLE table959307
 go
+
+DROP TABLE Mantis54
+go
