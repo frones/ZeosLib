@@ -153,7 +153,7 @@ var
 
 implementation
 
-uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata,
+uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
   ZInterbaseToken, ZInterbaseAnalyser;
 
 { TZInterbase6Driver }
@@ -396,7 +396,9 @@ destructor TZInterbase6Connection.Destroy;
 begin
   if not Closed then
     Close;
-
+  if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
+     ( ConSettings.ClientCodePage.CP = zCP_NONE ) then
+    Dispose(ConSettings.ClientCodePage);
   inherited Destroy;
 end;
 
@@ -443,10 +445,12 @@ end;
   Opens a connection to database server with specified parameters.
 }
 procedure TZInterbase6Connection.Open;
+const sCS_NONE = 'NONE';
 var
   DPB: PAnsiChar;
   FDPBLength: Word;
   DBName: array[0..512] of AnsiChar;
+  TmpClientCodePageOld, TmpClientCodePageNew: PZCodePage;
 begin
   if not Closed then
      Exit;
@@ -506,28 +510,42 @@ begin
           CheckCharEncoding(FClientCodePage);
         end
         else
-          if GetString(6) = 'NONE' then
-          begin
-            if not ( FClientCodePage = 'NONE' ) then
+          if GetString(6) = sCS_NONE then
+            if not ( FClientCodePage = sCS_NONE ) then
             begin
-              URL.Properties.Values['isc_dpb_lc_ctype'] := 'NONE';
-              FClientCodePage := 'NONE';
-              {charset 'none' can't converty anything. If another charset was set
-               in attaching then all column collations are returned with this
-               charset. BUT no string converstions where done! So we need a
-               reopen (since we can set the Client-CharacterSet only on
-               connecting) to determine charset 'NONE' corectly. Then the column
-               collations have there proper CharsetID's to encode all strings
-               correctly.}
+              URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
+              FClientCodePage := sCS_NONE;
+              {save the user wanted CodePage-Informations}
+              TmpClientCodePageOld := ConSettings.ClientCodePage;
+              { charset 'NONE' can't converty anything and write 'Data as is'!
+                If another charset was set on attaching the Server then all
+                column collations are retrieved with newly choosen collation.
+                BUT NO string convertations where done! So we need a
+                reopen (since we can set the Client-CharacterSet only on
+                connecting) to determine charset 'NONE' corectly. Then the column
+                collations have there proper CharsetID's to encode all strings
+                correctly. }
               Self.Close;
               Self.Open;
-              CheckCharEncoding(FClientCodePage);
+              { Create a new PZCodePage for the new environment-variables }
+              TmpClientCodePageNew := New(PZCodePage);
+              TmpClientCodePageNew.Name := sCS_NONE;
+              TmpClientCodePageNew.ID := CS_NONE;
+              TmpClientCodePageNew.CharWidth := 1;
+              TmpClientCodePageNew.Encoding := TmpClientCodePageOld.Encoding;
+              TmpClientCodePageNew.CP := TmpClientCodePageOld.CP;
+              TmpClientCodePageNew.ZAlias := '';
+              ConSettings.ClientCodePage := TmpClientCodePageNew;
+              {Also reset the MetaData ConSettings}
+              (FMetadata as TZInterbase6DatabaseMetadata).ConSettings := ConSettings;
+              { now we're able to read and write strings for columns without a
+                spezial declared collation for charset 'NONE' with the user
+                choosen CodePage and Encoding }
             end;
-          end;
       Close;
     end;
-    if FClientCodePage = 'NONE' then
-      ConSettings.AutoEncode := True;
+    if FClientCodePage = sCS_NONE then
+      ConSettings.AutoEncode := True; //Must be set!
   finally
     StrDispose(DPB);
   end;
@@ -601,17 +619,6 @@ begin
      Open;
   Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
-
-{**
-   Conver parameters list to Interbase6 parameter index and values
-   and sore it in the list.
-   <P><B>Note:</B>
-   Parameter value sored in list as value.
-   Interbase6 parameter index store as object link.
-   @see #GenerateDPB
-   @see #GenerateTPB
-   @param the list of Interbase6 prepared parameters
-}
 
 {**
   Drops all changes made since the previous

@@ -116,15 +116,13 @@ type
   private
     FFieldNames: TStringDynArray;
     function PrepareOracleOutVars(Statement: IZStatement; InVars: PZSQLVars;
-      FieldNames: TStringDynArray; ParamTypes,
-      FFunctionResultOffsets: array of shortInt): PZSQLVars;
+      const OracleParams: TZOracleParams): PZSQLVars;
   protected
     procedure Open; override;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-      ParamTypes, FunctionResultOffsets: array of shortInt);
+      ErrorHandle: POCIError; OutVars: PZSQLVars; const OracleParams: TZOracleParams);
     procedure Close; override;
     function Next: Boolean; override;
   End;
@@ -1031,56 +1029,33 @@ end;
 
 { TZOracleCallableResultSet }
 function TZOracleCallableResultSet.PrepareOracleOutVars(Statement: IZStatement;
-  InVars: PZSQLVars; FieldNames: TStringDynArray;
-  ParamTypes, FFunctionResultOffsets: array of shortInt): PZSQLVars;
+  InVars: PZSQLVars; const OracleParams: TZOracleParams): PZSQLVars;
 var
-  I, J, K, OutParamCount, ResultOffSet: Integer;
-  Connection: IZConnection;
-
-  procedure PrepareVar;
-  begin
-    Result.Variables[J].ColType := InVars.Variables[K].ColType;
-    Result.Variables[J].TypeCode := InVars.Variables[K].TypeCode;
-    Result.Variables[J].DataSize := InVars.Variables[K].DataSize;
-    Result.Variables[J].Length := InVars.Variables[K].Length;
-    GetMem(Result.Variables[J].Data, InVars.Variables[K].Length);
-    Move(InVars.Variables[K].Data^, Result.Variables[J].Data^, InVars.Variables[K].Length);
-    SetLength(FFieldNames, J);
-    FFieldNames[j-1] := FieldNames[I-1];
-  end;
+  I, J: Integer;
 begin
-  Connection := Statement.GetConnection;
-
-  OutParamCount := 0;
-  for i := 0 to InVars.ActualNum-1 do
-    if ParamTypes[I] in [2,3,4] then
-      Inc(OutParamCount);
+  J := 0;
+  for i := 0 to High(OracleParams) do
+    if OracleParams[I].pType in [2,3,4] then
+      Inc(J);
 
   Result := nil;
-  AllocateOracleSQLVars(Result, OutParamCount);
-  Result.ActualNum := OutParamCount;
+  AllocateOracleSQLVars(Result, J);
+  Result.ActualNum := J;
+  SetLength(FFieldNames, J);
 
-  J := 0;
-  K := 0;
-  ResultOffSet := 0;
-  for i := 1 to InVars.ActualNum do
+  for I := 1 to Length(OracleParams) do
   begin
-    Inc(K);
-    if ( Length(FFunctionResultOffsets) > 0 ) and  (FFunctionResultOffsets[ResultOffSet] = i -1) then
-      Inc(K);
-    if ParamTypes[i-1] in [2,3] then
+    J := OracleParams[I-1].pOutIndex;
+    if OracleParams[I-1].pType in [2,3,4] then //ptInOut, ptOut, ptResult
     begin
-      inc(J);
-      PrepareVar;
-    end
-    else
-      if ParamTypes[i-1] = 4 then //ptResult
-      begin
-        inc(J);
-        K := FFunctionResultOffsets[ResultOffSet]+1;
-        PrepareVar;
-        Inc(ResultOffSet);
-      end;
+      Result.Variables[J].ColType := InVars.Variables[I].ColType;
+      Result.Variables[J].TypeCode := InVars.Variables[I].TypeCode;
+      Result.Variables[J].DataSize := InVars.Variables[I].DataSize;
+      Result.Variables[J].Length := InVars.Variables[I].Length;
+      GetMem(Result.Variables[J].Data, InVars.Variables[I].Length);
+      Move(InVars.Variables[I].Data^, Result.Variables[J].Data^, InVars.Variables[I].Length);
+      FFieldNames[J-1] := OracleParams[I-1].pName;
+    end;
   end;
 end;
 
@@ -1149,11 +1124,9 @@ end;
 }
 constructor TZOracleCallableResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
-  ErrorHandle: POCIError; OutVars: PZSQLVars; FieldNames: TStringDynArray;
-  ParamTypes, FunctionResultOffsets: array of shortInt);
+  ErrorHandle: POCIError; OutVars: PZSQLVars; const OracleParams: TZOracleParams);
 begin
-  FOutVars := PrepareOracleOutVars(Statement, OutVars, FieldNames, ParamTypes,
-                FunctionResultOffsets);
+  FOutVars := PrepareOracleOutVars(Statement, OutVars, OracleParams);
   inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle);
   FConnection := Statement.GetConnection as IZOracleConnection;
   MaxRows := 1;

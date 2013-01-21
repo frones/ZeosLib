@@ -255,6 +255,7 @@ type
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
+    property ConSettings;
     destructor Destroy; override;
   end;
 
