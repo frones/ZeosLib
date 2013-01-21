@@ -6,7 +6,7 @@
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -52,7 +52,7 @@
 				<Form>,
   ZTestMidas in &apos;..\..\test\component\ZTestMidas.pas&apos;</Form>
 			</DCCReference>
-			<BuildConfiguration Include="Basis">
+			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
@@ -115,7 +115,7 @@
 						<Excluded_Packages Name="$(BDS)\bin\dclofficexp120.bpl">Microsoft Office XP Sample Automation Server Wrapper Components</Excluded_Packages>
 					</Excluded_Packages>
 					<Language>
-						<Language Name="RootDir">D:\Developer\Delphi XE\Components\ZEOS\packages\Delphi2009\</Language>
+						<Language Name="RootDir">D:\Data\Delphi\ZEOSTesting\packages\delphi12\</Language>
 					</Language>
 				</Delphi.Personality>
 			</BorlandProject>
