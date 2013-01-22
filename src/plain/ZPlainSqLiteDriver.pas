@@ -860,7 +860,7 @@ function TZSQLiteBaseDriver.Open(const filename: PAnsiChar; mode: Integer;
   var errmsg: PAnsiChar): Psqlite;
 var
   Result0: Psqlite;
-{$IFNDEF DELPHI12_UP}
+{$IFNDEF UNICODE}
   Version: string;
   FileNameString: String;
 {$ENDIF}
@@ -872,7 +872,7 @@ begin
     be converted to UTF-8 prior to passing them into sqlite3_open() or
     sqlite3_open_v2(). *)
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
   SQLite_API.sqlite_open(filename, Result0);
 {$ELSE}
   Version := LibVersion;

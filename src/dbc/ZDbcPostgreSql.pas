@@ -1061,7 +1061,7 @@ end;
 function TZPostgreSQLConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
 begin
   Result := GetPlainDriver.EscapeString(FHandle, Value, ConSettings);
-  {$IFNDEF DELPHI12_UP}
+  {$IFNDEF UNICODE}
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}

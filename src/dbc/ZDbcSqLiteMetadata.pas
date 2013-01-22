@@ -1512,9 +1512,9 @@ const
   TypeCodes: array[1..MaxTypeCount] of TZSQLType = (
     stBoolean, stByte, stShort, stInteger, stInteger, stLong,
     stFloat, stFloat, stDouble, stDouble, stDouble, stDouble,
-    stString, {$IFDEF DELPHI12_UP}stUnicodeString{$ELSE}stString{$ENDIF},
+    stString, {$IFDEF UNICODE}stUnicodeString{$ELSE}stString{$ENDIF},
     stBytes, stBytes, stDate, stTime, stTimestamp,
-    stTimestamp, stBinaryStream, {$IFDEF DELPHI12_UP}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF});
+    stTimestamp, stBinaryStream, {$IFDEF UNICODE}stUnicodeStream{$ELSE}stAsciiStream{$ENDIF});
   TypePrecision: array[1..MaxTypeCount] of Integer = (
     -1, 2, 4, 9, 9, 16, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
     -1, -1, -1, -1, -1);

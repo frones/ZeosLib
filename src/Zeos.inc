@@ -59,6 +59,7 @@
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
  {$DEFINE WITH_FTDATASETSUPPORT} //ftDataSet is supported
  {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
+ {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -182,6 +183,7 @@
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
+  {$DEFINE WITH_TENCODING_CLASS}        // Have class TEncoding
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
 {$ENDIF}
 
@@ -202,6 +204,7 @@
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
   {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
+  {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}

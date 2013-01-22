@@ -289,7 +289,7 @@ begin
 {$ENDIF}
     varStrArg: Result := adWChar;
     varString: Result := adVarChar;
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
     varUString: Result := adVarChar;
 {$ENDIF}
     varAny: Result := adEmpty;

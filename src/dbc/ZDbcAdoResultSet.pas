@@ -685,12 +685,12 @@ begin
     Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
     case GetMetadata.GetColumnType(ColumnIndex) of
       stAsciiStream:
-        if (VarType(V) = varOleStr) {$IFDEF DELPHI12_UP} or ( VarType(V) = varUString){$ENDIF} then
+        if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
           Result.SetString(GetStatement.GetConnection.GetIZPlainDriver.ZPlainString(WideString(V), ConSettings))
         else
           Result.SetString(AnsiString(V));
       stUnicodeStream:
-        if (VarType(V) = varOleStr) {$IFDEF DELPHI12_UP} or ( VarType(V) = varUString){$ENDIF} then
+        if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
           Result.SetUnicodeString(WideString(V))
         else
           Result.SetUnicodeString(GetStatement.GetConnection.GetIZPlainDriver.ZDbcUnicodeString(ZAnsiString(V), ConSettings.CTRL_CP));

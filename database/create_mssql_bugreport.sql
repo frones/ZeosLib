@@ -27,4 +27,14 @@ CREATE PROCEDURE proc959307 (@p varchar(10)) as
 	insert into table959307 (fld1) values (@p)
 GO
 
+/*==============================================================*/
+/* Tables Manntis#54                                            */
+/*==============================================================*/
+CREATE TABLE Mantis54 (
+    Key1 int NOT NULL ,
+    BI bigint NULL ,
+    F float NULL
+)
+go
+
 

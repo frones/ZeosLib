@@ -251,7 +251,7 @@ function TZSQLiteConnection.Key(const Key: string):Integer;
 var
   ErrorCode: Integer;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
   ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
@@ -269,7 +269,7 @@ function TZSQLiteConnection.ReKey(const Key: string):Integer;
 var
   ErrorCode: Integer;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
   ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
@@ -294,7 +294,7 @@ begin
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
   FHandle := GetPlainDriver.Open(PAnsiChar(AnsiString(UTF8Encode(Database))), 0, ErrorMessage);
 {$ELSE}
   FHandle := GetPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
@@ -310,7 +310,7 @@ begin
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), StrLen(PAnsiChar(UTF8String(Password))));
     {$ELSE}
     ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
@@ -318,7 +318,7 @@ begin
     CheckSQLiteError(GetPlainDriver, ErrorCode, nil, lcConnect, 'SQLite.Key');
   end;
 
-  { Set busy timeout if requested } 
+  { Set busy timeout if requested }
   Timeout_ms := StrToIntDef(Info.Values['busytimeout'], -1); 
   if Timeout_ms >= 0 then 
   begin 

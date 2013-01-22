@@ -435,11 +435,7 @@ begin
       CheckDBLibError(lcConnect, LogMessage);
   end
   else
-    {$IFDEF DELPHI12_UP}
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Database))) <> DBSUCCEED then
-    {$ELSE}
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(Database)) <> DBSUCCEED then
-    {$ENDIF}
+    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ZPlainString(Database))) <> DBSUCCEED then
       CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
@@ -737,11 +733,7 @@ begin
         CheckDBLibError(lcOther, LogMessage);
     end
     else
-      {$IFDEF DELPHI12_UP}
-      if GetPLainDriver.dbUse(FHandle, PAnsiChar(UTF8String(Catalog))) <> DBSUCCEED then
-      {$ELSE}
-      if GetPLainDriver.dbUse(FHandle, PAnsiChar(Catalog)) <> DBSUCCEED then
-      {$ENDIF}
+      if GetPLainDriver.dbUse(FHandle, PAnsiChar(ZPlainString(Catalog))) <> DBSUCCEED then
         CheckDBLibError(lcOther, LogMessage);
     DriverManager.LogMessage(lcOther, PLainDriver.GetProtocol, LogMessage);
   end;

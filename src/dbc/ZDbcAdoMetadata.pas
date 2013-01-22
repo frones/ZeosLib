@@ -2720,7 +2720,7 @@ begin
     if (SupportedSchemas[SchemaIndex].SupportedRestrictions
       and (1 shl I)) <> 0 then
     begin
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       Result[I] := string(Args[I].VPWideChar);
       if (Args[I].VType = VtUnicodeString) then
         if string(Args[I].VPWideChar) = '' then

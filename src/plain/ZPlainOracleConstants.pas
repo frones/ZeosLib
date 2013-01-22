@@ -500,6 +500,7 @@ const
   _SQLT_BOL = 252;
 
   { > typecode defines from oro.h }
+  OCI_TYPECODE_REF              = SQLT_REF; //SQL/OTS OBJECT REFERENCE
   OCI_TYPECODE_VARRAY           = 247;      //SQL VARRAY  OTS PAGED VARRAY
   OCI_TYPECODE_TABLE            = 248;      //SQL TABLE  OTS MULTISET
   OCI_TYPECODE_OBJECT           = SQLT_NTY; //SQL/OTS NAMED OBJECT TYPE
@@ -4325,7 +4326,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   TOCIObjectNew = function(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
     const typecode: OCITypeCode; const tdo: POCIType; const table: Pointer;
     const duration: OCIDuration; const value: boolean;
-    out instance: PPointer): sword; cdecl;
+    instance: PPointer): sword; cdecl;
   {
      NAME: OCIObjectNew - OCI new (create) a standalone instance
      PARAMETERS:
@@ -5032,7 +5033,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   {---------------------------- OCIObjectGetTypeRef -------------------------- }
   TOCIObjectGetTypeRef = function(env: POCIEnv; err: POCIError;
-    const instance:pointer; out type_ref: POCIRef): sword; cdecl;
+    const instance:pointer; type_ref: POCIRef): sword; cdecl;
 
   {
      NAME: OCIObjectGetTypeRef - get the type reference of a standalone object
@@ -5060,7 +5061,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   {--------------------------- OCIObjectGetObjectRef ------------------------- }
   TOCIObjectGetObjectRef = function(env: POCIEnv; err: POCIError;
-    const _object: pointer; out object_ref: POCIRef): sword; cdecl;
+    const _object: pointer; bject_ref: POCIRef): sword; cdecl;
 
   {
      NAME: OCIObjectGetObjectRef - OCI get the object reference of an
@@ -5090,7 +5091,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {--------------------------- OCIObjectMakeObjectRef ----------------------- }
   TOCIObjectMakeObjectRef = function(env: POCIEnv; err: POCIError;
     const svc: POCISvcCtx; const table: pointer; const values: PPointer;
-    const array_len: ub4; out object_ref: POCIRef): sword; cdecl;
+    const array_len: ub4; object_ref: POCIRef): sword; cdecl;
 
   {
      NAME: OCIObjectMakeObjectRef - OCI Create an object reference to a
@@ -5130,7 +5131,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {--------------------------- OCIObjectGetPrimaryKeyTypeRef ---------------  }
   TOCIObjectGetPrimaryKeyTypeRef = function(env: POCIEnv; err: POCIError;
     const svc:POCISvcCtx; const table: pointer;
-    out type_ref: POCIRef): sword; cdecl;
+    type_ref: POCIRef): sword; cdecl;
 
   {
      NAME: OCIObjectGetPrimaryKeyTypeRef - OCI get the REF to the pk OID type
@@ -5160,7 +5161,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   {-------------------------- OCIObjectGetInd -------------------------------- }
   TOCIObjectGetInd = function(env: POCIEnv; err: POCIError;
-    const instance: pointer; out null_struct: PPointer): sword; cdecl;
+    const instance: pointer; null_struct: PPointer): sword; cdecl;
 
   {
      NAME: OCIObjectGetInd - OCI get the null structure of a standalone object
@@ -5190,7 +5191,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   {------------------------- OCIObjectExists -------------------------------- }
   TOCIObjectExists = function(env: POCIEnv; err: POCIError; const ins: pointer;
-    out exist: PBoolean): sword; cdecl;
+    exist: PBoolean): sword; cdecl;
 
   {
      NAME: OCIObjectExist - OCI checks if the object exists
@@ -5218,7 +5219,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------- OCIObjectGetProperty --------------------------- }
   TOCIObjectGetProperty = function(envh: POCIEnv; errh: POCIError;
     const obj: pointer; const propertyId: OCIObjectPropId;
-    out _property: pointer; size: Pub4): sword; cdecl;
+    _property: pointer; size: Pub4): sword; cdecl;
 
   {
      NAME: OCIObjectGetProperty - OCIObject Get Property of given object
@@ -5346,7 +5347,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   {---------------------------- OCIObjectIsLocked -------------------------- }
   TOCIObjectIsLocked = function(env: POCIEnv; err: POCIError; const ins: pointer;
-    out lock: Pboolean): sword; cdecl;
+    lock: Pboolean): sword; cdecl;
 
   {
      NAME: OCIObjectIsLocked - OCI get the lock status of a standalone object
@@ -5373,7 +5374,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   {------------------------- OCIObjectIsDirty ------------------------------ }
   TOCIObjectIsDirty = function(env: POCIEnv; err: POCIError; const ins: pointer;
-    out dirty:Pboolean): sword; cdecl;
+    dirty:Pboolean): sword; cdecl;
 
   {
      NAME: OCIObjectIsDirty - OCI get the dirty status of a standalone object
@@ -5403,7 +5404,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     const svc:POCISvcCtx; const schema_name: Poratext; const s_n_length: ub4;
     const object_name: Poratext; const o_n_length:ub4;
     const scope_obj_ref: POCIRef; const pin_duration: OCIDuration;
-    out _object: PPointer): sword; cdecl;
+    _object: PPointer): sword; cdecl;
 
   {
      NAME: OCIObjectPinTable - OCI get table object
@@ -5439,8 +5440,8 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     const ref_array: PPOCIRef; const array_size: ub4;
     const cor_array: PPOCIComplexObject; const cor_array_size: ub4;
     const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
-    const lock: OCILockOpt; out obj_array: PPointer;
-    out pos: Pub4): sword; cdecl;
+    const lock: OCILockOpt; obj_array: PPointer;
+    pos: Pub4): sword; cdecl;
 
   {
      NAME: OCIObjectArrayPin - ORIO array pin
@@ -5487,7 +5488,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   TOCICacheFlushGet = function(context: pointer; last: Pub1): POCIRef; cdecl;
   TOCICacheFlush = function(env: POCIEnv; err: POCIError; const svc:POCISvcCtx;
     const context: pointer; const get: TOCICacheFlushGet;
-    out ref: PPOCIRef): sword; cdecl;
+    ref: PPOCIRef): sword; cdecl;
 
   {
      NAME: OCICacheFlush - OCI flush persistent objects
@@ -5689,7 +5690,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     }
   TOCIDurationBegin = function(env: POCIEnv; err: POCIError;
     svc: POCISvcCtx; const parent: OCIDuration;
-    out dur: POCIDuration): sword; cdecl;
+    dur: POCIDuration): sword; cdecl;
 
   {
      NAME: OCIDurationBegin - OCI DURATION BEGIN
@@ -5755,7 +5756,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
           if operation fails, return OCI_ERROR.
     }
   TOCIDurationEnd = function(env: POCIEnv; err: POCIError; svc: POCISvcCtx;
-    out duration: OCIDuration): sword; cdecl;
+    duration: OCIDuration): sword; cdecl;
 
   {
      NAME: OCIDurationEnd - OCI DURATION END
@@ -5863,7 +5864,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
 
   TOCITypeIterNew = function (env: POCIEnv; err: POCIError; const tdo: POCIType;
-                      out iterator_ort: PPOCITypeIter):sword; cdecl;
+                      iterator_ort: PPOCITypeIter):sword; cdecl;
 
   {
     NAME: OCITypeIterNew - OCI Iterator NEW
@@ -5942,7 +5943,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     schema_name: Poratext; const s_length: ub4; const type_name: Poratext;
     const t_length: ub4; version_name: Poratext; const v_length: ub4;
     const pin_duration: OCIDuration; const get_option: OCITypeGetOpt;
-    out tdo: PPOCIType): sword; cdecl;
+    tdo: PPOCIType): sword; cdecl;
 
   {
     NAME: OCITypeByName - OCI Get the most current version of an existing TYPe
@@ -5989,7 +5990,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
     array_len: ub4; schema_name:  PPoratext; s_length: Pub4;
     type_name: PPoratext; t_length: Pub4; version_name: PPoratext;
     v_length: Pub4; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-    out tdo: PPOCIType): sword; cdecl;
+    tdo: PPOCIType): sword; cdecl;
 
   {
     NAME: OCITypeArrayByName - OCI Get array of TYPes by name.
@@ -6090,7 +6091,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
    }
   TOCITypeArrayByRef = function(env: POCIEnv; err: POCIError; array_len: ub4;
     type_ref: PPOCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-    out tdo: PPOCIType): sword; cdecl;
+    tdo: PPOCIType): sword; cdecl;
 
   {
     NAME: OCITypeArrayByRef - OCI Get array of TYPes by REF.
@@ -6135,7 +6136,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {---------------------------- OCITypeName --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeName = function(env: POCIEnv; err: POCIError; tdo: POCIType;
-    out n_length: Pub4): poratext; cdecl;
+    n_length: Pub4): poratext; cdecl;
 
   {
      NAME: OCITypeName -  ORT Get a Type's naME.
@@ -6165,7 +6166,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeSchema --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeSchema = function(env: POCIEnv; err: POCIError; const tdo: POCIType;
-    out n_length: Pub4): poratext; cdecl;
+    n_length: Pub4): poratext; cdecl;
 
   {
      NAME: OCITypeSchema -  ORT Get a Type's SCHema name.
@@ -6251,7 +6252,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
 (* Const before type ignored *)
   TOCITypeVersion = function(env: POCIEnv; err: POCIError; const tdo: POCIType;
-    out v_length: Pub4): poratext; cdecl;
+    v_length: Pub4): poratext; cdecl;
 
   {
      NAME: OCITypeVersion - OCI Get a Type's user-readable VersioN.
@@ -6336,7 +6337,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeElemName --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeElemName = function(env: POCIEnv; err: POCIError;
-    const elem: POCITypeElem; out n_length:Pub4): poratext; cdecl;
+    const elem: POCITypeElem; n_length:Pub4): poratext; cdecl;
 
   {
      NAME: OCITypeElemName - OCI Get an Attribute's NaMe.
@@ -6400,7 +6401,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeElemType --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeElemType = function(env: POCIEnv; err: POCIError;
-    const elem: POCITypeElem; out elem_tdo:PPOCIType): sword; cdecl;
+    const elem: POCITypeElem; elem_tdo:PPOCIType): sword; cdecl;
 
   {
     PARAMETERS
@@ -6582,7 +6583,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {--------------------- OCITypeElemParameterizedType ------------------------ }
   { ** OBSOLETE **  }
   TOCITypeElemParameterizedType = function(env: POCIEnv; err: POCIError;
-    const elem: POCITypeElem; out type_stored: PPOCIType): sword; cdecl;
+    const elem: POCITypeElem; type_stored: PPOCIType): sword; cdecl;
 
   {
      NAME: OCITypeElemParameterizedType
@@ -6657,7 +6658,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
   TOCITypeAttrByName = function(env: POCIEnv; err: POCIError;
     const tdo: POCIType; const name: Poratext; const n_length: ub4;
-    out elem: PPOCITypeElem): sword; cdecl;
+    elem: PPOCITypeElem): sword; cdecl;
 
   {
      NAME: OCITypeAttrByName - OCI Get an Attribute By Name.
@@ -6696,7 +6697,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeAttrNext --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeAttrNext = function(env: POCIEnv; err: POCIError;
-    iterator_ort: POCITypeIter; out elem: PPOCITypeElem): sword; cdecl;
+    iterator_ort: POCITypeIter; elem: PPOCITypeElem): sword; cdecl;
 
   {
      NAME: OCITypeAttrNext - OCI Get an Attribute By Iteration.
@@ -6779,7 +6780,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeCollSize --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeCollSize = function(env: POCIEnv; err: POCIError; const tdo: POCIType;
-    out num_elems: Pub4): sword; cdecl;
+    num_elems: Pub4): sword; cdecl;
 
   {
      NAME: OCITypeCollSize - OCI Get a Collection's Number of Elements.
@@ -6813,7 +6814,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeCollExtTypeCode --------------------------- }
   { ** OBSOLETE **  }
   TOCITypeCollExtTypeCode = function(env: POCIEnv; err: POCIError;
-    const tdo:POCIType; out sqt_code: POCITypeCode): sword; cdecl;
+    const tdo:POCIType; sqt_code: POCITypeCode): sword; cdecl;
 
   {
      NAME: ortcsqt - OCI Get a Collection element's DTY constant.
@@ -6883,7 +6884,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
   TOCITypeMethodByName = function(env: POCIEnv; err: POCIError;
     const tdo: POCIType; const method_name: Poratext; const m_length: ub4;
-    out mdos: PPOCITypeMethod): sword; cdecl;
+    mdos: PPOCITypeMethod): sword; cdecl;
 
   {
      NAME: OCITypeMethodByName - OCI Get one or more Methods with Name.
@@ -6925,7 +6926,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeMethodNext -------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeMethodNext = function(env: POCIEnv; err: POCIError;
-    iterator_ort: POCITypeIter; out mdo: PPOCITypeMethod): sword; cdecl;
+    iterator_ort: POCITypeIter; mdo: PPOCITypeMethod): sword; cdecl;
 
   {
      NAME: OCITypeMethodNext - OCI Get a Method By Iteration.
@@ -6964,7 +6965,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeMethodName -------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeMethodName = function(env:POCIEnv; err: POCIError;
-    const mdo: POCITypeMethod; out n_length: Pub4): poratext; cdecl;
+    const mdo: POCITypeMethod; n_length: Pub4): poratext; cdecl;
   {
      NAME: OCITypeMethodName - OCI Get a Method's NaMe.
      PARAMETERS:
@@ -7047,7 +7048,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeMethodMap --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeMethodMap = function(env: POCIEnv; err: POCIError; const tdo: POCIType;
-    out mdo: PPOCITypeMethod): sword; cdecl;
+    mdo: PPOCITypeMethod): sword; cdecl;
 
   {
      NAME: OCITypeMethodMap - OCI Get the Method's MAP function.
@@ -7083,7 +7084,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------ OCITypeMethodOrder ------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeMethodOrder = function(env: POCIEnv; err: POCIError;
-    const tdo: POCIType; out mdo: PPOCITypeMethod): sword; cdecl;
+    const tdo: POCIType; mdo: PPOCITypeMethod): sword; cdecl;
 
   {
      NAME: OCITypeMethodOrder - OCI Get the Method's ORder function.
@@ -7148,7 +7149,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {-------------------------- OCITypeResult --------------------------------- }
   { ** OBSOLETE **  }
   TOCITypeResult = function(env: POCIEnv; err: POCIError;
-    const mdo: POCITypeMethod; out elem: PPOCITypeElem): sword; cdecl;
+    const mdo: POCITypeMethod; elem: PPOCITypeElem): sword; cdecl;
 
   {
      NAME: OCITypeResult - OCI Get a method's result type descriptor.
@@ -7184,7 +7185,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
   TOCITypeParamByPos = function(env: POCIEnv; err: POCIError;
     const mdo: POCITypeMethod; const position: ub4;
-    out elem: PPOCITypeElem): sword; cdecl;
+    elem: PPOCITypeElem): sword; cdecl;
 
   {
      NAME: OCITypeParamByPos - OCI Get a Parameter in a method By Position.
@@ -7219,7 +7220,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
   TOCITypeParamByName = function(env: POCIEnv; err: POCIError;
     const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-    out elem:PPOCITypeElem): sword; cdecl;
+    elem:PPOCITypeElem): sword; cdecl;
 
   {
      NAME: OCITypeParamByName - OCI Get a Parameter in a method By Name.
@@ -7255,7 +7256,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   { ** OBSOLETE **  }
   TOCITypeParamPos = function(env: POCIEnv; err: POCIError;
     const mdo: POCITypeMethod; const name: Poratext; const n_length: ub4;
-    out position: Pub4; out elem: PPOCITypeElem): sword; cdecl;
+    position: Pub4; elem: PPOCITypeElem): sword; cdecl;
 
   {
      NAME: OCITypeParamPos - OCI Get a parameter's position in a method
@@ -7321,7 +7322,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {------------------------- OCITypeElemDefaultValue ------------------------- }
   { ** OBSOLETE **  }
   TOCITypeElemDefaultValue = function(env: POCIEnv; err: POCIError;
-    const elem: POCITypeElem; out d_v_length: Pub4): poratext; cdecl;
+    const elem: POCITypeElem; d_v_length: Pub4): poratext; cdecl;
 
   {
      NAME: OCITypeElemDefaultValue - OCI Get the element's Default Value.
