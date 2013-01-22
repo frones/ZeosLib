@@ -9,7 +9,7 @@
 /*==============================================================*/
 create table blob_values
 (
-   b_id                           int			 not null,
+   b_id                           int not null,
    b_text                         longtext,
    b_image                        longblob   
 );
@@ -106,7 +106,7 @@ create table extension
 /*==============================================================*/
 create table number_values
 (
-   n_id                           int   		 not null,
+   n_id                           int not null,
    n_tint                         tinyint,
    n_sint                         smallint,
    n_int                          int,
@@ -354,13 +354,25 @@ BEGIN
   SELECT 10;
 END;//
 
+CREATE PROCEDURE ALL_PARAMS_IN(
+  IN p_id INT,
+  IN p_name varchar(40))
+BEGIN
+  SELECT * from people where people.p_id=p_id or people.p_name=p_name; 
+END;//
+
+CREATE FUNCTION SIMPLE_FUNC() RETURNS INTEGER
+BEGIN
+  RETURN 10;
+END;//
+
 DELIMITER ;
 
 /*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/
 
-/* grant update(p_resume, p_redundant) on zeoslib.people to root@localhost; 
+/* grant update(p_resume, p_redundant) on zeoslib.people to root@localhost;
 */
 
 /*==============================================================*/

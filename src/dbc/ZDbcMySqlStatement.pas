@@ -933,7 +933,10 @@ function TZMySQLCallableStatement.GetCallSQL: ZAnsiString;
 var
   InParams: ZAnsiString;
 begin
-  InParams := GenerateParamsStr(OutParamCount);
+  if HasOutParameter then
+    InParams := GenerateParamsStr(OutParamCount)
+  else
+    InParams := GenerateParamsStr(InParamCount);
   Result := 'CALL '+ZPlainString(SQL)+'('+InParams+')';
 end;
 
@@ -1214,41 +1217,31 @@ procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex
       const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
 begin
   FParamNames[ParameterIndex] := ParamName;
-  {if Precision > 0 then
-    FParamTypeNames[ParameterIndex] := 'DECIMAL('+IntToStr(ColumnSize)+','+IntToStr(Precision)+')'
+  if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
+     ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
+    FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
   else
-    if ( Pos('real', LowerCase(ParamTypeName)) > 0 ) or
-       ( Pos('float', LowerCase(ParamTypeName)) > 0 ) or
-       ( Pos('decimal', LowerCase(ParamTypeName)) > 0 ) or
-       ( Pos('numeric', LowerCase(ParamTypeName)) > 0 ) or
-       ( Pos('double', LowerCase(ParamTypeName)) > 0 ) then
-      FParamTypeNames[ParameterIndex] := 'DECIMAL('+IntToStr(ColumnSize)+')'
-    else}
-      if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
-         ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-        FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+    if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
+      FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+    else
+      if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
+         ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
+        FParamTypeNames[ParameterIndex] := 'DATETIME'
       else
-        if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-          FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+        if ( Pos('date', LowerCase(ParamTypeName)) > 0 ) then
+          FParamTypeNames[ParameterIndex] := 'DATE'
         else
-          if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
-             ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
-            FParamTypeNames[ParameterIndex] := 'DATETIME'
+          if ( Pos('time', LowerCase(ParamTypeName)) > 0 ) then
+            FParamTypeNames[ParameterIndex] := 'TIME'
           else
-            if ( Pos('date', LowerCase(ParamTypeName)) > 0 ) then
-              FParamTypeNames[ParameterIndex] := 'DATE'
+            if ( Pos('int', LowerCase(ParamTypeName)) > 0 ) or
+               ( Pos('year', LowerCase(ParamTypeName)) > 0 ) then
+              FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
-              if ( Pos('time', LowerCase(ParamTypeName)) > 0 ) then
-                FParamTypeNames[ParameterIndex] := 'TIME'
+              if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
+                FParamTypeNames[ParameterIndex] := 'BINARY('+IntToStr(ColumnSize)+')'
               else
-                if ( Pos('int', LowerCase(ParamTypeName)) > 0 ) or
-                   ( Pos('year', LowerCase(ParamTypeName)) > 0 ) then
-                  FParamTypeNames[ParameterIndex] := 'SIGNED'
-                else
-                  if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
-                    FParamTypeNames[ParameterIndex] := 'BINARY('+IntToStr(ColumnSize)+')'
-                  else
-                    FParamTypeNames[ParameterIndex] := '';
+                FParamTypeNames[ParameterIndex] := '';
 end;
 
 constructor TZMySQLCallableStatement.Create(PlainDriver: IZMySQLPlainDriver;
@@ -1408,7 +1401,10 @@ begin
   begin
     BindInParameters;
     ExecuteUpdate(GetCallSQL);
-    Result := ExecuteQuery(ZPlainString(GetOutParamSQL)); //Get the Last Resultset
+    if OutParamCount > 0 then
+      Result := ExecuteQuery(ZPlainString(GetOutParamSQL)) //Get the Last Resultset
+    else
+      Result := GetLastResultSet;
   end;
   if Assigned(Result) then
     FetchOutParams(Result);
@@ -1436,9 +1432,7 @@ begin
   begin
     BindInParameters;
     Result := ExecuteUpdate(GetCallSQL);
-    //if Assigned(LastResultSet) then
-      //FetchOutParams(LastResultSet) //Get the First ResultSet(s)
-    //else
+    if OutParamCount > 0 then
       FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL))); //Get the Last Resultset
     Inc(Result, LastUpdateCount);
   end;

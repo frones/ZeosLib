@@ -228,14 +228,27 @@ BEGIN
 END; ^
 
 /*==============================================================*/
-/* Stored procedure: simple_func                                */
+/* Stored procedure: simplefunc                                */
 /*==============================================================*/
 CREATE OR REPLACE FUNCTION simplefunc RETURN INTEGER IS
 BEGIN
   RETURN 2222;
 END; ^
 
-CREATE OR REPLACE 
+/*==============================================================*/
+/* Stored procedure: IS_ACCOUNT_SERVE                           */
+/*==============================================================*/
+CREATE OR REPLACE FUNCTION IS_ACCOUNT_SERVE(p_MIFARE_ID varchar2, p_msg OUT varchar2)
+  RETURN NUMBER
+IS
+  l_ret NUMBER;
+BEGIN
+  l_ret := 1;
+  p_msg := 'OK';
+  RETURN l_ret;
+END; ^
+
+CREATE OR REPLACE
 PACKAGE MYPACKAGE AS 
   procedure ABTEST (P1 NUMBER, P2 NUMBER, P3 VARCHAR2, P4 OUT NUMBER, P5 OUT VARCHAR2);
   FUNCTION "myfuncInOutReturn"(x IN OUT VARCHAR) RETURN VARCHAR2;

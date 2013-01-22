@@ -148,7 +148,7 @@ type
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
-    property ConSettings: PZConSettings read FConSettings;
+    property ConSettings: PZConSettings read FConSettings write FConSettings;
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; virtual;

@@ -568,8 +568,11 @@ begin
   if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
     case FSqlData.GetIbSqlType(ColumnIndex -1) of
       SQL_VARYING, SQL_TEXT:
-        Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1),
-          FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
+        if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
+          Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1))
+        else
+          Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1),
+            FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
       else
         Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1));
     end
@@ -596,8 +599,11 @@ begin
   if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
     case FSqlData.GetIbSqlType(ColumnIndex -1) of
       SQL_VARYING, SQL_TEXT:
-        Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1),
-          FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
+        if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
+          Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1))
+        else
+          Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1),
+            FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
       else
         Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1));
     end
