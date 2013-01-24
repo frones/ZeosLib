@@ -405,7 +405,7 @@ var
     if (Index > Parent.FEvents.Count) then
       Result := nil
     else
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
       Result := PAnsiChar(AnsiString(Parent.FEvents[Index - 1]));
   {$ELSE}
       Result := PAnsiChar(Parent.FEvents[Index - 1]);

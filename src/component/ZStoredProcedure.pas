@@ -249,14 +249,14 @@ begin
         ftString:
           begin
             Param.AsString := FCallableStatement.GetString(I + 1);
-            {$IFDEF DELPHI12_UP}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
+            {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
           end;
         ftWideString:
           {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
         ftMemo:
           begin
             Param.AsMemo := FCallableStatement.GetString(I + 1);
-            {$IFDEF DELPHI12_UP}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
+            {$IFDEF UNICODE}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
           end;
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
