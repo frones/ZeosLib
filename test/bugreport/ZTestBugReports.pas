@@ -5,6 +5,9 @@ unit ZTestBugReports;
 interface
 
 uses
+{$IFDEF ENABLE_ADO}
+  ZTestBugCompADO,
+{$ENDIF}
 {$IFDEF ENABLE_ASA}
   ZTestBugDbcASA, ZTestBugCompASA,
 {$ENDIF}

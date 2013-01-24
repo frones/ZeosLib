@@ -223,8 +223,7 @@ CREATE TABLE Mantis54 (
     F float NULL)
 
 EgonHugeist:
-  The resultset-Metadata returning SYBFLT8, which is probably a floating type.
-  Reminder for ?missing? metadata processing.
+  The resultset-Metadata returning 8, which is probably a floating type..
 }
 procedure TZTestCompMSSqlBugReport.Mantis54;
 var
@@ -237,7 +236,7 @@ begin
     Query.SQL.Text := 'select * from mantis54';
     Query.Open;
     CheckEquals(ord(ftInteger), ord(Query.Fields[0].DataType));
-    CheckEquals(ord(ftLargeInt), ord(Query.Fields[1].DataType));
+    CheckEquals(ord(ftLargeInt), ord(Query.Fields[1].DataType), 'Int64/LongInt expected');
     CheckEquals(ord(ftFloat), ord(Query.Fields[2].DataType));
   finally
     Query.Free;

@@ -101,7 +101,7 @@ begin
   with Stmnt.ExecuteQueryPrepared do
   begin
     CheckEquals(Ord(stInteger), Ord(GetMetadata.GetColumnType(1)));
-    //CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(2)), 'Int64/LongInt expected');
+    //CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(2)), 'Int64/LongInt expected'); //Not solvable
     CheckEquals(Ord(stDouble), Ord(GetMetadata.GetColumnType(3)));
     Close;
   end;
