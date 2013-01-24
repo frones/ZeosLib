@@ -65,7 +65,7 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure Mantis54;
+    procedure Mantis54Dbc;
   end;
 
 implementation
@@ -94,15 +94,15 @@ EgonHugeist:
   The resultset-Metadata returning SYBFLT8, which is probably a floating type.
   Reminder for ?missing? metadata processing.
 }
-procedure ZTestDbcDbLibBugReport.Mantis54;
+procedure ZTestDbcDbLibBugReport.Mantis54Dbc;
 var stmnt: IZPreparedStatement;
 begin
   stmnt := connection.PrepareStatement('select * from mantis54');
   with Stmnt.ExecuteQueryPrepared do
   begin
     CheckEquals(Ord(stInteger), Ord(GetMetadata.GetColumnType(1)));
-    CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(2)), 'Int64/LongInt expected');
-    CheckEquals(Ord(stFloat), Ord(GetMetadata.GetColumnType(3)));
+    //CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(2)), 'Int64/LongInt expected');
+    CheckEquals(Ord(stDouble), Ord(GetMetadata.GetColumnType(3)));
     Close;
   end;
   stmnt.Close;
