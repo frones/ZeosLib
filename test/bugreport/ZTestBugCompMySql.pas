@@ -108,6 +108,7 @@ type
     procedure Test1045286;
     procedure Test1023149;
     procedure TestMantis220;
+    procedure TestMantis235;
   end;
 
 implementation
@@ -1702,6 +1703,37 @@ begin
     Query.Close;
     Query.Open; //Here the Exception was raised
     Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+{** Mantis235
+I've patched TZMySQLResultSet.Close as suggested in issue 000220.
+(Thanks Shkil)
+When I do that using TQuery.Open with a stored procedure works great the first time and all subsequent times.
+
+HOWEVER: If I run TZQuery.ExecSQL (not valid for a stored proc with resultset, I know) I get "Commands out of sync..." error and MySQL/Zeos will not let me out of that one.
+
+I don't mind getting an error, but I don't want to have to disconnect and reconnect to the database just to fix being stuck.
+}
+procedure TZTestCompMySQLBugReport.TestMantis235;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.Properties.Values['ValidateUpdateCount'] := 'False';
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'CALL SingleResultSet()';
+    Query.ExecSQL;
+    Query.ExecSQL; //Here the Exception was raised
   finally
     Query.Free;
   end;

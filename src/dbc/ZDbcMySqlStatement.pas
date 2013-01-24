@@ -339,16 +339,19 @@ begin
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
-    begin
-      QueryHandle := FPlainDriver.StoreResult(FHandle);
-      if QueryHandle <> nil then
-      begin
-        Result := FPlainDriver.GetRowCount(QueryHandle);
-        FPlainDriver.FreeResult(QueryHandle);
-      end
-      else
-        Result := FPlainDriver.GetAffectedRows(FHandle);
-    end
+      repeat
+        begin
+
+        QueryHandle := FPlainDriver.StoreResult(FHandle);
+        if QueryHandle <> nil then
+        begin
+          Result := FPlainDriver.GetRowCount(QueryHandle);
+          FPlainDriver.FreeResult(QueryHandle);
+        end
+        else
+          Result := FPlainDriver.GetAffectedRows(FHandle);
+        end;
+      until not (FPlainDriver.RetrieveNextRowset(FHandle) = 0)
     { Process regular query }
     else
       Result := FPlainDriver.GetAffectedRows(FHandle);
