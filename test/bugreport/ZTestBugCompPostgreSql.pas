@@ -88,6 +88,7 @@ type
     procedure Test933623;
     procedure Test994562;
     procedure Test1043252;
+    procedure TestMantis240;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -789,6 +790,57 @@ begin
     CheckEquals('Vasia Pupkin', Query.FieldByName('p_name').AsString);
 
     Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+{** Matin#0000240
+Hi!
+
+I tried to run a ZQuery to get the table
+
+"ntax_bejovo_konyvelesi_tipusok"
+
+primary keys.
+
+select r.relname as "Table", c.conname,
+contype as "Constraint Type"
+from pg_class r, pg_constraint c
+where r.oid = c.conrelid;
+
+In PGADMIN and EMS PG Manager I got good result, the:
+
+"ntax_bejovo_konyvelesi_tipusok_pkey"
+
+
+But Zeos Query is set the Field Size to 32, and I don't found the needed columns of the primary key in the next Query...
+
+
+When I cast the field:
+
+cast(c.conname as varchar(100)),
+
+the field size is correctly 100.
+
+Is this bug, or this based on "unknown field type" of PG that automatically set to 32... :-(
+}
+procedure TZTestCompPostgreSQLBugReport.TestMantis240;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select r.relname as "Table", c.conname, ' +
+            ' contype as "Constraint Type" ' +
+            ' from pg_class r, pg_constraint c ' +
+            ' where r.oid = c.conrelid and r.relname = ''ntax_bejovo_konyvelesi_tipusok''; ';
+    Query.Open;
+    CheckEquals('ntax_bejovo_konyvelesi_tipusok_pkey', Query.FieldByName('conname').AsString);
   finally
     Query.Free;
   end;
