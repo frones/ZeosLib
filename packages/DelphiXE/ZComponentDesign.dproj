@@ -11,7 +11,6 @@
 			<Platform>Win32</Platform>
 			<AppType>Package</AppType>
 			<FrameworkType>None</FrameworkType>
-			<Basis>True</Basis>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -28,8 +27,8 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
-			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
+			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
 			<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp</DCC_DcpOutput>
 			<DesignOnlyPackage>true</DesignOnlyPackage>
@@ -55,9 +54,10 @@
 			<DCC_ResourcePath>$(BDSCOMMONDIR)\Bpl;$(DCC_ResourcePath)</DCC_ResourcePath>
 			<DCC_ObjPath>$(BDSCOMMONDIR)\Bpl;$(DCC_ObjPath)</DCC_ObjPath>
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
-			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
+			<DCC_Define>RELEASE</DCC_Define>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 			<Version>7.0</Version>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
@@ -134,9 +134,6 @@
 					<Source>
 						<Source Name="MainSource">ZComponentDesign.dpk</Source>
 					</Source>
-					<Language>
-						<Language Name="RootDir">..\..\..\..\Developer\Delphi XE\Components\ZEOS\packages\DelphiXE\</Language>
-					</Language>
 				</Delphi.Personality>
 				<Platforms>
 					<Platform value="Win32">True</Platform>

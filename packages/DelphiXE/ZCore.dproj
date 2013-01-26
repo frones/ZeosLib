@@ -11,7 +11,6 @@
 			<Platform>Win32</Platform>
 			<AppType>Package</AppType>
 			<FrameworkType>None</FrameworkType>
-			<Basis>True</Basis>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -27,10 +26,11 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
-			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp</DCC_DcpOutput>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DllSuffix>150</DllSuffix>
 			<DCC_Description>Zeos Core Classes and Interfaces</DCC_Description>
@@ -43,7 +43,6 @@
 			<GenPackage>true</GenPackage>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
-			<DCC_DependencyCheckOutputName>build\ZCore150.bpl</DCC_DependencyCheckOutputName>
 			<Version>7.0</Version>
 			<DCC_DebugInformation>False</DCC_DebugInformation>
 			<DCC_LocalDebugSymbols>False</DCC_LocalDebugSymbols>
@@ -59,7 +58,6 @@
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
-			<DCC_DependencyCheckOutputName>build\ZCore150.bpl</DCC_DependencyCheckOutputName>
 			<Version>7.0</Version>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
