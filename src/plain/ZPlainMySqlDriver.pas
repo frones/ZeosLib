@@ -611,7 +611,7 @@ begin
     ServerArgsLen := TmpList.Count;
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
-      {$IFDEF DELPHI12_UP}
+      {$IFDEF UNICODE}
       ServerArgs[i] := StrNew(PAnsiChar(UTF8String(TmpList[i])));
       {$ELSE}
       ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
@@ -763,7 +763,7 @@ var
   Outbuffer: ZAnsiString;
   TempValue: ZAnsiString;
 begin
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   TempValue := Value;
   {$ELSE}
   if WasEncoded then

@@ -192,7 +192,7 @@ var
 begin
   StmtHandle := 0;
   iError := 0;
-  {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
+  {$IFNDEF UNICODE}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
   with FIBConnection do
   begin
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
@@ -265,7 +265,7 @@ begin
   with FIBConnection do
   begin
     try
-      {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
+      {$IFNDEF UNICODE}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
 
@@ -333,7 +333,7 @@ begin
   begin
     try
       Result := False;
-      {$IFNDEF DELPHI12_UP}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
+      {$IFNDEF UNICODE}ASQL := SQL;{$ENDIF} //preprepares SQL and sets AnsiSQL(ASQL)
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, LogSQL, StmtHandle);
 

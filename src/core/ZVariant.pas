@@ -229,7 +229,7 @@ type
     constructor CreateWithInteger(Value: Int64);
     constructor CreateWithFloat(Value: Extended);
     constructor CreateWithString(const Value: String);
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     // unicodeType is a (dummy) default parameter to avoid
     // the problem described in https://forums.codegear.com/thread.jspa?messageID=65681
     // when dcc creates header (.hpp)-files for c++ builder. Both 'String' and
@@ -563,7 +563,7 @@ begin
       Result := AnsiCompareStr(Value1.VString, GetAsString(Value2));
     vtUnicodeString:
 {$IFNDEF FPC}
-   {$IFDEF DELPHI12_UP}
+   {$IFDEF UNICODE}
       Result := AnsiCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
    {$ELSE}
       Result := WideCompareStr(Value1.VUnicodeString, GetAsUnicodeString(Value2));
@@ -1368,7 +1368,7 @@ end;
   Constructs this object and assignes the main properties.
   @param Value a unicode string value.
 }
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
 constructor TZAnyValue.CreateWithUnicodeString(const Value: String; unicodeType : Boolean = true);
 {$ELSE}
 constructor TZAnyValue.CreateWithUnicodeString(const Value: WideString);
@@ -1550,7 +1550,7 @@ begin
       Result := EncodeInteger(Integer(Value));
     varBoolean: Result := EncodeBoolean(Value);
     varString: Result := EncodeString(Value);
-   {$IFDEF DELPHI12_UP}
+   {$IFDEF UNICODE}
    varUString: Result := EncodeUnicodeString(Value);
    {$ENDIF}
     varSingle, varDouble, varCurrency:

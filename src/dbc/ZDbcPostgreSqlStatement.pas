@@ -755,7 +755,7 @@ begin
   end
   else Exit;
 
-  {$IFDEF DELPHI12_UP}WSQL{$ELSE}ASQL{$ENDIF} := TempSQL;
+  {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := TempSQL;
   ConnectionHandle := FPostgreSQLConnection.GetConnectionHandle;
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));

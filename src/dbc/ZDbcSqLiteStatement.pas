@@ -348,7 +348,7 @@ begin
       stString:
         Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39));
       stUnicodeString:
-        {$IFDEF DELPHI12_UP}
+        {$IFDEF UNICODE}
         Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39));
         {$ELSE}
         Result := AnsiQuotedStr(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), #39);

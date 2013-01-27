@@ -88,7 +88,7 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChars
@@ -112,7 +112,7 @@ function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: string): Boolean; {$IFDEF DELPHI12_UP} overload;
+function StartsWith(const Str, SubStr: string): Boolean; {$IFDEF UNICODE} overload;
 function StartsWith(const Str, SubStr: RawByteString): Boolean; overload; {$ENDIF}
 {**
   Checks is the string ends with substring.
@@ -412,7 +412,7 @@ begin
 end;
 
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChar
@@ -463,7 +463,7 @@ begin
     Result := True
    else if LenSubStr <= Length(Str) then
     //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
-   {$IFDEF DELPHI12_UP}
+   {$IFDEF UNICODE}
    Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
    {$ELSE}
    Result := MemLCompAnsi(PChar(Str), PChar(SubStr), LenSubStr)
@@ -472,7 +472,7 @@ begin
     Result := False;
 end;
 
-{$IFDEF DELPHI12_UP}
+{$IFDEF UNICODE}
 function StartsWith(const Str, SubStr: RawByteString): Boolean; overload;
 var
   LenSubStr: Integer;
@@ -507,7 +507,7 @@ begin
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
       //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
       Result := MemLCompUnicode(PChar(Pointer(Str)) + LenStr - LenSubStr,
          Pointer(SubStr), LenSubStr)
     {$ELSE}
@@ -814,11 +814,7 @@ end;
 }
 function FloatToSQLStr(Value: Extended): string;
 var
-  {$IFDEF DELPHI12_UP}
-  OldDecimalSeparator: WideChar;
-  {$ELSE}
   OldDecimalSeparator: Char;
-  {$ENDIF}
 begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';

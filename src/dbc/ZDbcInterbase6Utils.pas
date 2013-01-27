@@ -548,7 +548,7 @@ begin
     end;
   end;
 
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   Result := AnsiStrAlloc(FDPBLength + 1);
   {$ELSE}
   Result := StrAlloc(FDPBLength + 1);
@@ -611,7 +611,7 @@ begin
     default database transaction}
   if (TPBLength > 0) and (IsolationLevel) then
   begin
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     TPB := AnsiStrAlloc(TPBLength + 1);
     {$ELSE}
     TPB := StrAlloc(TPBLength + 1);

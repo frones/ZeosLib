@@ -1609,7 +1609,7 @@ var
 begin
   if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Value <> '' )then
   begin
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     SourceTemp := Value;
     {$ELSE}
     if WasEncoded then

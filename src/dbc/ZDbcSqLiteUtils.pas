@@ -212,9 +212,9 @@ begin
 
   if (Result = stString) then
     if (Precision = 0) then
-      Precision := 255 *{$IFDEF DELPHI12_UP}2{$ELSE}4{$ENDIF}//UTF8 assumes 4Byte/Char
+      Precision := 255 *{$IFDEF UNICODE}2{$ELSE}4{$ENDIF}//UTF8 assumes 4Byte/Char
     else
-      Precision := Precision*{$IFDEF DELPHI12_UP}2{$ELSE}4{$ENDIF};//UTF8 assumes 4Byte/Char
+      Precision := Precision*{$IFDEF UNICODE}2{$ELSE}4{$ENDIF};//UTF8 assumes 4Byte/Char
 
   if (Result = stUnicodeString) then
     if (Precision = 0) then
