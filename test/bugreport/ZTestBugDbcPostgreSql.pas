@@ -80,6 +80,7 @@ type
     procedure Test933623;
     procedure Test1014416;
     procedure Test_Mantis0000148;
+    procedure Test_Mantis0000229;
   end;
 
   TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
@@ -664,6 +665,29 @@ begin
   ///
   Blob := ResultSet.GetBlob(1);
   Statement.Close;
+end;
+
+{**
+0000229: postgresql varchar is badly interpreted
+  In postgresql, varchar with no precision is equal to text (blob) type.
+  In zeos, varchar is treated as stString with default precision 255.
+  It means when we try to read data that are longer than 255 then they are
+  automatically truncated.
+}
+procedure TZTestDbcPostgreSQLBugReport.Test_Mantis0000229;
+var
+  ResultSet: IZResultSet;
+begin
+  with Connection.PrepareStatement('select * from Mantis229') do
+  begin
+    ResultSet := ExecuteQueryPrepared;
+    if Connection.GetConSettings.CPType = cCP_UTF16 then
+      CheckEquals(Ord(stUnicodeStream), Ord(ResultSet.GetMetadata.GetColumnType(1)))
+    else
+      CheckEquals(Ord(stAsciiStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+    ResultSet := nil;
+    Close;
+  end;
 end;
 
 function TZTestDbcPostgreSQLBugReportMBCs.GetSupportedProtocols: string;

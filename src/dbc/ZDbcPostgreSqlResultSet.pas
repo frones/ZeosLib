@@ -71,8 +71,7 @@ type
   protected
     function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
     procedure Open; override;
-    procedure DefinePostgreSQLToSQLType(ColumnIndex: Integer;
-      ColumnInfo: TZColumnInfo; TypeOid: Oid);
+    procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
@@ -177,8 +176,8 @@ end;
   @param TypeOid a type oid.
   @return a SQL undepended type.
 }
-procedure TZPostgreSQLResultSet.DefinePostgreSQLToSQLType(ColumnIndex: Integer;
-  ColumnInfo: TZColumnInfo; TypeOid: Oid);
+procedure TZPostgreSQLResultSet.DefinePostgreSQLToSQLType(
+  ColumnInfo: TZColumnInfo; const TypeOid: Oid);
 var
   SQLType: TZSQLType;
   Connection: IZPostgreSQLConnection;
@@ -221,6 +220,7 @@ procedure TZPostgreSQLResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
+  FieldMode, FieldSize: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -248,21 +248,26 @@ begin
       Signed := False;
       Nullable := ntNullable;
 
-      DefinePostgreSQLToSQLType(I, ColumnInfo,
+      DefinePostgreSQLToSQLType(ColumnInfo,
         FPlainDriver.GetFieldType(FQueryHandle, I));
 
       if Precision = 0 then
       begin
-        Precision := Max(Max(FPlainDriver.GetFieldMode(FQueryHandle, I) - 4,
-          FPlainDriver.GetFieldSize(FQueryHandle, I)), 0);
+        FieldMode := FPlainDriver.GetFieldMode(FQueryHandle, I);
+        FieldSize := FPlainDriver.GetFieldSize(FQueryHandle, I);
+        Precision := Max(Max(FieldMode - 4, FieldSize), 0);
 
         if ColumnType in [stString, stUnicodeString] then
-          if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
-            Precision := GetFieldSize(ColumnType, ConSettings, 255,
-              ConSettings.ClientCodePage^.CharWidth, nil, True)
+          {begin patch: varchar() is equal to text!}
+          if ( FieldMode = -1 ) and ( FieldSize = -1 ) then
+            DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
           else
-            Precision := GetFieldSize(ColumnType, ConSettings, Precision,
-              ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize);
+            if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
+              Precision := GetFieldSize(ColumnType, ConSettings, 255,
+                ConSettings.ClientCodePage^.CharWidth, nil, True)
+            else
+              Precision := GetFieldSize(ColumnType, ConSettings, Precision,
+                ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize);
       end;
     end;
 

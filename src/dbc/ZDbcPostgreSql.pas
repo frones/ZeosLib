@@ -87,7 +87,6 @@ type
     function GetConnectionHandle: PZPostgreSQLConnect;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
-    function GetCharactersetCode: TZPgCharactersetType;
     function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
@@ -101,7 +100,6 @@ type
     FBeginRequired: Boolean;
     FTypeList: TStrings;
     FOidAsBlob: Boolean;
-    FCharactersetCode: TZPgCharactersetType;
     FServerMajorVersion: Integer;
     FServerMinorVersion: Integer;
     FServerSubVersion: Integer;
@@ -153,7 +151,6 @@ type
 
     function PingServer: Integer; override;
     function EscapeString(Value: ZAnsiString): ZAnsiString; override;
-    function GetCharactersetCode: TZPgCharactersetType;
     function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
     function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; override;
@@ -305,7 +302,6 @@ begin
 
   OnPropertiesChange(nil);
 
-  FCharactersetCode := TZPgCharactersetType(Consettings.ClientCodePage^.ID);
   FNoticeProcessor := DefaultNoticeProcessor;
 end;
 
@@ -506,7 +502,6 @@ begin
         Close;
       end;
     CheckCharEncoding(FClientCodePage);
-    FCharactersetCode := TZPgCharactersetType(ConSettings.ClientCodePage^.ID);
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
@@ -1017,15 +1012,6 @@ function TZPostgreSQLConnection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := TZPostgreSQLSequence.Create(Self, Sequence, BlockSize);
-end;
-
-{**
-  Get characterset in terms of enumerated number.
-  @return characterset in terms of enumerated number.
-}
-function TZPostgreSQLConnection.GetCharactersetCode: TZPgCharactersetType;
-begin
-  Result := FCharactersetCode;
 end;
 
 {**

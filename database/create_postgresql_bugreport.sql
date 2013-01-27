@@ -101,3 +101,12 @@ CREATE TABLE ntax_bejovo_konyvelesi_tipusok
   kovetel character varying(30),
   CONSTRAINT ntax_bejovo_konyvelesi_tipusok_pkey PRIMARY KEY (kod)
 );
+
+/*==============================================================*/
+/* Tables for Mantis-Bug#0000229                                */
+/*==============================================================*/
+
+CREATE TABLE Mantis229
+(
+  TEXTFIELD VARCHAR
+);

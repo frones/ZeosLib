@@ -89,6 +89,7 @@ type
     procedure Test994562;
     procedure Test1043252;
     procedure TestMantis240;
+    procedure TestMantis229;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -841,6 +842,31 @@ begin
             ' where r.oid = c.conrelid and r.relname = ''ntax_bejovo_konyvelesi_tipusok''; ';
     Query.Open;
     CheckEquals('ntax_bejovo_konyvelesi_tipusok_pkey', Query.FieldByName('conname').AsString);
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+0000229: postgresql varchar is badly interpreted
+  In postgresql, varchar with no precision is equal to text (blob) type.
+  In zeos, varchar is treated as stString with default precision 255.
+  It means when we try to read data that are longer than 255 then they are
+  automatically truncated.
+}
+procedure TZTestCompPostgreSQLBugReport.TestMantis229;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from Mantis229';
+    Query.Open;
+    CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
   finally
     Query.Free;
   end;
