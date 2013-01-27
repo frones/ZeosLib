@@ -23,10 +23,10 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_BplOutput>build</DCC_BplOutput>
+			<DCC_BplOutput>$(BDSCOMMONDIR)\Bpl</DCC_BplOutput>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_DcpOutput>build</DCC_DcpOutput>
+			<DCC_DcpOutput>$(BDSCOMMONDIR)\Dcp</DCC_DcpOutput>
 			<DCC_DependencyCheckOutputName>build\ZPlain120.bpl</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DesignOnlyPackage>false</DesignOnlyPackage>
@@ -52,7 +52,6 @@
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
 			<DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
 			<DCC_MapFile>3</DCC_MapFile>
-			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_ObjOutput>build</DCC_ObjOutput>
 			<DCC_HppOutput>build</DCC_HppOutput>
 			<DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
@@ -61,13 +60,13 @@
 			<DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_2)'!=''">
+			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 			<Version>7.0</Version>
 			<DCC_Optimize>False</DCC_Optimize>
 			<DCC_IntegerOverflowCheck>True</DCC_IntegerOverflowCheck>
 			<DCC_RangeChecking>True</DCC_RangeChecking>
 			<DCC_GenerateStackFrames>True</DCC_GenerateStackFrames>
 			<DCC_MapFile>3</DCC_MapFile>
-			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_ObjOutput>build</DCC_ObjOutput>
 			<DCC_HppOutput>build</DCC_HppOutput>
 			<DCC_ResourcePath>$(BDSCOMMONDIR)\Bpl;$(DCC_ResourcePath)</DCC_ResourcePath>

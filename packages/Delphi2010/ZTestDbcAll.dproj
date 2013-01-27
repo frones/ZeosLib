@@ -20,7 +20,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\test\dbc;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_BplOutput>build</DCC_BplOutput>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
@@ -47,21 +47,7 @@
 			<DelphiCompile Include="ZTestDbcAll.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcUtils.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcCache.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcCachedResultSet.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcResultSet.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcResultSetMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcResolver.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcGeneric.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcMySqlMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcMySql.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcPostgreSqlMetadata.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcPostgreSql.pas"/>
-			<DCCReference Include="..\..\test\dbc\ZTestDbcSqLite.pas">
-				<Form>/  ZTestDbcInterbaseMetadata in &apos;..\..\test\dbc\ZTestDbcInterbaseMetadata.pas&apos;,</Form>
-			</DCCReference>
+			<DCCReference Include="..\..\test\dbc\ZTestDbc.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>

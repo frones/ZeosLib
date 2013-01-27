@@ -25,6 +25,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UnitSearchPath>build;..\..\test\core;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
@@ -55,14 +56,7 @@
 			</DelphiCompile>
 			<DCCReference Include="..\..\test\framework\ZTestConfig.pas"/>
 			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestSysUtils.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestList.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestFramework.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestVariant.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestExprToken.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestTokenizer.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestExpression.pas"/>
-			<DCCReference Include="..\..\test\core\ZTestURL.pas"/>
+			<DCCReference Include="..\..\test\core\ZTestCore.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>

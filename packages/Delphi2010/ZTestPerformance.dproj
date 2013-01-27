@@ -1,12 +1,12 @@
 ﻿	<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 		<PropertyGroup>
-			<ProjectGuid>{B9F9C1B6-A431-4240-9867-DD01B220B185}</ProjectGuid>
-			<MainSource>ZTestDbcAll.dpr</MainSource>
+			<ProjectGuid>{A0482AC2-CFC3-4724-AAB3-7BB0933A5A16}</ProjectGuid>
+			<MainSource>ZTestPerformance.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
 			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
-		<PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
+		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_1)'!=''">
@@ -20,19 +20,20 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>build;..\..\test\dbc;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-			<DCC_DcuOutput>build</DCC_DcuOutput>
-			<DCC_BplOutput>build</DCC_BplOutput>
-			<DCC_ExeOutput>build</DCC_ExeOutput>
-			<DCC_DcpOutput>build</DCC_DcpOutput>
+			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_DependencyCheckOutputName>build\ZTestPerformance.exe</DCC_DependencyCheckOutputName>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
-			<DCC_E>false</DCC_E>
+			<DCC_ExeOutput>build</DCC_ExeOutput>
+			<DCC_BplOutput>build</DCC_BplOutput>
+			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_Platform>x86</DCC_Platform>
-			<DCC_DependencyCheckOutputName>build\ZTestDbcAll.exe</DCC_DependencyCheckOutputName>
 			<DCC_N>false</DCC_N>
 			<DCC_S>false</DCC_S>
-			<DCC_F>false</DCC_F>
+			<DCC_DcpOutput>build</DCC_DcpOutput>
 			<DCC_K>false</DCC_K>
+			<DCC_DcuOutput>build</DCC_DcuOutput>
+			<DCC_E>false</DCC_E>
+			<DCC_F>false</DCC_F>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Cfg_1)'!=''">
 			<DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -44,11 +45,17 @@
 			<DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
 		</PropertyGroup>
 		<ItemGroup>
-			<DelphiCompile Include="ZTestDbcAll.dpr">
+			<DelphiCompile Include="ZTestPerformance.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\dbc\ZTestDbc.pas"/>
-			<BuildConfiguration Include="Base">
+			<DCCReference Include="..\..\test\performance\ZTestBdePerformance.pas"/>
+			<DCCReference Include="..\..\test\performance\ZTestPlainPerformance.pas"/>
+			<DCCReference Include="..\..\test\performance\ZTestDbcPerformance.pas"/>
+			<DCCReference Include="..\..\test\performance\ZTestDatasetPerformance.pas"/>
+			<DCCReference Include="..\..\test\performance\ZTestOldZeosPerformance.pas"/>
+			<DCCReference Include="..\..\test\performance\ZTestDbxPerformance.pas"/>
+			<DCCReference Include="..\..\test\performance\ZTestIbxPerformance.pas"/>
+			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
 			<BuildConfiguration Include="Debug">
@@ -67,7 +74,7 @@
 			<BorlandProject>
 				<Delphi.Personality>
 					<Source>
-						<Source Name="MainSource">ZTestDbcAll.dpr</Source>
+						<Source Name="MainSource">ZTestPerformance.dpr</Source>
 					</Source>
 					<Parameters>
 						<Parameters Name="UseLauncher">False</Parameters>
@@ -86,7 +93,7 @@
 						<VersionInfo Name="Special">False</VersionInfo>
 						<VersionInfo Name="Private">False</VersionInfo>
 						<VersionInfo Name="DLL">False</VersionInfo>
-						<VersionInfo Name="Locale">2067</VersionInfo>
+						<VersionInfo Name="Locale">1031</VersionInfo>
 						<VersionInfo Name="CodePage">1252</VersionInfo>
 					</VersionInfo>
 					<VersionInfoKeys>

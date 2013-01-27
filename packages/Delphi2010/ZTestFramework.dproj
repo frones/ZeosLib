@@ -25,7 +25,6 @@
 			<DCC_DcpOutput>build</DCC_DcpOutput>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
 			<DesignOnlyPackage>false</DesignOnlyPackage>
-			<DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
 			<DllSuffix>140</DllSuffix>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_Platform>x86</DCC_Platform>
