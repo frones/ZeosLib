@@ -67,7 +67,6 @@ uses
   ZTestConfig,
   ZSqlTestCase,
   ZTestDbc in '..\..\test\dbc\ZTestDbc.pas';
-;
 
 begin
   TestGroup := DBC_TEST_GROUP;

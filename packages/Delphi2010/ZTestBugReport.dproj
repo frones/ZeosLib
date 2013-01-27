@@ -20,8 +20,9 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_DcuOutput>build</DCC_DcuOutput>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
-			<DCC_UnitSearchPath>build;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\test\bugreport;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DependencyCheckOutputName>build\ZTestBugReport.exe</DCC_DependencyCheckOutputName>
 			<DCC_BplOutput>build</DCC_BplOutput>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;$(DCC_UnitAlias)</DCC_UnitAlias>
@@ -49,16 +50,7 @@
 			</DelphiCompile>
 			<DCCReference Include="..\..\test\framework\ZTestConfig.pas"/>
 			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompASA.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompCore.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompInterbase.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompMSSql.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompOracle.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcOracle.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcASA.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcCore.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcInterbase.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompSQLite.pas"/>
+			<DCCReference Include="..\..\test\bugreport\ZTestBugReports.pas"/>
 			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>

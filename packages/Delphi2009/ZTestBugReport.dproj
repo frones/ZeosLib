@@ -4,6 +4,7 @@
 			<MainSource>ZTestBugReport.dpr</MainSource>
 			<Config Condition="'$(Config)'==''">Debug</Config>
 			<DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
+			<ProjectVersion>12.0</ProjectVersion>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Config)'=='Basis' or '$(Base)'!=''">
 			<Base>true</Base>
@@ -19,10 +20,15 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
+			<DCC_UnitSearchPath>build;..\..\test\bugreport;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_DcuOutput>build</DCC_DcuOutput>
+			<DCC_BplOutput>build</DCC_BplOutput>
+			<DCC_ExeOutput>build</DCC_ExeOutput>
+			<DCC_DcpOutput>build</DCC_DcpOutput>
 			<DCC_ImageBase>00400000</DCC_ImageBase>
 			<DCC_E>false</DCC_E>
 			<DCC_Platform>x86</DCC_Platform>
-			<DCC_DependencyCheckOutputName>ZTestBugReport.exe</DCC_DependencyCheckOutputName>
+			<DCC_DependencyCheckOutputName>build\ZTestBugReport.exe</DCC_DependencyCheckOutputName>
 			<DCC_N>false</DCC_N>
 			<DCC_S>false</DCC_S>
 			<DCC_F>false</DCC_F>
@@ -41,11 +47,7 @@
 			<DelphiCompile Include="ZTestBugReport.dpr">
 				<MainSource>MainSource</MainSource>
 			</DelphiCompile>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcCore.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcPostgreSql.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugDbcDbLib.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompCore.pas"/>
-			<DCCReference Include="..\..\test\bugreport\ZTestBugCompPostgreSql.pas"/>
+			<DCCReference Include="..\..\test\bugreport\ZTestBugReports.pas"/>
 			<BuildConfiguration Include="Basis">
 				<Key>Base</Key>
 			</BuildConfiguration>
