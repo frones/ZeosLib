@@ -28,6 +28,7 @@ package ZPlain;
 {$LIBSUFFIX '160'}
 {$RUNONLY}
 {$IMPLICITBUILD OFF}
+{$I ZPackages.inc}
 
 requires
   ZCore,
@@ -35,7 +36,44 @@ requires
   vcl;
 
 contains
+{$IFDEF ENABLE_DBLIB}
+  ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
+  ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_INTERBASE}
+  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
+  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_MYSQL}
+  ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
+  ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_POSTGRESQL}
+  ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_ADO}
+  ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
+  ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_ORACLE}
+  ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
+  ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_SQLITE}
+  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
+{$ENDIF}
+
+{$IFDEF ENABLE_ASA}
+  ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
+  ZPlainASAConstants in '..\..\src\plain\ZPlainASAConstants.pas',
+{$ENDIF}
+
   ZPlainDriver in '..\..\src\plain\ZPlainDriver.pas',
   ZPlainLoader in '..\..\src\plain\ZPlainLoader.pas';
-
 end.
