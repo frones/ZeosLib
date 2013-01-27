@@ -220,7 +220,7 @@ procedure TZPostgreSQLResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
-  FieldMode, FieldSize: Integer;
+  FieldMode, FieldSize, FieldType: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -248,8 +248,8 @@ begin
       Signed := False;
       Nullable := ntNullable;
 
-      DefinePostgreSQLToSQLType(ColumnInfo,
-        FPlainDriver.GetFieldType(FQueryHandle, I));
+      FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
+      DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
 
       if Precision = 0 then
       begin
@@ -259,7 +259,7 @@ begin
 
         if ColumnType in [stString, stUnicodeString] then
           {begin patch: varchar() is equal to text!}
-          if ( FieldMode = -1 ) and ( FieldSize = -1 ) then
+          if ( FieldMode = -1 ) and ( FieldSize = -1 ) and ( FieldType = 1043) then
             DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
           else
             if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
