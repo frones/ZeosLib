@@ -790,7 +790,7 @@ begin
   FDPBLength := 1;
   Inc(FDPBLength, 2 + Length(UserName));
   Inc(FDPBLength, 2 + Length(Password));
-  {$IFDEF DELPHI12_UP}
+  {$IFDEF UNICODE}
   DPB := AnsiStrAlloc(FDPBLength +1);
   {$ELSE}
   DPB := StrAlloc(FDPBLength +1);

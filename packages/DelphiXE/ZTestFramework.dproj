@@ -74,10 +74,8 @@
 			<DCCReference Include="designide.dcp"/>
 			<DCCReference Include="..\..\test\framework\ZTestConfig.pas"/>
 			<DCCReference Include="..\..\test\framework\ZTestConsts.pas"/>
-			<DCCReference Include="..\..\test\framework\ZTestDefinitions.pas"/>
 			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
 			<DCCReference Include="..\..\test\framework\ZTestCase.pas"/>
-			<DCCReference Include="..\..\test\framework\ZBugReport.pas"/>
 			<DCCReference Include="..\..\test\framework\ZPerformanceTestCase.pas"/>
 			<DCCReference Include="..\..\test\external\MemCheck.pas"/>
 			<BuildConfiguration Include="Debug">

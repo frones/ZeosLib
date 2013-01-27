@@ -56,22 +56,16 @@ unit ZTestDbcMySql;
 interface
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, ZTestDefinitions, ZDbcMySql,
+uses Classes, SysUtils, ZDbcIntfs, ZSqlTestCase, ZDbcMySql,
   ZCompatibility, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcMySQLCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcMySQLCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
-
   published
     procedure TestConnection;
     procedure TestStoredResultSet;
@@ -96,23 +90,6 @@ uses ZSysUtils, ZTestConsts;
 function TZTestDbcMySQLCase.GetSupportedProtocols: string;
 begin
   Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5';
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcMySQLCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcMySQLCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**

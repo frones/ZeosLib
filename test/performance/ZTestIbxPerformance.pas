@@ -66,7 +66,7 @@ type
   TZIBXPerformanceTestCase = class (TZPerformanceSQLTestCase)
   protected
     function GetImplementedAPI: string; override;
-    function IsProtocolValid(Value: string): boolean; override;
+    function GetSupportedProtocols: String; override;
 
 {$IFNDEF EXCLUDE_IBX_TEST}
   private
@@ -106,7 +106,7 @@ type
   TZIBXCPerformanceTestCase = class (TZPerformanceSQLTestCase)
   protected
     function GetImplementedAPI: string; override;
-    function IsProtocolValid(Value: string): boolean; override;
+    function GetSupportedProtocols: String; override;
 
 {$IFNDEF EXCLUDE_IBX_TEST}
   private
@@ -156,16 +156,11 @@ begin
 end;
 
 
-function TZIBXPerformanceTestCase.IsProtocolValid(Value: string): boolean;
+function TZIBXPerformanceTestCase.GetSupportedProtocols: String;
 begin
-  if (Value = 'interbase-5') or (Value = 'interbase-6') or
-     (Value = 'firebird-1.0') or (Value = 'firebird-1.5') or 
-     (Value = 'firebird-2.0') or (Value = 'firebird-2.1') or 
-     (Value = 'firebirdd-1.5') or (Value = 'firebirdd-2.0') or 
-     (Value = 'firebirdd-2.1') then
-    Result := True
-  else
-    Result := False;
+  Result := 'interbase-5,interbase-6,firebird-1.0,'+
+    'firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5'+
+    'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
 end;
 
 
@@ -397,13 +392,11 @@ begin
 end;
 
 
-function TZIBXCPerformanceTestCase.IsProtocolValid(Value: string): boolean;
+function TZIBXCPerformanceTestCase.GetSupportedProtocols: String;
 begin
-  if (Value = 'interbase-5') or (Value = 'interbase-6') or
-     (Value = 'firebird-1.0') or (Value = 'firebird-1.5') then
-    Result := True
-  else
-    Result := False;
+  Result := 'interbase-5,interbase-6,firebird-1.0,'+
+    'firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5'+
+    'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
 end;
 
 

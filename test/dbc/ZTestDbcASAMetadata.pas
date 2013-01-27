@@ -61,14 +61,13 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions, ZCompatibility,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase, ZCompatibility,
   ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib, ZDbcASA;
 
 type
   {** Implements a test case for. }
-  TZASATestDbcMetadata = class(TZDbcSpecificSQLTestCase)
+  TZASATestDbcMetadata = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
     MD: IZDatabaseMetadata;
     Catalog, Schema: string;
     ResultSet: IZResultSet;
@@ -77,8 +76,6 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestMetadataGetCatalogs;
     procedure TestMetadataGetSchemas;
@@ -110,7 +107,7 @@ uses ZSysUtils, ZTestConsts;
 }
 procedure TZASATestDbcMetadata.SetUp;
 begin
-  Connection := CreateDbcConnection;
+  inherited SetUp;
   CheckNotNull(Connection);
   MD := Connection.GetMetadata;
   CheckNotNull(MD);
@@ -131,8 +128,7 @@ procedure TZASATestDbcMetadata.TearDown;
 begin
   ResultSet := nil;
   MD := nil;
-  Connection.Close;
-  Connection := nil;
+  inherited TearDown;
 end;
 
 procedure TZASATestDbcMetadata.TestMetadataGetTableTypes;

@@ -59,11 +59,11 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZCollections, SysUtils, Classes,
-  ZCompatibility, ZTokenizer, ZTestDefinitions;
+  ZCompatibility, ZTokenizer, ZTestCase;
 
 type
   {** Implements an abstract test case for tokenizers. }
-  TZAbstractTokenizerTestCase = class (TZCoreGenericTestCase)
+  TZAbstractTokenizerTestCase = class (TZGenericTestCase)
   private
     FTokenizer: TZTokenizer;
   protected

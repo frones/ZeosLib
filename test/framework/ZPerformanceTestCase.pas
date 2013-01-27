@@ -65,7 +65,7 @@ type
   TZTestMethod = procedure of object;
 
   {** Implements a abstract performance test case. }
-  TZPerformanceSQLTestCase = class (TZPortableSQLTestCase)
+  TZPerformanceSQLTestCase = class (TZAbstractCompSQLTestCase)
   private
     FSelectedAPIs: TStrings;
     FSelectedTests: TStrings;
@@ -350,18 +350,15 @@ end;
 }
 procedure TZPerformanceSQLTestCase.CleanupTable(TableName: string);
 var
-  Connection: TZConnection;
   Query: TZQuery;
 begin
-  Connection := CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     Query.Connection := Connection;
     Query.SQL.Text := Format('DELETE FROM %s', [TableName]);
     Query.ExecSQL;
   finally
     Query.Free;
-    Connection.Free;
   end;
 end;
 
@@ -379,16 +376,13 @@ procedure TZPerformanceSQLTestCase.PopulateTable(TableName: string;
   ForeignKey: string; ForeignKeyRange: Integer);
 var
   I, Index, Count: Integer;
-  Connection: TZConnection;
   Query, Query1: TZQuery;
   CurrentCount: Integer;
   QuerySQL, Fields, Values: string;
 begin
-  Connection := CreateDatasetConnection;
-  Query := TZQuery.Create(nil);
-  Query1 := TZQuery.Create(nil);
+  Query := CreateQuery;
+  Query1 := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.ReadOnly := True;
 
     Query1.Connection := Connection;
@@ -473,7 +467,6 @@ begin
   finally
     Query.Free;
     Query1.Free;
-    Connection.Free;
   end;
 end;
 

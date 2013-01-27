@@ -58,13 +58,13 @@ interface
 {$I ZCore.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions,ZURL;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase,ZURL;
 
 type
 
   { TZURLTest }
 
-  TZURLTest = class (TZCoreGenericTestCase)
+  TZURLTest = class (TZGenericTestCase)
   published
     procedure TestAssignToUrl;
     procedure TestAssignToProperties;

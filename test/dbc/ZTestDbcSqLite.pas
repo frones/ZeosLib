@@ -61,22 +61,16 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZTestDefinitions, ZDbcSQLite,
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcSQLite,
   ZCompatibility;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcSQLiteCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcSQLiteCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
-
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -101,23 +95,6 @@ uses ZSysUtils, ZTestConsts;
 function TZTestDbcSQLiteCase.GetSupportedProtocols: string;
 begin
   Result := 'sqlite,sqlite-3';
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcSQLiteCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcSQLiteCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**

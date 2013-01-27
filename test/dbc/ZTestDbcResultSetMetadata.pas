@@ -55,24 +55,18 @@ unit ZTestDbcResultSetMetadata;
 
 interface
 {$I ZDbc.inc}
-uses Classes, SysUtils, ZTestDefinitions, ZDbcIntfs, ZClasses,
+uses Classes, SysUtils, ZSqlTestCase, ZDbcIntfs, ZClasses,
   ZCollections, ZDbcResultSet, ZDbcResultSetMetadata,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
  {** Implements a test case for TZAbstractBlob. }
-  TZTestResultSetMetadataCase = class(TZDbcPortableSQLTestCase)
+  TZTestResultSetMetadataCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-
     procedure CheckColumnMetadata(Metadata: IZResultSetMetadata;
       ColumnIndex: Integer; ColumnLabel, ColumnName, ColumnTable: string;
       IsAutoIncrement, IsWritable: Boolean);
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestResultSetMetadata;
     procedure TestResultSetMetadata1;
@@ -83,23 +77,6 @@ implementation
 uses ZSysUtils;
 
 { TZTestResultSetMetadataCase }
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestResultSetMetadataCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestResultSetMetadataCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
-end;
 
 {**
   Checks metadata for one single resultset column.

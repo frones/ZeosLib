@@ -7,7 +7,6 @@
       <MainUnit Value="0"/>
       <UseAppBundle Value="False"/>
       <UseXPManifest Value="True"/>
-      <Icon Value="0"/>
     </General>
     <VersionInfo>
       <StringTable ProductVersion=""/>

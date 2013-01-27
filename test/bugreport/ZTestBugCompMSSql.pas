@@ -60,20 +60,15 @@ uses
   Variants,
 {$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection,
-  ZDbcIntfs, ZBugReport,ZCompatibility;
+  ZDbcIntfs, ZSqlTestCase,ZCompatibility;
 
 type
 
   {** Implements a bug report test case for MSSql components. }
-  TZTestCompMSSqlBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  TZTestCompMSSqlBugReport = class(TZAbstractCompSQLTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
 
-    property Connection: TZConnection read FConnection write FConnection;
     procedure Test959307; //wrong defined????
     procedure Test953072; //is this test really solvable? I don't think so
   published
@@ -93,18 +88,6 @@ begin
   Result := 'mssql,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005';
 end;
 
-procedure TZTestCompMSSqlBugReport.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
-end;
-
-procedure TZTestCompMSSqlBugReport.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
 {**
   Access Violation during ZReadOnlyQuery.Open
   In method TZAbstractRODataset.InternalInitFieldDefs: 
@@ -117,9 +100,8 @@ begin
 
   if SkipClosed then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM department';
     Query.Open;
     CheckEquals(4, Query.FieldCount);
@@ -175,9 +157,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from master..sysobjects';
     Query.Open;
     CheckEquals(False, Query.IsEmpty);
@@ -197,11 +178,10 @@ begin
   if SkipTest then Exit;
 
   StoredProc := TZStoredProc.Create(nil);
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     StoredProc.Connection := Connection;
     StoredProc.StoredProcName := 'proc959307';
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from table959307';
 
     StoredProc.ParamByName('@p').AsString := 'xyz';

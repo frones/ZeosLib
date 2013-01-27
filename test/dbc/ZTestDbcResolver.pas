@@ -56,19 +56,14 @@ unit ZTestDbcResolver;
 interface
 {$I ZDbc.inc}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZCollections, ZDbcGenericResolver, ZTestDefinitions;
+  ZCollections, ZDbcGenericResolver, ZSqlTestCase;
 
 type
 
  {** Implements a test case for CachedResolver classes. }
-  TZTestCachedResolverCase = class(TZDbcPortableSQLTestCase)
+  TZTestCachedResolverCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestGenericResolver;
     {$IFDEF ENABLE_INTERBASE}procedure TestInterbaseResolver;{$ENDIF}
@@ -82,23 +77,6 @@ uses ZSysUtils, ZTestConsts
      {$IFDEF ENABLE_MYSQL}, ZDbcMySql, ZDbcMySqlStatement, ZDbcMySqlResultSet{$ENDIF};
 
 { TZTestCachedResolverCase }
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestCachedResolverCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestCachedResolverCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
-end;
 
 {**
   Runs a test for GenericCachedResolver class.

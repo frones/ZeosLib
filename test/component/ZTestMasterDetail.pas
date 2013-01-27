@@ -57,15 +57,31 @@ interface
 {$I ZComponent.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
+  ZSqlStrings, ZTokenizer, ZGenericSqlToken,
+  ZConnection, ZDataset, ZSqlTestCase, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib;
 
 type
 
-  {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestMasterDetailCase = class(TZComponentPortableSQLTestCase)
+  {** Implements a test case for Master-Detail relations }
+  TZTestMasterDetailCase = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
+    MasterDataSource: TDataSource;
+    MasterQuery: TZQuery;
+    DetailQuery: TZQuery;
+    DetailQuery2: TZQuery;
+    DetailQuery3: TZQuery;
+  protected
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestDataSource;
+    procedure TestMasterFields;
+    procedure TestClientDataset;
+  end;
+
+  TZTestMasterDetailCaseMBCs = class(TZAbstractCompSQLTestCaseMBCs)
+  private
     MasterDataSource: TDataSource;
     MasterQuery: TZQuery;
     DetailQuery: TZQuery;
@@ -75,10 +91,7 @@ type
     procedure SetUp; override;
     procedure TearDown; override;
     procedure TestClientDatasetWithForeignKey_ApplyUpdates;
-published
-    procedure TestDataSource;
-    procedure TestMasterFields;
-    procedure TestClientDataset;
+  published
     procedure TestClientDatasetWithForeignKey_doUpdateMasterFirst;
   end;
 
@@ -96,22 +109,15 @@ const TestRowID = 1000;
 }
 procedure TZTestMasterDetailCase.SetUp;
 begin
-  Connection := CreateDatasetConnection;
+  inherited SetUp;
 
-  MasterQuery := TZQuery.Create(nil);
-  MasterQuery.Connection := Connection;
-
+  MasterQuery := CreateQuery;
   MasterDataSource := TDataSource.Create(nil);
   MasterDataSource.DataSet := MasterQuery;
 
-  DetailQuery := TZQuery.Create(nil);
-  DetailQuery.Connection := Connection;
-
-  DetailQuery2 := TZQuery.Create(nil);
-  DetailQuery2.Connection := Connection;
-
-  DetailQuery3 := TZQuery.Create(nil);
-  DetailQuery3.Connection := Connection;
+  DetailQuery := CreateQuery;
+  DetailQuery2 := CreateQuery;
+  DetailQuery3 := CreateQuery;
 end;
 
 {**
@@ -133,8 +139,7 @@ begin
 
   MasterDataSource.Free;
 
-  Connection.Disconnect;
-  Connection.Free;
+  inherited TearDown;
 end;
 
 {**
@@ -272,82 +277,48 @@ begin
   end;
 end;
 
+{ TZTestMasterDetailCaseMBCs }
 {**
-  Runs a test for in extendet clientdatset rules
-  All detail-queries should be updated in a single transaction.
-  But now the MasterTable should be updated first for an valid ForegnKey.
-  Then all DetailTables should have been updated.
-  Very tricky and has to deal with MetaData informations.
+  Prepares initial data before each test.
 }
-procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_doUpdateMasterFirst;
-var
-  SQLMonitor: TZSQLMonitor;
-  CommitCount, I: Integer;
-
+procedure TZTestMasterDetailCaseMBCs.SetUp;
 begin
-  if SkipTest then Exit;
+  inherited SetUp;
 
-  SQLMonitor := TZSQLMonitor.Create(nil);
-  SQLMonitor.Active := True;
-  MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
-  MasterQuery.Options := MasterQuery.Options + [doDontSortOnPost];
-  MasterQuery.Open;
+  MasterQuery := CreateQuery;
+  MasterDataSource := TDataSource.Create(nil);
+  MasterDataSource.DataSet := MasterQuery;
 
-  CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
-
-  DetailQuery.SQL.Text := 'SELECT * FROM people';
-  DetailQuery.MasterSource := MasterDataSource;
-  DetailQuery.MasterFields := 'dep_id';
-  DetailQuery.LinkedFields := 'p_dep_id';
-  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst, doDontSortOnPost];
-  DetailQuery.Open;
-  CommitCount := 0;
-  try
-    MasterQuery.Append;
-    MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
-    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
-    MasterQuery.FieldByName('dep_shname').AsString := 'abc';
-    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
-
-    CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
-
-    DetailQuery.Append;
-    DetailQuery.FieldByName('p_id').AsInteger := TestRowID;
-    DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID;
-
-    DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
-    DetailQuery.FieldByName('p_end_work').AsDateTime := now;
-    DetailQuery.FieldByName('p_picture').AsString := '';
-    DetailQuery.FieldByName('p_resume').AsString := '';
-    DetailQuery.FieldByName('p_redundant').AsInteger := 5;
-    CheckEquals(True, (DetailQuery.State = dsInsert), 'MasterQuery Insert-State');
-
-    MasterQuery.Post;
-
-    CheckEquals(True, (MasterQuery.State = dsBrowse), 'MasterQuery Browse-State');
-    CheckEquals(True, (DetailQuery.State = dsBrowse), 'DetailQuery Browse-State');
-
-    for i := 0 to SQLMonitor.TraceCount -1 do
-      if SQLMonitor.TraceList[i].Category = lcTransaction then
-        if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
-          Inc(CommitCount);
-    //fix it CheckEquals(1, CommitCount, 'CommitCount');
-  finally
-    MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
-    MasterQuery.ExecSQL;
-    MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);
-    MasterQuery.ExecSQL;
-    SQLMonitor.Free;
-  end;
+  DetailQuery := CreateQuery;
+  DetailQuery2 := CreateQuery;
+  DetailQuery3 := CreateQuery;
 end;
 
-procedure TZTestMasterDetailCase.TestClientDatasetWithForeignKey_ApplyUpdates;
+{**
+  Removes data after each test.
+}
+procedure TZTestMasterDetailCaseMBCs.TearDown;
+begin
+  DetailQuery.Close;
+  DetailQuery.Free;
+
+  DetailQuery2.Close;
+  DetailQuery2.Free;
+
+  DetailQuery3.Close;
+  DetailQuery3.Free;
+
+  MasterQuery.Close;
+  MasterQuery.Free;
+
+  MasterDataSource.Free;
+
+  inherited TearDown;
+end;
+
+procedure TZTestMasterDetailCaseMBCs.TestClientDatasetWithForeignKey_ApplyUpdates;
 var
   SQLMonitor: TZSQLMonitor;
-  I: Integer;
-
   procedure SetTheData(Index: Integer);
   begin
     MasterQuery.Append;
@@ -411,6 +382,79 @@ begin
   end;
 end;
 
+{**
+  Runs a test for in extendet clientdatset rules
+  All detail-queries should be updated in a single transaction.
+  But now the MasterTable should be updated first for an valid ForegnKey.
+  Then all DetailTables should have been updated.
+  Very tricky and has to deal with MetaData informations.
+}
+procedure TZTestMasterDetailCaseMBCs.TestClientDatasetWithForeignKey_doUpdateMasterFirst;
+var
+  SQLMonitor: TZSQLMonitor;
+  //CommitCount, I: Integer;
+begin
+  if SkipTest then Exit;
+
+  SQLMonitor := TZSQLMonitor.Create(nil);
+  SQLMonitor.Active := True;
+  MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
+  MasterQuery.Options := MasterQuery.Options + [doDontSortOnPost];
+  MasterQuery.Open;
+
+  CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
+
+  DetailQuery.SQL.Text := 'SELECT * FROM people';
+  DetailQuery.MasterSource := MasterDataSource;
+  DetailQuery.MasterFields := 'dep_id';
+  DetailQuery.LinkedFields := 'p_dep_id';
+  DetailQuery.Options := DetailQuery.Options + [doUpdateMasterFirst, doDontSortOnPost];
+  DetailQuery.Open;
+  //CommitCount := 0;
+  try
+    MasterQuery.Append;
+    MasterQuery.FieldByName('dep_id').AsInteger := TestRowID;
+    MasterQuery.FieldByName('dep_name').AsString := GetDBTestString('צהüüהצ', Connection.DbcConnection.GetConSettings);
+    MasterQuery.FieldByName('dep_shname').AsString := 'abc';
+    MasterQuery.FieldByName('dep_address').AsString := GetDBTestString('A adress of צהüüהצ', Connection.DbcConnection.GetConSettings);
+
+    CheckEquals(True, (MasterQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    DetailQuery.Append;
+    DetailQuery.FieldByName('p_id').AsInteger := TestRowID;
+    DetailQuery.FieldByName('p_dep_id').AsInteger := TestRowID;
+
+    DetailQuery.FieldByName('p_begin_work').AsDateTime := now;
+    DetailQuery.FieldByName('p_end_work').AsDateTime := now;
+    DetailQuery.FieldByName('p_picture').AsString := '';
+    DetailQuery.FieldByName('p_resume').AsString := '';
+    DetailQuery.FieldByName('p_redundant').AsInteger := 5;
+    CheckEquals(True, (DetailQuery.State = dsInsert), 'MasterQuery Insert-State');
+
+    MasterQuery.Post;
+
+    CheckEquals(True, (MasterQuery.State = dsBrowse), 'MasterQuery Browse-State');
+    CheckEquals(True, (DetailQuery.State = dsBrowse), 'DetailQuery Browse-State');
+
+    {fix it
+    for i := 0 to SQLMonitor.TraceCount -1 do
+      if SQLMonitor.TraceList[i].Category = lcTransaction then
+        if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
+          Inc(CommitCount);
+    CheckEquals(1, CommitCount, 'CommitCount'); }
+  finally
+    MasterQuery.SQL.Text := 'delete from people where p_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    MasterQuery.SQL.Text := 'delete from department where dep_id = '+IntToStr(TestRowID);
+    MasterQuery.ExecSQL;
+    SQLMonitor.Free;
+  end;
+end;
+
+
 initialization
   RegisterTest('component',TZTestMasterDetailCase.Suite);
+  RegisterTest('component',TZTestMasterDetailCaseMBCs.Suite);
 end.

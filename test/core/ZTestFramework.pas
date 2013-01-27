@@ -57,20 +57,20 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSysUtils, SysUtils, ZTestDefinitions, ZCompatibility;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSysUtils, SysUtils, ZSqlTestCase, ZCompatibility;
 
 type
 
-  {** Implements a test case for TZPortableSQLTestCase. }
-  TZTestPortableSQLTestCase = class(TZCorePortableSQLTestCase)
+  {** Implements a test case for TZAbstractSQLTestCase. }
+  TZTestPortableSQLTestCase = class(TZAbstractSQLTestCase)
   published
     procedure TestOne;
     procedure TestTwo;
     procedure TestTree;
   end;
 
-  {** Implements a test case for TZSpecificSQLTestCase. }
-  TZTestSpecificSQLTestCase = class(TZCoreSpecificSQLTestCase)
+  {** Implements a test case for TZAbstractSQLTestCase. }
+  TZTestSpecificSQLTestCase = class(TZAbstractSQLTestCase)
   protected
     function GetSupportedProtocols: string; override;
   published

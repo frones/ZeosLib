@@ -57,25 +57,14 @@ interface
 {$I ZComponent.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions, ZStoredProcedure;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
+  ZSqlStrings, ZTokenizer, ZGenericSqlToken,
+  ZConnection, ZDataset, ZSqlTestCase, ZStoredProcedure;
 
 type
   {** Implements a generic test case for class TZStoredProc. }
-  TZTestStoredProcedure = class(TZComponentPortableSQLTestCase)
+  TZTestStoredProcedure = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
-    StoredProc: TZStoredProc;
-  protected
-    procedure SetUp; override;
-    procedure TearDown; override;
-    function GetConnectionUrl: string;
-  end;
-
-  {** Implements a protocol specific test case for class TZStoredProc. }
-  TZTestStoredProcedureSpecific = class(TZComponentSpecificSQLTestCase)
-  private
-    Connection: TZConnection;
     StoredProc: TZStoredProc;
   protected
     procedure SetUp; override;
@@ -84,7 +73,7 @@ type
   end;
 
   {** Implements a test case for class TZStoredProc. }
-  TZTestInterbaseStoredProcedure = class(TZTestStoredProcedureSpecific)
+  TZTestInterbaseStoredProcedure = class(TZTestStoredProcedure)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -94,7 +83,7 @@ type
 
 
   {** Implements a test case for class TZStoredProc. }
-  TZTestDbLibStoredProcedure = class(TZTestStoredProcedureSpecific)
+  TZTestDbLibStoredProcedure = class(TZTestStoredProcedure)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -102,7 +91,7 @@ type
   end;
 
   {** Impleme nts a test case for class TZStoredProc. }
-  TZTestPostgreSQLStoredProcedure = class(TZTestStoredProcedureSpecific)
+  TZTestPostgreSQLStoredProcedure = class(TZTestStoredProcedure)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -116,7 +105,7 @@ type
   end;
 
   {** Implements a test case for class TZStoredProc. }
-  TZTestMySQLStoredProcedure = class(TZTestStoredProcedureSpecific)
+  TZTestMySQLStoredProcedure = class(TZTestStoredProcedure)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -129,7 +118,7 @@ type
 
 
   {** Implements a test case for class TZStoredProc. }
-  TZTestADOStoredProcedure = class(TZTestStoredProcedureSpecific)
+  TZTestADOStoredProcedure = class(TZTestStoredProcedure)
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -140,7 +129,7 @@ type
 
   { TZTestOracleStoredProcedure }
 
-  TZTestOracleStoredProcedure = class(TZTestStoredProcedureSpecific)
+  TZTestOracleStoredProcedure = class(TZTestStoredProcedure)
   protected
     function GetSupportedProtocols: string; override;
     procedure abtest(prefix:string ='');
@@ -170,8 +159,7 @@ uses Classes, ZSysUtils, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZAbstractDataset,
 }
 procedure TZTestStoredProcedure.SetUp;
 begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
+  inherited SetUp;
   StoredProc := TZStoredProc.Create(nil);
   StoredProc.Connection := Connection;
   StoredProc.ParamCheck := True;
@@ -184,8 +172,7 @@ procedure TZTestStoredProcedure.TearDown;
 begin
   StoredProc.Close;
   StoredProc.Free;
-  Connection.Disconnect;
-  Connection.Free;
+  inherited TearDown;
 end;
 
 {**
@@ -193,50 +180,6 @@ end;
   @return a built connection URL string.
 }
 function TZTestStoredProcedure.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-  TempProperties.Free;
-end;
-
-{ TZTestStoredProcedureSpecific }
-
-{**
-  Prepares initial data before each test.
-}
-procedure TZTestStoredProcedureSpecific.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-  Connection.Connect;
-  StoredProc := TZStoredProc.Create(nil);
-  StoredProc.Connection := Connection;
-  StoredProc.ParamCheck := True;
-end;
-
-{**
-  Removes data after each test.
-}
-procedure TZTestStoredProcedureSpecific.TearDown;
-begin
-  StoredProc.Close;
-  StoredProc.Free;
-  Connection.Disconnect;
-  Connection.Free;
-end;
-
-{**
-  Gets a connection URL string.
-  @return a built connection URL string.
-}
-function TZTestStoredProcedureSpecific.GetConnectionUrl: string;
 var
   TempProperties :TStrings;
   I: Integer;

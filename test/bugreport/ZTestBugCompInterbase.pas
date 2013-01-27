@@ -57,23 +57,16 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZBugReport, ZCompatibility
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility
   {$IFNDEF LINUX}
     ,DBCtrls
   {$ENDIF};
 type
 
   {** Implements a bug report test case for Interbase components. }
-  ZTestCompInterbaseBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: TZConnection;
+  ZTestCompInterbaseBugReport = class(TZAbstractCompSQLTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-
-    property Connection: TZConnection read FConnection write FConnection;
-
   published
     procedure Test750912;
     procedure Test789879;
@@ -88,18 +81,23 @@ type
     procedure Test984305;
     procedure Test1004584;
     procedure Test1021705;
+  end;
+
+  ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
+  protected
+    function GetSupportedProtocols: string; override;
+  published
     procedure Test_Param_LoadFromStream_StringStream_ftBlob;
     procedure Test_Param_LoadFromStream_StringStream_ftMemo;
     procedure Test_Mantis214;
   end;
-
 implementation
 
 uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSqlTestCase, ZEncoding;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZEncoding;
 
 { ZTestCompInterbaseBugReport }
 
@@ -107,17 +105,6 @@ function ZTestCompInterbaseBugReport.GetSupportedProtocols: string;
 begin
   Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,'+
   'firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
-end;
-
-procedure ZTestCompInterbaseBugReport.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-procedure ZTestCompInterbaseBugReport.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
 end;
 
 {**
@@ -153,9 +140,8 @@ begin
   if SkipTest then Exit;
 
   Error := True;
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     // Query.RequestLive := True;
     Query.SQL.Text := 'SELECT * FROM TABLE1021705';
     Query.OPEN;
@@ -204,11 +190,11 @@ begin
   if SkipTest then Exit;
 
 {$IFNDEF LINUX}
-  Query := TZQuery.Create(nil);
-  ROQuery := TZReadOnlyQuery.Create(nil);;
+  Query := CreateQuery;
+  ROQuery := CreateReadOnlyQuery;
   DSQuery := TDataSource.Create(nil);
   DSROQuery := TDataSource.Create(nil);
-  LookUp := TDBLookupComboBox.Create(nil);;
+  LookUp := TDBLookupComboBox.Create(nil);
   try
     Query.Connection := Connection;
     ROQuery.Connection := Connection;
@@ -260,9 +246,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'DELETE FROM TABLE789879';
     Query.ExecSQL;
 
@@ -304,7 +289,7 @@ begin
   if SkipTest then Exit;
 
   Temp := False;
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
     Query.Connection := Connection;
     Query.SQL.Text := 'DELETE FROM TABLE841559';
@@ -335,9 +320,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
 
-  Query.Connection := Connection;
   // Query.RequestLive := True;
   Query.SQL.Text := 'DELETE FROM BLOB_VALUES';
   Query.ExecSQL;
@@ -404,8 +388,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   // Query.RequestLive := True;
   try
     Query.SQL.Text := 'SELECT * FROM TABLE864622';
@@ -429,8 +412,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   // Query.RequestLive := True;
   try
     Query.SQL.Text := 'DELETE FROM TABLE886194';
@@ -457,7 +439,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   Query.Connection := Connection;
   // Query.RequestLive := True;
   try
@@ -505,8 +487,7 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   // Query.RequestLive := True;
 
   try
@@ -536,8 +517,7 @@ begin
   if SkipTest then Exit;
 
   Error := True;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateQuery;
   // Query.RequestLive := True;
   UpdateSQL := TZUpdateSQL.Create(nil);
 
@@ -585,9 +565,7 @@ begin
   if SkipTest then Exit;
 
   Error := True;
-  Query := TZQuery.Create(nil);
-  Query.Connection := Connection;
-
+  Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM PEOPLE';
     Query.Open;
@@ -607,11 +585,20 @@ begin
     Query.Free;
   end;
 end;
+
+{ ZTestCompInterbaseBugReportMBCs }
+
+function ZTestCompInterbaseBugReportMBCs.GetSupportedProtocols: string;
+begin
+  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,'+
+  'firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
+end;
+
 const
   Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
   Str3 = 'ќдной из наиболее';
 
-procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftBlob;
+procedure ZTestCompInterbaseBugReportMBCs.Test_Param_LoadFromStream_StringStream_ftBlob;
 var
   Query: TZQuery;
   StrStream1: TMemoryStream;
@@ -619,12 +606,10 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   SL := TStringList.Create;
   StrStream1 := TMemoryStream.Create;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -634,10 +619,10 @@ begin
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
-      ParamByName('P_NAME').AsString := GetDBTestString(Str3, FConnection.DbcConnection.GetConSettings);
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
 
       CheckEquals(3, Query.Params.Count, 'Param.Count');
-      SL.Text := GetDBTestString(Str2, FConnection.DbcConnection.GetConSettings);
+      SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftBlob);
@@ -649,7 +634,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(str2+LineEnding, StrStream1, FConnection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftBlob)');
+        CheckEquals(str2+LineEnding, StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftBlob)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -672,7 +657,7 @@ begin
   end;
 end;
 
-procedure ZTestCompInterbaseBugReport.Test_Param_LoadFromStream_StringStream_ftMemo;
+procedure ZTestCompInterbaseBugReportMBCs.Test_Param_LoadFromStream_StringStream_ftMemo;
 var
   Query: TZQuery;
   StrStream1: TMemoryStream;
@@ -680,10 +665,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -696,8 +679,8 @@ begin
       ParamByName('P_ID').AsInteger := TEST_ROW_ID;
       CheckEquals(3, Query.Params.Count, 'Param.Count');
 
-      ParamByName('P_NAME').AsString := GetDBTestString(Str3, FConnection.DbcConnection.GetConSettings);
-      SL.Text := GetDBTestString(Str2, FConnection.DbcConnection.GetConSettings);
+      ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
+      SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
       StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
@@ -711,7 +694,7 @@ begin
         Open;
 
         (FieldByName('P_RESUME') as TBlobField).SaveToStream(StrStream1);
-        CheckEquals(Str2+LineEnding, StrStream1, FConnection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
+        CheckEquals(Str2+LineEnding, StrStream1, Connection.DbcConnection.GetConSettings, 'Param().LoadFromStream(StringStream, ftMemo)');
         SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
         CheckEquals(1, Params.Count);
         Params[0].DataType := ftInteger;
@@ -753,7 +736,7 @@ For sample code see Additional Information. Minimalistic program to reproduce th
 Please let me know what I can do to track down the bug.
 
 }
-procedure ZTestCompInterbaseBugReport.Test_Mantis214;
+procedure ZTestCompInterbaseBugReportMBCs.Test_Mantis214;
 const
   RowID = 214;
   { three cases }
@@ -765,7 +748,7 @@ var
   Procedure AddRecord(ID: Integer; WS: ZWideString);
   begin
     iqry.ParamByName('i1').AsInteger:= ID;
-    {$IFDEF DELPHI12_UP}
+    {$IFDEF UNICODE}
     iqry.ParamByName('s1').AsString := WS;
     {$ELSE}
     iqry.ParamByName('s1').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF} := WS;
@@ -776,10 +759,9 @@ begin
   if SkipTest then Exit;
 
   { prepared insert statement }
-  iqry:= TZQuery.Create(nil);
-  iqry.Connection:= Connection;
+  iqry:= CreateQuery;
   try
-    Connection.Connect;
+    Connection.Connect; // DbcConnection needed
     if Connection.DbcConnection.GetEncoding = ceUTF8 then
     begin
       if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
@@ -795,7 +777,7 @@ begin
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
         {$IFDEF WITH_FTWIDESTRING}
-          {$IFDEF DELPHI12_UP}
+          {$IFDEF UNICODE}
           CheckEquals(UTF8ToString(S1), iqry.Fields[0].AsString);
           iqry.Next;
           CheckEquals(UTF8ToString(S2), iqry.Fields[0].AsString);
@@ -815,13 +797,13 @@ begin
         iqry.SQL.Add('insert into string_values(s_id,s_varchar) values (:i1,:s1)');
         iqry.Prepare;
         iqry.ParamByName('i1').AsInteger:= RowID;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, FConnection.DbcConnection.GetConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S1, Connection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+1;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, FConnection.DbcConnection.GetConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S2, Connection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.ParamByName('i1').AsInteger:= RowID+2;
-        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, FConnection.DbcConnection.GetConSettings, True);
+        iqry.ParamByName('s1').AsString:= GetDBTestString(S3, Connection.DbcConnection.GetConSettings, True);
         iqry.ExecSQL;
         iqry.Unprepare;
 
@@ -829,15 +811,15 @@ begin
         iqry.open;
 
         CheckEquals(3, iqry.RecordCount, 'RecordCount');
-        if (FConnection.DbcConnection.GetConSettings.CPType = cGET_ACP ) then
+        if (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP ) then
         begin
-          if not  (FConnection.DbcConnection.AutoEncodeStrings) then
+          if not  (Connection.DbcConnection.AutoEncodeStrings) then
             CheckEquals(S1, iqry.Fields[0].AsString)
           else
             if ZDefaultSystemCodePage = zCP_WIN1252 then
               CheckEquals(UTF8ToAnsi(S1), iqry.Fields[0].AsString);
           iqry.Next;
-          if not  (FConnection.DbcConnection.AutoEncodeStrings) then
+          if not  (Connection.DbcConnection.AutoEncodeStrings) then
             CheckEquals(S2, iqry.Fields[0].AsString)
           else
             if ZDefaultSystemCodePage = zCP_WIN1251 then
@@ -848,17 +830,17 @@ begin
         else
         begin //CPType = cCP_UTF8
           if ( ZDefaultSystemCodePage = zCP_WIN1252 ) and
-             ( FConnection.DbcConnection.AutoEncodeStrings ) then
+             ( Connection.DbcConnection.AutoEncodeStrings ) then
             CheckEquals(S1, iqry.Fields[0].AsString)
           else
-            if not (FConnection.DbcConnection.AutoEncodeStrings) then
+            if not (Connection.DbcConnection.AutoEncodeStrings) then
               CheckEquals(S1, iqry.Fields[0].AsString);
           iqry.Next;
           if ( ZDefaultSystemCodePage = zCP_WIN1251 ) and
-              ( FConnection.DbcConnection.AutoEncodeStrings ) then
+              ( Connection.DbcConnection.AutoEncodeStrings ) then
             CheckEquals(S2, iqry.Fields[0].AsString)
           else
-            if not (FConnection.DbcConnection.AutoEncodeStrings) then
+            if not (Connection.DbcConnection.AutoEncodeStrings) then
               CheckEquals(S2, iqry.Fields[0].AsString);
           iqry.Next;
           CheckEquals(S3, iqry.Fields[0].AsString);
@@ -874,4 +856,5 @@ end;
 
 initialization
   RegisterTest('bugreport',ZTestCompInterbaseBugReport.Suite);
+  RegisterTest('bugreport',ZTestCompInterbaseBugReportMBCs.Suite);
 end.

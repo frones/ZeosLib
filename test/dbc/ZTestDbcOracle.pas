@@ -56,21 +56,16 @@ unit ZTestDbcOracle;
 interface
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZTestDefinitions, ZDbcOracle,
+uses Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZSqlTestCase, ZDbcOracle,
   ZCompatibility;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcOracleCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcOracleCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    property Connection: IZConnection read FConnection write FConnection;
-
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -91,7 +86,7 @@ type
 
 implementation
 
-uses Types, ZTestConsts, ZTestCase, ZSqlTestCase;
+uses Types, ZTestConsts, ZTestCase;
 
 { TZTestDbcOracleCase }
 
@@ -102,23 +97,6 @@ uses Types, ZTestConsts, ZTestCase, ZSqlTestCase;
 function TZTestDbcOracleCase.GetSupportedProtocols: string;
 begin
   Result := 'oracle,oracle-9i';
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcOracleCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcOracleCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**

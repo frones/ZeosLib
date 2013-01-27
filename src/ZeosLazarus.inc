@@ -79,6 +79,7 @@
     {$DEFINE WITH_FPC_MODIFIED_BUG} //http://bugs.freepascal.org/view.php?id=22381
     {$DEFINE WITHOUT_VARBYTESASSTRING}
     {$DEFINE WITH_PWIDECHAR_TOWIDESTRING}
+    {$DEFINE WITH_CLASS_VARS}
   {$ELSE}
     {$FATAL Versions Older than 2.2.4 are not supported!}
   {$ENDIF}

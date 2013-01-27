@@ -65,7 +65,6 @@ uses
   TextTestRunner,
 {$ENDIF}
   ZTestConfig  in '..\..\test\framework\ZTestConfig.pas',
-  ZTestDefinitions in '..\..\test\framework\ZTestDefinitions.pas',
   ZSqlTestCase in   '..\..\test\framework\ZSqlTestCase.pas',
   ZTestCore in '..\..\test\core\ZTestCore.pas';
 

@@ -327,6 +327,7 @@ var
   Catalog, Schema, ObjectName: string;
   ColumnType: Integer;
 begin
+  CheckConnected;
   if AnsiCompareText(Trim(SQL.Text), Trim(Value)) <> 0 then
   begin
     SQL.Text := Value;

@@ -56,20 +56,14 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
   ZCompatibility;
 
 type
   {** Implements a test case for . }
-  TZGenericTestDbcResultSet = class(TZDbcPortableSQLTestCase)
+  TZGenericTestDbcResultSet = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    property Connection: IZConnection read FConnection write FConnection;
-
-    procedure SetUp; override;
-    procedure TearDown; override;
-
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -86,24 +80,6 @@ implementation
 uses ZSysUtils, ZTestConsts, ZTestCase;
 
 { TZGenericTestDbcResultSet }
-
-{**
-  Creates objects and allocate memory for variables
-}
-procedure TZGenericTestDbcResultSet.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-  Destroys objects and free allocated memory for variables
-}
-procedure TZGenericTestDbcResultSet.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
-end;
-
 {**
    Test table with aliases
 }

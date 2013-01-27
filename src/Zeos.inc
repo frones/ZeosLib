@@ -58,6 +58,7 @@
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
+ {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -201,6 +202,7 @@
   {$UNDEF WITH_WIDEMEMO}
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
+  {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
   {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
 {$ENDIF}
 

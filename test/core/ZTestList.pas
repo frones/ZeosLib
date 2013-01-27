@@ -57,12 +57,12 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestDefinitions, SysUtils, Classes;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, SysUtils, Classes;
 
 type
 
   {** Implements a test case for Utilities. }
-  TZTestListCase = class(TZCoreGenericTestCase)
+  TZTestListCase = class(TZGenericTestCase)
   published
     procedure TestPerformanceStandardList;
     procedure TestPerformanceItemList;

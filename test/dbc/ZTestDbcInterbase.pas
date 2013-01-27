@@ -56,22 +56,16 @@ unit ZTestDbcInterbase;
 interface
 {$I ZDbc.inc}
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZTestDefinitions,
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZSqlTestCase,
   ZCompatibility, DateUtils, Math;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
-  TZTestDbcInterbaseCase = class(TZDbcSpecificSQLTestCase)
+  TZTestDbcInterbaseCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl: string;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure TestConnection;
     procedure TestStatement;
@@ -101,45 +95,6 @@ begin
   Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,'+
     'firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,'+
     'firebirdd-2.1,firebirdd-2.5';
-end;
-
-{**
-  Gets a connection URL string.
-  @return a built connection URL string.
-}
-function TZTestDbcInterbaseCase.GetConnectionUrl: string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
-end;
-
-{**
-   Create objects and allocate memory for variables
-}
-procedure TZTestDbcInterbaseCase.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-{**
-   Destroy objects and free allocated memory for variables
-}
-procedure TZTestDbcInterbaseCase.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 procedure TZTestDbcInterbaseCase.TestConnection;

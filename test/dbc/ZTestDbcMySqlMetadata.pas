@@ -56,22 +56,20 @@ unit ZTestDbcMySqlMetadata;
 interface
 {$I ZDbc.inc}
 
-uses SysUtils, ZDbcIntfs, ZCompatibility, ZTestDefinitions, ZDbcResultSet,
+uses SysUtils, ZDbcIntfs, ZCompatibility, ZSqlTestCase, ZDbcResultSet,
  ZDbcMySql,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type
 
  {** Implements a test case for TZMySqlMetadata. }
-  TZTestMySqlMetadataCase = class(TZDbcSpecificSQLTestCase)
+  TZTestMySqlMetadataCase = class(TZAbstractDbcSQLTestCase)
   private
-    FConnection: IZConnection;
     FMetadata: IZDatabaseMetadata;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
     function GetSupportedProtocols: string; override;
 
-    property Connection: IZConnection read FConnection write FConnection;
     property Metadata: IZDatabaseMetadata read FMetadata write FMetadata;
   published
     procedure TestGetProcedures;
@@ -104,7 +102,7 @@ end;
 }
 procedure TZTestMySqlMetadataCase.SetUp;
 begin
-  Connection := CreateDbcConnection;
+  inherited SetUp;
   Metadata := Connection.GetMetadata;
 end;
 
@@ -113,9 +111,8 @@ end;
 }
 procedure TZTestMySqlMetadataCase.TearDown;
 begin
-  Connection.Close;
-  Connection := nil;
   Metadata := nil;
+  inherited TearDown;
 end;
 
 {**

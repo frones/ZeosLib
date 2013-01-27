@@ -57,27 +57,19 @@ interface
 
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs,
-  ZBugReport, ZCompatibility, ZDbcPostgreSql, ZTestConsts;
+  ZSqlTestCase, ZCompatibility, ZDbcPostgreSql, ZTestConsts;
 
 type
 
   {** Implements a DBC bug report test case for PostgreSQL. }
-  TZTestDbcPostgreSQLBugReport = class(TZSpecificSQLBugReportTestCase)
-  private
-    FConnection: IZConnection;
+  TZTestDbcPostgreSQLBugReport = class(TZAbstractDbcSQLTestCase)
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     function GetSupportedProtocols: string; override;
-    function GetConnectionUrl(Param: String): string;
-
-    property Connection: IZConnection read FConnection write FConnection;
   published
     procedure Test702361;
     procedure Test702365;
     procedure Test702368;
     procedure Test727385;
-    procedure Test739514;
     procedure Test739444;
     procedure Test759184;
     procedure Test798336;
@@ -90,45 +82,22 @@ type
     procedure Test_Mantis0000148;
   end;
 
+  TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
+  protected
+    function GetSupportedProtocols: string; override;
+  published
+    procedure Test739514;
+  end;
+
 implementation
 
 uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils;
 
 { TZTestDbcPostgreSQLBugReport }
 
-function TZTestDbcPostgreSQLBugReport.GetConnectionUrl(Param: String): string;
-var
-  TempProperties :TStrings;
-  I: Integer;
-begin
-  TempProperties := TStringList.Create;
-  for I := 0 to High(Properties) do
-  begin
-    TempProperties.Add(Properties[I])
-  end;
-  TempProperties.Add(Param);
-  Result := DriverManager.ConstructURL(Protocol, HostName, Database,
-  UserName, Password, Port, TempProperties);
-{  if Port <> 0 then
-    Result := Format('zdbc:%s://%s:%d/%s', [Protocol, HostName, Port, Database])
-  else Result := Format('zdbc:%s://%s/%s', [Protocol, HostName, Database]);}
-  TempProperties.Free;
-end;
-
 function TZTestDbcPostgreSQLBugReport.GetSupportedProtocols: string;
 begin
   Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
-end;
-
-procedure TZTestDbcPostgreSQLBugReport.SetUp;
-begin
-  Connection := CreateDbcConnection;
-end;
-
-procedure TZTestDbcPostgreSQLBugReport.TearDown;
-begin
-  Connection.Close;
-  Connection := nil;
 end;
 
 {**
@@ -350,51 +319,6 @@ begin
   ResultSet := nil;
 end;
 
-procedure TZTestDbcPostgreSQLBugReport.Test739514;
-var
-  ResultSet: IZResultSet;
-  Statement: IZStatement;
-begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
-
-  Statement := Connection.CreateStatement;
-  Statement.ExecuteUpdate('delete from test739514 where id<>1');
-
-  Statement.SetResultSetType(rtScrollInsensitive);
-  Statement.SetResultSetConcurrency(rcUpdatable);
-  ResultSet := Statement.ExecuteQuery('select id, fld from test739514');
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
-    MoveToInsertRow;
-    UpdateIntByName('id', 2);
-
-    UpdateStringByName('fld', GetDBTestString('\Победа\', Connection.GetConSettings));
-    InsertRow;
-    Close;
-  end;
-
-  ResultSet := Statement.ExecuteQuery('select id, fld from test739514 order by id');
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
-
-    Check(Next);
-    CheckEquals(2, ResultSet.GetInt(1));
-    CheckEquals('\Победа\', ResultSet.GetString(2), Connection.GetConSettings);
-    Close;
-  end;
-
-  Statement.ExecuteUpdate('delete from test739514 where id<>1');
-  Statement.Close;
-end;
-
 {**
   Test the bug report #759184.
 
@@ -442,8 +366,6 @@ begin
   if SkipClosed then Exit;
 
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
-  //Connection := DriverManager.GetConnectionWithLogin(
-    //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Connection.SetTransactionIsolation(tiReadCommitted);
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -744,6 +666,57 @@ begin
   Statement.Close;
 end;
 
+function TZTestDbcPostgreSQLBugReportMBCs.GetSupportedProtocols: string;
+begin
+  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+end;
+
+procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
+var
+  ResultSet: IZResultSet;
+  Statement: IZStatement;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Statement := Connection.CreateStatement;
+  Statement.ExecuteUpdate('delete from test739514 where id<>1');
+
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+  ResultSet := Statement.ExecuteQuery('select id, fld from test739514');
+  with ResultSet do
+  begin
+    Check(Next);
+    CheckEquals(1, ResultSet.GetInt(1));
+    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
+    MoveToInsertRow;
+    UpdateIntByName('id', 2);
+
+    UpdateStringByName('fld', GetDBTestString('\Победа\', Connection.GetConSettings));
+    InsertRow;
+    Close;
+  end;
+
+  ResultSet := Statement.ExecuteQuery('select id, fld from test739514 order by id');
+  with ResultSet do
+  begin
+    Check(Next);
+    CheckEquals(1, ResultSet.GetInt(1));
+    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
+
+    Check(Next);
+    CheckEquals(2, ResultSet.GetInt(1));
+    CheckEquals('\Победа\', ResultSet.GetString(2), Connection.GetConSettings);
+    Close;
+  end;
+
+  Statement.ExecuteUpdate('delete from test739514 where id<>1');
+  Statement.Close;
+end;
+
 initialization
   RegisterTest('bugreport',TZTestDbcPostgreSQLBugReport.Suite);
+  RegisterTest('bugreport',TZTestDbcPostgreSQLBugReportMBCs.Suite);
 end.

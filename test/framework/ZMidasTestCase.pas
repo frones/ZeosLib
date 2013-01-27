@@ -96,7 +96,7 @@ type
   end;
 
   {** Implements a generic test case for Midas (DataSnap) components. }
-  TZMidasPortableSQLTestCase = class(TZPortableSQLTestCase)
+  TZMidasPortableSQLTestCase = class(TZAbstractSQLTestCase)
   private
     FRemoteDM: TZRemoteDM;
     FConnection: TLocalConnection;

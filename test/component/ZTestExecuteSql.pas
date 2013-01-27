@@ -58,14 +58,13 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZTestDefinitions;
+  ZConnection, ZDataset, ZSqlTestCase;
 
 type
 
   {** Implements a test case for class TZReadOnlyQuery. }
-  TZTestExecSQLCase = class(TZComponentPortableSQLTestCase)
+  TZTestExecSQLCase = class(TZAbstractCompSQLTestCase)
   private
-    Connection: TZConnection;
     Query: TZReadOnlyQuery;
   protected
     procedure SetUp; override;
@@ -86,10 +85,9 @@ uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs;
 }
 procedure TZTestExecSQLCase.SetUp;
 begin
-  Connection := CreateDatasetConnection;
+  inherited SetUp;
 
-  Query := TZReadOnlyQuery.Create(nil);
-  Query.Connection := Connection;
+  Query := CreateReadOnlyQuery;
   Query.ParamCheck := True;
 end;
 
@@ -100,8 +98,7 @@ procedure TZTestExecSQLCase.TearDown;
 begin
   Query.Close;
   Query.Free;
-  Connection.Disconnect;
-  Connection.Free;
+  inherited TearDown;
 end;
 
 {**

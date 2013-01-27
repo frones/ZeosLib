@@ -59,32 +59,27 @@ uses
   Types,
 {$ENDIF}
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, SysUtils, ZDbcIntfs,
-  ZTestDefinitions, ZCompatibility;
+  ZSqlTestCase, ZCompatibility;
 
 type
   {** Implements a test case for . }
 
   { TZGenericTestDbcResultSet }
 
-  TZGenericTestDbcResultSet = class(TZComponentPortableSQLTestCase)
+  TZGenericTestDbcResultSet = class(TZAbstractCompSQLTestCase)
   private
-    FConnection: TZConnection;
   protected
-    procedure SetUp; override;
-    procedure TearDown; override;
     procedure TestQueryGeneric(Query: TDataset);
     procedure TestFilterGeneric(Query: TDataset);
-    property Connection: TZConnection read FConnection write FConnection;
+    function IsRealPreparableTest: Boolean; override;
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
-    procedure TestRealPrepReadOnlyQuery;
     procedure TestQuery;
     procedure TestReadOnlyQueryExecSql;
     procedure TestQueryExecSql;
     procedure TestQueryUpdate;
     procedure TestPreparedStatement;
-    procedure TestRealPreparedStatement;
     procedure TestParamChar;
     procedure TestReadOnlyQueryFilter;
     procedure TestQueryFilter;
@@ -98,6 +93,10 @@ type
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
     procedure TestDoubleFloatParams;
+  end;
+
+  TZGenericTestDbcResultSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
+  published
     procedure TestVeryLargeBlobs;
   end;
 
@@ -108,26 +107,9 @@ uses
   Variants,
 {$ENDIF}
   DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset,
-  ZDatasetUtils, strutils{$IFDEF DELPHI12_UP}, AnsiStrings{$ENDIF};
+  ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDbcResultSet }
-
-{**
-  Create objects and allocate memory for variables
-}
-procedure TZGenericTestDbcResultSet.SetUp;
-begin
-  Connection := CreateDatasetConnection;
-end;
-
-{**
-  Destroy objects and free allocated memory for variables
-}
-procedure TZGenericTestDbcResultSet.TearDown;
-begin
-  Connection.Disconnect;
-  Connection.Free;
-end;
 
 procedure TZGenericTestDbcResultSet.TestConnection;
 var
@@ -138,9 +120,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
-  Table := TZTable.Create(nil);
-  ROQuery := TZReadOnlyQuery.Create(nil);
+  Query := TZQuery.Create(nil); // not CreateQuery because here we test unconnected queries
+  Table := TZTable.Create(nil); // not CreateTable because here we test unconnected queries
+  ROQuery := TZReadOnlyQuery.Create(nil); // not CreateReadOnlyQuery because here we test unconnected queries
   MetadataList := TStringList.Create;
   try
     CheckEquals(False, Connection.Connected);
@@ -216,11 +198,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-    // Query.RequestLive := true;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -330,207 +309,7 @@ begin
       StrStream := TMemoryStream.Create;
       StrStream.LoadFromFile('../../../database/text/lgpl.txt');
       StrStream.Size := 1024;
-//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
-      Params[6].LoadFromStream(StrStream, ftMemo);
-
-      Params[7].Value := Null;
-      ExecSql;
-      CheckEquals(1, RowsAffected);
-
-      { Checks inserted row. }
-      SQL.Text := 'SELECT * FROM people WHERE p_id = :p_id';
-      CheckEquals(1, Params.Count);
-      Params[0].DataType := ftInteger;
-      Params[0].AsInteger := TEST_ROW_ID;
-      ReadOnly:=True;
-      Open;
-      CheckEquals(TEST_ROW_ID, FieldByName('p_id').AsInteger);
-      CheckEquals(False, FieldByName('p_id').IsNull);
-      CheckEquals(2, FieldByName('p_dep_id').AsInteger);
-      CheckEquals(False, FieldByName('p_dep_id').IsNull);
-      CheckEquals('xyz', FieldByName('p_name').AsString);
-      CheckEquals(False, FieldByName('p_name').IsNull);
-      CheckEquals(EncodeTime(8, 0, 0, 0), FieldByName('p_begin_work').AsDateTime, 0.0001);
-      CheckEquals(False, FieldByName('p_begin_work').IsNull);
-      CheckEquals(EncodeTime(17, 30, 0, 0), FieldByName('p_end_work').AsDateTime, 0.0001);
-      CheckEquals(False, FieldByName('p_end_work').IsNull);
-      CheckEquals(False, FieldByName('p_picture').IsNull);
-      CheckEquals(False, FieldByName('p_resume').IsNull);
-      CheckEquals(0, FieldByName('p_redundant').AsInteger);
-      CheckEquals(True, FieldByName('p_redundant').IsNull);
-
-      { compare aciistream/unicodestream }
-      //Modification by EgonHugeist: Different behavior for the Same Field
-      //With dependencies on stUnicodeStream = CP_UTF8 for Delphi-compilers.
-      //Now we read a none Wide-Stream in! What happens? Zeos is now able
-      //to autodetect such strange things! But Zeos converts the Ansi-Stream to
-      //a WiteString-Stream. So this test must be modified...
-      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
-      begin
-        StrStream.position := 0;
-        SetLength(Ansi,StrStream.Size);
-        StrStream.Read(PAnsiChar(Ansi)^, StrStream.Size);
-        WS := UTF8ToString(Ansi);
-        StrStream.Clear;
-        StrStream.Write(PWideChar(WS)^, Length(WS)*2);
-        StrStream.Position := 0;
-      end;
-      StrStream1 := TMemoryStream.Create;
-      (FieldByName('p_resume') as TBlobField).SaveToStream(StrStream1);
-      CheckEquals(StrStream, StrStream1, 'Ascii Stream');
-      StrStream.Free;
-      StrStream1.Free;
-
-      { compare BinaryStream }
-      BinStream1 := TMemoryStream.Create;
-      (FieldByName('p_picture') as TBlobField).SaveToStream(BinStream1);
-      CheckEquals(BinStream, BinStream1, 'Binary Stream');
-      BinStream.Free;
-      BinStream1.Free;
-      Close;
-
-      { Delete the row. }
-      SQL.Text := 'DELETE FROM people WHERE p_id = :p_id';
-      CheckEquals(1, Params.Count);
-
-      Params[0].DataType := ftInteger;
-      Params[0].AsInteger := TEST_ROW_ID;
-
-      ExecSQL;
-      CheckEquals(1, RowsAffected);
-    end;
-  finally
-    Query.Free;
-  end;
-end;
-
-procedure TZGenericTestDbcResultSet.TestRealPreparedStatement;
-var
-  Ansi: AnsiString;
-  WS: ZWideString;
-  Query: TZQuery;
-  StrStream, BinStream: TMemoryStream;
-  StrStream1, BinStream1: TMemoryStream;
-  s:string;
-begin
-  if SkipTest then Exit;
-
-  Query := TZQuery.Create(nil);
-  try
-    Query.Connection := Connection;
-    Query.Options := [doCalcDefaults,doPreferPrepared,doPreferPreparedResolver];
-    // Query.RequestLive := true;
-
-    with Query do
-    begin
-      SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
-      ExecSQL;
-      SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
-      ExecSQL;
-    end;
-
-    {
-      The test for equipment table
-    }
-    with Query do
-    begin
-      { Create prepared statement for equipment table }
-      Sql.Text := 'INSERT INTO equipment (eq_id, eq_name, eq_type, eq_cost, eq_date, '
-          + ' woff_date) VALUES(:q_id, :eq_name, :eq_type, :eq_cost, :eq_date, :woff_date)';
-      CheckEquals(6, Params.Count);
-
-      Params[0].DataType := ftInteger;
-      Params[1].DataType := ftString;
-      Params[2].DataType := ftSmallint;
-      Params[3].DataType := ftFloat;
-      Params[4].DataType := ftDate;
-      Params[5].DataType := ftDate;
-
-      Params[0].AsInteger := TEST_ROW_ID;
-      Params[1].AsString := '\xyz\'+#13;
-      Params[2].AsInteger := 7;
-      Params[3].AsFloat := 1234.567;
-      Params[4].AsDateTime := EncodeDate(1999, 8, 5);
-      Params[5].Value := Null;
-      ExecSQL;
-
-      CheckEquals(1, RowsAffected);
-
-      { check inserted row from equipment table }
-      SQL.Text := 'SELECT * FROM equipment WHERE eq_id = :eq_id';
-      CheckEquals(1, Query.Params.Count);
-      Params[0].DataType := ftInteger;
-      Params[0].AsInteger := TEST_ROW_ID;
-
-      Open;
-      CheckEquals(1, RecordCount);
-      CheckEquals(False, IsEmpty);
-      CheckEquals(TEST_ROW_ID, FieldByName('eq_id').AsInteger);
-      s:=FieldByName('eq_name').AsString;
-      CheckEquals('\xyz\'#13, s);
-      CheckEquals(7, FieldByName('eq_type').AsInteger);
-      CheckEquals(1234.567, FieldByName('eq_cost').AsFloat, 0.001);
-      CheckEquals(EncodeDate(1999, 8, 5), FieldByName('eq_date').AsDateTime);
-      CheckEquals(True, FieldByName('woff_date').IsNull);
-      Close;
-
-      { update inserted row from equipment table }
-      SQL.Text := 'UPDATE equipment SET eq_name = :eq_name WHERE eq_id = :eq_id';
-      CheckEquals(2, Params.Count);
-
-      Params[0].DataType := ftString;
-      Params[1].DataType := ftInteger;
-
-      Params[0].AsString := 'xyz1';
-      Params[1].AsInteger := TEST_ROW_ID;
-
-      ExecSQL;
-      CheckEquals(1, RowsAffected);
-
-      { delete inserted row from equipment table }
-      SQL.Text := 'DELETE FROM equipment WHERE eq_id = :eq_id';
-
-      CheckEquals(1, Params.Count);
-      Params[0].DataType := ftInteger;
-      Params[0].AsInteger := TEST_ROW_ID;
-      ExecSQL;
-      CheckEquals(1, RowsAffected);
-    end;
-
-    { The test for people table }
-    with Query do
-    begin
-      { Create prepared statement for people table }
-      SQL.Text := 'INSERT INTO people (p_id, p_dep_id, p_name, p_begin_work, p_end_work,' +
-          ' p_picture, p_resume, p_redundant) VALUES(:p_id, :p_dep_id, :p_name, ' +
-          ' :p_begin_work, :p_end_work, :p_picture, :p_resume, :p_redundant)';
-      { Sets prepared statement parameters values. }
-      CheckEquals(8, Params.Count);
-
-      Params[0].DataType := ftInteger;
-      Params[1].DataType := ftSmallint;
-      Params[2].DataType := ftString;
-      Params[3].DataType := ftDateTime;
-      Params[4].DataType := ftDateTime;
-      Params[5].DataType := ftBlob;
-      Params[6].DataType := ftMemo;
-      Params[7].DataType := ftSmallint;
-
-      Params[0].AsInteger := TEST_ROW_ID;
-      Params[1].AsInteger := 2;
-      Params[2].AsString := 'xyz';
-      Params[3].AsDateTime := EncodeTime(8, 0, 0, 0);
-      Params[4].AsDateTime := EncodeTime(17, 30, 0, 0);
-
-      BinStream := TMemoryStream.Create;
-      BinStream.LoadFromFile('../../../database/images/dogs.jpg');
-      BinStream.Size := 1024;
-      Params[5].LoadFromStream(BinStream, ftBlob);
-
-      StrStream := TMemoryStream.Create;
-      StrStream.LoadFromFile('../../../database/text/lgpl.txt');
-      StrStream.Size := 1024;
-//      Params[6].LoadFromStream(StrStream, {$IFDEF DELPHI12_UP}ftWideMemo{$ELSE}ftMemo{$ENDIF});
+//      Params[6].LoadFromStream(StrStream, {$IFDEF UNICODE}ftWideMemo{$ELSE}ftMemo{$ENDIF});
       Params[6].LoadFromStream(StrStream, ftMemo);
 
       Params[7].Value := Null;
@@ -614,10 +393,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
@@ -701,11 +478,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-    //Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
-    //CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
     TestQueryGeneric(Query);
   finally
     Query.Free;
@@ -722,10 +496,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'UPDATE equipment SET eq_name=eq_name';
@@ -784,32 +556,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-  //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
-  //  CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
-    TestQueryGeneric(Query);
-  finally
-    Query.Free;
-  end;
-end;
-
-{**
-  Check functionality of TZReadOnlyQuery Using PrefereRealPrepared
-}
-procedure TZGenericTestDbcResultSet.TestRealPrepReadOnlyQuery;
-var
-  Query: TZReadOnlyQuery;
-begin
-  if SkipTest then Exit;
-
-  Query := TZReadOnlyQuery.Create(nil);
-  Query.Options:= Query.Options + [doPreferPrepared];
-  try
-    Query.Connection := Connection;
-  //  Query.DbcStatement.SetResultSetType(rtScrollInsensitive);
-  //  CheckEquals(ord(rcReadOnly), ord(Query.DbcStatement.GetResultSetConcurrency));
     TestQueryGeneric(Query);
   finally
     Query.Free;
@@ -827,10 +575,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
 
@@ -1278,10 +1024,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-
     with Query do
     begin
       SQL.Text := 'UPDATE equipment SET eq_name=eq_name';
@@ -1341,10 +1085,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
-  //!!  TestFilterGeneric(Query);
+  { TODO : Enable this test }//TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -1436,6 +1179,11 @@ begin
   end;
 end;
 
+function TZGenericTestDbcResultSet.IsRealPreparableTest: Boolean;
+begin
+  Result:= true;
+end;
+
 {**
   Test for locating recods in TZReadOnlyQuery
 }
@@ -1446,10 +1194,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-    Query.SQL.Add('select * from cargo'); 
+    Query.SQL.Add('select * from cargo');
     Query.ExecSQL; 
     Query.Open; 
     Check(Query.RecordCount > 0, 'Query return no records'); 
@@ -1471,10 +1218,9 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
-  //!!  TestFilterGeneric(Query);
+  { TODO : Enable this test }//!!  TestFilterGeneric(Query);
   finally
     Query.Free;
   end;
@@ -1489,9 +1235,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
 
     Query.Filter := 'p_id + 1 = 2';
@@ -1522,9 +1267,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT p_id, p_dep_id, p_name FROM people';
     Query.Open;
 
@@ -1560,9 +1304,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from people';
     Check(not (doSmartOpen in Query.Options));
 
@@ -1627,9 +1370,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZReadOnlyQuery.Create(nil);
+  Query := CreateReadOnlyQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'select * from people';
 
     Query.Prepare;
@@ -1672,9 +1414,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
     //!! Oracle: depend from local settings
     Query.Filter := 'p_begin_work >= "'+TimeToStr(EncodeTime(8,30,0,50))+'"';
@@ -1706,9 +1447,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM cargo';
     Date_came := EncodeDateTime(2002,12,19,18,30,0,0);
     Query.Filter := 'c_date_came >= "'+DateTimeToStr(Date_came)+'"';
@@ -1755,9 +1495,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM people';
     Query.Open;
     CheckEquals(true, Query.Locate('p_begin_work',EncodeTime(8,30,0,0),[]));
@@ -1781,9 +1520,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := 'SELECT * FROM cargo';
     Query.Open;
     CheckEquals(true, Query.Locate('c_date_came',EncodeDateTime(2002,12,19,14,0,0,0),[]));
@@ -1804,9 +1542,8 @@ var
 begin
   if SkipTest then Exit;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
@@ -1841,7 +1578,9 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestVeryLargeBlobs;
+{ TZGenericTestDbcResultSetMBCs }
+
+procedure TZGenericTestDbcResultSetMBCs.TestVeryLargeBlobs;
 const teststring = '123456ייאא';
 var
   Query: TZQuery;
@@ -1857,9 +1596,8 @@ begin
   BinStream1:=nil;
   TextStreamS:=nil;
 
-  Query := TZQuery.Create(nil);
+  Query := CreateQuery;
   try
-    Query.Connection := Connection;
     if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
     begin
       TempConnection := TZConnection.Create(nil);
@@ -1908,16 +1646,16 @@ begin
       if ( Connection.DbcConnection.GetEncoding = ceUTF8 ) and
         not ( (Connection.DbcConnection.GetConSettings.CPType = cGET_ACP) and
           Connection.DbcConnection.GetConSettings.AutoEncode )  then
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(utf8encode(teststring),6000)
+        s:={$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(utf8encode(teststring),6000)
       else
-        s:={$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(teststring,6000);
+        s:={$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(teststring,6000);
       TextStreamS.Write(s[1],length(s));
       Params[1].LoadFromStream(TextStreamS, ftMemo);
       BinStream := TMemoryStream.Create;
       BinStream.LoadFromFile('../../../database/images/horse.jpg');
       setlength(s,BinStream.Size);
       BinStream.Read(s[1],length(s));
-      s := {$IFDEF DELPHI12_UP}AnsiStrings.{$ENDIF}DupeString(s, 10);
+      s := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}DupeString(s, 10);
       CheckEquals(BinStream.Size * 10, length(s), 'Length of DupeString result');
       BinStream.Position := 0;
       BinStream.Write(s[1],length(s));
@@ -1960,5 +1698,6 @@ end;
 
 initialization
   RegisterTest('component',TZGenericTestDbcResultSet.Suite);
+  RegisterTest('component',TZGenericTestDbcResultSetMBCs.Suite);
 end.
 
