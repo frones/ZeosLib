@@ -75,8 +75,7 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared, doPreferPreparedResolver, doDontSortOnPost,
-    doUpdateMasterFirst);
+    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -1660,10 +1659,6 @@ begin
       Temp.Values['preferprepared'] := 'true'
     else
       Temp.Values['preferprepared'] := 'false';
-    if doPreferPreparedResolver in FOptions then
-      Temp.Values['preferpreparedresolver'] := 'true'
-    else
-      Temp.Values['preferpreparedresolver'] := 'false';
 
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
@@ -1754,7 +1749,7 @@ begin
       for i := 0 to Fields.Count -1 do
         if Fields[i].DataType in [ftString, ftWideString] then
           if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
-            Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
     end;
     BindFields(True);
 
