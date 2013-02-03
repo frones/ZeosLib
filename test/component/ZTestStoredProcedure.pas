@@ -1172,11 +1172,11 @@ begin
   StoredProc.Unprepare;
   S := StoredProc.ParamByName('@p4').AsString +
     ' ' + StoredProc.ParamByName('@p5').AsString;
-  StoredProc.ParamByName('P1').AsInteger := 50;
-  StoredProc.ParamByName('P2').AsInteger := 100;
-  StoredProc.ParamByName('P3').AsString := 'a';
-  CheckEquals('@p4', StoredProc.Params[3].Name);
-  CheckEquals('@p5', StoredProc.Params[4].Name);
+  StoredProc.ParamByName('@p1').AsInteger := 50;
+  StoredProc.ParamByName('@p2').AsInteger := 100;
+  StoredProc.ParamByName('@p3').AsString := 'a';
+  CheckEquals('@p3', StoredProc.Params[3].Name);
+  CheckEquals('@p4', StoredProc.Params[4].Name);
   StoredProc.Open;
 
   CheckEquals(2, ord(StoredProc.Fields.Count));
