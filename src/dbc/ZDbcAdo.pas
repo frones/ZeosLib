@@ -85,10 +85,10 @@ type
     procedure ReStartTransactionSupport;
   protected
     FAdoConnection: ZPlainAdo.Connection;
-    function GetAdoConnection: ZPlainAdo.Connection; virtual;
-    procedure InternalExecuteStatement(const SQL: string); virtual;
-    procedure CheckAdoError; virtual;
-    procedure StartTransaction; virtual;
+    function GetAdoConnection: ZPlainAdo.Connection;
+    procedure InternalExecuteStatement(const SQL: string);
+    procedure CheckAdoError;
+    procedure StartTransaction;
     procedure InternalCreate; override;
   public
     destructor Destroy; override;
