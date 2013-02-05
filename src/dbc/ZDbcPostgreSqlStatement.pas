@@ -466,9 +466,19 @@ begin
       stBytes:
         Result := (Connection as IZPostgreSQLConnection).EncodeBinary(ZAnsiString(SoftVarManager.GetAsString(Value)));
       stString:
-        Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
+        if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
+          Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stUnicodeString:
-        Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+        if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
+          Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
         Result := ZAnsiString(Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
@@ -504,12 +514,18 @@ begin
                 else
                   Result := (Connection as IZPostgreSQLConnection).EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
-                begin
-                  Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
+                  Result := FPlainDriver.EscapeString(
+                    (Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                    ConSettings, True)
+                else
+                  Result := ZDbcPostgreSqlUtils.PGEscapeString(
+                    (Connection as IZPostgreSQLConnection).GetConnectionHandle,
                     GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, TempBlob.WasDecoded, ConSettings),
                     ConSettings, True);
-                end;
             end; {case..}
           end
           else
@@ -648,11 +664,19 @@ begin
       stBytes:
         Result := FPostgreSQLConnection.EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
-        Result :=  FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-          ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings, True);
+        if FPlainDriver.SupportsStringEscaping(FPostgreSQLConnection.ClientSettingsChanged) then
+          Result :=  FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString(FPostgreSQLConnection.GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings, True);
       stUnicodeString:
-        Result := FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-          ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), FPostgreSQLConnection.GetConSettings, True);
+        if FPlainDriver.SupportsStringEscaping(FPostgreSQLConnection.ClientSettingsChanged) then
+          Result := FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), FPostgreSQLConnection.GetConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString(FPostgreSQLConnection.GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), FPostgreSQLConnection.GetConSettings, True);
       stDate:
         if Escaped then
           Result := ZAnsiString(Format('''%s''::date',
@@ -696,11 +720,18 @@ begin
                 else
                   Result := FPostgreSQLConnection.EncodeBinary(TempBlob.GetString);
               else
-                Result := FPlainDriver.EscapeString(
-                  (Connection as IZPostgreSQLConnection).GetConnectionHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                  ConSettings, True);
+                if FPlainDriver.SupportsStringEscaping(FPostgreSQLConnection.ClientSettingsChanged) then
+                  Result := FPlainDriver.EscapeString(
+                    (Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                    ConSettings, True)
+                else
+                  Result := ZDbcPostgreSqlUtils.PGEscapeString(
+                    (Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                    ConSettings, True);
             end; {case..}
             TempBlob := nil;
           end
@@ -725,20 +756,6 @@ begin
       TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
     try
       TempSQL := 'PREPARE '+ZDbcString(FPlanName)+' AS ';
-
-      {EgonHugeist: This i've commented out. For those who are able/take care to
-        declare the right Parameter-Types it speeds the Statements up too,
-        because PostgreSQL must not finc the right types. On the other hand if
-        you assign a type like Params[0].AsString := IntToStr(ID); it makes
-        trouble, because PosgreSQL does not convert or check the types again!
-        Without pre-defining the types PostgreSQL does the casts.
-      TempSQL := 'PREPARE '+ZDbcString(FPlanName)+'(';
-      for i := 0 to InParamCount -1 do
-        if I = 0 then
-          TempSQL := TempSQL + SQLTypeToPostgreSQL(Self.InParamTypes[i], FPostgreSQLConnection.IsOidAsBlob)
-        else
-          TempSQL := TempSQL + ', '+ SQLTypeToPostgreSQL(Self.InParamTypes[i], FPostgreSQLConnection.IsOidAsBlob);
-      TempSQL := TempSQL + ') AS ';}
       N := 0;
       for I := 0 to Tokens.Count - 1 do
       begin
@@ -1438,11 +1455,19 @@ begin
       stBytes:
         Result := (Connection as IZPostgreSQLConnection).EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
-        Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-          ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
+        if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
+          Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stUnicodeString:
+        if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
+            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
         Result := ZAnsiString(Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
@@ -1479,10 +1504,18 @@ begin
                   Result := GetConnection.GetEscapeString(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
                 begin
+                if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
                   Result := FPlainDriver.EscapeString(
                     (Connection as IZPostgreSQLConnection).GetConnectionHandle,
                     GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings), ConSettings, True);
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                    ConSettings, True)
+                else
+                  Result := ZDbcPostgreSqlUtils.PGEscapeString(
+                    (Connection as IZPostgreSQLConnection).GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                    ConSettings, True);
                 end;
             end; {case..}
           end

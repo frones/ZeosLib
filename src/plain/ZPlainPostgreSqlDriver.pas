@@ -427,16 +427,16 @@ type
   //* Quoting strings before inclusion in queries. */
   // postgresql 8
   TPQescapeStringConn = function(Handle: PGconn; ToChar: PAnsiChar;
-    const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl;
+    const FromChar: PAnsiChar; length: NativeUInt; error: PInteger): NativeUInt;cdecl; //7.3
   TPQescapeLiteral    = function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
-  TPQescapeIdentifier = function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl;
+  TPQescapeIdentifier = function(Handle: PGconn; const str: PAnsiChar; len: NativeUInt): PAnsiChar;cdecl; //7.3
   TPQescapeByteaConn  = function(Handle: PPGconn;const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl;
   TPQunescapeBytea    = function(const from:PAnsiChar;to_lenght:PLongword):PAnsiChar;cdecl;
   TPQFreemem          = procedure(ptr:Pointer);cdecl;
 
   //* These forms are deprecated! */
-  TPQescapeString     = function(ToChar: PAnsiChar; const FormChar: PAnsiChar; length: NativeUInt): NativeUInt;cdecl;
-  TPQescapeBytea      = function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl;
+  TPQescapeString     = function(ToChar: PAnsiChar; const FormChar: PAnsiChar; length: NativeUInt): NativeUInt;cdecl; //7.2
+  TPQescapeBytea      = function(const from:PAnsiChar;from_length:longword;to_lenght:PLongword):PAnsiChar;cdecl; //7.2
 
   { === in fe-lobj.c === }
   Tlo_open         = function(Handle: PPGconn; lobjId: Oid; mode: Integer): Integer; cdecl;
@@ -556,8 +556,12 @@ type
 
     function GetStandardConformingStrings: Boolean;
 
-    function  EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect; Quoted: Boolean = True): AnsiString;
-    function  DecodeBYTEA(const value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
+    function EncodeBYTEA(const Value: ZAnsiString; Handle: PZPostgreSQLConnect;
+      Quoted: Boolean = True): ZAnsiString;
+    function DecodeBYTEA(const value: ZAnsiString; Handle: PZPostgreSQLConnect): ZAnsiString;
+    function SupportsEncodeBYTEA: Boolean;
+    function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
+    function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
 
     function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
     function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,Passwd: PAnsiChar): PZPostgreSQLConnect;
@@ -682,9 +686,9 @@ type
   end;
 
   {** Implements a base driver for PostgreSQL}
-  TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPlainDriver, IZPostgreSQLPlainDriver)
+  TZPostgreSQLBaseDriver = class(TZAbstractPlainDriver, IZPostgreSQLPlainDriver)
   protected
-    POSTGRESQL_API : TZPOSTGRESQL_API;
+    POSTGRESQL_API: TZPOSTGRESQL_API;
     function GetStandardConformingStrings: Boolean; virtual;
     function GetUnicodeCodePageName: String; override;
     procedure LoadCodePages; override;
@@ -692,11 +696,18 @@ type
   public
     constructor Create;
 
-    function EncodeBYTEA(const Value: AnsiString; Handle: PZPostgreSQLConnect; Quoted: Boolean = True): AnsiString;
-    function DecodeBYTEA(const value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
+    function EncodeBYTEA(const Value: ZAnsiString; Handle: PZPostgreSQLConnect;
+      Quoted: Boolean = True): ZAnsiString;
+    function DecodeBYTEA(const value: ZAnsiString;
+      Handle: PZPostgreSQLConnect): ZAnsiString;
+
+    function SupportsEncodeBYTEA: Boolean;
+    function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
+    function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
 
     function ConnectDatabase(ConnInfo: PAnsiChar): PZPostgreSQLConnect;
-    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User, Passwd: PAnsiChar): PZPostgreSQLConnect;
+    function SetDatabaseLogin(Host, Port, Options, TTY, Db, User,
+      Passwd: PAnsiChar): PZPostgreSQLConnect;
     function GetConnectDefaults: PZPostgreSQLConnectInfoOption;
 
     procedure Finish(Handle: PZPostgreSQLConnect);
@@ -1078,7 +1089,8 @@ begin
   Result := POSTGRESQL_API.lo_creat(Handle, Mode);
 end;
 
-function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: AnsiString; Handle: PZPostgreSQLConnect): AnsiString;
+function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: ZAnsiString;
+  Handle: PZPostgreSQLConnect): ZAnsiString;
 var
   decoded: PAnsiChar;
   Ansi: AnsiString;
@@ -1105,7 +1117,30 @@ begin
       Result := Value;
 end;
 
-function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: AnsiString;  Handle: PZPostgreSQLConnect; Quoted: Boolean = True): AnsiString;
+function TZPostgreSQLBaseDriver.SupportsEncodeBYTEA: Boolean;
+begin
+  Result := Assigned(POSTGRESQL_API.PQescapeByteaConn) or
+    Assigned(POSTGRESQL_API.PQescapeBytea);
+end;
+
+function TZPostgreSQLBaseDriver.SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
+begin
+  Result := ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) or
+    Assigned(POSTGRESQL_API.PQUnescapeBytea);
+end;
+
+function TZPostgreSQLBaseDriver.SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
+begin
+  Result := False;
+  if ClientDependend then
+    Result := Assigned(POSTGRESQL_API.PQescapeStringConn)
+  else
+    Result := Assigned(POSTGRESQL_API.PQescapeStringConn) or
+              Assigned(POSTGRESQL_API.PQescapeString);
+end;
+
+function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: ZAnsiString;
+  Handle: PZPostgreSQLConnect; Quoted: Boolean = True): ZAnsiString;
 var
   encoded: PAnsiChar;
   len: Longword;
@@ -1607,8 +1642,10 @@ var
   SourceTemp: ZAnsiString;
   IError: Integer;
 begin
-  if Assigned(POSTGRESQL_API.PQescapeStringConn) and ( Value <> '' )then
+  if ( Assigned(POSTGRESQL_API.PQescapeStringConn) or
+       Assigned(POSTGRESQL_API.PQescapeString) ) and ( Value <> '' )then
   begin
+    IError := 0;
     {$IFDEF UNICODE}
     SourceTemp := Value;
     {$ELSE}
@@ -1618,8 +1655,12 @@ begin
       SourceTemp := ZPlainString(Value, ConSettings); //check encoding too
     {$ENDIF}
     GetMem(Temp, Length(SourceTemp)*2);
-    ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
-      PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError);
+    if Assigned(POSTGRESQL_API.PQescapeStringConn) then
+      ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
+        PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError)
+    else
+      ResLen := POSTGRESQL_API.PQescapeString(Temp, PAnsiChar(SourceTemp),
+        StrLen(PAnsiChar(SourceTemp)));
     if not (IError = 0) then
       raise Exception.Create('Wrong escape behavior!');
     SetLength(Result, ResLen);
