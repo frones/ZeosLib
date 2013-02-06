@@ -172,7 +172,7 @@ type
   Oid = Integer;
 
 TZPgCharactersetType = (
-	csSQL_ASCII,	{ SQL/ASCII }
+	csSQL_ASCII = 0,	{ SQL/ASCII }
 	csEUC_JP,	{ EUC for Japanese }
 	csEUC_CN,	{ EUC for Chinese }
 	csEUC_KR,	{ EUC for Korean }
@@ -1131,7 +1131,6 @@ end;
 
 function TZPostgreSQLBaseDriver.SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
 begin
-  Result := False;
   if ClientDependend then
     Result := Assigned(POSTGRESQL_API.PQescapeStringConn)
   else
