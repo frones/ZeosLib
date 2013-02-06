@@ -65,6 +65,20 @@ uses
   {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataSet,
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
+const
+  { protocol lists }
+  pl_mysql_client_server = 'mysql,mysql-4.1,mysql-5,MariaDB-5';
+  pl_mysql_embedded = 'mysqld-4.1,mysqld-5';
+  pl_all_mysql = pl_mysql_client_server + ','+ pl_mysql_embedded;
+  pl_all_postgresql = 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  pl_all_sqlite = 'sqlite,sqlite-3';
+  pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5';
+  pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
+  pl_all_interbase = pl_interbase_client_server + ',' + pl_interbase_embedded;
+
+  // Protocols needing prefererealprepared option for real prepared statements
+  pl_realpreparable = pl_all_mysql+','+pl_all_postgresql+','+pl_all_sqlite;
+
 type
   TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared, cuAutoEncoded);
   TZConfigUses = set of TZConfigUse;
@@ -415,7 +429,7 @@ var
     TempName : string;
   begin
     Result := False;
-    Temp := SplitString('mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5,postgresql,postgresql-7,postgresql-8,postgresql-9,sqlite,sqlite-3', LIST_DELIMITERS);
+    Temp := SplitString(pl_realpreparable, LIST_DELIMITERS);
     TempName := Protocol;
     try
       {$IFDEF ENABLE_POOLED}

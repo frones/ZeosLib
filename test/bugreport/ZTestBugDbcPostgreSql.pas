@@ -98,7 +98,7 @@ uses SysUtils, ZSysUtils, ZTestCase, ZDbcPostgreSqlUtils;
 
 function TZTestDbcPostgreSQLBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 {**
@@ -692,7 +692,7 @@ end;
 
 function TZTestDbcPostgreSQLBugReportMBCs.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;

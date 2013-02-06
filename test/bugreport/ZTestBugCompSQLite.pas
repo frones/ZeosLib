@@ -88,7 +88,7 @@ uses
 
 function ZTestCompSQLiteBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'sqlite,sqlite-3';
+  Result := pl_all_sqlite;
 end;
 
 procedure ZTestCompSQLiteBugReport.DummyTest;
@@ -108,7 +108,7 @@ const
 
 function ZTestCompSQLiteBugReportMBCs.GetSupportedProtocols: string;
 begin
-  Result := 'sqlite,sqlite-3';
+  Result := pl_all_sqlite;
 end;
 
 {**

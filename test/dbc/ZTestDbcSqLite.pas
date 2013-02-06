@@ -94,7 +94,7 @@ uses ZSysUtils, ZTestConsts;
 }
 function TZTestDbcSQLiteCase.GetSupportedProtocols: string;
 begin
-  Result := 'sqlite,sqlite-3';
+  Result := pl_all_sqlite;
 end;
 
 {**

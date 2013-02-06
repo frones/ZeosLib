@@ -260,7 +260,7 @@ uses ZSqlTestCase, ZMySqlToken;
 }
 function TZPlainMySQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5';
+  Result := pl_all_mysql;
 end;
 
 {**
@@ -614,7 +614,7 @@ end;
 }
 function TZPlainPostgreSQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 {**
@@ -918,9 +918,7 @@ end;
 
 function TZPlainInterbase6SQLPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'interbase-5,interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,'+
-    'firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1'+
-    'firebirdd-2.5';
+  Result := pl_all_interbase;
 end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.RunTestConnect;
@@ -995,9 +993,7 @@ var
   FFirebirdd20PlainDriver: IZInterbasePlainDriver;
   FFirebirdd21PlainDriver: IZInterbasePlainDriver;
 begin
-  if Protocol = 'interbase-5' then
-    FDialect := 1
-  else FDialect := 3;
+  FDialect := 3;
   FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
   FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
   FFirebird20PlainDriver := TZFirebird20PlainDriver.Create; 
