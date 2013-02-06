@@ -107,6 +107,8 @@ type
     procedure Test989474;
     procedure Test1045286;
     procedure Test1023149;
+    procedure TestMantis220;
+    procedure TestMantis235;
   end;
 
 implementation
@@ -1672,6 +1674,66 @@ begin
     Query.SQL.Text := 'DELETE FROM blob_values WHERE b_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
     Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+  0000220: MySQL: After next open of DataSet with Open() we get MySQL Error 2014:
+  Commands out of sync; you can't run this command now
+
+  Hint this happens on calling StoredProcedure. Fixed with Zeos7 R
+}
+procedure TZTestCompMySQLBugReport.TestMantis220;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'CALL SingleResultSet()';
+    Query.Open;
+    Query.Close;
+    Query.Open; //Here the Exception was raised
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+{** Mantis235
+I've patched TZMySQLResultSet.Close as suggested in issue 000220.
+(Thanks Shkil)
+When I do that using TQuery.Open with a stored procedure works great the first time and all subsequent times.
+
+HOWEVER: If I run TZQuery.ExecSQL (not valid for a stored proc with resultset, I know) I get "Commands out of sync..." error and MySQL/Zeos will not let me out of that one.
+
+I don't mind getting an error, but I don't want to have to disconnect and reconnect to the database just to fix being stuck.
+}
+procedure TZTestCompMySQLBugReport.TestMantis235;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.Properties.Values['ValidateUpdateCount'] := 'False';
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'CALL SingleResultSet()';
+    Query.ExecSQL;
+    Query.ExecSQL; //Here the Exception was raised
   finally
     Query.Free;
   end;

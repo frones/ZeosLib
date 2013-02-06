@@ -359,18 +359,17 @@ end;
     value returned is <code>null</code>
 }
 function TZAdoResultSet.GetString(ColumnIndex: Integer): String;
-var
-  NL: Integer;
+{var
+  NL: Integer;}
 begin
   Result := '';
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  NL := Length(Result);
-  while (NL > 0) and (Result[NL] = ' ') do
-     Dec(NL);
-  SetLength(Result, NL);
+  {NL := Length(Result);
+  while (NL > 0) and (Result[NL] = ' ') do Dec(NL);
+  SetLength(Result, NL);}
 end;
 
 {**
@@ -383,18 +382,19 @@ end;
     value returned is <code>null</code>
 }
 function TZAdoResultSet.GetUnicodeString(ColumnIndex: Integer): WideString;
-var
-  NL: Integer;
+{var
+  NL: Integer;}
 begin
   Result := '';
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  {for what?
   NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do
      Dec(NL);
-  SetLength(Result, NL);
+  SetLength(Result, NL);}
 end;
 
 {**

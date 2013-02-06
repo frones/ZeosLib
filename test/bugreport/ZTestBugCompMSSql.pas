@@ -75,6 +75,7 @@ type
     procedure Test728955;
     procedure Test833489;
     procedure Test907497;
+    procedure Mantis54;
   end;
 
 implementation
@@ -164,7 +165,7 @@ begin
     CheckEquals(False, Query.IsEmpty);
   finally
     Query.Free;
-  end;  
+  end;
 end;
 
 {**
@@ -204,6 +205,40 @@ begin
     Query.Close;
   finally
     StoredProc.Free;
+    Query.Free;
+  end;
+end;
+
+{ Mantis #54 }
+{
+The fields with data type "BigInt" in "MS-SQL" behave like "float" and not like Integer.
+For example:
+Suppose that 2 data bases are had. The one in MySQL and the other in MS-SQL Server, with a table each one.
+The structure of the tables is the following one:
+
+MS-SQL Server
+CREATE TABLE Mantis54 (
+    Key1 int NOT NULL ,
+    BI bigint NULL ,
+    F float NULL)
+
+EgonHugeist:
+  The resultset-Metadata returning 8, which is probably a floating type..
+}
+procedure TZTestCompMSSqlBugReport.Mantis54;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from mantis54';
+    Query.Open;
+    CheckEquals(ord(ftInteger), ord(Query.Fields[0].DataType));
+    CheckEquals(ord(ftLargeInt), ord(Query.Fields[1].DataType), 'Int64/LongInt expected');
+    CheckEquals(ord(ftFloat), ord(Query.Fields[2].DataType));
+  finally
     Query.Free;
   end;
 end;
