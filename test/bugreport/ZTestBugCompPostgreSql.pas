@@ -867,6 +867,7 @@ begin
     Query.SQL.Text := 'select * from Mantis229';
     Query.Open;
     CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+    CheckEquals('Mantis229', Query.Fields[0].AsString);
   finally
     Query.Free;
   end;
