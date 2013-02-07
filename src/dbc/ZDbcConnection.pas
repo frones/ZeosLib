@@ -133,6 +133,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FUndefinedVarcharAsStringLength: Integer; //used for PostgreSQL and SQLite
     FClientCodePage: String;
     FMetadata: TContainedObject;
     procedure InternalCreate; virtual; abstract;
@@ -692,7 +693,6 @@ begin
 
   Info.NameValueSeparator := '=';
   FClientCodePage := Info.Values['codepage'];
-
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
   CheckCharEncoding(FClientCodePage, True);
