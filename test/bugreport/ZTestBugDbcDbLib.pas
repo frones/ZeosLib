@@ -65,7 +65,7 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure EmptyTest;
+    procedure Mantis54;
   end;
 
 implementation
@@ -77,10 +77,35 @@ begin
   Result := 'mssql,sybase,FreeTDS_MsSQL<=6.5,FreeTDS_MsSQL-7.0,FreeTDS_MsSQL-2000,FreeTDS_MsSQL>=2005,FreeTDS_Sybase<10,FreeTDS_Sybase-10+';
 end;
 
-procedure ZTestDbcDbLibBugReport.EmptyTest;
+{ Mantis #54 }
+{
+The fields with data type "BigInt" in "MS-SQL" behave like "float" and not like Integer.
+For example:
+Suppose that 2 data bases are had. The one in MySQL and the other in MS-SQL Server, with a table each one.
+The structure of the tables is the following one:
+
+MS-SQL Server
+CREATE TABLE Mantis54 (
+    Key1 int NOT NULL ,
+    BI bigint NULL ,
+    F float NULL)
+
+EgonHugeist:
+  The resultset-Metadata returning SYBFLT8, which is probably a floating type.
+  Reminder for ?missing? metadata processing.
+}
+procedure ZTestDbcDbLibBugReport.Mantis54;
+var stmnt: IZPreparedStatement;
 begin
-  //need a dummy
-  Check(True);
+  stmnt := connection.PrepareStatement('select * from mantis54');
+  with Stmnt.ExecuteQueryPrepared do
+  begin
+    CheckEquals(Ord(stInteger), Ord(GetMetadata.GetColumnType(1)));
+    CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(2)), 'Int64/LongInt expected');
+    CheckEquals(Ord(stFloat), Ord(GetMetadata.GetColumnType(3)));
+    Close;
+  end;
+  stmnt.Close;
 end;
 
 initialization

@@ -354,6 +354,11 @@ BEGIN
   SELECT 10;
 END;//
 
+CREATE PROCEDURE SingleResultSet()
+BEGIN
+  SELECT * FROM PEOPLE;
+END;//
+
 CREATE PROCEDURE ALL_PARAMS_IN(
   IN p_id INT,
   IN p_name varchar(40))

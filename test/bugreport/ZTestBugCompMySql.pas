@@ -107,6 +107,7 @@ type
     procedure Test989474;
     procedure Test1045286;
     procedure Test1023149;
+    procedure TestMantis220;
   end;
 
 implementation
@@ -1672,6 +1673,35 @@ begin
     Query.SQL.Text := 'DELETE FROM blob_values WHERE b_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
     Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
+
+{**
+  0000220: MySQL: After next open of DataSet with Open() we get MySQL Error 2014:
+  Commands out of sync; you can't run this command now
+
+  Hint this happens on calling StoredProcedure. Fixed with Zeos7 R
+}
+procedure TZTestCompMySQLBugReport.TestMantis220;
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  if SkipClosed then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'CALL SingleResultSet()';
+    Query.Open;
+    Query.Close;
+    Query.Open; //Here the Exception was raised
+    Query.Close;
   finally
     Query.Free;
   end;
