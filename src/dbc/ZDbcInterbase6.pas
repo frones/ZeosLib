@@ -336,10 +336,7 @@ begin
     Self.Port := 3050;
 
   { set default sql dialect it can be overriden }
-  if PlainDriver.GetProtocol = 'interbase-5' then
-    FDialect := 1
-  else
-    FDialect := 3;
+  FDialect := 3;
 
   UserSetDialect := Trim(URL.Properties.Values['dialect']);
   if UserSetDialect <> '' then

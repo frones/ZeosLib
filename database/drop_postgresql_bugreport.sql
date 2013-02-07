@@ -4,6 +4,8 @@
 /* Created on:     04.02.2003 19:59:06                          */
 /*==============================================================*/
 
+drop table Mantis229;
+drop table ntax_bejovo_konyvelesi_tipusok;
 drop table test739514;
 drop table test739519;
 drop table test766053a;
