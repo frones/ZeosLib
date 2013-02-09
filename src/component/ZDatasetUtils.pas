@@ -856,7 +856,7 @@ begin
             WValue2 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
             if PartialKey then
             begin
-              {$IFDEF DELPHI12_UP}
+              {$IFDEF UNICODE}
               Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
               {$ELSE}
               Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
@@ -873,7 +873,7 @@ begin
             WValue1 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
             if PartialKey then
             begin
-              {$IFDEF DELPHI12_UP}
+              {$IFDEF UNICODE}
               Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
               {$ELSE}
               Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
@@ -1080,7 +1080,7 @@ begin
 
         if CaseInsensitive then
           WValue2 := WideUpperCase(WValue2);
-        {$IFDEF DELPHI12_UP}
+        {$IFDEF UNICODE}
         Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
         {$ELSE}
           AValue1 := UTF8ToAnsi(UTF8Encode(WValue1));
@@ -1095,7 +1095,7 @@ begin
           or (ResultSet.GetConSettings.AutoEncode and ( ResultSet.GetConSettings.CTRL_CP <> 65001 )) then
           AValue2 := AnsiString(ResultSet.GetString(ColumnIndex))
         else
-          AValue2 := AnsiString({$IFNDEF DELPHI12_UP}UTF8ToAnsi{$ENDIF}(ResultSet.GetString(ColumnIndex)));
+          AValue2 := AnsiString({$IFNDEF UNICODE}UTF8ToAnsi{$ENDIF}(ResultSet.GetString(ColumnIndex)));
 
         if CaseInsensitive then
           AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
@@ -1613,7 +1613,7 @@ begin
             on Changing to stUnicodeString/Delphi12Up a String is from
             Type wide/unicode so we have to give him back as
             Stream!}
-            {$IFDEF DELPHI12_UP}
+            {$IFDEF UNICODE}
             Stream := Param.AsStream;
             {$ELSE}
             Stream := TStringStream.Create(Param.AsMemo);

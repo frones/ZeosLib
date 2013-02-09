@@ -128,6 +128,7 @@ begin
     -7: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
 //    -6: Result := stByte;
+    -5: Result := stLong;
     -6: Result := stShort;
     5: Result := stShort;
     4: Result := stInteger;
@@ -192,7 +193,8 @@ begin
   case FieldType of
     SYBCHAR, SYBVARCHAR, XSYBCHAR, XSYBVARCHAR: Result := stString;
     SYBINTN, SYBINT4:                           Result := stInteger;
-    SYBINT8, SYBNUMERIC:                        Result := stBigDecimal;
+    SYBINT8:                                    Result := stLong;
+    SYBNUMERIC:                                 Result := stBigDecimal;
     SYBINT1, SYBINT2:                           Result := stShort;
     SYBFLT8, SYBFLTN, SYBREAL, SYBDECIMAL:      Result := stDouble;
     SYBDATETIME, SYBDATETIME4, SYBDATETIMN:     Result := stTimestamp;
@@ -269,7 +271,7 @@ begin
     stByte: Result := 'tinyint';
     stShort: Result := 'smallint';
     stInteger: Result := 'int';
-    stLong: Result := 'int';
+    stLong: Result := 'bigint';
     stFloat: Result := 'float(24)';
     stDouble: Result := 'float(53)';
     stBigDecimal: Result := 'float(53)';
@@ -326,7 +328,7 @@ begin
     stByte: Result := 'tinyint';
     stShort: Result := 'smallint';
     stInteger: Result := 'int';
-    stLong: Result := 'int';
+    stLong: Result := 'bigint';
     stFloat: Result := 'float(24)';
     stDouble: Result := 'float(53)';
     stBigDecimal: Result := 'float(53)';

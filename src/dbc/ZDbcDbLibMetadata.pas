@@ -1845,6 +1845,7 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+var SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1865,8 +1866,11 @@ begin
           GetStringByName('COLUMN_NAME'));
         Result.UpdateNullByName('DATA_TYPE');
   //The value in the resultset will be used
-  //      Result.UpdateShortByName('DATA_TYPE',
-  //        Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+        SQLType := ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType);
+        if SQLType = stUnknown then
+          Result.UpdateNullByName('DATA_TYPE')
+        else
+          Result.UpdateShortByName('DATA_TYPE', Ord(SQLType));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
