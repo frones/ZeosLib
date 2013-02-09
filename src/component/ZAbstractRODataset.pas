@@ -1756,7 +1756,10 @@ begin
       for i := 0 to Fields.Count -1 do
         if Fields[i].DataType in [ftString, ftWideString] then
           if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+          begin
+            {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
             Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+          end;
     end;
     BindFields(True);
 
