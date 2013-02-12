@@ -144,6 +144,8 @@ type
 
 implementation
 
+Uses ZSqlTestCase;
+
 { TZIBXPerformanceTestCase }
 
 {**

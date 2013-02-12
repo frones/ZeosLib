@@ -127,7 +127,7 @@ function TZOldZeosPerformanceTestCase.GetSupportedProtocols: string;
 begin
   Result := pl_all_mysql
     + ',sybase,' + pl_all_interbase
-    + ',' pl_all_postgresql;
+    + ',' + pl_all_postgresql;
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}
