@@ -109,7 +109,7 @@ uses ZSysUtils, ZTestCase;
 
 function TZTestCompPostgreSQLBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 {**
@@ -867,6 +867,7 @@ begin
     Query.SQL.Text := 'select * from Mantis229';
     Query.Open;
     CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+    CheckEquals('Mantis229', Query.Fields[0].AsString);
   finally
     Query.Free;
   end;
@@ -875,7 +876,7 @@ end;
 { TZTestCompPostgreSQLBugReportMBCs }
 function TZTestCompPostgreSQLBugReportMBCs.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 procedure TZTestCompPostgreSQLBugReportMBCs.TestStandartConfirmingStrings(Query: TZQuery; Connection: TZConnection);

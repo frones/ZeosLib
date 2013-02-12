@@ -221,7 +221,7 @@ type
 
 implementation
 
-uses ZTestCase, ZSysUtils;
+uses ZTestCase, ZSysUtils,ZSqlTestCase;
 
 { TZDBXPerformanceTestCase }
 
@@ -240,10 +240,9 @@ end;
 }
 function TZDBXPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5'
-    + ',sybase,interbase,interbase-5,interbase-6'
-    + ',firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebirdd-1.5,firebirdd-2.0,firebirdd-2.1'
-    + ',postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_mysql
+    + ',sybase,'+ pl_all_interbase
+    + ',' + pl_all_postgresql;
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}
@@ -579,10 +578,9 @@ end;
 }
 function TZDBXCPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5'
-    + ',sybase,interbase,interbase-5,interbase-6'
-    + ',firebird-1.0,firebird-1.5'
-    + ',postgresql,postgresql-7,postgresql-8';
+  Result := pl_all_mysql
+    + ',sybase,' + pl_all_interbase
+    + ',' + pl_all_postgresql;
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}
@@ -918,10 +916,9 @@ end;
 }
 function TZDBXODBCPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5'
-    + ',sybase,interbase,interbase-5,interbase-6'
-    + ',firebird-1.0,firebird-1.5'
-    + ',postgresql,postgresql-6.5,postgresql-7.2,postgresql-8.1';
+  Result := pl_all_mysql
+    + ',sybase,' + pl_all_interbase
+    + ',' + pl_all_postgresql;
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}
@@ -1176,10 +1173,9 @@ end;
 }
 function TZDBXODBCCPerformanceTestCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5'
-    + ',sybase,interbase,interbase-5,interbase-6'
-    + ',firebird-1.0,firebird-1.5'
-    + ',postgresql,postgresql-6.5,postgresql-7.2,postgresql-8.1';
+  Result := pl_all_mysql
+    + ',sybase,' + pl_all_interbase
+    + ',' + pl_all_postgresql;
 {$IFNDEF LINUX}
   Result := Result + ',mssql';
 {$ENDIF}

@@ -89,7 +89,7 @@ uses ZSysUtils, ZTestConsts;
 }
 function TZTestDbcMySQLCase.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5,MariaDB-5';
+  Result := pl_all_mysql;
 end;
 
 {**
