@@ -84,6 +84,8 @@ type
   protected
     FAdoCommand: ZPlainAdo.Command;
     procedure SetInParamCount(NewParamCount: Integer); override;
+    procedure InternalSetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
+      const Value: TZVariant; const ParamDirection: ParameterDirectionEnum);
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
   public
@@ -100,8 +102,9 @@ type
   {** Implements Prepared ADO Statement. }
   TZAdoCallableStatement = class(TZAdoPreparedStatement)
   protected
-    //FOutParamIndexes: TIntegerDynArray;
     function GetOutParam(ParameterIndex: Integer): TZVariant; override;
+    procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
+      const Value: TZVariant); override;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection;
       SQL: string; Info: TStrings);
@@ -290,8 +293,9 @@ end;
   @param SqlType a parameter SQL type.
   @paran Value a new parameter value.
 }
-procedure TZAdoPreparedStatement.SetInParam(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: TZVariant);
+procedure TZAdoPreparedStatement.InternalSetInParam(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: TZVariant;
+  const ParamDirection: ParameterDirectionEnum);
 var
   S: Integer;
   HR: HResult;
@@ -310,13 +314,11 @@ var
 begin
   PC := 0;
   if FAdoCommand.CommandType = adCmdStoredProc then
-  begin
     try
-//some providers generates exceptions here mainly for update statements
+      //some providers generates exceptions here mainly for update statements
       PC := FAdoCommand.Parameters.Count;
     except
-    end;
-  end
+    end
   else
   begin
     OleDBCommand := (FAdoCommand as ADOCommandConstruction).OLEDBCommand;
@@ -378,39 +380,31 @@ begin
     vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
     vtString: V := AnsiString(SoftVarManager.GetAsString(RetValue));
-    vtUnicodeString: V := SoftVarManager.GetAsUnicodeString(RetValue);
+    vtUnicodeString: V := WideString(SoftVarManager.GetAsUnicodeString(RetValue));
     vtDateTime: V := SoftVarManager.GetAsDateTime(RetValue);
   end;
 
-  S := 0;
-  if SQLType = stString then
-  begin
-    S := Length(VarToStr(V));
-    if S = 0 then
-    begin
-      S := 1;
-//      patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255      
-//      V := Null;
-    end;
-  end;
-
-  if SQLType = stUnicodeString then
-  begin
-    S := Length(VarToWideStr(V));
-    if S = 0 then
-    begin
-      S := 1;
-//      patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255      
-//      V := Null;
-    end;
-  end;
-
-  if SQLType = stBytes then
-  begin
-    V := StrToBytes(ZAnsiString(VarToStr(V)));
-    if (VarType(V) and varArray) <> 0 then
-      S := VarArrayHighBound(V, 1) + 1;
-    if S = 0 then V := Null;
+  S := 0; //init val
+  case SQLType of
+    stString:
+      begin
+        S := Length(VarToStr(V));
+        if S = 0 then S := 1;
+        //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
+      end;
+    stUnicodeString:
+      begin
+        S := Length(VarToWideStr(V))*2; //strange! Need size in bytes!!
+        if S = 0 then S := 1;
+        //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
+      end;
+    stBytes:
+      begin
+        V := StrToBytes(ZAnsiString(VarToStr(V)));
+        if (VarType(V) and varArray) <> 0 then
+          S := VarArrayHighBound(V, 1) + 1;
+        if S = 0 then V := Null;
+      end;
   end;
 
   if VarIsNull(V) then
@@ -430,19 +424,32 @@ begin
         P.Size := S;
         // by aperger:
         // to use the new value at the next calling of the statement
-        if P.Value <> V then
+        if {(P.Value = unassigned) or} (P.Value <> V) then
           P.Value := V;
       end;
     end
     else
       P.Value := V;
     FAdoCommand.Prepared:=false;
+    p.Direction := ParamDirection;
   end
   else
   begin
     FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter(
-      'P' + IntToStr(ParameterIndex), T, adParamInput, S, V));
+      'P' + IntToStr(ParameterIndex), T, ParamDirection, S, V));
   end;
+end;
+
+{**
+  Sets a variant value into specified parameter.
+  @param ParameterIndex a index of the parameter.
+  @param SqlType a parameter SQL type.
+  @paran Value a new parameter value.
+}
+procedure TZAdoPreparedStatement.SetInParam(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: TZVariant);
+begin
+  InternalSetInParam(ParameterIndex, SQLType, Value, adParamInput);
 end;
 
 {**
@@ -499,7 +506,8 @@ begin
       AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
     end
     else
-      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{adExecuteNoRecords});
+      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
+    //ClearInParameterValues;
     Result := GetCurrentResult(RC);
     DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
   except
@@ -511,6 +519,7 @@ begin
   end
 end;
 
+{ TZAdoCallableStatement }
 constructor TZAdoCallableStatement.Create(PlainDriver: IZPlainDriver;
   Connection: IZConnection; SQL: string; Info: TStrings);
 begin
@@ -525,6 +534,7 @@ var
   P: Pointer;
   TempBlob: IZBLob;
 begin
+
   if ParameterIndex > OutParamCount then
     Result := NullVariant
   else
@@ -589,6 +599,23 @@ begin
   end;
 
   LastWasNull := DefVarManager.IsNull(Result);
+end;
+
+procedure TZAdoCallableStatement.SetInParam(ParameterIndex: Integer;
+  SQLType: TZSQLType; const Value: TZVariant);
+begin
+  case Self.FDBParamTypes[ParameterIndex-1] of
+    0: //ptUnknown
+      InternalSetInParam(ParameterIndex, SQLType, Value, adParamUnknown);
+    1: //ptInput
+      InternalSetInParam(ParameterIndex, SQLType, Value, adParamInput);
+    2: //ptOut
+      InternalSetInParam(ParameterIndex, SQLType, Value, adParamOutput);
+    3: //ptInputOutput
+      InternalSetInParam(ParameterIndex, SQLType, Value, adParamInputOutput);
+    4: //ptResult
+      InternalSetInParam(ParameterIndex, SQLType, Value, adParamReturnValue);
+  end;
 end;
 
 end.

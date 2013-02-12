@@ -58,7 +58,7 @@ interface
 
 uses
   Classes, SysUtils, ZDbcIntfs, ZPlainPostgreSqlDriver,
-  ZDbcPostgreSql, ZDbcLogging;
+  ZDbcPostgreSql, ZDbcLogging, ZCompatibility;
 
 {**
   Indicate what field type is a number (integer, float and etc.)
@@ -106,6 +106,16 @@ function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: Boolean): string;
 function EncodeBinaryString(const Value: AnsiString): AnsiString;
 
 {**
+  Encode string which probably consists of multi-byte characters.
+  Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded. Since we have noticed that back slash is the second byte of some BIG5 characters (each of them is two bytes in length), we need a characterset aware encoding function.
+  @param CharactersetCode the characterset in terms of enumerate code.
+  @param Value the regular string.
+  @return the encoded string.
+}
+function PGEscapeString(Handle: Pointer; const Value: ZAnsiString;
+    ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+
+{**
   Converts an string from escape PostgreSQL format.
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
@@ -138,7 +148,7 @@ function GetMinorVersion(const Value: string): Word;
 
 implementation
 
-uses ZMessages, ZCompatibility;
+uses ZMessages;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -309,6 +319,207 @@ begin
   Result := Value in [stByte, stShort, stInteger, stLong,
     stFloat, stDouble, stBigDecimal];
 end;
+
+{**
+  Encode string which probably consists of multi-byte characters.
+  Characters ' (apostraphy), low value (value zero), and \ (back slash) are encoded.
+  Since we have noticed that back slash is the second byte of some BIG5 characters
+    (each of them is two bytes in length), we need a characterset aware encoding function.
+  @param CharactersetCode the characterset in terms of enumerate code.
+  @param Value the regular string.
+  @return the encoded string.
+}
+function PGEscapeString(Handle: Pointer; const Value: ZAnsiString;
+    ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+var
+  I, LastState: Integer;
+  SrcLength, DestLength: Integer;
+  SrcBuffer, DestBuffer: PAnsiChar;
+
+  function pg_CS_stat(stat: integer; character: integer;
+          CharactersetCode: TZPgCharactersetType): integer;
+  begin
+    if character = 0 then
+      stat := 0;
+
+    case CharactersetCode of
+      csUTF8, csUNICODE_PODBC:
+        begin
+          if (stat < 2) and (character >= $80) then
+          begin
+            if character >= $fc then
+              stat := 6
+            else if character >= $f8 then
+              stat := 5
+            else if character >= $f0 then
+              stat := 4
+            else if character >= $e0 then
+              stat := 3
+            else if character >= $c0 then
+              stat := 2;
+          end
+          else
+            if (stat > 2) and (character > $7f) then
+              Dec(stat)
+            else
+              stat := 0;
+        end;
+  { Shift-JIS Support. }
+      csSJIS:
+        begin
+      if (stat < 2)
+        and (character > $80)
+        and not ((character > $9f) and (character < $e0)) then
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+  { Chinese Big5 Support. }
+      csBIG5:
+        begin
+      if (stat < 2) and (character > $A0) then
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+  { Chinese GBK Support. }
+      csGBK:
+        begin
+      if (stat < 2) and (character > $7F) then
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+
+  { Korian UHC Support. }
+      csUHC:
+        begin
+      if (stat < 2) and (character > $7F) then
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+
+  { EUC_JP Support }
+      csEUC_JP:
+        begin
+      if (stat < 3) and (character = $8f) then { JIS X 0212 }
+        stat := 3
+      else
+      if (stat <> 2)
+        and ((character = $8e) or
+        (character > $a0)) then { Half Katakana HighByte & Kanji HighByte }
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+
+  { EUC_CN, EUC_KR, JOHAB Support }
+      csEUC_CN, csEUC_KR, csJOHAB:
+        begin
+      if (stat < 2) and (character > $a0) then
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+      csEUC_TW:
+        begin
+      if (stat < 4) and (character = $8e) then
+        stat := 4
+      else if (stat = 4) and (character > $a0) then
+        stat := 3
+      else if ((stat = 3) or (stat < 2)) and (character > $a0) then
+        stat := 2
+      else if stat = 2 then
+        stat := 1
+      else
+        stat := 0;
+        end;
+        { Chinese GB18030 support.Added by Bill Huang <bhuang@redhat.com> <bill_huanghb@ybb.ne.jp> }
+      csGB18030:
+        begin
+      if (stat < 2) and (character > $80) then
+        stat := 2
+      else if stat = 2 then
+      begin
+        if (character >= $30) and (character <= $39) then
+          stat := 3
+        else
+          stat := 1;
+      end
+      else if stat = 3 then
+      begin
+        if (character >= $30) and (character <= $39) then
+          stat := 1
+        else
+          stat := 3;
+      end
+      else
+        stat := 0;
+        end;
+      else
+      stat := 0;
+    end;
+    Result := stat;
+  end;
+
+begin
+  SrcLength := Length(Value);
+  SrcBuffer := PAnsiChar(Value);
+  DestLength := 2;
+  LastState := 0;
+  for I := 1 to SrcLength do
+  begin
+    LastState := pg_CS_stat(LastState,integer(SrcBuffer^),
+      TZPgCharactersetType(ConSettings.ClientCodePage.ID));
+    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+      Inc(DestLength, 4)
+    else
+      Inc(DestLength);
+    Inc(SrcBuffer);
+  end;
+
+  SrcBuffer := PAnsiChar(Value);
+  SetLength(Result, DestLength);
+  DestBuffer := PAnsiChar(Result);
+  DestBuffer^ := '''';
+  Inc(DestBuffer);
+
+  LastState := 0;
+  for I := 1 to SrcLength do
+  begin
+    LastState := pg_CS_stat(LastState,integer(SrcBuffer^),
+      TZPgCharactersetType(ConSettings.ClientCodePage.ID));
+    if CharInSet(SrcBuffer^, [#0, '''']) or ((SrcBuffer^ = '\') and (LastState = 0)) then
+    begin
+      DestBuffer[0] := '\';
+      DestBuffer[1] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) shr 6));
+      DestBuffer[2] := AnsiChar(Ord('0') + ((Byte(SrcBuffer^) shr 3) and $07));
+      DestBuffer[3] := AnsiChar(Ord('0') + (Byte(SrcBuffer^) and $07));
+      Inc(DestBuffer, 4);
+    end
+    else
+    begin
+      DestBuffer^ := SrcBuffer^;
+      Inc(DestBuffer);
+    end;
+    Inc(SrcBuffer);
+  end;
+  DestBuffer^ := '''';
+end;
+
 
 {**
   add by Perger -> based on SourceForge:

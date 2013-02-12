@@ -70,6 +70,7 @@ type
     procedure EmptyTest;
     {$ELSE}
     procedure TestTrailingSpaces;
+    procedure TestNotNullValues;
     {$ENDIF}
   end;
 
@@ -129,7 +130,46 @@ begin
     Query.ExecSQL;
     Query.Free;
   end;
+end;
 
+procedure ZTestCompADOBugReport.TestNotNullValues;
+const
+  RowID = 0;
+  TestString = String('NullValues');
+var
+  Query: TZQuery;
+begin
+  if SkipTest then Exit;
+
+  Query := CreateQuery;
+  Query.Connection := Connection;
+  // Query.RequestLive := True;
+  try
+    Query.SQL.Text := 'select * from people';
+    Query.Open;
+    CheckEquals(ord(ftSmallInt), ord(Query.Fields[0].DataType));
+    CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
+    CheckStringFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+    CheckEquals(ord(ftDateTime), ord(Query.Fields[3].DataType));
+    CheckEquals(ord(ftDateTime), ord(Query.Fields[4].DataType));
+    CheckEquals(ord(ftBlob), ord(Query.Fields[5].DataType));
+    CheckMemoFieldType(Query.Fields[6].DataType, Connection.DbcConnection.GetConSettings);
+    CheckEquals(ord(ftSmallInt), ord(Query.Fields[7].DataType));
+    CheckEquals('Vasia Pupkin', Query.Fields[2].AsString);
+
+    Query.Append;
+    Query.Fields[0].AsInteger := RowID;
+    Query.Fields[2].AsString  := TestString;
+    Query.Post;
+    Query.Close;
+    Query.Open;
+    Query.Last;
+    CheckEquals(TestString, Query.Fields[2].AsString);
+  finally
+    Query.SQL.Text := 'delete from people where p_id = '+IntToStr(RowID);
+    Query.ExecSQL;
+    Query.Free;
+  end;
 end;
 
 {$ENDIF}

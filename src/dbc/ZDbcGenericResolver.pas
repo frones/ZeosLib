@@ -306,12 +306,16 @@ end;
 
 function TZGenericCachedResolver.CreateResolverStatement(SQL: String): IZPreparedStatement;
 var
-  Temp : TSTrings;
+  Temp : TStrings;
 begin
   if StrToBoolEx(FStatement.GetParameters.Values['preferprepared']) then
     begin
       Temp := TStringList.Create;
       Temp.Values['preferprepared'] := 'true';
+      if not ( Connection.GetParameters.Values['chunk_size'] = '' ) then //ordered by precedence
+        Temp.Values['chunk_size'] := Connection.GetParameters.Values['chunk_size']
+      else
+        Temp.Values['chunk_size'] := FStatement.GetParameters.Values['chunk_size'];
       Result := Connection.PrepareStatementWithParams(SQL, Temp);
       Temp.Free;
     end
