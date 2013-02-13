@@ -89,7 +89,7 @@ uses SysUtils, ZTestConsts;
 }
 function TZTestDbcPostgreSQLCase.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestConnection;

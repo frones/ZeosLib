@@ -200,9 +200,7 @@ end;
 }
 function TZTestInterbaseStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'interbase,interbase-6.5,interbase-7.2,firebird-1.0,firebird-1.5,'+
-    'firebird-2.0,firebird-2.1,firebird-2.5,firebirdd-1.5,firebirdd-2.0,'+
-    'firebirdd-2.1,firebirdd-2.5';
+  Result := pl_all_interbase;
 end;
 
 {**
@@ -325,7 +323,7 @@ end;
 }
 function TZTestPostgreSQLStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'postgresql,postgresql-7,postgresql-8,postgresql-9';
+  Result := pl_all_postgresql;
 end;
 
 {**
@@ -541,7 +539,7 @@ end;
 { TZTestMySQLStoredProcedure }
 function TZTestMySQLStoredProcedure.GetSupportedProtocols: string;
 begin
-  Result := 'mysql,mysql-4.1,mysql-5,mysqld-4.1,mysqld-5';
+  Result := pl_all_mysql;
 end;
 
 procedure TZTestMySQLStoredProcedure.Test_abtest;
@@ -1172,11 +1170,11 @@ begin
   StoredProc.Unprepare;
   S := StoredProc.ParamByName('@p4').AsString +
     ' ' + StoredProc.ParamByName('@p5').AsString;
-  StoredProc.ParamByName('P1').AsInteger := 50;
-  StoredProc.ParamByName('P2').AsInteger := 100;
-  StoredProc.ParamByName('P3').AsString := 'a';
-  CheckEquals('@p4', StoredProc.Params[3].Name);
-  CheckEquals('@p5', StoredProc.Params[4].Name);
+  StoredProc.ParamByName('@p1').AsInteger := 50;
+  StoredProc.ParamByName('@p2').AsInteger := 100;
+  StoredProc.ParamByName('@p3').AsString := 'a';
+  CheckEquals('@p3', StoredProc.Params[3].Name);
+  CheckEquals('@p4', StoredProc.Params[4].Name);
   StoredProc.Open;
 
   CheckEquals(2, ord(StoredProc.Fields.Count));
