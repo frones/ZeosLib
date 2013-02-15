@@ -91,6 +91,7 @@ type
     function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
+    function ClientSettingsChanged: Boolean;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -107,6 +108,7 @@ type
     FServerSubVersion: Integer;
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
     FPreparedStmts: TStrings;
+    FClientSettingsChanged: Boolean;
   protected
     procedure InternalCreate; override;
     function BuildConnectStr: AnsiString;
@@ -117,6 +119,7 @@ type
     function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
+    function ClientSettingsChanged: Boolean;
   public
     destructor Destroy; override;
 
@@ -457,13 +460,17 @@ begin
     FPreparedStmts.Delete(Index);
 end;
 
+function TZPostgreSQLConnection.ClientSettingsChanged: Boolean;
+begin
+  Result := FClientSettingsChanged;
+end;
 {**
   Opens a connection to database server with specified parameters.
 }
 procedure TZPostgreSQLConnection.Open;
 
 var
-  SCS, LogMessage: string;
+  SCS, LogMessage, TempClientCodePage: string;
 begin
   if not Closed then
     Exit;
@@ -485,11 +492,12 @@ begin
 
     GetPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
-    { Sets a client codepage. }
-    if ( FClientCodePage <> '' ) then
-    begin
+    { Gets the current codepage }
+    TempClientCodePage := GetPlainDriver.ValidateCharEncoding(GetPlainDriver.GetClientEncoding(FHandle)).Name;
+
+    { Sets a client codepage if necessary }
+    if ( FClientCodePage <> '' ) and (TempClientCodePage <> FClientCodePage) then
       SetServerSetting('CLIENT_ENCODING', FClientCodePage);
-    end;
 
     { Turn on transaction mode }
     StartTransactionSupport;
@@ -498,20 +506,22 @@ begin
     inherited Open;
 
     { Gets the current codepage if it wasn't set..}
-    if FClientCodePage = '' then
-      with CreateStatement.ExecuteQuery(Format('select pg_encoding_to_char(%d)',
-        [GetPlainDriver.GetClientEncoding(FHandle)]))  do
-      begin
-        if Next then FClientCodePage := GetString(1);
-        Close;
-      end;
-    CheckCharEncoding(FClientCodePage);
+    if ( FClientCodePage = '') then
+      CheckCharEncoding(TempClientCodePage)
+    else
+    begin
+      CheckCharEncoding(FClientCodePage);
+      FClientSettingsChanged := True;
+    end;
     FCharactersetCode := TZPgCharactersetType(ConSettings.ClientCodePage^.ID);
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
     if SCS <> '' then
+    begin
       SetServerSetting(standard_conforming_strings, SCS);
+      FClientSettingsChanged := True;
+    end;
 
     //if not FOidAsBlob then
       //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;

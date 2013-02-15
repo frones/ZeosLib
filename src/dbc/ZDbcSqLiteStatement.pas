@@ -324,7 +324,6 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  TempStream: TStream;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
