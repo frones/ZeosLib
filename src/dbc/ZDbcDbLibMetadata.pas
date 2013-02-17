@@ -65,8 +65,6 @@ type
   {** Implements MsSql Database Information. }
   TZDbLibDatabaseInfo = class(TZAbstractDatabaseInfo)
   public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
 
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
@@ -188,7 +186,6 @@ type
     function DataDefinitionIgnoredInTransactions: Boolean; override;
 
     // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string; override;
     function GetSchemaTerm: string; override;
     function GetProcedureTerm: string; override;
     function GetCatalogTerm: string; override;
@@ -312,22 +309,6 @@ uses ZDbcUtils, ZDbcDbLibUtils;
 { TZDbLibDatabaseInfo }
 
 {**
-  Constructs this object.
-  @param Metadata the interface of the correpsonding database metadata object
-}
-constructor TZDbLibDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
-begin
-  inherited;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZDbLibDatabaseInfo.Destroy;
-begin
-  inherited;
-end;
-
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
 
@@ -466,18 +447,6 @@ end;
 function TZDbLibDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
-end;
-
-{**
-  What's the string used to quote SQL identifiers?
-  This returns a space " " if identifier quoting isn't supported.
-  A JDBC Compliant<sup><font size=-2>TM</font></sup>
-  driver always uses a double quote character.
-  @return the quoting string
-}
-function TZDbLibDatabaseInfo.GetIdentifierQuoteString: string;
-begin
-  Result := '"';
 end;
 
 {**

@@ -66,7 +66,6 @@ type
   TZAdoDatabaseInfo = class(TZAbstractDatabaseInfo)
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
 
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
@@ -190,7 +189,6 @@ type
     function DataDefinitionIgnoredInTransactions: Boolean; override;
 
     // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string; override;
     function GetSchemaTerm: string; override;
     function GetProcedureTerm: string; override;
     function GetCatalogTerm: string; override;
@@ -299,18 +297,11 @@ var
 {**
   Constructs this object.
   @param Metadata the interface of the correpsonding database metadata object
+  @param IdentifierQuotes the default Quotes for Identifiers used by the driver
 }
 constructor TZAdoDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
-  inherited;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZAdoDatabaseInfo.Destroy;
-begin
-  inherited;
+  inherited Create(MetaData, '[]');
 end;
 
 //----------------------------------------------------------------------
@@ -451,18 +442,6 @@ end;
 function TZAdoDatabaseInfo.StoresMixedCaseQuotedIdentifiers: Boolean;
 begin
   Result := True;
-end;
-
-{**
-  What's the string used to quote SQL identifiers?
-  This returns a space " " if identifier quoting isn't supported.
-  A JDBC Compliant<sup><font size=-2>TM</font></sup>
-  driver always uses a double quote character.
-  @return the quoting string
-}
-function TZAdoDatabaseInfo.GetIdentifierQuoteString: string;
-begin
-  Result := '[]';
 end;
 
 {**

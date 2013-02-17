@@ -71,6 +71,7 @@ type
     procedure TestExecuteDirect;
     procedure TestExecuteDirect2;
     procedure TestLoginPromptConnection;
+    procedure TestIdentifierQuotes;
    end;
 
 implementation
@@ -183,6 +184,30 @@ procedure TZTestConnectionCase.ConnLogin(Sender: TObject; var Username:string ; 
 begin
    UserName := gloUserName;
    Password := gloPassword;
+end;
+
+procedure TZTestConnectionCase.TestIdentifierQuotes;
+begin
+  if SkipTest then Exit;
+
+  try
+    Connection.Connect;
+    Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString <> '');
+    Connection.Disconnect;
+
+    Connection.Properties.Add('identifier_quotes=');
+    Connection.Connect;
+    Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString = '');
+    Connection.Disconnect;
+    Connection.Properties.Delete(Connection.Properties.IndexOfName('identifier_quotes'));
+
+    Connection.Properties.Values['identifier_quotes'] := '{}';
+    Connection.Connect;
+    Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString = '{}');
+    Connection.Disconnect;
+  finally
+    Connection.Properties.Delete(Connection.Properties.IndexOfName('identifier_quotes'));
+  end;
 end;
 
 initialization

@@ -298,9 +298,12 @@ type
   private
     FMetadata: TZAbstractDatabaseMetadata;
   protected
+    FIdentifierQuotes: String;
     property Metadata: TZAbstractDatabaseMetadata read FMetadata;
   public
-    constructor Create(const Metadata: TZAbstractDatabaseMetadata);
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata); overload;
+    constructor Create(const Metadata: TZAbstractDatabaseMetadata;
+      const IdentifierQuotes: String); overload;
     destructor Destroy; override;
 
     // database/driver/server info:
@@ -425,7 +428,7 @@ type
     function DataDefinitionIgnoredInTransactions: Boolean; virtual;
 
     // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string; virtual;
+    function GetIdentifierQuoteString: string;
     function GetSchemaTerm: string; virtual;
     function GetProcedureTerm: string; virtual;
     function GetCatalogTerm: string; virtual;
@@ -501,8 +504,30 @@ uses ZVariant, ZCollections;
 }
 constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
+  Create(MetaData, '"');
+end;
+
+{**
+  Constructs this object.
+  @param Metadata the interface of the correpsonding database metadata object
+  @param IdentifierQuotes
+    What's the string used to quote SQL identifiers?
+    This returns a space " " if identifier quoting isn't supported.
+    A JDBC Compliant<sup><font size=-2>TM</font></sup>
+    driver always uses a double quote character.
+}
+constructor TZAbstractDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata;
+  const IdentifierQuotes: String);
+begin
   inherited Create;
   FMetadata := Metadata;
+  if FMetaData.FUrl.Properties.IndexOfName('identifier_quotes') > -1 then //prevent to loose emty quotes '' !!!
+    FIdentifierQuotes := FMetaData.FUrl.Properties.Values['identifier_quotes']
+  else
+    if IdentifierQuotes = '' then
+      FIdentifierQuotes := '"'
+    else
+      FIdentifierQuotes := IdentifierQuotes;
 end;
 
 {**
@@ -754,7 +779,7 @@ end;
 }
 function TZAbstractDatabaseInfo.GetIdentifierQuoteString: string;
 begin
-  Result := '"';
+  Result := FIdentifierQuotes;
 end;
 
 {**
