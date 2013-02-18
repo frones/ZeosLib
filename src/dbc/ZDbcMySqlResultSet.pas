@@ -298,6 +298,7 @@ procedure TZMySQLResultSet.Close;
 begin
   if FQueryHandle <> nil then
   begin
+    FPlainDriver.FreeResult(FQueryHandle);
     while(FPlainDriver.RetrieveNextRowset(FHandle) = 0) do
     begin
       FQueryHandle := FPlainDriver.StoreResult(FHandle);
@@ -306,7 +307,6 @@ begin
         FPlainDriver.FreeResult(FQueryHandle);
       end;
     end;
-    FPlainDriver.FreeResult(FQueryHandle);
   end;
   FQueryHandle := nil;
   FRowHandle := nil;
@@ -924,8 +924,14 @@ begin
     FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
   FBindBuffer.Free;
-
+  if Assigned(FPrepStmt) then
+    begin
+      FPlainDriver.FreePreparedResult(FPrepStmt);
+      while(FPlainDriver.GetPreparedNextResult(FPrepStmt) = 0) do
+        FPlainDriver.FreePreparedResult(FPrepStmt);
+    end;
   inherited Close;
+
 end;
 
 {**
