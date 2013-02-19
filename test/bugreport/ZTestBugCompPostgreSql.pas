@@ -857,20 +857,43 @@ end;
 procedure TZTestCompPostgreSQLBugReport.TestMantis229;
 var
   Query: TZQuery;
+
+  procedure TestMantis229_AsMemo;
+  begin
+    Query := CreateQuery;
+    try
+      Query.SQL.Text := 'select * from Mantis229';
+      Query.Open;
+      CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+      CheckEquals('Mantis229', Query.Fields[0].AsString);
+    finally
+      Query.Free;
+    end;
+  end;
+
+  procedure TestMantis229_AsString;
+  begin
+    Connection.Properties.Values['Undefined_Varchar_AsString_Length'] := '255';
+    Connection.Connected := False;
+    Query := CreateQuery;
+    try
+      Query.SQL.Text := 'select * from Mantis229';
+      Query.Open;
+      CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+      CheckEquals('Mantis229', Query.Fields[0].AsString);
+    finally
+      Query.Free;
+      Connection.Properties.Values['Undefined_Varchar_AsString_Length'] := '';
+    end;
+  end;
+
 begin
   if SkipTest then Exit;
 
   if SkipClosed then Exit;
 
-  Query := CreateQuery;
-  try
-    Query.SQL.Text := 'select * from Mantis229';
-    Query.Open;
-    CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
-    CheckEquals('Mantis229', Query.Fields[0].AsString);
-  finally
-    Query.Free;
-  end;
+  TestMantis229_AsMemo;
+  TestMantis229_AsString;
 end;
 
 { TZTestCompPostgreSQLBugReportMBCs }

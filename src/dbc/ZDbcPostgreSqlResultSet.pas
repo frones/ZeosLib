@@ -68,6 +68,7 @@ type
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
+    FUndefinedVarcharAsStringLength: Integer;
   protected
     function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
     procedure Open; override;
@@ -157,6 +158,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
   FChunk_Size := Chunk_Size; //size of red/write lob chunks
+  FUndefinedVarcharAsStringLength := (Statement.GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
 
   Open;
 end;
@@ -260,7 +262,12 @@ begin
         if ColumnType in [stString, stUnicodeString] then
           {begin patch: varchar() is equal to text!}
           if ( FieldMode = -1 ) and ( FieldSize = -1 ) and ( FieldType = 1043) then
-            DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
+            if FUndefinedVarcharAsStringLength > 0 then
+              Precision := GetFieldSize(ColumnType, ConSettings,
+                FUndefinedVarcharAsStringLength,
+                ConSettings.ClientCodePage^.CharWidth, nil, True)
+            else
+              DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
           else
             if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
               Precision := GetFieldSize(ColumnType, ConSettings, 255,

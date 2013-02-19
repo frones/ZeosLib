@@ -91,6 +91,7 @@ type
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
+    function GetUndefinedVarcharAsStringLength: Integer;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -109,6 +110,7 @@ type
     FClientSettingsChanged: Boolean;
   protected
     procedure InternalCreate; override;
+    function GetUndefinedVarcharAsStringLength: Integer;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
@@ -303,9 +305,17 @@ begin
   else
     FOidAsBlob := False;
 
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
+
   OnPropertiesChange(nil);
 
   FNoticeProcessor := DefaultNoticeProcessor;
+end;
+
+
+function TZPostgreSQLConnection.GetUndefinedVarcharAsStringLength: Integer;
+begin
+  Result := FUndefinedVarcharAsStringLength;
 end;
 
 {**
