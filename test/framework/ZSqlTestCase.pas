@@ -428,7 +428,6 @@ var
     Temp: TStrings;
     TempName : string;
   begin
-    Result := False;
     Temp := SplitString(pl_realpreparable, LIST_DELIMITERS);
     TempName := Protocol;
     try
@@ -1286,8 +1285,11 @@ end;
 
 procedure TZAbstractDbcSQLTestCase.TearDown;
 begin
-  FConnection.Close;
-  FConnection := nil;
+  if Assigned(FConnection) then
+  begin
+    FConnection.Close;
+    FConnection := nil;
+  end;
 end;
 
 function TZAbstractDbcSQLTestCase.IsRealPreparableTest: Boolean;
@@ -1319,8 +1321,11 @@ end;
 
 procedure TZAbstractCompSQLTestCase.TearDown;
 begin
-  FConnection.Disconnect;
-  FConnection.Free;
+  if Assigned(FConnection) then
+  begin
+    FConnection.Disconnect;
+    FConnection.Free;
+  end;
 end;
 
 function TZAbstractCompSQLTestCase.IsRealPreparableTest: Boolean;

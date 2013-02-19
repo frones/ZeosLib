@@ -339,9 +339,7 @@ begin
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
-      repeat
-        begin
-
+      begin
         QueryHandle := FPlainDriver.StoreResult(FHandle);
         if QueryHandle <> nil then
         begin
@@ -350,9 +348,16 @@ begin
         end
         else
           Result := FPlainDriver.GetAffectedRows(FHandle);
-        end;
-      until not (FPlainDriver.RetrieveNextRowset(FHandle) = 0)
-    { Process regular query }
+        while(FPlainDriver.RetrieveNextRowset(FHandle) = 0) do
+          begin
+           QueryHandle := FPlainDriver.StoreResult(FHandle);
+           if QueryHandle <> nil then
+             begin
+               FPlainDriver.FreeResult(QueryHandle);
+             end;
+           end;
+      end
+  { Process regular query }
     else
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
@@ -860,6 +865,13 @@ begin
     begin
       FPlainDriver.StorePreparedResult(FStmtHandle);
       Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
+      if Assigned(FStmtHandle) then
+        begin
+          FPlainDriver.FreePreparedResult(FStmtHandle);
+          while(FPlainDriver.GetPreparedNextResult(FStmtHandle) = 0) do
+            FPlainDriver.FreePreparedResult(FStmtHandle);
+        end;
+
     end
     { Process regular query }
   else

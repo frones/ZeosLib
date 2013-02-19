@@ -194,9 +194,10 @@ type
     function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
     // stmt_fetch_column
     function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
-    // stmt_free_result
+    procedure FreePreparedResult (Handle: PZMySqlPrepStmt);
     function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNextResult (Handle: PZMySqlPrepStmt): Integer;
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
 
@@ -295,8 +296,10 @@ type
     function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
     function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
     function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
+    procedure FreePreparedResult (Handle: PZMySqlPrepStmt);
     function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
+    function GetPreparedNextResult (Handle: PZMySqlPrepStmt): Integer;
     function GetPreparedNumRows (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
     function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult;
@@ -746,7 +749,8 @@ end;
   of mysql->charset, and thus affects the character set
   used by mysql_real_escape_string()
 }
-function TZMySQLBaseDriver.SetConnectionCharacterSet(Handle: PMYSQL; const csName: PAnsiChar): Integer; // set_character_set Returns 0 if valid
+function TZMySQLBaseDriver.SetConnectionCharacterSet(Handle: PMYSQL;
+  const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 begin
   Result := MYSQL_API.mysql_set_character_set(Handle, csName);
 end;
@@ -848,7 +852,7 @@ begin
   Result := Handle;
 end;
 
-function TZMySQLBaseDriver.getLastInsertID (Handle: PZMySQLConnect): Int64;
+function TZMySQLBaseDriver.GetLastInsertID(Handle: PZMySQLConnect): Int64;
 begin
     Result := MYSQL_API.mysql_insert_id(PMYSQL(Handle));
 end;
@@ -967,12 +971,12 @@ begin
     Result := (my_bool = 0);
 end;
 
-function TZMySQLBaseDriver.getSQLState (Handle: PZMySQLConnect): AnsiString;
+function TZMySQLBaseDriver.GetSQLState(Handle: PZMySQLConnect): AnsiString;
 begin
     Result := MYSQL_API.mysql_sqlstate (PMYSQL(Handle));
 end;
 
-function TZMySQLBaseDriver.StmtAttrSet(stmt: PMYSQL_STMT;
+function TZMySQLBaseDriver.StmtAttrSet(stmt: PZMySqlPrepStmt;
   option: TMysqlStmtAttrType; arg: PAnsiChar): Byte;
 begin
   Result :=  MYSQL_API.mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
@@ -1034,6 +1038,13 @@ begin
     Result := MYSQL_API.mysql_stmt_field_count(PMYSQL_STMT(Handle));
 end;
 
+procedure TZMySQLBaseDriver.FreePreparedResult(Handle: PZMySqlPrepStmt);
+var
+    my_bool: Byte;
+begin
+    my_bool := MYSQL_API.mysql_stmt_free_result(PMYSQL_STMT(Handle));
+end;
+
 function TZMySQLBaseDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
 begin
     Result := MYSQL_API.mysql_stmt_init(PMYSQL(Handle));
@@ -1042,6 +1053,14 @@ end;
 function TZMySQLBaseDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
 begin
     Result := MYSQL_API.mysql_stmt_insert_id (PMYSQL_STMT(Handle));
+end;
+
+function TZMySQLBaseDriver.GetPreparedNextResult(Handle: PZMySqlPrepStmt): Integer;
+begin
+    if (@MYSQL_API.mysql_stmt_next_result = nil) then
+        Result := -1  // Successful and there are no more results
+    else
+        Result :=  MYSQL_API.mysql_stmt_next_result (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
