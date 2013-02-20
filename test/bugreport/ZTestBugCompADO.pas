@@ -76,7 +76,7 @@ type
 
 implementation
 
-uses SysUtils;
+uses SysUtils, ZTestCase;
 
 { ZTestCompDbLibBugReport }
 
@@ -99,7 +99,7 @@ const
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.Connection := Connection;
@@ -139,7 +139,7 @@ const
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.Connection := Connection;

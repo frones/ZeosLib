@@ -167,10 +167,8 @@ type
     FCreateScripts: TStringDynArray;
     FDropScripts: TStringDynArray;
     FProperties: TStringDynArray;
-    FSkipNonZeosIssues: Boolean;
     FSkipSetup: Boolean;
     function GetProtocol : string;
-    function GetSkipNonZeosIssues: Boolean;
   protected
     {$IFDEF WITH_CLASS_VARS}class var {$ENDIF} CVConnectionConfigs : TObjectList;
     {$IFDEF WITH_CLASS_VARS}class{$ENDIF} procedure LoadConfigurations;
@@ -191,7 +189,7 @@ type
     function IsRealPreparableTest: Boolean; virtual;
     function IsAutoEncodableTest: Boolean; virtual;
     function GetSupportedProtocols: string; virtual;
-    function SkipClosed: Boolean;
+    function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
     procedure StartSQLTrace;
     procedure StopSQLTrace;
@@ -227,7 +225,6 @@ type
     property CreateScripts: TStringDynArray read FCreateScripts;
     property DropScripts: TStringDynArray read FDropScripts;
     property Properties: TStringDynArray read FProperties;
-    property SkipNonZeosIssues: Boolean read GetSkipNonZeosIssues;
     property SkipSetup: Boolean read FSkipSetup;
   end;
 
@@ -290,17 +287,21 @@ implementation
 
 uses ZSysUtils, ZTestConsts, ZTestConfig, ZSqlProcessor, ZURL, ZAbstractRODataset;
 
-function PropPos(const Current: TZConnectionConfig; const AProp: String): Integer;
+function PropPos(const PropDynArray: TStringDynArray; const AProp: String): Integer; overload;
 var
   I: Integer;
 begin
   Result := -1;
-  for i := 0 to high(Current.Properties) do
-    if StartsWith(UpperCase(Current.Properties[i]), UpperCase(AProp)+'=') then
+  for i := 0 to high(PropDynArray) do
+    if StartsWith(UpperCase(PropDynArray[i]), UpperCase(AProp)+'=') then
     begin
       Result := i;
       Break;
     end;
+end;
+function PropPos(const Current: TZConnectionConfig; const AProp: String): Integer; overload;
+begin
+  Result := PropPos(Current.Properties, AProp);
 end;
 
 procedure SetProperty(const Current: TZConnectionConfig; const AProp, NewValue: String);
@@ -330,6 +331,24 @@ begin
   else if LowerCase(Value) = LowerCase(EMPTY_LINE_DELIMITER) then
     Result := dtEmptyLine
   else Result := dtDefault;
+end;
+
+Function ProtocolInProtocols(protocol : string; protocols : string) : boolean;
+var
+  Temp: TStrings;
+  TempName : string;
+begin
+  Temp := SplitString(protocols, LIST_DELIMITERS);
+  TempName := Protocol;
+  try
+    {$IFDEF ENABLE_POOLED}
+    If StartsWith(TempName,pooledprefix) then
+      TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
+    {$ENDIF}
+    Result := (Temp.IndexOf(TempName) >= 0);
+  finally
+    Temp.Free;
+  end;
 end;
 
 { TZConnectionConfig }
@@ -423,23 +442,6 @@ procedure TZConnectionConfig.CreateExtendedConfigurations(ConnectionsList: TObje
 var
   TempConfig:TZConnectionConfig;
 
-  Function ProtocolIsRealPreparable(protocol : string) : boolean;
-  var
-    Temp: TStrings;
-    TempName : string;
-  begin
-    Temp := SplitString(pl_realpreparable, LIST_DELIMITERS);
-    TempName := Protocol;
-    try
-      {$IFDEF ENABLE_POOLED}
-      If StartsWith(TempName,pooledprefix) then
-        TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
-      {$ENDIF}
-      Result := (Temp.IndexOf(TempName) >= 0);
-    finally
-      Temp.Free;
-    end;
-  end;
   procedure SetCharacterSets(const Current: TZConnectionConfig);
   var
     iCharacterSets: Integer;
@@ -548,7 +550,7 @@ begin
 
   if Not Skip_RealPrepared then
   begin
-    if ProtocolIsRealPreparable(self.Protocol) then
+    if ProtocolInProtocols(self.Protocol,pl_realpreparable) then
     begin
       //writeln('create preferprepared');
       TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
@@ -592,12 +594,6 @@ begin
     Result := FProtocol;
 end;
 
-function TZAbstractSQLTestCase.GetSkipNonZeosIssues: boolean;
-begin
-  Check(True);
-  Result := FSkipNonZeosIssues
-end;
-
 {**
   Overrides a fail method which prints an error message.
   @param Msg an error message string.
@@ -625,26 +621,11 @@ end;
   @result true if protocol valid
 }
 function TZAbstractSQLTestCase.IsProtocolValid(Config: TZConnectionConfig): Boolean;
-var
-  Temp: TStrings;
-  TempName : string;
 begin
   if GetSupportedProtocols = '' then
     Result := True
   else
-    begin
-      Temp := SplitString(GetSupportedProtocols, LIST_DELIMITERS);
-      TempName := Config.Protocol;
-      try
-        {$IFDEF ENABLE_POOLED}
-        If StartsWith(TempName,pooledprefix) then
-          TempName := Copy(TempName,Length(PooledPrefix)+1,Length(TempName));
-        {$ENDIF}
-        Result := (Temp.IndexOf(TempName) >= 0);
-      finally
-        Temp.Free;
-      end;
-    end;
+    Result := ProtocolInProtocols(Config.Protocol,GetSupportedProtocols);
 end;
 
 function TZAbstractSQLTestCase.IsConfigUseValid(
@@ -695,10 +676,12 @@ begin
   result := '';
 end;
 
-function TZAbstractSQLTestCase.SkipClosed: Boolean;
+function TZAbstractSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
-  Check(True);
-  Result := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
+  Result:=inherited SkipForReason(Reasons) or
+          ((srMysqlRealPreparedConnection in Reasons) and
+           (ProtocolInProtocols(FProtocol,pl_all_mysql)) and
+           (PropPos(FProperties,'preferprepared')>-1));
 end;
 
 {**

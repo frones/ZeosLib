@@ -111,9 +111,7 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test1004584;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
   Connection.Disconnect;
@@ -136,7 +134,7 @@ var
   Error: Boolean;
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Error := True;
   Query := CreateQuery;
@@ -186,7 +184,7 @@ var
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
 {$IFNDEF LINUX}
   Query := CreateQuery;
@@ -243,7 +241,7 @@ procedure ZTestCompInterbaseBugReport.Test789879;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -269,7 +267,7 @@ end;
 }
 procedure ZTestCompInterbaseBugReport.Test833489;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.Disconnect;
   Connection.AutoCommit := False;
@@ -285,7 +283,7 @@ var
   Temp: boolean;
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Temp := False;
   Query := CreateQuery;
@@ -317,7 +315,7 @@ var
   Ansi: AnsiString;
   WS: WideString;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
 
@@ -385,7 +383,7 @@ procedure ZTestCompInterbaseBugReport.Test864622;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   // Query.RequestLive := True;
@@ -409,7 +407,7 @@ procedure ZTestCompInterbaseBugReport.Test886194;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   // Query.RequestLive := True;
@@ -436,7 +434,7 @@ procedure ZTestCompInterbaseBugReport.Test886854;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.Connection := Connection;
@@ -484,7 +482,7 @@ procedure ZTestCompInterbaseBugReport.Test897631;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   // Query.RequestLive := True;
@@ -513,7 +511,7 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Error := True;
   Query := CreateQuery;
@@ -561,7 +559,7 @@ var
   Error: boolean;
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Error := True;
   Query := CreateQuery;
@@ -602,7 +600,7 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   SL := TStringList.Create;
@@ -661,7 +659,7 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -754,7 +752,7 @@ var
     iqry.ExecSQL;
   end;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   { prepared insert statement }
   iqry:= CreateQuery;

@@ -131,7 +131,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset, ZDbcCache;
+  SysUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset, ZDbcCache, ZTestCase;
 
 { ZTestCompCoreBugReport }
 
@@ -186,9 +186,7 @@ procedure ZTestCompCoreBugReport.Test000002;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -213,9 +211,7 @@ procedure ZTestCompCoreBugReport.Test000001;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -256,9 +252,7 @@ var
   TextStream: TMemoryStream;
   BinaryStream: TMemoryStream;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
 
@@ -306,9 +300,7 @@ procedure ZTestCompCoreBugReport.Test707364;
 var
   Processor: TZSQLProcessor;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
   try
@@ -330,11 +322,7 @@ var
   Query: TZQuery;
   RecNo: Integer;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
-
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  if SkipForReason([srClosedBug{$IFDEF FPC}, srNonZeos{$ENDIF}]) then Exit;
 
   Query := CreateQuery;
   try
@@ -364,9 +352,7 @@ procedure ZTestCompCoreBugReport.Test722651;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -412,9 +398,7 @@ procedure ZTestCompCoreBugReport.Test000003;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -438,9 +422,7 @@ procedure ZTestCompCoreBugReport.Test773022;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -494,9 +476,7 @@ procedure ZTestCompCoreBugReport.Test772926;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -563,9 +543,7 @@ procedure ZTestCompCoreBugReport.Test793351;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -612,11 +590,7 @@ var
   FieldDefs: TFieldDefs;
   CalcField: TField;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
-
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  if SkipForReason([srClosedBug{$IFDEF FPC}, srNonZeos{$ENDIF}]) then Exit;
 
   Query := CreateQuery;
   try
@@ -664,11 +638,7 @@ var
   FieldDefs: TFieldDefs;
   CalcField: TField;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
-
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  if SkipForReason([srClosedBug{$IFDEF FPC}, srNonZeos{$ENDIF}]) then Exit;
 
   Query := CreateQuery;
   try
@@ -718,9 +688,7 @@ var
   Query: TZQuery;
   RefreshQuery: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   RefreshQuery := CreateQuery;
@@ -769,9 +737,7 @@ var
   Connection: TZConnection;     // Attention : local Connection
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection := TZConnection.Create(nil);
   Query := TZQuery.Create(nil);
@@ -790,9 +756,7 @@ var
   Connection: TZConnection;     // Attention : local Connection
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection := Self.CreateDatasetConnection;
   Query := TZQuery.Create(nil);
@@ -820,9 +784,7 @@ var
   Connection: TZConnection;       // Attention : local Connection
   SQLProcessor: TZSQLProcessor;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection := Self.CreateDatasetConnection;
   SQLProcessor := TZSQLProcessor.Create(nil);
@@ -848,9 +810,7 @@ procedure ZTestCompCoreBugReport.Test832467;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   // Query.RequestLive := True;
@@ -891,9 +851,7 @@ procedure ZTestCompCoreBugReport.Test830804;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select p_id, p_name, p_resume from people'
@@ -973,9 +931,7 @@ procedure ZTestCompCoreBugReport.Test833197;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people';
@@ -1003,9 +959,7 @@ procedure ZTestCompCoreBugReport.Test834798;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people order by p_id';
@@ -1045,9 +999,7 @@ procedure ZTestCompCoreBugReport.Test839540;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people order by p_id';
@@ -1073,9 +1025,7 @@ procedure ZTestCompCoreBugReport.Test840218;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people order by p_id';
@@ -1100,9 +1050,7 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   UpdateSQL := TZUpdateSQL.Create(nil);
@@ -1125,9 +1073,7 @@ procedure ZTestCompCoreBugReport.Test846377;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.CachedUpdates := True;
@@ -1161,9 +1107,7 @@ procedure ZTestCompCoreBugReport.Test880459;
 var
   Processor: TZSQLProcessor;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
   try
@@ -1191,9 +1135,7 @@ procedure ZTestCompCoreBugReport.Test000005;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1222,9 +1164,7 @@ procedure ZTestCompCoreBugReport.Test887103;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.BeforeScroll := DataSetBeforeScroll;
@@ -1252,9 +1192,7 @@ procedure ZTestCompCoreBugReport.Test919401;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.CachedUpdates := True;
@@ -1288,9 +1226,7 @@ procedure ZTestCompCoreBugReport.Test926264;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.CachedUpdates := True;
@@ -1349,9 +1285,7 @@ procedure ZTestCompCoreBugReport.Test953557;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.BeforeScroll := DataSetBeforeScroll;
@@ -1394,11 +1328,7 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
-
-  {$IFDEF FPC} if SkipNonZeosIssues then Exit; {$ENDIF}
+  if SkipForReason([srClosedBug{$IFDEF FPC}, srNonZeos{$ENDIF}]) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select * from people';
@@ -1480,9 +1410,8 @@ procedure ZTestCompCoreBugReport.Test985629;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  // Float values are not guaranteed to be exact for mysql real prepared statements
+  if SkipForReason([srClosedBug,srMysqlRealPreparedConnection]) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select c_cost from cargo order by c_id';
@@ -1505,9 +1434,8 @@ procedure ZTestCompCoreBugReport.TestFloatPrecision;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  // Float values are not guaranteed to be exact for mysql real prepared statements
+  if SkipForReason([srClosedBug,srMysqlRealPreparedConnection]) then Exit;
 
   Query := CreateQuery;
   try
@@ -1538,9 +1466,7 @@ procedure ZTestCompCoreBugReport.Test995080;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.CachedUpdates := True;
@@ -1574,9 +1500,7 @@ procedure ZTestCompCoreBugReport.Test996283;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateReadOnlyQuery;
   try
@@ -1611,9 +1535,7 @@ procedure ZTestCompCoreBugReport.Test1004534;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateReadOnlyQuery;
   try
@@ -1640,9 +1562,7 @@ procedure ZTestCompCoreBugReport.Test1012751;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'select * '#10'from cargo'#13' order by'#10#13' c_id';
@@ -1664,9 +1584,7 @@ procedure ZTestCompCoreBugReport.Test1022415;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Query.SQL.Text := 'SELECT * FROM table1 WHERE field1 NOT IN ('
@@ -1688,9 +1606,7 @@ procedure ZTestCompCoreBugReport.Test1049821;
 var
   Processor: TZSQLProcessor;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Processor := TZSQLProcessor.Create(nil);
   try
@@ -1714,9 +1630,7 @@ procedure ZTestCompCoreBugReport.Test1045500;
 var
   Metadata: TZSQLMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Metadata := TZSQLMetadata.Create(nil);
   try
@@ -1738,9 +1652,7 @@ procedure ZTestCompCoreBugReport.Test1036916;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1790,9 +1702,7 @@ end;
 }
 procedure ZTestCompCoreBugReport.Test1004584;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   CheckEquals(Ord(tiNone), Ord(Connection.TransactIsolationLevel));
   Connection.Disconnect;
@@ -1822,8 +1732,6 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
-  if SkipTest then Exit;
-
   StrStream1 := nil;
   Query := CreateQuery;
   try
@@ -1895,8 +1803,6 @@ var
   end;
 
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   Connection.Connect;  //DbcConnection needed
   try

@@ -138,9 +138,7 @@ procedure TZTestCompMySQLBugReport.Test735226;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -183,9 +181,7 @@ procedure TZTestCompMySQLBugReport.Test726788;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -213,9 +209,7 @@ procedure TZTestCompMySQLBugReport.Test735299;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -267,9 +261,7 @@ procedure TZTestCompMySQLBugReport.Test740144;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -316,9 +308,7 @@ procedure TZTestCompMySQLBugReport.Test740899;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -366,9 +356,7 @@ procedure TZTestCompMySQLBugReport.Test724542;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -413,9 +401,7 @@ procedure TZTestCompMySQLBugReport.Test739444;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -446,9 +432,7 @@ procedure TZTestCompMySQLBugReport.Test733236;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -481,9 +465,7 @@ var
   Query: TZQuery;
   UpdateSql: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -568,9 +550,7 @@ procedure TZTestCompMySQLBugReport.Test771576;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -599,9 +579,7 @@ procedure TZTestCompMySQLBugReport.Test768163;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -634,9 +612,7 @@ procedure TZTestCompMySQLBugReport.Test779520;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -665,9 +641,7 @@ procedure TZTestCompMySQLBugReport.Test799863;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -693,9 +667,7 @@ procedure TZTestCompMySQLBugReport.Test000001;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -727,9 +699,7 @@ procedure TZTestCompMySQLBugReport.Test817607;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -757,9 +727,7 @@ var
   Temp: PChar;
   Stream: TStream;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -820,9 +788,7 @@ procedure TZTestCompMySQLBugReport.Test840608;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -863,9 +829,7 @@ var
   Query: TZQuery;
   SQLProcessor: TZSQLProcessor;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -894,9 +858,7 @@ procedure TZTestCompMySQLBugReport.Test849723;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -935,7 +897,7 @@ end;
 }
 procedure TZTestCompMySQLBugReport.Test833489;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.Disconnect;
   Connection.AutoCommit := False;
@@ -950,9 +912,7 @@ procedure TZTestCompMySQLBugReport.Test869609;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -990,9 +950,7 @@ procedure TZTestCompMySQLBugReport.Test865564;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1020,9 +978,7 @@ procedure TZTestCompMySQLBugReport.Test881634;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1059,9 +1015,7 @@ var
   MasterDataSource: TDataSource;
   DetailQuery: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   MasterQuery := CreateQuery;
   MasterDataSource := TDataSource.Create(nil);
@@ -1104,9 +1058,7 @@ procedure TZTestCompMySQLBugReport.Test886841;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1139,9 +1091,7 @@ procedure TZTestCompMySQLBugReport.Test894367;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1201,9 +1151,7 @@ procedure TZTestCompMySQLBugReport.Test914436;
 {var
   Query: TZQuery;}
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   {Test914436Query := CreateQuery;
   try
@@ -1229,7 +1177,7 @@ procedure TZTestCompMySQLBugReport.Test920589;
 var
   Query: TZQuery;
 begin
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1265,9 +1213,7 @@ var
   Query: TZQuery;
   UpdateSql: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1331,9 +1277,7 @@ procedure TZTestCompMySQLBugReport.Test952976;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1359,9 +1303,7 @@ procedure TZTestCompMySQLBugReport.Test957126;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1400,9 +1342,7 @@ procedure TZTestCompMySQLBugReport.Test961337;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1430,9 +1370,7 @@ var
   Query: TZQuery;
   DatabaseName: string;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.Disconnect;
   DatabaseName := Connection.Database;
@@ -1487,9 +1425,7 @@ procedure TZTestCompMySQLBugReport.Test987022;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1555,9 +1491,7 @@ var
   Query: TZQuery;
   UpdateSQL: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   UpdateSQL := TZUpdateSQL.Create(nil);
@@ -1611,9 +1545,7 @@ procedure TZTestCompMySQLBugReport.Test1045286;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1645,9 +1577,7 @@ procedure TZTestCompMySQLBugReport.Test1023149;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1689,9 +1619,7 @@ procedure TZTestCompMySQLBugReport.TestMantis220;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -1721,9 +1649,7 @@ procedure TZTestCompMySQLBugReport.TestMantis235;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try

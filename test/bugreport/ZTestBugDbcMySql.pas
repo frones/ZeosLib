@@ -102,9 +102,7 @@ var
   Statement: IZStatement;
   PrStatement: IZPreparedStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select * from mysql.user');
@@ -132,9 +130,7 @@ var
   Statement: IZStatement;
   MetaData: IZResultSetMetaData;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   {test statement}
   Statement := Connection.CreateStatement;
@@ -165,9 +161,7 @@ var
   Statement: IZStatement;
   MetaData: IZResultSetMetaData;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select table739448a.fld1, table739448a.fld2, table739448a.fld3, '+
@@ -201,9 +195,7 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   {create statement}
   Statement := Connection.CreateStatement;
@@ -243,9 +235,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetConcurrency(rcReadOnly);
@@ -275,9 +265,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetConcurrency(rcReadOnly);
@@ -307,9 +295,7 @@ procedure TZTestDbcMySQLBugReport.Test924861;
 var
   Connection: IZConnection;  // Attention : local Connection
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   try
     Connection := DriverManager.GetConnection('zdbc:mysql://xxx:12345/db');
@@ -329,9 +315,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   try
