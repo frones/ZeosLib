@@ -277,6 +277,9 @@ end;
 }
 destructor TZOracleConnection.Destroy;
 begin
+  if not IsClosed then
+     Close;
+
   if FHandle <> nil then
   begin
     GetPlainDriver.HandleFree(FHandle, OCI_HTYPE_ENV);
@@ -380,7 +383,6 @@ begin
   end;
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FSessionHandle, 0,
     OCI_ATTR_SESSION, FErrorHandle);
-
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
 
   StartTransactionSupport;
