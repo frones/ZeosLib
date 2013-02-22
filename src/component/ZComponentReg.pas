@@ -115,10 +115,10 @@ begin
     TZProtocolPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Database',
     TZConnectionGroupPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'LibraryLocation',
-    TZLibLocationPropertyEditor);
   RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog',
-      TZGroupedConnectionCatalogPropertyEditor);
+    TZGroupedConnectionCatalogPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'LibraryLocation',
+    TZConnectionGroupLibLocationPropertyEditor);
 
   RegisterPropertyEditor(TypeInfo(string), TZQuery, 'LinkedFields',
     TZDataFieldPropertyEditor); {renamed by bangfauzan}
