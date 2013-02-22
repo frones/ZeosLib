@@ -898,14 +898,23 @@ begin
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
         (GetZComponent as TZAbstractConnection).Properties);
 
-      with DbcConnection.GetMetadata.GetCatalogs do
-      try
-        while Next do
-          List.Append(GetStringByName('TABLE_CAT'));
-      finally
-        Close;
-      end;
-
+      if Assigned(DbcConnection) then
+        if DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInDataManipulation then
+          with DbcConnection.GetMetadata.GetCatalogs do
+          try
+            while Next do
+              List.Append(GetStringByName('TABLE_CAT'));
+          finally
+            Close;
+          end
+        else if DbcConnection.GetMetadata.GetDatabaseInfo.SupportsSchemasInDataManipulation then
+          with DbcConnection.GetMetadata.GetSchemas do
+          try
+            while Next do
+              List.Append(GetStringByName('TABLE_SCHEM'));
+          finally
+            Close;
+          end;
     finally
       (GetZComponent as TZAbstractConnection).HideSqlHourGlass;
     end;
