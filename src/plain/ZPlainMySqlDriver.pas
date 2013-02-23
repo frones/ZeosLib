@@ -195,7 +195,7 @@ type
     function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
     // stmt_fetch_column
     function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
-    procedure FreePreparedResult (Handle: PZMySqlPrepStmt);
+    function FreePreparedResult (Handle: PZMySqlPrepStmt): Byte;
     function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedNextResult (Handle: PZMySqlPrepStmt): Integer;
@@ -297,7 +297,7 @@ type
     function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
     function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
     function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
-    procedure FreePreparedResult (Handle: PZMySqlPrepStmt);
+    function FreePreparedResult (Handle: PZMySqlPrepStmt): Byte;
     function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
     function GetPreparedInsertID (Handle: PZMySqlPrepStmt): Int64;
     function GetPreparedNextResult (Handle: PZMySqlPrepStmt): Integer;
@@ -1050,11 +1050,9 @@ begin
     Result := MYSQL_API.mysql_stmt_field_count(PMYSQL_STMT(Handle));
 end;
 
-procedure TZMySQLBaseDriver.FreePreparedResult(Handle: PZMySqlPrepStmt);
-var
-    my_bool: Byte;
+function TZMySQLBaseDriver.FreePreparedResult(Handle: PZMySqlPrepStmt): Byte;
 begin
-    my_bool := MYSQL_API.mysql_stmt_free_result(PMYSQL_STMT(Handle));
+   Result := MYSQL_API.mysql_stmt_free_result(PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;

@@ -70,7 +70,6 @@ type
     procedure GetVersion(var MajorVersion, MinorVersion: integer);
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-    destructor Destroy; override;
 
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
@@ -192,7 +191,6 @@ type
 //    function DataDefinitionIgnoredInTransactions: Boolean; override; -> Not implemented
 
     // interface details (terms, keywords, etc):
-    function GetIdentifierQuoteString: string; override;
     function GetSchemaTerm: string; override;
     function GetProcedureTerm: string; override;
     function GetCatalogTerm: string; override;
@@ -267,15 +265,7 @@ uses
 }
 constructor TZMySQLDatabaseInfo.Create(const Metadata: TZAbstractDatabaseMetadata);
 begin
-  inherited;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZMySQLDatabaseInfo.Destroy;
-begin
-  inherited;
+  inherited Create(MetaData, '`');
 end;
 
 //----------------------------------------------------------------------
@@ -343,18 +333,6 @@ end;
 function TZMySQLDatabaseInfo.StoresMixedCaseIdentifiers: Boolean;
 begin
   Result := True;
-end;
-
-{**
-  What's the string used to quote SQL identifiers?
-  This returns a space " " if identifier quoting isn't supported.
-  A JDBC Compliant<sup><font size=-2>TM</font></sup>
-  driver always uses a double quote character.
-  @return the quoting string
-}
-function TZMySQLDatabaseInfo.GetIdentifierQuoteString: string;
-begin
-  Result := '`';
 end;
 
 {**
