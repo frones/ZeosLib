@@ -1,4 +1,4 @@
-{*********************************************************}
+  {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {          Utility Classes for Native Libraries           }
@@ -173,11 +173,20 @@ begin
 end;
 
 function TZNativeLibraryLoader.ZLoadLibrary(Location: String): Boolean;
+var newpath, temp: TFileName; // AB modif
 begin
    if FLoaded then
       Self.FreeNativeLibrary;
    FLoaded := False;
    Result := False;
+   newpath := ExtractFilePath(Location);
+   // AB modif BEGIN
+   try
+     if newpath<>'' then begin
+       temp := GetCurrentDir;
+       SetCurrentDir(newpath);
+     end;
+   // AB modif END
 
 {$IFDEF UNIX}
   {$IFDEF FPC}
@@ -189,6 +198,12 @@ begin
         FHandle := LoadLibrary(PChar(Location));
 {$ENDIF}
 
+    // AB modif BEGIN
+   finally
+     if temp<>'' then
+       SetCurrentDir(temp);
+   end;
+   // AB modif END
    if (FHandle <> INVALID_HANDLE_VALUE) and (FHandle <> 0) then
    begin
       FLoaded := True;
