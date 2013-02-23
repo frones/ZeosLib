@@ -795,7 +795,6 @@ begin
     Query.SQL.Text := 'update table840608 set name=''PARACETAMOL (GPO)''';
     Query.ExecSQL;
 
-    // Query.RequestLive := True;
     Query.SQL.Text := 'select * from table840608';
     Query.Open;
     CheckEquals(1, Query.RecordCount);

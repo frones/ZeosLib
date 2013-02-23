@@ -3,9 +3,10 @@ program ztestall;
 {$mode objfpc}{$H+}
 
 uses
-  heaptrc,custapp, sysutils, comctrls,
+  heaptrc,custapp, sysutils, comctrls, types,
   Interfaces, Forms, GuiTestRunner, LResources,
-  Classes, consoletestrunner, fpcunit, fpcunitreport, plaintestreport,
+  Classes, consoletestrunner, fpcunit, fpcunitreport, testregistry,
+  plaintestreport,latextestreport, xmltestreport,
   ZTestConfig,
   ZSqlTestCase,
   //core
@@ -47,6 +48,7 @@ type
     procedure WriteCustomHelp; override;
     function GetShortOpts: string; override;
     function GetResultsWriter: TCustomResultsWriter; override;
+    procedure DoRun; override;
   public
     constructor Create(AOwner: TComponent); override;
   end;
@@ -165,11 +167,12 @@ begin
   writeln('  -c <filename>             custom config file name');
   writeln('  -b or --batch             don''t run the GUI interface');
   writeln('  -v or --verbose           show full output (otherwise compact report is used)');
+  writeln('  -n or --norebuild         don''t rebuild the databases');
 end;
 
 function TMyTestRunner.GetShortOpts: string;
 begin
-  Result:=inherited GetShortOpts+'bvc';
+  Result:=inherited GetShortOpts+'bvcn';
 end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
@@ -180,11 +183,87 @@ begin
     Result:=inherited GetResultsWriter;
 end;
 
+procedure TMyTestRunner.DoRun;
+    procedure CheckTestRegistry (test:TTest; ATestName:string);
+    var s, c : string;
+        I, p : integer;
+    begin
+      if test is TTestSuite then
+        begin
+        p := pos ('.', ATestName);
+        if p > 0 then
+          begin
+          s := copy (ATestName, 1, p-1);
+          c := copy (ATestName, p+1, maxint);
+          end
+        else
+          begin
+          s := '';
+          c := ATestName;
+          end;
+        if comparetext(c, test.TestName) = 0 then
+          DoTestRun(test)
+        else if (CompareText( s, Test.TestName) = 0) or (s = '') then
+          for I := 0 to TTestSuite(test).Tests.Count - 1 do
+            CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
+        end
+      else // if test is TTestCase then
+        begin
+        if comparetext(test.TestName, ATestName) = 0 then
+          begin
+            Writeln('Running Suite : '+test.TestName);
+            DoTestRun(test);
+          end;
+        end;
+    end;
+
+  var
+    I, J: integer;
+    S: string;
+    SuiteTests: TStringDynArray;
+  begin
+    S := CheckOptions(GetShortOpts, LongOpts);
+    if (S <> '') then
+      Writeln(S);
+
+    ParseOptions;
+
+    //get a list of all registed tests
+    if HasOption('l', 'list') then
+      case FormatParam of
+        fLatex: Write(GetSuiteAsLatex(GetTestRegistry));
+        fPlain: Write(GetSuiteAsPlain(GetTestRegistry));
+      else
+        Write(GetSuiteAsLatex(GetTestRegistry));;
+      end;
+
+    //run the tests
+    if HasOption('suite') then
+    begin
+      S := '';
+      S := GetOptionValue('suite');
+      if S = '' then
+        for I := 0 to GetTestRegistry.Tests.Count - 1 do
+          writeln(GetTestRegistry[i].TestName)
+      else
+        begin
+          SuiteTests := SplitStringToArray(S, LIST_DELIMITERS);
+          for J := 0 to High(SuiteTests) do
+            for I := 0 to GetTestRegistry.Tests.count-1 do
+              CheckTestRegistry (GetTestregistry[I], SuiteTests[J]);
+        end;
+    end
+    else if HasOption('a', 'all') or (DefaultRunAllTests and Not HasOption('l','list')) then
+      DoTestRun(GetTestRegistry) ;
+    Terminate;
+  end;
+
 constructor TMyTestRunner.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   longopts.Add('batch');
   longopts.Add('verbose');
+  longopts.Add('norebuild');
 end;
 
 var
@@ -196,7 +275,8 @@ begin
   {$I ztestall.lrs}
   SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
-  If Not Application.HasOption('h', 'help')then
+  If Not Application.HasOption('h', 'help') and
+     Not Application.HasOption('n', 'norebuild')then
     RebuildTestDatabases;
 
  If Application.HasOption('b', 'batch') then
