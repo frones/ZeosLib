@@ -184,6 +184,7 @@ begin
 end;
 
 procedure TMyTestRunner.DoRun;
+  Var tempTestSuite : TTestSuite;
     procedure CheckTestRegistry (test:TTest; ATestName:string);
     var s, c : string;
         I, p : integer;
@@ -202,7 +203,10 @@ procedure TMyTestRunner.DoRun;
           c := ATestName;
           end;
         if comparetext(c, test.TestName) = 0 then
-          DoTestRun(test)
+          begin
+//            Writeln('Adding Suite : '+test.TestName);
+            tempTestSuite.AddTest(test);
+          end
         else if (CompareText( s, Test.TestName) = 0) or (s = '') then
           for I := 0 to TTestSuite(test).Tests.Count - 1 do
             CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
@@ -211,8 +215,8 @@ procedure TMyTestRunner.DoRun;
         begin
         if comparetext(test.TestName, ATestName) = 0 then
           begin
-            Writeln('Running Suite : '+test.TestName);
-            DoTestRun(test);
+//            Writeln('Adding Test : '+test.TestName);
+            tempTestSuite.AddTest(test);
           end;
         end;
     end;
@@ -247,10 +251,12 @@ procedure TMyTestRunner.DoRun;
           writeln(GetTestRegistry[i].TestName)
       else
         begin
+          tempTestSuite := TTestSuite.Create('CustomTestSuite');
           SuiteTests := SplitStringToArray(S, LIST_DELIMITERS);
           for J := 0 to High(SuiteTests) do
             for I := 0 to GetTestRegistry.Tests.count-1 do
               CheckTestRegistry (GetTestregistry[I], SuiteTests[J]);
+          DoTestRun(tempTestSuite);
         end;
     end
     else if HasOption('a', 'all') or (DefaultRunAllTests and Not HasOption('l','list')) then
