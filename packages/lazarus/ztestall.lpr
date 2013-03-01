@@ -65,7 +65,6 @@ type
 
 constructor TMyGUITestRunner.Create(TheOwner: TComponent);
 var
-  Suite : String;
   SuiteNode : TTreeNode;
   procedure ChangeCheck(aNode: TTreeNode; aCheck: TTreeNodeState);
   var
@@ -85,11 +84,10 @@ var
   end;
 begin
   inherited Create(TheOwner);
-  if Application.HasOption('suite') then
+  if CommandLineSwitches.suite then
     begin
-      Suite := Application.GetOptionValue('suite');
       ActUncheckAllExecute(Self);
-      SuiteNode := FindNode(suite);
+      SuiteNode := FindNode(CommandLineSwitches.suiteitems[0]);
       If SuiteNode <> nil then
         begin
           SuiteNode.selected := true;
@@ -177,7 +175,7 @@ end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
 begin
-  if (FormatParam = fPlain) and not Application.HasOption('v', 'verbose') then
+  if (FormatParam = fPlain) and not CommandLineSwitches.verbose then
     Result := TMyResultsWriter.Create(nil)
   else
     Result:=inherited GetResultsWriter;
@@ -224,7 +222,6 @@ procedure TMyTestRunner.DoRun;
   var
     I, J: integer;
     S: string;
-    SuiteTests: TStringDynArray;
   begin
     S := CheckOptions(GetShortOpts, LongOpts);
     if (S <> '') then
@@ -233,7 +230,7 @@ procedure TMyTestRunner.DoRun;
     ParseOptions;
 
     //get a list of all registed tests
-    if HasOption('l', 'list') then
+    if CommandLineSwitches.list then
       case FormatParam of
         fLatex: Write(GetSuiteAsLatex(GetTestRegistry));
         fPlain: Write(GetSuiteAsPlain(GetTestRegistry));
@@ -242,24 +239,21 @@ procedure TMyTestRunner.DoRun;
       end;
 
     //run the tests
-    if HasOption('suite') then
+    if CommandLineSwitches.suite then
     begin
-      S := '';
-      S := GetOptionValue('suite');
-      if S = '' then
+      if length(CommandLineSwitches.suiteitems) = 0 then
         for I := 0 to GetTestRegistry.Tests.Count - 1 do
           writeln(GetTestRegistry[i].TestName)
       else
         begin
           tempTestSuite := TTestSuite.Create('CustomTestSuite');
-          SuiteTests := SplitStringToArray(S, LIST_DELIMITERS);
-          for J := 0 to High(SuiteTests) do
+          for J := 0 to High(CommandLineSwitches.suiteitems) do
             for I := 0 to GetTestRegistry.Tests.count-1 do
-              CheckTestRegistry (GetTestregistry[I], SuiteTests[J]);
+              CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
           DoTestRun(tempTestSuite);
         end;
     end
-    else if HasOption('a', 'all') or (DefaultRunAllTests and Not HasOption('l','list')) then
+    else if CommandLineSwitches.runall or (DefaultRunAllTests and Not CommandLineSwitches.list) then
       DoTestRun(GetTestRegistry) ;
     Terminate;
   end;
@@ -281,11 +275,11 @@ begin
   {$I ztestall.lrs}
   SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
-  If Not Application.HasOption('h', 'help') and
-     Not Application.HasOption('n', 'norebuild')then
+  If Not CommandLineSwitches.help and
+     Not CommandLineSwitches.norebuild then
     RebuildTestDatabases;
 
- If Application.HasOption('b', 'batch') then
+ If CommandLineSwitches.batch then
   begin
     Applicationc := TMyTestRunner.Create(nil);
     Applicationc.Initialize;

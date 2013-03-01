@@ -100,7 +100,7 @@ Conditionals=
 DebugSourceDirs=build
 UsePackages=0
 [Parameters]
-RunParams=
+RunParams=-n -s "core" -b
 HostApplication=
 Launcher=
 UseLauncher=0
@@ -146,13 +146,13 @@ Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
 Count=10
-Item0=build;..\..\test\core
-Item1=build;..\..\test\performance
-Item2=build;..\..\test\bugreport
-Item3=build;..\..\test\framework;..\..\test\component
-Item4=build;..\..\test\component
-Item5=build;..\..\test\dbc
-Item6=build;..\..\test\parsesql
+Item0=build;..\..\test\performance
+Item1=build;..\..\test\bugreport
+Item2=build;..\..\test\framework;..\..\test\component
+Item3=build;..\..\test\component
+Item4=build;..\..\test\dbc
+Item5=build;..\..\test\parsesql
+Item6=build;..\..\test\core
 Item7=build
 Item8=build;../../test/framework
 Item9=$(ZEOSDBO_BUILD)

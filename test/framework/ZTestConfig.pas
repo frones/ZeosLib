@@ -190,6 +190,20 @@ type
     property MemCheckShowResult: Boolean read FMemCheckShowResult;
   end;
 
+type
+  TCommandLineSwitches = record
+    help:          boolean;
+    list:          boolean;
+    verbose:       boolean;
+    runall:        boolean;
+    batch:         boolean;
+    norebuild:     boolean;
+    suite:         boolean;
+    suiteitems:    TStringDynArray;
+  end;
+var
+  CommandLineSwitches: TCommandLineSwitches;
+
 
 {**
   Splits string using the delimiter string.
@@ -206,9 +220,10 @@ var
   {** The active test group. }
   TestGroup: string;
 
+
 implementation
 
-uses ZSysUtils;
+uses ZSysUtils{$IFDEF FPC} ,Forms {$ENDIF};
 
 {**
   Splits string using the delimiter string.
@@ -369,7 +384,61 @@ begin
 {$ENDIF}
 end;
 
+{**
+  Dumb function which makes it possible to find the value passed to a command line switch in Delphi.
+  Please replace this by a better solution when available.
+  eg when the test program is started using commandline
+    ztestall.exe -n -suite "core;parsesql" -b
+  this function should return 'core;parsesql'
+}
+{$IFNDEF FPC}
+function GetCommandLineSwitchValue(ShortSwitch: String; Longswitch: String):String;
+var
+  i: integer;
+begin
+  Result := '';
+  for i := 1 to ParamCount-1 do // Don't check the last one, as we can't return the next param then!!
+  begin
+    If (ParamStr(i)[1]='-') then
+      if (CompareText(ParamStr(i),'-'+ShortSwitch) = 0) or
+         (CompareText(ParamStr(i),'-'+LongSwitch) = 0) then
+        Result := ParamStr(i+1);
+    If (ParamStr(i)[1]='/') then
+      if (CompareText(ParamStr(i),'/'+ShortSwitch) = 0) or
+         (CompareText(ParamStr(i),'/'+LongSwitch) = 0) then
+        Result := ParamStr(i+1);
+  end;
+end;
+{$ENDIF}
+
+procedure GetCommandLineSwitches;
+begin
+  {$IFDEF FPC}
+  CommandLineSwitches.help := Application.HasOption('h', 'help');
+  CommandLineSwitches.list := Application.HasOption('l', 'list');
+  CommandLineSwitches.verbose := Application.HasOption('v', 'verbose');
+  CommandLineSwitches.runall := Application.HasOption('a', 'all');
+  CommandLineSwitches.batch := Application.HasOption('b', 'batch');
+  CommandLineSwitches.norebuild := Application.HasOption('n', 'norebuild');
+  CommandLineSwitches.suite := Application.HasOption('suite');
+  If CommandLineSwitches.suite then
+    CommandLineSwitches.suiteitems := SplitStringToArray(Application.GetOptionValue('suite'),LIST_DELIMITERS);
+  {$ELSE}
+  CommandLineSwitches.help := (FindCmdLineSwitch('H',true) or FindCmdLineSwitch('Help',true));
+  CommandLineSwitches.list := (FindCmdLineSwitch('L',true) or FindCmdLineSwitch('List',true));
+  CommandLineSwitches.verbose := (FindCmdLineSwitch('V',true) or FindCmdLineSwitch('Verbose',true));
+  CommandLineSwitches.runall := (FindCmdLineSwitch('A',true) or FindCmdLineSwitch('All',true));
+  CommandLineSwitches.batch := (FindCmdLineSwitch('B',true) or FindCmdLineSwitch('Batch',true));
+  CommandLineSwitches.norebuild := (FindCmdLineSwitch('N',true) or FindCmdLineSwitch('NoRebuild',true));
+  CommandLineSwitches.suite := (FindCmdLineSwitch('S',true) or FindCmdLineSwitch('Suite',true));
+  If CommandLineSwitches.suite then
+    CommandLineSwitches.suiteitems := SplitStringToArray(GetCommandLineSwitchValue('S' ,'Suite'),LIST_DELIMITERS);
+  {$ENDIF}
+end;
+
 initialization
+  GetCommandLineSwitches;
+
   TestGroup := COMMON_GROUP;
 
   TestConfig := TZTestConfiguration.Create;
