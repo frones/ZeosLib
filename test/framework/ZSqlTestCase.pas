@@ -153,22 +153,23 @@ type
 
   TZAbstractSQLTestCase = class(TZAbstractTestCase, IZLoggingListener)
   private
+    FCurrentConnectionConfig : TZConnectionConfig;
+    FSkipSetup: boolean;
     FTraceList: TStrings;
 
-    FConnectionName: string;
-    FAlias: string;
-    FProtocol: string;
-    FHostName: string;
-    FPort: Integer;
-    FDatabase: string;
-    FUserName: string;
-    FPassword: string;
-    FRebuild: Boolean;
-    FCreateScripts: TStringDynArray;
-    FDropScripts: TStringDynArray;
-    FProperties: TStringDynArray;
-    FSkipSetup: Boolean;
+    function GetAlias: string;
+    function GetConnectionName: string;
+    function GetCreateScripts: TStringDynArray;
+    function GetDatabase: string;
+    function GetDropScripts: TStringDynArray;
+    function GetHostName: string;
+    function GetPassword: string;
+    function GetPort: Integer;
+    function GetProperties: TStringDynArray;
     function GetProtocol : string;
+    function GetRebuild: Boolean;
+    function GetUserName: string;
+    procedure SetCurrentConnectionConfig(AValue: TZConnectionConfig);
   protected
     {$IFDEF WITH_CLASS_VARS}class var {$ENDIF} CVConnectionConfigs : TObjectList;
     {$IFDEF WITH_CLASS_VARS}class{$ENDIF} procedure LoadConfigurations;
@@ -176,7 +177,6 @@ type
     {$IFNDEF WITH_CLASS_VARS}procedure LoadConfiguration; override;{$ENDIF}
     property TraceList: TStrings read FTraceList write FTraceList;
 
-    procedure SetActiveConnection(Connection: TZConnectionConfig);
     {$IFNDEF FPC}
     procedure RunWithFixture(TestResult: TTestResult); override;
     {$ELSE}
@@ -213,18 +213,19 @@ type
       ShowTypes: Boolean; Note: string = '');
 
     { Properties to access active connection settings. }
-    property ConnectionName: string read FConnectionName;
-    property Alias: string read FAlias;
+    property ConnectionConfig:TZConnectionConfig read FCurrentConnectionConfig write SetCurrentConnectionConfig;
+    property ConnectionName: string read GetConnectionName;
+    property Alias: string read GetAlias;
     property Protocol: string read GetProtocol;
-    property HostName: string read FHostName;
-    property Port: Integer read FPort;
-    property Database: string read FDatabase;
-    property UserName: string read FUserName;
-    property Password: string read FPassword;
-    property Rebuild: Boolean read FRebuild;
-    property CreateScripts: TStringDynArray read FCreateScripts;
-    property DropScripts: TStringDynArray read FDropScripts;
-    property Properties: TStringDynArray read FProperties;
+    property HostName: string read GetHostName;
+    property Port: Integer read GetPort;
+    property Database: string read GetDatabase;
+    property UserName: string read GetUserName;
+    property Password: string read GetPassword;
+    property Rebuild: Boolean read GetRebuild;
+    property CreateScripts: TStringDynArray read GetCreateScripts;
+    property DropScripts: TStringDynArray read GetDropScripts;
+    property Properties: TStringDynArray read GetProperties;
     property SkipSetup: Boolean read FSkipSetup;
   end;
 
@@ -586,12 +587,73 @@ end;
 
 function TZAbstractSQLTestCase.GetProtocol: string;
 begin
+  Result := FCurrentConnectionConfig.Protocol;
   {$IFDEF ENABLE_POOLED}
-  If StartsWith(FProtocol,pooledprefix) then
-    Result := Copy(FProtocol,Length(PooledPrefix)+1,Length(FProtocol))
-  else
+  If StartsWith(Result,pooledprefix) then
+    Result := Copy(Result,Length(PooledPrefix)+1,Length(Result));
   {$ENDIF}
-    Result := FProtocol;
+end;
+
+function TZAbstractSQLTestCase.GetRebuild: Boolean;
+begin
+  Result := FCurrentConnectionConfig.Rebuild;
+end;
+
+function TZAbstractSQLTestCase.GetUserName: string;
+begin
+  Result := FCurrentConnectionConfig.UserName;
+end;
+
+procedure TZAbstractSQLTestCase.SetCurrentConnectionConfig(
+  AValue: TZConnectionConfig);
+begin
+  if FCurrentConnectionConfig=AValue then Exit;
+  FCurrentConnectionConfig:=AValue;
+end;
+
+function TZAbstractSQLTestCase.GetAlias: string;
+begin
+  Result := FCurrentConnectionConfig.Alias;
+end;
+
+function TZAbstractSQLTestCase.GetConnectionName: string;
+begin
+  Result := FCurrentConnectionConfig.Name;
+end;
+
+function TZAbstractSQLTestCase.GetCreateScripts: TStringDynArray;
+begin
+  Result := FCurrentConnectionConfig.CreateScripts;
+end;
+
+function TZAbstractSQLTestCase.GetDatabase: string;
+begin
+  Result := FCurrentConnectionConfig.Database;
+end;
+
+function TZAbstractSQLTestCase.GetDropScripts: TStringDynArray;
+begin
+  Result := FCurrentConnectionConfig.DropScripts;
+end;
+
+function TZAbstractSQLTestCase.GetHostName: string;
+begin
+  Result := FCurrentConnectionConfig.HostName;
+end;
+
+function TZAbstractSQLTestCase.GetPassword: string;
+begin
+  Result := FCurrentConnectionConfig.Password;
+end;
+
+function TZAbstractSQLTestCase.GetPort: Integer;
+begin
+  Result := FCurrentConnectionConfig.Port;
+end;
+
+function TZAbstractSQLTestCase.GetProperties: TStringDynArray;
+begin
+  Result := FCurrentConnectionConfig.Properties;
 end;
 
 {**
@@ -680,8 +742,8 @@ function TZAbstractSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
   Result:=inherited SkipForReason(Reasons) or
           ((srMysqlRealPreparedConnection in Reasons) and
-           (ProtocolInProtocols(FProtocol,pl_all_mysql)) and
-           (PropPos(FProperties,'preferprepared')>-1));
+           (ProtocolInProtocols(Protocol,pl_all_mysql)) and
+           (PropPos(Properties,'preferprepared')>-1));
 end;
 
 {**
@@ -732,27 +794,6 @@ begin
   LoadConfigurations;
 end;
 {$ENDIF}
-
-{**
-  Sets an active database connection for the test.
-  @param Connection a database connection to be set.
-}
-procedure TZAbstractSQLTestCase.SetActiveConnection(
-  Connection: TZConnectionConfig);
-begin
-  FConnectionName := Connection.Name;
-  FAlias := Connection.Alias;
-  FProtocol := Connection.Protocol;
-  FHostName := Connection.HostName;
-  FPort := Connection.Port;
-  FDatabase := Connection.Database;
-  FUserName := Connection.UserName;
-  FPassword := Connection.Password;
-  FRebuild := Connection.Rebuild;
-  FCreateScripts := Connection.CreateScripts;
-  FDropScripts := Connection.DropScripts;
-  FProperties := Connection.Properties;
-end;
 
 {**
   Starts logging outgoing SQL statements.
@@ -941,15 +982,13 @@ end;
 procedure TZAbstractSQLTestCase.RunWithFixture(TestResult: TTestResult);
 var
   I: Integer;
-  Current: TZConnectionConfig;
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
        IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
     begin
-      Current := TZConnectionConfig(ConnectionConfigs[I]);
+      ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
     //writeln('Using : '+Current.Name);
-      SetActiveConnection(Current);
       inherited RunWithFixture(TestResult);
     end;
 end;
@@ -962,15 +1001,13 @@ end;
 procedure TZAbstractSQLTestCase.Run(TestResult: TTestResult);
 var
   I: Integer;
-  Current: TZConnectionConfig;
 begin
   for I := 0 to ConnectionConfigs.Count - 1 do
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
        IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
     begin
-      Current := TZConnectionConfig(ConnectionConfigs[I]);
-      //writeln('Using : '+Current.Name);
-      SetActiveConnection(Current);
+      ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
+      //writeln('Using : '+ConnectionName);
       inherited Run(TestResult);
     end;
 end;
@@ -1228,7 +1265,6 @@ end;
 procedure TZSupplementarySQLTestCase.RebuildDatabases;
 var
   I: Integer;
-  Current: TZConnectionConfig;
   Connection: TZConnection;
 begin
 {$IFNDEF WITH_CLASS_VARS}
@@ -1239,19 +1275,18 @@ begin
     if IsProtocolValid(TZConnectionConfig(ConnectionConfigs[I])) and
        IsConfigUseValid(TZConnectionConfig(ConnectionConfigs[I])) then
     begin
-      Current := TZConnectionConfig(ConnectionConfigs[I]);
-      //Writeln('Rebuilding '+Current.Name);
-      SetActiveConnection(Current);
+      ConnectionConfig := TZConnectionConfig(ConnectionConfigs[I]);
+      //Writeln('Rebuilding '+ConnectionName);
       Connection := CreateDatasetConnection;
       try
         FSQLProcessor.Connection := Connection;
-        FSQLProcessor.Delimiter := Current.Delimiter;
-        FSQLProcessor.DelimiterType := Current.DelimiterType;
+        FSQLProcessor.Delimiter := ConnectionConfig.Delimiter;
+        FSQLProcessor.DelimiterType := ConnectionConfig.DelimiterType;
 
-        if Current.Rebuild then
+        if Rebuild then
         begin
-          ExecuteScripts(Current.DropScripts, False);
-          ExecuteScripts(Current.CreateScripts, True);
+          ExecuteScripts(DropScripts, False);
+          ExecuteScripts(CreateScripts, True);
         end;
       finally
         Connection.Free;
