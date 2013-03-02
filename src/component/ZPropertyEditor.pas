@@ -170,6 +170,15 @@ type
     procedure SetValue(const Value: string); override;
   end;
 
+  {** Implements a property editor for ZGroupedConnection.LibLocation property. }
+  {** added 2013/02/20 }
+  TZConnectionGroupLibLocationPropertyEditor = class(TZStringProperty)
+  public
+    function  GetAttributes: TPropertyAttributes; override;
+    function  GetValue: string; override;
+    procedure Edit; override;
+    procedure SetValue(const Value: string); override;
+  end;
   /////////////////////////////////////////////////////////
 
 
@@ -889,14 +898,23 @@ begin
       DbcConnection := DriverManager.GetConnectionWithParams(Url,
         (GetZComponent as TZAbstractConnection).Properties);
 
-      with DbcConnection.GetMetadata.GetCatalogs do
-      try
-        while Next do
-          List.Append(GetStringByName('TABLE_CAT'));
-      finally
-        Close;
-      end;
-
+      if Assigned(DbcConnection) then
+        if DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInDataManipulation then
+          with DbcConnection.GetMetadata.GetCatalogs do
+          try
+            while Next do
+              List.Append(GetStringByName('TABLE_CAT'));
+          finally
+            Close;
+          end
+        else if DbcConnection.GetMetadata.GetDatabaseInfo.SupportsSchemasInDataManipulation then
+          with DbcConnection.GetMetadata.GetSchemas do
+          try
+            while Next do
+              List.Append(GetStringByName('TABLE_SCHEM'));
+          finally
+            Close;
+          end;
     finally
       (GetZComponent as TZAbstractConnection).HideSqlHourGlass;
     end;
@@ -1163,7 +1181,60 @@ begin
     inherited;
 end;
 
+{** added 2013/02/20 }
+{ TZConnectionGroupLibLocationPropertyEditor }
 
+{**
+  Gets a type of property attributes.
+  @return a type of property attributes.
+}
+function TZConnectionGroupLibLocationPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  if GetZComponent is TZConnectionGroup then
+    Result := [paDialog];
+end;
+
+{**
+  Gets a selected string value.
+  @return a selected string value.
+}
+function TZConnectionGroupLibLocationPropertyEditor.GetValue: string;
+begin
+  Result := GetStrValue;
+end;
+
+{**
+  Sets a new selected string value.
+  @param Value a new selected string value.
+}
+procedure TZConnectionGroupLibLocationPropertyEditor.SetValue(const Value: string);
+begin
+  SetStrValue(Value);
+  //if GetZComponent is TZAbstractConnection then
+  //  (GetZComponent as TZAbstractConnection).Connected := False;
+end;
+
+{**
+  Brings up the proper LibLocation property editor dialog.
+}
+procedure TZConnectionGroupLibLocationPropertyEditor.Edit;
+var
+  OD: TOpenDialog;
+begin
+  if GetZComponent is TZConnectionGroup then
+  begin
+    OD := TOpenDialog.Create(nil);
+    try
+      OD.InitialDir := ExtractFilePath((GetZComponent as TZConnectionGroup).LibraryLocation);
+      if OD.Execute then
+        (GetZComponent as TZConnectionGroup).LibraryLocation := OD.FileName;
+    finally
+      OD.Free;
+    end;
+  end
+  else
+    inherited;
+end;
 
 {$ENDIF}
 

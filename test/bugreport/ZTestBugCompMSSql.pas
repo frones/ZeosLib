@@ -97,9 +97,7 @@ procedure TZTestCompMSSqlBugReport.Test728955;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateReadOnlyQuery;
   try
@@ -124,7 +122,7 @@ end;
 }
 procedure TZTestCompMSSqlBugReport.Test833489;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.Disconnect;
   Connection.AutoCommit := False;
@@ -135,7 +133,7 @@ procedure TZTestCompMSSqlBugReport.Test907497;
 var
   StoredProc: TZStoredProc;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   StoredProc := TZStoredProc.Create(nil);
   try
@@ -156,7 +154,7 @@ procedure TZTestCompMSSqlBugReport.Test953072;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -176,7 +174,7 @@ var
   Query: TZQuery;
   StoredProc: TZStoredProc;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   StoredProc := TZStoredProc.Create(nil);
   Query := CreateQuery;
@@ -229,7 +227,7 @@ procedure TZTestCompMSSqlBugReport.Mantis54;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try

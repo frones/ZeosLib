@@ -118,9 +118,7 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
   //Connection := DriverManager.GetConnectionWithLogin(
@@ -157,9 +155,8 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
-  if SkipClosed then Exit;
   with (Connection as IZPostgreSQLConnection) do
   begin
     if (GetServerMajorVersion < 7 ) or
@@ -190,9 +187,7 @@ procedure TZTestDbcPostgreSQLBugReport.Test702368;
   ResultSet: IZResultSet;
   Statement: IZStatement;}
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   {Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select probin from pg_proc');
@@ -225,9 +220,7 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TStream;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -297,9 +290,7 @@ var
   Statement: IZStatement;
   MetaData: IZResultSetMetaData;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   {test statement}
   Statement := Connection.CreateStatement;
@@ -330,9 +321,7 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -362,9 +351,7 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
   Connection.SetTransactionIsolation(tiReadCommitted);
@@ -423,9 +410,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
   begin
@@ -484,9 +469,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
   begin
@@ -543,9 +526,7 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Metadata := Connection.GetMetadata;
   ResultSet := Metadata.GetTables('', '', '', nil);
@@ -567,7 +548,7 @@ const
   MinorVersion2: string = 'tst4beta2';
   MinorVersion3: string = '123beta2';
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   CheckEquals(4, GetMinorVersion(MinorVersion1));
   CheckEquals(0, GetMinorVersion(MinorVersion2));
@@ -582,9 +563,7 @@ procedure TZTestDbcPostgreSQLBugReport.Test933623;
 var
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.SetAutoCommit(True);
   Connection.SetTransactionIsolation(tiReadCommitted);
@@ -609,9 +588,7 @@ var
   Statement: IZStatement;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   with (Connection as IZPostgreSQLConnection) do
   begin
@@ -658,7 +635,7 @@ var
   Statement: IZStatement;
   Blob: IZBlob;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
@@ -700,9 +677,7 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.ExecuteUpdate('delete from test739514 where id<>1');

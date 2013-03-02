@@ -140,7 +140,7 @@ var
     CheckEquals(TestString, Query.FieldByName('s_nvarchar').AsString, Connection.DbcConnection.GetConSettings);
   end;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   Connection.Connect;
