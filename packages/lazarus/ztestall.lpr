@@ -229,32 +229,20 @@ procedure TMyTestRunner.DoRun;
 
     ParseOptions;
 
+    tempTestSuite := CreateTestSuite;
+
     //get a list of all registed tests
     if CommandLineSwitches.list then
       case FormatParam of
-        fLatex: Write(GetSuiteAsLatex(GetTestRegistry));
-        fPlain: Write(GetSuiteAsPlain(GetTestRegistry));
+        fLatex: Write(GetSuiteAsLatex(tempTestSuite));
+        fPlain: Write(GetSuiteAsPlain(tempTestSuite));
       else
-        Write(GetSuiteAsLatex(GetTestRegistry));;
+        Write(GetSuiteAsLatex(tempTestSuite));;
       end;
 
     //run the tests
-    if CommandLineSwitches.suite then
-    begin
-      if length(CommandLineSwitches.suiteitems) = 0 then
-        for I := 0 to GetTestRegistry.Tests.Count - 1 do
-          writeln(GetTestRegistry[i].TestName)
-      else
-        begin
-          tempTestSuite := TTestSuite.Create('CustomTestSuite');
-          for J := 0 to High(CommandLineSwitches.suiteitems) do
-            for I := 0 to GetTestRegistry.Tests.count-1 do
-              CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
-          DoTestRun(tempTestSuite);
-        end;
-    end
-    else if CommandLineSwitches.runall or (DefaultRunAllTests and Not CommandLineSwitches.list) then
-      DoTestRun(GetTestRegistry) ;
+    if CommandLineSwitches.runall or (DefaultRunAllTests and Not CommandLineSwitches.list) then
+      DoTestRun(CreateTestSuite) ;
     Terminate;
   end;
 

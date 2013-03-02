@@ -74,7 +74,7 @@ uses
 {$IFDEF USE_MEMCHECK}
   MemCheck,
 {$ENDIF}
-  Classes, SysUtils, IniFiles, ZCompatibility;
+{$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF},Classes, SysUtils, IniFiles, ZCompatibility;
 
 const
   { Test configuration file }
@@ -220,10 +220,15 @@ var
   {** The active test group. }
   TestGroup: string;
 
+  {$IFDEF FPC}
+  function CreateTestSuite:TTestSuite;
+  {$ELSE}
+  function CreateTestSuite:ITestSuite;
+  {$ENDIF}
 
 implementation
 
-uses ZSysUtils{$IFDEF FPC} ,Forms {$ENDIF};
+uses ZSysUtils{$IFDEF FPC} ,Forms, testregistry{$ENDIF};
 
 {**
   Splits string using the delimiter string.
@@ -411,6 +416,9 @@ begin
 end;
 {$ENDIF}
 
+{**
+  Convert Command Line Switches to aa compiler independent global record
+}
 procedure GetCommandLineSwitches;
 begin
   {$IFDEF FPC}
@@ -435,6 +443,110 @@ begin
     CommandLineSwitches.suiteitems := SplitStringToArray(GetCommandLineSwitchValue('S' ,'Suite'),LIST_DELIMITERS);
   {$ENDIF}
 end;
+
+{**
+  Build a custom test suite from all registered tests, based on command line switches and the
+  configuration file
+  Unfortunately fpcunit and DUnit need different approaches
+}
+{$IFDEF FPC}
+function CreateTestSuite:TTestSuite;
+Var
+  TempRunTests : TTestSuite;
+  I, J: integer;
+  procedure CheckTestRegistry (test:TTest; ATestName:string);
+  var s, c : string;
+      I, p : integer;
+  begin
+    if test is TTestSuite then
+      begin
+      p := pos ('.', ATestName);
+      if p > 0 then
+        begin
+        s := copy (ATestName, 1, p-1);
+        c := copy (ATestName, p+1, maxint);
+        end
+      else
+        begin
+        s := '';
+        c := ATestName;
+        end;
+      if comparetext(c, test.TestName) = 0 then
+        TempRunTests.AddTest(test)
+      else if (CompareText( s, Test.TestName) = 0) or (s = '') then
+        for I := 0 to TTestSuite(test).Tests.Count - 1 do
+          CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
+      end
+    else // if test is TTestCase then
+      begin
+      if comparetext(test.TestName, ATestName) = 0 then
+        TempRunTests.AddTest(test);
+      end;
+  end;
+begin
+  If CommandLineSwitches.Suite then
+    begin
+      TempRunTests := TTestSuite.Create('Suite');
+      for J := 0 to High(CommandLineSwitches.suiteitems) do
+        for I := 0 to GetTestregistry.Tests.count-1 do
+          CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
+    end
+  else
+    TempRuntests := GetTestregistry;
+  Result := TempRunTests;
+end;
+
+{$ELSE}
+function CreateTestSuite:ITestSuite;
+var
+  TempRunTests : ITestSuite;
+  I, J: integer;
+  procedure CheckTestRegistry (test:ITest; ATestName:string);
+  var s, c : string;
+      I, p : integer;
+  begin
+    if Supports(test, ITestSuite) then
+      begin
+      p := pos ('.', ATestName);
+      if p > 0 then
+        begin
+        s := copy (ATestName, 1, p-1);
+        c := copy (ATestName, p+1, maxint);
+        end
+      else
+        begin
+        s := '';
+        c := ATestName;
+        end;
+      if comparetext(c, test.Name) = 0 then
+        begin
+          TempRunTests.AddTest(test);
+        end
+      else if (CompareText( s, Test.Name) = 0) or (s = '') then
+        for I := 0 to test.Tests.Count - 1 do
+          CheckTestRegistry (ITest(test.Tests[I]), c)
+      end
+    else // if test is TTestCase then
+      begin
+      if comparetext(test.Name, ATestName) = 0 then
+        begin
+          TempRunTests.AddTest(test);
+        end;
+      end;
+  end;
+begin
+  If CommandLineSwitches.Suite then
+    begin
+      TempRunTests := TTestSuite.Create('Suite');
+      for J := 0 to High(CommandLineSwitches.suiteitems) do
+        for I := 0 to RegisteredTests.Tests.count-1 do
+          CheckTestRegistry (ITest(RegisteredTests.Tests[I]), CommandLineSwitches.suiteitems[J]);
+    end
+  else
+    TempRuntests := RegisteredTests;
+  Result := TempRunTests;
+end;
+{$ENDIF}
 
 initialization
   GetCommandLineSwitches;
