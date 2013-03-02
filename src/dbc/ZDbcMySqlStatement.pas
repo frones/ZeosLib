@@ -689,17 +689,20 @@ begin
       if MyType =FIELD_TYPE_BLOB then
       begin
         TempBlob := (InParamValues[I].VInterface as IZBlob);
-        if InParamTypes[I] = stBinaryStream then
-          FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
+        if TempBlob.IsEmpty then
+          DefVarManager.SetNull(InParamValues[I])
         else
-        begin
-          TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-          TempBlob := TempBlob.Clone;
-          TempBlob.SetString(TempAnsi);
-          InParamValues[I].VInterface  := TempBlob;
-          FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
-        end;
+          if InParamTypes[I] = stBinaryStream then
+            FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
+          else
+          begin
+            TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, TempBlob.WasDecoded, ConSettings);
+            TempBlob := TempBlob.Clone;
+            TempBlob.SetString(TempAnsi);
+            InParamValues[I].VInterface  := TempBlob;
+            FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
+          end;
       end
       else
         FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1,false);

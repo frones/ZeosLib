@@ -77,7 +77,7 @@ const
   procedureNullableUnknown = 2;
 
 type
-  TZWildcardsSet= {$IFDEF WITH_TSYSCHARSET}TSysCharSet{$ELSE}set of Char{$ENDIF};
+  TZWildcardsSet= {$IFDEF UNICODE}TSysCharSet{$ELSE}set of Char{$ENDIF};
 
   {** Defines a metadata resultset column definition. }
   TZMetadataColumnDef = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
