@@ -232,7 +232,7 @@ procedure EnableZSQLMonitor;
 
 implementation
 
-uses ZSysUtils{$IFDEF FPC} ,Forms, testregistry{$ENDIF}, ZSqlMonitor;
+uses ZSysUtils, Forms{$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor;
 
 var
   SQLMonitor : TZSQLMonitor;
@@ -571,6 +571,8 @@ begin
 end;
 
 initialization
+  SQLMonitor := nil;
+
   GetCommandLineSwitches;
 
   TestGroup := COMMON_GROUP;
@@ -581,5 +583,7 @@ initialization
 finalization
   if Assigned(TestConfig) then
     TestConfig.Free;
+  if Assigned(SQLMonitor) then
+    SQLMonitor.Free;
 end.
 
