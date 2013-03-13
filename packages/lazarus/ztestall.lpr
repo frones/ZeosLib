@@ -106,15 +106,16 @@ end;
 procedure TMyTestRunner.WriteCustomHelp;
 begin
   inherited WriteCustomHelp;
-  writeln('  -c <filename>             custom config file name');
-  writeln('  -b or --batch             don''t run the GUI interface');
-  writeln('  -v or --verbose           show full output (otherwise compact report is used)');
-  writeln('  -n or --norebuild         don''t rebuild the databases');
+  writeln('  -c <filename>                        custom config file name');
+  writeln('  -b or --batch                        don''t run the GUI interface');
+  writeln('  -v or --verbose                      show full output (otherwise compact report is used)');
+  writeln('  -n or --norebuild                    don''t rebuild the databases');
+  writeln('  -m <filename> or -monitor <filename> sqlmonitor file name');
 end;
 
 function TMyTestRunner.GetShortOpts: string;
 begin
-  Result:=inherited GetShortOpts+'bvcn';
+  Result:=inherited GetShortOpts+'bvcnm';
 end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
@@ -160,6 +161,7 @@ begin
   longopts.Add('batch');
   longopts.Add('verbose');
   longopts.Add('norebuild');
+  longopts.Add('monitor');
 end;
 
 var
@@ -171,11 +173,15 @@ begin
   {$I ztestall.lrs}
   SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
+
+  If CommandLineSwitches.sqlmonitor then
+    EnableZSQLMonitor;
+
   If Not CommandLineSwitches.help and
      Not CommandLineSwitches.norebuild then
     RebuildTestDatabases;
 
- If CommandLineSwitches.batch then
+  If CommandLineSwitches.batch then
   begin
     Applicationc := TMyTestRunner.Create(nil);
     Applicationc.Initialize;
@@ -188,4 +194,5 @@ begin
     Application.CreateForm(TMyGuiTestRunner, TestRunner);
     Application.Run;
   end;
+
 end.

@@ -70,6 +70,9 @@ begin
   If Not CommandLineSwitches.norebuild then
     RebuildTestDatabases;
 
+  If CommandLineSwitches.sqlmonitor then
+    EnableZSQLMonitor;
+
   If CommandLineSwitches.batch then
     TextTestRunner.RunTest(CreateTestSuite)
   else
