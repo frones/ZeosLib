@@ -583,7 +583,9 @@ initialization
 finalization
   if Assigned(TestConfig) then
     TestConfig.Free;
+{$IFNDEF FPC}
   if Assigned(SQLMonitor) then
     SQLMonitor.Free;
+{$ENDIF}
 end.
 
