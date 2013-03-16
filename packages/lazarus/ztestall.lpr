@@ -64,17 +64,23 @@ var
   tempTestSuite :TTestSuite;
 begin
   // Dirty Workaround to make sure all tests can be destroyed in the destructor
-  FullRegistryItems := TFPList.Create;
-  FullRegistryItems.Assign(GetTestRegistry.Tests);
-  tempTestSuite := CreateTestSuite;
-  GetTestRegistry.Tests.Assign(tempTestSuite.Tests);
+  If CommandLineSwitches.Suite then
+    begin
+      FullRegistryItems := TFPList.Create;
+      FullRegistryItems.Assign(GetTestRegistry.Tests);
+      tempTestSuite := CreateTestSuite;
+      GetTestRegistry.Tests.Assign(tempTestSuite.Tests);
+    end;
   inherited Create(TheOwner);
 end;
 
 destructor TMyGUITestRunner.Destroy;
 begin
-  GetTestRegistry.Tests.Assign(FullRegistryItems);
-  FullRegistryItems.Free;
+  If CommandLineSwitches.Suite then
+    begin
+      GetTestRegistry.Tests.Assign(FullRegistryItems);
+      FullRegistryItems.Free;
+    end;
   inherited Destroy;
 end;
 
