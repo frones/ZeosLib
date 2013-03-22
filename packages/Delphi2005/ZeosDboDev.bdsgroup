@@ -18,13 +18,9 @@
       <Projects Name="ZComponent100.bpl">ZComponent.bdsproj</Projects>
       <Projects Name="ZComponentDesign100.bpl">ZComponentDesign.bdsproj</Projects>
       <Projects Name="ZTestFramework.bpl">ZTestFramework.bdsproj</Projects>
-      <Projects Name="ZTestCoreAll.exe">ZTestCoreAll.bdsproj</Projects>
-      <Projects Name="ZTestParseSqlAll.exe">ZTestParseSqlAll.bdsproj</Projects>
-      <Projects Name="ZTestDbcAll.exe">ZTestDbcAll.bdsproj</Projects>
-      <Projects Name="ZTestComponentAll.exe">ZTestComponentAll.bdsproj</Projects>
-      <Projects Name="ZTestBugReport.exe">ZTestBugReport.bdsproj</Projects>
+      <Projects Name="ZTestAll.exe">ZTestAll.bdsproj</Projects>
       <Projects Name="ZTestPerformance.exe">ZTestPerformance.bdsproj</Projects>
-      <Projects Name="Targets">ZCore100.bpl ZPlain100.bpl ZParseSql100.bpl ZDbc100.bpl ZComponent100.bpl ZComponentDesign100.bpl ZTestFramework.bpl ZTestCoreAll.exe ZTestParseSqlAll.exe ZTestDbcAll.exe ZTestComponentAll.exe ZTestBugReport.exe ZTestPerformance.exe</Projects>
+      <Projects Name="Targets">ZCore100.bpl ZPlain100.bpl ZParseSql100.bpl ZDbc100.bpl ZComponent100.bpl ZComponentDesign100.bpl ZTestFramework.bpl ZTestAll.exe ZTestPerformance.exe</Projects>
     </Projects>
     <Dependencies/>
   </Default.Personality>
