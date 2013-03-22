@@ -102,7 +102,6 @@
   </target>
 
   <target name="delphi7_run" if="delphi7.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi7"/>
       <param name="compiler.dir" value="${delphi7.home}"/>
@@ -110,7 +109,6 @@
   </target>
 
   <target name="delphi9_run" if="delphi9.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi9"/>
       <param name="compiler.dir" value="${delphi9.home}"/>
@@ -118,7 +116,6 @@
   </target>
 
   <target name="delphi2005_run" if="delphi2005.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi2005"/>
       <param name="compiler.dir" value="${delphi2005.home}"/>
@@ -126,7 +123,6 @@
   </target>
 
   <target name="delphi2007_run" if="delphi2007.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi2007"/>
       <param name="compiler.dir" value="${delphi2007.home}"/>
@@ -134,7 +130,6 @@
   </target>
 
   <target name="delphi2009_run" if="delphi2009.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi2009"/>
       <param name="compiler.dir" value="${delphi2009.home}"/>
@@ -142,7 +137,6 @@
   </target>
 
   <target name="delphi2010_run" if="delphi2010.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphi2010"/>
       <param name="compiler.dir" value="${delphi2010.home}"/>
@@ -150,7 +144,6 @@
   </target>
 
   <target name="delphiXE_run" if="delphiXE.run">
-    <property name="runparams" value=""/>
     <antcall target="test_run_all">
       <param name="compiler" value="delphiXE"/>
       <param name="compiler.dir" value="${delphiXE.home}"/>
@@ -194,10 +187,7 @@
 
     <copy todir="${test.dir}">
       <fileset dir="${build.dir}">
-        <include name="ZTest*"/>
-        <exclude name="ZTest*.dcu"/>
-        <exclude name="ZTest*.ppu"/>
-        <exclude name="ZTest*.o"/>
+        <include name="ZTestAll.exe"/>
       </fileset>
     </copy>
 
@@ -217,37 +207,43 @@
 
   <target name="test_core_run" if="core.run">
     <antcall target="test_element_run" inheritAll="true">
-      <param name="test.exec" value="ZTestCoreAll"/>
+      <param name="test.exec" value="ZTestAll"/>
+      <param name="runparams" value="-s core -b -n -m ${log.file}.${compiler}.core"/>
     </antcall>
   </target>
 
   <target name="test_parsesql_run" if="parsesql.run">
     <antcall target="test_element_run" inheritAll="true">
-      <param name="test.exec" value="ZTestParseSqlAll"/>
+      <param name="test.exec" value="ZTestAll"/>
+      <param name="runparams" value="-s parsesql -b -n -m ${log.file}.${compiler}.parsesql"/>
     </antcall>
   </target>
 
   <target name="test_dbc_run" if="dbc.run">
     <antcall target="test_element_run" inheritAll="true">
-      <param name="test.exec" value="ZTestDbcAll"/>
+      <param name="test.exec" value="ZTestAll"/>
+      <param name="runparams" value="-s dbc -b -m ${log.file}.${compiler}.dbc"/>
     </antcall>
   </target>
 
   <target name="test_component_run" if="component.run">
     <antcall target="test_element_run" inheritAll="true">
-      <param name="test.exec" value="ZTestComponentAll"/>
+      <param name="test.exec" value="ZTestAll"/>
+      <param name="runparams" value="-s component -b -m ${log.file}.${compiler}.component"/>
     </antcall>
   </target>
 
   <target name="test_bugreport_run" if="bugreport.run">
     <antcall target="test_element_run" inheritAll="true">
-      <param name="test.exec" value="ZTestBugReport"/>
+      <param name="test.exec" value="ZTestAll"/>
+      <param name="runparams" value="-s bugreport -b -m ${log.file}.${compiler}.bugreport"/>
     </antcall>
   </target>
 
   <target name="test_performance_run" if="performance.run">
     <antcall target="test_element_run" inheritAll="true">
-      <param name="test.exec" value="ZTestPerformance"/>
+      <param name="test.exec" value="ZTestAll"/>
+      <param name="runparams" value="- performance -b -m ${log.file}.${compiler}.performance"/>
     </antcall>
   </target>
 
@@ -287,7 +283,7 @@
     <copy todir="${test.dir}">
       <fileset dir="${build.dir}">
         <include name="ztestall.exe*"/>
-        <include name="ztestall*"/>
+        <!--include name="ztestall*"/-->
       </fileset>
     </copy>
     <chmod dir="${test.dir}" perm="ugo+rx" includes="ztestall.exe"/>
@@ -340,7 +336,7 @@
     <exec dir="${test.dir}" executable="${test.dir}/ztestall.exe"
        output="${log.file}" append="true">
 	<env key="HEAPTRC" value="disabled"/>
-   <arg line="--batch -a -p --format=plain --suite=${test.suite}"/>
+   <arg line="--batch -a -p --format=plain --suite=${test.suite} --monitor=${log.file}.${test.suite}.log"/>
     </exec>
   </target>
 

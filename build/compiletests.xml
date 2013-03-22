@@ -191,23 +191,8 @@
       <param name="project.name" value="ZTestFramework.dpk"/>
     </antcall>
     <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestCoreAll.dpr"/>
+      <param name="project.name" value="ZTestAll.dpr"/>
     </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestParseSqlAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestDbcAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestComponentAll.dpr"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestBugReport.dpr"/>
-    </antcall>
-    <!--antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestPerformance.dpr"/>
-    </antcall-->
 
     <!--delete file="${build.dir}/GUITestRunner.dfm"/-->
     <echo/>
