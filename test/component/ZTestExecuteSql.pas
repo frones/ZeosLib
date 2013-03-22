@@ -106,8 +106,6 @@ end;
 }
 procedure TZTestExecSQLCase.TestParams;
 begin
-  if SkipTest then Exit;
-
   Query.SQL.Text := 'DELETE FROM department WHERE dep_id=:Id';
   CheckEquals(1, Query.Params.Count);
   CheckEquals('Id', Query.Params[0].Name);
@@ -142,8 +140,6 @@ end;
 }
 procedure TZTestExecSQLCase.TestKeepParams;
 begin
-  if SkipTest then Exit;
-
   Query.SQL.Text := 'DELETE FROM department WHERE dep_id=:Id';
   CheckEquals(1, Query.Params.Count);
   CheckEquals('Id', Query.Params[0].Name);

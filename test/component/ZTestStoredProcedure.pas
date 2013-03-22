@@ -212,8 +212,6 @@ end;
 }
 procedure TZTestInterbaseStoredProcedure.TestStoredProc;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'PROCEDURE1';
 
   CheckEquals(2, StoredProc.Params.Count);
@@ -235,8 +233,6 @@ var
   i, P2: integer;
   S: String;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
@@ -299,8 +295,6 @@ end;
 }
 procedure TZTestDbLibStoredProcedure.TestStoredProc;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'procedure1';
 
   CheckEquals(3, StoredProc.Params.Count);
@@ -333,8 +327,6 @@ procedure TZTestPostgreSQLStoredProcedure.Test_abtest;
 var
   i: integer;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := '"ABTEST"';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
@@ -374,8 +366,6 @@ end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_composite;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'proc_composite';
   CheckEquals(4, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
@@ -406,8 +396,6 @@ end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_mixedorder;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'proc_mixedorder';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
@@ -436,8 +424,6 @@ end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_nonames;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'proc_nonames';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('$1', StoredProc.Params[0].Name);
@@ -463,8 +449,6 @@ end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_noout;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'proc_noout';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
@@ -490,8 +474,6 @@ end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_onename;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'proc_onename';
   CheckEquals(3, StoredProc.Params.Count);
   CheckEquals('p1', StoredProc.Params[0].Name);
@@ -517,8 +499,6 @@ end;
 
 procedure TZTestPostgreSQLStoredProcedure.Test_set;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'proc_set';
   CheckEquals(1, StoredProc.Params.Count);
   CheckEquals('returnValue', StoredProc.Params[0].Name);
@@ -547,8 +527,6 @@ var
   i, P2: integer;
   S: String;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(5, StoredProc.Params.Count);
   CheckEquals('P1', StoredProc.Params[0].Name);
@@ -623,8 +601,6 @@ var
   SQLTime: TDateTime;
   TempBytes: TByteDynArray;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
 
@@ -887,8 +863,6 @@ end;
 
 procedure TZTestMySQLStoredProcedure.Test_FuncReturnInteger;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'FuncReturnInteger';
   CheckEquals(2, StoredProc.Params.Count);
 
@@ -919,8 +893,6 @@ end;
 
 procedure TZTestMySQLStoredProcedure.Test_ALL_PARAMS_IN;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'ALL_PARAMS_IN';
   CheckEquals(2, StoredProc.Params.Count);
 
@@ -942,8 +914,6 @@ end;
 
 procedure TZTestMySQLStoredProcedure.MultipleVaryingResultSets;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'MultipleVaryingResultSets';
   CheckEquals(3, StoredProc.Params.Count);
 
@@ -1111,8 +1081,6 @@ var
   i, P2: integer;
   S: String;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'ABTEST';
   CheckEquals(6, StoredProc.Params.Count);
   CheckEquals('@RETURN_VALUE', StoredProc.Params[0].Name);
@@ -1327,36 +1295,26 @@ end;
 
 procedure TZTestOracleStoredProcedure.Test_abtest;
 begin
-  if SkipTest then Exit;
-
   abtest();
 end;
 
 procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
 begin
-  if SkipTest then Exit;
-
   myfuncInOutReturn();
 end;
 
 procedure TZTestOracleStoredProcedure.Test_simple_func;
 begin
-  if SkipTest then Exit;
-
   simple_func();
 end;
 
 procedure TZTestOracleStoredProcedure.Test_simplefunc;
 begin
-  if SkipTest then Exit;
-
   simplefunc();
 end;
 
 procedure TZTestOracleStoredProcedure.Test_packaged;
 begin
-  if SkipTest then Exit;
-
   abtest('MYPACKAGE.');
   myfuncInOutReturn('MYPACKAGE.');
   simple_func('MYPACKAGE.');
@@ -1365,8 +1323,6 @@ end;
 
 procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
 begin
-  if SkipTest then Exit;
-
   StoredProc.StoredProcName := 'MYPACKAGE';
   CheckEquals(9, StoredProc.Params.Count);
 

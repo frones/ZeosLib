@@ -133,8 +133,6 @@ var
   Text: string;
   NewLine: string;
 begin
-  if SkipTest then Exit;
-
   CheckNotNull(FProcessor);
 //  FProcessor.DelimiterType = sdDefault;
 
@@ -165,8 +163,6 @@ var
   Text: string;
   NewLine: string;
 begin
-  if SkipTest then Exit;
-
   CheckNotNull(FProcessor);
   FProcessor.DelimiterType := dtEmptyLine;
 
@@ -197,8 +193,6 @@ var
   Text: string;
   NewLine: string;
 begin
-  if SkipTest then Exit;
-
   CheckNotNull(FProcessor);
   FProcessor.DelimiterType := dtGo;
 
@@ -231,8 +225,6 @@ var
   Comment: string;
   Text: string;
 begin
-  if SkipTest then Exit;
-
   CheckNotNull(FProcessor);
   FProcessor.DelimiterType := dtSetTerm;
 
@@ -266,8 +258,6 @@ procedure TZTestSQLProcessorCase.TestUncompleted;
 var
   SQLScript: string;
 begin
-  if SkipTest then Exit;
-
   SQLScript := 'SELECT * FROM people;' + #10 + 'SELECT * FROM cargo;';
   FProcessor.Script.Text := SQLScript;
   FProcessor.Parse;
@@ -293,8 +283,6 @@ var
   Text: string;
   NewLine: string;
 begin
-  if SkipTest then Exit;
-
   CheckNotNull(FProcessor);
 //  FProcessor.DelimiterType = sdDefault;
 
@@ -378,8 +366,6 @@ const
     '/* Grant privileges to columns                                  */'+LineEnding+
     '/*==============================================================*/');
 begin
-  if SkipTest then Exit;
-
   FProcessor.DelimiterType := dtSetTerm;
   Fprocessor.LoadFromFile('..\..\..\database\text\TestSQLProcessor3Stmts.sql');
   Fprocessor.Parse;

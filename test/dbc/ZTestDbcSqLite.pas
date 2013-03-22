@@ -102,8 +102,6 @@ end;
 }
 procedure TZTestDbcSQLiteCase.TestConnection;
 begin
-  if SkipTest then Exit;
-
   CheckEquals(True, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -134,8 +132,6 @@ procedure TZTestDbcSQLiteCase.TestStatement;
 var
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -157,8 +153,6 @@ var
   Metadata: IZDatabaseMetadata;
   TableTypes: TStringDynArray;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -206,8 +200,6 @@ var
   Statement: IZPreparedStatement;
   Stream: TStream;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.PrepareStatement(
     'INSERT INTO department(dep_id,dep_name,dep_shname,dep_address)'
     + ' VALUES(?,?,?,?)');
@@ -243,8 +235,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -277,8 +267,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -317,8 +305,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 

@@ -132,8 +132,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetTableTypes;
 begin
-  if SkipTest then Exit;
-
   Resultset := MD.GetTableTypes;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetTableTypes');
@@ -143,8 +141,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetCatalogs;
 begin
-  if SkipTest then Exit;
-
   Resultset := MD.GetCatalogs;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetCatalogs');
@@ -154,8 +150,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetSchemas;
 begin
-  if SkipTest then Exit;
-
   Resultset := MD.GetSchemas;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetSchemas');
@@ -169,8 +163,6 @@ const
 var
   I: Integer;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetTables(Catalog, Schema, '%', TableTypes);
   CheckNotNull(ResultSet);
   PrintResultSet(Resultset, False, 'GetTables');
@@ -216,8 +208,6 @@ procedure TZInterbaseTestDbcMetadata.TestMetadataGetColumns;
     CheckEquals(UpperCase(IsNullable), UpperCase(ResultSet.GetStringByName('IS_NULLABLE')));
   end;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetColumns(Catalog, Schema, 'PEOPLE', '');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, False);
@@ -236,8 +226,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetTablePrivileges;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetTablePrivileges(Catalog, Schema, 'PEOPLE');
   PrintResultSet(ResultSet, False);
   while ResultSet.Next do
@@ -255,8 +243,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetColumnPrivileges;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetColumnPrivileges(Catalog, Schema, 'people', '');
   PrintResultSet(ResultSet, False);
   while ResultSet.Next do
@@ -275,8 +261,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetBestRowIdentifier;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetBestRowIdentifier(Catalog, Schema, 'PEOPLE', 0, True);
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be 1 bestRow Identifier in the people table');
@@ -294,8 +278,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetVersionColumns;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetVersionColumns(Catalog, Schema, 'PEOPLE');
   PrintResultSet(ResultSet, False);
   CheckEquals(1, Resultset.FindColumn('SCOPE'));
@@ -311,8 +293,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetPrimaryKeys;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetPrimaryKeys(Catalog, Schema, 'PEOPLE');
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be primary key in the people table');
@@ -327,8 +307,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetImportedKeys;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetImportedKeys(Catalog, Schema, 'CARGO');
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be an imported key in the people table');
@@ -368,8 +346,6 @@ procedure TZInterbaseTestDbcMetadata.TestMetadataGetExportedKeys;
     CheckEquals(14, Resultset.FindColumn('DEFERRABILITY'));
   end;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetExportedKeys(Catalog, Schema, 'DEPARTMENT');
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
@@ -384,8 +360,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetCrossReference;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetCrossReference(Catalog, Schema, 'DEPARTMENT', Catalog, Schema, 'PEOPLE');
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be a cross reference between people and department table');
@@ -408,8 +382,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetIndexInfo;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetIndexInfo(Catalog, Schema, 'PEOPLE', False, False);
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be an index on the people table');
@@ -431,8 +403,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetProcedures;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetProcedures(Catalog, Schema, '%');
   PrintResultSet(ResultSet, False);
   CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
@@ -448,8 +418,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetProcedureColumns;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetProcedureColumns(Catalog, Schema, '%', '');
   PrintResultSet(ResultSet, False);
   CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
@@ -470,8 +438,6 @@ end;
 
 procedure TZInterbaseTestDbcMetadata.TestMetadataGetTypeInfo;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetTypeInfo;
   PrintResultSet(ResultSet, False);
   ResultSet.Close;

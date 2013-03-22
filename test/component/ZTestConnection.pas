@@ -97,8 +97,6 @@ procedure TZTestConnectionCase.TestExecuteDirect;
 var
   l_bool : boolean;
 begin
-  if SkipTest then Exit;
-
   l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (89,''Dept89'')');
   CheckEquals(true, l_bool);
   l_bool := Connection.ExecuteDirect('delete from department where dep_id = 89');
@@ -113,8 +111,6 @@ var
   l_int  : integer;
   l_bool : boolean;
 begin
-  if SkipTest then Exit;
-
   l_bool := Connection.ExecuteDirect('insert into department (dep_id,dep_name) Values (87,''Dept87'')',l_int);
   CheckEquals(true, l_bool);
   CheckEquals(1, l_int);
@@ -133,8 +129,6 @@ procedure TZTestConnectionCase.TestLoginPromptConnection;
 var
     locUserName,locPassword : string;
 begin
-  if SkipTest then Exit;
-
   locUserName := Connection.User;
   locPassword := Connection.Password;
   Connection.Disconnect;
@@ -157,8 +151,6 @@ end;
 
 procedure TZTestConnectionCase.TestLibrary;
 begin
-  if SkipTest then Exit;
-
   if not ( Connection.Protocol = 'ado' ) then
   begin
     Connection.Disconnect;
@@ -188,8 +180,6 @@ end;
 
 procedure TZTestConnectionCase.TestIdentifierQuotes;
 begin
-  if SkipTest then Exit;
-
   try
     Connection.Connect;
     Check(Connection.DbcConnection.GetMetadata.GetDatabaseInfo.GetIdentifierQuoteString <> '');

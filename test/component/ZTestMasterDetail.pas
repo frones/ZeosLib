@@ -147,8 +147,6 @@ end;
 }
 procedure TZTestMasterDetailCase.TestDataSource;
 begin
-  if SkipTest then Exit;
-
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
   MasterQuery.Open;
 
@@ -172,8 +170,6 @@ end;
 }
 procedure TZTestMasterDetailCase.TestMasterFields;
 begin
-  if SkipTest then Exit;
-
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';
   MasterQuery.Open;
 
@@ -203,8 +199,6 @@ var
   SQLMonitor: TZSQLMonitor;
   CommitCount, I: Integer;
 begin
-  if SkipTest then Exit;
-
   SQLMonitor := TZSQLMonitor.Create(nil);
   SQLMonitor.Active := True;
   MasterQuery.SQL.Text := 'SELECT * FROM default_values ORDER BY d_id';
@@ -394,8 +388,6 @@ var
   SQLMonitor: TZSQLMonitor;
   //CommitCount, I: Integer;
 begin
-  if SkipTest then Exit;
-
   SQLMonitor := TZSQLMonitor.Create(nil);
   SQLMonitor.Active := True;
   MasterQuery.SQL.Text := 'SELECT * FROM department ORDER BY dep_id';

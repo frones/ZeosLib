@@ -84,7 +84,6 @@ type
   private
     FDecimalSeparator: Char;
     FSuppressTestOutput: Boolean;
-    FSkipTest: Boolean;
     FSkipClosed: Boolean;
     FSkipNonZeos: Boolean;
   protected
@@ -114,7 +113,6 @@ type
     procedure LoadConfiguration; virtual;
 
     { Configuration properties accessing methods. }
-    function GetSkipTest: Boolean; virtual;
     function ReadProperty(const Group, Key, Default: string): string;
     function ReadGroupProperty(const Key, Default: string): string;
     {$IFDEF WITH_CLASS_VARS}class{$ENDIF} function ReadInheritProperty(const Key, Default: string): string;
@@ -147,7 +145,6 @@ type
     procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
     class function Suite : CTZAbstractTestCase;
     {$ENDIF}
-    property SkipTest: Boolean read GetSkipTest;
   end;
 
   {** Implements a generic test case. }
@@ -302,12 +299,6 @@ begin
   inherited Destroy;
 end;
 
-function TZAbstractTestCase.GetSkipTest: Boolean;
-begin
-  Check(True);
-  Result := FSkipTest;
-end;
-
 {**
   Loads a configuration from the configuration file.
 }
@@ -325,7 +316,6 @@ begin
 
   { Defines a 'suppress test output' setting. }
   FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
-  FSkipTest := StrToBoolEx(ReadInheritProperty(SKIP_TEST_KEY, FALSE_VALUE));
   FSkipClosed := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
   FSkipNonZeos := StrToBoolEx(ReadInheritProperty(SKIP_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
 end;

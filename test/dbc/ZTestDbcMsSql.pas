@@ -131,8 +131,6 @@ var
   Statement: IZPreparedStatement;
   Stream: TStream;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.PrepareStatement(
     'INSERT INTO department(dep_id,dep_name,dep_shname,dep_address)'
     + ' VALUES(?,?,?,?)');
@@ -166,8 +164,6 @@ procedure TZTestDbcMsSQLCase.TestStatement;
 var
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -186,8 +182,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -210,8 +204,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
@@ -234,8 +226,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -273,8 +263,6 @@ var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
 begin
-  if SkipTest then Exit;
-
   CallableStatement := Connection.PrepareCallWithParams(
     'procedure1', nil);
   with CallableStatement do

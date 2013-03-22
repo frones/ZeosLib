@@ -104,8 +104,6 @@ procedure TZTestSQLStringsCase.TestParams;
 var
   SQLScript: string;
 begin
-  if SkipTest then Exit;
-
   SQLScript := 'INSERT INTO department VALUES (:ID, :NAME, :NEW_ADDRESS);'
     + #10 + 'UPDATE department SET dep_name=:NEW_NAME, dep_address=:NEW_ADDRESS'
     + ' WHERE id_dep=:Id AND dep_name=:Name;';
@@ -141,8 +139,6 @@ procedure TZTestSQLStringsCase.TestParamChar;
 var
   SQLScript: string;
 begin
-  if SkipTest then Exit;
-
   SQLScript := 'INSERT INTO department VALUES (:ID, :NAME, :NEW_ADDRESS);'
     + #10 + 'UPDATE department SET dep_name=:NEW_NAME, dep_address=:NEW_ADDRESS'
     + ' WHERE id_dep=:Id AND dep_name=:Name;';
@@ -178,8 +174,6 @@ procedure TZTestSQLStringsCase.TestStatements;
 var
   SQLScript: string;
 begin
-  if SkipTest then Exit;
-
   SQLScript := 'INSERT INTO department VALUES (:ID, :NAME, :NEW_ADDRESS);'
     + #10 + 'UPDATE department SET dep_name=:NEW_NAME, dep_address=:NEW_ADDRESS'
     + ' WHERE id_dep=:Id AND dep_name=:Name;';
@@ -209,8 +203,6 @@ procedure TZTestSQLStringsCase.TestUncompleted;
 var
   SQLScript: string;
 begin
-  if SkipTest then Exit;
-
   SQLScript := 'SELECT * FROM people;' + #10 + 'SELECT * FROM cargo;';
   SQLStrings.Text := SQLScript;
 

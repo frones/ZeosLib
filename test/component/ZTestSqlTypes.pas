@@ -106,8 +106,6 @@ procedure TZTestSQLTypesCase.TestDateTypes;
 var
   NowDate: TDateTime;
 begin
-  if SkipTest then Exit;
-
   NowDate := Now();
 
   Query.SQL.Text := 'DELETE FROM date_values WHERE d_id=:Id';
