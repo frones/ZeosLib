@@ -39,21 +39,23 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
-
 // Compilation directives for Lazarus
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
+{$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
   {$MODE DELPHI}
+
   {$INTERFACES COM}
   {$IFDEF FPC_FULLVERSION}  // FPC_FULLVERSION was added in FPC 2.2.4
     {$IF FPC_FULLVERSION<=20204}
       {$DEFINE OLDFPC}
     {$IFEND}
 
-    {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
-
 //    {$IF FPC_FULLVERSION>=20400}  // 2.4.0 status is unknown. 2.4.2+ should be generally fine.
 //      {$DEFINE FPC2_4UP}
 //    {$IFEND}
+
+    {$DEFINE WITH_FTWIDESTRING}  // Supported from somewhere between 2.2 and 2.4
+
     {$IF FPC_FULLVERSION>=20500}  // Upgrade to 2.6.x asap.
       {$DEFINE FPC2_5UP} // Used in code
       {$DEFINE WITH_NEWTOBJECT}
@@ -66,7 +68,7 @@
        {$DEFINE WITH_ASVARIANT}
        {$DEFINE WITH_FORMATSETTINGS}
        {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
-      {$DEFINE FPC2_6UP}
+       {$DEFINE FPC2_6UP}
     {$IFEND}
 
     {$IFDEF LCL}
