@@ -199,11 +199,11 @@ begin
     try
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
-//      if not(StatementType in [stSelect, stSelectForUpdate]) then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
 
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
           SSQL, StmtHandle, SQLData);
+
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
 
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, SQLData.GetData);
@@ -230,8 +230,6 @@ begin
           raise EZSQLException.Create(SCanNotRetrieveResultSetData);
         end;
       end;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
     except
       on E: Exception do
       begin
@@ -269,8 +267,7 @@ begin
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, SSQL, StmtHandle);
 
-//      if StatementType in [stExecProc, stSelect, stSelectForUpdate] then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
 
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, nil, nil);
@@ -289,7 +286,6 @@ begin
       if Connection.GetAutoCommit then
         Connection.Commit;
       { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
     finally
       FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
     end;
@@ -349,6 +345,7 @@ begin
           StmtHandle, SQLData);
       end;
 
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
       { Execute prepared statement }
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
               @StmtHandle, GetDialect, nil);
@@ -388,8 +385,6 @@ begin
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
     except
       on E: Exception do
       begin
@@ -794,6 +789,7 @@ begin
   begin
     ProcSql := GetProcedureSql(False);
     BindInParameters;
+    DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
     try
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
             GetDialect, FParamSQLData.GetData, Self.FResultSQLData.GetData);
@@ -827,8 +823,7 @@ begin
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SQL);
+
     except
       on E: Exception do
       begin
@@ -857,6 +852,8 @@ begin
     ProcSql := GetProcedureSql(True); //Prepares the Statement
     BindInParameters;
     try
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, ProcSql);
+
       if (FStatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
           GetDialect, FParamSQLData.GetData)
@@ -882,8 +879,7 @@ begin
           TZInterbase6ResultSet.Create(Self, ProcSql, FStmtHandle, Cursor,
           FResultSQLData, nil, FCachedBlob));
       end;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, ProcSql);
+
     except
       on E: Exception do
       begin
@@ -912,6 +908,9 @@ begin
     try
       ProcSQL := Self.GetProcedureSql(False);
       BindInParameters;
+
+      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, ProcSQL);
+
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
         GetDialect, FParamSQLData.GetData, FResultSQLData.GetData);
       CheckInterbase6Error(ProcSql);
@@ -923,8 +922,7 @@ begin
       { Autocommit statement. }
       if Connection.GetAutoCommit then
         Connection.Commit;
-      { Logging SQL Command }
-      DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, ProcSQL);
+
     finally
       //FreeStatement(GetPlainDriver, FStmtHandle, DSQL_unprepare); //AVZ -- unprepare the statement - not close it
 
