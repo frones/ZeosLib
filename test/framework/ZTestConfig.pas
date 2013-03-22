@@ -192,14 +192,17 @@ type
 
 type
   TCommandLineSwitches = record
-    help:          boolean;
-    list:          boolean;
-    verbose:       boolean;
-    runall:        boolean;
-    batch:         boolean;
-    norebuild:     boolean;
-    suite:         boolean;
-    suiteitems:    TStringDynArray;
+    help:            boolean;
+    list:            boolean;
+    verbose:         boolean;
+    runall:          boolean;
+    batch:           boolean;
+    norebuild:       boolean;
+    suite:           boolean;
+    suiteitems:      TStringDynArray;
+    sqlmonitor:      boolean;
+    sqlmonitorfile:  String;
+
   end;
 var
   CommandLineSwitches: TCommandLineSwitches;
@@ -225,10 +228,15 @@ var
   {$ELSE}
   function CreateTestSuite:ITestSuite;
   {$ENDIF}
+procedure EnableZSQLMonitor;
 
 implementation
 
-uses ZSysUtils{$IFDEF FPC} ,Forms, testregistry{$ENDIF};
+uses ZSysUtils, Forms{$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor;
+
+var
+  SQLMonitor : TZSQLMonitor;
+
 
 {**
   Splits string using the delimiter string.
@@ -431,6 +439,9 @@ begin
   CommandLineSwitches.suite := Application.HasOption('suite');
   If CommandLineSwitches.suite then
     CommandLineSwitches.suiteitems := SplitStringToArray(Application.GetOptionValue('suite'),LIST_DELIMITERS);
+  CommandLineSwitches.sqlmonitor := Application.HasOption('m','monitor');
+  If CommandLineSwitches.sqlmonitor then
+    CommandLineSwitches.sqlmonitorfile := Application.GetOptionValue('m', 'monitor');
   {$ELSE}
   CommandLineSwitches.help := (FindCmdLineSwitch('H',true) or FindCmdLineSwitch('Help',true));
   CommandLineSwitches.list := (FindCmdLineSwitch('L',true) or FindCmdLineSwitch('List',true));
@@ -441,6 +452,9 @@ begin
   CommandLineSwitches.suite := (FindCmdLineSwitch('S',true) or FindCmdLineSwitch('Suite',true));
   If CommandLineSwitches.suite then
     CommandLineSwitches.suiteitems := SplitStringToArray(GetCommandLineSwitchValue('S' ,'Suite'),LIST_DELIMITERS);
+  CommandLineSwitches.sqlmonitor := (FindCmdLineSwitch('M',true) or FindCmdLineSwitch('Monitor',true));
+  If CommandLineSwitches.sqlmonitor then
+    CommandLineSwitches.sqlmonitorfile := GetCommandLineSwitchValue('M' ,'Monitor');
   {$ENDIF}
 end;
 
@@ -548,7 +562,17 @@ begin
 end;
 {$ENDIF}
 
+procedure EnableZSQLMonitor;
+begin
+  SQLMonitor := TZSQLMonitor.Create(Application);
+  SQLMonitor.FileName := CommandLineSwitches.sqlmonitorfile;
+  SQLMonitor.Active := True;
+  SQLMonitor.AutoSave := True;
+end;
+
 initialization
+  SQLMonitor := nil;
+
   GetCommandLineSwitches;
 
   TestGroup := COMMON_GROUP;
@@ -559,5 +583,9 @@ initialization
 finalization
   if Assigned(TestConfig) then
     TestConfig.Free;
+{$IFNDEF FPC}
+  if Assigned(SQLMonitor) then
+    SQLMonitor.Free;
+{$ENDIF}
 end.
 

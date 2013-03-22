@@ -340,7 +340,7 @@
     <exec dir="${test.dir}" executable="${test.dir}/ztestall.exe"
        output="${log.file}" append="true">
 	<env key="HEAPTRC" value="disabled"/>
-   <arg line="--batch -a -p --format=plain --suite=${test.suite}"/>
+   <arg line="--batch -a -p --format=plain --suite=${test.suite} --monitor=${log.file}.${test.suite}.log"/>
     </exec>
   </target>
 
