@@ -205,10 +205,7 @@ type
   {** Implements Interbase6 Database Metadata. }
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    function StripEscape(const Pattern: string): string;
-    function HasNoWildcards(const Pattern: string): boolean;
     function GetPrivilege(Privilege: string): string;
-    function ConstructNameCondition(Pattern: string; Column: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
 
@@ -1893,8 +1890,7 @@ begin
     Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
     LTable := ConstructNameCondition(AddEscapeCharToWildcards(Table), 'a.RDB$RELATION_NAME');// Modified by cipto 6/12/2007 2:26:18 PM
-    LColumnNamePattern := ConstructNameCondition(ColumnNamePattern,
-      'a.RDB$FIELD_NAME');
+    LColumnNamePattern := ConstructNameCondition(ColumnNamePattern, 'a.RDB$FIELD_NAME');
 
     SQL := 'SELECT a.RDB$USER, a.RDB$GRANTOR, a.RDB$PRIVILEGE,'
       + ' a.RDB$GRANT_OPTION, a.RDB$RELATION_NAME, a.RDB$FIELD_NAME '
@@ -1924,9 +1920,11 @@ begin
           Grantable := 'NO';
         if FieldName = '' then
         begin
-          SQL := 'SELECT RDB$FIELD_NAME FROM RDB$RELATION_FIELDS '
-            + ' WHERE RDB$RELATION_NAME = ''' + TableName + ''' AND '
-            + ' RDB$FIELD_NAME = ''' + LColumnNamePattern + ''' AND ';
+          LTable := ConstructNameCondition(TableName, 'a.RDB$RELATION_NAME');
+          SQL := 'SELECT RDB$FIELD_NAME FROM RDB$RELATION_FIELDS A'
+            + ' WHERE ' + LTable;
+          If LColumnNamePattern <> '' then
+            SQL := SQL + ' AND ' + LColumnNamePattern;
           with GetConnection.CreateStatement.ExecuteQuery(SQL) do
           begin
             while Next do
@@ -2821,105 +2819,6 @@ begin
     Result := 'REFERENCE'
   else
     Result := '';
-end;
-
-{**
-   Takes a name patternand column name and retuen an appropriate SQL clause
-    @param Pattern a sql pattren
-    @parma Column a sql column name
-    @return processed string for query
-}
-function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern, Column: string): string;
-const
-  Spaces = '';
-var
-  WorkPattern: string;
-begin
-  if (Length(Pattern) > 2 * 31) then
-    raise EZSQLException.Create(SPattern2Long);
-
-  if (Pattern = '%') or (Pattern = '') then
-     Exit;
-  WorkPattern := Pattern;
-  if Not GetIdentifierConvertor.IsQuoted(WorkPattern) then
-    WorkPattern := UpperCase(WorkPattern);
-  if HasNoWildcards(WorkPattern) then
-  begin
-    WorkPattern := StripEscape(WorkPattern);
-    Result := Format('%s = ''%s''', [Column, WorkPattern]);
-  end
-  else
-  begin
-    Result := Format('%s || ''%s'' like ''%s%s%%''',
-      [Column, Spaces, WorkPattern, Spaces]);
-  end;
-end;
-
-{**
-   Check what pattern do not contain wildcards
-   @param Pattern a sql pattern
-   @return if pattern contain wildcards return true otherwise false
-}
-function TZInterbase6DatabaseMetadata.HasNoWildcards(
-  const Pattern: string): Boolean;
-var
-  I: Integer;
-  PreviousCharWasEscape: Boolean;
-  EscapeChar,PreviousChar: Char;
-  WildcardsSet: TZWildcardsSet;
-begin
-  Result := False;
-  PreviousChar := #0;
-  PreviousCharWasEscape := False;
-  EscapeChar := Char(GetDatabaseInfo.GetSearchStringEscape[1]);
-  WildcardsSet := GetWildcardsSet;
-  for I := 1 to Length(Pattern) do
-  begin
-    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
-     Exit;
-
-    PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
-    if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
-      PreviousChar := #0
-    else
-      PreviousChar := Pattern[I];
-  end;
-  Result := True;
-end;
-
-{**
-   Remove escapes from pattren string
-   @param Pattern a sql pattern
-   @return string without escapes
-}
-function TZInterbase6DatabaseMetadata.StripEscape(
-  const Pattern: string): string;
-var
-  I: Integer;
-  PreviousChar: Char;
-  EscapeChar: string;
-begin
-  PreviousChar := #0;
-  Result := '';
-  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
-  for I := 1 to Length(Pattern) do
-  begin
-    if (Pattern[i] <> EscapeChar) then
-    begin
-      Result := Result + Pattern[I];
-      PreviousChar := Pattern[I];
-    end
-    else
-    begin
-      if (PreviousChar = EscapeChar) then
-      begin
-        Result := Result + Pattern[I];
-        PreviousChar := #0;
-      end
-      else
-        PreviousChar := Pattern[i];
-    end;
-  end;
 end;
 
 {**

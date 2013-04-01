@@ -1186,7 +1186,7 @@ function TZOracleDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
 var
-  PartSQL, SQL: string;
+  NameCondition, OwnerCondition, PartSQL, SQL: string;
 
   function IncludedType(const TypeName: string): Boolean;
   var I: Integer;
@@ -1197,23 +1197,39 @@ var
     Result := Result or (Length(Types) = 0);
   end;
 
+  function CreateWhere: String;
+  begin
+    Result := '';
+    If OwnerCondition <> '' then
+      Result := OwnerCondition;
+    If NameCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + NameCondition
+      Else
+        Result := NameCondition;
+    If Result <> '' then
+      Result := ' Where ' + Result;
+  end;
+
 begin
+  OwnerCondition := ConstructNameCondition(SchemaPattern,'OWNER');
+
   if IncludedType('TABLE') then
   begin
+    NameCondition := ConstructNameCondition(TableNamePattern,'TABLE_NAME');
     SQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM, TABLE_NAME,'
       + ' ''TABLE'' AS TABLE_TYPE, NULL AS REMARKS FROM SYS.ALL_TABLES'
-      + ' WHERE OWNER LIKE ''' + ToLikeString(Uppercase(SchemaPattern)) + ''' AND TABLE_NAME LIKE '''
-      + ToLikeString(Uppercase(TableNamePattern)) + '''';
+      + CreateWhere;
   end else
     SQL := '';
 
   if IncludedType('SYNONYM') then
   begin
+    NameCondition := ConstructNameCondition(TableNamePattern,'SYNONYM_NAME');
     PartSQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM,'
       + ' SYNONYM_NAME AS TABLE_NAME, ''SYNONYM'' AS TABLE_TYPE,'
-      + ' NULL AS REMARKS FROM SYS.ALL_SYNONYMS WHERE OWNER LIKE '''
-      + ToLikeString(SchemaPattern) + ''' AND SYNONYM_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
-
+      + ' NULL AS REMARKS FROM SYS.ALL_SYNONYMS'
+      + CreateWhere;
     if SQL <> '' then
       SQL := SQL + ' UNION ';
     SQL := SQL + PartSQL;
@@ -1221,11 +1237,11 @@ begin
 
   if IncludedType('VIEW') then
   begin
+    NameCondition := ConstructNameCondition(TableNamePattern,'VIEW_NAME');
     PartSQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM,'
       + ' VIEW_NAME AS TABLE_NAME, ''VIEW'' AS TABLE_TYPE,'
-      + ' NULL AS REMARKS FROM SYS.ALL_VIEWS WHERE OWNER LIKE '''
-      + ToLikeString(SchemaPattern) + ''' AND VIEW_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
-
+      + ' NULL AS REMARKS FROM SYS.ALL_VIEWS'
+      + CreateWhere;
     if SQL <> '' then
       SQL := SQL + ' UNION ';
     SQL := SQL + PartSQL;
@@ -1233,11 +1249,12 @@ begin
 
   if IncludedType('SEQUENCE') then
   begin
+    OwnerCondition := ConstructNameCondition(SchemaPattern,'SEQUENCE_OWNER');
+    NameCondition := ConstructNameCondition(TableNamePattern,'SEQUENCE_NAME');
     PartSQL := 'SELECT NULL AS TABLE_CAT, SEQUENCE_OWNER AS TABLE_SCHEM,'
       + ' SEQUENCE_NAME AS TABLE_NAME, ''SEQUENCE'' AS TABLE_TYPE,'
-      + ' NULL AS REMARKS FROM SYS.ALL_SEQUENCES WHERE SEQUENCE_OWNER LIKE '''
-      + ToLikeString(SchemaPattern) + ''' AND SEQUENCE_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
-
+      + ' NULL AS REMARKS FROM SYS.ALL_SEQUENCES'
+      + CreateWhere;
     if SQL <> '' then
       SQL := SQL + ' UNION ';
     SQL := SQL + PartSQL;
@@ -1356,6 +1373,11 @@ var
       ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
       ' OR package_name like '''+ ToLikeString(ProcName)+''' )'+
         'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
+{ TODO : rewrite similar to following code:
+     Result := 'select * from user_arguments where ('+ConstructNameCondition(PackageName,'package_name') +
+      ' AND'+ ConstructNameCondition(ProcName,'object_name') +
+      ' OR '+ ConstructNameCondition(ProcName,'package_name')+')'+
+        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';}
   end;
 
   procedure AddColumns(WasNext: Boolean; WasFunc: Boolean);
@@ -1380,10 +1402,14 @@ var
   procedure GetMoreProcedures;
   var
     i: Integer;
+    PackageNameCondition: String;
   begin
+    PackageNameCondition := ConstructNameCondition(ProcedureNamePattern,'package_name');
+    If PackageNameCondition <> '' then
+      PackageNameCondition := ' WHERE ' + PackageNameCondition;
     TempSet.Close;
-    TempSet := IZStmt.ExecuteQuery('select object_name from user_arguments where package_name = '+
-      #39+ProcedureNamePattern+#39+' GROUP BY object_name order by object_name');
+    TempSet := IZStmt.ExecuteQuery('select object_name from user_arguments '
+               + PackageNameCondition + ' GROUP BY object_name order by object_name');
     while TempSet.Next do
       Procs.Add(TempSet.GetString(1));
     TempSet.Close;
@@ -1394,6 +1420,7 @@ var
       AddColumns(False, False);
     end;
   end;
+
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
@@ -1452,7 +1479,7 @@ function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   begin
       Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
-  LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
+  LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,objet_name||''.''||procedure_name)');
   SQL := 'select Object_Name, procedure_name from user_procedures';
 
   if LProcedureNamePattern <> '' then
@@ -1595,16 +1622,38 @@ function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQL: string;
   SQLType: TZSQLType;
+  OwnerCondition,TableCondition,ColumnCondition: String;
+
+  function CreateWhere: String;
+  begin
+    Result := '';
+    If OwnerCondition <> '' then
+      Result := OwnerCondition;
+    If TableCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + TableCondition
+      Else
+        Result := TableCondition;
+    If ColumnCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + ColumnCondition
+      Else
+        Result := ColumnCondition;
+    If Result <> '' then
+      Result := ' Where ' + Result;
+  end;
+
 begin
+  OwnerCondition := ConstructNameCondition(SchemaPattern,'OWNER');
+  TableCondition := ConstructNameCondition(TableNamePattern,'TABLE_NAME');
+  ColumnCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
   SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
     + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
     + ' DATA_DEFAULT, NULL, NULL, NULL, COLUMN_ID, NULLABLE'
     + ' FROM SYS.ALL_TAB_COLUMNS'
-    + ' WHERE OWNER LIKE ''' + ToLikeString(SchemaPattern) + ''' AND TABLE_NAME LIKE '''
-    + ToLikeString(TableNamePattern) + ''' AND COLUMN_NAME LIKE '''
-    + ToLikeString(ColumnNamePattern) + '''';
+    + CreateWhere;
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
@@ -1688,19 +1737,39 @@ function TZOracleDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: str
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   SQL: string;
-begin
-    SQL := 'SELECT NULL AS TABLE_CAT, TABLE_SCHEMA AS TABLE_SCHEM, TABLE_NAME,'
-      + ' COLUMN_NAME, GRANTOR, GRANTEE, PRIVILEGE, GRANTABLE AS IS_GRANTABLE'
-      + ' FROM SYS.ALL_COL_PRIVS WHERE';
-    if Schema <> '' then
-      SQL := SQL + ' TABLE_SCHEMA=''' + Schema + ''' AND';
-    if Table <> '' then
-      SQL := SQL + ' TABLE_NAME=''' + Table + ''' AND';
-    SQL := SQL + ' COLUMN_NAME LIKE ''' + ToLikeString(ColumnNamePattern) + '''';
+  OwnerCondition,TableCondition,ColumnCondition: String;
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(TableColPrivColumnsDynArray));
+  function CreateWhere: String;
+  begin
+    Result := '';
+    If OwnerCondition <> '' then
+      Result := OwnerCondition;
+    If TableCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + TableCondition
+      Else
+        Result := TableCondition;
+    If ColumnCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + ColumnCondition
+      Else
+        Result := ColumnCondition;
+    If Result <> '' then
+      Result := ' Where ' + Result;
+  end;
+
+begin
+  OwnerCondition := ConstructNameCondition(Schema,'TABLE_SCHEMA');
+  TableCondition := ConstructNameCondition(Table,'TABLE_NAME');
+  ColumnCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
+  SQL := 'SELECT NULL AS TABLE_CAT, TABLE_SCHEMA AS TABLE_SCHEM, TABLE_NAME,'
+    + ' COLUMN_NAME, GRANTOR, GRANTEE, PRIVILEGE, GRANTABLE AS IS_GRANTABLE'
+    + ' FROM SYS.ALL_COL_PRIVS'
+    + CreateWhere;
+
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(TableColPrivColumnsDynArray));
 end;
 
 {**
@@ -1739,15 +1808,33 @@ function TZOracleDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: stri
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   SQL: string;
-begin
-    SQL := 'SELECT NULL AS TABLE_CAT, TABLE_SCHEMA AS TABLE_SCHEM, TABLE_NAME,'
-      + ' GRANTOR, GRANTEE, PRIVILEGE, GRANTABLE AS IS_GRANTABLE'
-      + ' FROM SYS.ALL_TAB_PRIVS WHERE TABLE_SCHEMA LIKE ''' + ToLikeString(SchemaPattern)
-      + ''' AND TABLE_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
+  OwnerCondition,TableCondition: String;
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(TablePrivColumnsDynArray));
+  function CreateWhere: String;
+  begin
+    Result := '';
+    If OwnerCondition <> '' then
+      Result := OwnerCondition;
+    If TableCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + TableCondition
+      Else
+        Result := TableCondition;
+    If Result <> '' then
+      Result := ' Where ' + Result;
+  end;
+
+begin
+  OwnerCondition := ConstructNameCondition(SchemaPattern,'TABLE_SCHEMA');
+  TableCondition := ConstructNameCondition(TableNamePattern,'TABLE_NAME');
+  SQL := 'SELECT NULL AS TABLE_CAT, TABLE_SCHEMA AS TABLE_SCHEM, TABLE_NAME,'
+    + ' GRANTOR, GRANTEE, PRIVILEGE, GRANTABLE AS IS_GRANTABLE'
+    + ' FROM SYS.ALL_TAB_PRIVS '
+    + CreateWhere;
+
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(TablePrivColumnsDynArray));
 end;
 
 {**
@@ -1776,20 +1863,34 @@ function TZOracleDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   SQL: string;
+  OwnerCondition,TableCondition: String;
+
+  function CreateExtraWhere: String;
+  begin
+    Result := '';
+    If OwnerCondition <> '' then
+      Result := OwnerCondition;
+    If TableCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + TableCondition
+      Else
+        Result := TableCondition;
+    If Result <> '' then
+      Result := ' AND ' + Result;
+  end;
+
 begin
+  OwnerCondition := ConstructNameCondition(Schema,'A.OWNER');
+  TableCondition := ConstructNameCondition(Table,'A.TABLE_NAME');
   SQL := 'SELECT NULL AS TABLE_CAT, A.OWNER AS TABLE_SCHEM, A.TABLE_NAME,'
     + ' B.COLUMN_NAME, B.COLUMN_POSITION AS KEY_SEQ, A.INDEX_NAME AS PK_NAME'
     + ' FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
     + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
     + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME'
     + ' AND A.UNIQUENESS=''UNIQUE'' AND A.GENERATED=''Y'''
-    + ' AND A.INDEX_NAME LIKE ''SYS_%''';
-  if Schema <> '' then
-    SQL := SQL + ' AND A.OWNER=''' + Schema + '''';
-  if Table <> '' then
-      SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
-     //SQL := SQL + ' AND A.OWNER_NAME=''' + Table + '''';
-  SQL := SQL + ' ORDER BY A.INDEX_NAME, B.COLUMN_POSITION';
+    + ' AND A.INDEX_NAME LIKE ''SYS_%'''
+    + CreateExtraWhere
+    + ' ORDER BY A.INDEX_NAME, B.COLUMN_POSITION';
 
   Result := CopyToVirtualResultSet(
     GetConnection.CreateStatement.ExecuteQuery(SQL),
@@ -1852,18 +1953,33 @@ function TZOracleDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   Approximate: Boolean): IZResultSet;
 var
   SQL: string;
+  OwnerCondition,TableCondition: String;
+
+  function CreateExtraWhere: String;
+  begin
+    Result := '';
+    If OwnerCondition <> '' then
+      Result := OwnerCondition;
+    If TableCondition <> '' then
+      If Result <> '' then
+        Result := Result + ' AND ' + TableCondition
+      Else
+        Result := TableCondition;
+    If Result <> '' then
+      Result := ' AND ' + Result;
+  end;
+
 begin
+  OwnerCondition := ConstructNameCondition(Schema,'A.TABLE_OWNER');
+  TableCondition := ConstructNameCondition(Table,'A.TABLE_NAME');
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
   SQL := 'SELECT NULL, A.OWNER, A.TABLE_NAME, A.UNIQUENESS, NULL,'
     + ' A.INDEX_NAME, 3, B.COLUMN_POSITION, B.COLUMN_NAME, B.DESCEND,'
     + ' 0, 0, NULL FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
     + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
-    + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME';
-  if Schema <> '' then
-    SQL := SQL + ' AND A.TABLE_OWNER=''' + Schema + '''';
-  if Table <> '' then
-    SQL := SQL + ' AND A.TABLE_NAME=''' + Table + '''';
+    + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME'
+    + CreateExtraWhere;
   if Unique then
     SQL := SQL + ' AND A.UNIQUENESS=''UNIQUE''';
   SQL := SQL + ' ORDER BY A.UNIQUENESS DESC, A.INDEX_NAME, B.COLUMN_POSITION';
