@@ -75,6 +75,7 @@ const
   pl_interbase_client_server = 'interbase-6,firebird-1.0,firebird-1.5,firebird-2.0,firebird-2.1,firebird-2.5';
   pl_interbase_embedded = 'firebirdd-1.5,firebirdd-2.0,firebirdd-2.1,firebirdd-2.5';
   pl_all_interbase = pl_interbase_client_server + ',' + pl_interbase_embedded;
+  pl_all_oracle = 'oracle,oracle-9i';
 
   // Protocols needing prefererealprepared option for real prepared statements
   pl_realpreparable = pl_all_mysql+','+pl_all_postgresql+','+pl_all_sqlite;
@@ -283,6 +284,8 @@ type
     the test group is taken from TestGroup global variable.
 }
 procedure RebuildTestDatabases(TestGroup: string = '');
+
+Function ProtocolInProtocols(protocol : string; protocols : string) : boolean;
 
 implementation
 
