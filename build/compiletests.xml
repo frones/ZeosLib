@@ -183,9 +183,6 @@
 
     <property name="package.dir" value="${packages.dir}/${compiler}"/>
     <property name="build.dir" value="${package.dir}/build"/>
-    <!--property name="bpl.dir" value="${compiler.dir}/Projects/Bpl"/-->
-
-    <!--copyfile src="${externaltestlibs.dir}/GUITestRunner.dfm" dest="${build.dir}/GUITestRunner.dfm"/-->
 
     <antcall target="delphi_compile_project" inheritAll="true">
       <param name="project.name" value="ZTestFramework.dpk"/>
@@ -194,7 +191,6 @@
       <param name="project.name" value="ZTestAll.dpr"/>
     </antcall>
 
-    <!--delete file="${build.dir}/GUITestRunner.dfm"/-->
     <echo/>
   </target>
 
