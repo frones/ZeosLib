@@ -128,6 +128,7 @@ type
   protected
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
+    function EscapeString(const S: string): string; virtual;
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
 
@@ -139,10 +140,11 @@ type
     function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
       DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
     function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
-    function ConstructNameCondition(Pattern: string; Column: string): string;
+    function ConstructNameCondition(Pattern: string; Column: string): string; virtual;
     function AddEscapeCharToWildcards(const Pattern:string): string;
     function GetWildcardsSet:TZWildcardsSet;
     procedure FillWildcards; virtual;
+    function NormalizePatternCase(Pattern:String): string;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -1855,6 +1857,11 @@ begin
   Result := True;
 end;
 
+function TZAbstractDatabaseMetadata.EscapeString(const S: string): string;
+begin
+  Result := '''' + S + '''';
+end;
+
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
@@ -2108,18 +2115,16 @@ begin
 
   if (Pattern = '%') or (Pattern = '') then
      Exit;
-  WorkPattern := Pattern;
-  if Not GetIdentifierConvertor.IsQuoted(WorkPattern) then
-    WorkPattern := UpperCase(WorkPattern);
+  WorkPattern:=NormalizePatternCase(Pattern);
   if HasNoWildcards(WorkPattern) then
   begin
     WorkPattern := StripEscape(WorkPattern);
-    Result := Format('%s = ''%s''', [Column, WorkPattern]);
+    Result := Format('%s = %s', [Column, EscapeString(WorkPattern)]);
   end
   else
   begin
-    Result := Format('%s || ''%s'' like ''%s%s%%''',
-      [Column, Spaces, WorkPattern, Spaces]);
+    Result := Format('%s like %s',
+      [Column, EscapeString(WorkPattern)]);
   end;
 end;
 
@@ -2139,9 +2144,6 @@ end;
 function TZAbstractDatabaseMetadata.GetUserName: string;
 begin
   Result := FURL.UserName;
-  {Result := FInfo.Values['UID'];
-  if Result = '' then
-    Result := FInfo.Values['username'];}
 end;
 
 {**
@@ -4259,6 +4261,20 @@ begin
   except
     WildcardsArray:=nil;
   end;
+end;
+
+function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
+var
+  WorkPattern: string;
+begin
+  if not GetIdentifierConvertor.IsQuoted(Pattern) then
+    if FDatabaseInfo.StoresUpperCaseIdentifiers then
+      Result := UpperCase(Pattern)
+    else if FDatabaseInfo.StoresLowerCaseIdentifiers then
+      Result := LowerCase(Pattern)
+    else Result := Pattern
+  else
+    Result := GetIdentifierConvertor.ExtractQuote(Pattern);
 end;
 
 {**

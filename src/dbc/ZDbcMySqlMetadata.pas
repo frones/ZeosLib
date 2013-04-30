@@ -903,17 +903,17 @@ begin
   if Catalog = '' then
   begin
     if SchemaPattern <> '' then
-      OutCatalog := SchemaPattern
+      OutCatalog := NormalizePatternCase(SchemaPattern)
     else
-      OutCatalog := FDatabase;
+      OutCatalog := NormalizePatternCase(FDatabase);
   end
   else
-    OutCatalog := Catalog;
+    OutCatalog := NormalizePatternCase(Catalog);
 
   if NamePattern = '' then
     OutNamePattern := '%'
   else
-    OutNamePattern := NamePattern;
+    OutNamePattern := NormalizePatternCase(NamePattern);
 end;
 
 {**
@@ -1314,25 +1314,38 @@ function TZMySQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: stri
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
 var
   I: Integer;
-  LCatalog, LColumnNamePattern: string;
   Host, Database, Grantor, User, FullUser: String;
   AllPrivileges, ColumnName, Privilege: String;
   PrivilegesList: TStrings;
+  ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
   Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
-    GetCatalogAndNamePattern(Catalog, Schema, ColumnNamePattern,
-      LCatalog, LColumnNamePattern);
+    If Catalog = '' then
+      If Schema <> '' then
+      SchemaCondition := ConstructNameCondition(Schema,'c.db')
+      else
+      SchemaCondition := ConstructNameCondition(FDatabase,'c.db')
+    else
+      SchemaCondition := ConstructNameCondition(Catalog,'c.db');
+    TableNameCondition := ConstructNameCondition(Table,'c.table_name');
+    ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'c.column_name');
+    If SchemaCondition <> '' then
+      SchemaCondition := ' and ' + SchemaCondition;
+    If TableNameCondition <> '' then
+      TableNameCondition := ' and ' + TableNameCondition;
+    If ColumnNameCondition <> '' then
+      ColumnNameCondition := ' and ' + ColumnNameCondition;
 
     PrivilegesList := TStringList.Create;
     try
       with GetConnection.CreateStatement.ExecuteQuery(
-        Format('SELECT c.host, c.db, t.grantor, c.user, c.table_name,'
-          + ' c.column_name, c.column_priv FROM mysql.columns_priv c,'
-          + ' mysql.tables_priv t WHERE c.host=t.host AND c.db=t.db'
-          + ' AND c.table_name=t.table_name AND c.db=''%s'''
-          + ' AND c.table_name=''%s'' AND c.column_name LIKE ''%s''',
-          [LCatalog, Table, LColumnNamePattern])) do
+        'SELECT c.host, c.db, t.grantor, c.user, c.table_name,'
+        + ' c.column_name, c.column_priv FROM mysql.columns_priv c,'
+        + ' mysql.tables_priv t WHERE c.host=t.host AND c.db=t.db'
+        + ' AND c.table_name=t.table_name'
+        + SchemaCondition + TableNameCondition + ColumnNameCondition
+      ) do
       begin
         while Next do
         begin
@@ -1407,22 +1420,33 @@ function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: strin
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
 var
   I: Integer;
-  LCatalog, LTableNamePattern: string;
   Host, Database, Table, Grantor, User, FullUser: String;
   AllPrivileges, Privilege: String;
   PrivilegesList: TStrings;
+  TableNameCondition, SchemaCondition: string;
 begin
     Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
-    GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
-      LCatalog, LTableNamePattern);
+    If Catalog = '' then
+      If SchemaPattern <> '' then
+      SchemaCondition := ConstructNameCondition(SchemaPattern,'db')
+      else
+      SchemaCondition := ConstructNameCondition(FDatabase,'db')
+    else
+      SchemaCondition := ConstructNameCondition(Catalog,'db');
+    TableNameCondition := ConstructNameCondition(TableNamePattern,'table_name');
+    If SchemaCondition <> '' then
+      SchemaCondition := ' and ' + SchemaCondition;
+    If TableNameCondition <> '' then
+      TableNameCondition := ' and ' + TableNameCondition;
 
     PrivilegesList := TStringList.Create;
     try
       with GetConnection.CreateStatement.ExecuteQuery(
-        Format('SELECT host,db,table_name,grantor,user,table_priv'
-        + ' from mysql.tables_priv WHERE db=''%s'' AND table_name LIKE ''%s''',
-        [LCatalog, LTableNamePattern])) do
+        'SELECT host,db,table_name,grantor,user,table_priv'
+        + ' from mysql.tables_priv WHERE 1=1'
+        + SchemaCondition + TableNameCondition
+      ) do
       begin
         while Next do
         begin
@@ -1486,7 +1510,7 @@ function TZMySQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   KeyType: string;
-  LCatalog: string;
+  LCatalog, LTable: string;
   ColumnIndexes : Array[1..3] of integer;
 begin
     if Table = '' then
@@ -1494,20 +1518,13 @@ begin
 
     Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
-    if Catalog = '' then
-    begin
-      if Schema <> '' then
-        LCatalog := Schema
-      else
-        LCatalog := FDatabase;
-    end
-    else
-      LCatalog := Catalog;
+    GetCatalogAndNamePattern(Catalog, Schema, Table,
+      LCatalog, LTable);
 
     with GetConnection.CreateStatement.ExecuteQuery(
       Format('SHOW KEYS FROM %s.%s',
       [GetIdentifierConvertor.Quote(LCatalog),
-      GetIdentifierConvertor.Quote(Table)])) do
+      GetIdentifierConvertor.Quote(LTable)])) do
     begin
       ColumnIndexes[1] := FindColumn('Key_name');
       ColumnIndexes[2] := FindColumn('Column_name');
@@ -1604,7 +1621,7 @@ function TZMySQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
 var
   I: Integer;
   KeySeq: Integer;
-  LCatalog: string;
+  LCatalog, LTable: string;
   TableType, Comment, Keys: String;
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..2] of integer;
@@ -1614,22 +1631,15 @@ begin
 
     Result := inherited UncachedGetImportedKeys(Catalog, Schema, Table);
 
-    if Catalog = '' then
-    begin
-      if Schema <> '' then
-        LCatalog := Schema
-      else
-        LCatalog := FDatabase;
-    end
-    else
-      LCatalog := Catalog;
+    GetCatalogAndNamePattern(Catalog, Schema, Table,
+      LCatalog, LTable);
 
     KeyList := TStringList.Create;
     CommentList := TStringList.Create;
     try
       with GetConnection.CreateStatement.ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
-        [GetIdentifierConvertor.Quote(LCatalog), Table])) do
+        [GetIdentifierConvertor.Quote(LCatalog), LTable])) do
       begin
         ColumnIndexes[1] := FindColumn('Type');
         ColumnIndexes[2] := FindColumn('Comment');
@@ -1754,7 +1764,7 @@ function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
 var
   I: Integer;
   KeySeq: Integer;
-  LCatalog: string;
+  LCatalog, LTable: string;
   TableType, Comment, Keys: String;
   CommentList, KeyList: TStrings;
   ColumnIndexes : Array[1..3] of integer;
@@ -1764,15 +1774,8 @@ begin
 
     Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
-    if Catalog = '' then
-    begin
-      if Schema <> '' then
-        LCatalog := Schema
-      else
-        LCatalog := FDatabase;
-    end
-    else
-      LCatalog := Catalog;
+    GetCatalogAndNamePattern(Catalog, Schema, Table,
+      LCatalog, LTable);
 
     KeyList := TStringList.Create;
     CommentList := TStringList.Create;
@@ -2166,7 +2169,7 @@ function TZMySQLDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  LCatalog: string;
+  LCatalog, LTable: string;
   ColumnIndexes : Array[1..7] of integer;
 begin
     if Table = '' then
@@ -2174,20 +2177,13 @@ begin
 
     Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-    if Catalog = '' then
-    begin
-      if Schema <> '' then
-        LCatalog := Schema
-      else
-        LCatalog := FDatabase;
-    end
-    else
-      LCatalog := Catalog;
+    GetCatalogAndNamePattern(Catalog, Schema, Table,
+      LCatalog, LTable);
 
     with GetConnection.CreateStatement.ExecuteQuery(
       Format('SHOW INDEX FROM %s.%s',
       [GetIdentifierConvertor.Quote(LCatalog),
-      GetIdentifierConvertor.Quote(Table)])) do
+      GetIdentifierConvertor.Quote(LTable)])) do
     begin
       ColumnIndexes[1] := FindColumn('Table');
       ColumnIndexes[2] := FindColumn('Non_unique');
@@ -2257,33 +2253,28 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  LCatalog, SQL: string;
+  SQL: string;
+  ProcedureNameCondition, SchemaCondition: string;
 begin
-  if Catalog = '' then
-  begin
-    if SchemaPattern <> '' then
-      LCatalog := SchemaPattern
+  If Catalog = '' then
+    If SchemaPattern <> '' then
+    SchemaCondition := ConstructNameCondition(SchemaPattern,'p.db')
     else
-      LCatalog := FDatabase;
-  end
+    SchemaCondition := ConstructNameCondition(FDatabase,'p.db')
   else
-    LCatalog := Catalog;
+    SchemaCondition := ConstructNameCondition(Catalog,'p.db');
+  ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');
+  If SchemaCondition <> '' then
+    SchemaCondition := ' and ' + SchemaCondition;
+  If ProcedureNameCondition <> '' then
+    ProcedureNameCondition := ' and ' + ProcedureNameCondition;
 
   SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
       'NULL AS RESERVED3, p.comment AS REMARKS, '+
-    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p ';
-    if ( LCataLog <> '' ) or ( ProcedureNamePattern <> '' ) then
-      SQL := SQL + 'WHERE ';
-    if ( LCataLog <> '' ) then
-      SQL := SQL + ' p.db LIKE '+QuotedStr(LCatalog);
-    if ( ProcedureNamePattern <> '' ) then
-    begin
-      if ( LCataLog <> '' ) then
-        SQL := SQL + ' AND ';
-      SQL := SQL + ' p.name LIKE '+QuotedStr(ProcedureNamePattern)
-    end;
-    SQL := SQL + ' ORDER BY p.db, p.name';
+      IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
+      'WHERE 1=1' + SchemaCondition + ProcedureNameCondition+
+      ' ORDER BY p.db, p.name';
     Result := CopyToVirtualResultSet(
     GetConnection.CreateStatement.ExecuteQuery(SQL),
     ConstructVirtualResultSet(ProceduresColumnsDynArray));
@@ -2349,10 +2340,11 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  LCatalog, SQL, TypeName, Temp: string;
+  SQL, TypeName, Temp: string;
   ParamList, Params, Names, Returns: TStrings;
   I, ColumnSize, Precision: Integer;
   FieldType: TZSQLType;
+  ProcedureNameCondition, SchemaCondition: string;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
   var N: Integer;
@@ -2424,33 +2416,26 @@ var
     Result := Temp;
   end;
 begin
-  if Catalog = '' then
-  begin
-    if SchemaPattern <> '' then
-      LCatalog := SchemaPattern
+  If Catalog = '' then
+    If SchemaPattern <> '' then
+    SchemaCondition := ConstructNameCondition(SchemaPattern,'p.db')
     else
-      LCatalog := FDatabase;
-  end
+    SchemaCondition := ConstructNameCondition(FDatabase,'p.db')
   else
-    LCatalog := Catalog;
+    SchemaCondition := ConstructNameCondition(Catalog,'p.db');
+  ProcedureNameCondition := ConstructNameCondition(ProcedureNamePattern,'p.name');
+  If SchemaCondition <> '' then
+    SchemaCondition := ' and ' + SchemaCondition;
+  If ProcedureNameCondition <> '' then
+    ProcedureNameCondition := ' and ' + ProcedureNameCondition;
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
   SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
     IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
-    ' from  mysql.proc p ';
-    if ( LCataLog <> '' ) or ( ProcedureNamePattern <> '' ) then
-      SQL := SQL + 'WHERE ';
-    if ( LCataLog <> '' ) then
-      SQL := SQL + ' p.db LIKE '+QuotedStr(LCatalog);
-    if ( ProcedureNamePattern <> '' ) then
-    begin
-      if ( LCataLog <> '' ) then
-        SQL := SQL + ' AND ';
-      SQL := SQL + ' p.name LIKE '+QuotedStr(ProcedureNamePattern)
-    end;
-    SQL := SQL + ' ORDER BY p.db, p.name';
+    ' from  mysql.proc p where 1 = 1'+SchemaCondition+ProcedureNameCondition+
+    ' ORDER BY p.db, p.name';
 
     try
       with GetConnection.CreateStatement.ExecuteQuery(SQL) do
@@ -2611,6 +2596,7 @@ function TZMySQLDatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, S
   TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
 var
   SQL, LCatalog: string;
+  ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
     if Catalog = '' then
     begin
@@ -2621,10 +2607,25 @@ begin
     end
     else
       LCatalog := Catalog;
+  If Catalog = '' then
+    If SchemaPattern <> '' then
+    SchemaCondition := ConstructNameCondition(SchemaPattern,'TABLE_SCHEMA')
+    else
+    SchemaCondition := ConstructNameCondition(FDatabase,'TABLE_SCHEMA')
+  else
+    SchemaCondition := ConstructNameCondition(Catalog,'TABLE_SCHEMA');
+  TableNameCondition := ConstructNameCondition(TableNamePattern,'TABLE_NAME');
+  ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
+  If SchemaCondition <> '' then
+    SchemaCondition := ' and ' + SchemaCondition;
+  If TableNameCondition <> '' then
+    TableNameCondition := ' and ' + TableNameCondition;
+  If ColumnNameCondition <> '' then
+    ColumnNameCondition := ' and ' + ColumnNameCondition;
 
   Result:=inherited UncachedGetCollationAndCharSet(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  if LCatalog <> '' then
+  if SchemaCondition <> '' then
   begin
     if TableNamePattern <> '' then
     begin
@@ -2634,9 +2635,7 @@ begin
           'FROM INFORMATION_SCHEMA.COLUMNS CLMS '+
           'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
           'ON CS.DEFAULT_COLLATE_NAME = CLMS.COLLATION_NAME '+
-          'WHERE TABLE_SCHEMA = '''+LCatalog+ ''' AND '+
-          'TABLE_NAME = '''+TableNamePattern+''' AND '+
-          'COLUMN_NAME = '''+TableNamePattern+''';';
+          'WHERE 1=1'+ SchemaCondition + TableNameCondition + ColumnNameCondition;
         with GetConnection.CreateStatement.ExecuteQuery(SQL) do
         begin
           if Next then
@@ -2661,8 +2660,7 @@ begin
           'FROM INFORMATION_SCHEMA.TABLES TBLS LEFT JOIN '+
           'INFORMATION_SCHEMA.CHARACTER_SETS CS ON '+
           'TBLS.TABLE_COLLATION = CS.DEFAULT_COLLATE_NAME '+
-          'WHERE TABLE_SCHEMA = '''+LCatalog+''''+
-          'AND TBLS.TABLE_NAME = '''+TableNamePattern+''';';
+          'WHERE 1=1'+ SchemaCondition + TableNameCondition;
         with GetConnection.CreateStatement.ExecuteQuery(SQL) do
         begin
           if Next then
@@ -2687,7 +2685,7 @@ begin
         'CS.MAXLEN FROM INFORMATION_SCHEMA.SCHEMATA S '+
         'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
         'ON CS.DEFAULT_COLLATE_NAME = S.DEFAULT_COLLATION_NAME '+
-        'WHERE S.SCHEMA_NAME = '''+LCatalog+'''';
+        'WHERE 1=1'+ SchemaCondition;
       with GetConnection.CreateStatement.ExecuteQuery(SQL) do
       begin
         if Next then
