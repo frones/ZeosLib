@@ -1,0 +1,118 @@
+package ZComponent;
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Zeos Database Components'}
+{$LIBSUFFIX '180'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  rtl,
+  dbrtl,
+  ZPlain,
+  ZDbc,
+  ZCore,
+  ZParseSql,
+  vclactnband,
+  vcl;
+
+contains
+  ZSqlUpdate in '..\..\src\component\ZSqlUpdate.pas',
+  ZAbstractDataset in '..\..\src\component\ZAbstractDataset.pas',
+  ZAbstractRODataset in '..\..\src\component\ZAbstractRODataset.pas',
+  ZStreamBlob in '..\..\src\component\ZStreamBlob.pas',
+  ZAbstractConnection in '..\..\src\component\ZAbstractConnection.pas',
+  ZGroupedConnection in '..\..\src\component\ZGroupedConnection.pas',
+  ZConnectionGroup in '..\..\src\component\ZConnectionGroup.pas',
+  ZConnection in '..\..\src\component\ZConnection.pas',
+  ZDataset in '..\..\src\component\ZDataset.pas',
+  ZDatasetUtils in '..\..\src\component\ZDatasetUtils.pas',
+  ZSqlStrings in '..\..\src\component\ZSqlStrings.pas',
+  ZSqlProcessor in '..\..\src\component\ZSqlProcessor.pas',
+  ZSqlMonitor in '..\..\src\component\ZSqlMonitor.pas',
+  ZStoredProcedure in '..\..\src\component\ZStoredProcedure.pas',
+  ZAbstractTable in '..\..\src\component\ZAbstractTable.pas',
+  ZSqlMetadata in '..\..\src\component\ZSqlMetadata.pas',
+  ZSequence in '..\..\src\component\ZSequence.pas',
+  ZDbcSqLite in '..\..\src\dbc\ZDbcSqLite.pas',
+  ZDbcSqLiteMetadata in '..\..\src\dbc\ZDbcSqLiteMetadata.pas',
+  ZDbcSqLiteResultSet in '..\..\src\dbc\ZDbcSqLiteResultSet.pas',
+  ZDbcSqLiteStatement in '..\..\src\dbc\ZDbcSqLiteStatement.pas',
+  ZDbcSqLiteUtils in '..\..\src\dbc\ZDbcSqLiteUtils.pas',
+  ZDbcAdo in '..\..\src\dbc\ZDbcAdo.pas',
+  ZDbcAdoMetadata in '..\..\src\dbc\ZDbcAdoMetadata.pas',
+  ZDbcAdoResultSet in '..\..\src\dbc\ZDbcAdoResultSet.pas',
+  ZDbcAdoStatement in '..\..\src\dbc\ZDbcAdoStatement.pas',
+  ZDbcAdoUtils in '..\..\src\dbc\ZDbcAdoUtils.pas',
+  ZDbcASA in '..\..\src\dbc\ZDbcASA.pas',
+  ZDbcASAMetadata in '..\..\src\dbc\ZDbcASAMetadata.pas',
+  ZDbcASAResultSet in '..\..\src\dbc\ZDbcASAResultSet.pas',
+  ZDbcASAStatement in '..\..\src\dbc\ZDbcASAStatement.pas',
+  ZDbcASAUtils in '..\..\src\dbc\ZDbcASAUtils.pas',
+  ZDbcDbLibMetadata in '..\..\src\dbc\ZDbcDbLibMetadata.pas',
+  ZDbcDbLibResultSet in '..\..\src\dbc\ZDbcDbLibResultSet.pas',
+  ZDbcDbLibStatement in '..\..\src\dbc\ZDbcDbLibStatement.pas',
+  ZDbcDbLibUtils in '..\..\src\dbc\ZDbcDbLibUtils.pas',
+  ZDbcInterbase6 in '..\..\src\dbc\ZDbcInterbase6.pas',
+  ZDbcInterbase6Metadata in '..\..\src\dbc\ZDbcInterbase6Metadata.pas',
+  ZDbcInterbase6ResultSet in '..\..\src\dbc\ZDbcInterbase6ResultSet.pas',
+  ZDbcInterbase6Statement in '..\..\src\dbc\ZDbcInterbase6Statement.pas',
+  ZDbcInterbase6Utils in '..\..\src\dbc\ZDbcInterbase6Utils.pas',
+  ZDbcMySql in '..\..\src\dbc\ZDbcMySql.pas',
+  ZDbcMySqlMetadata in '..\..\src\dbc\ZDbcMySqlMetadata.pas',
+  ZDbcMySqlResultSet in '..\..\src\dbc\ZDbcMySqlResultSet.pas',
+  ZDbcMySqlStatement in '..\..\src\dbc\ZDbcMySqlStatement.pas',
+  ZDbcMySqlUtils in '..\..\src\dbc\ZDbcMySqlUtils.pas',
+  ZDbcOracle in '..\..\src\dbc\ZDbcOracle.pas',
+  ZDbcOracleMetadata in '..\..\src\dbc\ZDbcOracleMetadata.pas',
+  ZDbcOracleResultSet in '..\..\src\dbc\ZDbcOracleResultSet.pas',
+  ZDbcOracleStatement in '..\..\src\dbc\ZDbcOracleStatement.pas',
+  ZDbcOracleUtils in '..\..\src\dbc\ZDbcOracleUtils.pas',
+  ZDbcPooled in '..\..\src\dbc\ZDbcPooled.pas',
+  ZDbcPostgreSql in '..\..\src\dbc\ZDbcPostgreSql.pas',
+  ZDbcPostgreSqlMetadata in '..\..\src\dbc\ZDbcPostgreSqlMetadata.pas',
+  ZDbcPostgreSqlResultSet in '..\..\src\dbc\ZDbcPostgreSqlResultSet.pas',
+  ZDbcPostgreSqlStatement in '..\..\src\dbc\ZDbcPostgreSqlStatement.pas',
+  ZDbcPostgreSqlUtils in '..\..\src\dbc\ZDbcPostgreSqlUtils.pas',
+  ZPlainOracleDriver in '..\..\src\plain\ZPlainOracleDriver.pas',
+  ZPlainPostgreSqlDriver in '..\..\src\plain\ZPlainPostgreSqlDriver.pas',
+  ZPlainSqLiteDriver in '..\..\src\plain\ZPlainSqLiteDriver.pas',
+  ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
+  ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
+  ZPlainASAConstants in '..\..\src\plain\ZPlainASAConstants.pas',
+  ZPlainASADriver in '..\..\src\plain\ZPlainASADriver.pas',
+  ZPlainDbLibConstants in '..\..\src\plain\ZPlainDbLibConstants.pas',
+  ZPlainDbLibDriver in '..\..\src\plain\ZPlainDbLibDriver.pas',
+  ZPlainFirebirdDriver in '..\..\src\plain\ZPlainFirebirdDriver.pas',
+  ZPlainFirebirdInterbaseConstants in '..\..\src\plain\ZPlainFirebirdInterbaseConstants.pas',
+  ZPlainMySqlConstants in '..\..\src\plain\ZPlainMySqlConstants.pas',
+  ZPlainMySqlDriver in '..\..\src\plain\ZPlainMySqlDriver.pas',
+  ZDbcDbLib in '..\..\src\dbc\ZDbcDbLib.pas',
+  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
+  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas',
+  ZPlainOracleConstants in '..\..\src\plain\ZPlainOracleConstants.pas';
+
+end.

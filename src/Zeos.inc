@@ -57,9 +57,6 @@
  {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
- {$DEFINE WITH_FTDATASETSUPPORT} //ftDataSet is supported
- {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
- {$DEFINE WITH_INLINE}          // compiler supports inline methodes
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -158,6 +155,20 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
+
+// Compilation directives for Delphi XE4
+{$IFDEF VER250}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in code
+  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
@@ -183,12 +194,8 @@
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
-  {$DEFINE WITH_TENCODING_CLASS}        // Have class TEncoding
-  {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
-{$ENDIF}
-
-{$IFDEF DELPHI14_UP}
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
+  {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
@@ -203,8 +210,6 @@
   {$UNDEF WITH_WIDEMEMO}
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
-  {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
-  {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}
@@ -218,6 +223,17 @@
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
 {$ENDIF}
+
+{$IFDEF DELPHI18_UP}
+  {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
+  {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
+  {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
+  {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
+  {$UNDEF WITH_TVALUEBUFFER}
+
+{$ENDIF}
+
+
 // Debug/release compiler options
 {$D+}
 
@@ -374,3 +390,8 @@
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
 {.$DEFINE USE_SYNEDIT}
+
+// Compile test applications with a graphical user interface (GUI)
+// Comment this definition if you want to compile console test applications
+{.$DEFINE TESTGUI}
+

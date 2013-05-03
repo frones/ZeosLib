@@ -553,7 +553,12 @@ begin
   {$ELSE}
   Result := StrAlloc(FDPBLength + 1);
   {$ENDIF}
+
+  {$IFDEF DELPHI18_UP}
+  SysUtils.StrPCopy(Result, DPB);
+  {$ELSE}
   StrPCopy(Result, DPB);
+  {$ENDIF}
 end;
 
 {**
@@ -616,7 +621,12 @@ begin
     {$ELSE}
     TPB := StrAlloc(TPBLength + 1);
     {$ENDIF}
+    {$IFDEF DELPHI18_UP}
+    TPB := SysUtils.StrPCopy(TPB, TempStr);
+    {$ELSE}
     TPB := StrPCopy(TPB, TempStr);
+    {$ENDIF}
+
   end
   else
     TPB := nil;
@@ -809,11 +819,19 @@ begin
     ErrorMessage := '';
     PStatusVector := @StatusVector;
     while PlainDriver.isc_interprete(Msg, @PStatusVector) > 0 do
+    {$IFDEF DELPHI18_UP}
+      ErrorMessage := ErrorMessage + ' ' + String(SysUtils.StrPas(Msg));
+    {$ELSE}
       ErrorMessage := ErrorMessage + ' ' + String(StrPas(Msg));
+    {$ENDIF}
 
     ErrorCode := PlainDriver.isc_sqlcode(@StatusVector);
     PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
+    {$IFDEF DELPHI18_UP}
+    ErrorSqlMessage := String(SysUtils.StrPas(Msg));
+    {$ELSE}
     ErrorSqlMessage := String(StrPas(Msg));
+    {$ENDIF}
 
 {$IFDEF INTERBASE_EXTENDED_MESSAGES}
     if SQL <> '' then
@@ -839,14 +857,11 @@ begin
 {$ENDIF}
       end
         else
-      begin      //AVZ -- connection lost to the database, shutting down the application // raise a connection error event to the database component
-        {raise EZSQLException.CreateWithCode(ErrorCode,
+      begin      //AVZ -- Added exception back in to help error trapping
+        raise EZSQLException.CreateWithCode(ErrorCode,
           Format('SQL Error: %s. Error Code: %d. %s',
-          [ErrorMessage, ErrorCode, ErrorSqlMessage]));}
-        //Ludob EZSQLWarning created but not raised --> leak
-        {EZSQLWarning.CreateWithCode (ErrorCode,
-          Format('SQL Error: %s. Error Code: %d. %s',
-          [ErrorMessage, ErrorCode, ErrorSqlMessage])); //AVZ}
+          [ErrorMessage, ErrorCode, ErrorSqlMessage]));
+
         Result := DISCONNECT_ERROR;
       end;
     end;
@@ -1530,8 +1545,13 @@ begin
   {$R-}
   for Result := 0 to GetFieldCount - 1 do
     if FXSQLDA.sqlvar[Result].aliasname_length = Length(name) then
+    {$IFDEF DELPHI18_UP}
+         if SysUtils.StrLIComp(@FXSQLDA.sqlvar[Result].aliasname, PAnsiChar(Name), FXSQLDA.sqlvar[Result].aliasname_length) = 0 then
+            Exit;
+    {$ELSE}
          if StrLIComp(@FXSQLDA.sqlvar[Result].aliasname, PAnsiChar(Name), FXSQLDA.sqlvar[Result].aliasname_length) = 0 then
             Exit;
+    {$ENDIF}
   raise Exception.Create(Format(SFieldNotFound1, [name]));
   {$IFOPT D+}
 {$R+}

@@ -1154,7 +1154,12 @@ begin
     else
       encoded := POSTGRESQL_API.PQescapeBytea(PAnsiChar(value),leng,@len);
     SetLength(result, len -1); //removes the #0 byte
+
+    {$IFDEF DELPHI18_UP}
+    SysUtils.StrCopy(PAnsiChar(result), encoded);
+    {$ELSE}
     StrCopy(PAnsiChar(result), encoded);
+    {$ENDIF}
     POSTGRESQL_API.PQFreemem(encoded);
     if Quoted then
       result := ''''+result+'''';
@@ -1656,10 +1661,19 @@ begin
     GetMem(Temp, Length(SourceTemp)*2);
     if Assigned(POSTGRESQL_API.PQescapeStringConn) then
       ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
-        PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError)
+
+      {$IFDEF DELPHI18_UP}
+      PAnsiChar(SourceTemp), SysUtils.StrLen(PAnsiChar(SourceTemp)), @IError)
+      {$ELSE}
+      PAnsiChar(SourceTemp), StrLen(PAnsiChar(SourceTemp)), @IError)
+      {$ENDIF}
     else
       ResLen := POSTGRESQL_API.PQescapeString(Temp, PAnsiChar(SourceTemp),
+      {$IFDEF DELPHI18_UP}
+        SysUtils.StrLen(PAnsiChar(SourceTemp)));
+      {$ELSE}
         StrLen(PAnsiChar(SourceTemp)));
+      {$ENDIF}
     if not (IError = 0) then
       raise Exception.Create('Wrong escape behavior!');
     SetLength(Result, ResLen);
