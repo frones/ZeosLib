@@ -2124,7 +2124,7 @@ begin
   else
   begin
     Result := Format('%s like %s',
-      [Column, EscapeString(WorkPattern)]);
+      [Column, EscapeString(WorkPattern+'%')]);
   end;
 end;
 
