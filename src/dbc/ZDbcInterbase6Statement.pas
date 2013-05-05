@@ -764,11 +764,11 @@ end;
 
 destructor TZInterbase6CallableStatement.Destroy;
 begin
+  inherited Destroy;
   if FStmtHandle <> 0 then
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
   FResultSQLData := nil;
   FParamSQLData := nil;
-  inherited Destroy;
 end;
 
 {**
