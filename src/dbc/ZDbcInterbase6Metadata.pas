@@ -2833,23 +2833,25 @@ function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern, Column: st
 const
   Spaces = '';
 var
-  StrippedPattern: string;
+  WorkPattern: string;
 begin
   if (Length(Pattern) > 2 * 31) then
     raise EZSQLException.Create(SPattern2Long);
 
   if (Pattern = '%') or (Pattern = '') then
      Exit;
-
-  if HasNoWildcards(Pattern) then
+  WorkPattern := Pattern;
+  if Not GetIdentifierConvertor.IsQuoted(WorkPattern) then
+    WorkPattern := UpperCase(WorkPattern);
+  if HasNoWildcards(WorkPattern) then
   begin
-    StrippedPattern := StripEscape(Pattern);
-    Result := Format('%s = ''%s''', [Column, StrippedPattern]);
+    WorkPattern := StripEscape(WorkPattern);
+    Result := Format('%s = ''%s''', [Column, WorkPattern]);
   end
   else
   begin
     Result := Format('%s || ''%s'' like ''%s%s%%''',
-      [Column, Spaces, Pattern, Spaces]);
+      [Column, Spaces, WorkPattern, Spaces]);
   end;
 end;
 

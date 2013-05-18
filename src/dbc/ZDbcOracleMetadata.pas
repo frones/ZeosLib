@@ -1202,8 +1202,8 @@ begin
   begin
     SQL := 'SELECT NULL AS TABLE_CAT, OWNER AS TABLE_SCHEM, TABLE_NAME,'
       + ' ''TABLE'' AS TABLE_TYPE, NULL AS REMARKS FROM SYS.ALL_TABLES'
-      + ' WHERE OWNER LIKE ''' + ToLikeString(SchemaPattern) + ''' AND TABLE_NAME LIKE '''
-      + ToLikeString(TableNamePattern) + '''';
+      + ' WHERE OWNER LIKE ''' + ToLikeString(Uppercase(SchemaPattern)) + ''' AND TABLE_NAME LIKE '''
+      + ToLikeString(Uppercase(TableNamePattern)) + '''';
   end else
     SQL := '';
 

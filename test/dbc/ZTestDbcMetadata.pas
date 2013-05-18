@@ -62,6 +62,9 @@ uses
 
 type
   {** Implements a test case for. }
+
+  { TZGenericTestDbcMetadata }
+
   TZGenericTestDbcMetadata = class(TZAbstractDbcSQLTestCase)
   private
     MD: IZDatabaseMetadata;
@@ -71,7 +74,6 @@ type
   protected
     procedure SetUp; override;
     procedure TearDown; override;
-    function IsProtocolValid(Config: TZConnectionConfig): Boolean; override;
   published
     procedure TestMetadataIdentifierQuoting;
     procedure TestMetadataGetCatalogs;
@@ -483,13 +485,6 @@ begin
   ResultSet := MD.GetUDTs(Catalog, Schema, '', nil);
   PrintResultSet(ResultSet, False);
   ResultSet.Close;
-end;
-
-function TZGenericTestDbcMetadata.IsProtocolValid(Config: TZConnectionConfig): Boolean;
-begin
-  Result := not StartsWith(Config.Protocol, 'interbase')
-    and not StartsWith(Config.Protocol, 'firebird')
-    and not StartsWith(Config.Protocol, 'oracle');
 end;
 
 initialization
