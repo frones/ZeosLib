@@ -131,8 +131,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataIdentifierQuoting;
 begin
-  if SkipTest then Exit;
-
   Check(MD.GetIdentifierConvertor.Quote('99')=MD.GetDatabaseInfo.GetIdentifierQuoteString[1]+'99'+MD.GetDatabaseInfo.GetIdentifierQuoteString[length(MD.GetDatabaseInfo.GetIdentifierQuoteString)]);
   Check(MD.GetIdentifierConvertor.Quote('9A')=MD.GetDatabaseInfo.GetIdentifierQuoteString[1]+'9A'+MD.GetDatabaseInfo.GetIdentifierQuoteString[length(MD.GetDatabaseInfo.GetIdentifierQuoteString)]);
   Check(MD.GetIdentifierConvertor.Quote('A9 A')=MD.GetDatabaseInfo.GetIdentifierQuoteString[1]+'A9 A'+MD.GetDatabaseInfo.GetIdentifierQuoteString[length(MD.GetDatabaseInfo.GetIdentifierQuoteString)]);
@@ -142,8 +140,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetTableTypes;
 begin
-  if SkipTest then Exit;
-
   Resultset := MD.GetTableTypes;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetTableTypes');
@@ -153,8 +149,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetCatalogs;
 begin
-  if SkipTest then Exit;
-
   Resultset := MD.GetCatalogs;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetCatalogs');
@@ -164,8 +158,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetSchemas;
 begin
-  if SkipTest then Exit;
-
   Resultset := MD.GetSchemas;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetSchemas');
@@ -179,8 +171,6 @@ const
 var
   I: Integer;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetTables(Catalog, Schema, '%', TableTypes);
   CheckNotNull(ResultSet);
   PrintResultSet(Resultset, False, 'GetTables');
@@ -226,8 +216,6 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetColumns;
     CheckEquals(UpperCase(IsNullable), UpperCase(ResultSet.GetStringByName('IS_NULLABLE')));
   end;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetColumns(Catalog, Schema, 'people', '');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, False);
@@ -246,8 +234,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetTablePrivileges;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetTablePrivileges(Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
   while ResultSet.Next do
@@ -265,8 +251,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetColumnPrivileges;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetColumnPrivileges(Catalog, Schema, 'people', '');
   PrintResultSet(ResultSet, False);
   while ResultSet.Next do
@@ -285,8 +269,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetBestRowIdentifier;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetBestRowIdentifier(Catalog, Schema, 'people', 0, True);
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be 1 bestRow Identifier in the people table');
@@ -305,8 +287,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetVersionColumns;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetVersionColumns(Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
   CheckEquals(1, Resultset.FindColumn('SCOPE'));
@@ -322,8 +302,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetPrimaryKeys;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetPrimaryKeys(Catalog, Schema, 'people');
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be primary key in the people table');
@@ -338,8 +316,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetImportedKeys;
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'sqlite')
     or StartsWith(Protocol, 'mysql') then Exit;
 
@@ -393,8 +369,6 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
   end;
 
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'sqlite')
     or StartsWith(Protocol, 'mysql') then Exit;
 
@@ -412,8 +386,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetCrossReference;
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'sqlite')
     or StartsWith(Protocol, 'mysql') then Exit;
 
@@ -443,8 +415,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetIndexInfo;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetIndexInfo(Catalog, Schema, 'people', False, False);
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be an index on the people table');
@@ -466,8 +436,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetProcedures;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetProcedures(Catalog, Schema, '');
   PrintResultSet(ResultSet, False);
   CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
@@ -483,8 +451,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetProcedureColumns;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetProcedureColumns(Catalog, Schema, '', '');
   PrintResultSet(ResultSet, False);
   CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
@@ -505,8 +471,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetTypeInfo;
 begin
-  if SkipTest then Exit;
-
   ResultSet := MD.GetTypeInfo;
   PrintResultSet(ResultSet, False);
   ResultSet.Close;
@@ -514,8 +478,6 @@ end;
 
 procedure TZGenericTestDbcMetadata.TestMetadataGetUDTs;
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'postgresql')
     or StartsWith(Protocol, 'sqlite') then Exit;
   ResultSet := MD.GetUDTs(Catalog, Schema, '', nil);

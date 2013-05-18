@@ -94,8 +94,6 @@ end;
 
 procedure TZTestDbcPostgreSQLCase.TestConnection;
 begin
-  if SkipTest then Exit;
-
   CheckEquals(True, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -126,8 +124,6 @@ procedure TZTestDbcPostgreSQLCase.TestStatement;
 var
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -144,8 +140,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -175,8 +169,6 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
-  if SkipTest then Exit;
-
   Connection := DriverManager.GetConnection(GetConnectionUrl('oidasblob=true'));
   //Connection := DriverManager.GetConnectionWithLogin(
     //GetConnectionUrl + '?oidasblob=true', UserName, Password);
@@ -226,8 +218,6 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -265,8 +255,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -300,8 +288,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);

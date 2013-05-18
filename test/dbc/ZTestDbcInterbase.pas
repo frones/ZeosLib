@@ -97,8 +97,6 @@ end;
 
 procedure TZTestDbcInterbaseCase.TestConnection;
 begin
-  if SkipTest then Exit;
-
   CheckEquals(True, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -128,8 +126,6 @@ procedure TZTestDbcInterbaseCase.TestStatement;
 var
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -146,8 +142,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -176,8 +170,6 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
-  if SkipTest then Exit;
-
   Connection := CreateDbcConnection;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -227,8 +219,6 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
-  if SkipTest then Exit;
-
   Connection := CreateDbcConnection;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -339,8 +329,6 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -377,8 +365,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -416,8 +402,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -462,8 +446,6 @@ var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
 begin
-  if SkipTest then Exit;
-
   // Doesn't run with ExecutePrepared. RegisterOutParameter does also not work.
   // Has to be called with an ExecuteQueryPrepared, then has to be fetched and
   // afterwards the Resultes have to be retrieved via result set columns.
@@ -505,8 +487,6 @@ var
     ThisTime : TDateTime; 
     oldTimeFormat: string; 
 begin 
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -545,8 +525,6 @@ const
 var
   PreparedStatement: IZPreparedStatement;
 begin
-  if SkipTest then Exit;
-
   PreparedStatement := Connection.PrepareStatement(CSQLd);
   CheckNotNull(PreparedStatement);
   PreparedStatement.ExecutePrepared;

@@ -94,8 +94,6 @@ end;
 
 procedure TZTestDbcASACase.TestConnection;
 begin
-  if SkipTest then Exit;
-
   CheckEquals(True, Connection.IsReadOnly);
   CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -123,8 +121,6 @@ procedure TZTestDbcASACase.TestStatement;
 var
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -140,8 +136,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -170,8 +164,6 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
-  if SkipTest then Exit;
-
   Connection := CreateDbcConnection;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -257,8 +249,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -296,8 +286,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   if Protocol='ASA12' then exit;
 
   Statement := Connection.CreateStatement;
@@ -344,8 +332,6 @@ var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
 begin
-  if SkipTest then Exit;
-
   CallableStatement := Connection.PrepareCallWithParams(
     'PROCEDURE1', nil);
   with CallableStatement do

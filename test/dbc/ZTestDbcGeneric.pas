@@ -91,8 +91,6 @@ var
 //  StrStream, BinStream: TMemoryStream;
 //  StrStream1, BinStream1: TStream;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -174,8 +172,6 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'FreeTDS') or
     ( Protocol = 'mssql') or ( Protocol = 'ado') or ( Protocol = 'sybase') or
      StartsWith(Protocol, 'ASA') then
@@ -351,8 +347,6 @@ end;
 }
 procedure TZGenericTestDbcResultSet.TestConnection;
 begin
-  if SkipTest then Exit;
-
   CheckEquals(True, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
@@ -388,8 +382,6 @@ var
   StrStream1, BinStream1: TStream;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Sql := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
   Connection.CreateStatement.ExecuteUpdate(Sql);
   Sql := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
@@ -547,8 +539,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
 
@@ -607,8 +597,6 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -729,8 +717,6 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TStream;
 begin
-  if SkipTest then Exit;
-
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -924,8 +910,6 @@ var
   Statement1: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
   SQL := 'UPDATE people SET p_id=p_id WHERE 1=0';
   Statement := Connection.PrepareStatement(SQL);
   try

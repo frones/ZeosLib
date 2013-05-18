@@ -90,8 +90,6 @@ var
   Columns: TObjectList;
 *)
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'interbase')
     or StartsWith(Protocol, 'firebird') then
     Exit;
@@ -142,8 +140,6 @@ var
   Resolver: TZGenericCachedResolver;
 *)
 begin
-  if SkipTest then Exit;
-
   if not StartsWith(Protocol, 'interbase') then Exit;
 (*
   Statement := Connection.CreateStatement;
@@ -193,8 +189,6 @@ var
   ResultSet: IZResultSet;
   WhereClause: string;
 begin
-  if SkipTest then Exit;
-
   if not StartsWith(Protocol, 'mysql') then
     Exit;
 

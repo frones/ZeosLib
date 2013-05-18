@@ -118,8 +118,6 @@ var
   Table: TZTable;
   ROQuery: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := TZQuery.Create(nil); // not CreateQuery because here we test unconnected queries
   Table := TZTable.Create(nil); // not CreateTable because here we test unconnected queries
   ROQuery := TZReadOnlyQuery.Create(nil); // not CreateReadOnlyQuery because here we test unconnected queries
@@ -196,8 +194,6 @@ var
   StrStream1, BinStream1: TMemoryStream;
   s:string;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     with Query do
@@ -391,8 +387,6 @@ var
   Query: TZQuery;
   s:string;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     with Query do
@@ -476,8 +470,6 @@ procedure TZGenericTestDbcResultSet.TestQuery;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     TestQueryGeneric(Query);
@@ -494,8 +486,6 @@ procedure TZGenericTestDbcResultSet.TestQueryExecSql;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     with Query do
@@ -554,8 +544,6 @@ procedure TZGenericTestDbcResultSet.TestReadOnlyQuery;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     TestQueryGeneric(Query);
@@ -573,8 +561,6 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TMemoryStream;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
@@ -1022,8 +1008,6 @@ procedure TZGenericTestDbcResultSet.TestReadOnlyQueryExecSql;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     with Query do
@@ -1083,8 +1067,6 @@ procedure TZGenericTestDbcResultSet.TestQueryFilter;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
   { TODO : Enable this test }//TestFilterGeneric(Query);
@@ -1192,8 +1174,6 @@ var
   Query: TZReadOnlyQuery;
   ResData : boolean; 
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Add('select * from cargo');
@@ -1216,8 +1196,6 @@ procedure TZGenericTestDbcResultSet.TestReadOnlyQueryFilter;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
   { TODO : Enable this test }//!!  TestFilterGeneric(Query);
@@ -1233,8 +1211,6 @@ procedure TZGenericTestDbcResultSet.TestFilterExpression;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Text := 'SELECT * FROM people';
@@ -1265,8 +1241,6 @@ var
   FieldDirs: TBooleanDynArray;
   OnlyDataFields: Boolean;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Text := 'SELECT p_id, p_dep_id, p_name FROM people';
@@ -1302,8 +1276,6 @@ procedure TZGenericTestDbcResultSet.TestSmartOpen;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Text := 'select * from people';
@@ -1368,8 +1340,6 @@ procedure TZGenericTestDbcResultSet.TestPrepare;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     Query.SQL.Text := 'select * from people';
@@ -1412,8 +1382,6 @@ procedure TZGenericTestDbcResultSet.TestTimeFilterExpression;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM people';
@@ -1445,8 +1413,6 @@ var
   Query: TZQuery;
   Date_came,Date_out : TDateTime;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM cargo';
@@ -1493,8 +1459,6 @@ procedure TZGenericTestDbcResultSet.TestTimeLocateExpression;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM people';
@@ -1518,8 +1482,6 @@ procedure TZGenericTestDbcResultSet.TestDateTimeLocateExpression;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     Query.SQL.Text := 'SELECT * FROM cargo';
@@ -1540,8 +1502,6 @@ procedure TZGenericTestDbcResultSet.TestDoubleFloatParams;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     with Query do
@@ -1588,8 +1548,6 @@ var
   TextLob, BinLob: String;
   TempConnection: TZConnection;
 begin
-  if SkipTest then Exit;
-
   TempConnection := nil;
   BinStream:=nil;
   BinStream1:=nil;

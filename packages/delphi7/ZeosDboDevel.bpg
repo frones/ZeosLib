@@ -23,31 +23,16 @@ ZCore.bpl: ZCore.dpk
 ZParseSql.bpl: ZParseSql.dpk
   $(DCC)
 
-ZTestParseSqlAll.exe: ZTestParseSqlAll.dpr
-  $(DCC)
-
 ZPlain.bpl: ZPlain.dpk
   $(DCC)
 
 ZDbc.bpl: ZDbc.dpk
   $(DCC)
 
-ZTestDbcAll.exe: ZTestDbcAll.dpr
-  $(DCC)
-
 ZComponent.bpl: ZComponent.dpk
   $(DCC)
 
-ZTestComponentAll.exe: ZTestComponentAll.dpr
-  $(DCC)
-
 ZTestAll.exe: ZTestAll.dpr
-  $(DCC)
-
-ZTestFramework.bpl: ZTestFramework.dpk
-  $(DCC)
-
-ZTestBugReport.exe: ZTestBugReport.dpr
   $(DCC)
 
 ZTestPerformance.exe: ZTestPerformance.dpr
@@ -55,8 +40,4 @@ ZTestPerformance.exe: ZTestPerformance.dpr
 
 ZComponentDesign70.bpl: ZComponentDesign.dpk
   $(DCC)
-
-ZTestCoreAll.exe: ZTestCoreAll.dpr
-  $(DCC)
-
 

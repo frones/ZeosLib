@@ -108,7 +108,6 @@ const
   SUPPRESS_TEST_OUTPUT_KEY     = 'suppress.output';
   ENABLE_KEY                   = 'enable';
   SKIP_CLOSED_KEY              = 'skip.closed';
-  SKIP_TEST_KEY                = 'skip.test';
   SKIP_NON_ZEOS_ISSUES_KEY     = 'skip.non_zeos_issues';
   SKIP_REAL_PREPARED_KEY       = 'skip.real_prepared';
   ACTIVE_CONNECTIONS_KEY       = 'connections';
