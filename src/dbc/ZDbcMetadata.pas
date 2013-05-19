@@ -111,6 +111,9 @@ type
   end;
 
   {** Implements Abstract Database Metadata. }
+
+  { TZAbstractDatabaseMetadata }
+
   TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
     FConnection: Pointer;
@@ -120,6 +123,8 @@ type
     FConSettings: PZConSettings;
     function GetInfo: TStrings;
     function GetURLString: String;
+    function StripEscape(const Pattern: string): string;
+    function HasNoWildcards(const Pattern: string): boolean;
   protected
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
@@ -134,12 +139,10 @@ type
     function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
       DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
     function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
-    //Added by Cipto
+    function ConstructNameCondition(Pattern: string; Column: string): string;
     function AddEscapeCharToWildcards(const Pattern:string): string;
     function GetWildcardsSet:TZWildcardsSet;
     procedure FillWildcards; virtual;
-    //End Added by Cipto
-
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -494,7 +497,7 @@ var
 
 implementation
 
-uses ZVariant, ZCollections;
+uses ZVariant, ZCollections, ZMessages;
 
 { TZAbstractDatabaseInfo }
 
@@ -1786,6 +1789,72 @@ begin
   Result := FURL.URL;
 end;
 
+{**
+   Remove escapes from pattren string
+   @param Pattern a sql pattern
+   @return string without escapes
+}
+function TZAbstractDatabaseMetadata.StripEscape(const Pattern: string): string;
+var
+  I: Integer;
+  PreviousChar: Char;
+  EscapeChar: string;
+begin
+  PreviousChar := #0;
+  Result := '';
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
+  for I := 1 to Length(Pattern) do
+  begin
+    if (Pattern[i] <> EscapeChar) then
+    begin
+      Result := Result + Pattern[I];
+      PreviousChar := Pattern[I];
+    end
+    else
+    begin
+      if (PreviousChar = EscapeChar) then
+      begin
+        Result := Result + Pattern[I];
+        PreviousChar := #0;
+      end
+      else
+        PreviousChar := Pattern[i];
+    end;
+  end;
+end;
+
+{**
+   Check if pattern does not contain wildcards
+   @param Pattern a sql pattern
+   @return if pattern contain wildcards return true otherwise false
+}
+function TZAbstractDatabaseMetadata.HasNoWildcards(const Pattern: string
+  ): boolean;
+var
+  I: Integer;
+  PreviousCharWasEscape: Boolean;
+  EscapeChar,PreviousChar: Char;
+  WildcardsSet: TZWildcardsSet;
+begin
+  Result := False;
+  PreviousChar := #0;
+  PreviousCharWasEscape := False;
+  EscapeChar := Char(GetDatabaseInfo.GetSearchStringEscape[1]);
+  WildcardsSet := GetWildcardsSet;
+  for I := 1 to Length(Pattern) do
+  begin
+    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
+     Exit;
+
+    PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
+    if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
+      PreviousChar := #0
+    else
+      PreviousChar := Pattern[I];
+  end;
+  Result := True;
+end;
+
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
@@ -1811,7 +1880,7 @@ end;
   Creates and returns a statement object.
   @return the statement object
 }
-function TZAbstractDatabaseMetadata.GetStatement: IZStatement;
+function TZAbstractDatabaseMetadata.GetStatement: IZSTatement;
 begin
   Result := GetConnection.CreateStatement;
 end;
@@ -2017,6 +2086,40 @@ begin
     ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
+  end;
+end;
+
+{**
+   Takes a name patternand column name and retuen an appropriate SQL clause
+    @param Pattern a sql pattren
+    @parma Column a sql column name
+    @return processed string for query
+}
+function TZAbstractDatabaseMetadata.ConstructNameCondition(Pattern: string;
+  Column: string): string;
+const
+  Spaces = '';
+var
+  WorkPattern: string;
+begin
+  Result := '';
+  if (Length(Pattern) > 2 * 31) then
+    raise EZSQLException.Create(SPattern2Long);
+
+  if (Pattern = '%') or (Pattern = '') then
+     Exit;
+  WorkPattern := Pattern;
+  if Not GetIdentifierConvertor.IsQuoted(WorkPattern) then
+    WorkPattern := UpperCase(WorkPattern);
+  if HasNoWildcards(WorkPattern) then
+  begin
+    WorkPattern := StripEscape(WorkPattern);
+    Result := Format('%s = ''%s''', [Column, WorkPattern]);
+  end
+  else
+  begin
+    Result := Format('%s || ''%s'' like ''%s%s%%''',
+      [Column, Spaces, WorkPattern, Spaces]);
   end;
 end;
 
@@ -3982,8 +4085,8 @@ begin
     Result := ConstructVirtualResultSet(IndexInfoColumnsDynArray);
 end;
 
-function TZAbstractDatabaseMetadata.GetSequences(const Catalog, SchemaPattern,
-  SequenceNamePattern: string): IZResultSet;
+function TZAbstractDatabaseMetadata.GetSequences(const Catalog: string;
+  const SchemaPattern: string; const SequenceNamePattern: string): IZResultSet;
 var
   Key: string;
 begin
@@ -4002,8 +4105,8 @@ begin
   end;
 end;
 
-function TZAbstractDatabaseMetadata.UncachedGetSequences(const Catalog, SchemaPattern,
-  SequenceNamePattern: string): IZResultSet;
+function TZAbstractDatabaseMetadata.UncachedGetSequences(const Catalog: string;
+  const SchemaPattern: string; const SequenceNamePattern: string): IZResultSet;
 begin
     Result := ConstructVirtualResultSet(SequenceColumnsDynArray);
 end;
