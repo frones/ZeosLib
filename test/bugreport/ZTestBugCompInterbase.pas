@@ -292,10 +292,11 @@ begin
       Table.Delete;
       Table.Delete;
       Table.Delete;
-    finally
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := DecimalSep;
-      Table.Free;
+    except
+      // Do nothing here -> just have a clean table
     end;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := DecimalSep;
+    Table.Free;
   end;
 end;
 
