@@ -1529,7 +1529,6 @@ var
   OutParamCount: Integer;
   ColumnName: string;
   ColumnType: Integer;
-  EscapedSchemaPattern, EscapedProcedureName: string;
   ProcedureCondition, SchemaCondition: string;
 begin
   SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');

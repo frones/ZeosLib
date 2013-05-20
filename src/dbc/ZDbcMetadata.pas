@@ -4264,8 +4264,6 @@ begin
 end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
-var
-  WorkPattern: string;
 begin
   if not GetIdentifierConvertor.IsQuoted(Pattern) then
     if FDatabaseInfo.StoresUpperCaseIdentifiers then
