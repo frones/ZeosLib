@@ -2073,7 +2073,12 @@ begin
         if AttTypMod <> -1 then
           Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
             ConSettings.ClientCodePage.CharWidth))
-        else Result.UpdateInt(7, 0);
+        else
+        begin
+          if ( TypeOid = 1043 ) then
+            Result.UpdateInt(5, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead
+          Result.UpdateInt(7, 0);
+        end;
       end
       else if (PgType = 'numeric') or (PgType = 'decimal') then
       begin
