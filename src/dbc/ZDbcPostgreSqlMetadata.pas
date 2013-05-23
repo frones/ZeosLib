@@ -2074,11 +2074,16 @@ begin
           Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
             ConSettings.ClientCodePage.CharWidth))
         else
-        begin
           if ( TypeOid = 1043 ) then
-            Result.UpdateInt(5, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead
-          Result.UpdateInt(7, 0);
-        end;
+            if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then
+            begin
+              Result.UpdateInt(5, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead
+              Result.UpdateInt(7, 0); // need no size for streams
+            end
+            else //keep the string type but with user defined count of chars
+              Result.UpdateInt(7, (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength )
+          else
+            Result.UpdateInt(7, 0);
       end
       else if (PgType = 'numeric') or (PgType = 'decimal') then
       begin
