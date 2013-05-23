@@ -233,7 +233,6 @@ type
   {** Implements PostgreSQL Database Metadata. }
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    function EscapeString(const S: string): string;
     function GetRuleType(const Rule: String): TZImportedKey;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
@@ -248,6 +247,7 @@ type
     function GetPrivilegeName(Permission: char): string;
     // (technobot) end of questioned section
 
+    function EscapeString(const S: string): string; override;
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function UncachedGetSchemas: IZResultSet; override;
@@ -468,7 +468,7 @@ end;
 function TZPostgreSQLDatabaseInfo.GetSQLKeywords: string;
 begin
   Result := 'abort,absolute,access,action,add,admin,after,aggregate,all,also,'+
-  			'alter,always,analyse,analyze,and,any,array,asc,assertion,assignment,'+
+            'alter,always,analyse,analyze,and,any,array,asc,assertion,assignment,'+
             'asymmetric,at,authorization,'+
             'backward,before,begin,between,bigint,binary,bit,boolean,both,'+
             'cache,called,cascade,cascaded,case,cast,catalog,chain,character,'+
@@ -1396,41 +1396,43 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  SQL, LProcedureNamePattern: string;
+  SQL, ProcedureCondition, SchemaCondition: string;
 begin
-    LProcedureNamePattern := ToLikeString(ProcedureNamePattern);
+  SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
+  ProcedureCondition := ConstructNameCondition(ProcedureNamePattern,'p.proname');
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  begin
+    SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
+      + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
+      + ' NULL AS RESERVED3, d.description AS REMARKS, '
+      + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
+      + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
+      + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
+      + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
+      + ' c.relname=''pg_proc'') LEFT JOIN pg_catalog.pg_namespace pn ON'
+      + ' (c.relnamespace=pn.oid AND pn.nspname=''pg_catalog'') '
+      + ' WHERE p.pronamespace=n.oid';
+    if SchemaCondition <> '' then
+      SQL := SQL + ' AND ' + Schemacondition;
+    if ProcedureCondition <> '' then
+      SQL := SQL + ' AND ' + ProcedureCondition;
+    SQL := SQL + ' ORDER BY PROCEDURE_SCHEM, PROCEDURE_NAME';
+  end
+  else
+  begin
+    SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
+      + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
+      + ' NULL AS RESERVED3, NULL AS REMARKS, '
+      + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
+      + ' FROM pg_proc p';
+    if ProcedureCondition <> '' then
+      SQL := SQL + ' WHERE ' + ProcedureCondition;
+    SQL := SQL + ' ORDER BY PROCEDURE_NAME';
+  end;
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
-    begin
-      SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
-        + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
-        + ' NULL AS RESERVED3, d.description AS REMARKS, '
-        + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
-        + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
-        + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
-        + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
-        + ' c.relname=''pg_proc'') LEFT JOIN pg_catalog.pg_namespace pn ON'
-        + ' (c.relnamespace=pn.oid AND pn.nspname=''pg_catalog'') '
-        + ' WHERE p.pronamespace=n.oid';
-      if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-      SQL := SQL + ' AND p.proname LIKE ' + EscapeString(LProcedureNamePattern)
-        + ' ORDER BY PROCEDURE_SCHEM, PROCEDURE_NAME';
-    end
-    else
-    begin
-      SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
-        + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
-        + ' NULL AS RESERVED3, NULL AS REMARKS, '
-        + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
-        + ' FROM pg_proc p WHERE p.proname LIKE '
-        + EscapeString(LProcedureNamePattern)
-        + ' ORDER BY PROCEDURE_NAME';
-    end;
-
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(ProceduresColumnsDynArray));
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(ProceduresColumnsDynArray));
 end;
 
 {**
@@ -1528,152 +1530,155 @@ var
   ColumnName: string;
   ColumnType: Integer;
   EscapedSchemaPattern, EscapedProcedureName: string;
+  ProcedureCondition, SchemaCondition: string;
 begin
-    Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
+  SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
+  ProcedureCondition := ConstructNameCondition(ProcedureNamePattern,'p.proname');
+  Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-    EscapedSchemaPattern := EscapeString(GetIdentifierConvertor.ExtractQuote(SchemaPattern));
-    EscapedProcedureName := EscapeString(ToLikeString(
-      GetIdentifierConvertor.ExtractQuote(ProcedureNamePattern)));
+  Ver80Up := (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(8, 0);
+  Ver73Up := Ver80Up or (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3);
+  if Ver80Up then
+  begin
+    SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
+      + 'p.proallargtypes,p.proargnames,p.proargmodes,t.typrelid '
+      + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t '
+      + 'WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
+    if SchemaPattern <> '' then
+      SQL := SQL + ' AND ' + SchemaCondition;
+    if ProcedureNamePattern <> '' then
+      SQL := SQL + ' AND ' + ProcedureCondition;
+    SQL := SQL + ' ORDER BY n.nspname, p.proname';
+  end
+  else
+  if Ver73Up then
+  begin
+    SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
+      + 'NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typrelid '
+      + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
+      + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
+    if SchemaPattern <> '' then
+        SQL := SQL + ' AND ' + SchemaCondition;
+    if ProcedureNamePattern <> '' then
+        SQL := SQL + ' AND ' + ProcedureCondition;
+    SQL := SQL + ' ORDER BY n.nspname, p.proname';
+  end
+  else
+  begin
+    SQL := 'SELECT NULL AS nspname,p.proname,p.prorettype,p.proargtypes,'
+      + ' NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typtype,t.typrelid'
+      + ' FROM pg_proc p, pg_type t'
+      + ' WHERE p.prorettype=t.oid';
+    if ProcedureNamePattern <> '' then
+      SQL := SQL + ' AND ' + ProcedureCondition;
+    SQL := SQL + ' ORDER BY p.proname';
+  end;
 
-    Ver80Up := (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(8, 0);
-    Ver73Up := Ver80Up or (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3);
-    if Ver80Up then
+  ArgTypes := TStringList.Create;
+  ArgNames := TStringList.Create;
+  ArgModes := TStringList.Create;
+  try
+    ResultSet := GetConnection.CreateStatement.ExecuteQuery(SQL); //FirmOS Patch
+    with ResultSet do
     begin
-      SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
-        + 'p.proallargtypes,p.proargnames,p.proargmodes,t.typrelid '
-        + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_type t '
-        + 'WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
-      if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapedSchemaPattern;
-      SQL := SQL + ' AND p.proname LIKE ' + EscapedProcedureName
-        + ' ORDER BY n.nspname, p.proname';
-    end
-    else
-    if Ver73Up then
-    begin
-      SQL := 'SELECT n.nspname,p.proname,p.prorettype,p.proargtypes,t.typtype,'
-        + 'NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typrelid '
-        + 'FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n,'
-        + ' pg_catalog.pg_type t WHERE p.pronamespace=n.oid AND p.prorettype=t.oid';
-      if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapedSchemaPattern;
-      SQL := SQL + ' AND p.proname LIKE ' + EscapedProcedureName
-        + ' ORDER BY n.nspname, p.proname';
-    end
-    else
-      SQL := 'SELECT NULL AS nspname,p.proname,p.prorettype,p.proargtypes,'
-        + ' NULL AS proallargtypes,NULL AS proargnames,NULL AS proargnames,t.typtype,t.typrelid'
-        + ' FROM pg_proc p, pg_type t'
-        + ' WHERE p.prorettype=t.oid'
-        + ' AND p.proname LIKE '
-        +   EscapedProcedureName
-        + ' ORDER BY p.proname';
-
-    ArgTypes := TStringList.Create;
-    ArgNames := TStringList.Create;
-    ArgModes := TStringList.Create;
-    try
-      ResultSet := GetConnection.CreateStatement.ExecuteQuery(SQL); //FirmOS Patch
-      with ResultSet do
+      while Next do
       begin
-        while Next do
+        ReturnType := StrToInt(GetStringByName('prorettype'));
+        ReturnTypeType := GetStringByName('typtype');
+
+        ArgTypes.Clear;
+        ArgNames.Clear;
+        ArgModes.Clear;
+
+        if (IsNullByName('proallargtypes')) then
+          PutSplitString(ArgTypes, GetStringByName('proargtypes'), #10#13#9' ')
+        else
+          ParseACLArray(ArgTypes, GetStringByName('proallargtypes'));
+        ParseACLArray(ArgNames, GetStringByName('proargnames'));
+        ParseACLArray(ArgModes, GetStringByName('proargmodes'));
+
+        OutParamCount := 0;
+        for I := 0 to ArgTypes.Count - 1 do
         begin
-          ReturnType := StrToInt(GetStringByName('prorettype'));
-          ReturnTypeType := GetStringByName('typtype');
-
-          ArgTypes.Clear;
-          ArgNames.Clear;
-          ArgModes.Clear;
-
-          if (IsNullByName('proallargtypes')) then
-            PutSplitString(ArgTypes, GetStringByName('proargtypes'), #10#13#9' ')
-          else
-            ParseACLArray(ArgTypes, GetStringByName('proallargtypes'));
-          ParseACLArray(ArgNames, GetStringByName('proargnames'));
-          ParseACLArray(ArgModes, GetStringByName('proargmodes'));
-
-          OutParamCount := 0;
-          for I := 0 to ArgTypes.Count - 1 do
+          IsInParam := True;
+          IsOutParam := False;
+          if ArgModes.Count > I then
           begin
-            IsInParam := True;
-            IsOutParam := False;
-            if ArgModes.Count > I then
-            begin
-              ArgMode := ArgModes[I][1];
-              IsInParam := CharInSet(ArgMode, ['i', 'b', 'v']);
-              IsOutParam := CharInSet(ArgMode, ['o', 'b', 't']);
-            end;
-
-            if IsOutParam then
-              Inc(OutParamCount);
-
-            // column name
-            ArgOid := StrToInt(ArgTypes.Strings[i]);
-            if ArgNames.Count > I then
-              ColumnName := ArgNames.Strings[I]
-            else
-              ColumnName := '$' + IntToStr(I + 1);
-
-            // column type
-            if IsInParam then
-            begin
-              if IsOutParam then
-                ColumnType := Ord(pctInOut)
-              else
-                ColumnType := Ord(pctIn);
-            end
-            else
-            begin
-             if IsOutParam then
-               ColumnType := Ord(pctOut)
-             else
-               ColumnType := Ord(pctUnknown);
-            end;
-
-            InsertProcedureColumnRow(Result, GetStringByName('nspname'),
-              GetStringByName('proname'), ColumnName, ColumnType,
-              Ord(GetSQLTypeByOid(ArgOid)), GetPostgreSQLType(ArgOid),
-              Ord(ntNullableUnknown));
+            ArgMode := ArgModes[I][1];
+            IsInParam := CharInSet(ArgMode, ['i', 'b', 'v']);
+            IsOutParam := CharInSet(ArgMode, ['o', 'b', 't']);
           end;
 
-          if (OutParamCount > 0) then
-            Continue;
+          if IsOutParam then
+            Inc(OutParamCount);
 
-          if (ReturnTypeType = 'c') then // Extract composit type columns
+          // column name
+          ArgOid := StrToInt(ArgTypes.Strings[i]);
+          if ArgNames.Count > I then
+            ColumnName := ArgNames.Strings[I]
+          else
+            ColumnName := '$' + IntToStr(I + 1);
+
+          // column type
+          if IsInParam then
           begin
-            ColumnsRS := GetConnection.CreateStatement.ExecuteQuery(
-              Format('SELECT a.attname,a.atttypid'
-                + ' FROM pg_catalog.pg_attribute a WHERE a.attrelid=%s'
-                + ' ORDER BY a.attnum',
-                [ResultSet.GetStringByName('typrelid')]));
-            while ColumnsRS.Next do
-            begin
-              ColumnTypeOid := ColumnsRS.GetIntByName('atttypid');
-              InsertProcedureColumnRow(Result, GetStringByName('nspname'),
-                GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
-                Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid)),
-                GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
-            end;
-            ColumnsRS.Close;
+            if IsOutParam then
+              ColumnType := Ord(pctInOut)
+            else
+              ColumnType := Ord(pctIn);
           end
           else
           begin
-            if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
-            begin
-              InsertProcedureColumnRow(Result, GetStringByName('nspname'),
-                GetStringByName('proname'), 'returnValue', Ord(pctReturn),
-                Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
-                Ord(ntNullableUnknown));
-            end;
+           if IsOutParam then
+             ColumnType := Ord(pctOut)
+           else
+             ColumnType := Ord(pctUnknown);
+          end;
+
+          InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+            GetStringByName('proname'), ColumnName, ColumnType,
+            Ord(GetSQLTypeByOid(ArgOid)), GetPostgreSQLType(ArgOid),
+            Ord(ntNullableUnknown));
+        end;
+
+        if (OutParamCount > 0) then
+          Continue;
+
+        if (ReturnTypeType = 'c') then // Extract composit type columns
+        begin
+          ColumnsRS := GetConnection.CreateStatement.ExecuteQuery(
+            Format('SELECT a.attname,a.atttypid'
+              + ' FROM pg_catalog.pg_attribute a WHERE a.attrelid=%s'
+              + ' ORDER BY a.attnum',
+              [ResultSet.GetStringByName('typrelid')]));
+          while ColumnsRS.Next do
+          begin
+            ColumnTypeOid := ColumnsRS.GetIntByName('atttypid');
+            InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+              GetStringByName('proname'), ColumnsRS.GetStringByName('attname'),
+              Ord(pctResultSet), Ord(GetSQLTypeByOid(ColumnTypeOid)),
+              GetPostgreSQLType(ColumnTypeOid), Ord(ntNullableUnknown));
+          end;
+          ColumnsRS.Close;
+        end
+        else
+        begin
+          if (ReturnTypeType <> 'p') then // Single non-pseudotype return value
+          begin
+            InsertProcedureColumnRow(Result, GetStringByName('nspname'),
+              GetStringByName('proname'), 'returnValue', Ord(pctReturn),
+              Ord(GetSQLTypeByOid(ReturnType)), GetPostgreSQLType(ReturnType),
+              Ord(ntNullableUnknown));
           end;
         end;
-        Close;
       end;
-    finally
-      ArgTypes.Free;
-      ArgNames.Free;
-      ArgModes.Free;
+      Close;
     end;
+  finally
+    ArgTypes.Free;
+    ArgNames.Free;
+    ArgModes.Free;
+  end;
 end;
 
 {**
@@ -1714,127 +1719,131 @@ var
   TableType, OrderBy, SQL: string;
   UseSchemas: Boolean;
   LTypes: TStringDynArray;
+  TableNameCondition, SchemaCondition: string;
 begin
-    UseSchemas := True;
+  SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
+  TableNameCondition := ConstructNameCondition(TableNamePattern,'c.relname');
+  UseSchemas := True;
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  begin
+    SQL := ' SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,'
+      + ' c.relname AS TABLE_NAME,  '
+      + ' CASE (n.nspname LIKE ''pg\\_%'')'
+      + '   OR (n.nspname=''information_schema'')'
+      + ' WHEN true THEN CASE n.nspname '
+      + '   WHEN ''pg_catalog'' THEN CASE c.relkind '
+      + '     WHEN ''r'' THEN ''SYSTEM TABLE'''
+      + '     WHEN ''v'' THEN ''SYSTEM VIEW'' '
+      + '     WHEN ''i'' THEN ''SYSTEM INDEX'' '
+      + '     ELSE NULL '
+      + '   END '
+      + '   WHEN ''information_schema'' THEN CASE c.relkind '
+      + '     WHEN ''r'' THEN ''SYSTEM TABLE'''
+      + '     WHEN ''v'' THEN ''SYSTEM VIEW'' '
+      + '     WHEN ''i'' THEN ''SYSTEM INDEX'' '
+      + '     ELSE NULL '
+      + '   END '
+      + '   WHEN ''pg_toast'' THEN CASE c.relkind '
+      + '     WHEN ''r'' THEN ''SYSTEM TOAST TABLE'' '
+      + '     WHEN ''i'' THEN ''SYSTEM TOAST INDEX'' '
+      + '     ELSE NULL '
+      + '   END '
+      + '   ELSE CASE c.relkind '
+      + '	WHEN ''r'' THEN ''TEMPORARY TABLE'' '
+      + '	WHEN ''i'' THEN ''TEMPORARY INDEX'' '
+      + '	ELSE NULL '
+      + '   END '
+      + ' END '
+      + ' WHEN false THEN CASE c.relkind '
+      + '   WHEN ''r'' THEN ''TABLE'' '
+      + '   WHEN ''i'' THEN ''INDEX'' '
+      + '   WHEN ''S'' THEN ''SEQUENCE'' '
+      + '   WHEN ''v'' THEN ''VIEW'' '
+      + '   ELSE NULL '
+      + ' END '
+      + ' ELSE NULL '
+      + ' END '
+      + ' AS TABLE_TYPE, d.description AS REMARKS '
+      + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c '
+      + ' LEFT JOIN pg_catalog.pg_description d'
+      + ' ON (c.oid = d.objoid AND d.objsubid = 0) '
+      + ' LEFT JOIN pg_catalog.pg_class dc ON (d.classoid=dc.oid'
+      + ' AND dc.relname=''pg_class'') LEFT JOIN pg_catalog.pg_namespace dn'
+      + ' ON (dn.oid=dc.relnamespace AND dn.nspname=''pg_catalog'') '
+      + ' WHERE c.relnamespace = n.oid ';
+    if SchemaPattern <> '' then
     begin
-      SQL := ' SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,'
-        + ' c.relname AS TABLE_NAME,  '
-        + ' CASE (n.nspname LIKE ''pg\\_%'')'
-        + '   OR (n.nspname=''information_schema'')'
-        + ' WHEN true THEN CASE n.nspname '
-        + '   WHEN ''pg_catalog'' THEN CASE c.relkind '
-        + '     WHEN ''r'' THEN ''SYSTEM TABLE'''
-        + '     WHEN ''v'' THEN ''SYSTEM VIEW'' '
-        + '     WHEN ''i'' THEN ''SYSTEM INDEX'' '
-        + '     ELSE NULL '
-        + '   END '
-        + '   WHEN ''information_schema'' THEN CASE c.relkind '
-        + '     WHEN ''r'' THEN ''SYSTEM TABLE'''
-        + '     WHEN ''v'' THEN ''SYSTEM VIEW'' '
-        + '     WHEN ''i'' THEN ''SYSTEM INDEX'' '
-        + '     ELSE NULL '
-        + '   END '
-        + '   WHEN ''pg_toast'' THEN CASE c.relkind '
-        + '     WHEN ''r'' THEN ''SYSTEM TOAST TABLE'' '
-        + '     WHEN ''i'' THEN ''SYSTEM TOAST INDEX'' '
-        + '     ELSE NULL '
-        + '   END '
-        + '   ELSE CASE c.relkind '
-        + '	WHEN ''r'' THEN ''TEMPORARY TABLE'' '
-        + '	WHEN ''i'' THEN ''TEMPORARY INDEX'' '
-        + '	ELSE NULL '
-        + '   END '
-        + ' END '
-        + ' WHEN false THEN CASE c.relkind '
-        + '   WHEN ''r'' THEN ''TABLE'' '
-        + '   WHEN ''i'' THEN ''INDEX'' '
-        + '   WHEN ''S'' THEN ''SEQUENCE'' '
-        + '   WHEN ''v'' THEN ''VIEW'' '
-        + '   ELSE NULL '
-        + ' END '
-        + ' ELSE NULL '
-        + ' END '
-        + ' AS TABLE_TYPE, d.description AS REMARKS '
-        + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c '
-        + ' LEFT JOIN pg_catalog.pg_description d'
-        + ' ON (c.oid = d.objoid AND d.objsubid = 0) '
-        + ' LEFT JOIN pg_catalog.pg_class dc ON (d.classoid=dc.oid'
-        + ' AND dc.relname=''pg_class'') LEFT JOIN pg_catalog.pg_namespace dn'
-        + ' ON (dn.oid=dc.relnamespace AND dn.nspname=''pg_catalog'') '
-        + ' WHERE c.relnamespace = n.oid ';
-      //if SchemaPattern <> '' then // cannot happen due to SchemaPattern := '%'
-      begin
-        SQL := SQL + ' AND n.nspname LIKE '
-          + EscapeString(ToLikeString(SchemaPattern));
-      end;
-      OrderBy := ' ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME';
-    end
-    else
-    begin
-      UseSchemas := False;
-      TableType := ' CASE c.relname LIKE ''pg\\_%'' '
-        + 'WHEN true THEN CASE c.relname LIKE ''pg\\_toast\\_%'' '
-        + 'WHEN true THEN CASE c.relkind '
-        + '  WHEN ''r'' THEN ''SYSTEM TOAST TABLE'' '
-        + '  WHEN ''i'' THEN ''SYSTEM TOAST INDEX'' '
-        + '  ELSE NULL '
-        + 'END '
-        + 'WHEN false THEN CASE c.relname LIKE ''pg\\_temp\\_%'' '
-        + '  WHEN true THEN CASE c.relkind '
-        + '    WHEN ''r'' THEN ''TEMPORARY TABLE'' '
-        + '    WHEN ''i'' THEN ''TEMPORARY INDEX'' '
-        + '    ELSE NULL '
-        + '  END '
-        + '  WHEN false THEN CASE c.relkind '
-        + '    WHEN ''r'' THEN ''SYSTEM TABLE'' '
-        + '    WHEN ''v'' THEN ''SYSTEM VIEW'' '
-        + '    WHEN ''i'' THEN ''SYSTEM INDEX'' '
-        + '    ELSE NULL '
-        + '  END '
-        + '  ELSE NULL '
-        + 'END '
-        + 'ELSE NULL '
-        + 'END '
-        + 'WHEN false THEN CASE c.relkind '
-        + '  WHEN ''r'' THEN ''TABLE'' '
-        + '  WHEN ''i'' THEN ''INDEX'' '
-        + '  WHEN ''S'' THEN ''SEQUENCE'' '
-        + '  WHEN ''v'' THEN ''VIEW'' '
-        + '  ELSE NULL '
-        + 'END '
-        + 'ELSE NULL '
-        + ' END ';
-      OrderBy := ' ORDER BY TABLE_TYPE,TABLE_NAME ';
-      SQL := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,'
-        + ' c.relname AS TABLE_NAME, ' + TableType + ' AS TABLE_TYPE,'
-        + ' NULL AS REMARKS FROM pg_class c WHERE true ';
+      SQL := SQL + ' AND ' + SchemaCondition;
     end;
+    OrderBy := ' ORDER BY TABLE_TYPE,TABLE_SCHEM,TABLE_NAME';
+  end
+  else
+  begin
+    UseSchemas := False;
+    TableType := ' CASE c.relname LIKE ''pg\\_%'' '
+      + 'WHEN true THEN CASE c.relname LIKE ''pg\\_toast\\_%'' '
+      + 'WHEN true THEN CASE c.relkind '
+      + '  WHEN ''r'' THEN ''SYSTEM TOAST TABLE'' '
+      + '  WHEN ''i'' THEN ''SYSTEM TOAST INDEX'' '
+      + '  ELSE NULL '
+      + 'END '
+      + 'WHEN false THEN CASE c.relname LIKE ''pg\\_temp\\_%'' '
+      + '  WHEN true THEN CASE c.relkind '
+      + '    WHEN ''r'' THEN ''TEMPORARY TABLE'' '
+      + '    WHEN ''i'' THEN ''TEMPORARY INDEX'' '
+      + '    ELSE NULL '
+      + '  END '
+      + '  WHEN false THEN CASE c.relkind '
+      + '    WHEN ''r'' THEN ''SYSTEM TABLE'' '
+      + '    WHEN ''v'' THEN ''SYSTEM VIEW'' '
+      + '    WHEN ''i'' THEN ''SYSTEM INDEX'' '
+      + '    ELSE NULL '
+      + '  END '
+      + '  ELSE NULL '
+      + 'END '
+      + 'ELSE NULL '
+      + 'END '
+      + 'WHEN false THEN CASE c.relkind '
+      + '  WHEN ''r'' THEN ''TABLE'' '
+      + '  WHEN ''i'' THEN ''INDEX'' '
+      + '  WHEN ''S'' THEN ''SEQUENCE'' '
+      + '  WHEN ''v'' THEN ''VIEW'' '
+      + '  ELSE NULL '
+      + 'END '
+      + 'ELSE NULL '
+      + ' END ';
+    OrderBy := ' ORDER BY TABLE_TYPE,TABLE_NAME ';
+    SQL := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,'
+      + ' c.relname AS TABLE_NAME, ' + TableType + ' AS TABLE_TYPE,'
+      + ' NULL AS REMARKS FROM pg_class c WHERE true ';
+  end;
 
-    if (Types = nil) or (Length(Types) = 0) then
-    begin
-      SetLength(LTypes, 3);
-      // SetLength(LTypes, 6);
-      LTypes[0] := 'TABLE';
-      LTypes[1] := 'VIEW';
-      LTypes[2] := 'TEMPORARY TABLE';
-      // LTypes[3] := 'SYSTEM TABLE';
-      // LTypes[4] := 'SYSTEM TOAST TABLE';
-      // LTypes[5] := 'SYSTEM VIEW';
-    end
-    else
-      LTypes := Types;
+  if (Types = nil) or (Length(Types) = 0) then
+  begin
+    SetLength(LTypes, 3);
+    // SetLength(LTypes, 6);
+    LTypes[0] := 'TABLE';
+    LTypes[1] := 'VIEW';
+    LTypes[2] := 'TEMPORARY TABLE';
+    // LTypes[3] := 'SYSTEM TABLE';
+    // LTypes[4] := 'SYSTEM TOAST TABLE';
+    // LTypes[5] := 'SYSTEM VIEW';
+  end
+  else
+    LTypes := Types;
 
-    SQL := SQL + ' AND c.relname LIKE ' + EscapeString(ToLikeString(TableNamePattern))
-      + ' AND (false';
-    for I := 0 to High(LTypes) do
-      SQL := SQL + ' OR (' + TableTypeSQLExpression(LTypes[i], UseSchemas) + ')';
-    SQL := SQL + ')' + OrderBy;
+  If TableNameCondition <> '' then
+    SQL := SQL + ' AND ' + TableNameCondition;
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(TableColumnsDynArray));
+  SQL := SQL + ' AND (false';
+  for I := 0 to High(LTypes) do
+    SQL := SQL + ' OR (' + TableTypeSQLExpression(LTypes[i], UseSchemas) + ')';
+  SQL := SQL + ')' + OrderBy;
+
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
 {**
@@ -1985,130 +1994,136 @@ var
   TypeOid, AttTypMod: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
+  ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
-    Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+  SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
+  TableNameCondition := ConstructNameCondition(TableNamePattern,'c.relname');
+  ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'a.attname');
+  Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
-    begin
-      SQL := 'SELECT n.nspname,' {1}
-        + 'c.relname,' {2}
-        + 'a.attname,' {3}
-        + 'a.atttypid,' {4}
-        + 'a.attnotnull,' {5}
-        + 'a.atttypmod,' {6}
-        + 'a.attlen,' {7}
-        + 'a.attnum,' {8}
-        + 'pg_get_expr(def.adbin, def.adrelid) as adsrc,' {9}
-        + 'dsc.description ' {10}
-        + ' FROM pg_catalog.pg_namespace n '
-        + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
-        + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
-        + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid'
-        + ' AND a.attnum = def.adnum) LEFT JOIN pg_catalog.pg_description dsc'
-        + ' ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
-        + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid'
-        + ' AND dc.relname=''pg_class'') LEFT JOIN pg_catalog.pg_namespace dn'
-        + ' ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
-        + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
-      if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-      //else
-         //SQL := SQL + ' AND pg_table_is_visible (c.oid) '; omit: because of Speed decrease: http://zeos.firmos.at/viewtopic.php?p=16646&sid=130
-    end
-    else
-    begin
-      SQL := 'SELECT NULL::text AS nspname,' {1}
-        + 'c.relname,' {2}
-        + 'a.attname,' {3}
-        + 'a.atttypid,' {4}
-        + 'a.attnotnull,' {5}
-        + 'a.atttypmod,' {6}
-        + 'a.attlen,' {7}
-        + 'a.attnum,' {8}
-        + 'NULL AS adsrc,' {9}
-        + 'NULL AS description' {10}
-        + 'FROM pg_class c, pg_attribute a '
-        + ' WHERE a.attrelid=c.oid AND a.attnum > 0 ';
-    end;
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  begin
+    SQL := 'SELECT n.nspname,' {1}
+      + 'c.relname,' {2}
+      + 'a.attname,' {3}
+      + 'a.atttypid,' {4}
+      + 'a.attnotnull,' {5}
+      + 'a.atttypmod,' {6}
+      + 'a.attlen,' {7}
+      + 'a.attnum,' {8}
+      + 'pg_get_expr(def.adbin, def.adrelid) as adsrc,' {9}
+      + 'dsc.description ' {10}
+      + ' FROM pg_catalog.pg_namespace n '
+      + ' JOIN pg_catalog.pg_class c ON (c.relnamespace = n.oid) '
+      + ' JOIN pg_catalog.pg_attribute a ON (a.attrelid=c.oid) '
+      + ' LEFT JOIN pg_catalog.pg_attrdef def ON (a.attrelid=def.adrelid'
+      + ' AND a.attnum = def.adnum) LEFT JOIN pg_catalog.pg_description dsc'
+      + ' ON (c.oid=dsc.objoid AND a.attnum = dsc.objsubid) '
+      + ' LEFT JOIN pg_catalog.pg_class dc ON (dc.oid=dsc.classoid'
+      + ' AND dc.relname=''pg_class'') LEFT JOIN pg_catalog.pg_namespace dn'
+      + ' ON (dc.relnamespace=dn.oid AND dn.nspname=''pg_catalog'') '
+      + ' WHERE a.attnum > 0 AND NOT a.attisdropped';
+    if SchemaPattern <> '' then
+      SQL := SQL + ' AND ' + SchemaCondition;
+    //else
+       //SQL := SQL + ' AND pg_table_is_visible (c.oid) '; omit: because of Speed decrease: http://zeos.firmos.at/viewtopic.php?p=16646&sid=130
+  end
+  else
+  begin
+    SQL := 'SELECT NULL::text AS nspname,' {1}
+      + 'c.relname,' {2}
+      + 'a.attname,' {3}
+      + 'a.atttypid,' {4}
+      + 'a.attnotnull,' {5}
+      + 'a.atttypmod,' {6}
+      + 'a.attlen,' {7}
+      + 'a.attnum,' {8}
+      + 'NULL AS adsrc,' {9}
+      + 'NULL AS description' {10}
+      + 'FROM pg_class c, pg_attribute a '
+      + ' WHERE a.attrelid=c.oid AND a.attnum > 0 ';
+  end;
 
-    SQL := SQL + ' AND c.relname LIKE ' + EscapeString(ToLikeString(TableNamePattern))
-      + ' AND a.attname LIKE ' + EscapeString(ToLikeString(ColumnNamePattern))
-      + ' ORDER BY nspname,relname,attnum';
+  If TableNameCondition <> '' then
+    SQL := SQL + ' AND ' + TableNameCondition;
+  If ColumnNameCondition <> '' then
+    SQL := SQL+ ' AND ' + ColumnNameCondition;
+  SQL := SQL+ ' ORDER BY nspname,relname,attnum';
 
-    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+  begin
+    while Next do
     begin
-      while Next do
+      AttTypMod := GetInt(6 {atttypmod});
+
+      TypeOid := GetInt(4 {atttypid});
+      PgType := GetPostgreSQLType(TypeOid);
+
+      Result.MoveToInsertRow;
+      Result.UpdateNull(1);
+      Result.UpdateString(2, GetString(1 {nspname}));
+      Result.UpdateString(3, GetString(2 {relname}));
+      Result.UpdateString(4, GetString(3 {attname}));
+      SQLType := GetSQLTypeByOid(TypeOid);
+      Result.UpdateInt(5, Ord(SQLType));
+      Result.UpdateString(6, PgType);
+      Result.UpdateInt(8, 0);
+
+      if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
       begin
-        AttTypMod := GetInt(6 {atttypmod});
-
-        TypeOid := GetInt(4 {atttypid});
-        PgType := GetPostgreSQLType(TypeOid);
-
-        Result.MoveToInsertRow;
-        Result.UpdateNull(1);
-        Result.UpdateString(2, GetString(1 {nspname}));
-        Result.UpdateString(3, GetString(2 {relname}));
-        Result.UpdateString(4, GetString(3 {attname}));
-        SQLType := GetSQLTypeByOid(TypeOid);
-        Result.UpdateInt(5, Ord(SQLType));
-        Result.UpdateString(6, PgType);
-        Result.UpdateInt(8, 0);
-
-        if (PgType = 'bpchar') or (PgType = 'varchar') or (PgType = 'enum') then
-        begin
-          if AttTypMod <> -1 then
-            Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
-              ConSettings.ClientCodePage.CharWidth))
-          else Result.UpdateInt(7, 0);
-        end
-        else if (PgType = 'numeric') or (PgType = 'decimal') then
-        begin
-          Result.UpdateInt(7, ((AttTypMod - 4) div 65536)); //precision
-          Result.UpdateInt(9, ((AttTypMod -4) mod 65536)); //scale
-          Result.UpdateInt(10, 10); //base? ten as default
-        end
-        else if (PgType = 'bit') or (PgType = 'varbit') then
-        begin
-          Result.UpdateInt(7, AttTypMod);
-          Result.UpdateInt(10, 2);
-        end
-        else
-        begin
-          Result.UpdateInt(7, GetInt(7 {attlen}));
-          Result.UpdateInt(10, 2);
-        end;
-
-        Result.UpdateNull(8);
-        if GetBoolean(5 {attnotnull}) then
-        begin
-          Result.UpdateString(18, 'NO');
-          Result.UpdateInt(11, Ord(ntNoNulls));
-        end
-        else
-        begin
-          Result.UpdateString(18, 'YES');
-          Result.UpdateInt(11, Ord(ntNullable));
-        end;
-
-        Result.UpdateString(12, GetString(10 {description}));
-        Result.UpdateString(13, GetString(9 {adsrc}));
-        Result.UpdateNull(14);
-        Result.UpdateNull(15);
-        Result.UpdateInt(16, Result.GetInt(7));
-        Result.UpdateInt(17, GetInt(8 {attnum}));
-
-        Result.UpdateNullByName('AUTO_INCREMENT');
-        Result.UpdateBooleanByName('CASE_SENSITIVE',
-          GetIdentifierConvertor.IsCaseSensitive(GetString(3 {attname})));
-        Result.UpdateBooleanByName('SEARCHABLE', True);
-        Result.UpdateBooleanByName('WRITABLE', True);
-        Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-        Result.UpdateBooleanByName('READONLY', False);
-
-        Result.InsertRow;
+        if AttTypMod <> -1 then
+          Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
+            ConSettings.ClientCodePage.CharWidth))
+        else Result.UpdateInt(7, 0);
+      end
+      else if (PgType = 'numeric') or (PgType = 'decimal') then
+      begin
+        Result.UpdateInt(7, ((AttTypMod - 4) div 65536)); //precision
+        Result.UpdateInt(9, ((AttTypMod -4) mod 65536)); //scale
+        Result.UpdateInt(10, 10); //base? ten as default
+      end
+      else if (PgType = 'bit') or (PgType = 'varbit') then
+      begin
+        Result.UpdateInt(7, AttTypMod);
+        Result.UpdateInt(10, 2);
+      end
+      else
+      begin
+        Result.UpdateInt(7, GetInt(7 {attlen}));
+        Result.UpdateInt(10, 2);
       end;
-      Close;
+
+      Result.UpdateNull(8);
+      if GetBoolean(5 {attnotnull}) then
+      begin
+        Result.UpdateString(18, 'NO');
+        Result.UpdateInt(11, Ord(ntNoNulls));
+      end
+      else
+      begin
+        Result.UpdateString(18, 'YES');
+        Result.UpdateInt(11, Ord(ntNullable));
+      end;
+
+      Result.UpdateString(12, GetString(10 {description}));
+      Result.UpdateString(13, GetString(9 {adsrc}));
+      Result.UpdateNull(14);
+      Result.UpdateNull(15);
+      Result.UpdateInt(16, Result.GetInt(7));
+      Result.UpdateInt(17, GetInt(8 {attnum}));
+
+      Result.UpdateNullByName('AUTO_INCREMENT');
+      Result.UpdateBooleanByName('CASE_SENSITIVE',
+        GetIdentifierConvertor.IsCaseSensitive(GetString(3 {attname})));
+      Result.UpdateBooleanByName('SEARCHABLE', True);
+      Result.UpdateBooleanByName('WRITABLE', True);
+      Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
+      Result.UpdateBooleanByName('READONLY', False);
+
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
@@ -2146,78 +2161,84 @@ var
   SQL, Column, Owner: string;
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStrings;
+  ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
-    Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
+  SchemaCondition := ConstructNameCondition(Schema,'n.nspname');
+  TableNameCondition := ConstructNameCondition(Table,'c.relname');
+  ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'a.attname');
+  Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  begin
+    SQL := 'SELECT n.nspname,c.relname,u.usename,c.relacl,a.attname '
+      + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
+      + ' pg_catalog.pg_user u, pg_catalog.pg_attribute a '
+      + ' WHERE c.relnamespace = n.oid AND u.usesysid = c.relowner '
+      + ' AND c.oid = a.attrelid AND c.relkind = ''r'''
+      + ' AND a.attnum > 0 AND NOT a.attisdropped';
+    if Schema <> '' then
+      SQL := SQL + ' AND ' + SchemaCondition;
+  end
+  else
+  begin
+    SQL := 'SELECT NULL::text AS nspname,c.relname,u.usename,c.relacl,'
+      + 'a.attname FROM pg_class c, pg_user u,pg_attribute a '
+      + ' WHERE u.usesysid = c.relowner AND c.oid = a.attrelid '
+      + ' AND a.attnum > 0 AND c.relkind = ''r''';
+  end;
+
+  If TableNameCondition <> '' then
+    SQL := SQL + ' AND ' + TableNameCondition;
+  If ColumnNameCondition <> '' then
+    SQL := SQL + ' AND '+ ColumnNameCondition;
+  SQL := SQL + ' ORDER BY attname';
+
+  Permissions := TStringList.Create;
+  PermissionsExp := TStringList.Create;
+  try
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
-      SQL := 'SELECT n.nspname,c.relname,u.usename,c.relacl,a.attname '
-        + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
-        + ' pg_catalog.pg_user u, pg_catalog.pg_attribute a '
-        + ' WHERE c.relnamespace = n.oid AND u.usesysid = c.relowner '
-        + ' AND c.oid = a.attrelid AND c.relkind = ''r'''
-        + ' AND a.attnum > 0 AND NOT a.attisdropped';
-      if Schema <> '' then
-        SQL := SQL + ' AND n.nspname = ' + EscapeString(Schema);
-    end
-    else
-    begin
-      SQL := 'SELECT NULL::text AS nspname,c.relname,u.usename,c.relacl,'
-        + 'a.attname FROM pg_class c, pg_user u,pg_attribute a '
-        + ' WHERE u.usesysid = c.relowner AND c.oid = a.attrelid '
-        + ' AND a.attnum > 0 AND c.relkind = ''r''';
-    end;
-
-    SQL := SQL + ' AND c.relname = ' + EscapeString(Table)
-      + ' AND a.attname LIKE ' + EscapeString(ToLikeString(ToLikeString(ColumnNamePattern)))
-      + ' ORDER BY attname';
-
-    Permissions := TStringList.Create;
-    PermissionsExp := TStringList.Create;
-    try
-      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      while Next do
       begin
-        while Next do
+        //SchemaName := GetStringByName('nspname');
+        //TableName := GetStringByName('relname');
+        Column := GetStringByName('attname');
+        Owner := GetStringByName('usename');
+        Permissions.Clear;
+        ParseACLArray(Permissions, GetStringByName('relacl'));
+        for I := 0 to Permissions.Count-1 do
         begin
-          //SchemaName := GetStringByName('nspname');
-          //TableName := GetStringByName('relname');
-          Column := GetStringByName('attname');
-          Owner := GetStringByName('usename');
-          Permissions.Clear;
-          ParseACLArray(Permissions, GetStringByName('relacl'));
-          for I := 0 to Permissions.Count-1 do
+          PutSplitString(PermissionsExp, Permissions.Strings[I], '=');
+          if PermissionsExp.Count < 2 then
+            Continue;
+          Grantee := PermissionsExp.Strings[0];
+          if Grantee = '' then
+            Grantee := 'PUBLIC';
+          Privileges := PermissionsExp.Strings[1];
+          for J := 1 to Length(Privileges) do
           begin
-            PutSplitString(PermissionsExp, Permissions.Strings[I], '=');
-            if PermissionsExp.Count < 2 then
-              Continue;
-            Grantee := PermissionsExp.Strings[0];
-            if Grantee = '' then
-              Grantee := 'PUBLIC';
-            Privileges := PermissionsExp.Strings[1];
-            for J := 1 to Length(Privileges) do
-            begin
-              if Owner = Grantee then
-                Grantable := 'YES'
-              else Grantable := 'NO';
-              Result.MoveToInsertRow;
-              Result.UpdateNull(1);
-              Result.UpdateString(2, Schema);
-              Result.UpdateString(3, Table);
-              Result.UpdateString(4, Column);
-              Result.UpdateString(5, Owner);
-              Result.UpdateString(6, Grantee);
-              Result.UpdateString(7, GetPrivilegeName(Privileges[J]));
-              Result.UpdateString(8, grantable);
-              Result.InsertRow;
-            end;
+            if Owner = Grantee then
+              Grantable := 'YES'
+            else Grantable := 'NO';
+            Result.MoveToInsertRow;
+            Result.UpdateNull(1);
+            Result.UpdateString(2, Schema);
+            Result.UpdateString(3, Table);
+            Result.UpdateString(4, Column);
+            Result.UpdateString(5, Owner);
+            Result.UpdateString(6, Grantee);
+            Result.UpdateString(7, GetPrivilegeName(Privileges[J]));
+            Result.UpdateString(8, grantable);
+            Result.InsertRow;
           end;
         end;
-        Close;
       end;
-    finally
-      Permissions.Free;
-      PermissionsExp.Free;
+      Close;
     end;
+  finally
+    Permissions.Free;
+    PermissionsExp.Free;
+  end;
 end;
 
 {**
@@ -2259,74 +2280,77 @@ var
   SQL, SchemaName, TableName, Owner: string;
   Privileges, Grantable, Grantee: string;
   Permissions, PermissionsExp: TStringList;
+  TableNameCondition, SchemaCondition: string;
 begin
-    Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
+  SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
+  TableNameCondition := ConstructNameCondition(TableNamePattern,'c.relname');
+  Result:=inherited UncachedGetTablePrivileges(Catalog, SchemaPattern, TableNamePattern);
 
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  begin
+    SQL := 'SELECT n.nspname,c.relname,u.usename,c.relacl '
+      + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
+      + ' pg_catalog.pg_user u WHERE c.relnamespace = n.oid '
+      + ' AND u.usesysid = c.relowner AND c.relkind = ''r'' ';
+    if SchemaPattern <> '' then
+      SQL := SQL + ' AND ' + SchemaCondition;
+  end
+  else
+  begin
+    SQL := 'SELECT NULL::text AS nspname,c.relname,u.usename,c.relacl '
+      + ' FROM pg_class c, pg_user u WHERE u.usesysid = c.relowner '
+      + ' AND c.relkind = ''r'' ';
+  end;
+
+  SQL := SQL + ' AND ' + TableNameCondition
+    + ' ORDER BY nspname, relname';
+
+  Permissions := TStringList.Create;
+  PermissionsExp := TStringList.Create;
+  try
+    with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
-      SQL := 'SELECT n.nspname,c.relname,u.usename,c.relacl '
-        + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class c,'
-        + ' pg_catalog.pg_user u WHERE c.relnamespace = n.oid '
-        + ' AND u.usesysid = c.relowner AND c.relkind = ''r'' ';
-      if SchemaPattern <> '' then
-        SQL := SQL + ' AND n.nspname LIKE ' + EscapeString(SchemaPattern);
-    end
-    else
-    begin
-      SQL := 'SELECT NULL::text AS nspname,c.relname,u.usename,c.relacl '
-        + ' FROM pg_class c, pg_user u WHERE u.usesysid = c.relowner '
-        + ' AND c.relkind = ''r'' ';
-    end;
-
-    SQL := SQL + ' AND c.relname LIKE ' + EscapeString(ToLikeString(TableNamePattern))
-      + ' ORDER BY nspname, relname';
-
-    Permissions := TStringList.Create;
-    PermissionsExp := TStringList.Create;
-    try
-      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      while Next do
       begin
-        while Next do
+        SchemaName := GetStringByName('nspname');
+        TableName := GetStringByName('relname');
+        Owner := GetStringByName('usename');
+        SchemaName := GetStringByName('nspname');
+        Permissions.Clear;
+        ParseACLArray(Permissions, GetStringByName('relacl'));
+        Permissions.Sort;
+        for I := 0 to Permissions.Count-1 do
         begin
-          SchemaName := GetStringByName('nspname');
-          TableName := GetStringByName('relname');
-          Owner := GetStringByName('usename');
-          SchemaName := GetStringByName('nspname');
-          Permissions.Clear;
-          ParseACLArray(Permissions, GetStringByName('relacl'));
-          Permissions.Sort;
-          for I := 0 to Permissions.Count-1 do
+          PutSplitString(PermissionsExp, Permissions.Strings[I], '=');
+          if PermissionsExp.Count < 2 then
+            Continue;
+          Grantee := PermissionsExp.Strings[0];
+          if Grantee = '' then
+          Grantee := 'PUBLIC';
+          Privileges := PermissionsExp.Strings[1];
+          for J := 1 to Length(Privileges) do
           begin
-            PutSplitString(PermissionsExp, Permissions.Strings[I], '=');
-            if PermissionsExp.Count < 2 then
-              Continue;
-            Grantee := PermissionsExp.Strings[0];
-            if Grantee = '' then
-            Grantee := 'PUBLIC';
-            Privileges := PermissionsExp.Strings[1];
-            for J := 1 to Length(Privileges) do
-            begin
-              if Owner = Grantee then
-                Grantable := 'YES'
-              else Grantable := 'NO';
-              Result.MoveToInsertRow;
-              Result.UpdateNull(1);
-              Result.UpdateString(2, SchemaName);
-              Result.UpdateString(3, TableName);
-              Result.UpdateString(4, Owner);
-              Result.UpdateString(5, Grantee);
-              Result.UpdateString(6, GetPrivilegeName(Privileges[J]));
-              Result.UpdateString(7, grantable);
-              Result.InsertRow;
-            end;
+            if Owner = Grantee then
+              Grantable := 'YES'
+            else Grantable := 'NO';
+            Result.MoveToInsertRow;
+            Result.UpdateNull(1);
+            Result.UpdateString(2, SchemaName);
+            Result.UpdateString(3, TableName);
+            Result.UpdateString(4, Owner);
+            Result.UpdateString(5, Grantee);
+            Result.UpdateString(6, GetPrivilegeName(Privileges[J]));
+            Result.UpdateString(7, grantable);
+            Result.InsertRow;
           end;
         end;
-        Close;
       end;
-    finally
-      Permissions.Free;
-      PermissionsExp.Free;
+      Close;
     end;
+  finally
+    Permissions.Free;
+    PermissionsExp.Free;
+  end;
 end;
 
 {**
@@ -2402,34 +2426,37 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: stri
   const Schema: string; const Table: string): IZResultSet;
 var
   SQL, Select, From, Where: string;
+  TableNameCondition, SchemaCondition: string;
 begin
-    if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
-    begin
-      Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
-      From := ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct,'
-        + ' pg_catalog.pg_class ci, pg_catalog.pg_attribute a,'
-        + ' pg_catalog.pg_index i';
-      Where := ' AND ct.relnamespace = n.oid';
-      if Schema <> '' then
-        Where := Where + ' AND n.nspname = ' + EscapeString(Schema);
-    end
-    else
-    begin
-      Select := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,';
-      From := ' FROM pg_class ct, pg_class ci, pg_attribute a, pg_index i';
-    end;
-    SQL := Select + ' ct.relname AS TABLE_NAME, a.attname AS COLUMN_NAME,'
-      + ' a.attnum AS KEY_SEQ, ci.relname AS PK_NAME'
-      + From
-      + ' WHERE ct.oid=i.indrelid AND ci.oid=i.indexrelid'
-      + ' AND a.attrelid=ci.oid AND i.indisprimary';
-    if Table <> '' then
-       SQL := SQL + ' AND ct.relname = ' + EscapeString(Table);
-    SQL := SQL + Where + ' ORDER BY table_name, pk_name, key_seq';
+  SchemaCondition := ConstructNameCondition(Schema,'n.nspname');
+  TableNameCondition := ConstructNameCondition(Table,'ct.relname');
+  if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
+  begin
+    Select := 'SELECT NULL AS TABLE_CAT, n.nspname AS TABLE_SCHEM,';
+    From := ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_class ct,'
+      + ' pg_catalog.pg_class ci, pg_catalog.pg_attribute a,'
+      + ' pg_catalog.pg_index i';
+    Where := ' AND ct.relnamespace = n.oid';
+    if Schema <> '' then
+      Where := Where + ' AND ' + SchemaCondition;
+  end
+  else
+  begin
+    Select := 'SELECT NULL AS TABLE_CAT, NULL AS TABLE_SCHEM,';
+    From := ' FROM pg_class ct, pg_class ci, pg_attribute a, pg_index i';
+  end;
+  SQL := Select + ' ct.relname AS TABLE_NAME, a.attname AS COLUMN_NAME,'
+    + ' a.attnum AS KEY_SEQ, ci.relname AS PK_NAME'
+    + From
+    + ' WHERE ct.oid=i.indrelid AND ci.oid=i.indexrelid'
+    + ' AND a.attrelid=ci.oid AND i.indisprimary';
+  if Table <> '' then
+     SQL := SQL + ' AND ' + TableNameCondition;
+  SQL := SQL + Where + ' ORDER BY table_name, pk_name, key_seq';
 
-    Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
-      ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
+  Result := CopyToVirtualResultSet(
+    GetConnection.CreateStatement.ExecuteQuery(SQL),
+    ConstructVirtualResultSet(PrimaryKeyColumnsDynArray));
 end;
 
 {**
@@ -2504,7 +2531,11 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: str
 var
   SQL: string;
   KeySequence: Integer;
+  TableNameCondition, SchemaCondition, CatalogCondition: string;
 begin
+  CatalogCondition := ConstructNameCondition(Catalog,'kcu.table_catalog');
+  SchemaCondition := ConstructNameCondition(Schema,'kcu.constraint_schema');
+  TableNameCondition := ConstructNameCondition(Table,'kcu.table_name');
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
     Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
@@ -2528,11 +2559,11 @@ begin
       'join information_schema.referential_constraints as rf on rf.constraint_name = tc.constraint_name '+
       'WHERE constraint_type = ''FOREIGN KEY''';
     if Catalog <> '' then
-      SQL := SQL + ' and kcu.table_catalog = '''+Catalog+'''';
+      SQL := SQL + ' and ' + CatalogCondition;
     if Schema <> '' then
-      SQL := SQL + ' and kcu.constraint_schema = '''+Schema+'''';
+      SQL := SQL + ' and ' + SchemaCondition;
     if Table <> '' then
-      SQL := SQL + ' and kcu.table_name = '''+Table+'''';
+      SQL := SQL + ' and ' + TableNameCondition;
 
     KeySequence := 0;
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
@@ -2640,7 +2671,11 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: str
 var
   SQL: string;
   KeySequence: Integer;
+  TableNameCondition, SchemaCondition, CatalogCondition: string;
 begin
+  CatalogCondition := ConstructNameCondition(Catalog,'tc.constraint_catalog');
+  SchemaCondition := ConstructNameCondition(Schema,'tc.constraint_schema');
+  TableNameCondition := ConstructNameCondition(Table,'ccu.table_name');
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 4) then
   begin
     Result:=inherited UncachedGetImportedKeys(Catalog, Schema, Table);
@@ -2664,11 +2699,11 @@ begin
       'join information_schema.referential_constraints as rf on rf.constraint_name = tc.constraint_name '+
       'WHERE constraint_type = ''FOREIGN KEY''';
     if Catalog <> '' then
-      SQL := SQL + ' and tc.constraint_catalog = '''+Catalog+'''';
+      SQL := SQL + ' and ' + CatalogCondition;
     if Schema <> '' then
-      SQL := SQL + ' and tc.constraint_schema = '''+Schema+'''';
+      SQL := SQL + ' and ' + SchemaCondition;
     if Table <> '' then
-      SQL := SQL + ' and ccu.table_name = '''+Table+'''';
+      SQL := SQL + ' and ' + TableNameCondition;
     SQL := SQL + ' order by kcu.table_name;';
 
     KeySequence := 0;

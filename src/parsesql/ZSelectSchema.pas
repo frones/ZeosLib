@@ -439,6 +439,17 @@ end;
 procedure TZSelectSchema.ConvertIdentifiers(Convertor: IZIdentifierConvertor);
 var
   I: Integer;
+  function ExtractNeedlessQuote(Value : String) : String;
+  var
+    tempstring: String;
+  begin
+    tempstring := Convertor.ExtractQuote(Value);
+    if Convertor.IsCaseSensitive(tempstring) then
+      result := Value
+    else
+      result := tempstring;
+  end;
+
 begin
   if Convertor = nil then Exit;
 
@@ -446,11 +457,11 @@ begin
   begin
     with TZFieldRef(FFields[I]) do
     begin
-      Catalog := Convertor.ExtractQuote(Catalog);
-      Schema := Convertor.ExtractQuote(Schema);
-      Table := Convertor.ExtractQuote(Table);
-      Field := Convertor.ExtractQuote(Field);
-      Alias := Convertor.ExtractQuote(Alias);
+      Catalog := ExtractNeedlessQuote(Catalog);
+      Schema := ExtractNeedlessQuote(Schema);
+      Table := ExtractNeedlessQuote(Table);
+      Field := ExtractNeedlessQuote(Field);
+      Alias := ExtractNeedlessQuote(Alias);
     end;
   end;
 
@@ -458,10 +469,10 @@ begin
   begin
     with TZTableRef(FTables[I]) do
     begin
-      Catalog := Convertor.ExtractQuote(Catalog);
-      Schema := Convertor.ExtractQuote(Schema);
-      Table := Convertor.ExtractQuote(Table);
-      Alias := Convertor.ExtractQuote(Alias);
+      Catalog := ExtractNeedlessQuote(Catalog);
+      Schema := ExtractNeedlessQuote(Schema);
+      Table := ExtractNeedlessQuote(Table);
+      Alias := ExtractNeedlessQuote(Alias);
     end;
   end;
 end;
