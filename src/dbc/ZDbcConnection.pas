@@ -750,8 +750,21 @@ end;
   @return a new Statement object
 }
 function TZAbstractConnection.CreateStatement: IZStatement;
+var
+  Info: TStrings;
 begin
-  Result := CreateRegularStatement(nil);
+  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    begin
+     Info := TSTringList.Create;
+     Info.Append('preferprepared=TRUE');
+    end
+  Else
+    Info := nil;
+
+  Result := CreateRegularStatement(Info);
+
+  If Info <> nil then
+    Info.Free;
 end;
 
 {**
@@ -771,6 +784,8 @@ end;
 function TZAbstractConnection.CreateStatementWithParams(Info: TStrings):
   IZStatement;
 begin
+  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    Info.Append('preferprepared=TRUE');
   Result := CreateRegularStatement(Info);
 end;
 
@@ -815,8 +830,21 @@ end;
     pre-compiled statement
 }
 function TZAbstractConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
+var
+  Info: TStrings;
 begin
-  Result := CreatePreparedStatement(SQL, nil);
+  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    begin
+     Info := TSTringList.Create;
+     Info.Append('preferprepared=TRUE');
+    end
+  Else
+    Info := nil;
+
+  Result := CreatePreparedStatement(SQL, Info);
+
+  If Info <> nil then
+    Info.Free;
 end;
 
 {**
@@ -832,6 +860,9 @@ end;
 function TZAbstractConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
 begin
+  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    Info.Append('preferprepared=TRUE');
+
   Result := CreatePreparedStatement(SQL, Info);
 end;
 
@@ -881,8 +912,21 @@ end;
 
 function TZAbstractConnection.PrepareCall(
   const SQL: string): IZCallableStatement;
+var
+  Info: TStrings;
 begin
-  Result := CreateCallableStatement(SQL, nil);
+  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    begin
+     Info := TSTringList.Create;
+     Info.Append('preferprepared=TRUE');
+    end
+  Else
+    Info := nil;
+
+  Result := CreateCallableStatement(SQL, Info);
+
+  If Info <> nil then
+    Info.Free;
 end;
 
 {**
@@ -902,6 +946,8 @@ end;
 function TZAbstractConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
 begin
+  If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    Info.Append('preferprepared=TRUE');
   Result := CreateCallableStatement(SQL, Info);
 end;
 

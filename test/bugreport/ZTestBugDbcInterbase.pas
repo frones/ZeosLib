@@ -92,9 +92,7 @@ var
   ResultSet: IZResultSet;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -130,7 +128,7 @@ var
   Temp: boolean;
   Statement: IZStatement;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Temp := False;
   Statement := Connection.CreateStatement;
@@ -153,7 +151,7 @@ var
   StrStream, BinStream: TMemoryStream;
   StrStream1, BinStream1: TStream;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   { load data to the stream }
   BinStream := TMemoryStream.Create;
@@ -241,9 +239,7 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -273,9 +269,7 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -315,9 +309,7 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -372,9 +364,7 @@ var
   PreparedStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -416,7 +406,7 @@ var
   Metadata: IZDatabaseMetadata;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Metadata := Connection.GetMetadata;
 

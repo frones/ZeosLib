@@ -70,6 +70,11 @@ type
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
   TDateParts = set of TDatePart;
+  ZSkipReason = (srClosedBug,srNonZeos
+                 //database dependent
+                 ,srMysqlRealPreparedConnection
+                );
+  ZSkipReasons = set of ZSkipReason;
 
   {** Implements an abstract class for all test cases. }
 
@@ -80,6 +85,8 @@ type
     FDecimalSeparator: Char;
     FSuppressTestOutput: Boolean;
     FSkipTest: Boolean;
+    FSkipClosed: Boolean;
+    FSkipNonZeos: Boolean;
   protected
     {$IFDEF FPC}
     frefcount : longint;
@@ -99,6 +106,9 @@ type
       write FDecimalSeparator;
     property SuppressTestOutput: Boolean read FSuppressTestOutput
       write FSuppressTestOutput;
+
+    function SkipForReason(Reasons: ZSkipReasons): Boolean; overload; virtual;
+    function SkipForReason(Reason: ZSkipReason): Boolean; overload;
 
     { Test configuration methods. }
     procedure LoadConfiguration; virtual;
@@ -258,6 +268,18 @@ begin
 end;
 {$ENDIF}
 
+function TZAbstractTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
+begin
+  Check(True);
+  Result := (FSkipClosed and (srClosedBug in Reasons)) or
+            (FSkipNonZeos and (srNonZeos in Reasons));
+end;
+
+function TZAbstractTestCase.SkipForReason(Reason: ZSkipReason): Boolean;
+begin
+  Result := SkipForReason([Reason]);
+end;
+
 {**
   Creates the abstract test case and initialize global parameters.
   @param MethodName a name of the test case.
@@ -304,6 +326,8 @@ begin
   { Defines a 'suppress test output' setting. }
   FSuppressTestOutput := StrToBoolEx(ReadInheritProperty(SUPPRESS_TEST_OUTPUT_KEY, TRUE_VALUE));
   FSkipTest := StrToBoolEx(ReadInheritProperty(SKIP_TEST_KEY, FALSE_VALUE));
+  FSkipClosed := StrToBoolEx(ReadInheritProperty(SKIP_CLOSED_KEY, FALSE_VALUE));
+  FSkipNonZeos := StrToBoolEx(ReadInheritProperty(SKIP_NON_ZEOS_ISSUES_KEY, FALSE_VALUE));
 end;
 
 {**

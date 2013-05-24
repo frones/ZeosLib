@@ -132,9 +132,7 @@ var
   Query: TZQuery;
 *)
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 (*
   Query := CreateQuery;
   try
@@ -165,9 +163,7 @@ procedure TZTestCompPostgreSQLBugReport.Test707337;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -192,9 +188,7 @@ procedure TZTestCompPostgreSQLBugReport.Test707338;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -216,9 +210,7 @@ procedure TZTestCompPostgreSQLBugReport.Test709879;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -236,9 +228,7 @@ var
   Query: TZQuery;
   UpdateSql: TZUpdateSQL;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -321,9 +311,7 @@ procedure TZTestCompPostgreSQLBugReport.Test739519;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -363,9 +351,7 @@ procedure TZTestCompPostgreSQLBugReport.Test739444;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -395,9 +381,7 @@ procedure TZTestCompPostgreSQLBugReport.Test759184;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -416,7 +400,7 @@ procedure TZTestCompPostgreSQLBugReport.Test765111;
 var
   Batch: TZSqlProcessor;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.AutoCommit := True;
   Batch := TZSqlProcessor.Create(nil);
@@ -445,7 +429,7 @@ var
   LookUp: TDBLookupComboBox;
 {$ENDIF}
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
 {$IFNDEF LINUX}
   Query1 := CreateQuery;
@@ -484,9 +468,7 @@ procedure TZTestCompPostgreSQLBugReport.Test816846;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -526,9 +508,8 @@ procedure TZTestCompPostgreSQLBugReport.Test824780;
 var
   Metadata: TZSQLMetadata;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
-  if SkipClosed then Exit;
   if Connection.Protocol <> 'postgresql-7' then
     Exit;
 
@@ -557,9 +538,7 @@ procedure TZTestCompPostgreSQLBugReport.Test815854;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
   if Connection.Protocol <> 'postgresql-7' then
     Exit;
 
@@ -602,9 +581,7 @@ procedure TZTestCompPostgreSQLBugReport.Test831559;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -642,9 +619,7 @@ procedure TZTestCompPostgreSQLBugReport.Test894367;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -689,9 +664,7 @@ procedure TZTestCompPostgreSQLBugReport.Test933623;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Connection.AutoCommit := True;
   Connection.TransactIsolationLevel := tiReadCommitted;
@@ -722,9 +695,7 @@ procedure TZTestCompPostgreSQLBugReport.Test994562;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateReadOnlyQuery;
   try
@@ -754,9 +725,7 @@ procedure TZTestCompPostgreSQLBugReport.Test1043252;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -826,7 +795,7 @@ var
   TempConnection: TZConnection;          // Attention : local Connection
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+//??  if SkipForReason(srClosedBug) then Exit;
 
   TempConnection := CreateDatasetConnection;
   TempConnection.Properties.Add('standard_conforming_strings=ON');
@@ -845,7 +814,7 @@ var
   TempConnection: TZConnection;
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   TempConnection := CreateDatasetConnection;
   TempConnection.Properties.Add('standard_conforming_strings=OFF');

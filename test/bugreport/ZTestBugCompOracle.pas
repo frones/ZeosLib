@@ -95,7 +95,7 @@ procedure ZTestCompOracleBugReport.TestNum1;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -114,7 +114,7 @@ procedure ZTestCompOracleBugReport.TestNestedDataSetFields1;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
@@ -129,7 +129,7 @@ procedure ZTestCompOracleBugReport.TestNestedDataSetFields2;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try

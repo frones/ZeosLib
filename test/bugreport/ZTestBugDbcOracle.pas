@@ -88,9 +88,7 @@ var
   Statement: IZStatement;
   ResultSet: IZResultSet;
 begin
-  if SkipTest then Exit;
-
-  if SkipClosed then Exit;
+  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   Statement.SetResultSetType(rtScrollInsensitive);
