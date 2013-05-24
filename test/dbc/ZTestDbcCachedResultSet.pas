@@ -297,8 +297,6 @@ var
   Collection: TObjectList;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
-  if SkipTest then Exit;
-
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
@@ -365,8 +363,6 @@ var
   CachedResultSet: TZAbstractCachedResultSet;
   Successful: Boolean;
 begin
-  if SkipTest then Exit;
-
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
@@ -502,8 +498,6 @@ var
   ByteArray: TByteDynArray;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
-  if SkipTest then Exit;
-
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
@@ -635,8 +629,6 @@ var
   Collection: TObjectList;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
-  if SkipTest then Exit;
-
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(
@@ -786,8 +778,6 @@ var
   Warnings: EZSQLWarning;
   CachedResultSet: TZVirtualResultSet;
 begin
-  if SkipTest then Exit;
-
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZVirtualResultSet.CreateWithColumns(
@@ -878,8 +868,6 @@ var
   TimeStart, TimeEnd: TDateTime;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
-  if SkipTest then Exit;
-
   PrintLn;
   PrintLn('Test work with ' + IntToStr(MAX_ELEMENT) + ' elements');
 
@@ -965,8 +953,6 @@ var
   Collection: TObjectList;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
-  if SkipTest then Exit;
-
   Collection := GetColumnsInfoCollection;
   try
     CachedResultSet := TZAbstractCachedResultSet.CreateWithColumns(

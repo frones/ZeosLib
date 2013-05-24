@@ -167,7 +167,7 @@ begin
   longopts.Add('batch');
   longopts.Add('verbose');
   longopts.Add('norebuild');
-  longopts.Add('monitor');
+  longopts.Add('monitor:');
 end;
 
 var

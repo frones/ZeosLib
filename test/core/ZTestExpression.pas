@@ -98,8 +98,6 @@ procedure TZTestExpressionCase.TestArrays;
 var
   Expression: IZExpression;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
 (*
   Variant[] values1 = new Variant[10];
@@ -153,8 +151,6 @@ procedure TZTestExpressionCase.TestFunctionsConvert;
 var
   Expression: IZExpression;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
   with Expression do
   begin
@@ -179,8 +175,6 @@ var
   v1, v2, v3: TZVariant;
   i         : Int64;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
   with Expression do
   begin
@@ -342,8 +336,6 @@ procedure TZTestExpressionCase.TestFunctionsMath;
 var
   Expression: IZExpression;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
   with Expression do
   begin
@@ -405,8 +397,6 @@ procedure TZTestExpressionCase.TestFunctionsOther;
 var
   Expression: IZExpression;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
   with Expression do
   begin
@@ -443,8 +433,6 @@ procedure TZTestExpressionCase.TestFunctionsStrings;
 var
   Expression: IZExpression;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
   with Expression do
   begin
@@ -516,8 +504,6 @@ procedure TZTestExpressionCase.TestRegularExpressions;
 var
   Expression: IZExpression;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
 
   Expression.Expression := '2+2';
@@ -557,8 +543,6 @@ var
   Expression: TZExpression;
   Variables: IZVariablesList;
 begin
-  if SkipTest then Exit;
-
   Expression := TZExpression.Create;
 
   with Expression do
@@ -677,8 +661,6 @@ var
   end;
 
 begin
-  if SkipTest then Exit;
-
   { Tests speed of repeatable calculations with variables. }
   Expression := TZExpression.Create;
   Stack := TZExecutionStack.Create;

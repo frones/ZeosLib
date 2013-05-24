@@ -103,8 +103,6 @@ end;
 }
 procedure TZTestSQLMetadataCase.TestMainDatasets;
 begin
-  if SkipTest then Exit;
-
   Metadata.MetadataType := mdTables;
   Metadata.Open;
   try

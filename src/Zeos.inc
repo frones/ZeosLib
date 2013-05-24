@@ -373,8 +373,3 @@
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
 {.$DEFINE USE_SYNEDIT}
-
-// Compile test applications with a graphical user interface (GUI)
-// Comment this definition if you want to compile console test applications
-{.$DEFINE TESTGUI}
-

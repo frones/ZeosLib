@@ -102,8 +102,6 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
   if StartsWith(Protocol, 'interbase')
     or StartsWith(Protocol, 'firebird')
     or StartsWith(Protocol, 'oracle') then
@@ -176,8 +174,6 @@ var
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
-  if SkipTest then Exit;
-
   if not StartsWith(Protocol, 'interbase')
      and not StartsWith(Protocol,'firebird') 
      and not StartsWith(Protocol, 'oracle') then

@@ -107,8 +107,6 @@ procedure TZTestSortingCase.TestResultSetSort;
 var
   Query: TZReadOnlyQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateReadOnlyQuery;
   try
     Query.Connection := Connection;
@@ -146,8 +144,6 @@ procedure TZTestSortingCase.TestCachedResultSetSort;
 var
   Query: TZQuery;
 begin
-  if SkipTest then Exit;
-
   Query := CreateQuery;
   try
     Query.Connection := Connection;

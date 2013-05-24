@@ -154,8 +154,6 @@ var
   WriteNum, ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
-  if SkipTest then Exit;
-
   StreamIn := TMemoryStream.Create;
   WriteNum := StreamIn.Write(FBuffer^, BINARY_BUFFER_SIZE);
   StreamIn.Position := 0;
@@ -204,8 +202,6 @@ var
   WriteNum, ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
-  if SkipTest then Exit;
-
   StreamIn := TMemoryStream.Create;
   WriteNum := StreamIn.Write(FBuffer^, BINARY_BUFFER_SIZE);
   CheckEquals(WriteNum, BINARY_BUFFER_SIZE, 'WritedNum');
@@ -239,8 +235,6 @@ var
   WriteNum, ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
-  if SkipTest then Exit;
-
   StreamIn := TMemoryStream.Create;
   WriteNum := StreamIn.Write(FBuffer^, BINARY_BUFFER_SIZE);
   CheckEquals(WriteNum, BINARY_BUFFER_SIZE, 'WritedNum');
@@ -293,8 +287,6 @@ var
  ColumnInfo: TZColumnInfo;
  ColumnInfo1: TZColumnInfo;
 begin
-  if SkipTest then Exit;
-
   ColumnInfo := TZColumnInfo.Create;
   ColumnInfo1 := TZColumnInfo.Create;
 
