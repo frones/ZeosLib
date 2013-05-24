@@ -1328,8 +1328,6 @@ begin
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
     Result.Options := Result.Options + [doPreferPrepared];
-  if StrToBoolEx(FConnection.Properties.Values['preferpreparedresolver']) then
-    Result.Options := Result.Options + [doPreferPreparedResolver];
 end;
 
 function TZAbstractCompSQLTestCase.CreateReadOnlyQuery: TZReadOnlyQuery;
@@ -1339,8 +1337,6 @@ begin
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
     Result.Options := Result.Options + [doPreferPrepared];
-  if StrToBoolEx(FConnection.Properties.Values['preferpreparedresolver']) then
-    Result.Options := Result.Options + [doPreferPreparedResolver];
 end;
 
 function TZAbstractCompSQLTestCase.CreateTable: TZTable;
@@ -1350,8 +1346,6 @@ begin
   { do not check for Include_RealPrepared, because it's allways true if set! }
   if StrToBoolEx(FConnection.Properties.Values['preferprepared']) then
     Result.Options := Result.Options + [doPreferPrepared];
-  if StrToBoolEx(FConnection.Properties.Values['preferpreparedresolver']) then
-    Result.Options := Result.Options + [doPreferPreparedResolver];
 end;
 
 { TZAbstractDbcSQLTestCaseMBCs }

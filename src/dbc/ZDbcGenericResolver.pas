@@ -308,7 +308,7 @@ function TZGenericCachedResolver.CreateResolverStatement(SQL: String): IZPrepare
 var
   Temp : TStrings;
 begin
-  if StrToBoolEx(FStatement.GetParameters.Values['preferpreparedresolver']) then
+  if StrToBoolEx(FStatement.GetParameters.Values['preferprepared']) then
     begin
       Temp := TStringList.Create;
       Temp.Values['preferprepared'] := 'true';

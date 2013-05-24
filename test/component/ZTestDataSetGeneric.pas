@@ -1544,7 +1544,6 @@ begin
 
   Query := CreateQuery;
   try
-    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
       SQL.Text := 'DELETE FROM number_values where n_id = '+ IntToStr(TEST_ROW_ID);
@@ -1615,7 +1614,6 @@ begin
       Query.Connection := TempConnection;
       Connection.TransactIsolationLevel:=tiReadCommitted;
     end;
-    Query.Options := [doPreferPrepared,doPreferPreparedResolver];
     with Query do
     begin
       SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);

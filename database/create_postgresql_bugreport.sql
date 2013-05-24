@@ -87,3 +87,17 @@ CREATE TABLE test894367b (
   f3 VARCHAR(20),
   f4 VARCHAR(20)
 ) WITHOUT OIDS;
+
+
+/*==============================================================*/
+/* Tables for Mantis-Bug#0000240                                */
+/*==============================================================*/
+
+CREATE TABLE ntax_bejovo_konyvelesi_tipusok
+(
+  kod serial NOT NULL,
+  nev character varying(100) NOT NULL,
+  tartozik character varying(30),
+  kovetel character varying(30),
+  CONSTRAINT ntax_bejovo_konyvelesi_tipusok_pkey PRIMARY KEY (kod)
+);
