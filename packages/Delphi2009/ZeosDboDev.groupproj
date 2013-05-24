@@ -24,20 +24,8 @@
 			<Projects Include="ZTestFramework.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="ZTestCoreAll.dproj">
+			<Projects Include="ZTestAll.dproj">
 				<Dependencies>ZTestFramework.dproj</Dependencies>
-			</Projects>
-			<Projects Include="ZTestParseSqlAll.dproj">
-				<Dependencies/>
-			</Projects>
-			<Projects Include="ZTestDbcAll.dproj">
-				<Dependencies/>
-			</Projects>
-			<Projects Include="ZTestComponentAll.dproj">
-				<Dependencies/>
-			</Projects>
-			<Projects Include="ZTestBugReport.dproj">
-				<Dependencies/>
 			</Projects>
 			<Projects Include="ZTestPerformance.dproj">
 				<Dependencies/>
@@ -115,50 +103,14 @@
 		<Target Name="ZTestFramework:Make">
 			<MSBuild Targets="Make" Projects="ZTestFramework.dproj"/>
 		</Target>
-		<Target DependsOnTargets="ZTestFramework" Name="ZTestCoreAll">
-			<MSBuild Projects="ZTestCoreAll.dproj"/>
+		<Target DependsOnTargets="ZTestFramework" Name="ZTestAll">
+			<MSBuild Projects="ZTestAll.dproj"/>
 		</Target>
-		<Target DependsOnTargets="ZTestFramework:Clean" Name="ZTestCoreAll:Clean">
-			<MSBuild Targets="Clean" Projects="ZTestCoreAll.dproj"/>
+		<Target DependsOnTargets="ZTestFramework:Clean" Name="ZTestAll:Clean">
+			<MSBuild Targets="Clean" Projects="ZTestAll.dproj"/>
 		</Target>
-		<Target DependsOnTargets="ZTestFramework:Make" Name="ZTestCoreAll:Make">
-			<MSBuild Targets="Make" Projects="ZTestCoreAll.dproj"/>
-		</Target>
-		<Target Name="ZTestParseSqlAll">
-			<MSBuild Projects="ZTestParseSqlAll.dproj"/>
-		</Target>
-		<Target Name="ZTestParseSqlAll:Clean">
-			<MSBuild Targets="Clean" Projects="ZTestParseSqlAll.dproj"/>
-		</Target>
-		<Target Name="ZTestParseSqlAll:Make">
-			<MSBuild Targets="Make" Projects="ZTestParseSqlAll.dproj"/>
-		</Target>
-		<Target Name="ZTestDbcAll">
-			<MSBuild Projects="ZTestDbcAll.dproj"/>
-		</Target>
-		<Target Name="ZTestDbcAll:Clean">
-			<MSBuild Targets="Clean" Projects="ZTestDbcAll.dproj"/>
-		</Target>
-		<Target Name="ZTestDbcAll:Make">
-			<MSBuild Targets="Make" Projects="ZTestDbcAll.dproj"/>
-		</Target>
-		<Target Name="ZTestComponentAll">
-			<MSBuild Projects="ZTestComponentAll.dproj"/>
-		</Target>
-		<Target Name="ZTestComponentAll:Clean">
-			<MSBuild Targets="Clean" Projects="ZTestComponentAll.dproj"/>
-		</Target>
-		<Target Name="ZTestComponentAll:Make">
-			<MSBuild Targets="Make" Projects="ZTestComponentAll.dproj"/>
-		</Target>
-		<Target Name="ZTestBugReport">
-			<MSBuild Projects="ZTestBugReport.dproj"/>
-		</Target>
-		<Target Name="ZTestBugReport:Clean">
-			<MSBuild Targets="Clean" Projects="ZTestBugReport.dproj"/>
-		</Target>
-		<Target Name="ZTestBugReport:Make">
-			<MSBuild Targets="Make" Projects="ZTestBugReport.dproj"/>
+		<Target DependsOnTargets="ZTestFramework:Make" Name="ZTestAll:Make">
+			<MSBuild Targets="Make" Projects="ZTestAll.dproj"/>
 		</Target>
 		<Target Name="ZTestPerformance">
 			<MSBuild Projects="ZTestPerformance.dproj"/>
@@ -170,13 +122,13 @@
 			<MSBuild Targets="Make" Projects="ZTestPerformance.dproj"/>
 		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestFramework;ZTestCoreAll;ZTestParseSqlAll;ZTestDbcAll;ZTestComponentAll;ZTestBugReport;ZTestPerformance"/>
+			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestFramework;ZTestAll;ZTestPerformance"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="ZCore:Clean;ZParseSql:Clean;ZPlain:Clean;ZDbc:Clean;ZComponent:Clean;ZComponentDesign:Clean;ZTestFramework:Clean;ZTestCoreAll:Clean;ZTestParseSqlAll:Clean;ZTestDbcAll:Clean;ZTestComponentAll:Clean;ZTestBugReport:Clean;ZTestPerformance:Clean"/>
+			<CallTarget Targets="ZCore:Clean;ZParseSql:Clean;ZPlain:Clean;ZDbc:Clean;ZComponent:Clean;ZComponentDesign:Clean;ZTestFramework:Clean;ZTestAll:Clean;ZTestPerformance:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="ZCore:Make;ZParseSql:Make;ZPlain:Make;ZDbc:Make;ZComponent:Make;ZComponentDesign:Make;ZTestFramework:Make;ZTestCoreAll:Make;ZTestParseSqlAll:Make;ZTestDbcAll:Make;ZTestComponentAll:Make;ZTestBugReport:Make;ZTestPerformance:Make"/>
+			<CallTarget Targets="ZCore:Make;ZParseSql:Make;ZPlain:Make;ZDbc:Make;ZComponent:Make;ZComponentDesign:Make;ZTestFramework:Make;ZTestAll:Make;ZTestPerformance:Make"/>
 		</Target>
 		<Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 	</Project>

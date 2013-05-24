@@ -3,7 +3,7 @@ program ztestall;
 {$mode objfpc}{$H+}
 
 uses
-  heaptrc,custapp, sysutils, comctrls, types,
+  heaptrc,custapp, sysutils,
   Interfaces, Forms, GuiTestRunner, LResources,
   Classes, consoletestrunner, fpcunit, fpcunitreport, testregistry,
   plaintestreport,latextestreport, xmltestreport,
@@ -22,11 +22,6 @@ uses
   ;
 
 type
-
-  TTreeNodeState=(tsUnChecked, tsChecked);
-
-  { TLazTestRunner }
-
   { TMyResultsWriter }
 
   TMyResultsWriter = class(TPlainResultsWriter)
@@ -58,82 +53,35 @@ type
   TMyGUITestRunner = class(TGUITestRunner)
   protected
   // override the protected methods of TGUITestRunner to customize its behavior
+    FullRegistryItems: TFPList;
   public
     constructor Create(TheOwner: TComponent); override;
-    function FindNode(NodeText : String):TTreeNode;
+    destructor Destroy; override;
   end;
 
 constructor TMyGUITestRunner.Create(TheOwner: TComponent);
 var
-  Suite : String;
-  SuiteNode : TTreeNode;
-  procedure ChangeCheck(aNode: TTreeNode; aCheck: TTreeNodeState);
-  var
-    i: integer;
-    n: TTreeNode;
-  begin
-    if Assigned(aNode) then
-    begin
-      aNode.StateIndex := ord(aCheck);
-      if (TTest(aNode.Data) is TTestSuite) then
-        for i := 0 to aNode.Count - 1 do
-        begin
-          n := aNode.Items[i];
-          ChangeCheck(n, aCheck);
-        end;
-    end;
-  end;
+  tempTestSuite :TTestSuite;
 begin
-  inherited Create(TheOwner);
-  if Application.HasOption('suite') then
+  // Dirty Workaround to make sure all tests can be destroyed in the destructor
+  If CommandLineSwitches.Suite then
     begin
-      Suite := Application.GetOptionValue('suite');
-      ActUncheckAllExecute(Self);
-      SuiteNode := FindNode(suite);
-      If SuiteNode <> nil then
-        begin
-          SuiteNode.selected := true;
-          ChangeCheck(SuiteNode,tsChecked);
-        end;
+      FullRegistryItems := TFPList.Create;
+      FullRegistryItems.Assign(GetTestRegistry.Tests);
+      tempTestSuite := CreateTestSuite;
+      GetTestRegistry.Tests.Assign(tempTestSuite.Tests);
     end;
+  inherited Create(TheOwner);
 end;
 
-function TMyGUITestRunner.FindNode(NodeText: String): TTreeNode;
-var
-  i: integer;
-  Function CheckNodes (node:TTreeNode; ATestName:string):TTreeNode;
-  var s, c : string;
-      I, p : integer;
-  begin
-    result := nil;
-      begin
-      p := pos ('.', ATestName);
-      if p > 0 then
-        begin
-        s := copy (ATestName, 1, p-1);
-        c := copy (ATestName, p+1, maxint);
-        end
-      else
-        begin
-        s := '';
-        c := ATestName;
-        end;
-      if comparetext(c, node.Text) = 0 then
-        result := node
-      else if (CompareText( s, node.Text) = 0) or (s = '') then
-        for I := 0 to node.Count - 1 do
-          begin
-            result := CheckNodes(node.items[I], c);
-            if result <> nil then exit;
-          end;
-      end
-  end;
+destructor TMyGUITestRunner.Destroy;
 begin
-  for i := 0 to TestTree.Items.Count -1 do
+  If CommandLineSwitches.Suite then
     begin
-      Result := CheckNodes(TestTree.Items[i],NodeText);
-      if result <> nil then exit;
+      GetTestRegistry.Tests.Assign(FullRegistryItems);
+      FullRegistryItems.Free;
     end;
+  inherited Destroy;
 end;
 
 procedure TMyResultsWriter.WriteTestFooter(ATest: TTest; ALevel: integer;
@@ -164,67 +112,30 @@ end;
 procedure TMyTestRunner.WriteCustomHelp;
 begin
   inherited WriteCustomHelp;
-  writeln('  -c <filename>             custom config file name');
-  writeln('  -b or --batch             don''t run the GUI interface');
-  writeln('  -v or --verbose           show full output (otherwise compact report is used)');
-  writeln('  -n or --norebuild         don''t rebuild the databases');
+  writeln('  -c <filename>                        custom config file name');
+  writeln('  -b or --batch                        don''t run the GUI interface');
+  writeln('  -v or --verbose                      show full output (otherwise compact report is used)');
+  writeln('  -n or --norebuild                    don''t rebuild the databases');
+  writeln('  -m <filename> or -monitor <filename> sqlmonitor file name');
 end;
 
 function TMyTestRunner.GetShortOpts: string;
 begin
-  Result:=inherited GetShortOpts+'bvcn';
+  Result:=inherited GetShortOpts+'bvcnm';
 end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
 begin
-  if (FormatParam = fPlain) and not Application.HasOption('v', 'verbose') then
+  if (FormatParam = fPlain) and not CommandLineSwitches.verbose then
     Result := TMyResultsWriter.Create(nil)
   else
     Result:=inherited GetResultsWriter;
 end;
 
 procedure TMyTestRunner.DoRun;
-  Var tempTestSuite : TTestSuite;
-    procedure CheckTestRegistry (test:TTest; ATestName:string);
-    var s, c : string;
-        I, p : integer;
-    begin
-      if test is TTestSuite then
-        begin
-        p := pos ('.', ATestName);
-        if p > 0 then
-          begin
-          s := copy (ATestName, 1, p-1);
-          c := copy (ATestName, p+1, maxint);
-          end
-        else
-          begin
-          s := '';
-          c := ATestName;
-          end;
-        if comparetext(c, test.TestName) = 0 then
-          begin
-//            Writeln('Adding Suite : '+test.TestName);
-            tempTestSuite.AddTest(test);
-          end
-        else if (CompareText( s, Test.TestName) = 0) or (s = '') then
-          for I := 0 to TTestSuite(test).Tests.Count - 1 do
-            CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
-        end
-      else // if test is TTestCase then
-        begin
-        if comparetext(test.TestName, ATestName) = 0 then
-          begin
-//            Writeln('Adding Test : '+test.TestName);
-            tempTestSuite.AddTest(test);
-          end;
-        end;
-    end;
-
   var
-    I, J: integer;
+    tempTestSuite : TTestSuite;
     S: string;
-    SuiteTests: TStringDynArray;
   begin
     S := CheckOptions(GetShortOpts, LongOpts);
     if (S <> '') then
@@ -232,35 +143,21 @@ procedure TMyTestRunner.DoRun;
 
     ParseOptions;
 
+    tempTestSuite := CreateTestSuite;
+
     //get a list of all registed tests
-    if HasOption('l', 'list') then
+    if CommandLineSwitches.list then
       case FormatParam of
-        fLatex: Write(GetSuiteAsLatex(GetTestRegistry));
-        fPlain: Write(GetSuiteAsPlain(GetTestRegistry));
+        fLatex: Write(GetSuiteAsLatex(tempTestSuite));
+        fPlain: Write(GetSuiteAsPlain(tempTestSuite));
+        fXML: Write(GetSuiteAsXML(tempTestSuite));
       else
-        Write(GetSuiteAsLatex(GetTestRegistry));;
+        Write(GetSuiteAsLatex(tempTestSuite));;
       end;
 
     //run the tests
-    if HasOption('suite') then
-    begin
-      S := '';
-      S := GetOptionValue('suite');
-      if S = '' then
-        for I := 0 to GetTestRegistry.Tests.Count - 1 do
-          writeln(GetTestRegistry[i].TestName)
-      else
-        begin
-          tempTestSuite := TTestSuite.Create('CustomTestSuite');
-          SuiteTests := SplitStringToArray(S, LIST_DELIMITERS);
-          for J := 0 to High(SuiteTests) do
-            for I := 0 to GetTestRegistry.Tests.count-1 do
-              CheckTestRegistry (GetTestregistry[I], SuiteTests[J]);
-          DoTestRun(tempTestSuite);
-        end;
-    end
-    else if HasOption('a', 'all') or (DefaultRunAllTests and Not HasOption('l','list')) then
-      DoTestRun(GetTestRegistry) ;
+    if CommandLineSwitches.runall or (DefaultRunAllTests and Not CommandLineSwitches.list) then
+      DoTestRun(tempTestSuite) ;
     Terminate;
   end;
 
@@ -270,6 +167,7 @@ begin
   longopts.Add('batch');
   longopts.Add('verbose');
   longopts.Add('norebuild');
+  longopts.Add('monitor');
 end;
 
 var
@@ -281,11 +179,15 @@ begin
   {$I ztestall.lrs}
   SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
-  If Not Application.HasOption('h', 'help') and
-     Not Application.HasOption('n', 'norebuild')then
+
+  If CommandLineSwitches.sqlmonitor then
+    EnableZSQLMonitor;
+
+  If Not CommandLineSwitches.help and
+     Not CommandLineSwitches.norebuild then
     RebuildTestDatabases;
 
- If Application.HasOption('b', 'batch') then
+  If CommandLineSwitches.batch then
   begin
     Applicationc := TMyTestRunner.Create(nil);
     Applicationc.Initialize;
@@ -298,4 +200,5 @@ begin
     Application.CreateForm(TMyGuiTestRunner, TestRunner);
     Application.Run;
   end;
+
 end.

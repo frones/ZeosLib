@@ -74,7 +74,7 @@ uses
 {$IFDEF USE_MEMCHECK}
   MemCheck,
 {$ENDIF}
-  Classes, SysUtils, IniFiles, ZCompatibility;
+{$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF},Classes, SysUtils, IniFiles, ZCompatibility;
 
 const
   { Test configuration file }
@@ -190,6 +190,23 @@ type
     property MemCheckShowResult: Boolean read FMemCheckShowResult;
   end;
 
+type
+  TCommandLineSwitches = record
+    help:            boolean;
+    list:            boolean;
+    verbose:         boolean;
+    runall:          boolean;
+    batch:           boolean;
+    norebuild:       boolean;
+    suite:           boolean;
+    suiteitems:      TStringDynArray;
+    sqlmonitor:      boolean;
+    sqlmonitorfile:  String;
+
+  end;
+var
+  CommandLineSwitches: TCommandLineSwitches;
+
 
 {**
   Splits string using the delimiter string.
@@ -206,9 +223,20 @@ var
   {** The active test group. }
   TestGroup: string;
 
+  {$IFDEF FPC}
+  function CreateTestSuite:TTestSuite;
+  {$ELSE}
+  function CreateTestSuite:ITestSuite;
+  {$ENDIF}
+procedure EnableZSQLMonitor;
+
 implementation
 
-uses ZSysUtils;
+uses ZSysUtils, Forms{$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor;
+
+var
+  SQLMonitor : TZSQLMonitor;
+
 
 {**
   Splits string using the delimiter string.
@@ -369,7 +397,184 @@ begin
 {$ENDIF}
 end;
 
+{**
+  Dumb function which makes it possible to find the value passed to a command line switch in Delphi.
+  Please replace this by a better solution when available.
+  eg when the test program is started using commandline
+    ztestall.exe -n -suite "core;parsesql" -b
+  this function should return 'core;parsesql'
+}
+{$IFNDEF FPC}
+function GetCommandLineSwitchValue(ShortSwitch: String; Longswitch: String):String;
+var
+  i: integer;
+begin
+  Result := '';
+  for i := 1 to ParamCount-1 do // Don't check the last one, as we can't return the next param then!!
+  begin
+    If (ParamStr(i)[1]='-') then
+      if (CompareText(ParamStr(i),'-'+ShortSwitch) = 0) or
+         (CompareText(ParamStr(i),'-'+LongSwitch) = 0) then
+        Result := ParamStr(i+1);
+    If (ParamStr(i)[1]='/') then
+      if (CompareText(ParamStr(i),'/'+ShortSwitch) = 0) or
+         (CompareText(ParamStr(i),'/'+LongSwitch) = 0) then
+        Result := ParamStr(i+1);
+  end;
+end;
+{$ENDIF}
+
+{**
+  Convert Command Line Switches to aa compiler independent global record
+}
+procedure GetCommandLineSwitches;
+begin
+  {$IFDEF FPC}
+  CommandLineSwitches.help := Application.HasOption('h', 'help');
+  CommandLineSwitches.list := Application.HasOption('l', 'list');
+  CommandLineSwitches.verbose := Application.HasOption('v', 'verbose');
+  CommandLineSwitches.runall := Application.HasOption('a', 'all');
+  CommandLineSwitches.batch := Application.HasOption('b', 'batch');
+  CommandLineSwitches.norebuild := Application.HasOption('n', 'norebuild');
+  CommandLineSwitches.suite := Application.HasOption('suite');
+  If CommandLineSwitches.suite then
+    CommandLineSwitches.suiteitems := SplitStringToArray(Application.GetOptionValue('suite'),LIST_DELIMITERS);
+  CommandLineSwitches.sqlmonitor := Application.HasOption('m','monitor');
+  If CommandLineSwitches.sqlmonitor then
+    CommandLineSwitches.sqlmonitorfile := Application.GetOptionValue('m', 'monitor');
+  {$ELSE}
+  CommandLineSwitches.help := (FindCmdLineSwitch('H',true) or FindCmdLineSwitch('Help',true));
+  CommandLineSwitches.list := (FindCmdLineSwitch('L',true) or FindCmdLineSwitch('List',true));
+  CommandLineSwitches.verbose := (FindCmdLineSwitch('V',true) or FindCmdLineSwitch('Verbose',true));
+  CommandLineSwitches.runall := (FindCmdLineSwitch('A',true) or FindCmdLineSwitch('All',true));
+  CommandLineSwitches.batch := (FindCmdLineSwitch('B',true) or FindCmdLineSwitch('Batch',true));
+  CommandLineSwitches.norebuild := (FindCmdLineSwitch('N',true) or FindCmdLineSwitch('NoRebuild',true));
+  CommandLineSwitches.suite := (FindCmdLineSwitch('S',true) or FindCmdLineSwitch('Suite',true));
+  If CommandLineSwitches.suite then
+    CommandLineSwitches.suiteitems := SplitStringToArray(GetCommandLineSwitchValue('S' ,'Suite'),LIST_DELIMITERS);
+  CommandLineSwitches.sqlmonitor := (FindCmdLineSwitch('M',true) or FindCmdLineSwitch('Monitor',true));
+  If CommandLineSwitches.sqlmonitor then
+    CommandLineSwitches.sqlmonitorfile := GetCommandLineSwitchValue('M' ,'Monitor');
+  {$ENDIF}
+end;
+
+{**
+  Build a custom test suite from all registered tests, based on command line switches and the
+  configuration file
+  Unfortunately fpcunit and DUnit need different approaches
+}
+{$IFDEF FPC}
+function CreateTestSuite:TTestSuite;
+Var
+  TempRunTests : TTestSuite;
+  I, J: integer;
+  procedure CheckTestRegistry (test:TTest; ATestName:string);
+  var s, c : string;
+      I, p : integer;
+  begin
+    if test is TTestSuite then
+      begin
+      p := pos ('.', ATestName);
+      if p > 0 then
+        begin
+        s := copy (ATestName, 1, p-1);
+        c := copy (ATestName, p+1, maxint);
+        end
+      else
+        begin
+        s := '';
+        c := ATestName;
+        end;
+      if comparetext(c, test.TestName) = 0 then
+        TempRunTests.AddTest(test)
+      else if (CompareText( s, Test.TestName) = 0) or (s = '') then
+        for I := 0 to TTestSuite(test).Tests.Count - 1 do
+          CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
+      end
+    else // if test is TTestCase then
+      begin
+      if comparetext(test.TestName, ATestName) = 0 then
+        TempRunTests.AddTest(test);
+      end;
+  end;
+begin
+  If CommandLineSwitches.Suite then
+    begin
+      TempRunTests := TTestSuite.Create('Suite');
+      for J := 0 to High(CommandLineSwitches.suiteitems) do
+        for I := 0 to GetTestregistry.Tests.count-1 do
+          CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
+    end
+  else
+    TempRuntests := GetTestregistry;
+  Result := TempRunTests;
+end;
+
+{$ELSE}
+function CreateTestSuite:ITestSuite;
+var
+  TempRunTests : ITestSuite;
+  I, J: integer;
+  procedure CheckTestRegistry (test:ITest; ATestName:string);
+  var s, c : string;
+      I, p : integer;
+  begin
+    if Supports(test, ITestSuite) then
+      begin
+      p := pos ('.', ATestName);
+      if p > 0 then
+        begin
+        s := copy (ATestName, 1, p-1);
+        c := copy (ATestName, p+1, maxint);
+        end
+      else
+        begin
+        s := '';
+        c := ATestName;
+        end;
+      if comparetext(c, test.Name) = 0 then
+        begin
+          TempRunTests.AddTest(test);
+        end
+      else if (CompareText( s, Test.Name) = 0) or (s = '') then
+        for I := 0 to test.Tests.Count - 1 do
+          CheckTestRegistry (ITest(test.Tests[I]), c)
+      end
+    else // if test is TTestCase then
+      begin
+      if comparetext(test.Name, ATestName) = 0 then
+        begin
+          TempRunTests.AddTest(test);
+        end;
+      end;
+  end;
+begin
+  If CommandLineSwitches.Suite then
+    begin
+      TempRunTests := TTestSuite.Create('Suite');
+      for J := 0 to High(CommandLineSwitches.suiteitems) do
+        for I := 0 to RegisteredTests.Tests.count-1 do
+          CheckTestRegistry (ITest(RegisteredTests.Tests[I]), CommandLineSwitches.suiteitems[J]);
+    end
+  else
+    TempRuntests := RegisteredTests;
+  Result := TempRunTests;
+end;
+{$ENDIF}
+
+procedure EnableZSQLMonitor;
+begin
+  SQLMonitor := TZSQLMonitor.Create(Application);
+  SQLMonitor.FileName := CommandLineSwitches.sqlmonitorfile;
+  SQLMonitor.Active := True;
+  SQLMonitor.AutoSave := True;
+end;
+
 initialization
+  SQLMonitor := nil;
+
+  GetCommandLineSwitches;
+
   TestGroup := COMMON_GROUP;
 
   TestConfig := TZTestConfiguration.Create;
@@ -378,5 +583,9 @@ initialization
 finalization
   if Assigned(TestConfig) then
     TestConfig.Free;
+{$IFNDEF FPC}
+  if Assigned(SQLMonitor) then
+    SQLMonitor.Free;
+{$ENDIF}
 end.
 
