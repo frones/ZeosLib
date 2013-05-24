@@ -121,7 +121,7 @@ end;
 
 function TMyTestRunner.GetShortOpts: string;
 begin
-  Result:=inherited GetShortOpts+'bvcnm';
+  Result:=inherited GetShortOpts+'bvcnm:';
 end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;
@@ -167,7 +167,7 @@ begin
   longopts.Add('batch');
   longopts.Add('verbose');
   longopts.Add('norebuild');
-  longopts.Add('monitor');
+  longopts.Add('monitor:');
 end;
 
 var
