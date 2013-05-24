@@ -307,10 +307,18 @@ function AnsiToStringEx(const s: ZAnsiString; const FromCP{$IFNDEF UNICODE}, ToC
 {$ENDIF}
 
 {**
-  Returns the current system codepage of AnsiString
+  Get the current system codepage of AnsiString
   @return current system codepage of AnsiString
 }
 function ZDefaultSystemCodePage: Word;
+
+{**
+  Is the codepage equal or compatible?
+  @param CP1 word the first codepage to compare
+  @param CP2 word the second codepage to compare
+  @returns Boolean True if codepage is equal or compatible
+}
+function ZCompatibleCodePages(const CP1, CP2: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -638,12 +646,23 @@ begin
   {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
   Result := Word(DefaultSystemCodePage);
   {$ELSE}
-    {$IF defined(MSWINDOWS) and not defined(WinCE)}
-    Result := GetACP;
+    {$IFDEF MSWINDOWS}
+    Result := GetACP; //available for Windows and WinCE
     {$ELSE}
-    Result := zCP_UTF8;
-    {$IFEND}
+    Result := zCP_UTF8; //how to determine the current OS CP?
+    {$ENDIF}
   {$ENDIF}
+end;
+
+{**
+  Is the codepage equal or compatible?
+  @param CP1 word the first codepage to compare
+  @param CP2 word the second codepage to compare
+  @returns Boolean True if codepage is equal or compatible
+}
+function ZCompatibleCodePages(const CP1, CP2: Word): Boolean;
+begin
+  Result := (CP1 = CP2) or (CP1 = zCP_us_ascii) or (CP2 = zCP_us_ascii);
 end;
 
 function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
