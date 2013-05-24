@@ -241,7 +241,7 @@ type
 
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); virtual;
-    procedure SetByte(ParameterIndex: Integer; Value: ShortInt); virtual;
+    procedure SetByte(ParameterIndex: Integer; Value: Byte); virtual;
     procedure SetShort(ParameterIndex: Integer; Value: SmallInt); virtual;
     procedure SetInt(ParameterIndex: Integer; Value: Integer); virtual;
     procedure SetLong(ParameterIndex: Integer; Value: Int64); virtual;
@@ -1437,7 +1437,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetByte(ParameterIndex: Integer;
-  Value: ShortInt);
+  Value: Byte);
 var
   Temp: TZVariant;
 begin

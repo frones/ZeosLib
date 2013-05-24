@@ -569,7 +569,7 @@ type
 
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
-    procedure SetByte(ParameterIndex: Integer; Value: ShortInt);
+    procedure SetByte(ParameterIndex: Integer; Value: Byte);
     procedure SetShort(ParameterIndex: Integer; Value: SmallInt);
     procedure SetInt(ParameterIndex: Integer; Value: Integer);
     procedure SetLong(ParameterIndex: Integer; Value: Int64);
