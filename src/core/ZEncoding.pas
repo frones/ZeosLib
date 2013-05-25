@@ -298,13 +298,38 @@ const
     zCP_x_iscii_gu, zCP_x_iscii_pa, zCP_UTF7, zCP_UTF8, 42);
 
 function IsFullMultiByteCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} ToCP: Word): ZAnsiString; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function AnsiToStringEx(const s: ZAnsiString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+{$ENDIF}
+
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
   ZAnsiString; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} ToCP: Word): ZAnsiString; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-function AnsiToStringEx(const s: ZAnsiString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-{$ENDIF}
+
+function RawCPConvert(const Src: ZAnsiString; Const FromCP, ToCP: Word): ZAnsiString;
+{converter functions for the String-types}
+function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): ZAnsiString;
+function ZConvertRawToAnsi(const Src: ZAnsiString; const RawCP: Word): AnsiString;
+function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;
+function ZConvertUTF8ToAnsi(const Src: UTF8String): AnsiString;
+function ZConvertRawToUTF8(const Src: ZAnsiString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): ZAnsiString;
+function ZConvertRawToString(const Src: ZAnsiString; const RawCP: Word): String;
+function ZConvertStringToRaw(const Src: String; const RawCP: Word): ZAnsiString;
+function ZConvertUTF8ToString(const Src: UTF8String): String;
+function ZConvertStringToUTF8(const Src: String): UTF8String;
+{move functions for the String types}
+function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): ZAnsiString;
+function ZMoveRawToAnsi(const Src: ZAnsiString; const RawCP: Word): AnsiString;
+function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
+function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
+function ZMoveRawToUTF8(const Src: ZAnsiString; const CP: Word): UTF8String;
+function ZMoveUTF8ToRaw(Const Src: UTF8String; const CP: Word): ZAnsiString;
+function ZMoveRawToString(const Src: ZAnsiString; const RawCP: Word): String;
+function ZMoveStringToRaw(const Src: String; const RawCP: Word): ZAnsiString;
+function ZMoveUTF8ToString(const Src: UTF8String): String;
+function ZMoveStringToUTF8(const Src: String): UTF8String;
 
 {**
   Get the current system codepage of AnsiString
@@ -352,7 +377,8 @@ function GetValidatedUnicodeStream(const Ansi: ZAnsiString;
 
 implementation
 
-uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
+uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
+  ZSysUtils;
 
 {$IFNDEF WITH_LCONVENCODING}
 function IsFullMultiByteCodePage(CP: Word): Boolean;
@@ -665,6 +691,9 @@ begin
   Result := (CP1 = CP2) or (CP1 = zCP_us_ascii) or (CP2 = zCP_us_ascii);
 end;
 
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
 function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
   const ConSettings: PZConSettings): TZCharEncoding;
 begin
@@ -695,6 +724,305 @@ begin
     else
       Result := ceDefault
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
+
+function RawCPConvert(const Src: ZAnsiString; Const FromCP, ToCP: Word): ZAnsiString;
+var
+  {$IFDEF WITH_LCONVENCODING}
+  sUTF8: String;
+  {$ELSE}
+  WS: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
+  {$ENDIF}
+begin
+  if (Src = '') then
+    Result := ''
+  else
+    if ZCompatibleCodePages(FromCP, ToCP) then
+      Result := Src
+    else
+    begin
+      {$IFDEF WITH_LCONVENCODING}
+      case FromCP of
+        28591: //ISO_8859_1
+          sUTF8 := ISO_8859_1ToUTF8(PAnsiChar(Src));
+        28592:  //ISO_8859_2
+          sUTF8 := ISO_8859_2ToUTF8(PAnsiChar(Src));
+        1250: //WIN1250
+          sUTF8 := CP1250ToUTF8(PAnsiChar(Src));
+        1251: //WIN1251
+          sUTF8 := CP1251ToUTF8(PAnsiChar(Src));
+        1252: //WIN1252
+          sUTF8 := CP1252ToUTF8(PAnsiChar(Src));
+        1253: //WIN1253
+          sUTF8 := CP1253ToUTF8(PAnsiChar(Src));
+        1254: //WIN1254
+          sUTF8 := CP1254ToUTF8(PAnsiChar(Src));
+        1255: //WIN1255
+          sUTF8 := CP1255ToUTF8(PAnsiChar(Src));
+        1256: //WIN1256
+          sUTF8 := CP1256ToUTF8(PAnsiChar(Src));
+        1257: //WIN1257
+          sUTF8 := CP1257ToUTF8(PAnsiChar(Src));
+        1258: //WIN1258
+          sUTF8 := CP1258ToUTF8(PAnsiChar(Src));
+        437: //CP437
+          sUTF8 := CP437ToUTF8(PAnsiChar(Src));
+        850: //CP850
+          sUTF8 := CP850ToUTF8(PAnsiChar(Src));
+        852: //CP852
+          sUTF8 := CP852ToUTF8(PAnsiChar(Src));
+        866: //CP866
+          sUTF8 := CP866ToUTF8(PAnsiChar(Src));
+        874: //CP874
+          sUTF8 := CP874ToUTF8(PAnsiChar(Src));
+        20866: //KOI8 (Russian)
+          sUTF8 := KOI8ToUTF8(PAnsiChar(Src));
+        else
+          sUTF8 := PAnsiChar(Src);
+      end;
+      if ToCP = zCP_UTF8 then
+        ZSetString(PAnsiChar(sUTF8), Result)
+      else
+      begin
+        case DB_CP of
+          28591: //ISO_8859_1
+            sUTF8 := UTF8ToISO_8859_1(sUTF8);
+          28592:  //ISO_8859_2
+            sUTF8 := UTF8ToISO_8859_2(sUTF8);
+          1250: //WIN1250
+            sUTF8 := UTF8ToCP1250(sUTF8);
+          1251: //WIN1251
+            sUTF8 := UTF8ToCP1251(sUTF8);
+          1252: //WIN1252
+            sUTF8 := UTF8ToCP1252(sUTF8);
+          1253: //WIN1253
+            sUTF8 := UTF8ToCP1253(sUTF8);
+          1254: //WIN1254
+            sUTF8 := UTF8ToCP1254(sUTF8);
+          1255: //WIN1255
+            sUTF8 := UTF8ToCP1255(sUTF8);
+          1256: //WIN1256
+            sUTF8 := UTF8ToCP1256(sUTF8);
+          1257: //WIN1257
+            sUTF8 := UTF8ToCP1257(sUTF8);
+          1258: //WIN1258
+            sUTF8 := UTF8ToCP1258(sUTF8);
+          437: //CP437
+            sUTF8 := UTF8ToCP437(sUTF8);
+          850: //CP850
+            sUTF8 := UTF8ToCP850(sUTF8);
+          852: //CP852
+            sUTF8 := UTF8ToCP852(sUTF8);
+          866: //CP866
+            sUTF8 := UTF8ToCP866(sUTF8);
+          874: //CP874
+            sUTF8 := UTF8ToCP874(sUTF8);
+          20866: //KOI8 (Russian)
+            sUTF8 := UTF8ToKOI8(sUTF8);
+        end;
+        ZSetString(PAnsiChar(sUTF8), Result);
+      end;
+      {$ELSE}
+      WS := AnsiToWide(PAnsiChar(Src), FromCP);
+      Result := WideToAnsi(WS, ToCP);
+      {$ENDIF}
+    end;
+end;
+
+function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): ZAnsiString;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := ZWideString(Src);
+    Result := WideToAnsi(WS, RawCP);
+  end;
+end;
+
+function ZConvertRawToAnsi(const Src: ZAnsiString; const RawCP: Word): AnsiString;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := AnsiToWide(Src, RawCP);
+    ZSetString(PAnsiChar(AnsiString(WS)), Result); //avoid convertations
+  end;
+end;
+
+function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := ZWideString(Src);
+    Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(WS);
+  end;
+end;
+
+function ZConvertUTF8ToAnsi(const Src: UTF8String): AnsiString;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Src);
+    Result := AnsiString(WS);
+  end;
+end;
+
+function ZConvertRawToUTF8(const Src: ZAnsiString; const CP: Word): UTF8String;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := AnsiToWide(Src, CP);
+    Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(WS);
+  end;
+end;
+
+function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): ZAnsiString;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := UTF8ToString(PAnsiChar(Src));
+    Result := WideToAnsi(WS, CP);
+  end;
+end;
+
+function ZConvertRawToString(const Src: ZAnsiString; const RawCP: Word): String;
+var WS: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+begin
+  if Src = '' then
+    Result := ''
+  else
+  begin
+    WS := AnsiToWide(Src, RawCP);
+    Result := {$IFNDEF UNICODE}String{$ENDIF}(WS);
+  end;
+end;
+
+function ZConvertStringToRaw(const Src: String; const RawCP: Word): ZAnsiString;
+begin
+  if Src = '' then
+    Result := ''
+  else
+    {$IFDEF UNICODE}
+    Result := WideToAnsi(Src, RawCP);
+    {$ELSE}
+    Result := WideToAnsi(ZWideString(Src), RawCP);
+    {$ENDIF}
+end;
+
+function ZConvertUTF8ToString(const Src: UTF8String): String;
+begin
+  if Src = '' then
+    Result := ''
+  else
+    {$IFDEF WITH_RAWBYTESTRING}
+    Result := String(Src);
+    {$ELSE}
+    Result := String(UTF8Decode(PAnsichar(Src)));
+    {$ENDIF}
+end;
+
+function ZConvertStringToUTF8(const Src: String): UTF8String;
+begin
+  if Src = '' then
+    Result := ''
+  else
+    {$IFDEF WITH_RAWBYTESTRING}
+    Result := UTF8String(Src);
+    {$ELSE}
+    Result := UTF8Encode(ZWideString(Src));
+    {$ENDIF}
+end;
+
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
+function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): ZAnsiString;
+begin
+  ZSetString(PAnsiChar(Src), Result);
+end;
+
+function ZMoveRawToAnsi(const Src: ZAnsiString; const RawCP: Word): AnsiString;
+begin
+  ZSetString(PAnsiChar(Src), Result);
+end;
+
+function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
+begin
+  ZSetString(PAnsiChar(Src), Result);
+end;
+
+function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
+begin
+  ZSetString(PAnsiChar(Src), Result);
+end;
+
+function ZMoveRawToUTF8(const Src: ZAnsiString; const CP: Word): UTF8String;
+begin
+  ZSetString(PAnsiChar(Src), Result);
+end;
+
+function ZMoveUTF8ToRaw(Const Src: UTF8String; const CP: Word): ZAnsiString;
+begin
+  ZSetString(PAnsiChar(Src), Result);
+end;
+
+function ZMoveRawToString(const Src: ZAnsiString; const RawCP: Word): String;
+begin
+  {$IFDEF UNICODE}
+  Result := AnsiToWide(Src, RawCP);
+  {$ELSE}
+  ZSetString(PAnsiChar(Src), Result);
+  {$ENDIF}
+end;
+
+function ZMoveStringToRaw(const Src: String; const RawCP: Word): ZAnsiString;
+begin
+  {$IFDEF UNICODE}
+  Result := WideToAnsi(Src, RawCP);
+  {$ELSE}
+  ZSetString(PAnsiChar(Src), Result);
+  {$ENDIF}
+end;
+
+function ZMoveUTF8ToString(const Src: UTF8String): String;
+begin
+  {$IFDEF UNICODE}
+  Result := String(Src);
+  {$ELSE}
+  ZSetString(PAnsiChar(Src), Result);
+  {$ENDIF}
+end;
+
+function ZMoveStringToUTF8(const Src: String): UTF8String;
+begin
+  {$IFDEF UNICODE}
+  Result := UTF8String(Src);
+  {$ELSE}
+  ZSetString(PAnsiChar(Src), Result);
+  {$ENDIF}
+end;
+
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -708,8 +1036,6 @@ var
   WS: ZWideString;
   Bytes: TByteDynArray;
 begin
-  Result := '';
-
   if Size = 0 then
     Result := ''
   else
@@ -919,3 +1245,4 @@ begin
 end;
 
 end.
+
