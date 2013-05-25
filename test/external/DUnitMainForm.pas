@@ -1,7 +1,7 @@
-{ $Id: DUnitMainForm.pas,v 1.6 2003/01/08 14:33:33 juanco Exp $ }
+{ $Id: DUnitMainForm.pas 23 2008-08-26 04:42:20Z judc $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.6 $ 2001/03/08 uberto
+   @version $Revision: 23 $ 2001/03/08 uberto
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -34,21 +34,16 @@ unit DUnitMainForm;
 interface
 
 uses
-  Windows,
   Messages,
   Classes,
-  SysUtils,
-
   TestFramework,
-  TestModules,
   GUITestRunner,
-
-  Graphics, Controls, Forms, Dialogs,
+  Graphics, Controls, Dialogs,
   Menus, ActnList, ImgList, StdCtrls, ComCtrls, ToolWin,
   ExtCtrls;
 
 const
-  rcs_id :string = '#(@)$Id: DUnitMainForm.pas,v 1.6 2003/01/08 14:33:33 juanco Exp $';
+  rcs_id :string = '#(@)$Id: DUnitMainForm.pas 23 2008-08-26 04:42:20Z judc $';
 
 type
   TDUnitForm = class(TGUITestRunner)
@@ -75,7 +70,11 @@ var
 
 implementation
 
-uses DunitAbout;
+uses
+  SysUtils,
+  Forms, 
+  DUnitAbout,
+  TestModules;
 
 {$R *.DFM}
 
@@ -99,6 +98,10 @@ begin
         end;
       end;
       inherited Suite := RootSuite;
+
+      // Set up the GUI nodes in the test nodes
+
+      SetupGUINodes;
     end;
 end;
 
@@ -111,7 +114,7 @@ begin
   FRootSuite := TTestSuite.Create('All Tests');
   for i := 1 to ParamCount do
   begin
-    if not CharInSet(ParamStr(i)[1], ['/','-']) then
+    if not (AnsiChar(ParamStr(i)[1]) in ['/','-']) then
     begin
       Suite := LoadModuleTests(ParamStr(i));
       if Suite <> nil then
@@ -132,7 +135,7 @@ end;
 procedure TDUnitForm.AboutActionExecute(Sender: TObject);
 begin
   inherited;
-  TDunitAboutBox.Create(nil).ShowModal;
+  TDUnitAboutBox.Create(nil).ShowModal;
 end;
 
 end.

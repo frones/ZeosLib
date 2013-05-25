@@ -102,7 +102,7 @@ begin
   CheckEquals(True, Connection.GetAutoCommit);
   CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
 
-  CheckEquals(3, (Connection as IZInterbase6Connection).GetDialect);
+  CheckEquals(3, Cardinal((Connection as IZInterbase6Connection).GetDialect));
 
   { Checks without transactions. }
   Connection.CreateStatement;

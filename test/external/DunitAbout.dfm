@@ -139,7 +139,7 @@ object DunitAboutBox: TDunitAboutBox
         'Semeijn, Uberto Barbini, '
         'Brett Shearer'
         ''
-        'Copyright © 1999-2001'
+        'Copyright '#169' 1999-2009'
         'The DUnit Group.'
         'All rights reserved.')
       ReadOnly = True

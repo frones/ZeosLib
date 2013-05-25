@@ -261,7 +261,7 @@ begin
     CheckEquals(0, Fields[1].AsInteger, 'The Byte Field');
     CheckEquals(0, Fields[2].AsInteger, 'The Short Field');
     CheckEquals(0, Fields[3].AsInteger, 'The Interger Field');
-    CheckEquals(0, Fields[4].Value, 'The BigDecimal Field');
+    CheckEquals(0, Fields[4].AsInteger, 'The BigDecimal Field');
     CheckEquals(0, Fields[5].AsInteger, 'The Numeric Field');
     CheckEquals(0, Fields[6].AsFloat, 1, 'The Float Field');
     CheckEquals(0, Fields[7].AsFloat, 1,'The Real Field');
@@ -315,7 +315,7 @@ begin
     CheckEquals(15, Fields[2].AsInteger, 'The Byte Field');
     CheckEquals(3457, Fields[3].AsInteger, 'The Short Field');
     CheckEquals(1968754, Fields[4].AsInteger, 'The Interger Field');
-    CheckEquals(645397181, Fields[5].Value, 'The BigDecimal Field');
+    CheckEquals(645397181, Fields[5].AsInteger, 'The BigDecimal Field');
     CheckEquals(645397181, Fields[6].AsInteger, 'The Numeric Field');
     CheckEquals(178.345123, Fields[7].AsFloat, 1, 'The Float Field');
     CheckEquals(132489.45612098, Fields[8].AsFloat, 1,'The Real Field');

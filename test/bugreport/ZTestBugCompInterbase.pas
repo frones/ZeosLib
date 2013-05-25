@@ -338,7 +338,7 @@ begin
     CheckEquals('Vasia Pupkin', Query.FieldByName('p_name').AsString);
     CheckEquals('Line agency', LookUp.Text);
     {$IFNDEF FPC}
-    CheckEquals(1, LookUp.KeyValue);
+    CheckEquals(1, Integer(LookUp.KeyValue));
     {$ENDIF}
 
     Query.Next;
@@ -347,7 +347,7 @@ begin
     CheckEquals('Andy Karto', Query.FieldByName('p_name').AsString);
     CheckEquals('Container agency', LookUp.Text);
     {$IFNDEF FPC}
-    CheckEquals(2, LookUp.KeyValue);
+    CheckEquals(2, Integer(LookUp.KeyValue));
     {$ENDIF}
   finally
     LookUp.Free;

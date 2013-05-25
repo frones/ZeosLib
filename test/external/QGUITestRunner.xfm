@@ -30,6 +30,7 @@ object GUITestRunner: TGUITestRunner
   ShowHint = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
+  OnShow = FormShow
   PixelsPerInch = 96
   object BodyPanel: TPanel
     Left = 0

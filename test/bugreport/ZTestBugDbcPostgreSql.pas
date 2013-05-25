@@ -550,9 +550,9 @@ const
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  CheckEquals(4, GetMinorVersion(MinorVersion1));
-  CheckEquals(0, GetMinorVersion(MinorVersion2));
-  CheckEquals(123, GetMinorVersion(MinorVersion3));
+  CheckEquals(4, Cardinal(GetMinorVersion(MinorVersion1)));
+  CheckEquals(0, Cardinal(GetMinorVersion(MinorVersion2)));
+  CheckEquals(123, Cardinal(GetMinorVersion(MinorVersion3)));
 end;
 
 {**

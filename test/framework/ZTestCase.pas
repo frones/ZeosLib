@@ -541,13 +541,13 @@ begin
   DecodeTime(Expected, EHour, EMin, ESec, EMSec);
   DecodeDate(Actual, AYear, AMonth, ADay);
   DecodeTime(Actual, AHour, AMin, ASec, AMSec);
-  if dpYear in Parts then CheckEquals(EYear, AYear, s + '(DateTime.Year)');
-  if dpMonth in Parts then CheckEquals(EMonth, AMonth, s + '(DateTime.Month)');
-  if dpDay in Parts then CheckEquals(EDay, ADay, s + '(DateTime.Day)');
-  if dpHour in Parts then CheckEquals(EHour, AHour, s + '(DateTime.Hour)');
-  if dpMin in Parts then CheckEquals(EMin, AMin, s + '(DateTime.Min)');
-  if dpSec in Parts then CheckEquals(ESec, ASec, s + '(DateTime.Sec)');
-  if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
+  if dpYear in Parts then CheckEquals(Cardinal(EYear), Cardinal(AYear), s + '(DateTime.Year)');
+  if dpMonth in Parts then CheckEquals(Cardinal(EMonth), Cardinal(AMonth), s + '(DateTime.Month)');
+  if dpDay in Parts then CheckEquals(Cardinal(EDay), Cardinal(ADay), s + '(DateTime.Day)');
+  if dpHour in Parts then CheckEquals(Cardinal(EHour), Cardinal(AHour), s + '(DateTime.Hour)');
+  if dpMin in Parts then CheckEquals(Cardinal(EMin), Cardinal(AMin), s + '(DateTime.Min)');
+  if dpSec in Parts then CheckEquals(Cardinal(ESec), Cardinal(ASec), s + '(DateTime.Sec)');
+  if dpMSec in Parts then CheckEquals(Cardinal(EMSec), Cardinal(AMSec), s + '(DateTime.MSec)');
 end;
 
 (*{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
