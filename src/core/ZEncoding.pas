@@ -380,24 +380,12 @@ implementation
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
   ZSysUtils;
 
-{$IFNDEF WITH_LCONVENCODING}
-function IsFullMultiByteCodePage(CP: Word): Boolean;
-var
-  I: Integer;
-begin
-  for i := 0 to High(ZFullMultiByteCodePages) do
-  begin
-    Result := CP = ZFullMultiByteCodePages[i];
-    if Result then Break;
-  end;
-end;
-
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
-{$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+{$IF not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) and not defined(WITH_LCONVENCODING)}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
-{$ENDIF}
+{$IFEND}
 begin
   Result := '';
   case CP of
@@ -442,7 +430,7 @@ begin
         end;
         {$ELSE} //FPC.6-
           {$IFDEF WITH_LCONVENCODING} //LCL
-          case FromCP of
+          case CP of
             28591: //ISO_8859_1
               Result := UTF8Decode(ISO_8859_1ToUTF8(PAnsiChar(S)));
             28592:  //ISO_8859_2
@@ -490,10 +478,10 @@ end;
 
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
   ZAnsiString;
-{$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+{$IF not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) and not defined(WITH_LCONVENCODING)}
 var
   {$IFDEF WITH_UNICODEFROMLOCALECHARS}wlen, ulen{$ELSE}l{$ENDIF}: Integer;
-{$ENDIF}
+{$IFEND}
 begin
   Result := '';
   case CP of
@@ -542,7 +530,7 @@ begin
         end;
         {$ELSE} //FPC2.6-
           {$IFDEF WITH_LCONVENCODING} //LCL
-          case ToCP of
+          case CP of
             28591: //ISO_8859_1
               Result := UTF8ToISO_8859_1(UTF8Encode(Result));
             28592:  //ISO_8859_2
@@ -585,6 +573,18 @@ begin
           {$ENDIF}
         {$IFEND}
       {$ENDIF}
+  end;
+end;
+
+{$IFNDEF WITH_LCONVENCODING}
+function IsFullMultiByteCodePage(CP: Word): Boolean;
+var
+  I: Integer;
+begin
+  for i := 0 to High(ZFullMultiByteCodePages) do
+  begin
+    Result := CP = ZFullMultiByteCodePages[i];
+    if Result then Break;
   end;
 end;
 
