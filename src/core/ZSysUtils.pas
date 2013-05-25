@@ -1494,36 +1494,60 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
 begin
-  ZSetString(Src, StrLen(Src), Dest);
+  if Assigned(Src) then
+    ZSetString(Src, StrLen(Src), Dest)
+  else
+    Dest := '';
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len);
+    Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
 end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String);
 begin
-  ZSetString(Src, StrLen(Src), Dest);
+  if Assigned(Src) then
+    ZSetString(Src, StrLen(Src), Dest)
+  else
+    Dest := '';
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
 begin
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len);
+    Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
 end;
 
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString);
 begin
-  ZSetString(Src, StrLen(Src), Dest);
+  if Assigned(Src) then
+    ZSetString(Src, StrLen(Src), Dest)
+  else
+    Dest := '';
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len);
+    Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
 end;
 {$ENDIF}
 
