@@ -401,7 +401,7 @@ var
 begin
   Result := '';
   case CP of
-    zCP_UTF8: Result := UTF8ToString(s);
+    zCP_UTF8, zCP_us_ascii: Result := UTF8ToString(s);
     zCP_NONE: Result := {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}(s);
     else
       {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
@@ -441,7 +441,48 @@ begin
           {$ENDIF}
         end;
         {$ELSE} //FPC.6-
+          {$IFDEF WITH_LCONVENCODING} //LCL
+          case FromCP of
+            28591: //ISO_8859_1
+              Result := UTF8Decode(ISO_8859_1ToUTF8(PAnsiChar(S)));
+            28592:  //ISO_8859_2
+              Result := UTF8Decode(ISO_8859_2ToUTF8(PAnsiChar(S)));
+            1250: //WIN1250
+              Result := UTF8Decode(CP1250ToUTF8(PAnsiChar(S)));
+            1251: //WIN1251
+              Result := UTF8Decode(CP1251ToUTF8(PAnsiChar(S)));
+            1252: //WIN1252
+              Result := UTF8Decode(CP1252ToUTF8(PAnsiChar(S)));
+            1253: //WIN1253
+              Result := UTF8Decode(CP1253ToUTF8(PAnsiChar(S)));
+            1254: //WIN1254
+              Result := UTF8Decode(CP1254ToUTF8(PAnsiChar(S)));
+            1255: //WIN1255
+              Result := UTF8Decode(CP1255ToUTF8(PAnsiChar(S)));
+            1256: //WIN1256
+              Result := UTF8Decode(CP1256ToUTF8(PAnsiChar(S)));
+            1257: //WIN1257
+              Result := UTF8Decode(CP1257ToUTF8(PAnsiChar(S)));
+            1258: //WIN1258
+              Result := UTF8Decode(CP1258ToUTF8(PAnsiChar(S)));
+            437: //CP437
+              Result := UTF8Decode(CP437ToUTF8(PAnsiChar(S)));
+            850: //CP850
+              Result := UTF8Decode(CP850ToUTF8(PAnsiChar(S)));
+            852: //CP852
+              Result := UTF8Decode(CP852ToUTF8(PAnsiChar(S)));
+            866: //CP866
+              Result := UTF8Decode(CP866ToUTF8(PAnsiChar(S)));
+            874: //CP874
+              Result := UTF8Decode(CP874ToUTF8(PAnsiChar(S)));
+            20866: //KOI8 (Russian)
+              Result := UTF8Decode(KOI8ToUTF8(PAnsiChar(S)));
+            else
+              Result := ZWideString(S); //random success!
+          end;
+          {$ELSE}
           Result := ZWideString(s); //random success!
+          {$ENDIF}
         {$IFEND}
       {$ENDIF}
   end;
@@ -456,7 +497,7 @@ var
 begin
   Result := '';
   case CP of
-    zCP_UTF8: Result := UTF8Encode(ws);
+    zCP_UTF8, zCP_us_ascii: Result := UTF8Encode(ws);
     zCP_NONE: Result := ZAnsiString(WS);
     else
       {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
@@ -500,7 +541,48 @@ begin
           {$ENDIF}
         end;
         {$ELSE} //FPC2.6-
-        Result := ZAnsiString(WS); //random success
+          {$IFDEF WITH_LCONVENCODING} //LCL
+          case ToCP of
+            28591: //ISO_8859_1
+              Result := UTF8ToISO_8859_1(UTF8Encode(Result));
+            28592:  //ISO_8859_2
+              Result := UTF8ToISO_8859_2(UTF8Encode(Result));
+            1250: //WIN1250
+              Result := UTF8ToCP1250(UTF8Encode(Result));
+            1251: //WIN1251
+              Result := UTF8ToCP1251(UTF8Encode(Result));
+            1252: //WIN1252
+              Result := UTF8ToCP1252(UTF8Encode(Result));
+            1253: //WIN1253
+              Result := UTF8ToCP1253(UTF8Encode(Result));
+            1254: //WIN1254
+              Result := UTF8ToCP1254(UTF8Encode(Result));
+            1255: //WIN1255
+              Result := UTF8ToCP1255(UTF8Encode(Result));
+            1256: //WIN1256
+              Result := UTF8ToCP1256(UTF8Encode(Result));
+            1257: //WIN1257
+              Result := UTF8ToCP1257(UTF8Encode(Result));
+            1258: //WIN1258
+              Result := UTF8ToCP1258(UTF8Encode(Result));
+            437: //CP437
+              Result := UTF8ToCP437(UTF8Encode(Result));
+            850: //CP850
+              Result := UTF8ToCP850(UTF8Encode(Result));
+            852: //CP852
+              Result := UTF8ToCP852(UTF8Encode(Result));
+            866: //CP866
+              Result := UTF8ToCP866(UTF8Encode(Result));
+            874: //CP874
+              Result := UTF8ToCP874(UTF8Encode(Result));
+            20866: //KOI8 (Russian)
+              Result := UTF8ToKOI8(UTF8Encode(Result));
+            else
+              Result := ZAnsiString(WS); //random success!
+          end;
+          {$ELSE}
+          Result := ZAnsiString(WS); //random success
+          {$ENDIF}
         {$IFEND}
       {$ENDIF}
   end;
@@ -782,11 +864,11 @@ begin
         else
           sUTF8 := PAnsiChar(Src);
       end;
-      if ToCP = zCP_UTF8 then
+      if ( ToCP = zCP_UTF8 ) then
         ZSetString(PAnsiChar(sUTF8), Result)
       else
       begin
-        case DB_CP of
+        case ToCP of
           28591: //ISO_8859_1
             sUTF8 := UTF8ToISO_8859_1(sUTF8);
           28592:  //ISO_8859_2
