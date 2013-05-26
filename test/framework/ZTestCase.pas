@@ -385,7 +385,7 @@ begin
   Size1 := Length(Array1);
   Size2 := Length(Array2);
   if Size1 <> Size2 then
-    FailNotEquals(IntToStr(Size1), IntToStr(Size1), _Message, CallerAddr);
+    FailNotEquals(IntToStr(Size1), IntToStr(Size1), _Message, ReturnAddress);
 
   P1 := Addr(Array1);
   P2 := Addr(Array2);

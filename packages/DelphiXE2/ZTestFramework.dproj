@@ -51,7 +51,7 @@
 			<VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
 			<VerInfo_Locale>2067</VerInfo_Locale>
 			<DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
-			<DCC_UnitSearchPath>.\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>.\$(Platform)\$(Config);build;..\..\test\external;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
 			<DCC_DcpOutput>.\$(Platform)\$(Config)</DCC_DcpOutput>
 			<DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
@@ -121,10 +121,10 @@
 			<DCCReference Include="..\..\test\framework\ZTestConsts.pas"/>
 			<DCCReference Include="..\..\test\framework\ZSqlTestCase.pas"/>
 			<DCCReference Include="..\..\test\framework\ZTestCase.pas"/>
+			<DCCReference Include="..\..\test\external\MemCheck.pas"/>
 			<DCCReference Include="..\..\test\framework\ZPerformanceTestCase.pas"/>
-			<DCCReference Include="..\..\test\external\MemCheck.pas">
-				<Form>$ENDIF</Form>
-			</DCCReference>
+			<DCCReference Include="..\..\test\external\DUnitConsts.pas"/>
+			<DCCReference Include="..\..\test\external\TestFrameWork.pas"/>
 			<BuildConfiguration Include="Debug">
 				<Key>Cfg_2</Key>
 				<CfgParent>Base</CfgParent>
