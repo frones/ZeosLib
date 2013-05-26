@@ -174,8 +174,8 @@ type
     property  TestMethodInvoked: Boolean read  GetTestMethodInvoked
                                          write SetTestMethodInvoked;
 
-    function  GetEnabled: boolean;
-    procedure SetEnabled(Value: boolean);
+    function  GetEnabled: Boolean;
+    procedure SetEnabled(Value: Boolean);
 
     procedure SetStartTime(Value :Int64);
     function  GetStartTime : Int64;
@@ -189,16 +189,16 @@ type
     function  GetStatus :string;
 
     procedure LoadConfiguration(const iniFile :TCustomIniFile; const section :string);  overload;
-    procedure LoadConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
+    procedure LoadConfiguration(const fileName: string; const useRegistry, useMemIni: Boolean); overload;
 
     procedure SaveConfiguration(const iniFile :TCustomIniFile; const section :string);  overload;
-    procedure SaveConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
+    procedure SaveConfiguration(const fileName: string; const useRegistry, useMemIni: Boolean); overload;
 
     procedure SetGUIObject(const guiObject: TObject);
     function  GetGUIObject: TObject;
 
     property Name:    string  read GetName;
-    property Enabled: boolean read GetEnabled write SetEnabled;
+    property Enabled: Boolean read GetEnabled write SetEnabled;
     property GUIObject: TObject read GetGUIObject write SetGUIObject;
     property Status:  string  read GetStatus;
 
@@ -270,7 +270,7 @@ type
     procedure EndTest(test: ITest);
     procedure TestingEnds(testResult :TTestResult);
 
-    function  ShouldRunTest(test :ITest):boolean;
+    function  ShouldRunTest(test :ITest):Boolean;
   end;
 
 
@@ -305,14 +305,14 @@ type
   private
     FTotalTime: Int64;
   protected
-    fFailures: TList;
-    fErrors: TList;
+    FFailures: TList;
+    FErrors: TList;
     FOverRides: Integer;
-    fListeners: IInterfaceList;
+    FListeners: IInterfaceList;
     FRootTest: ITest;
-    fRunTests: integer;
-    fStop: boolean;
-    FBreakOnFailures :boolean;
+    FRunTests: integer;
+    FStop: Boolean;
+    FBreakOnFailures :Boolean;
     FFailsIfNoChecksExecuted: Boolean;
     FIgnoresMemoryLeakInSetUpTearDown: Boolean;
     FMemoryLeakIgnoredInSetupOrTearDown: boolean;
@@ -322,14 +322,14 @@ type
     FStatusAdapter :IStatusListener;
 
     procedure Run(test: ITest); virtual;
-    function  RunTestSetup(test: ITest):boolean; virtual;
+    function  RunTestSetup(test: ITest):Boolean; virtual;
     procedure RunTestTearDown(test: ITest); virtual;
-    function  RunTestRun(test: ITest) : boolean; virtual;
+    function  RunTestRun(test: ITest) : Boolean; virtual;
 
     procedure TestingStarts;                           virtual;
     procedure StartSuite(suite: ITest);                virtual;
     procedure StartTest(test: ITest);                  virtual;
-    function  ShouldRunTest(test :ITest) :boolean;     virtual;
+    function  ShouldRunTest(test :ITest) :Boolean;     virtual;
     procedure Status(test :ITest; const Msg :string);  virtual;
     procedure EndSuite(suite: ITest);                  virtual;
     procedure EndTest(test: ITest);                    virtual;
@@ -342,13 +342,13 @@ type
     procedure AddListener(listener: ITestListener); virtual;
 
     procedure RunSuite(test: ITest);  overload;
-    procedure AddSuccess(test: ITest);                                                              virtual;
+    procedure AddSuccess(test: ITest); virtual;
     function  AddFailure(test: ITest; e: Exception; Addrs :Pointer): TTestFailure; overload;
     function  AddFailure(test: ITest; Addrs :Pointer; msg :string = ''): TTestFailure; overload;
     function  AddError(test: ITest; e: Exception; Addrs :Pointer; msg :string = ''): TTestFailure; virtual;
 
     procedure Stop; virtual;
-    function  ShouldStop: boolean; virtual;
+    function  ShouldStop: Boolean; virtual;
 
     function RunCount: integer;     virtual;
     function ErrorCount: integer;   virtual;
@@ -357,10 +357,10 @@ type
     function  GetError(idx :Integer) :TTestFailure;
     function  GetFailure(idx :Integer) :TTestFailure;
 
-    function  WasStopped :boolean; virtual;
-    function  WasSuccessful: boolean; virtual;
+    function  WasStopped :Boolean; virtual;
+    function  WasSuccessful: Boolean; virtual;
 
-    property  BreakOnFailures :boolean read  FBreakOnFailures write FBreakOnFailures;
+    property  BreakOnFailures :Boolean read  FBreakOnFailures write FBreakOnFailures;
     property  FailsIfNoChecksExecuted :Boolean read  fFailsIfNoChecksExecuted
                                                write fFailsIfNoChecksExecuted;
     property  FailsIfMemoryLeaked :Boolean read  fFailsIfMemoryLeaked
@@ -378,14 +378,13 @@ type
     property OverRides: integer read FOverRides write FOverRides;
   end;
 
-
   TAbstractTest = class(TInterfacedObject, ITest)
   protected
     FTestName: string;
-    fEnabled: boolean;
+    FEnabled: Boolean;
 
-    fStartTime: Int64;
-    fStopTime:  Int64;
+    FStartTime: Int64;
+    FStopTime:  Int64;
 
     FStatusListener :IStatusListener;
     FStatusStrings  :TStrings;
@@ -446,10 +445,10 @@ type
     constructor Create(AName: string);
     destructor Destroy; override;
 
-    function GetName: string; virtual;
+    function  GetName: string; virtual;
 
-    function  GetEnabled: boolean; virtual;
-    procedure SetEnabled(value: boolean); virtual;
+    function  GetEnabled: Boolean; virtual;
+    procedure SetEnabled(value: Boolean); virtual;
 
     function  Tests: IInterfaceList; virtual;
 
@@ -468,21 +467,19 @@ type
     procedure Status(const Msg :string);
     function  GetStatus :string;
 
-    procedure LoadConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
+    procedure LoadConfiguration(const fileName: string; const useRegistry, useMemIni: Boolean); overload;
     procedure LoadConfiguration(const iniFile :TCustomIniFile; const section :string);  overload; virtual;
-    procedure SaveConfiguration(const fileName: string; const useRegistry, useMemIni: boolean); overload;
+    procedure SaveConfiguration(const fileName: string; const useRegistry, useMemIni: Boolean); overload;
     procedure SaveConfiguration(const iniFile :TCustomIniFile; const section :string);  overload; virtual;
 
-
     property Name:    string  read GetName;
-    property Enabled: boolean read GetEnabled write SetEnabled;
+    property Enabled: Boolean read GetEnabled write SetEnabled;
 
+    function  BoolToStr(ABool: Boolean): string;
 
-    function  BoolToStr(ABool: boolean): string;
-
-    procedure Check(condition: boolean; msg: string = ''); virtual;
-    procedure CheckTrue(condition: boolean; msg: string = ''); virtual;
-    procedure CheckFalse(condition: boolean; msg: string = ''); virtual;
+    procedure Check(condition: Boolean; msg: string = ''); virtual;
+    procedure CheckTrue(condition: Boolean; msg: string = ''); virtual;
+    procedure CheckFalse(condition: Boolean; msg: string = ''); virtual;
     procedure CheckEquals(expected, actual: extended; msg: string = ''); overload; virtual;
     procedure CheckEquals(expected, actual: extended; delta: extended; msg: string = ''); overload; virtual;
     procedure CheckEquals(expected, actual: integer; msg: string = ''); overload; virtual;
@@ -503,7 +500,7 @@ type
 {$ELSE}
     procedure CheckEquals(expected, actual: AnsiString; msg: string = ''); overload; virtual;
 {$ENDIF}
-    procedure CheckEquals(expected, actual: boolean; msg: string = ''); overload; virtual;
+    procedure CheckEquals(expected, actual: Boolean; msg: string = ''); overload; virtual;
     procedure CheckEqualsBin(expected, actual: longword; msg: string = ''; digits: integer=32); virtual;
     procedure CheckEqualsHex(expected, actual: longword; msg: string = ''; digits: integer=8); virtual;
 
@@ -523,11 +520,11 @@ type
     procedure CheckNotEqualsWideString(const expected, actual: WideString; msg: string = ''); virtual;
     procedure CheckNotEqualsMem(expected, actual: pointer; size:longword; msg:string=''); virtual;
 {$ENDIF}
-    procedure CheckNotEquals(expected, actual: boolean; msg: string = ''); overload; virtual;
+    procedure CheckNotEquals(expected, actual: Boolean; msg: string = ''); overload; virtual;
     procedure CheckNotEqualsBin(expected, actual: longword; msg: string = ''; digits: integer=32); virtual;
     procedure CheckNotEqualsHex(expected, actual: longword; msg: string = ''; digits: integer=8); virtual;
 
-    procedure CheckNotNull(obj :IUnknown; msg :string = ''); overload; virtual;
+    procedure CheckNotNull(obj :IUnknown; msg: string = ''); overload; virtual;
     procedure CheckNull(obj: IUnknown; msg: string = ''); overload; virtual;
     procedure CheckSame(expected, actual: IUnknown; msg: string = ''); overload; virtual;
     procedure CheckSame(expected, actual: TObject; msg: string = ''); overload; virtual;
@@ -535,25 +532,25 @@ type
     procedure CheckNotNull(obj: TObject; msg: string = ''); overload; virtual;
     procedure CheckNull(obj: TObject; msg: string = ''); overload; virtual;
 
-    procedure CheckException(AMethod: TTestMethod; AExceptionClass: TClass; msg :string = '');
-    procedure CheckEquals(  expected, actual: TClass; msg: string = ''); overload; virtual;
+    procedure CheckException(AMethod: TTestMethod; AExceptionClass: TClass; msg: string = '');
+    procedure CheckEquals(expected, actual: TClass; msg: string = ''); overload; virtual;
     procedure CheckInherits(expected, actual: TClass; msg: string = ''); overload; virtual;
-    procedure CheckIs(AObject :TObject; AClass: TClass; msg: string = ''); overload; virtual;
+    procedure CheckIs(AObject: TObject; AClass: TClass; msg: string = ''); overload; virtual;
 
     procedure Fail(msg: string; ErrorAddrs: Pointer = nil); overload; virtual;
     procedure FailEquals(expected, actual: WideString; msg: string = ''; ErrorAddrs: Pointer = nil); overload; virtual;
     procedure FailNotEquals(expected, actual: WideString; msg: string = ''; ErrorAddrs: Pointer = nil); overload; virtual;
     procedure FailNotSame(expected, actual: WideString; msg: string = ''; ErrorAddrs: Pointer = nil); virtual;
 
-    function EqualsErrorMessage(expected, actual :WideString; msg: string): WideString;
-    function NotEqualsErrorMessage(expected, actual :WideString; msg: string): WideString;
+    function EqualsErrorMessage(expected, actual: WideString; msg: string): WideString;
+    function NotEqualsErrorMessage(expected, actual: WideString; msg: string): WideString;
     function NotSameErrorMessage(expected, actual, msg: string): WideString;
 
     procedure StopTests(msg: string = ''); virtual;
 
 {$IFNDEF CLR}
     procedure CheckMethodIsNotEmpty(MethodPointer: pointer);
-{$ENDIF}    
+{$ENDIF}
 
     procedure StartExpectingException(e: ExceptionClass);
     procedure StopExpectingException(msg :string = '');
@@ -590,7 +587,6 @@ type
       write SetIgnoreSetUpTearDownLeaks;
   end;
 
-
   TTestCase = class(TAbstractTest, ITest)
   protected
     fMethod:    TTestMethod;
@@ -598,10 +594,8 @@ type
     procedure Invoke(AMethod: TTestMethod); override;
     procedure RunWithFixture(testResult: TTestResult); override;
     procedure RunTest(testResult: TTestResult); override;
-
   public
     constructor Create(MethodName: string); virtual;
-
     class function Suite: ITestSuite; virtual;
 
     procedure Run(testResult: TTestResult); overload;
@@ -651,7 +645,7 @@ type
 
   TTestSuite = class(TAbstractTest, ITestSuite, ITest)
   protected
-    fTests: IInterfaceList;
+    FTests: IInterfaceList;
     procedure RunTest(testResult: TTestResult); override;
   public
     constructor Create; overload;
@@ -674,9 +668,9 @@ type
 
   TTestFailure = class(TObject)
   protected
-    fFailedTest: ITest;
-    fThrownExceptionClass: TClass;
-    fThrownExceptionMessage: string;
+    FFailedTest: ITest;
+    FThrownExceptionClass: TClass;
+    FThrownExceptionMessage: string;
     FThrownExceptionAddress: Pointer;
     FStackTrace:             string;
 
@@ -738,7 +732,7 @@ function RunRegisteredTests(const listeners: array of ITestListener): TTestResul
 {$IFNDEF HAS_BUILTIN_RETURNADDRESS}
 function ReturnAddress: Pointer; {$IFNDEF CLR} assembler; {$ENDIF}
 {$ENDIF}
-function CallerAddr: Pointer; {$IFNDEF CLR} assembler; {$ENDIF}
+function CallerAddr: Pointer; {$IFNDEF CLR} assembler; {$ENDIF} 
   {$IFDEF HAS_BUILTIN_RETURNADDRESS}deprecated 'Use ReturnAddress';{$ENDIF}
 function PtrToStr(p: Pointer): string;
 function PointerToLocationInfo(Addrs: Pointer): string;
@@ -763,6 +757,7 @@ const sExpButWasFmt    = '%sexpected: <%s> but was: <%s>';
 {$ENDIF}
 ///////////////////////////////////////////////////////////////////////////
 implementation
+
 uses
 {$IFDEF GENERICS}
 {$IFDEF MSWINDOWS_OR_POSIX}
@@ -876,7 +871,7 @@ begin
   ErrorMsg := '';
   Result := True;
 end;
- {$ENDIF}
+{$ENDIF}
 
 function MemLeakMonitor: IMemLeakMonitor;
 begin
@@ -932,7 +927,7 @@ begin
    Result := Format('%p', [p])
 end;
 
-function IsBadPointer(P: Pointer):boolean; {$IFNDEF CLR} register; {$ENDIF}
+function IsBadPointer(P: Pointer):Boolean; {$IFNDEF CLR} register; {$ENDIF}
 begin
   try
     Result  := (p = nil)
@@ -944,7 +939,7 @@ begin
   end
 end;
 
-
+                                                                                                 
 {$IFNDEF HAS_BUILTIN_RETURNADDRESS}
 function ReturnAddress: Pointer; {$IFNDEF PUREPASCAL} assembler; {$ENDIF}
 {$IF defined(CPUX86) and defined(MSWINDOWS) }
@@ -1147,12 +1142,11 @@ end;
 constructor TTestResult.Create;
 begin
   inherited Create;
-  fFailures := TList.Create;
-  fErrors := TList.Create;
-  fListeners := TInterfaceList.Create;
-  fRunTests := 0;
-  fStop := false;
-
+  FFailures := TList.Create;
+  FErrors := TList.Create;
+  FListeners := TInterfaceList.Create;
+  FRunTests := 0;
+  FStop := false;
   FStatusAdapter := TStatusToResultAdapter.Create(Self);
 end;
 
@@ -1164,12 +1158,12 @@ begin
   begin
     TTestFailure(fErrors[i]).Free;
   end;
-  fErrors.Free;
+  FErrors.Free;
   for i := 0 to fFailures.Count - 1 do
   begin
     TTestFailure(fFailures[i]).Free;
   end;
-  fFailures.Free;
+  FFailures.Free;
   inherited;
 end;
 
@@ -1195,7 +1189,7 @@ begin
 
   TestFailureError := TTestFailure.Create(test, e, Addrs, msg);
   FErrors.add(TestFailureError);
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
     (FListeners[i] as ITestListener).AddError(TestFailureError);
   end;
@@ -1214,10 +1208,10 @@ begin
   assert(assigned(fFailures));
 
   Failure := TTestFailure.Create(test, e, Addrs);
-  fFailures.add(Failure);
-  for i := 0 to fListeners.count - 1 do
+  FFailures.add(Failure);
+  for i := 0 to FListeners.count - 1 do
   begin
-    (fListeners[i] as ITestListener).AddFailure(Failure);
+    (FListeners[i] as ITestListener).AddFailure(Failure);
   end;
 
   assert(assigned(Failure));
@@ -1227,19 +1221,19 @@ end;
 procedure TTestResult.addListener(listener: ITestListener);
 begin
   assert(assigned(listener), sNilListener);
-  fListeners.add(listener);
+  FListeners.add(listener);
 end;
 
 procedure TTestResult.EndTest(test: ITest);
 var
   i: integer;
 begin
-  assert(assigned(fListeners));
+  assert(assigned(FListeners));
 
   try
-    for i := 0 to fListeners.count - 1 do
+    for i := 0 to FListeners.count - 1 do
     begin
-      (fListeners[i] as ITestListener).EndTest(test);
+      (FListeners[i] as ITestListener).EndTest(test);
     end;
   finally
     test.SetStatusListener(nil);
@@ -1250,11 +1244,11 @@ procedure TTestResult.Status(test: ITest; const Msg: string);
 var
   i: integer;
 begin
-  assert(assigned(fListeners));
+  assert(assigned(FListeners));
 
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
-    (fListeners[i] as ITestListener).Status(test, Msg);
+    (FListeners[i] as ITestListener).Status(test, Msg);
   end;
 end;
 
@@ -1268,13 +1262,13 @@ begin
   Result := TObject(FFailures[idx]) as TTestFailure;
 end;
 
-function TTestResult.RunTestSetup(test: ITest):boolean;
+function TTestResult.RunTestSetup(test: ITest):Boolean;
 var
   LTime :Int64;
 begin
   Result := false;
   try
-    test.StopTime  := 0;
+    test.StopTime := 0;
     QueryPerformanceCounter(LTime);
     test.StartTime := LTime;
     test.FailsOnNoChecksExecuted := FFailsIfNoChecksExecuted;
@@ -1304,38 +1298,38 @@ begin
   test.StopTime := LTime;
 end;
 
-function TTestResult.RunTestRun(test: ITest) : boolean;
+function TTestResult.RunTestRun(test: ITest) : Boolean;
 var
   failure: TTestFailure;
 begin
   Result := false;
   test.TestMethodInvoked := False;
   failure := nil;
-    try
-      test.RunTest(self);
+  try
+    test.RunTest(self);
     if not Assigned(FRootTest) then
       FRootTest := test;
-      fTotalTime := FRootTest.ElapsedTestTime;
-      Result := true;
-    except
-      on e: EStopTestsFailure do
-      begin
-        failure := AddFailure(test, e, ExceptAddr);
-        FStop := True;
-      end;
-      on e: ETestFailure do
-      begin
-        failure := AddFailure(test, e, ExceptAddr);
-      end;
-      on e: EBreakingTestFailure do
-      begin
-        failure := AddFailure(test, e, ExceptAddr);
-      end;
-      on e: Exception do
-      begin
-        failure := AddError(test, e, ExceptAddr);
-      end;
+    FTotalTime := FRootTest.ElapsedTestTime;
+    Result := true;
+  except
+    on e: EStopTestsFailure do
+    begin
+      failure := AddFailure(test, e, ExceptAddr);
+      FStop := True;
     end;
+    on e: ETestFailure do
+    begin
+      failure := AddFailure(test, e, ExceptAddr);
+    end;
+    on e: EBreakingTestFailure do
+    begin
+      failure := AddFailure(test, e, ExceptAddr);
+    end;
+    on e: Exception do
+    begin
+      failure := AddError(test, e, ExceptAddr);
+    end;
+  end;
   if BreakOnFailures
   and (failure <> nil)
   and (failure.FThrownExceptionClass.InheritsFrom(ETestFailure))
@@ -1449,12 +1443,12 @@ end;
 
 function TTestResult.RunCount: integer;
 begin
-  result := fRunTests;
+  Result := FRunTests;
 end;
 
-function TTestResult.ShouldStop: boolean;
+function TTestResult.ShouldStop: Boolean;
 begin
-  result := fStop;
+  Result := FStop;
 end;
 
 procedure TTestResult.StartTest(test: ITest);
@@ -1462,47 +1456,47 @@ var
   i: integer;
 begin
   assert(assigned(test));
-  assert(assigned(fListeners));
+  assert(assigned(FListeners));
 
   test.SetStatusListener(FStatusAdapter);
 
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
-    (fListeners[i] as ITestListener).StartTest(test);
+    (FListeners[i] as ITestListener).StartTest(test);
   end;
 end;
 
 procedure TTestResult.Stop;
 begin
-  fStop := true;
+  FStop := true;
 end;
 
 function TTestResult.ErrorCount: integer;
 begin
-  assert(assigned(fErrors));
+  assert(assigned(FErrors));
 
-  result := fErrors.count;
+  Result := FErrors.count;
 end;
 
 function TTestResult.FailureCount: integer;
 begin
-  assert(assigned(fFailures));
+  assert(assigned(FFailures));
 
-  result := fFailures.count;
+  Result := FFailures.count;
 end;
 
-function TTestResult.WasSuccessful: boolean;
+function TTestResult.WasSuccessful: Boolean;
 begin
-  result := (FailureCount = 0) and (ErrorCount() = 0) and not WasStopped;
+  Result := (FailureCount = 0) and (ErrorCount() = 0) and not WasStopped;
 end;
 
 procedure TTestResult.TestingStarts;
 var
   i: Integer;
 begin
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
-    (fListeners[i] as ITestListener).TestingStarts;
+    (FListeners[i] as ITestListener).TestingStarts;
   end;
 end;
 
@@ -1510,20 +1504,20 @@ procedure TTestResult.TestingEnds;
 var
   i: Integer;
 begin
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
-    (fListeners[i] as ITestListener).TestingEnds(self);
+    (FListeners[i] as ITestListener).TestingEnds(self);
   end;
 end;
 
-function TTestResult.ShouldRunTest(test: ITest): boolean;
+function TTestResult.ShouldRunTest(test: ITest): Boolean;
 var
   i: Integer;
 begin
   Result := True;
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
-    if not (fListeners[i] as ITestListener).ShouldRunTest(test) then
+    if not (FListeners[i] as ITestListener).ShouldRunTest(test) then
     begin
       Result := false;
       break;
@@ -1532,9 +1526,9 @@ begin
 end;
 
 
-function TTestResult.WasStopped: boolean;
+function TTestResult.WasStopped: Boolean;
 begin
-  result := fStop;
+  Result := FStop;
 end;
 
 procedure TTestResult.RunSuite(test: ITest);
@@ -1562,12 +1556,12 @@ var
   i: Integer;
   l: ITestListenerX;
 begin
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
 {$IFDEF CLR}
-    if Supports(fListeners[i], ITestListenerX, l) then
+    if Supports(FListeners[i], ITestListenerX, l) then
 {$ELSE}
-    if fListeners[i].QueryInterface(ITestListenerX, l) = 0 then
+    if FListeners[i].QueryInterface(ITestListenerX, l) = 0 then
 {$ENDIF}
        l.EndSuite(suite);
   end;
@@ -1578,12 +1572,12 @@ var
   i: Integer;
   l: ITestListenerX;
 begin
-  for i := 0 to fListeners.count - 1 do
+  for i := 0 to FListeners.count - 1 do
   begin
 {$IFDEF CLR}
-    if Supports(fListeners[i], ITestListenerX, l) then
+    if Supports(FListeners[i], ITestListenerX, l) then
 {$ELSE}
-    if fListeners[i].QueryInterface(ITestListenerX, l) = 0 then
+    if FListeners[i].QueryInterface(ITestListenerX, l) = 0 then
 {$ENDIF}
       l.StartSuite(suite);
   end;
@@ -1668,17 +1662,17 @@ begin
   Result := 1;
 end;
 
-function TAbstractTest.getEnabled: boolean;
+function TAbstractTest.getEnabled: Boolean;
 begin
-  Result := fEnabled
+  Result := FEnabled
 end;
 
 function TAbstractTest.GetName: string;
 begin
-  Result := fTestName
+  Result := FTestName
 end;
 
-procedure TAbstractTest.LoadConfiguration(const fileName: string; const useRegistry, useMemIni: boolean);
+procedure TAbstractTest.LoadConfiguration(const fileName: string; const useRegistry, useMemIni: Boolean);
 var
   f: TCustomIniFile;
 begin
@@ -1704,7 +1698,7 @@ begin
   self.setEnabled(iniFile.readBool(section, self.GetName, True));
 end;
 
-procedure TAbstractTest.SaveConfiguration(const fileName: string; const useRegistry, useMemIni: boolean);
+procedure TAbstractTest.SaveConfiguration(const fileName: string; const useRegistry, useMemIni: Boolean);
 var
   f: TCustomIniFile;
 begin
@@ -1751,9 +1745,9 @@ begin
   Result := testResult;
 end;
 
-procedure TAbstractTest.setEnabled(value: boolean);
+procedure TAbstractTest.setEnabled(value: Boolean);
 begin
-  fEnabled := value;
+  FEnabled := value;
 end;
 
 var
@@ -1761,9 +1755,9 @@ var
 
 function TAbstractTest.Tests: IInterfaceList;
 begin
-   if EmptyTestList = nil then
-     EmptyTestList := TInterfaceList.Create;
-   Result := EmptyTestList;
+  if EmptyTestList = nil then
+    EmptyTestList := TInterfaceList.Create;
+  Result := EmptyTestList;
 end;
 
 
@@ -1809,7 +1803,7 @@ begin
   // returns TestTime in millisecs
   if fStopTime > 0 then
     LTime := FStopTime
-  else if fStartTime > 0 then
+  else if FStartTime > 0 then
     QueryPerformanceCounter(LTime)
   else
     LTime := 0;
@@ -1852,21 +1846,21 @@ begin
     testResult.Run(self);
 end;
 
-procedure TAbstractTest.Check(condition: boolean; msg: string);
+procedure TAbstractTest.Check(condition: Boolean; msg: string);
 begin
   FCheckCalled := True;
-    if (not condition) then
+  if (not condition) then
     Fail(msg, ReturnAddress);
 end;
 
-procedure TAbstractTest.CheckTrue(condition: boolean; msg: string);
+procedure TAbstractTest.CheckTrue(condition: Boolean; msg: string);
 begin
   FCheckCalled := True;
   if (not condition) then
     FailNotEquals(BoolToStr(true), BoolToStr(false), msg, ReturnAddress);
 end;
 
-procedure TAbstractTest.CheckFalse(condition: boolean; msg: string);
+procedure TAbstractTest.CheckFalse(condition: Boolean; msg: string);
 begin
   FCheckCalled := True;
   if (condition) then
@@ -1916,9 +1910,9 @@ begin
 end;
 
 procedure TAbstractTest.CheckEquals( expected,
-                                 actual   : extended;
-                                 delta    : extended;
-                                 msg      : string = '');
+                                     actual   : extended;
+                                     delta    : extended;
+                                     msg      : string = '');
 const
   Infinity    =  1.0 / 0.0;
 begin
@@ -1938,21 +1932,21 @@ end;
 procedure TAbstractTest.CheckNotNull(obj: IUnknown; msg: string);
 begin
   FCheckCalled := True;
-    if obj = nil then
+  if obj = nil then
     Fail(msg, ReturnAddress);
 end;
 
 procedure TAbstractTest.CheckNull(obj: IUnknown; msg: string);
 begin
   FCheckCalled := True;
-    if obj <>  nil then
+  if obj <>  nil then
     Fail(msg, ReturnAddress);
 end;
 
 procedure TAbstractTest.CheckSame(expected, actual: IUnknown; msg: string = '');
 begin
   FCheckCalled := True;
-    if (expected <> actual) then
+  if (expected <> actual) then
     FailNotSame(PtrToStr(Pointer(expected)), PtrToStr(Pointer(actual)), msg, ReturnAddress);
 end;
 
@@ -2071,6 +2065,7 @@ begin
     FailEquals(expected, actual, msg, ReturnAddress);
 end;
 {$ENDIF}
+
 procedure TAbstractTest.CheckNotEqualsWideString(const expected, actual: WideString; msg: string = '');
 begin
   FCheckCalled := True;
@@ -2118,6 +2113,7 @@ begin
     FailNotEquals(IntToStr(expected), IntToStr(actual), msg, ReturnAddress);
 end;
 
+
 procedure TAbstractTest.CheckNotEquals(expected, actual: integer; msg: string = '');
 begin
   FCheckCalled := True;
@@ -2142,18 +2138,18 @@ end;
 procedure TAbstractTest.CheckNotEquals(expected: extended; actual: extended; delta: extended = 0; msg: string = '');
 begin
   FCheckCalled := True;
-    if (abs(expected-actual) <= delta) then
+  if (abs(expected-actual) <= delta) then
     FailNotEquals(FloatToStr(expected), FloatToStr(actual), msg, ReturnAddress);
 end;
 
-procedure TAbstractTest.CheckEquals(expected, actual: boolean; msg: string);
+procedure TAbstractTest.CheckEquals(expected, actual: Boolean; msg: string);
 begin
   FCheckCalled := True;
   if (expected <> actual) then
     FailNotEquals(BoolToStr(expected), BoolToStr(actual), msg, ReturnAddress);
 end;
 
-procedure TAbstractTest.CheckNotEquals(expected, actual: boolean; msg: string);
+procedure TAbstractTest.CheckNotEquals(expected, actual: Boolean; msg: string);
 begin
   FCheckCalled := True;
   if (expected = actual) then
@@ -2163,7 +2159,7 @@ end;
 { [KGS] IntToBin: Elected not to add to TestFrameWork interface,
         many people already have a self made version: }
 function IntToBin(const value, digits: longword): string;
-const 
+const
   ALL_32_BIT_0 = '00000000000000000000000000000000';
 var
   counter: integer;
@@ -2215,46 +2211,46 @@ end;
 procedure TAbstractTest.CheckSame(expected, actual: TObject; msg: string);
 begin
   FCheckCalled := True;
-    if (expected <> actual) then
+  if (expected <> actual) then
     FailNotSame(PtrToStr(Pointer(expected)), PtrToStr(Pointer(actual)), msg, ReturnAddress);
 end;
 
 procedure TAbstractTest.CheckNotNull(obj: TObject; msg: string);
 begin
   FCheckCalled := True;
-    if obj = nil then
+  if obj = nil then
     FailNotSame('object', PtrToStr(Pointer(obj)), msg, ReturnAddress);
 end;
 
 procedure TAbstractTest.CheckNull(obj: TObject; msg: string);
 begin
   FCheckCalled := True;
-    if obj <> nil then
+  if obj <> nil then
     FailNotSame('nil', PtrToStr(Pointer(obj)), msg, ReturnAddress);
 end;
 
 function TAbstractTest.NotEqualsErrorMessage(expected, actual: WideString; msg: string): WideString;
 begin
-    if (msg <> '') then
-        msg := msg + ', ';
-    Result := Format( sExpButWasFmt , [msg, expected, actual])
+  if (msg <> '') then
+    msg := msg + ', ';
+  Result := Format( sExpButWasFmt , [msg, expected, actual])
 end;
 
 function TAbstractTest.EqualsErrorMessage(expected, actual: WideString; msg: string): WideString;
 begin
-    if (msg <> '') then
-        msg := msg + ', ';
-    Result := Format( sExpAndActualFmt, [msg, expected])
+  if (msg <> '') then
+    msg := msg + ', ';
+  Result := Format( sExpAndActualFmt, [msg, expected])
 end;
 
 function TAbstractTest.NotSameErrorMessage(expected, actual, msg: string): WideString;
 begin
-    if (msg <> '') then
-        msg := msg + ', ';
-    Result := Format( sExpButWasFmt, [msg, expected, actual])
+  if (msg <> '') then
+    msg := msg + ', ';
+  Result := Format( sExpButWasFmt, [msg, expected, actual])
 end;
 
-function TAbstractTest.BoolToStr(ABool: boolean): string;
+function TAbstractTest.BoolToStr(ABool: Boolean): string;
 begin
   Result := BooleanIdents[aBool];
 end;
@@ -2262,21 +2258,21 @@ end;
 procedure TAbstractTest.StartExpectingException(e: ExceptionClass);
 begin
   StopExpectingException;
-  fExpectedException := e;
+  FExpectedException := e;
 end;
 
 procedure TAbstractTest.StopExpectingException(msg :string);
 begin
   try
-    if fExpectedException <> nil then
+    if FExpectedException <> nil then
     begin
       Fail( Format( sExpectedException,
-                                        [fExpectedException.ClassName,
+                                        [FExpectedException.ClassName,
                                         Msg]),
                                         ReturnAddress);
     end;
   finally
-    fExpectedException := nil;
+    FExpectedException := nil;
   end;
 end;
 
@@ -2327,21 +2323,21 @@ end;
 procedure TAbstractTest.CheckInherits(expected, actual: TClass; msg: string);
 begin
   FCheckCalled := True;
- if expected = nil then
+  if expected = nil then
     FailNotEquals('nil', actual.ClassName, msg, ReturnAddress)
- else if actual = nil then
+  else if actual = nil then
     FailNotEquals(expected.ClassName, 'nil', msg, ReturnAddress)
- else if not actual.InheritsFrom(expected) then
+  else if not actual.InheritsFrom(expected) then
     FailNotEquals(expected.ClassName, actual.ClassName, msg, ReturnAddress)
 end;
 
 procedure TAbstractTest.CheckIs(AObject: TObject; AClass: TClass; msg: string);
 begin
   FCheckCalled := True;
- Assert(AClass <> nil);
- if AObject = nil then
+  Assert(AClass <> nil);
+  if AObject = nil then
     FailNotEquals(AClass.ClassName, 'nil', msg, ReturnAddress)
- else if not AObject.ClassType.InheritsFrom(AClass) then
+  else if not AObject.ClassType.InheritsFrom(AClass) then
     FailNotEquals(AClass.ClassName, AObject.ClassName, msg, ReturnAddress)
 end;
 
@@ -2494,9 +2490,9 @@ begin
 {$ELSE}
   RunMethod.code := MethodAddress(MethodName);
   RunMethod.Data := self;
-  fMethod := TTestMethod(RunMethod);
+  FMethod := TTestMethod(RunMethod);
 
-  assert(assigned(fMethod));
+  assert(assigned(FMethod));
 {$ENDIF}
 end;
 
@@ -2523,7 +2519,7 @@ begin
   FIgnoreSetUpTearDownLeaks := testResult.IgnoresMemoryLeakInSetUpTearDown;
   if testResult.ShouldRunTest(self) then
   begin
-    inc(testResult.fRunTests);
+    inc(testResult.FRunTests);
     inherited;
   end;
 end;
@@ -2531,17 +2527,17 @@ end;
 procedure TTestCase.RunTest(testResult: TTestResult);
 begin
   assert(assigned(FMethod), sMethodNotFound + FTestName + '" ');
-  fExpectedException := nil;
+  FExpectedException := nil;
   try
     try
 {$IFDEF CLR}
       testResult.FMethodPtr := nil;
 {$ELSE}
-      CheckMethodIsNotEmpty(tMethod(fMethod).Code);
+      CheckMethodIsNotEmpty(tMethod(FMethod).Code);
       testResult.FMethodPtr := tMethod(FMethod).Code;
 {$ENDIF}
       FCheckCalled := False;
-      Invoke(fMethod);
+      Invoke(FMethod);
       if FFailsOnNoChecksExecuted and (not FCheckCalled) then
         Fail(sNoChecksExecuted, testResult.FMethodPtr);
       StopExpectingException;
@@ -2552,14 +2548,14 @@ begin
       end;
       on E: Exception  do
       begin
-        if  not Assigned(fExpectedException) then
+        if  not Assigned(FExpectedException) then
           raise
         else if not E.ClassType.InheritsFrom(fExpectedException) then
           FailNotEquals(fExpectedException.ClassName, E.ClassName, sExceptionUnexpected, ExceptAddr);
       end;
     end;
   finally
-    fExpectedException := nil;
+    FExpectedException := nil;
   end;
 end;
 
@@ -2577,12 +2573,12 @@ end;
 
 constructor TTestFailure.Create(FailedTest: ITest; ThrownException: Exception; Addrs: Pointer; msg: string);
 begin
-  assert(assigned(thrownException));
+  assert(assigned(ThrownException));
 
   inherited Create;
-  fFailedTest := FailedTest;
-  fThrownExceptionClass := thrownException.ClassType;
-  fThrownExceptionMessage := msg + thrownException.message;
+  FFailedTest := FailedTest;
+  FThrownExceptionClass := ThrownException.ClassType;
+  FThrownExceptionMessage := msg + ThrownException.message;
   FThrownExceptionAddress := Addrs;
 
   FStackTrace := CaptureStackTrace(ThrownException, FThrownExceptionAddress);
@@ -2600,17 +2596,17 @@ end;
 
 function TTestFailure.FailedTest: ITest;
 begin
-  result := fFailedTest;
+  Result := FFailedTest;
 end;
 
 function TTestFailure.ThrownExceptionName: string;
 begin
-  result := fThrownExceptionClass.ClassName;
+  Result := FThrownExceptionClass.ClassName;
 end;
 
 function TTestFailure.ThrownExceptionMessage: string;
 begin
-  result := fThrownExceptionMessage;
+  Result := FThrownExceptionMessage;
 end;
 
 function TTestFailure.ThrownExceptionAddress: pointer;
@@ -2641,7 +2637,7 @@ end;
 function TTestFailure.CaptureStackTrace(ThrownException: Exception; ThrownExceptionAddress: Pointer): string;
 {$IFDEF USE_JEDI_JCL}
 var
-  Trace :TStrings;
+  Trace: TStrings;
 {$ENDIF}
 begin
 {$IFDEF CLR}
@@ -2650,7 +2646,7 @@ begin
 {$IFDEF USE_JEDI_JCL}
   Trace := TStringList.Create;
   try
-      JclDebug.JclLastExceptStackListToStrings(Trace, true);
+    JclDebug.JclLastExceptStackListToStrings(Trace, true);
     Result := Trace.Text;
   finally
     Trace.Free;
@@ -2681,7 +2677,7 @@ begin
 
   inherited Create(AName);
 
-  fTests := TInterfaceList.Create;
+  FTests := TInterfaceList.Create;
 end;
 
 constructor TTestSuite.Create( testClass: TTestCaseClass);
@@ -2704,7 +2700,7 @@ procedure TTestSuite.AddTest(ATest: ITest);
 begin
   Assert(Assigned(ATest));
 
-  fTests.Add(ATest);
+  FTests.Add(ATest);
 end;
 
 procedure TTestSuite.AddSuite(suite: ITestSuite);
@@ -2741,12 +2737,12 @@ var
   i: Integer;
   Total:  integer;
 begin
-  assert(assigned(fTests));
+  assert(assigned(FTests));
 
   Total := 0;
-  for i := 0 to fTests.Count - 1 do
+  for i := 0 to FTests.Count - 1 do
   begin
-    test := fTests[i] as ITest;
+    test := FTests[i] as ITest;
     Total := Total + test.CountTestCases;
   end;
   Result := Total;
@@ -2758,14 +2754,14 @@ var
   test: ITest;
   Total:  Integer;
 begin
-  assert(assigned(fTests));
+  assert(assigned(FTests));
 
   Total := 0;
   if getEnabled then
   begin
-    for i := 0 to fTests.Count - 1 do
+    for i := 0 to FTests.Count - 1 do
     begin
-      test := fTests[i] as ITest;
+      test := FTests[i] as ITest;
       Total := Total + test.CountEnabledTestCases;
     end;
   end;
@@ -2778,14 +2774,14 @@ var
   test: ITest;
 begin
   assert(assigned(testResult));
-  assert(assigned(fTests));
+  assert(assigned(FTests));
 
   testResult.StartSuite(self);
-  for i := 0 to fTests.Count - 1 do
+  for i := 0 to FTests.Count - 1 do
   begin
     if testResult.ShouldStop then
       BREAK;
-    test := fTests[i] as ITest;
+    test := FTests[i] as ITest;
     test.RunWithFixture(testResult);
   end;
   testResult.EndSuite(self);
@@ -2793,7 +2789,7 @@ end;
 
 function TTestSuite.Tests: IInterfaceList;
 begin
-  result := fTests;
+  Result := FTests;
 end;
 
 procedure TTestSuite.LoadConfiguration(const iniFile: TCustomIniFile; const section: string);
@@ -2821,7 +2817,6 @@ begin
   for i := 0 to LTests.count-1 do
     (LTests[i] as ITest).SaveConfiguration(iniFile, TestSection);
 end;
-
 
 { ETestFailure }
 
@@ -2864,7 +2859,7 @@ var
   I: integer;
   Methods: array of MethodInfo;
 
-  function IsTest(AMethod: MethodInfo): boolean;
+  function IsTest(AMethod: MethodInfo): Boolean;
   var
     CustomAttr: array of System.Object;
   begin
@@ -2874,10 +2869,10 @@ var
       Result :=  Length(CustomAttr) > 0;
     end
     else
-    Result := false;
+      Result := false;
   end;
 
-    begin
+begin
   inherited Create;
   FMethodNameList := StringCollection.Create;
   Methods := AClass.ClassInfo.GetMethods();
@@ -2886,12 +2881,12 @@ var
       FMethodNameList.Add(Methods[I].Name);
 end;
 {$ELSE}
-
+                                                            
 {$IF DEFINED(CPUX64) AND DEFINED(RTTI)}
 var
   I: Integer;
   LMethod: TRttiMethod;
-      begin
+begin
   inherited Create;
   if AClass <> nil then
     for LMethod in TRttiContext.Create.GetType(AClass).GetMethods do
@@ -2902,17 +2897,17 @@ var
           while (I <= High(FMethodNameList)) and (LMethod.Name <> FMethodNameList[I]) do
             Inc(I);
           if I > High(FMethodNameList) then
-        begin
+          begin
             SetLength(FMethodNameList, Length(FMethodNameList) + 1);
             FMethodNameList[Length(FMethodNameList) - 1] := LMethod.Name;
-      end;
+          end;
         end
         else
         begin
           SetLength(FMethodNameList, Length(FMethodNameList) + 1);
           FMethodNameList[Length(FMethodNameList) - 1] := LMethod.Name;
-    end;
-  end;
+        end;
+end;
 {$ELSE}
 type
   TMethodTable = packed record
@@ -3095,14 +3090,14 @@ end;
 
 function RegisteredTests: ITestSuite;
 begin
-  result := __TestRegistry;
+  Result := __TestRegistry;
 end;
 
 function RunTest(suite: ITest; const listeners: array of ITestListener): TTestResult; overload;
 var
   i        : Integer;
 begin
-  result := TTestResult.Create;
+  Result := TTestResult.Create;
   for i := low(listeners) to high(listeners) do
       result.addListener(listeners[i]);
   if suite <> nil then
@@ -3111,7 +3106,7 @@ end;
 
 function RunRegisteredTests(const listeners: array of ITestListener): TTestResult;
 begin
-  result := RunTest(RegisteredTests, listeners);
+  Result := RunTest(RegisteredTests, listeners);
 end;
 
 procedure ClearRegistry;

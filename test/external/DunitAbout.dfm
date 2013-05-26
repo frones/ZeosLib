@@ -1,4 +1,4 @@
-object DunitAboutBox: TDunitAboutBox
+object DUnitAboutBox: TDUnitAboutBox
   Left = 163
   Top = 33
   BorderIcons = []
