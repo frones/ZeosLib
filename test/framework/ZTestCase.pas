@@ -130,6 +130,10 @@ type
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: Word;
+      const Msg: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: Byte;
+      const Msg: string = ''); overload;
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
     { Measurement methods. }
@@ -522,6 +526,18 @@ begin
     FreeMem(EBuf);
     FreeMem(ABuf);
   end;
+end;
+
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
+  const Msg: string = '');
+begin
+  CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Byte;
+  const Msg: string = '');
+begin
+  CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
 end;
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
