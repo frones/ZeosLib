@@ -473,7 +473,7 @@ begin
     CheckEquals(100, RowBuffer2^.Index, 'Copy. Buffer2 Index');
     CheckEquals(ord(utModified), ord(RowBuffer2^.UpdateType),
         'Copy. Buffer2 UpdateType');
-    CheckEquals(2, Cardinal(RowBuffer2^.BookmarkFlag), 'Copy. Buffer2 BookmarkFlag');
+    CheckEquals(2, RowBuffer2^.BookmarkFlag, 'Copy. Buffer2 BookmarkFlag');
 
     {check CopyTo method}
     try
@@ -485,7 +485,7 @@ begin
     CheckEquals(10, RowBuffer1^.Index, 'CopyTo. The RowBuffer1 Index');
     CheckEquals(ord(utInserted), ord(RowBuffer1^.UpdateType),
         'CopyTo. The RowBuffer1 UpdateType');
-    CheckEquals(1, Cardinal(RowBuffer1^.BookmarkFlag),
+    CheckEquals(1, RowBuffer1^.BookmarkFlag,
         'CopyTo. The RowBuffer1 BookmarkFlag');
 
     {check Clear method}
@@ -498,7 +498,7 @@ begin
     CheckNotEquals(10, RowBuffer1^.Index, 'Clear. The RowBuffer1 Index');
     CheckNotEquals(ord(utInserted), ord(RowBuffer1^.UpdateType),
         'Clear. The RowBuffer1 UpdateType');
-    CheckNotEquals(1, Cardinal(RowBuffer1^.BookmarkFlag),
+    CheckNotEquals(1, RowBuffer1^.BookmarkFlag,
         'Clear. The RowBuffer1 BookmarkFlag');
 
     {check Moveto method}
@@ -512,13 +512,13 @@ begin
     CheckEquals(10, RowBuffer1^.Index, 'MoveTo. The RowBuffer1 Index');
     CheckEquals(ord(utInserted), ord(RowBuffer1^.UpdateType),
         'MoveTo. The RowBuffer1 UpdateType');
-    CheckEquals(1, Cardinal(RowBuffer1^.BookmarkFlag),
+    CheckEquals(1, RowBuffer1^.BookmarkFlag,
         'MoveTo. The RowBuffer1 BookmarkFlag');
 
     CheckNotEquals(10, RowBuffer^.Index, 'MoveTo. The RowBuffer Index');
     CheckNotEquals(ord(utInserted), ord(RowBuffer^.UpdateType),
         'MoveTo. The RowBuffer UpdateType');
-    CheckNotEquals(1, Cardinal(RowBuffer^.BookmarkFlag),
+    CheckNotEquals(1, RowBuffer^.BookmarkFlag,
         'MoveTo. The RowBuffer BookmarkFlag');
 
     {check CopyFrom method}
@@ -530,7 +530,7 @@ begin
     CheckEquals(100, RowBuffer^.Index, 'CopyFrom. The RowBuffer2 Index');
     CheckEquals(ord(utModified), ord(RowBuffer^.UpdateType),
         'CopyFrom. The RowBuffer2 UpdateType');
-    CheckEquals(2, Cardinal(RowBuffer^.BookmarkFlag),
+    CheckEquals(2, RowBuffer^.BookmarkFlag,
         'CopyFrom. The RowBuffer2 BookmarkFlag');
 
     {check Clear method}
@@ -543,7 +543,7 @@ begin
     CheckNotEquals(10, RowBuffer^.Index, 'Clear. The RowBuffer Index');
     CheckNotEquals(ord(utInserted), ord(RowBuffer^.UpdateType),
         'Clear. The RowBuffer UpdateType');
-    CheckNotEquals(1, Cardinal(RowBuffer^.BookmarkFlag),
+    CheckNotEquals(1, RowBuffer^.BookmarkFlag,
         'Clear. The RowBuffer BookmarkFlag');
 
     {check  dispose}

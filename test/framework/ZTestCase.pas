@@ -130,10 +130,16 @@ type
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
+    {$IFNDEF FPC}
     procedure CheckEquals(Expected, Actual: Word;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: Byte;
       const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: Word;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: Byte;
+      const Msg: string = ''); overload;
+    {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
     { Measurement methods. }
@@ -385,7 +391,7 @@ begin
   Size1 := Length(Array1);
   Size2 := Length(Array2);
   if Size1 <> Size2 then
-    FailNotEquals(IntToStr(Size1), IntToStr(Size1), _Message, ReturnAddress);
+    FailNotEquals(IntToStr(Size1), IntToStr(Size1), _Message, CallerAddr);
 
   P1 := Addr(Array1);
   P2 := Addr(Array2);
@@ -528,6 +534,7 @@ begin
   end;
 end;
 
+{$IFNDEF FPC}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
   const Msg: string = '');
 begin
@@ -539,6 +546,18 @@ procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Byte;
 begin
   CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
 end;
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Word;
+  const Msg: string = '');
+begin
+  CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Byte;
+  const Msg: string = '');
+begin
+  CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+{$ENDIF}
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
   Parts: TDateParts; const Msg: string);
@@ -557,13 +576,13 @@ begin
   DecodeTime(Expected, EHour, EMin, ESec, EMSec);
   DecodeDate(Actual, AYear, AMonth, ADay);
   DecodeTime(Actual, AHour, AMin, ASec, AMSec);
-  if dpYear in Parts then CheckEquals(Cardinal(EYear), Cardinal(AYear), s + '(DateTime.Year)');
-  if dpMonth in Parts then CheckEquals(Cardinal(EMonth), Cardinal(AMonth), s + '(DateTime.Month)');
-  if dpDay in Parts then CheckEquals(Cardinal(EDay), Cardinal(ADay), s + '(DateTime.Day)');
-  if dpHour in Parts then CheckEquals(Cardinal(EHour), Cardinal(AHour), s + '(DateTime.Hour)');
-  if dpMin in Parts then CheckEquals(Cardinal(EMin), Cardinal(AMin), s + '(DateTime.Min)');
-  if dpSec in Parts then CheckEquals(Cardinal(ESec), Cardinal(ASec), s + '(DateTime.Sec)');
-  if dpMSec in Parts then CheckEquals(Cardinal(EMSec), Cardinal(AMSec), s + '(DateTime.MSec)');
+  if dpYear in Parts then CheckEquals(EYear, AYear, s + '(DateTime.Year)');
+  if dpMonth in Parts then CheckEquals(EMonth, AMonth, s + '(DateTime.Month)');
+  if dpDay in Parts then CheckEquals(EDay, ADay, s + '(DateTime.Day)');
+  if dpHour in Parts then CheckEquals(EHour, AHour, s + '(DateTime.Hour)');
+  if dpMin in Parts then CheckEquals(EMin, AMin, s + '(DateTime.Min)');
+  if dpSec in Parts then CheckEquals(ESec, ASec, s + '(DateTime.Sec)');
+  if dpMSec in Parts then CheckEquals(EMSec, AMSec, s + '(DateTime.MSec)');
 end;
 
 (*{$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
