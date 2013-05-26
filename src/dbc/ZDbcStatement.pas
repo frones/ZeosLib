@@ -723,7 +723,7 @@ begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + {$IFDEF UNICODE}ZPlainString{$ENDIF}(SQLTokens[i].Value);
-        ttQuoted,
+        ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value);
         else
