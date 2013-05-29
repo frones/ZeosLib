@@ -91,7 +91,7 @@ type
     function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): ShortInt; override;
+    function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
@@ -333,7 +333,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZInterbase6ResultSet.GetByte(ColumnIndex: Integer): ShortInt;
+function TZInterbase6ResultSet.GetByte(ColumnIndex: Integer): Byte;
 begin
   CheckClosed;
 {$IFNDEF DISABLE_CHECKING}

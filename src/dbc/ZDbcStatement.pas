@@ -323,7 +323,7 @@ type
     function GetString(ParameterIndex: Integer): String; virtual;
     function GetUnicodeString(ParameterIndex: Integer): WideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
-    function GetByte(ParameterIndex: Integer): ShortInt; virtual;
+    function GetByte(ParameterIndex: Integer): Byte; virtual;
     function GetShort(ParameterIndex: Integer): SmallInt; virtual;
     function GetInt(ParameterIndex: Integer): Integer; virtual;
     function GetLong(ParameterIndex: Integer): Int64; virtual;
@@ -2264,9 +2264,9 @@ end;
   @return the parameter value.  If the value is SQL <code>NULL</code>, the result
   is 0.
 }
-function TZAbstractCallableStatement.GetByte(ParameterIndex: Integer): ShortInt;
+function TZAbstractCallableStatement.GetByte(ParameterIndex: Integer): Byte;
 begin
-  Result := ShortInt(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+  Result := Byte(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**

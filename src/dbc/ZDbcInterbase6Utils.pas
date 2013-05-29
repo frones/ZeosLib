@@ -145,7 +145,7 @@ type
     function GetPChar(const Index: Integer): PChar;
     function GetString(const Index: Integer): ZAnsiString;
     function GetBoolean(const Index: Integer): Boolean;
-    function GetByte(const Index: Integer): ShortInt;
+    function GetByte(const Index: Integer): Byte;
     function GetShort(const Index: Integer): SmallInt;
     function GetInt(const Index: Integer): Integer;
     function GetLong(const Index: Integer): Int64;
@@ -250,7 +250,7 @@ type
     function GetPChar(const Index: Integer): PChar;
     function GetString(const Index: Integer): ZAnsiString;
     function GetBoolean(const Index: Integer): Boolean;
-    function GetByte(const Index: Integer): ShortInt;
+    function GetByte(const Index: Integer): Byte;
     function GetShort(const Index: Integer): SmallInt;
     function GetInt(const Index: Integer): Integer;
     function GetLong(const Index: Integer): Int64;
@@ -2737,9 +2737,9 @@ end;
    @param Index the field index
    @return the field Byte value
 }
-function TZResultSQLDA.GetByte(const Index: Integer): ShortInt;
+function TZResultSQLDA.GetByte(const Index: Integer): Byte;
 begin
-  Result := ShortInt(GetShort(Index));
+  Result := Byte(GetShort(Index));
 end;
 
 {**
