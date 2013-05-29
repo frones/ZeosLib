@@ -57,7 +57,7 @@ interface
 
 uses
   {$IFNDEF LINUX}
-    {$IFDEF DELPHI16_UP}
+    {$IFDEF WITH_VCL_PREFIX}
     Vcl.DBCtrls,
     {$ELSE}
     DBCtrls,

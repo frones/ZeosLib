@@ -56,9 +56,10 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
-    {$IFDEF DELPHI16_UP}
+    {$IFDEF WITH_VCL_PREFIX}
     Vcl.DBCtrls,
     {$ELSE}
     DBCtrls,
