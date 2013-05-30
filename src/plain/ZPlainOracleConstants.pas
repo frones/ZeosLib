@@ -4217,6 +4217,10 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
           no previous index available
  *)
 
+(*--------------------------------orciap.h-----------------------------------*
+
+(*-------------------------------- OCIPing ----------------------------------*)
+  TOCIPing = function(svchp: POCISvcCtx; errhp: POCIError; mode: ub4): sword; cdecl;
 (*---------------------------------orid.h------------------------------------*
  *                           PUBLIC FUNCTIONS                                *
  *---------------------------------------------------------------------------*)
@@ -7811,7 +7815,8 @@ type
     { Oracle Object Interface for Dynamic Data Access }
     OCIObjectSetAttr:       TOCIObjectSetAttr;
     OCIObjectGetAttr:       TOCIObjectGetAttr;
-
+    {ociap.h}
+    OCIPing:                TOCIPing;
     {ort.h}
     OCITypeIterNew:         TOCITypeIterNew;
     OCITypeIterSet:         TOCITypeIterSet;
