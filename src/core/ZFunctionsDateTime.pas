@@ -738,6 +738,12 @@ end;
 
 function TZMilliSecondOfTheYearFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
+  {$IFDEF WITH_MILLISECONDOFTHEYEAR_BUG}
+  function MilliSecondOfTheYear(const AValue: TDateTime): Int64;
+  begin
+    Result := MilliSecondOf(AValue) + Int64(SecondOfTheYear(AValue)) * MSecsPerSec;
+  end;
+  {$ENDIF}
 begin
   CheckParamsCount(Stack, 1);
   VariantManager.SetAsInteger(Result, MilliSecondOfTheYear(
