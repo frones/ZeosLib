@@ -169,7 +169,7 @@ type
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): WideString;
     function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
-    function GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
+    function GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
     function GetShort(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
     function GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
     function GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
@@ -194,7 +194,7 @@ type
     procedure SetNotNull(ColumnIndex: Integer);
     procedure SetNull(ColumnIndex: Integer);
     procedure SetBoolean(ColumnIndex: Integer; Value: Boolean);
-    procedure SetByte(ColumnIndex: Integer; Value: Byte);
+    procedure SetByte(ColumnIndex: Integer; Value: ShortInt);
     procedure SetShort(ColumnIndex: Integer; Value: SmallInt);
     procedure SetInt(ColumnIndex: Integer; Value: Integer);
     procedure SetLong(ColumnIndex: Integer; Value: Int64);
@@ -1225,7 +1225,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetByte(ColumnIndex: Integer; var IsNull: Boolean): Byte;
+function TZRowAccessor.GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
@@ -1239,7 +1239,7 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stByte: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := GetShort(ColumnIndex, IsNull);
       stInteger: Result := GetInt(ColumnIndex, IsNull);
       stLong: Result := GetLong(ColumnIndex, IsNull);
@@ -1778,7 +1778,6 @@ begin
   end;
 {$ENDIF}
 
-begin
   Ptr := PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
   NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
 
@@ -1790,8 +1789,6 @@ begin
     Result := IZDataSet(Ptr^)
   else
     Result := nil;
-end;
-
 end;
 
 {**
@@ -2002,7 +1999,7 @@ end;
   @param x the new column value
 }
 procedure TZRowAccessor.SetByte(ColumnIndex: Integer;
-  Value: Byte);
+  Value: ShortInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
@@ -2012,7 +2009,7 @@ begin
     stByte:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+        PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
       end;
     stShort: SetShort(ColumnIndex, Value);
     stInteger: SetInt(ColumnIndex, Value);
