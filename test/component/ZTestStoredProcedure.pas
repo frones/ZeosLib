@@ -737,7 +737,7 @@ begin
   StoredProc.Params[21].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
   StoredProc.Params[22].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
   StoredProc.Params[23].AsString := GetDBTestString(Str1, Connection.DbcConnection.GetConSettings);
-  StoredProc.Params[24].Value := StrToBytes('121415');
+  StoredProc.Params[24].Value := StrToBytes(AnsiString('121415'));
   StoredProc.Params[25].AsString := 'a';
   StoredProc.Params[26].AsInteger := 50000;
   StoredProc.Params[27].AsInteger := 60000;

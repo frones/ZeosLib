@@ -59,7 +59,11 @@ uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility
   {$IFNDEF LINUX}
-    ,DBCtrls
+    {$IFDEF DELPHI16_UP}
+    , Vcl.DBCtrls
+    {$ELSE}
+    , DBCtrls
+    {$ENDIF}
   {$ENDIF};
 type
 
@@ -81,6 +85,7 @@ type
     procedure Test984305;
     procedure Test1004584;
     procedure Test1021705;
+    procedure Test_Decimal;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -175,6 +180,130 @@ begin
   end;
 end;
 
+{
+  Rounding issues:
+  http://zeos.firmos.at/viewtopic.php?t=3589
+  http://zeos.firmos.at/viewtopic.php?t=3725
+}
+procedure ZTestCompInterbaseBugReport.Test_Decimal;
+const
+  Row1_Num2 = '541.77';
+  Row1_Num3 = '541.777';
+  Row1_Num4 = '541.7777';
+  Row1_Num5 = '541.77777';
+  Row1_Num6 = '541.777777';
+  Row1_Num7 = '541.7777777';
+  Row1_Num8 = '541.77777777';
+
+  Row2_Num2 = '541.74';
+  Row2_Num3 = '541.774';
+  Row2_Num4 = '541.7774';
+  Row2_Num5 = '541.77774';
+  Row2_Num6 = '541.777774';
+  Row2_Num7 = '541.7777774';
+  Row2_Num8 = '541.77777774';
+
+  Row3_Num2 = '23.45';
+  Row3_Num3 = '23.445';
+  Row3_Num4 = '23.4445';
+  Row3_Num5 = '23.44445';
+  Row3_Num6 = '23.444445';
+  Row3_Num7 = '23.4444445';
+  Row3_Num8 = '23.44444445';
+var
+  Table: TZTable;
+  DecimalSep: Char;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Table := CreateTable;
+  DecimalSep := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+  try
+    // Query.RequestLive := True;
+    Table.TableName := 'TEST_DECIMAL';
+    Table.Open;
+
+    Table.Append;
+    Table.FieldByName('ID').AsInteger := 1;
+    Table.FieldByName('NUM_2').AsString := Row1_Num2;
+    Table.FieldByName('NUM_3').AsString := Row1_Num3;
+    Table.FieldByName('NUM_4').AsString := Row1_Num4;
+    Table.FieldByName('NUM_5').AsString := Row1_Num5;
+    Table.FieldByName('NUM_6').AsString := Row1_Num6;
+    Table.FieldByName('NUM_7').AsString := Row1_Num7;
+    Table.FieldByName('NUM_8').AsString := Row1_Num8;
+    Table.Post;
+
+    Table.Append;
+    Table.FieldByName('ID').AsInteger := 2;
+    Table.FieldByName('NUM_2').AsString := Row2_Num2;
+    Table.FieldByName('NUM_3').AsString := Row2_Num3;
+    Table.FieldByName('NUM_4').AsString := Row2_Num4;
+    Table.FieldByName('NUM_5').AsString := Row2_Num5;
+    Table.FieldByName('NUM_6').AsString := Row2_Num6;
+    Table.FieldByName('NUM_7').AsString := Row2_Num7;
+    Table.FieldByName('NUM_8').AsString := Row2_Num8;
+    Table.Post;
+
+    Table.Append;
+    Table.FieldByName('ID').AsInteger := 3;
+    Table.FieldByName('NUM_2').AsString := Row3_Num2;
+    Table.FieldByName('NUM_3').AsString := Row3_Num3;
+    Table.FieldByName('NUM_4').AsString := Row3_Num4;
+    Table.FieldByName('NUM_5').AsString := Row3_Num5;
+    Table.FieldByName('NUM_6').AsString := Row3_Num6;
+    Table.FieldByName('NUM_7').AsString := Row3_Num7;
+    Table.FieldByName('NUM_8').AsString := Row3_Num8;
+    Table.Post;
+    Table.Close;
+
+    Table.Open;
+
+    CheckEquals(1, Table.FieldByName('ID').AsInteger);
+    CheckEquals(Row1_Num2, Table.FieldByName('NUM_2').AsString);
+    CheckEquals(Row1_Num3, Table.FieldByName('NUM_3').AsString);
+    CheckEquals(Row1_Num4, Table.FieldByName('NUM_4').AsString);
+    CheckEquals(Row1_Num5, Table.FieldByName('NUM_5').AsString);
+    CheckEquals(Row1_Num6, Table.FieldByName('NUM_6').AsString);
+    CheckEquals(Row1_Num7, Table.FieldByName('NUM_7').AsString);
+    CheckEquals(Row1_Num8, Table.FieldByName('NUM_8').AsString);
+
+    Table.Next;
+
+    CheckEquals(2, Table.FieldByName('ID').AsInteger);
+    CheckEquals(Row2_Num2, Table.FieldByName('NUM_2').AsString);
+    CheckEquals(Row2_Num3, Table.FieldByName('NUM_3').AsString);
+    CheckEquals(Row2_Num4, Table.FieldByName('NUM_4').AsString);
+    CheckEquals(Row2_Num5, Table.FieldByName('NUM_5').AsString);
+    CheckEquals(Row2_Num6, Table.FieldByName('NUM_6').AsString);
+    CheckEquals(Row2_Num7, Table.FieldByName('NUM_7').AsString);
+    CheckEquals(Row2_Num8, Table.FieldByName('NUM_8').AsString);
+
+    Table.Next;
+
+    CheckEquals(2, Table.FieldByName('ID').AsInteger);
+    CheckEquals(Row3_Num2, Table.FieldByName('NUM_2').AsString);
+    CheckEquals(Row3_Num3, Table.FieldByName('NUM_3').AsString);
+    CheckEquals(Row3_Num4, Table.FieldByName('NUM_4').AsString);
+    CheckEquals(Row3_Num5, Table.FieldByName('NUM_5').AsString);
+    CheckEquals(Row3_Num6, Table.FieldByName('NUM_6').AsString);
+    CheckEquals(Row3_Num7, Table.FieldByName('NUM_7').AsString);
+    CheckEquals(Row3_Num8, Table.FieldByName('NUM_8').AsString);
+
+  finally
+    try
+      Table.Delete;
+      Table.Delete;
+      Table.Delete;
+    except
+      // Do nothing here -> just have a clean table
+    end;
+    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := DecimalSep;
+    Table.Free;
+  end;
+end;
+
 procedure ZTestCompInterbaseBugReport.Test750912;
 {$IFNDEF LINUX}
 var
@@ -213,7 +342,7 @@ begin
     CheckEquals('Vasia Pupkin', Query.FieldByName('p_name').AsString);
     CheckEquals('Line agency', LookUp.Text);
     {$IFNDEF FPC}
-    CheckEquals(1, LookUp.KeyValue);
+    CheckEquals(1, Integer(LookUp.KeyValue));
     {$ENDIF}
 
     Query.Next;
@@ -222,7 +351,7 @@ begin
     CheckEquals('Andy Karto', Query.FieldByName('p_name').AsString);
     CheckEquals('Container agency', LookUp.Text);
     {$IFNDEF FPC}
-    CheckEquals(2, LookUp.KeyValue);
+    CheckEquals(2, Integer(LookUp.KeyValue));
     {$ENDIF}
   finally
     LookUp.Free;

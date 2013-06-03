@@ -163,6 +163,19 @@ type
   ZAnsiString = {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
   ZWideString = {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
 
+type
+  {declare move or converter functions for the String Types}
+  TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): ZAnsiString;
+  TZRawToAnsi = function (const Src: ZAnsiString; const RawCP: Word): AnsiString;
+  TZAnsiToUTF8 = function (const Src: AnsiString): UTF8String;
+  TZUTF8ToAnsi = function (const Src: UTF8String): AnsiString;
+  TZRawToUTF8 = function (const Src: ZAnsiString; const CP: Word): UTF8String;
+  TZUTF8ToRaw = function (const Src: UTF8String; const CP: Word): ZAnsiString;
+  TZRawToString = function (const Src: ZAnsiString; const RawCP: Word): String;
+  TZStringToRaw = function (const Src: String; const RawCP: Word): ZAnsiString;
+  TZUTF8ToString = function (const Src: UTF8String): String;
+  TZStringToUTF8 = function (const Src: String): UTF8String;
+
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
 
@@ -170,7 +183,7 @@ type
     ceDefault,  //Internal switch for the two Functions below do not use it as a CodePage-declaration!
     ceAnsi,     //Base Ansi-String: prefered CodePage
     ceUTF8,     //UTF8_Unicode: 1-4Byte/Char
-    ceUTF16,    //reserved
+    ceUTF16,    //Wide or Unicode string encoding for Field-mapping
     ceUTF32);   //reserved
 
     {Here it's possible to add some more, to handle the Ansi->Unicode-Translations}

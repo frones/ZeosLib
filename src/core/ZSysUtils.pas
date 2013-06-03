@@ -249,8 +249,35 @@ function BytesToStr(const Value: TByteDynArray): AnsiString;
   @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: AnsiString): TByteDynArray;
-
+function StrToBytes(const Value: AnsiString): TByteDynArray; overload;
+{**
+  Converts a WideString into an array of bytes.
+  @param Value a WideString to be converted.
+  @return a converted array of bytes.
+}
+{$IFDEF WITH_RAWBYTESTRING}
+function StrToBytes(const Value: UTF8String): TByteDynArray; overload;
+{**
+  Converts a UTF8String into an array of bytes.
+  @param Value a UTF8String to be converted.
+  @return a converted array of bytes.
+}
+function StrToBytes(const Value: RawByteString): TByteDynArray; overload;
+{**
+  Converts a RawByteString into an array of bytes.
+  @param Value a RawByteString to be converted.
+  @return a converted array of bytes.
+}
+{$ENDIF}
+function StrToBytes(const Value: WideString): TByteDynArray; overload;
+{**
+  Converts a String into an array of bytes.
+  @param Value a String to be converted.
+  @return a converted array of bytes.
+}
+{$IFDEF UNICODE}
+function StrToBytes(const Value: String): TByteDynArray; overload;
+{$ENDIF}
 {**
   Converts bytes into a variant representation.
   @param Value an array of bytes to be converted.
@@ -365,6 +392,15 @@ function ZStrToFloat(Value: PAnsiChar): Extended; overload;
   @return a valid floating value
 }
 function ZStrToFloat(Value: AnsiString): Extended; overload;
+
+procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
+procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
+{$IFDEF WITH_RAWBYTESTRING}
+procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
+{$ENDIF}
 
 implementation
 
@@ -903,12 +939,70 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: AnsiString): TByteDynArray;
+var L: SmallInt;
 begin
-  SetLength(Result, Length(Value));
+  L := Length(Value);
+  SetLength(Result, L);
   if Value <> '' then
-    Move(Value[1], Result[0], Length(Value))
+    Move(Value[1], Result[0], L)
 end;
 
+{$IFDEF WITH_RAWBYTESTRING}
+{**
+  Converts a UTF8String into an array of bytes.
+  @param Value a UTF8String to be converted.
+  @return a converted array of bytes.
+}
+function StrToBytes(const Value: UTF8String): TByteDynArray;
+var L: SmallInt;
+begin
+  L := Length(Value);
+  SetLength(Result, L);
+  if Value <> '' then
+    Move(Value[1], Result[0], L)
+end;
+{**
+  Converts a RawByteString into an array of bytes.
+  @param Value a RawByteString to be converted.
+  @return a converted array of bytes.
+}
+function StrToBytes(const Value: RawByteString): TByteDynArray;
+var L: SmallInt;
+begin
+  L := Length(Value);
+  SetLength(Result, L);
+  if Value <> '' then
+    Move(Value[1], Result[0], L)
+end;
+{$ENDIF}
+{**
+  Converts a WideString into an array of bytes.
+  @param Value a String to be converted.
+  @return a converted array of bytes.
+}
+function StrToBytes(const Value: WideString): TByteDynArray;
+var L: SmallInt;
+begin
+  L := Length(Value)*2;
+  SetLength(Result, L);
+  if Value <> '' then
+    Move(Value[1], Result[0], L)
+end;
+{**
+  Converts a String into an array of bytes.
+  @param Value a String to be converted.
+  @return a converted array of bytes.
+}
+{$IFDEF UNICODE}
+function StrToBytes(const Value: String): TByteDynArray;
+var L: SmallInt;
+begin
+  L := Length(Value) * SizeOf(Char);
+  SetLength(Result, L);
+  if Value <> '' then
+    Move(Value[1], Result[0], L)
+end;
+{$ENDIF}
 {**
   Converts bytes into a variant representation.
   @param Value an array of bytes to be converted.
@@ -1397,5 +1491,64 @@ function ZStrToFloat(Value: AnsiString): Extended;
 begin
   Result := ZStrToFloat(PAnsiChar(Value));
 end;
+
+procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
+begin
+  if Assigned(Src) then
+    ZSetString(Src, StrLen(Src), Dest)
+  else
+    Dest := '';
+end;
+
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
+begin
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len);
+    Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
+end;
+
+procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String);
+begin
+  if Assigned(Src) then
+    ZSetString(Src, StrLen(Src), Dest)
+  else
+    Dest := '';
+end;
+
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
+begin
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len);
+    Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
+end;
+
+{$IFDEF WITH_RAWBYTESTRING}
+procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString);
+begin
+  if Assigned(Src) then
+    ZSetString(Src, StrLen(Src), Dest)
+  else
+    Dest := '';
+end;
+
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
+begin
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len);
+    Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
+end;
+{$ENDIF}
 
 end.

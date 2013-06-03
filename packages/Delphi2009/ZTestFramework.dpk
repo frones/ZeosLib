@@ -46,7 +46,8 @@ contains
   ZSqlTestCase in '..\..\test\framework\ZSqlTestCase.pas',
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
-  TestFramework in '..\..\..\..\DUnit\src\TestFramework.pas',
+  DUnitConsts in '..\..\test\external\DUnitConsts.pas',
+  TestFramework in '..\..\test\external\TestFramework.pas',
   MemCheck in '..\..\test\external\MemCheck.pas';
 
 {TextTestRunner in '..\..\test\external\TextTestRunner.pas',

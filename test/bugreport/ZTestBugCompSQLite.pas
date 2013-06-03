@@ -59,7 +59,11 @@ uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
+    {$IFDEF DELPHI16_UP}
+    Vcl.DBCtrls,
+    {$ELSE}
     DBCtrls,
+    {$ENDIF}
   {$ENDIF}
   ZCompatibility;
 type

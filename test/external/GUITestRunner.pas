@@ -1,7 +1,7 @@
-{ $Id: GUITestRunner.pas,v 1.127 2005/04/27 02:12:59 judc Exp $ }
+{ $Id: GUITestRunner.pas 37 2011-04-15 19:43:36Z medington $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.127 $ 2001/03/08 uberto
+   @version $Revision: 37 $ 2001/03/08 uberto
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -38,14 +38,22 @@
 unit GUITestRunner;
 interface
 
+  {$I ..\..\Src\Zeos.inc}
 uses
   TestFramework,
 
   Windows,
   Math,
-  Graphics, Controls, Forms, Dialogs,
-  ComCtrls, ExtCtrls, StdCtrls, ImgList, Buttons, Menus, ActnList,
-  SysUtils, Classes, IniFiles, ToolWin;
+  {$IFDEF DELPHI16_UP}
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.ComCtrls, Vcl.ExtCtrls,
+  Vcl.StdCtrls, Vcl.ImgList, Vcl.Buttons, Vcl.Menus, Vcl.ActnList, Vcl.ToolWin,
+  {$ELSE}
+  Graphics, Controls, Forms,
+  ComCtrls, ExtCtrls, StdCtrls, ImgList, Buttons, Menus, ActnList, ToolWin,
+  {$ENDIF}
+  Classes, IniFiles, DUnitConsts;
+
+
 
 const
   {: Section of the dunit.ini file where GUI information will be stored }
@@ -57,11 +65,12 @@ const
   clERROR   = clRed;
 
   {: Indexes of the color images used in the test tree and failure list }
-  imgNONE    = 0;
-  imgRUNNING = 1;
-  imgRUN     = 2;
-  imgFAILED  = 3;
-  imgERROR   = 4;
+  imgNONE     = 0;
+  imgRUNNING  = 1;
+  imgRUN      = 2;
+  imgHASPROPS = 3;
+  imgFAILED   = 4;
+  imgERROR    = 5;
 
   {: Indexes of the images used for test tree checkboxes }
   imgDISABLED        = 1;
@@ -73,7 +82,7 @@ type
      @param item  The ITest instance on which to act
      @return true if processing should continue, false otherwise
   }
-  TTestFunc = function (item :ITest):boolean of object;
+  TTestFunc = function (item :ITest):Boolean of object;
 
   TGUITestRunner = class(TForm, ITestListener, ITestListenerX)
     StateImages: TImageList;
@@ -191,6 +200,38 @@ type
     N8: TMenuItem;
     GoToNextSelectedNode2: TMenuItem;
     GoToPreviousSelectedNode2: TMenuItem;
+    FailIfNoChecksExecuted: TMenuItem;
+    FailIfNoChecksExecutedAction: TAction;
+    FailTestCaseIfMemoryLeaked: TMenuItem;
+    FailTestCaseIfMemoryLeakedAction: TAction;
+    TestCaseProperty: TPopupMenu;
+    TestCaseProperties: TMenuItem;
+    N10: TMenuItem;
+    FailNoCheckExecutedMenuItem: TMenuItem;
+    FailsOnMemoryLeakMenuItem: TMenuItem;
+    N11: TMenuItem;
+    TestCasePopup: TMenuItem;
+    FailsOnMemoryRecoveryMenuItem: TMenuItem;
+    AllowedLeakSizeMemuItem: TMenuItem;
+    ShowTestCaseswithRunTimeProperties: TMenuItem;
+    ShowTestCasesWithRunTimePropertiesAction: TAction;
+    N9: TMenuItem;
+    WarnOnFailTestOverride: TMenuItem;
+    WarnOnFailTestOverrideAction: TAction;
+    N12: TMenuItem;
+    TestCasePropertiesAction: TAction;
+    PropertyPopUpAction: TAction;
+    N13: TMenuItem;
+    Previous1: TMenuItem;
+    Next1: TMenuItem;
+    RunSelectedTest1: TMenuItem;
+    RunSelectedTestAltAction: TAction;
+    N14: TMenuItem;
+    ReportMemoryLeakTypeOnShutdown: TMenuItem;
+    IgnoreMemoryLeakInSetUpTearDown: TMenuItem;
+    IgnoreMemoryLeakInSetUpTearDownAction: TAction;
+    ReportMemoryLeakTypeOnShutdownAction: TAction;
+    TestCaseIgnoreSetUpTearDownLeaksMenuItem: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure TestTreeClick(Sender: TObject);
     procedure FailureListViewSelectItem(Sender: TObject; Item: TListItem;
@@ -232,14 +273,77 @@ type
     procedure GoToNextSelectedTestActionExecute(Sender: TObject);
     procedure GoToPrevSelectedTestActionExecute(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure FailIfNoChecksExecutedActionExecute(Sender: TObject);
+    procedure FailTestCaseIfMemoryLeakedActionExecute(Sender: TObject);
+    procedure ShowTestCasesWithRunTimePropertiesActionExecute(
+      Sender: TObject);
+    procedure WarnOnFailTestOverrideActionExecute(Sender: TObject);
+    procedure TestCasePropertiesActionExecute(Sender: TObject);
+    procedure Previous1Click(Sender: TObject);
+    procedure Next1Click(Sender: TObject);
+    procedure TestCasePropertiesMeasureItem(Sender: TObject;
+      ACanvas: TCanvas; var Width, Height: Integer);
+    procedure TestCasePropertiesDrawItem(Sender: TObject; ACanvas: TCanvas;
+      ARect: TRect; Selected: Boolean);
+    procedure FailNoCheckExecutedMenuItemDrawItem(Sender: TObject;
+      ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+    procedure AllowedLeakSizeMemuItemDrawItem(Sender: TObject;
+      ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+    procedure FailsOnMemoryRecoveryMenuItemDrawItem(Sender: TObject;
+      ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+    procedure FailsOnMemoryLeakMenuItemDrawItem(Sender: TObject;
+      ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+    procedure pmTestTreePopup(Sender: TObject);
+    procedure FailNoCheckExecutedMenuItemClick(Sender: TObject);
+    procedure AllowedLeakSizeMemuItemClick(Sender: TObject);
+    procedure FailsOnMemoryLeakMenuItemClick(Sender: TObject);
+    procedure FailsOnMemoryRecoveryMenuItemClick(Sender: TObject);
+    procedure RunSelectedTestAltActionExecute(Sender: TObject);
+    procedure Previous1DrawItem(Sender: TObject; ACanvas: TCanvas;
+      ARect: TRect; Selected: Boolean);
+    procedure RunSelectedTest1DrawItem(Sender: TObject; ACanvas: TCanvas;
+      ARect: TRect; Selected: Boolean);
+    procedure Next1DrawItem(Sender: TObject; ACanvas: TCanvas;
+      ARect: TRect; Selected: Boolean);
+    procedure ReportMemoryLeakTypeOnShutdownActionExecute(Sender: TObject);
+    procedure IgnoreMemoryLeakInSetUpTearDownActionExecute(
+      Sender: TObject);
+    procedure TestCaseIgnoreSetUpTearDownLeaksMenuItemClick(Sender: TObject);
+    procedure TestCaseIgnoreSetUpTearDownLeaksMenuItemDrawItem(Sender: TObject;
+      ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
   private
+    FNoCheckExecutedPtyOverridden: Boolean;
+    FMemLeakDetectedPtyOverridden: Boolean;
+    FIgnoreSetUpTearDownLeakPtyOverridden: Boolean;
+    FPopupY: Integer;
+    FPopupX: Integer;
     procedure ResetProgress;
+    procedure MenuLooksInactive(ACanvas: TCanvas; ARect: TRect; Selected: Boolean;
+      ATitle: string; TitlePosn: UINT; PtyOveridesGUI: boolean);
+    procedure MenuLooksActive(ACanvas: TCanvas; ARect: TRect; Selected: Boolean;
+      ATitle: string; TitlePosn: UINT);
+    function  GetPropertyName(const Caption: string): string;
   protected
     FSuite:         ITest;
     FTestResult:    TTestResult;
     FRunning:       Boolean;
     FTests:         TInterfaceList;
     FSelectedTests: TInterfaceList;
+    FTotalTime:     Int64;
+    FRunTimeStr:    string;
+    FNoChecksStr:   string;
+    FMemLeakStr:    string;
+    FMemGainStr:    string;
+    FMemBytesStr:   string;
+    FIgnoreLeakStr: string;
+    FBytes:         string;
+    FErrorCount:    Integer;
+    FFailureCount:  Integer;
+    FStrMaxLen:     Integer;
+    FValMaxLen:     Integer;
+    FUpdateTimer:   TTimer;
+    FTimerExpired:  Boolean;
+    FTotalTestsCount: Integer;
 
     procedure Setup;
     procedure SetUpStateImages;
@@ -302,8 +406,11 @@ type
     procedure CopyTestNametoClipboard(ANode: TTreeNode);
 
     procedure SetupCustomShortcuts;
+    procedure SetupGUINodes;
 
     function SelectNodeIfTestEnabled(ANode: TTreeNode): boolean;
+
+    procedure OnUpdateTimer(Sender: TObject);
   public
     {: implement the ITestListener interface }
     procedure AddSuccess(test: ITest);
@@ -319,6 +426,10 @@ type
     procedure Status(test :ITest; const Msg :string);
     procedure Warning(test :ITest; const Msg :string);
 
+    {: The number of errors in the last test run }
+    property ErrorCount: Integer read FErrorCount;
+    {: The number of failures in the last test run }
+    property FailureCount: Integer read FFailureCount;
     {: The test suite to be run in this runner }
     property Suite: ITest read FSuite write SetSuite;
     {: The result of the last test run }
@@ -334,12 +445,30 @@ procedure RunRegisteredTests;
 procedure RunTestModeless(test: ITest);
 procedure RunRegisteredTestsModeless;
 
+// Run all tests in unattended mode, i.e. automatically
+function RunRegisteredTestsModelessUnattended: Integer;
+
 implementation
+
 uses
-  Registry, Clipbrd;
+{$IFDEF FASTMM}
+  {$IFNDEF CLR}
+    {$IFNDEF ManualLeakReportingControl}
+      {$I FastMM4Options.inc}
+    {$ENDIF}
+    FastMM4,
+  {$ENDIF}
+{$ENDIF}
+  Registry,
+  SysUtils,
+  {$IFDEF DELPHI16_UP}
+  Vcl.Clipbrd
+  {$ELSE}
+  Clipbrd
+  {$ENDIF};
 
 {$BOOLEVAL OFF}  // Required or you'll get an AV
-{$R *.dfm}
+{$R *.DFM}
 
 type
   TProgressBarCrack = class(TProgressBar);
@@ -376,6 +505,36 @@ begin
    RunTestModeless(registeredTests)
 end;
 
+// Run all tests in unattended mode, i.e. automatically
+function RunRegisteredTestsModelessUnattended: Integer;
+var
+  GUI :TGUITestRunner;
+begin
+  // Create and show the GUI runner form
+
+  Application.CreateForm(TGUITestRunner, GUI);
+  GUI.Suite := registeredTests;
+  GUI.Show;
+
+  GUI.RunActionExecute(GUI.RunItem);
+
+  // Process messages until the tests have finished
+
+  repeat
+    try
+      Application.HandleMessage;
+    except
+      Application.HandleException(Application);
+    end;
+  until TGUITestRunner(Application.MainForm).RunAction.Enabled;
+
+  // Return the number of errors and failures and free the runner form
+
+  Result := GUI.ErrorCount + GUI.FailureCount;
+
+  GUI.Free;
+end;
+
 { TGUITestRunner }
 
 procedure TGUITestRunner.InitTree;
@@ -392,13 +551,19 @@ end;
 
 function TGUITestRunner.NodeToTest(Node: TTreeNode): ITest;
 var
-  index: Integer;
+  idx: Integer;
 begin
   assert(assigned(Node));
 
-  index  := Integer(Node.data);
-  assert((index >= 0) and (index < FTests.Count));
-  result := FTests[index] as ITest;
+  idx  := NativeInt(Node.data);
+  assert((idx >= 0) and (idx < FTests.Count));
+  result := FTests[idx] as ITest;
+end;
+
+procedure TGUITestRunner.OnUpdateTimer(Sender: TObject);
+begin
+  FTimerExpired := True;
+  FUpdateTimer.Enabled := False;
 end;
 
 function TGUITestRunner.TestToNode(test: ITest): TTreeNode;
@@ -443,15 +608,42 @@ end;
 
 procedure TGUITestRunner.TestingStarts;
 begin
+  FTotalTime := 0;
   UpdateStatus(True);
   TProgressBarCrack(ScoreBar).Color := clOK;
   TProgressBarCrack(ScoreBar).RecreateWnd;
 end;
 
 procedure TGUITestRunner.AddSuccess(test: ITest);
+var
+  OverridesGUI: Boolean;
+  HasRunTimePropsSet: Boolean;
 begin
   assert(assigned(test));
-  SetTreeNodeImage(TestToNode(Test), imgRun);
+  if not IsTestMethod(test) then
+    SetTreeNodeImage(TestToNode(Test), imgRun)
+  else
+  begin
+    OverridesGUI :=
+      ((FailIfNoChecksExecuted.Checked and not Test.FailsOnNoChecksExecuted) or
+       (FailTestCaseIfMemoryLeaked.Checked and not Test.FailsOnMemoryLeak)) or
+       (FailTestCaseIfMemoryLeaked.Checked and Test.IgnoreSetUpTearDownLeaks and
+         not IgnoreMemoryLeakInSetUpTearDown.Checked);
+    HasRunTimePropsSet :=
+      ((Test.FailsOnNoChecksExecuted and not FailIfNoChecksExecuted.Checked) or
+       (Test.FailsOnMemoryLeak and not FailTestCaseIfMemoryLeaked.Checked) or
+       (FailTestCaseIfMemoryLeaked.Checked and Test.IgnoreSetUpTearDownLeaks) or
+       (Test.AllowedMemoryLeakSize <> 0));
+
+    if OverridesGUI then
+      FTestResult.Overrides := FTestResult.Overrides + 1;
+
+    if (WarnOnFailTestOverride.Checked and OverridesGUI) or
+       (ShowTestCaseswithRunTimeProperties.Checked and HasRunTimePropsSet) then
+      SetTreeNodeImage(TestToNode(Test), imgHASPROPS)
+    else
+      SetTreeNodeImage(TestToNode(Test), imgRun);
+  end;
 end;
 
 procedure TGUITestRunner.AddError(failure: TTestFailure);
@@ -567,9 +759,20 @@ begin
       'HideTestNodesOnOpen', HideTestNodesOnOpenAction.Checked);
     BreakOnFailuresAction.Checked := ReadBool(cnConfigIniSection,
       'BreakOnFailures', BreakOnFailuresAction.Checked);
-
+    FailIfNoChecksExecutedAction.Checked := ReadBool(cnConfigIniSection,
+      'FailOnNoChecksExecuted', FailIfNoChecksExecutedAction.Checked);
+    FailTestCaseIfMemoryLeakedAction.Checked := ReadBool(cnConfigIniSection,
+      'FailOnMemoryLeaked', FailTestCaseIfMemoryLeakedAction.Checked);
+    IgnoreMemoryLeakInSetUpTearDownAction.Checked := ReadBool(cnConfigIniSection,
+      'IgnoreSetUpTearDownLeaks', IgnoreMemoryLeakInSetUpTearDownAction.Checked);
+    ReportMemoryLeakTypeOnShutdownAction.Checked := ReadBool(cnConfigIniSection,
+      'ReportMemoryLeakTypes', ReportMemoryLeakTypeOnShutdownAction.Checked);
+    WarnOnFailTestOverrideAction.Checked := ReadBool(cnConfigIniSection,
+      'WarnOnFailTestOverride', WarnOnFailTestOverrideAction.Checked);
     ShowTestedNodeAction.Checked := ReadBool(cnConfigIniSection,
       'SelectTestedNode', ShowTestedNodeAction.Checked);
+    FPopupX := ReadInteger(cnConfigIniSection,'PopupX', 350);
+    FPopupY := ReadInteger(cnConfigIniSection,'PopupY', 30);
   finally
     Free;
   end;
@@ -617,9 +820,17 @@ begin
     end;
 
     { other options }
-    WriteBool(cnConfigIniSection, 'HideTestNodesOnOpen', HideTestNodesOnOpenAction.Checked);
-    WriteBool(cnConfigIniSection, 'BreakOnFailures',     BreakOnFailuresAction.Checked);
-    WriteBool(cnConfigIniSection, 'SelectTestedNode',     ShowTestedNodeAction.Checked);
+    WriteBool(cnConfigIniSection, 'HideTestNodesOnOpen',      HideTestNodesOnOpenAction.Checked);
+    WriteBool(cnConfigIniSection, 'BreakOnFailures',          BreakOnFailuresAction.Checked);
+    WriteBool(cnConfigIniSection, 'FailOnNoChecksExecuted',   FailIfNoChecksExecutedAction.Checked);
+    WriteBool(cnConfigIniSection, 'FailOnMemoryLeaked',       FailTestCaseIfMemoryLeakedAction.Checked);
+    WriteBool(cnConfigIniSection, 'IgnoreSetUpTearDownLeaks', IgnoreMemoryLeakInSetUpTearDownAction.Checked);
+    WriteBool(cnConfigIniSection, 'ReportMemoryLeakTypes',    ReportMemoryLeakTypeOnShutdownAction.Checked);
+    WriteBool(cnConfigIniSection, 'SelectTestedNode',         ShowTestedNodeAction.Checked);
+    WriteBool(cnConfigIniSection, 'WarnOnFailTestOverride',   WarnOnFailTestOverrideAction.Checked);
+    WriteInteger(cnConfigIniSection, 'PopupX',                FPopupX);
+    WriteInteger(cnConfigIniSection, 'PopupY',                FPopupY);
+
   finally
     Free;
   end;
@@ -627,6 +838,7 @@ end;
 
 procedure TGUITestRunner.TestingEnds(TestResult :TTestResult);
 begin
+  FTotalTime := TestResult.TotalTime;
 end;
 
 procedure TGUITestRunner.UpdateNodeState(node: TTreeNode);
@@ -727,28 +939,33 @@ var
      Result := Format('%d:%2.2d:%2.2d.%3.3d', [h, nn, ss, zzz]);
    end;
 begin
-  if ResultsView.Items.Count = 0 then Exit;
+  if ResultsView.Items.Count = 0 then
+    Exit;
 
   if fullUpdate then
+  begin
+    FTotalTestsCount := Suite.countEnabledTestCases;
     if Assigned(Suite) then
-      ResultsView.Items[0].SubItems[0] := IntToStr(Suite.countEnabledTestCases)
+      ResultsView.Items[0].SubItems[0] := IntToStr(FTotalTestsCount)
     else
       ResultsView.Items[0].SubItems[0] := '';
-
+  end;
+  
   if TestResult <> nil then
   begin
     // Save the test number as we use it a lot
     TestNumber := TestResult.runCount;
 
-    // Only update every 8 tests to speed things up considerably
-    if fullUpdate or ((TestNumber and 7) = 0) then
+    if fullUpdate or FTimerExpired or ((TestNumber and 15) = 0) then
     begin
       with ResultsView.Items[0] do
       begin
         SubItems[1] := IntToStr(TestNumber);
         SubItems[2] := IntToStr(TestResult.failureCount);
         SubItems[3] := IntToStr(TestResult.errorCount);
-        SubItems[4] := FormatElapsedTime(TestResult.TotalTime);
+        SubItems[4] := IntToStr(TestResult.Overrides);
+        SubItems[5] := FormatElapsedTime(TestResult.TotalTime);
+        SubItems[6] := FormatElapsedTime(max(TestResult.TotalTime, FTotalTime));
       end;
       with TestResult do
       begin
@@ -761,24 +978,48 @@ begin
         else
           LbProgress.Caption := IntToStr((100 * ScoreBar.Position) div ScoreBar.Max) + '%';
       end;
-
-      // Allow the display to catch up and check for key strokes
-      Application.ProcessMessages;
+      if FTimerExpired and (TestNumber < FTotalTestsCount) then
+      begin
+        FTimerExpired := False;
+        FUpdateTimer.Enabled := True;
+      end;
     end;
+    // Allow just the results pane to catch up
+
+    ResultsPanel.Update;
   end
-  else begin
+  else
+  begin
     with ResultsView.Items[0] do
     begin
-      for i := 1 to 3 do
-        SubItems[i] := '';
-      SubItems[4] := FormatElapsedTime(SelectedTest.ElapsedTestTime);
+      if (SubItems[0] = '0') or (subItems[0] = '') then
+      begin
+        for i := 1 to 6 do
+          SubItems[i] := ''
+      end
+      else
+      begin
+        if SubItems[0] <> subItems[1] then
+          for i := 1 to 6 do
+            SubItems[i] := ''
+        else
+        begin
+          SubItems[5] := FormatElapsedTime(SelectedTest.ElapsedTestTime);
+          SubItems[6] := FormatElapsedTime(Max(SelectedTest.ElapsedTestTime, FTotalTime));
+        end;
+      end;
     end;
 
     ResetProgress;
   end;
 
   if fullUpdate then
+  begin
+    // Allow the whole display to catch up and check for key strokes
+
     Update;
+    Application.ProcessMessages;
+  end;
 end;
 
 procedure TGUITestRunner.ResetProgress;
@@ -820,16 +1061,13 @@ end;
 procedure TGUITestRunner.FillTestTree(RootNode: TTreeNode; ATest: ITest);
 var
   TestTests: IInterfaceList;
-  i:     Integer;
-  index: Integer;
+  i: Integer;
 begin
   if ATest = nil then
     EXIT;
 
   RootNode := TestTree.Items.AddChild(RootNode, ATest.Name);
-
-  index := FTests.Add(ATest);
-  RootNode.data := Pointer(index);
+  RootNode.data := TObject(FTests.Add(ATest));
 
   TestTests := ATest.Tests;
   for i := 0 to TestTests.count - 1 do
@@ -864,9 +1102,14 @@ end;
 procedure TGUITestRunner.SetSuite(value: ITest);
 begin
   FSuite := value;
-  LoadSuiteConfiguration;
-  EnableUI(FSuite <> nil);
-  if (FSuite <> nil) then InitTree;
+  if FSuite <> nil then
+  begin
+    LoadSuiteConfiguration;
+    EnableUI(True);
+    InitTree;
+  end
+  else
+    EnableUI(False)
 end;
 
 procedure TGUITestRunner.DisplayFailureMessage(Item: TListItem);
@@ -943,7 +1186,7 @@ begin
   end;
 end;
 
-procedure TGUITestRunner.Setup;
+procedure TGUITestRunner.SetUp;
 var
   i: Integer;
   node: TTreeNode;
@@ -956,27 +1199,24 @@ begin
   begin
     if Suite <> nil then
     begin
-      SubItems[0] := IntToStr(Suite.countEnabledTestCases);
+      i := Suite.countEnabledTestCases;
+      SubItems[0] := IntToStr(i);
+      ProgressBar.Max := i
     end
     else
     begin
       SubItems[0] := '';
+      ProgressBar.Max:= 10000;
     end;
+    ScoreBar.Max := ProgressBar.Max;
+
     SubItems[1] := '';
     SubItems[2] := '';
     SubItems[3] := '';
     SubItems[4] := '';
+    SubItems[5] := '';
+    SubItems[6] := '';
   end;
-
-  if Suite <> nil then
-  begin
-    ProgressBar.Max := Suite.countEnabledTestCases;
-  end
-  else
-  begin
-    ProgressBar.Max:= 10000;
-  end;
-  ScoreBar.Max := ProgressBar.Max;
 
   for i := 0 to TestTree.Items.Count - 1 do
   begin
@@ -1010,11 +1250,37 @@ begin
   TestTree.Items.Clear;
   EnableUI(false);
   ClearFailureMessage;
+  FUpdateTimer := TTimer.Create(Self);
+  FUpdateTimer.Interval := 200;
+  FUpdateTimer.Enabled := False;
+  FUpdateTimer.OnTimer := OnUpdateTimer;
   Setup;
+
+  {$IFDEF FASTMM}
+    FailTestCaseIfMemoryLeakedAction.Enabled := True;
+    {$IFDEF ManualLeakReportingControl}
+      ReportMemoryLeaksOnShutdown := ReportMemoryLeakTypeOnShutdownAction.Checked;
+    {$ELSE}
+      ReportMemoryLeakTypeOnShutdownAction.Checked := False;
+      ReportMemoryLeakTypeOnShutdownAction.Enabled := False;
+    {$ENDIF}
+  {$ELSE}
+    FailTestCaseIfMemoryLeakedAction.Enabled := False;
+    ReportMemoryLeakTypeOnShutdownAction.Checked := False;
+    ReportMemoryLeakTypeOnShutdownAction.Enabled := False;
+  {$ENDIF}
+
+  if not FailTestCaseIfMemoryLeakedAction.Enabled then
+    FailTestCaseIfMemoryLeakedAction.Checked := False;
+  IgnoreMemoryLeakInSetUpTearDownAction.Enabled :=
+    FailTestCaseIfMemoryLeakedAction.Checked;
+  if not IgnoreMemoryLeakInSetUpTearDownAction.Enabled then
+    IgnoreMemoryLeakInSetUpTearDownAction.Checked := False;
 end;
 
 procedure TGUITestRunner.FormDestroy(Sender: TObject);
 begin
+  FreeAndNil(FUpdateTimer);
   ClearResult;
   AutoSaveConfiguration;
   Suite := nil;
@@ -1024,27 +1290,12 @@ begin
 end;
 
 procedure TGUITestRunner.FormShow(Sender: TObject);
-var
-  node: TTreeNode;
-  test: ITest;
 begin
-  // Set up the GUI nodes here because the tree and all its tree nodes get
-  // recreated in TCustomForm.ShowModal in D8+ so we cannot do it sooner
+  { Set up the GUI nodes in the test nodes. We do it here because the form,
+    the tree and all its tree nodes get recreated in TCustomForm.ShowModal
+    in D8+ so we cannot do it sooner. }
 
-  node := TestTree.Items.GetFirstNode;
-  while assigned(node) do
-  begin
-    // Get and check the test for the tree node
-
-    test := NodeToTest(node);
-    assert(Assigned(test));
-
-    // Save the tree node in the test and get the next tree node
-
-    test.GUIObject := node;
-
-    node := node.GetNext;
-  end;
+  SetupGUINodes;
 end;
 
 procedure TGUITestRunner.TestTreeClick(Sender: TObject);
@@ -1105,17 +1356,17 @@ end;
 
 procedure TGUITestRunner.ApplyToTests(root :TTreeNode; const func :TTestFunc);
 
-  procedure DoApply(root :TTreeNode);
+  procedure DoApply(rootnode :TTreeNode);
   var
     test: ITest;
     node: TTreeNode;
   begin
-    if root <> nil then
+    if rootnode <> nil then
     begin
-      test := NodeToTest(root);
+      test := NodeToTest(rootnode);
       if func(test) then
       begin
-        node := root.getFirstChild;
+        node := rootnode.getFirstChild;
         while node <> nil do
         begin
           DoApply(node);
@@ -1291,7 +1542,8 @@ procedure TGUITestRunner.RunTheTest(aTest : ITest);
 begin
   if aTest = nil then
     EXIT;
-  if FRunning then begin
+  if FRunning then
+  begin
     // warning: we're reentering this method if FRunning is true
     assert(FTestResult <> nil);
     FTestResult.Stop;
@@ -1312,8 +1564,14 @@ begin
     try
       TestResult.addListener(self);
       TestResult.BreakOnFailures := BreakOnFailuresAction.Checked;
+      TestResult.FailsIfNoChecksExecuted := FailIfNoChecksExecutedAction.Checked;
+      TestResult.FailsIfMemoryLeaked := FailTestCaseIfMemoryLeakedAction.Checked;
+      TestResult.IgnoresMemoryLeakInSetUpTearDown :=
+        IgnoreMemoryLeakInSetUpTearDownAction.Checked;
       aTest.run(TestResult);
     finally
+      FErrorCount := TestResult.ErrorCount;
+      FFailureCount := TestResult.FailureCount;
       TestResult.Free;
       TestResult := nil;
     end;
@@ -1346,6 +1604,45 @@ begin
    Checked := not Checked;
 end;
 
+procedure TGUITestRunner.FailIfNoChecksExecutedActionExecute(Sender: TObject);
+begin
+  with FailIfNoChecksExecutedAction do
+    Checked := not Checked;
+end;
+
+procedure TGUITestRunner.FailTestCaseIfMemoryLeakedActionExecute(Sender: TObject);
+begin
+  with FailTestCaseIfMemoryLeakedAction do
+  begin
+    Checked := not Checked;
+    IgnoreMemoryLeakInSetUpTearDownAction.Enabled := Checked;
+    if not Checked then
+      IgnoreMemoryLeakInSetUpTearDownAction.Checked := False;
+  end;
+end;
+
+procedure TGUITestRunner.ShowTestCasesWithRunTimePropertiesActionExecute(
+  Sender: TObject);
+begin
+  with ShowTestCasesWithRunTimePropertiesAction do
+  begin
+    Checked := not Checked;
+    if Checked then
+      WarnOnFailTestOverrideAction.Checked := False;
+  end;
+end;
+
+procedure TGUITestRunner.WarnOnFailTestOverrideActionExecute(
+  Sender: TObject);
+begin
+  with WarnOnFailTestOverrideAction do
+  begin
+    Checked := not Checked;
+    if Checked then
+      ShowTestCasesWithRunTimePropertiesAction.Checked := False;
+  end;
+end;
+
 procedure TGUITestRunner.ShowTestedNodeActionExecute(Sender: TObject);
 begin
   with ShowTestedNodeAction do
@@ -1374,11 +1671,11 @@ procedure TGUITestRunner.ProcessClickOnStateIcon;
 var
   HitInfo: THitTests;
   node: TTreeNode;
-  Pos: TPoint;
+  PointPos: TPoint;
 begin
-  GetCursorPos(Pos);
-  Pos := TestTree.ScreenToClient(Pos);
-  with Pos do
+  GetCursorPos(PointPos);
+  PointPos := TestTree.ScreenToClient(PointPos);
+  with PointPos do
   begin
     HitInfo := TestTree.GetHitTestInfoAt(X, Y);
     node := TestTree.GetNodeAt(X, Y);
@@ -1591,10 +1888,10 @@ begin
   with MyForm do
   begin
     try
-		  suite := test;
+      suite := test;
       ShowModal;
     finally
-      Free;
+      MyForm.Free;
     end;
   end;
 end;
@@ -1616,7 +1913,7 @@ end;
 procedure TGUITestRunner.TestTreeMouseDown(Sender: TObject;
   Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 var
-  New: TTreeNode;
+  NewNode: TTreeNode;
 begin
   { a version of this code was in the pmTestTreePopup event, but it created
     an intermittent bug. OnPopup is executed if any of the ShortCut keys
@@ -1635,9 +1932,9 @@ begin
 
   if (Button = mbRight) and (htOnItem in TestTree.GetHitTestInfoAt(X, Y)) then
   begin
-    New := TestTree.GetNodeAt(X, Y);
-    if TestTree.Selected <> New then
-      TestTree.Selected := New;
+    NewNode := TestTree.GetNodeAt(X, Y);
+    if TestTree.Selected <> NewNode then
+      TestTree.Selected := NewNode;
   end;
 end;
 
@@ -1700,10 +1997,322 @@ end;
 procedure TGUITestRunner.SetupCustomShortcuts;
 begin
   { the following shortcuts are not offered as an option in the
-    form designer, but can be setup here }
+    form designer, but can be set up here }
   GoToNextSelectedTestAction.ShortCut := ShortCut(VK_RIGHT, [ssCtrl]);
   GoToPrevSelectedTestAction.ShortCut := ShortCut(VK_LEFT, [ssCtrl]);
 end;
 
-end.
+procedure TGUITestRunner.SetupGUINodes;
+var
+  node: TTreeNode;
+  test: ITest;
+begin
+  { Set up the GUI nodes in the test nodes. We do it here because the form,
+    the tree and all its tree nodes get recreated in TCustomForm.ShowModal
+    in D8+ so we cannot do it sooner.
+    This method is also called after loading test libraries }
 
+  node := TestTree.Items.GetFirstNode;
+  while assigned(node) do
+  begin
+    // Get and check the test for the tree node
+
+    test := NodeToTest(node);
+    assert(Assigned(test));
+
+    // Save the tree node in the test and get the next tree node
+
+    test.GUIObject := node;
+
+    node := node.GetNext;
+  end;
+end;
+
+const
+  NoChecksStrT = ' FailsOnNoChecksExecuted  := True ';
+  NoChecksStrF = ' FailsOnNoChecksExecuted  := False';
+  MemLeakStrT  = ' FailsOnMemoryLeak        := True ';
+  MemLeakStrF  = ' FailsOnMemoryLeak        := False';
+  MemGainStrT  = ' FailsOnMemoryRecovery    := True ';
+  MemGainStrF  = ' FailsOnMemoryRecovery    := False';
+  MemBytesStr0 = ' AllowedMemoryLeakSize '           ;
+  IgnoreStrT   = ' IgnoreSetUpTearDownLeaks := True ';
+  IgnoreStrF   = ' IgnoreSetUpTearDownLeaks := False';
+
+procedure TGUITestRunner.TestCasePropertiesActionExecute(Sender: TObject);
+var
+  aNode: TTreeNode;
+  ATest: ITest;
+
+begin
+  if TestTree.Selected <> nil then
+  begin
+    aNode := TestTree.Selected;
+    if (aNode <> nil) then
+    begin
+      ATest := NodeToTest(ANode);
+      if IsTestMethod(ATest) then
+      begin
+        if ATest.FailsOnNoChecksExecuted then
+          FNoChecksStr := NoChecksStrT
+        else
+          FNoChecksStr := NoChecksStrF;
+        fNoCheckExecutedPtyOverridden := FailIfNoChecksExecutedAction.Checked and
+          (not ATest.FailsOnNoChecksExecuted);
+
+        if ATest.FailsOnMemoryLeak then
+          FMemLeakStr := MemLeakStrT
+        else
+          FMemLeakStr := MemLeakStrF;
+        fMemLeakDetectedPtyOverridden := FailTestCaseIfMemoryLeakedAction.Checked and
+          (not ATest.FailsOnMemoryLeak);
+        if (ATest.FailsOnMemoryLeak and ATest.FailsOnMemoryRecovery) then
+          FMemGainStr := MemGainStrT
+        else
+          FMemGainStr := MemGainStrF;
+
+        if (ATest.IgnoreSetUpTearDownLeaks) and ATest.FailsOnMemoryLeak then
+          FIgnoreLeakStr := IgnoreStrT
+        else
+          FIgnoreLeakStr := IgnoreStrF;
+        FIgnoreSetUpTearDownLeakPtyOverridden := ATest.IgnoreSetUpTearDownLeaks and
+          ATest.FailsOnMemoryLeak and (not IgnoreMemoryLeakInSetUpTearDownAction.Checked);
+
+        FBytes := ':= ' + IntToStr(Atest.AllowedMemoryLeakSize) + ' Bytes';
+        FMemBytesStr := MemBytesStr0 + FBytes;
+        TestCaseProperty.Popup(Self.Left + FPopupX,Self.Top + FPopupY);
+      end;
+    end;
+    ATest := nil;
+  end;
+end;
+
+procedure TGUITestRunner.Previous1Click(Sender: TObject);
+begin
+  GoToPrevSelectedTestActionExecute(Self);
+  TestCasePropertiesActionExecute(self);
+end;
+
+procedure TGUITestRunner.Next1Click(Sender: TObject);
+begin
+  GoToNextSelectedTestActionExecute(Self);
+  TestCasePropertiesActionExecute(self);
+end;
+
+procedure TGUITestRunner.TestCasePropertiesMeasureItem(Sender: TObject;
+  ACanvas: TCanvas; var Width, Height: Integer);
+var
+  ImageSize: TSize;
+begin
+  if GetTextExtentPoint32(ACanvas.Handle,
+                          PChar(sPopupTitle),
+                          Length(sPopupTitle),
+                          ImageSize) then
+  begin
+    Width  := ImageSize.cx + 60;
+    Height := ImageSize.cy + 4;
+  end;
+end;
+
+procedure TGUITestRunner.MenuLooksInactive(ACanvas: TCanvas;
+                                           ARect: TRect;
+                                           Selected: Boolean;
+                                           ATitle: string;
+                                           TitlePosn: UINT;
+                                           PtyOveridesGUI: boolean);
+var
+  Count: integer;
+  SecondPart: string;
+  SecondRect: TRect;
+begin
+  if TitlePosn = DT_CENTER then
+    ACanvas.Font.Style := [fsBold];
+  if Selected then
+    ACanvas.Font.Color := clBlack;
+  if PtyOveridesGUI then
+    ACanvas.Brush.Color := clYellow
+  else
+    ACanvas.Brush.Color := TColor($C0FCC0);  //Sort of Moneygreen
+  ACanvas.FillRect(ARect);
+  Count := Pos(':=', ATitle);
+  if Count = 0 then
+    DrawText(ACanvas.Handle,
+             PChar(ATitle),
+             Length(ATitle),
+             ARect,
+             DT_VCENTER or DT_SINGLELINE or DT_NOCLIP or DT_NOPREFIX or TitlePosn)
+  else
+  begin
+    DrawText(ACanvas.Handle,
+             PChar(ATitle),
+             Count-1,
+             ARect,
+             DT_VCENTER or DT_SINGLELINE or DT_NOCLIP or DT_NOPREFIX or TitlePosn);
+
+    SecondPart := Copy(ATitle, Count, Length(ATitle));
+    SecondRect := ARect;
+    SecondRect.Left := 5 * ((ARect.Right - ARect.Left) div 8);
+    DrawText(ACanvas.Handle,
+             PChar(SecondPart),
+             Length(SecondPart),
+             SecondRect,
+             DT_VCENTER or DT_SINGLELINE or DT_NOCLIP or DT_NOPREFIX or TitlePosn)
+  end;
+end;
+
+procedure TGUITestRunner.MenuLooksActive(ACanvas: TCanvas;
+                                         ARect: TRect;
+                                         Selected: Boolean;
+                                         ATitle: string;
+                                         TitlePosn: UINT);
+begin
+  ACanvas.FillRect(ARect);
+  DrawText(ACanvas.Handle,
+           PChar(ATitle),
+           Length(ATitle),
+           ARect,
+           DT_VCENTER or DT_SINGLELINE or DT_NOCLIP or DT_NOPREFIX or TitlePosn);
+end;
+
+procedure TGUITestRunner.TestCasePropertiesDrawItem(Sender: TObject;
+  ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksInactive(ACanvas, ARect, Selected, sPopupTitle, DT_CENTER, False);
+end;
+
+procedure TGUITestRunner.Previous1DrawItem(Sender: TObject;
+  ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksActive(ACanvas, ARect, Selected, sPopupPrevious, DT_LEFT);
+end;
+
+procedure TGUITestRunner.RunSelectedTest1DrawItem(Sender: TObject;
+  ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksActive(ACanvas, ARect, Selected, sPopupRun, DT_LEFT);
+end;
+
+procedure TGUITestRunner.Next1DrawItem(Sender: TObject; ACanvas: TCanvas;
+  ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksActive(ACanvas, ARect, Selected, sPopupNext, DT_LEFT);
+end;
+
+procedure TGUITestRunner.FailNoCheckExecutedMenuItemDrawItem(
+  Sender: TObject; ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksInactive(ACanvas, ARect, Selected, FNoChecksStr,
+    DT_LEFT, fNoCheckExecutedPtyOverridden);
+end;
+
+procedure TGUITestRunner.FailsOnMemoryLeakMenuItemDrawItem(Sender: TObject;
+  ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksInactive(ACanvas, ARect, Selected, FMemLeakStr,
+    DT_LEFT, fMemLeakDetectedPtyOverridden);
+end;
+
+procedure TGUITestRunner.FailsOnMemoryRecoveryMenuItemDrawItem(
+  Sender: TObject; ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksInactive(ACanvas, ARect, Selected, FMemGainStr,
+    DT_LEFT, False);
+end;
+
+procedure TGUITestRunner.AllowedLeakSizeMemuItemDrawItem(Sender: TObject;
+  ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksInactive(ACanvas, ARect, Selected, FMemBytesStr, DT_LEFT, False);
+end;
+
+procedure TGUITestRunner.TestCaseIgnoreSetUpTearDownLeaksMenuItemDrawItem(
+  Sender: TObject; ACanvas: TCanvas; ARect: TRect; Selected: Boolean);
+begin
+  MenuLooksInactive(ACanvas, ARect, Selected, FIgnoreLeakStr,
+    DT_LEFT, FIgnoreSetUpTearDownLeakPtyOverridden);
+end;
+
+procedure TGUITestRunner.pmTestTreePopup(Sender: TObject);
+var
+  aNode: TTreeNode;
+  ATest: ITest;
+
+begin
+  if TestTree.Selected <> nil then
+  begin
+    aNode := TestTree.Selected;
+    if (aNode <> nil) then
+    begin
+      ATest := NodeToTest(ANode);
+      TestCasePopup.Enabled := IsTestMethod(ATest);
+    end;
+    ATest := nil;
+  end;
+end;
+
+function TGUITestRunner.GetPropertyName(const Caption: string): string;
+var
+  TempStr: string;
+  PosSpace: integer;
+begin
+  TempStr := Trim(Caption);
+  PosSpace := Pos(' ',TempStr);
+  if (PosSpace > 1)  then
+    result := Copy(TempStr, 1, PosSpace-1);
+end;
+
+procedure TGUITestRunner.FailNoCheckExecutedMenuItemClick(Sender: TObject);
+begin
+  Clipboard.AsText := GetPropertyName(NoChecksStrT);
+end;
+
+procedure TGUITestRunner.FailsOnMemoryLeakMenuItemClick(Sender: TObject);
+begin
+  Clipboard.AsText := GetPropertyName(MemLeakStrT);
+end;
+
+procedure TGUITestRunner.AllowedLeakSizeMemuItemClick(Sender: TObject);
+begin
+  Clipboard.AsText := GetPropertyName(MemBytesStr0);
+end;
+
+procedure TGUITestRunner.FailsOnMemoryRecoveryMenuItemClick(
+  Sender: TObject);
+begin
+  Clipboard.AsText := GetPropertyName(MemGainStrT);
+end;
+
+procedure TGUITestRunner.TestCaseIgnoreSetUpTearDownLeaksMenuItemClick(
+  Sender: TObject);
+begin
+  Clipboard.AsText := GetPropertyName(IgnoreStrT);
+end;
+
+procedure TGUITestRunner.RunSelectedTestAltActionExecute(Sender: TObject);
+begin
+  RunSelectedTestActionExecute(Self);
+  TestCasePropertiesActionExecute(Self);
+end;
+
+procedure TGUITestRunner.IgnoreMemoryLeakInSetUpTearDownActionExecute(
+  Sender: TObject);
+begin
+  with IgnoreMemoryLeakInSetUpTearDownAction do
+    Checked := not Checked;
+end;
+
+procedure TGUITestRunner.ReportMemoryLeakTypeOnShutdownActionExecute(
+  Sender: TObject);
+begin
+  with ReportMemoryLeakTypeOnShutdownAction do
+  begin
+    Checked := not Checked;
+{$IFDEF FASTMM}
+  {$IFDEF ManualLeakReportingControl}
+    ReportMemoryLeaksOnShutdown := Checked;
+  {$ENDIF}
+{$ENDIF}
+  end;    // with
+end;
+
+end.

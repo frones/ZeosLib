@@ -51,6 +51,8 @@
 
 program ZTestAll;
 
+{$APPTYPE CONSOLE}
+
 uses
   Types,
   SysUtils,

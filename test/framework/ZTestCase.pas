@@ -130,6 +130,16 @@ type
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
+    {$IFNDEF FPC}
+    procedure CheckEquals(Expected, Actual: Word;
+      const Msg: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: Byte;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: Word;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: Byte;
+      const Msg: string = ''); overload;
+    {$ENDIF}
     procedure CheckEqualsDate(const Expected, Actual: TDateTime;
       Parts: TDateParts = []; const Msg: string = '');
     { Measurement methods. }
@@ -523,6 +533,31 @@ begin
     FreeMem(ABuf);
   end;
 end;
+
+{$IFNDEF FPC}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
+  const Msg: string = '');
+begin
+  CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Byte;
+  const Msg: string = '');
+begin
+  CheckEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Word;
+  const Msg: string = '');
+begin
+  CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: Byte;
+  const Msg: string = '');
+begin
+  CheckNotEquals(Cardinal(Expected), Cardinal(Actual), Msg);
+end;
+{$ENDIF}
 
 procedure TZAbstractTestCase.CheckEqualsDate(const Expected, Actual: TDateTime;
   Parts: TDateParts; const Msg: string);

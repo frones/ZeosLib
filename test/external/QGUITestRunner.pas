@@ -1,7 +1,7 @@
-{ $Id: QGUITestRunner.pas,v 1.15 2005/03/05 21:32:48 judc Exp $ }
+{ $Id: QGUITestRunner.pas 7 2008-04-24 11:59:47Z judc $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
   @author  The DUnit Group.
-  @version $Revision: 1.15 $ 2001/03/08 uberto
+  @version $Revision: 7 $ 2001/03/08 uberto
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -195,8 +195,9 @@ type
    procedure StopActionExecute(Sender: TObject);
    procedure StopActionUpdate(Sender: TObject);
    procedure TestTreeChange(Sender: TObject; Node: TTreeNode);
-    procedure RunSelectedTestActionExecute(Sender: TObject);
-    procedure RunSelectedTestActionUpdate(Sender: TObject);
+   procedure RunSelectedTestActionExecute(Sender: TObject);
+   procedure RunSelectedTestActionUpdate(Sender: TObject);
+   procedure FormShow(Sender: TObject);
   private
    procedure ResetProgress;
   protected
@@ -852,8 +853,6 @@ begin
   index := FTests.Add(ATest);
   RootNode.data := Pointer(index);
 
-  ATest.GUIObject := RootNode;
-
   Tests := ATest.Tests;
   for i := 0 to Tests.count - 1 do
   begin
@@ -927,7 +926,7 @@ begin
   end;
 end;
 
-procedure TGUITestRunner.Setup;
+procedure TGUITestRunner.SetUp;
 var
   i: Integer;
   node: TTreeNode;
@@ -1039,6 +1038,29 @@ begin
   Suite := nil;
   FTests.Free;
   inherited;
+end;
+
+procedure TGUITestRunner.FormShow(Sender: TObject);
+var
+  node: TTreeNode;
+  test: ITest;
+begin
+  // Set up the GUI nodes here to be the same as GUITestRunner.pas
+
+  node := TestTree.Items.GetFirstNode;
+  while assigned(node) do
+  begin
+    // Get and check the test for the tree node
+
+    test := NodeToTest(node);
+    assert(Assigned(test));
+
+    // Save the tree node in the test and get the next tree node
+
+    test.GUIObject := node;
+
+    node := node.GetNext;
+  end;
 end;
 
 procedure TGUITestRunner.TestTreeClick(Sender: TObject);

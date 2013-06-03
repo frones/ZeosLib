@@ -1,7 +1,7 @@
-{ $Id: DunitAbout.pas,v 1.3 2003/01/08 14:33:33 juanco Exp $ }
+{ $Id: DunitAbout.pas 7 2008-04-24 11:59:47Z judc $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.3 $ 2001/03/08 uberto
+   @version $Revision: 7 $ 2001/03/08 uberto
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -29,19 +29,18 @@
  * The DUnit group at SourceForge <http://dunit.sourceforge.net>
  *
  *)
-unit DunitAbout;
+unit DUnitAbout;
 
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, Dialogs,
-  StdCtrls, ExtCtrls;
+  Messages, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls;
 
 const
-  rcs_id :string = '#(@)$Id: DunitAbout.pas,v 1.3 2003/01/08 14:33:33 juanco Exp $';
+  rcs_id :string = '#(@)$Id: DunitAbout.pas 7 2008-04-24 11:59:47Z judc $';
 
 type
-  TDunitAboutBox = class(TForm)
+  TDUnitAboutBox = class(TForm)
     MainPanel: TPanel;
     NamePanel: TPanel;
     Label1: TLabel;
@@ -67,35 +66,37 @@ type
   procedure Splash;
   
 implementation
+uses
+  SysUtils;
 
 {$R *.DFM}
 
 const
 {$include versioninfo.inc }
 
-procedure TDunitAboutBox.FormClose(Sender: TObject; var Action: TCloseAction);
+procedure TDUnitAboutBox.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   Action := caFree;
 end;
 
-procedure TDunitAboutBox.TimerTimer(Sender: TObject);
+procedure TDUnitAboutBox.TimerTimer(Sender: TObject);
 begin
   Close;
 end;
 
-procedure TDunitAboutBox.MainPanelClick(Sender: TObject);
+procedure TDUnitAboutBox.MainPanelClick(Sender: TObject);
 begin
   Close;
 end;
 
-procedure TDunitAboutBox.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+procedure TDUnitAboutBox.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   Close;
 end;
 
 procedure Splash;
 begin
-  with TDunitAboutBox.Create(nil) do
+  with TDUnitAboutBox.Create(nil) do
   begin
     FormStyle := fsStayOnTop;
     Show;
@@ -104,7 +105,7 @@ begin
   end;
 end;
 
-procedure TDunitAboutBox.FormCreate(Sender: TObject);
+procedure TDUnitAboutBox.FormCreate(Sender: TObject);
 begin
   IdentMemo.Lines[2] := Format('v %s', [ReleaseStr]);
 end;

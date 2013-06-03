@@ -1,7 +1,7 @@
-{ $Id: TestModules.pas,v 1.6 2003/01/08 14:33:36 juanco Exp $ }
+{ $Id: TestModules.pas 36 2011-04-15 19:26:16Z medington $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.6 $ 2001/03/08 uberto
+   @version $Revision: 36 $ 2001/03/08 uberto
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -34,12 +34,12 @@ unit TestModules;
 interface
 uses
   Windows,
-  SysUtils,
-  TestFramework;
+  TestFramework,
+  DUnitConsts;
 
 
 const
-  rcs_id :string = '#(@)$Id: TestModules.pas,v 1.6 2003/01/08 14:33:36 juanco Exp $';
+  rcs_id :string = '#(@)$Id: TestModules.pas 36 2011-04-15 19:26:16Z medington $';
 
 type
   TModuleRecord = record
@@ -58,6 +58,8 @@ procedure RegisterModuleTests(LibName: string);
 procedure UnloadTestModules;
                                                     
 implementation
+uses
+  SysUtils;
 
 function LoadModuleTests(LibName: string) :ITest;
 var
@@ -73,21 +75,21 @@ begin
        LibName := ChangeFileExt(LibName, '.dtl');
   end;
 
-  LibHandle := LoadLibrary(PChar(AnsiString(LibName)));
+  LibHandle := LoadLibrary(PChar(LibName));
   if LibHandle = 0 then
-    raise EDUnitException.Create(Format('Could not load module %s: %s', [LibName, SysErrorMessage(GetLastError)]))
+    raise EDUnitException.Create(Format(sLoadModule, [LibName, SysErrorMessage(GetLastError)]))
   else
   begin
     GetTest := GetProcAddress(LibHandle, 'Test');
     if not Assigned(GetTest) then
-      raise EDUnitException.Create(Format('Module "%s" does not export a "Test" function: %s', [LibName, SysErrorMessage(GetLastError)]))
+      raise EDUnitException.Create(Format(sExportFunction, [LibName, SysErrorMessage(GetLastError)]))
     else
     begin
       U := GetTest;
       if U = nil then
         U := TestFramework.TestSuite(LibName, []);
       if 0 <> U.QueryInterface(ITest, Result) then
-        raise EDUnitException.Create(Format('Module "%s.Test" did not return an ITest', [LibName]))
+        raise EDUnitException.Create(Format(sReturnInterface, [LibName]))
       else
       begin
         Assert(Result <> nil);

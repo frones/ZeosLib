@@ -1,7 +1,7 @@
-{ $Id: TextTestRunner.pas,v 1.28 2004/10/17 10:39:00 neuromancer Exp $ }
+{ $Id: TextTestRunner.pas 36 2011-04-15 19:26:16Z medington $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.28 $
+   @version $Revision: 36 $
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -37,12 +37,12 @@ unit TextTestRunner;
 
 interface
 uses
-  SysUtils,
   Classes,
-  TestFramework;
+  TestFramework,
+  DUnitConsts;
 
 const
-  rcs_id :string = '#(@)$Id: TextTestRunner.pas,v 1.28 2004/10/17 10:39:00 neuromancer Exp $';
+  rcs_id :string = '#(@)$Id: TextTestRunner.pas 36 2011-04-15 19:26:16Z medington $';
 
 type
   TRunnerExitBehavior = (
@@ -100,6 +100,8 @@ function RunTest(suite: ITest; exitBehavior: TRunnerExitBehavior = rxbContinue):
 function RunRegisteredTests(exitBehavior: TRunnerExitBehavior = rxbContinue): TTestResult; overload;
 
 implementation
+uses
+  SysUtils;
 
 const
   CRLF = #13#10;
@@ -139,9 +141,9 @@ begin
   result := '';
   if (r.errorCount <> 0) then begin
     if (r.errorCount = 1) then
-      result := result + format('There was %d error:', [r.errorCount]) + CRLF
+      result := result + format(sPrintError, [r.errorCount]) + CRLF
     else
-      result := result + format('There were %d errors:', [r.errorCount]) + CRLF;
+      result := result + format(sPrintErrors, [r.errorCount]) + CRLF;
 
     result := result + PrintErrorItems(r);
     result := result + CRLF
@@ -156,7 +158,7 @@ begin
   result := '';
   for i := 0 to r.FailureCount-1 do begin
     failure := r.Failures[i];
-    result := result + format('%3d) %s: %s'#13#10'     at %s'#13#10'      "%s"',
+    result := result + format(sFailedTestDetails,
                                [
                                i+1,
                                failure.failedTest.name,
@@ -175,7 +177,7 @@ begin
   result := '';
   for i := 0 to r.ErrorCount-1 do begin
     failure := r.Errors[i];
-    result := result + format('%3d) %s: %s'#13#10'     at %s'#13#10'      "%s"',
+    result := result + format(sFailedTestDetails,
                                [
                                i+1,
                                failure.failedTest.name,
@@ -194,9 +196,9 @@ begin
   result := '';
   if (r.failureCount <> 0) then begin
     if (r.failureCount = 1) then
-      result := result + format('There was %d failure:', [r.failureCount]) + CRLF
+      result := result + format(sPrintFailure, [r.failureCount]) + CRLF
     else
-      result := result + format('There were %d failures:', [r.failureCount]) + CRLF;
+      result := result + format(sPrintFailures, [r.failureCount]) + CRLF;
 
     result := result + PrintFailureItems(r);
     result := result + CRLF
@@ -212,14 +214,14 @@ begin
   if r.wasSuccessful then
   begin
     result := result + CRLF;
-    result := result + format('OK: %d tests'+CRLF, [r.runCount]);
+    result := result + format(sTestResultsOk + CRLF, [r.runCount]);
   end
   else
   begin
     result := result + CRLF;
-    result := result + 'FAILURES!!!'+CRLF;
-    result := result + 'Test Results:'+CRLF;
-    result := result + format('Run:      %8d'+CRLF+'Failures: %8d'+CRLF+'Errors:   %8d'+CRLF,
+    result := result + sTestResultsFailures +CRLF;
+    result := result + sTestResults +CRLF;
+    result := result + format(sRunCount +CRLF+ sFailureCount +CRLF+ sErrorsCount +CRLF,
                       [r.runCount, r.failureCount, r.errorCount]
                       );
   end
@@ -246,7 +248,7 @@ end;
 procedure TTextTestListener.TestingStarts;
 begin
   writeln;
-  writeln('DUnit / Testing');
+  writeln(sDUnitTesting);
   startTime := now;
 end;
 
@@ -258,7 +260,7 @@ begin
   runTime := endTime-startTime;
   writeln;
   DecodeTime(runTime, h,  m, s, l);
-  writeln(Format('Time: %d:%2.2d:%2.2d.%d', [h, m, s, l]));
+  writeln(Format(sDecodeTime, [h, m, s, l]));
   writeln(Report(testResult));
   writeln;
 end;
@@ -269,7 +271,7 @@ begin
   case exitBehavior of
     rxbPause:
       try
-        writeln('Press <RETURN> to continue.');
+        writeln(sPressReturn);
         readln
       except
       end;
@@ -296,7 +298,7 @@ begin
   case exitBehavior of
     rxbPause:
       try
-        writeln('Press <RETURN> to continue.');
+        writeln(sPressReturn);
         readln
       except
       end;

@@ -43,6 +43,7 @@ contains
   ZTestCase in '..\..\test\framework\ZTestCase.pas',
   ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas',
   MemCheck in '..\..\test\external\MemCheck.pas',
+  DUnitConsts in '..\..\test\external\DUnitConsts.pas',
   TestFrameWork in '..\..\test\external\TestFrameWork.pas',
   TextTestRunner in '..\..\test\external\TextTestRunner.pas',
   GUITestRunner in '..\..\test\external\GUITestRunner.pas',

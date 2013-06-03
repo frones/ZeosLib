@@ -1357,7 +1357,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetProcedureColumns(const Catalog:
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  SQL, Where: string;
+  SQL: string;
   LProcedureNamePattern, LColumnNamePattern: string;
   TypeName, SubTypeName: Integer;
   ColumnIndexes : Array[1..8] of integer;
@@ -1630,7 +1630,7 @@ function TZInterbase6DatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
-  SQL, Where, ColumnName, DefaultValue: String;
+  SQL, ColumnName, DefaultValue: String;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
   ColumnIndexes : Array[1..14] of integer;
