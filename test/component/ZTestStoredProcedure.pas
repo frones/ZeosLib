@@ -843,7 +843,7 @@ begin
   CheckMemoFieldType(StoredProc.Fields[23].DataType, Connection.DbcConnection.GetConSettings);
 
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
-  TempBytes :=StrToBytes(ZAnsiString('121415'));
+  TempBytes :=StrToBytes(RawByteString('121415'));
   SetLength(TempBytes, StoredProc.Fields[24].Size);
   CheckEquals(TempBytes, {$IFDEF WITH_ASBYTES}TByteDynArray(StoredProc.Fields[24].AsBytes){$ELSE}StrToBytes(StoredProc.Fields[24].AsString){$ENDIF});
   CheckEquals(ord(ftBytes), ord(StoredProc.Fields[24].DataType));

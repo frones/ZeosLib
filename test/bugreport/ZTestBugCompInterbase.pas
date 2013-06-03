@@ -891,9 +891,9 @@ procedure ZTestCompInterbaseBugReportMBCs.Test_Mantis214;
 const
   RowID = 214;
   { three cases }
-  S1 = ZAnsiString('Müller äöüÄÖÜß'); // gives malformed expression error on ExecSQL
-  S2 = ZAnsiString('000 Петър 000'); // can be stored but cyrillic letters cannot be read back
-  S3 = ZAnsiString('abc'); // can be written and reread
+  S1 = RawByteString('Müller äöüÄÖÜß'); // gives malformed expression error on ExecSQL
+  S2 = RawByteString('000 Петър 000'); // can be stored but cyrillic letters cannot be read back
+  S3 = RawByteString('abc'); // can be written and reread
 var
   iqry: TZQuery;
   Procedure AddRecord(ID: Integer; WS: ZWideString);

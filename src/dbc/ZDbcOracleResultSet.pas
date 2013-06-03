@@ -74,14 +74,14 @@ type
   protected
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): ZAnsiString;
+      SQLVarHolder: PZSQLVar): RawByteString;
     function GetAsLongIntValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): LongInt;
     function GetAsDoubleValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): Double;
     function GetAsDateTimeValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): TDateTime;
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     function GetFinalObject(Obj: POCIObject): POCIObject;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
@@ -163,7 +163,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
 
-    function GetString: ZAnsiString; override;
+    function GetString: RawByteString; override;
     function GetBytes: TByteDynArray; override;
     function GetStream: TStream; override;
   end;
@@ -256,7 +256,7 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetAsStringValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): ZAnsiString;
+  SQLVarHolder: PZSQLVar): RawByteString;
 var
   OldSeparator: Char;
   Blob: IZBlob;
@@ -446,7 +446,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZOracleAbstractResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1313,7 +1313,7 @@ var
   Buf: PByteArray;
   ReadNumBytes, ReadNumChars, Offset, Cap: ub4;
   Connection: IZOracleConnection;
-  AnsiTemp: ZAnsiString;
+  AnsiTemp: RawByteString;
   Stream: TStream;
 
   procedure DoRead;
@@ -1543,7 +1543,7 @@ end;
   Gets the string from the stored data.
   @return a string which contains the stored data.
 }
-function TZOracleBlob.GetString: ZAnsiString;
+function TZOracleBlob.GetString: RawByteString;
 begin
   ReadBlob;
   Result := inherited GetString;

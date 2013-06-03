@@ -108,7 +108,7 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
-  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): ZAnsiString;
+  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): RawByteString;
 
 implementation
 
@@ -364,7 +364,7 @@ end;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
-  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): ZAnsiString;
+  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): RawByteString;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
@@ -382,7 +382,7 @@ begin
         else
           Result := '0';
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
-        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
       stString:
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
       stUnicodeString:
@@ -399,13 +399,13 @@ begin
             Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := ZAnsiString('''' + FormatDateTime('yyyy/mm/dd',
+        Result := RawByteString('''' + FormatDateTime('yyyy/mm/dd',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stTime:
-        Result := ZAnsiString('''' + FormatDateTime('hh":"mm":"ss":"zzz',
+        Result := RawByteString('''' + FormatDateTime('hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stTimestamp:
-        Result := ZAnsiString('''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
+        Result := RawByteString('''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin

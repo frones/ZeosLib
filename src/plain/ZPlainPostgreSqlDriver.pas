@@ -556,9 +556,9 @@ type
 
     function GetStandardConformingStrings: Boolean;
 
-    function EncodeBYTEA(const Value: ZAnsiString; Handle: PZPostgreSQLConnect;
-      Quoted: Boolean = True): ZAnsiString;
-    function DecodeBYTEA(const value: ZAnsiString; Handle: PZPostgreSQLConnect): ZAnsiString;
+    function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
+      Quoted: Boolean = True): RawByteString;
+    function DecodeBYTEA(const value: RawByteString; Handle: PZPostgreSQLConnect): RawByteString;
     function SupportsEncodeBYTEA: Boolean;
     function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
     function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
@@ -696,10 +696,10 @@ type
   public
     constructor Create;
 
-    function EncodeBYTEA(const Value: ZAnsiString; Handle: PZPostgreSQLConnect;
-      Quoted: Boolean = True): ZAnsiString;
-    function DecodeBYTEA(const value: ZAnsiString;
-      Handle: PZPostgreSQLConnect): ZAnsiString;
+    function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
+      Quoted: Boolean = True): RawByteString;
+    function DecodeBYTEA(const value: RawByteString;
+      Handle: PZPostgreSQLConnect): RawByteString;
 
     function SupportsEncodeBYTEA: Boolean;
     function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
@@ -835,8 +835,8 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
-    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; override;
+    function EscapeString(Handle: Pointer; const Value: RawByteString;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; override;
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -1089,8 +1089,8 @@ begin
   Result := POSTGRESQL_API.lo_creat(Handle, Mode);
 end;
 
-function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: ZAnsiString;
-  Handle: PZPostgreSQLConnect): ZAnsiString;
+function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: RawByteString;
+  Handle: PZPostgreSQLConnect): RawByteString;
 var
   decoded: PAnsiChar;
   Ansi: AnsiString;
@@ -1138,8 +1138,8 @@ begin
               Assigned(POSTGRESQL_API.PQescapeString);
 end;
 
-function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: ZAnsiString;
-  Handle: PZPostgreSQLConnect; Quoted: Boolean = True): ZAnsiString;
+function TZPostgreSQLBaseDriver.EncodeBYTEA(const Value: RawByteString;
+  Handle: PZPostgreSQLConnect; Quoted: Boolean = True): RawByteString;
 var
   encoded: PAnsiChar;
   len: Longword;
@@ -1638,12 +1638,12 @@ begin
   result:= @POSTGRESQL_API;
 end;
 
-function TZPostgreSQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+function TZPostgreSQLBaseDriver.EscapeString(Handle: Pointer; const Value: RawByteString;
+  ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 var
   ResLen: NativeUInt;
   Temp: PAnsiChar;
-  SourceTemp: ZAnsiString;
+  SourceTemp: RawByteString;
   IError: Integer;
 begin
   if ( Assigned(POSTGRESQL_API.PQescapeStringConn) or

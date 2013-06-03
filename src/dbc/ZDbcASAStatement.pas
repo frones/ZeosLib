@@ -69,7 +69,7 @@ type
     FASAConnection: IZASAConnection;
     FSQLData: IZASASQLDA;
     FMoreResults: Boolean;
-    function InternalExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+    function InternalExecuteQuery(const SQL: RawByteString): IZResultSet;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -79,9 +79,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -103,9 +103,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -123,7 +123,7 @@ type
     FPrepared: Boolean;
   protected
     procedure FetchOutParams( Value: IZASASQLDA);
-    function GetProcedureSQL: ZAnsiString;
+    function GetProcedureSQL: RawByteString;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -133,9 +133,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -148,7 +148,7 @@ uses ZSysUtils, ZDbcUtils, ZPlainASAConstants;
 
 { TZASAStatement }
 
-function TZASAStatement.InternalExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZASAStatement.InternalExecuteQuery(const SQL: RawByteString): IZResultSet;
 var
   Cursor: AnsiString;
   CursorOptions: SmallInt;
@@ -300,7 +300,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZASAStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZASAStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   ASQL := SQL;
   Result := InternalExecuteQuery(ASQL);
@@ -320,7 +320,7 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 {$HINTS OFF}
-function TZASAStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZASAStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
   ASQL := SQL;
   Close;
@@ -362,7 +362,7 @@ end;
   @see #getUpdateCount
   @see #getMoreResults
 }
-function TZASAStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZASAStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   ASQL := SQL;
   LastResultSet := InternalExecuteQuery(ASQL);
@@ -481,7 +481,7 @@ end;
   @see #getMoreResults
 }
 
-function TZASAPreparedStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZASAPreparedStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   if ASQL <> SQL then
   begin
@@ -521,7 +521,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZASAPreparedStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZASAPreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   if ASQL <> SQL then
   begin
@@ -595,7 +595,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZASAPreparedStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZASAPreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
   if ASQL <> SQL then
   begin
@@ -749,9 +749,9 @@ end;
   @see #getMoreResults
 }
 
-function TZASACallableStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZASACallableStatement.Execute(const SQL: RawByteString): Boolean;
 var
-  ProcSQL: ZAnsiString;
+  ProcSQL: RawByteString;
 begin
   TrimInParameters;
   ProcSQL := GetProcedureSQL;
@@ -799,9 +799,9 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZASACallableStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZASACallableStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 var
-  ProcSQL: ZAnsiString;
+  ProcSQL: RawByteString;
 begin
   TrimInParameters;
   ProcSQL := GetProcedureSQL;
@@ -881,9 +881,9 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZASACallableStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZASACallableStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
-  ProcSQL: ZAnsiString;
+  ProcSQL: RawByteString;
 begin
   TrimInParameters;
   ProcSQL := GetProcedureSQL;
@@ -1001,7 +1001,7 @@ end;
     <b>SELECT</b> staement
    @return a Stored Procedure SQL string
 }
-function TZASACallableStatement.GetProcedureSql: ZAnsiString;
+function TZASACallableStatement.GetProcedureSql: RawByteString;
 
   function GenerateParamsStr(Count: integer): string;
   var

@@ -76,7 +76,7 @@ type
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     procedure Open; override;
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string);
     destructor Destroy; override;
@@ -259,7 +259,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZDBLibResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 var
   DL: Integer;
   Data: Pointer;
@@ -668,7 +668,7 @@ var
   DL: Integer;
   Data: Pointer;
   TempStream: TStream;
-  TempAnsi: ZAnsiString;
+  TempAnsi: RawByteString;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);

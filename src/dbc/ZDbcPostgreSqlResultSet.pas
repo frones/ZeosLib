@@ -70,7 +70,7 @@ type
     FChunk_Size: Integer;
     FUndefinedVarcharAsStringLength: Integer;
   protected
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
   public
@@ -340,7 +340,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 {$IFDEF WITH_RAWBYTESTRING}
 var Len: Integer;
 {$ENDIF}

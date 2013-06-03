@@ -175,7 +175,7 @@ begin
   Check(CompareMem(@Buffer, FBuffer, BINARY_BUFFER_SIZE));
 
   {string test}
-  Blob.SetString(ZAnsiString(FString));
+  Blob.SetString(RawByteString(FString));
   Check(not Blob.IsEmpty, 'IsEmpty');
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(Length(FString), Blob.Length, 'Length');
@@ -262,7 +262,7 @@ begin
 
   {string test}
   Blob := TZAbstractBlob.CreateWithStream(nil);
-  Blob.SetString(ZAnsiString(FString));
+  Blob.SetString(RawByteString(FString));
   Check(not Blob.IsEmpty, 'IsEmpty');
   Check(Blob.IsUpdated, 'IsUpdated');
   CheckEquals(Length(FString), Blob.Length, 'Length');

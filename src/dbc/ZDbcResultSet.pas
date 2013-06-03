@@ -88,7 +88,7 @@ type
   protected
     LastWasNull: Boolean;
 
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; virtual;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; virtual;
 
     procedure RaiseUnsupportedException;
     procedure RaiseForwardOnlyException;
@@ -131,7 +131,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
-    function GetBinaryString(ColumnIndex: Integer): ZAnsiString;
+    function GetBinaryString(ColumnIndex: Integer): RawByteString;
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): Byte; virtual;
@@ -160,7 +160,7 @@ type
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PChar; virtual;
     function GetStringByName(const ColumnName: string): String; virtual;
-    function GetBinaryStringByName(const ColumnName: string): ZAnsiString;
+    function GetBinaryStringByName(const ColumnName: string): RawByteString;
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): Byte; virtual;
@@ -244,7 +244,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
-    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: ZAnsiString);
+    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); virtual;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); virtual;
@@ -272,7 +272,7 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended); virtual;
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar); virtual;
     procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
-    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: ZAnsiString);
+    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString); virtual;
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime); virtual;
@@ -326,8 +326,8 @@ type
     function IsUpdated: Boolean; virtual;
     function Length: LongInt; virtual;
 
-    function GetString: ZAnsiString; virtual;
-    procedure SetString(const Value: ZAnsiString); virtual;
+    function GetString: RawByteString; virtual;
+    procedure SetString(const Value: RawByteString); virtual;
     function GetUnicodeString: WideString; virtual;
     procedure SetUnicodeString(const Value: WideString); virtual;
     function GetBytes: TByteDynArray; virtual;
@@ -416,7 +416,7 @@ begin
   inherited Destroy;
 end;
 
-function TZAbstractResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZAbstractResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -650,7 +650,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBinaryString(ColumnIndex: Integer): ZAnsiString;
+function TZAbstractResultSet.GetBinaryString(ColumnIndex: Integer): RawByteString;
 begin
   Result := InternalGetString(ColumnIndex);
 end;
@@ -1165,7 +1165,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBinaryStringByName(const ColumnName: string): ZAnsiString;
+function TZAbstractResultSet.GetBinaryStringByName(const ColumnName: string): RawByteString;
 begin
   Result := GetBinaryString(GetColumnIndex(ColumnName));
 end;
@@ -2112,7 +2112,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateBinaryString(ColumnIndex: Integer; const Value: ZAnsiString);
+procedure TZAbstractResultSet.UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString);
 begin
   case GetMetaData.GetColumnType(ColumnIndex) of
     stBytes: UpdateBytes(ColumnIndex, StrToBytes(Value));
@@ -2476,7 +2476,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateBinaryStringByName(const ColumnName: string;
-   const Value: ZAnsiString);
+   const Value: RawByteString);
 begin
   UpdateBinaryString(GetColumnIndex(ColumnName), Value);
 end;
@@ -2980,7 +2980,7 @@ end;
   Gets the string from the stored data.
   @return a string which contains the stored data.
 }
-function TZAbstractBlob.GetString: ZAnsiString;
+function TZAbstractBlob.GetString: RawByteString;
 begin
   if (FBlobSize > 0) and Assigned(FBlobData) then
     if FDecoded then
@@ -3002,7 +3002,7 @@ end;
   Sets a new string data to this blob content.
   @param Value a new string data.
 }
-procedure TZAbstractBlob.SetString(const Value: ZAnsiString);
+procedure TZAbstractBlob.SetString(const Value: RawByteString);
 begin
   Clear;
   FBlobSize := System.Length(Value);

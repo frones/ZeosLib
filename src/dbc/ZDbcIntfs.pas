@@ -251,7 +251,7 @@ type
     //Ping Server Support (firmos) 27032006
 
     function PingServer: Integer;
-    function EscapeString(Value: ZAnsiString): ZAnsiString;
+    function EscapeString(Value: RawByteString): RawByteString;
 
     procedure Open;
     procedure Close;
@@ -279,9 +279,9 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
     //EgonHugeist
-    function GetBinaryEscapeString(const Value: ZAnsiString): String;
+    function GetBinaryEscapeString(const Value: RawByteString): String;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
-    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload;
+    function GetEscapeString(const Value: RawByteString): RawByteString; overload;
     function GetClientCodePageInformations: PZCodePage;
     function GetAutoEncodeStrings: Boolean;
     procedure SetAutoEncodeStrings(const Value: Boolean);
@@ -504,9 +504,9 @@ type
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; overload;
     function ExecuteUpdate(const SQL: ZWideString): Integer; overload;
     function Execute(const SQL: ZWideString): Boolean; overload;
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; overload;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; overload;
-    function Execute(const SQL: ZAnsiString): Boolean; overload;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; overload;
+    function Execute(const SQL: RawByteString): Boolean; overload;
     procedure Close;
 
     function GetMaxFieldSize: Integer;
@@ -549,7 +549,7 @@ type
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
 
-    function GetEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}ZAnsiString{$ELSE}String{$IFEND}): ZAnsiString;
+    function GetEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
   end;
 
   {** Prepared SQL statement interface. }
@@ -655,7 +655,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
     function GetString(ColumnIndex: Integer): String;
-    function GetBinaryString(ColumnIndex: Integer): ZAnsiString;
+    function GetBinaryString(ColumnIndex: Integer): RawByteString;
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
@@ -684,7 +684,7 @@ type
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PChar;
     function GetStringByName(const ColumnName: string): String;
-    function GetBinaryStringByName(const ColumnName: string): ZAnsiString;
+    function GetBinaryStringByName(const ColumnName: string): RawByteString;
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
@@ -768,7 +768,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
-    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: ZAnsiString);
+    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
@@ -796,7 +796,7 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
-    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: ZAnsiString);
+    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
@@ -874,8 +874,8 @@ type
     function WasDecoded: Boolean;
     function Connection: IZConnection;
 
-    function GetString: ZAnsiString;
-    procedure SetString(const Value: ZAnsiString);
+    function GetString: RawByteString;
+    procedure SetString(const Value: RawByteString);
     function GetUnicodeString: WideString;
     procedure SetUnicodeString(const Value: WideString);
     function GetBytes: TByteDynArray;

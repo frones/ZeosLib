@@ -79,9 +79,9 @@ type
       Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function GetStatementHandle: POCIStmt;
   end;
@@ -99,7 +99,7 @@ type
 
     procedure SetLastStatement(LastStatement: IZStatement);
     function GetExecStatement: IZStatement;
-    function ConvertToOracleSQLQuery(SQL: string): ZAnsiString;
+    function ConvertToOracleSQLQuery(SQL: string): RawByteString;
 
   protected
     property Prepared: Boolean read FPrepared write FPrepared;
@@ -115,9 +115,9 @@ type
 
     procedure Close; override;
     procedure Prepare; override;
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -142,7 +142,7 @@ type
     procedure ArrangeInParams;
     procedure FetchOutParamsFromOracleVars;
   protected
-    function GetProcedureSql(SelectProc: boolean): ZAnsiString;
+    function GetProcedureSql(SelectProc: boolean): RawByteString;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
@@ -196,7 +196,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZOracleStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZOracleStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 var
   Handle: POCIStmt;
   ErrorHandle: POCIError;
@@ -227,7 +227,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZOracleStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZOracleStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   Handle: POCIStmt;
   ErrorHandle: POCIError;
@@ -270,7 +270,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZOracleStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZOracleStatement.Execute(const SQL: RawByteString): Boolean;
 var
   Handle: POCIStmt;
   ErrorHandle: POCIError;
@@ -390,7 +390,7 @@ end;
   @param SQL a query with parameters defined with '?'
   @returns a query with parameters in Oracle format ':pN'.
 }
-function TZOraclePreparedStatement.ConvertToOracleSQLQuery(SQL: string): ZAnsiString;
+function TZOraclePreparedStatement.ConvertToOracleSQLQuery(SQL: string): RawByteString;
 var
   I, N: Integer;
   Tokens: TStrings;
@@ -407,7 +407,7 @@ begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
-          Result := Result + ':P' + ZAnsiString(IntToStr(N));
+          Result := Result + ':P' + RawByteString(IntToStr(N));
         end else
           Result := Result + ZPlainString(Tokens[I]);
       end;
@@ -453,7 +453,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZOraclePreparedStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZOraclePreparedStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   LastStatement := GetExecStatement;
   Result := LastStatement.Execute(SQL);
@@ -469,7 +469,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZOraclePreparedStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZOraclePreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := GetExecStatement.ExecuteQuery(SQL);
 end;
@@ -485,7 +485,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZOraclePreparedStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZOraclePreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
   Result := GetExecStatement.ExecuteUpdate(SQL);
   LastUpdateCount := Result;
@@ -933,7 +933,7 @@ begin
     end;
 end;
 
-function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): ZAnsiString;
+function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): RawByteString;
 var
   sFunc: string;
   I, IncludeCount, LastIndex: Integer;

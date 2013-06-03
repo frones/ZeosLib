@@ -269,7 +269,7 @@ end;
 procedure TZDBLibConnection.InternalExecuteStatement(const SQL: string);
 var
   LSQL: string;
-  ASQL: ZAnsiString;
+  ASQL: RawByteString;
 begin
   FHandle := GetConnectionHandle;
   if GetPlainDriver.dbCancel(FHandle) <> DBSUCCEED then

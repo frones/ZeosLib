@@ -446,9 +446,9 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
-    function AnsiGetEscapeString(const Ansi: ZAnsiString): String;
+    function AnsiGetEscapeString(const Ansi: RawByteString): String;
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-    function GetEscapeString(const EscapeString: ZAnsiString): ZAnsiString;
+    function GetEscapeString(const EscapeString: RawByteString): RawByteString;
     {$ELSE}
     function GetEscapeString(const EscapeString: String): String;
     {$IFEND}
@@ -473,9 +473,9 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function AnsiGetEscapeString(const EscapeString: ZAnsiString): String; virtual;
+    function AnsiGetEscapeString(const EscapeString: RawByteString): String; virtual;
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-    function GetEscapeString(const EscapeString: ZAnsiString): ZAnsiString;
+    function GetEscapeString(const EscapeString: RawByteString): RawByteString;
     {$ELSE}
     function GetEscapeString(const EscapeString: String): String;
     {$IFEND}
@@ -1428,7 +1428,7 @@ begin
   end;
 end;
 
-function TZTokenizer.AnsiGetEscapeString(const EscapeString: ZAnsiString): String;
+function TZTokenizer.AnsiGetEscapeString(const EscapeString: RawByteString): String;
 var
   Temp: String;
 begin
@@ -1441,7 +1441,7 @@ begin
 end;
 
 {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-function TZTokenizer.GetEscapeString(const EscapeString: ZAnsiString): ZAnsiString;
+function TZTokenizer.GetEscapeString(const EscapeString: RawByteString): RawByteString;
 {$ELSE}
 function TZTokenizer.GetEscapeString(const EscapeString: String): String;
 {$IFEND}
@@ -1452,7 +1452,7 @@ begin
 
   if Length(EscapeString) > 0 then
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
-    Result := ZAnsiString(Temp)+EscapeString+ZAnsiString(Temp)
+    Result := RawByteString(Temp)+EscapeString+RawByteString(Temp)
     {$ELSE}
     Result := Temp+EscapeString+Temp
     {$IFEND}

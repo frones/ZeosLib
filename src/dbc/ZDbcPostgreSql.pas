@@ -87,7 +87,7 @@ type
     function GetConnectionHandle: PZPostgreSQLConnect;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
-    function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
+    function EncodeBinary(const Value: RawByteString): RawByteString;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
@@ -116,7 +116,7 @@ type
     procedure LoadServerVersion;
     procedure OnPropertiesChange(Sender: TObject); override;
     procedure SetStandardConformingStrings(const Value: Boolean);
-    function EncodeBinary(const Value: ZAnsiString): ZAnsiString;
+    function EncodeBinary(const Value: RawByteString): RawByteString;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
@@ -155,10 +155,10 @@ type
     function GetServerSubVersion: Integer;
 
     function PingServer: Integer; override;
-    function EscapeString(Value: ZAnsiString): ZAnsiString; override;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
+    function EscapeString(Value: RawByteString): RawByteString; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
-    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; override;
+    function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetServerSetting(const AName: string): string;
     procedure SetServerSetting(const AName, AValue: string);
   end;
@@ -444,7 +444,7 @@ end;
   @param Value the Binary String
   @result the encoded String
 }
-function TZPostgreSQLConnection.EncodeBinary(const Value: ZAnsiString): ZAnsiString;
+function TZPostgreSQLConnection.EncodeBinary(const Value: RawByteString): RawByteString;
 begin
   if ( Self.GetServerMajorVersion > 7 ) or
     ((GetServerMajorVersion = 7) and (GetServerMinorVersion >= 3)) then
@@ -1018,7 +1018,7 @@ begin
   end;
 end;
 
-function TZPostgreSQLConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
+function TZPostgreSQLConnection.EscapeString(Value: RawByteString): RawByteString;
 begin
   Result := PlainDriver.EscapeString(Self.FHandle, Value, ConSettings)
 end;
@@ -1042,7 +1042,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := String(EncodeBinary(Value));
   if GetAutoEncodeStrings then
@@ -1064,7 +1064,7 @@ begin
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
 
-function TZPostgreSQLConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
+function TZPostgreSQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := GetPlainDriver.EscapeString(FHandle, Value, ConSettings);
   {$IFNDEF UNICODE}

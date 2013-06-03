@@ -128,7 +128,7 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -736,7 +736,7 @@ begin
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 
-function TZInterbase6Connection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   if Self.GetPlainDriver.GetProtocol = 'firebird-2.5' then
     if Length(Value)*2 < 32*1024 then
