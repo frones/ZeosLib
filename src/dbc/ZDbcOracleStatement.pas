@@ -988,7 +988,7 @@ begin
           LastIndex := I;
           break;
         end;
-      PackageBody.Add('BEGIN '+sFunc+GetConnection.GetMetadata.GetIdentifierConvertor.Quote(SQL)+
+      PackageBody.Add('BEGIN '+sFunc+SQL+
         '.'+GetConnection.GetMetadata.GetIdentifierConvertor.Quote(PackageIncludedList[IncludeCount])+'('+InParams+'); END;');
     end;
     PackageBody.Add('END;');
@@ -1018,10 +1018,10 @@ end;
 constructor TZOracleCallableStatement.Create(Connection: IZConnection;
   const pProcName: string; Info: TStrings);
 begin
-  inherited Create(Connection, SQL, Info);
+
+  inherited Create(Connection, pProcName, Info);
 
   FOracleParamsCount := 0;
-  SQL := pProcName;
   FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
   ResultSetType := rtForwardOnly;
   FPrepared := False;

@@ -511,8 +511,11 @@ begin
         while ResultSet.Next do
         begin
           ProcedureName := ResultSet.GetStringByName('PROCEDURE_NAME');
-          if not Metadata.GetDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName then
-            ProcedureName := IdentifierConvertor.Quote(ProcedureName);
+          if ( not Metadata.GetDatabaseInfo.SupportsOverloadPrefixInStoredProcedureName ) then
+            if not ( StartsWith(ProcedureName, MetaData.GetDatabaseInfo.GetIdentifierQuoteString) or
+                     EndsWith(ProcedureName, MetaData.GetDatabaseInfo.GetIdentifierQuoteString) or
+                     (Pos('.', ProcedureName) > 0) ) then
+              ProcedureName := IdentifierConvertor.Quote(ProcedureName);
           Schema := ResultSet.GetStringByName('PROCEDURE_SCHEM');
           if Metadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls then
             if Catalog <> '' then
