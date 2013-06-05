@@ -210,6 +210,7 @@
 {$IFDEF DELPHI16_UP}
   {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
+  {$DEFINE WITH_VCL_PREFIX}
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}

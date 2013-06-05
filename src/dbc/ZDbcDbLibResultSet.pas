@@ -85,7 +85,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): ShortInt; override;
+    function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
@@ -352,7 +352,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZDBLibResultSet.GetByte(ColumnIndex: Integer): ShortInt;
+function TZDBLibResultSet.GetByte(ColumnIndex: Integer): Byte;
 var
   DL: Integer;
   Data: Pointer;
@@ -370,7 +370,7 @@ begin
   if Assigned(Data) then
   begin
     if DT = FPlainDriver.GetVariables.datatypes[Z_SQLINT1] then
-      Result := PShortInt(Data)^
+      Result := PByte(Data)^
     else
     begin
       FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLINT1],

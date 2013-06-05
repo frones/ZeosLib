@@ -1778,7 +1778,6 @@ begin
   end;
 {$ENDIF}
 
-begin
   Ptr := PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
   NullPtr := {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF}(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]]);
 
@@ -1790,8 +1789,6 @@ begin
     Result := IZDataSet(Ptr^)
   else
     Result := nil;
-end;
-
 end;
 
 {**

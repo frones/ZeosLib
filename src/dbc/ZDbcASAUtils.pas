@@ -94,7 +94,7 @@ type
 
     procedure UpdateNull(const Index: Integer; Value: boolean);
     procedure UpdateBoolean(const Index: Integer; Value: boolean);
-    procedure UpdateByte(const Index: Integer; Value: ShortInt);
+    procedure UpdateByte(const Index: Integer; Value: Byte);
     procedure UpdateShort(const Index: Integer; Value: SmallInt);
     procedure UpdateInt(const Index: Integer; Value: Integer);
     procedure UpdateLong(const Index: Integer; Value: Int64);
@@ -113,7 +113,7 @@ type
     function IsNull(const Index: Integer): Boolean;
     function IsAssigned(const Index: Integer): Boolean;
     function GetBoolean(const Index: Integer): Boolean;
-    function GetByte(const Index: Integer): ShortInt;
+    function GetByte(const Index: Integer): Byte;
     function GetShort(const Index: Integer): SmallInt;
     function GetInt(const Index: Integer): Integer;
     function GetLong(const Index: Integer): Int64;
@@ -175,7 +175,7 @@ type
 
     procedure UpdateNull(const Index: Integer; Value: boolean);
     procedure UpdateBoolean(const Index: Integer; Value: boolean);
-    procedure UpdateByte(const Index: Integer; Value: ShortInt);
+    procedure UpdateByte(const Index: Integer; Value: Byte);
     procedure UpdateShort(const Index: Integer; Value: SmallInt);
     procedure UpdateInt(const Index: Integer; Value: Integer);
     procedure UpdateLong(const Index: Integer; Value: Int64);
@@ -195,7 +195,7 @@ type
     function IsNull(const Index: Integer): Boolean;
     function IsAssigned(const Index: Integer): Boolean;
     function GetBoolean(const Index: Integer): Boolean;
-    function GetByte(const Index: Integer): ShortInt;
+    function GetByte(const Index: Integer): Byte;
     function GetShort(const Index: Integer): SmallInt;
     function GetInt(const Index: Integer): Integer;
     function GetLong(const Index: Integer): Int64;
@@ -635,7 +635,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateByte(const Index: Integer; Value: ShortInt);
+procedure TZASASQLDA.UpdateByte(const Index: Integer; Value: Byte);
 begin
   CheckIndex( Index);
   SetFieldType( Index, DT_TINYINT or 1, SizeOf( Byte));
@@ -643,7 +643,7 @@ begin
   begin
     case sqlType and $FFFE of
       DT_SMALLINT,
-      DT_UNSSMALLINT      : PSmallint(sqldata)^ := Value;
+      DT_UNSSMALLINT      : PWord(sqldata)^ := Value; //was PSmallint
       DT_INT,
       DT_UNSINT           : PInteger(sqldata)^ := Value;
       DT_FLOAT            : PSingle(sqldata)^ := Value;
@@ -1279,7 +1279,7 @@ end;
    @param Index the field index
    @return the field Byte value
 }
-function TZASASQLDA.GetByte(const Index: Integer): ShortInt;
+function TZASASQLDA.GetByte(const Index: Integer): Byte;
 var
   s: ZAnsiString;
 begin

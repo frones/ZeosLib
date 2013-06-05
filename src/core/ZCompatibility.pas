@@ -271,7 +271,7 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
 
 {$IF not Declared(UTF8ToString)}
 {$DEFINE ZUTF8ToString}
-function UTF8ToString(const s: AnsiString): WideString;
+function UTF8ToString(const s: ZAnsiString): ZWideString;
 {$IFEND}
 
 implementation
@@ -997,7 +997,7 @@ end;
 {$ENDIF}
 
 {$IFDEF  ZUTF8ToString}
-function UTF8ToString(const s: AnsiString): WideString;
+function UTF8ToString(const s: ZAnsiString): ZWideString;
 begin
   Result := UTF8Decode(s);
 end;

@@ -130,7 +130,16 @@ type
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: TStream;
       const Msg: string = ''); overload;
-    {$IFNDEF FPC}
+    procedure CheckEquals(Expected, Actual: PAnsiChar;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: PAnsiChar;
+      const Msg: string = ''); overload;
+    {$IFDEF FPC}
+    procedure CheckEquals(Expected, Actual: WideString;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: WideString;
+      const Msg: string = ''); overload;
+    {$ELSE}
     procedure CheckEquals(Expected, Actual: Word;
       const Msg: string = ''); overload;
     procedure CheckEquals(Expected, Actual: Byte;
@@ -534,7 +543,31 @@ begin
   end;
 end;
 
-{$IFNDEF FPC}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: PAnsiChar;
+  const Msg: string = '');
+begin
+  Check(MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+end;
+
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: PAnsiChar;
+  const Msg: string = '');
+begin
+  Check(not MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+end;
+
+{$IFDEF FPC}
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: WideString;
+  const Msg: string = '');
+begin
+  Check(Expected = Actual, Msg);
+end;
+
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
+  const Msg: string = '');
+begin
+  Check(Expected <> Actual, Msg);
+end;
+{$ELSE}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
   const Msg: string = '');
 begin
