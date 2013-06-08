@@ -199,6 +199,7 @@
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
   {$DEFINE WITH_TENCODING_CLASS}        // Have class TEncoding
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
+  {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
@@ -209,7 +210,7 @@
   {$DEFINE WITH_FORMATSETTINGS}
   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
   {$IFDEF WIN64}
-    {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on x64
+    {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
   {$ENDIF}
 {$ENDIF}
 
@@ -240,8 +241,8 @@
   {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
-  {$UNDEF WITH_TVALUEBUFFER}
-  {$DEFINE WITH_SYSUITLS_PREFIX}
+  {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
+  {$DEFINE WITH_SYSUITLS_PREFIX} 	//Need SysUtils. unit declaration for some functions like StrNew,StrAlloc
 {$ENDIF}
 
 

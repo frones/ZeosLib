@@ -437,8 +437,8 @@ type
       override;
     function BookmarkValid(Bookmark: TBookmark): Boolean; override;
 
-    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
-    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+    function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
+    function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean): Boolean; override;
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
@@ -506,7 +506,7 @@ end;
 
 procedure EZDatabaseError.SetStatusCode(const Value: String);
 begin
- FStatusCode:=value;
+  FStatusCode := value;
 end;
 
 { TZDataLink }
@@ -1254,7 +1254,9 @@ begin
   Result := RowBuffer <> nil;
 end;
 
-function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+function TZAbstractRODataset.GetFieldData(Field: TField;
+  {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
+  {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
   if Field.DataType in [ftWideString] then
@@ -1269,7 +1271,8 @@ end;
   @return <code>True</code> if non-null value was retrieved.
 }
 function TZAbstractRODataset.GetFieldData(Field: TField;
-  Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
+  {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
+    {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
@@ -1334,7 +1337,7 @@ begin
         { Processes all other fields. }
         else
           begin
-            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, PWideChar(Buffer)^,
+            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, Pointer(Buffer)^,
             RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
