@@ -1896,7 +1896,7 @@ begin
           and (GetIntByName('iscomputed') = 0));
         Result.UpdateBooleanByName('WRITABLE',
           ((GetShortByName('status') and $80) = 0)
-          and (GetShortByName('type') <> 37)
+          (*and (GetShortByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
           and (GetIntByName('iscomputed') = 0));
         Result.UpdateBooleanByName('DEFINITELYWRITABLE',
           Result.GetBooleanByName('WRITABLE'));
@@ -3009,7 +3009,7 @@ begin
           not (GetShortByName('type') in [34, 35]));
         Result.UpdateBooleanByName('WRITABLE',
           ((GetShortByName('status') and $80) = 0)
-          and (GetShortByName('type') <> 37));
+          (*and (GetShortByName('type') <> 37)*));   // <<<< *DEBUG WARUM?
         Result.UpdateBooleanByName('DEFINITELYWRITABLE',
           Result.GetBooleanByName('WRITABLE'));
         Result.UpdateBooleanByName('READONLY',
