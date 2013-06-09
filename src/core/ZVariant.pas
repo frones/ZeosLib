@@ -446,14 +446,14 @@ begin
     ZAnsiToUTF8 := @ZMoveAnsiToUTF8;
     ZUTF8ToAnsi := @ZMoveUTF8ToAnsi;
     ZUTF8ToString := @ZMoveUTF8ToString;
-    ZStringToUTF8 := ZMoveStringToUTF8;
+    ZStringToUTF8 := @ZMoveStringToUTF8;
   end
   else
   begin
     ZAnsiToUTF8 := @ZConvertAnsiToUTF8;
     ZUTF8ToAnsi := @ZConvertUTF8ToAnsi;
     ZUTF8ToString := @ZConvertUTF8ToString;
-    ZStringToUTF8 := ZConvertStringToUTF8;
+    ZStringToUTF8 := @ZConvertStringToUTF8;
   end;
 end;
 

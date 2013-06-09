@@ -164,7 +164,7 @@ type
   RawByteString = AnsiString;
   {$ENDIF}
 
-  ZWideString = {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
+  ZWideString = {$IFDEF PWIDECHAR_IS_PUNICODECHAR}UnicodeString{$ELSE}WideString{$ENDIF};
 
 type
   {declare move or converter functions for the String Types}
@@ -178,6 +178,8 @@ type
   TZStringToRaw = function (const Src: String; const RawCP: Word): RawByteString;
   TZUTF8ToString = function (const Src: UTF8String): String;
   TZStringToUTF8 = function (const Src: String): UTF8String;
+  TZRawToUnicode = function (const S: RawByteString; const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
+  TZUnicodeToRaw = function (const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word): RawByteString;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -199,13 +201,14 @@ type
     Encoding: TZCharEncoding; //The Type of String-Translation handling
     CP:  Word;                //The CodePage the AnsiString must have to
     ZAlias: String;           //A possible (saver?) CharacterSet which is more Zeos compatible... If it's empty it will be ignored!!!
+    IsStringFieldCPConsistent: Boolean; //Is the current client characterset codepage consistent for all codepages?
   end;
 
   PZConSettings = ^TZConSettings;
   TZConSettings = record
     AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
     CPType: TZControlsCodePage; //the CP-Settings type the controls do expect
-    CTRL_CP: Word;                //Target CP of string conversations (CP_ACP/CP_UPF8)
+    CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
@@ -264,7 +267,7 @@ const
 Type
   TEncodeType = (etUSASCII, etUTF8, etANSI);
 
-function DetectUTF8Encoding(Ansi: AnsiString): TEncodeType;
+function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType;
 {$IFEND}
 
 {$IFNDEF WITH_CHARINSET}
@@ -282,7 +285,7 @@ implementation
 uses ZEncoding;
 
 {$IFDEF ZDetectUTF8Encoding}
-function DetectUTF8Encoding(Ansi: AnsiString): TEncodeType; //EgonHugeist: Detect a valid UTF8Sequence
+function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType; //EgonHugeist: Detect a valid UTF8Sequence
 var
   I, Len: Integer;
   Source: PAnsiChar;
@@ -664,7 +667,7 @@ begin
             if ( ConSettings.CTRL_CP = zCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then //avoid "no success" for expected Codepage UTF8 of the Controls
               {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
-                //avoid string conversations -> move memory
+                //avoid string conversion -> move memory
                 TempAnsi := AnsiToUTF8(AStr);
                 SetLength(Result, Length(TempAnsi));
                 Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
@@ -675,7 +678,7 @@ begin
             else
               {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
-                //avoid string conversations -> move memory
+                //avoid string conversion -> move memory
                 TempAnsi := StringToAnsiEx(AStr, ConSettings.CTRL_CP, zCP_UTF8);
                 SetLength(Result, Length(TempAnsi));
                 Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
@@ -717,7 +720,7 @@ begin
                     TempAnsi := UTF8ToAnsi(AStr) //hope it's compatible we don't know the server CP here!!
                   else
                     TempAnsi := StringToAnsiEx(AStr, zCP_UTF8, ConSettings.ClientCodePage.CP);
-                  //avoid string conversations -> move memory
+                  //avoid string conversion -> move memory
                   SetLength(Result, Length(TempAnsi));
                   Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
                 end;
