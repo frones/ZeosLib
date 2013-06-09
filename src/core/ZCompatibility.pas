@@ -174,12 +174,14 @@ type
   TZUTF8ToAnsi = function (const Src: UTF8String): AnsiString;
   TZRawToUTF8 = function (const Src: RawByteString; const CP: Word): UTF8String;
   TZUTF8ToRaw = function (const Src: UTF8String; const CP: Word): RawByteString;
-  TZRawToString = function (const Src: RawByteString; const RawCP: Word): String;
-  TZStringToRaw = function (const Src: String; const RawCP: Word): RawByteString;
-  TZUTF8ToString = function (const Src: UTF8String): String;
-  TZStringToUTF8 = function (const Src: String): UTF8String;
-  TZRawToUnicode = function (const S: RawByteString; const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
-  TZUnicodeToRaw = function (const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word): RawByteString;
+  TZRawToString = function (const Src: RawByteString; const RawCP{$IFNDEF UNICODE}, StringCP{$ENDIF}: Word): String;
+  TZStringToRaw = function (const Src: String; const {$IFNDEF UNICODE}StringCP, {$ENDIF} RawCP: Word): RawByteString;
+  TZUTF8ToString = function (const Src: UTF8String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String;
+  TZStringToUTF8 = function (const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): UTF8String;
+  TZRawToUnicode = function (const S: RawByteString; const CP: Word): ZWideString;
+  TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
+  TZUnicodeToString = function (const Src: ZWideString{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String;
+  TZStringToUnicode = function (const Src: String{$IFNDEF UNICODE}; const StringCP :Word{$ENDIF}): ZWideString;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -204,17 +206,35 @@ type
     IsStringFieldCPConsistent: Boolean; //Is the current client characterset codepage consistent for all codepages?
   end;
 
+  TConvertEncodingFunctions = record
+    ZAnsiToUTF8: TZAnsiToUTF8;
+    ZUTF8ToAnsi: TZUTF8ToAnsi;
+    ZUTF8ToString: TZUTF8ToString;
+    ZStringToUTF8: TZStringToUTF8;
+    ZAnsiToRaw: TZAnsiToRaw;
+    ZRawToAnsi: TZRawToAnsi;
+    ZRawToUTF8: TZRawToUTF8;
+    ZUTF8ToRaw: TZUTF8ToRaw;
+    ZStringToRaw: TZStringToRaw;
+    ZRawToString: TZRawToString;
+    ZUnicodeToRaw: TZUnicodeToRaw;
+    ZRawToUnicode: TZRawToUnicode;
+    ZUnicodeToString: TZUnicodeToString;
+    ZStringToUnicode: TZStringToUnicode;
+  end;
+
   PZConSettings = ^TZConSettings;
   TZConSettings = record
     AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
     CPType: TZControlsCodePage; //the CP-Settings type the controls do expect
     CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
+    ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
+    DateFormat: String;
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;
     {$ENDIF}
-    DateFormat: String;
   end;
 
   TZCodePagedObject = Class(TInterfacedObject)
@@ -256,6 +276,20 @@ const
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
       CTRL_CP: $ffff;
+      ConvFuncs : (
+         ZAnsiToUTF8: nil;
+          ZUTF8ToAnsi: nil;
+          ZUTF8ToString: nil;
+          ZStringToUTF8: nil;
+          ZAnsiToRaw: nil;
+          ZRawToAnsi: nil;
+          ZRawToUTF8: nil;
+          ZUTF8ToRaw: nil;
+          ZStringToRaw: nil;
+          ZRawToString: nil;
+          ZUnicodeToRaw: nil;
+          ZRawToUnicode: nil;
+      );
       ClientCodePage: @ClientCodePageDummy;
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
@@ -436,7 +470,7 @@ begin
             {$ELSE}
               {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
-                //avoid string conversations -> move memory
+                //avoid string conversion -> move memory
                 TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
                 SetLength(Result, Length(TempAnsi));
                 Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
@@ -458,7 +492,7 @@ begin
                   if ConSettings.CTRL_CP = zCP_UTF8 then
                     {$IFDEF WITH_FPC_STRING_CONVERSATION}
                     begin
-                      //avoid string conversations -> move memory
+                      //avoid string conversion -> move memory
                       TempAnsi := AnsiToUTF8(Ansi); //hope we've compatible results ))):
                       SetLength(Result, Length(TempAnsi));
                       Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
@@ -474,7 +508,7 @@ begin
                   else
                     {$IFDEF WITH_FPC_STRING_CONVERSATION}
                     begin
-                      //avoid string conversations -> move memory
+                      //avoid string conversion -> move memory
                       TempAnsi := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
                       SetLength(Result, Length(TempAnsi));
                       Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
@@ -493,7 +527,7 @@ begin
               {$ELSE}
                 {$IFDEF WITH_FPC_STRING_CONVERSATION}
                 begin
-                  //avoid string conversations -> move memory
+                  //avoid string conversion -> move memory
                   TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
                   SetLength(Result, Length(TempAnsi));
                   Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
@@ -549,21 +583,21 @@ begin
   else
   {$ENDIF}
   begin
-    TempEncoding := FConSettings.ClientCodePage^.Encoding;
+    TempEncoding := FConSettings^.ClientCodePage^.Encoding;
     FConSettings.ClientCodePage^.Encoding := UseEncoding;
     Result := ZDbcString(Ansi, FConSettings);
-    FConSettings.ClientCodePage^.Encoding := TempEncoding;
+    FConSettings^.ClientCodePage^.Encoding := TempEncoding;
   end;
 end;
 
 function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString): ZWideString;
 begin
   {$IFNDEF WITH_LCONVENCODING}
-  Result := AnsiToWide(AStr, FConSettings.ClientCodePage.CP);
+  Result := RawToUnicode(AStr, FConSettings.ClientCodePage.CP);
   {$ELSE}
     case Consettings.ClientCodePage.Encoding of
       ceAnsi:
-        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr)); //!!!!SLOW Job don twice (Ansi up to wide to UTF8 to Wide)
+        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr)); //!!!!SLOW, Job down twice (Ansi up to wide to UTF8 to Wide)
       else
         Result := UTF8ToString(AStr)
     end;
@@ -584,13 +618,13 @@ begin
     {$ELSE}
       {$IFDEF WITH_FPC_STRING_CONVERSATION}
       begin
-        //avoid string conversations -> move memory
-        TempAnsi := WideToAnsi(AStr, FConSettings.CTRL_CP);
+        //avoid string conversion -> move memory
+        TempAnsi := UnicodeToRaw(AStr, FConSettings.CTRL_CP);
         SetLength(Result, Length(TempAnsi));
         Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
       end
       {$ELSE}
-      Result := WideToAnsi(AStr, FConSettings.CTRL_CP);
+      Result := UnicodeToRaw(AStr, FConSettings.CTRL_CP);
       {$ENDIF}
     {$ENDIF}
   {$ENDIF}
@@ -600,7 +634,7 @@ function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString;
   const FromCP: Word): ZWideString;
 begin
   {$IFNDEF WITH_LCONVENCODING}
-  Result := AnsiToWide(AStr, FromCP);
+  Result := RawToUnicode(AStr, FromCP);
   {$ELSE}
   if FromCP = zCP_UTF8 then
     Result := UTF8Decode(AStr)
@@ -619,7 +653,7 @@ begin
   Result := AStr;
   {$ELSE}
     {$IFNDEF WITH_LCONVENCODING}
-    Result := AnsiToWide(AStr, FromCP);
+    Result := RawToUnicode(AStr, FromCP);
     {$ELSE}
     if FromCP = zCP_UTF8 then
       Result := UTF8Decode(AStr)
@@ -813,7 +847,7 @@ begin
   {$IFDEF WITH_LCONVENCODING}
   Result := ConSettings.PlainConvertFunc(UTF8Encode(AStr));
   {$ELSE}
-  Result := WideToAnsi(AStr, ConSettings.ClientCodePage.CP);
+  Result := UnicodeToRaw(AStr, ConSettings.ClientCodePage.CP);
   {$ENDIF}
 end;
 
@@ -847,7 +881,7 @@ begin
     {$IFDEF WITH_LCONVENCODING}
     Result := UTF8ToString(AStr);
     {$ELSE}
-    Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
+    Result := RawToUnicode(AStr, FConSettings.CTRL_CP);
     {$ENDIF}
   {$ENDIF}
 end;
