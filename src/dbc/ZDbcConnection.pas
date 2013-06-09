@@ -391,7 +391,7 @@ begin
   Protocols := GetSupportedProtocols;
   for I := Low(Protocols) to High(Protocols) do
   begin
-    Result := StartsWith(Url, Format('zdbc:%s:', [Protocols[I]]));
+    Result := StartsWith(LowerCase(Url), Format('zdbc:%s:', [LowerCase(Protocols[I])]));
     if Result then
       Break;
   end;
