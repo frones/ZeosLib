@@ -2156,7 +2156,7 @@ function EncodeVariant(const Value: TZVariant): Variant;
 begin
   case Value.VType of
     vtBoolean: Result := Value.VBoolean;
-    vtBytes: Result := Value.VBytes;
+    vtBytes: Result := BytesToVar(Value.VBytes);
     vtInteger:
       if (Value.VInteger > -MaxInt) and (Value.VInteger < MaxInt) then
         Result := Integer(Value.VInteger)
@@ -2177,7 +2177,7 @@ begin
     {$ifdef fpc}
         Result := NativeInt(Value.VPointer);
     {$else}
-        Result := LongInt(Value.VPointer);
+        Result := NativeUInt(Value.VPointer);
     {$endif}
     vtInterface: Result := Value.VInterface;
   else
