@@ -393,9 +393,9 @@ destructor TZInterbase6Connection.Destroy;
 begin
   if not Closed then
     Close;
-  if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
-     ( ConSettings.ClientCodePage.CP = zCP_NONE ) then
-    Dispose(ConSettings.ClientCodePage);
+  if ( ConSettings^.ClientCodePage^.ID = CS_NONE ) and not
+     ( ConSettings^.ClientCodePage^.CP = ZDefaultSystemCodePage ) then
+    Dispose(ConSettings^.ClientCodePage);
   inherited Destroy;
 end;
 
@@ -532,6 +532,7 @@ begin
               TmpClientCodePageNew.Encoding := TmpClientCodePageOld.Encoding;
               TmpClientCodePageNew.CP := TmpClientCodePageOld.CP;
               TmpClientCodePageNew.ZAlias := '';
+              TmpClientCodePageNew.IsStringFieldCPConsistent := False;
               ConSettings.ClientCodePage := TmpClientCodePageNew;
               {Also reset the MetaData ConSettings}
               (FMetadata as TZInterbase6DatabaseMetadata).ConSettings := ConSettings;
