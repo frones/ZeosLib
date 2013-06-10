@@ -318,11 +318,11 @@ function ZConvertStringToRaw(const Src: String; const {$IFNDEF UNICODE}StringCP,
 function ZConvertStringToRawWithAutoEncode(const Src: String; const {$IFNDEF UNICODE}StringCP,{$ENDIF}RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertUTF8ToString(const Src: UTF8String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertStringToUTF8(const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): UTF8String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZUnicodeToString(const Src: ZWideString{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZUnicodeToString_CPUTF8(const Src: ZWideString{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertUnicodeToString(const Src: ZWideString{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZStringToUnicode(const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZString_CPUTF8ToUnicode(const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZStringToUnicodeWithAutoEncode(const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertString_CPUTF8ToUnicode(const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertStringToUnicodeWithAutoEncode(const Src: String{$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 {move functions for the String types}
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
@@ -361,6 +361,13 @@ function ZDefaultSystemCodePage: Word;
   @returns Boolean True if codepage is equal or compatible
 }
 function ZCompatibleCodePages(const CP1, CP2: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{**
+  Set the string-types conversion funtion in relation to the Connection-Settings.
+  The Results should be as optimal as possible to speed up the behavior
+  @param ConSettings a Pointer to the ConnectionSetting
+}
+procedure SetConvertFunctions(ConSettings: PZConSettings);
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -1206,7 +1213,7 @@ begin
     {$ENDIF}
 end;
 
-function ZUnicodeToString(const Src: ZWideString
+function ZConvertUnicodeToString(const Src: ZWideString
   {$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): String;
 {$IFNDEF UNICODE}
 var Tmp: RawByteString;
@@ -1220,7 +1227,7 @@ begin
   {$ENDIF}
 end;
 
-function ZUnicodeToString_CPUTF8(const Src: ZWideString{$IFNDEF UNICODE};
+function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString{$IFNDEF UNICODE};
   const StringCP: Word{$ENDIF}): String;
 {$IFNDEF UNICODE}
 var Tmp: RawByteString;
@@ -1248,7 +1255,7 @@ begin
   {$ENDIF}
 end;
 
-function ZString_CPUTF8ToUnicode(const Src: String
+function ZConvertString_CPUTF8ToUnicode(const Src: String
   {$IFNDEF UNICODE}; const StringCP: Word{$ENDIF}): ZWideString;
 {$IFNDEF UNICODE}
 var Tmp: RawByteString;
@@ -1263,7 +1270,7 @@ begin
 end;
 
 
-function ZStringToUnicodeWithAutoEncode(const Src: String{$IFNDEF UNICODE};
+function ZConvertStringToUnicodeWithAutoEncode(const Src: String{$IFNDEF UNICODE};
   const StringCP: Word{$ENDIF}): ZWideString;
 begin
   {$IFDEF UNICODE}
@@ -1566,6 +1573,104 @@ begin
       System.Move(PWideChar(US)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
     end;
+  end;
+end;
+
+procedure SetConvertFunctions(ConSettings: PZConSettings);
+begin
+  //Let's start with the AnsiTo/From types..
+  if ZCompatibleCodePages(ZDefaultSystemCodePage, zCP_UTF8) then
+  begin
+    ConSettings^.ConvFuncs.ZAnsiToUTF8 := @ZEncoding.ZMoveAnsiToUTF8;
+    ConSettings^.ConvFuncs.ZUTF8ToAnsi := @ZEncoding.ZMoveUTF8ToAnsi;
+  end
+  else
+  begin
+    ConSettings^.ConvFuncs.ZAnsiToUTF8 := @ZEncoding.ZConvertAnsiToUTF8;
+    ConSettings^.ConvFuncs.ZUTF8ToAnsi := @ZEncoding.ZConvertUTF8ToAnsi;
+  end;
+
+  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+  begin
+    // raw to/from UTF8
+    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) or
+      ( not ConSettings^.AutoEncode) then
+    begin
+      ConSettings^.ConvFuncs.ZRawToUTF8 := @ZMoveRawToUTF8;
+      ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZMoveUTF8ToRaw;
+    end
+    else
+    begin
+      ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
+      ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
+    end;
+
+    // raw to/from ansi
+    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ZDefaultSystemCodePage) then
+    begin
+      ConSettings^.ConvFuncs.ZAnsiToRaw := @ZMoveAnsiToRaw;
+      ConSettings^.ConvFuncs.ZRawToAnsi := @ZMoveRawToAnsi;
+    end
+    else
+    begin
+      ConSettings^.ConvFuncs.ZAnsiToRaw := @ZConvertAnsiToRaw;
+      ConSettings^.ConvFuncs.ZRawToAnsi := @ZConvertRawToAnsi;
+    end;
+
+    // raw to/from unicode
+    if ConSettings^.ClientCodePage^.CP = zCP_NONE then
+    begin
+      if ConSettings^.AutoEncode then
+        ConSettings^.ConvFuncs.ZRawToUnicode := @ZEncoding.UnknownRawToUnicodeWithAutoEncode
+      else
+        ConSettings^.ConvFuncs.ZRawToUnicode := @ZEncoding.UnknownRawToUnicode;
+      ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZEncoding.UnicodeToUnknownRaw;
+    end
+    else
+      {$IF defined(Delphi) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)}
+      if IsFullMultiByteCodePage(ConSettings^.ClientCodePage^.CP) then
+      begin
+        ConSettings^.ConvFuncs.ZRawToUnicode := @ZEncoding.MBCRawToUnicode;
+        ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZEncoding.UnicodeToMBCRaw;
+      end
+      else
+      begin
+        ConSettings^.ConvFuncs.ZRawToUnicode := @ZEncoding.SBCRawToUnicode;
+        ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZEncoding.UnicodeToSBCRaw;
+      end;
+      {$ELSE}  //LCL
+      begin
+        ConSettings^.ConvFuncs.ZRawToUnicode := @ZEncoding.RawToUnicode;
+        ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZEncoding.UnicodeToRaw;
+      end;
+      {$IFEND}
+
+    //last but not least the String to/from converters
+    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) or
+      ( not ConSettings^.AutoEncode) then
+    ConSettings^.ConvFuncs.ZUTF8ToString := @ZConvertUTF8ToString;
+    ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8;
+    Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+    ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
+
+
+  end
+  else //autoencode strings is allways true
+  begin
+    ConSettings^.ConvFuncs.ZUTF8ToString := @ZConvertUTF8ToString;
+    ConSettings^.ConvFuncs.ZStringToUTF8 := @ZConvertStringToUTF8;
+    ConSettings^.ConvFuncs.ZAnsiToRaw := @ZConvertAnsiToRaw;
+    ConSettings^.ConvFuncs.ZRawToAnsi := @ZConvertRawToAnsi;
+    ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
+    ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
+    Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+    Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+    Consettings^.ConvFuncs.ZUnicodeToRaw := @UnicodeToRaw;
+    Consettings^.ConvFuncs.ZRawToUnicode := @RawToUnicode;
+    ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
+    Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
   end;
 end;
 
