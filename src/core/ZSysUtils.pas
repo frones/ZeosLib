@@ -250,12 +250,13 @@ function BytesToStr(const Value: TByteDynArray): AnsiString;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: AnsiString): TByteDynArray; overload;
+
+{$IFDEF WITH_RAWBYTESTRING}
 {**
-  Converts a WideString into an array of bytes.
-  @param Value a WideString to be converted.
+  Converts a UTF8String into an array of bytes.
+  @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
-{$IFDEF WITH_RAWBYTESTRING}
 function StrToBytes(const Value: UTF8String): TByteDynArray; overload;
 {**
   Converts a UTF8String into an array of bytes.
@@ -275,8 +276,8 @@ function StrToBytes(const Value: WideString): TByteDynArray; overload;
   @param Value a String to be converted.
   @return a converted array of bytes.
 }
-{$IFDEF UNICODE}
-function StrToBytes(const Value: String): TByteDynArray; overload;
+{$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+function StrToBytes(const Value: UnicodeString): TByteDynArray; overload;
 {$ENDIF}
 {**
   Converts bytes into a variant representation.
@@ -993,8 +994,8 @@ end;
   @param Value a String to be converted.
   @return a converted array of bytes.
 }
-{$IFDEF UNICODE}
-function StrToBytes(const Value: String): TByteDynArray;
+{$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+function StrToBytes(const Value: UnicodeString): TByteDynArray;
 var L: SmallInt;
 begin
   L := Length(Value) * SizeOf(Char);
@@ -1113,12 +1114,12 @@ var
   Year, Month, Day, Hour, Min, Sec: Integer;
   StrLength, StrPos, StrPosPrev: Integer;
   //
-  function CharMatch( matchchars: string ): boolean; 
-  // try to match as much characters as possible 
-  begin 
-    StrPosPrev:= StrPos; 
-    Result:= false; 
-    while StrPos<=StrLength do 
+  function CharMatch( matchchars: string ): boolean;
+  // try to match as much characters as possible
+  begin
+    StrPosPrev:= StrPos;
+    Result:= false;
+    while StrPos<=StrLength do
        if pos(Value[StrPos], matchchars) > 0 then
          begin
             inc(StrPos);
@@ -1126,51 +1127,51 @@ var
          end
        else
          break;
-  end; 
-begin 
-  Result := 0; 
-  StrPos:= 1; 
-  StrLength := Length(Value); 
+  end;
+begin
+  Result := 0;
+  StrPos:= 1;
+  StrLength := Length(Value);
 
   if not CharMatch('1234567890') then
      exit; // year
-  Year := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  Year := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
   if not CharMatch('-/\') then
      exit;
   if not CharMatch('1234567890') then
      exit; // month
-  Month:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  Month:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
   if not CharMatch('-/\') then
      exit;
   if not CharMatch('1234567890') then
      exit; // day
-  Day:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  Day:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
   try
-    Result := EncodeDate(Year, Month, Day); 
+    Result := EncodeDate(Year, Month, Day);
   except
   end;
-  // 
+  //
   if not CharMatch(' ') then
      exit;
   if not CharMatch('1234567890') then
      exit; // hour
-  Hour := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  Hour := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
   if not CharMatch('-/\') then
      exit;
   if not CharMatch('1234567890') then
      exit; // minute
-  Min:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  Min:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
   if not CharMatch('-/\') then
      exit;
   if not CharMatch('1234567890') then
      exit; // second
-  Sec:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0); 
+  Sec:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
   try
-    Result := REsult + EncodeTime(Hour, Min, Sec,0); 
+    Result := REsult + EncodeTime(Hour, Min, Sec,0);
   except
   end;
 
-end; 
+end;
 
 
 {**

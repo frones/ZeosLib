@@ -64,6 +64,19 @@ type
     lcPrepStmt, lcBindPrepStmt, lcExecPrepStmt, lcUnprepStmt);
 
   {** Defines a object for logging event. }
+  TZLoggingEvent = class;
+
+  {** Defines a object for logging event. }
+
+  { TZLoggingFormatter }
+
+  TZLoggingFormatter = class (TObject)
+  private
+  public
+    function Format(LoggingEvent: TZLoggingEvent) : string; virtual;
+  end;
+
+  {** Defines a object for logging event. }
   TZLoggingEvent = class (TObject)
   private
     FCategory: TZLoggingCategory;
@@ -76,7 +89,7 @@ type
     constructor Create(Category: TZLoggingCategory; Protocol: string;
       Msg: string; ErrorCode: Integer; Error: string);
 
-    function AsString: string;
+    function AsString(LoggingFormatter:TZLoggingFormatter = nil): string;
 
     property Category: TZLoggingCategory read FCategory;
     property Protocol: string read FProtocol;
@@ -94,6 +107,34 @@ type
   end;
 
 implementation
+var DefaultLoggingFormatter: TZLoggingFormatter;
+
+{ TZLoggingFormatter }
+
+function TZLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): string;
+begin
+  Result := FormatDateTime('yyyy-mm-dd hh:mm:ss', LoggingEvent.Timestamp) + ' cat: ';
+  case LoggingEvent.Category of
+    lcConnect: Result := Result + 'Connect';
+    lcDisconnect: Result := Result + 'Disconnect';
+    lcTransaction: Result := Result + 'Transaction';
+    lcExecute: Result := Result + 'Execute';
+    lcPrepStmt: Result := Result + 'Prepare';
+    lcBindPrepStmt: Result := Result + 'Bind prepared';
+    lcExecPrepStmt: Result := Result + 'Execute prepared';
+    lcUnprepStmt: Result := Result + 'Unprepare prepared';
+  else
+    Result := Result + 'Other';
+  end;
+  if LoggingEvent.Protocol <> '' then
+    Result := Result + ', proto: ' + LoggingEvent.Protocol;
+  Result := Result + ', msg: ' + LoggingEvent.Message;
+  if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> '') then
+  begin
+    Result := Result + ', errcode: ' + IntToStr(LoggingEvent.ErrorCode)
+      + ', error: ' + LoggingEvent.Error;
+  end;
+end;
 
 { TZLoggingEvent }
 
@@ -119,30 +160,18 @@ end;
   Gets a string representation for this event.
   @returns a string representation.
 }
-function TZLoggingEvent.AsString: string;
+function TZLoggingEvent.AsString(LoggingFormatter:TZLoggingFormatter = nil): string;
 begin
-  Result := FormatDateTime('yyyy-mm-dd hh:mm:ss', FTimestamp) + ' cat: ';
-  case FCategory of
-    lcConnect: Result := Result + 'Connect';
-    lcDisconnect: Result := Result + 'Disconnect';
-    lcTransaction: Result := Result + 'Transaction';
-    lcExecute: Result := Result + 'Execute';
-    lcPrepStmt: Result := Result + 'Prepare';
-    lcBindPrepStmt: Result := Result + 'Bind prepared';
-    lcExecPrepStmt: Result := Result + 'Execute prepared';
-    lcUnprepStmt: Result := Result + 'Unprepare prepared';
+  If Assigned(LoggingFormatter) then
+    Result := LoggingFormatter.Format(Self)
   else
-    Result := Result + 'Other';
-  end;
-  if Protocol <> '' then
-    Result := Result + ', proto: ' + FProtocol;
-  Result := Result + ', msg: ' + FMessage;
-  if (FErrorCode <> 0) or (FError <> '') then
-  begin
-    Result := Result + ', errcode: ' + IntToStr(FErrorCode)
-      + ', error: ' + FError;
-  end;
+    Result := DefaultLoggingFormatter.Format(Self);
 end;
 
+initialization
+  DefaultLoggingFormatter := TZLoggingFormatter.Create;
+
+finalization
+  DefaultLoggingFormatter.Free;
 end.
 

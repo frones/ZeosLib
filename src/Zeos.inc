@@ -158,6 +158,20 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
+
+// Compilation directives for Delphi XE4
+{$IFDEF VER250}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in code
+  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
@@ -185,6 +199,7 @@
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
   {$DEFINE WITH_TENCODING_CLASS}        // Have class TEncoding
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
+  {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
@@ -195,7 +210,7 @@
   {$DEFINE WITH_FORMATSETTINGS}
   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
   {$IFDEF WIN64}
-    {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on x64
+    {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
   {$ENDIF}
 {$ENDIF}
 
@@ -205,6 +220,7 @@
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
   {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
   {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
+  {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}
@@ -219,6 +235,17 @@
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
 {$ENDIF}
+
+{$IFDEF DELPHI18_UP}
+  {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
+  {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
+  {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
+  {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
+  {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
+  {$DEFINE WITH_SYSUITLS_PREFIX} 	//Need SysUtils. unit declaration for some functions like StrNew,StrAlloc
+{$ENDIF}
+
+
 // Debug/release compiler options
 {$D+}
 

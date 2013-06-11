@@ -1544,7 +1544,7 @@ const teststring = '123456ייאא';
 var
   Query: TZQuery;
   BinStream,BinStream1,TextStreamS: TMemoryStream;
-  s:  ZAnsistring;
+  s:  RawByteString;
   TextLob, BinLob: String;
   TempConnection: TZConnection;
 begin

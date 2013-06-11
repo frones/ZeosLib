@@ -154,7 +154,7 @@ function ToLikeString(const Value: string): string;
   @returns a valid hex formated unicode-safe string
 }
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
-function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZAnsiString;
+function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
 
 {**
@@ -475,9 +475,9 @@ begin
     Result := 'x'#39+ZWideString(HexVal)+#39;
 end;
 
-function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZAnsiString;
+function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
 var
-  HexVal: ZAnsiString;
+  HexVal: RawByteString;
 begin
   SetLength(HexVal,Len * 2 );
   BinToHex(Value, PAnsiChar(HexVal), Len);

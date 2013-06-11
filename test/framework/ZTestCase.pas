@@ -468,7 +468,7 @@ var
   WS: WideString;
   StrStream: TMemoryStream;
 
-  procedure SetAnsiStream(Value: ZAnsiString);
+  procedure SetAnsiStream(Value: RawByteString);
   begin
     StrStream.Write(PAnsiChar(Value)^, Length(Value));
     StrStream.Position := 0;
@@ -479,22 +479,22 @@ begin
     cGET_ACP:
       if ConSettings.AutoEncode then
         if ConSettings.CTRL_CP = 65001 then
-          SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+          SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
         else
-          SetAnsiStream(ZAnsiString(OrgStr))
+          SetAnsiStream(RawByteString(OrgStr))
       else
         if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+          SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
         else
-          SetAnsiStream(ZAnsiString(OrgStr));
+          SetAnsiStream(RawByteString(OrgStr));
     cCP_UTF8:
       if ConSettings.AutoEncode then
-        SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+        SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
       else
         if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          SetAnsiStream(ZAnsiString(UTF8Encode(WideString(OrgStr))))
+          SetAnsiStream(RawByteString(UTF8Encode(WideString(OrgStr))))
         else
-          SetAnsiStream(ZAnsiString(OrgStr));
+          SetAnsiStream(RawByteString(OrgStr));
     cCP_UTF16:
       begin
         WS := WideString(OrgStr);

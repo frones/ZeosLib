@@ -368,7 +368,7 @@ begin
       stBinaryStream:
         begin
           if Assigned(B) then
-            DefVarManager.SetAsString(RetValue, String(BytesToStr(B.GetBytes)));
+            DefVarManager.SetAsBytes(RetValue, B.GetBytes);
           SQLType := stBytes;
         end;
     end;
@@ -377,9 +377,10 @@ begin
   case RetValue.VType of
     vtNull: V := Null;
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
+    vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
     vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
-    vtString: V := AnsiString(SoftVarManager.GetAsString(RetValue));
+    vtString: V := SoftVarManager.GetAsString(RetValue);
     vtUnicodeString: V := WideString(SoftVarManager.GetAsUnicodeString(RetValue));
     vtDateTime: V := SoftVarManager.GetAsDateTime(RetValue);
   end;
@@ -400,7 +401,7 @@ begin
       end;
     stBytes:
       begin
-        V := StrToBytes(ZAnsiString(VarToStr(V)));
+        //V := StrToBytes(VarToStr(V));
         if (VarType(V) and varArray) <> 0 then
           S := VarArrayHighBound(V, 1) + 1;
         if S = 0 then V := Null;
@@ -541,7 +542,8 @@ begin
   begin
     Temp := FAdoCommand.Parameters.Item[ParameterIndex - 1].Value;
 
-    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_, ConSettings.CPType) of
+    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_,
+      ConSettings.CPType) of
       stBoolean:
         DefVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stInteger, stLong:
@@ -673,4 +675,5 @@ end.
 //      end;
 //    end;
 //  end;
+
 

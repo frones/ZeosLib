@@ -98,6 +98,7 @@ type
     FTrHandle: TISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FHardCommit: boolean;
+    FDisposeClientCodePage: Boolean;
   private
     procedure StartTransaction; virtual;
   protected
@@ -128,7 +129,7 @@ type
     procedure Open; override;
     procedure Close; override;
 
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -327,6 +328,7 @@ var
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
+  FDisposeClientCodePage := False;
   Self.FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
   FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
@@ -393,9 +395,7 @@ destructor TZInterbase6Connection.Destroy;
 begin
   if not Closed then
     Close;
-  if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
-     ( ConSettings.ClientCodePage.CP = zCP_NONE ) then
-    Dispose(ConSettings.ClientCodePage);
+  if FDisposeClientCodePage then Dispose(ConSettings^.ClientCodePage); //FreeMem for own created ClientCodePage rec
   inherited Destroy;
 end;
 
@@ -532,7 +532,10 @@ begin
               TmpClientCodePageNew.Encoding := TmpClientCodePageOld.Encoding;
               TmpClientCodePageNew.CP := TmpClientCodePageOld.CP;
               TmpClientCodePageNew.ZAlias := '';
+              TmpClientCodePageNew.IsStringFieldCPConsistent := False;
               ConSettings.ClientCodePage := TmpClientCodePageNew;
+              SetConvertFunctions(ConSettings); //now let's the converters again
+              FDisposeClientCodePage := True;
               {Also reset the MetaData ConSettings}
               (FMetadata as TZInterbase6DatabaseMetadata).ConSettings := ConSettings;
               { now we're able to read and write strings for columns without a
@@ -736,7 +739,7 @@ begin
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 
-function TZInterbase6Connection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   if Self.GetPlainDriver.GetProtocol = 'firebird-2.5' then
     if Length(Value)*2 < 32*1024 then

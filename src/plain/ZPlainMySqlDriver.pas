@@ -320,8 +320,8 @@ type
     function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption;
       const Arg: PAnsiChar): Integer;
-    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; override;
+    function EscapeString(Handle: Pointer; const Value: RawByteString;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; override;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     function GetClientInfo: PAnsiChar;
     function GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -772,12 +772,12 @@ begin
   Result := MYSQL_API.mysql_get_client_info;
 end;
 
-function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: ZAnsiString;
-  ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: RawByteString;
+  ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 var
   Len, outlength: integer;
-  Outbuffer: ZAnsiString;
-  TempValue: ZAnsiString;
+  Outbuffer: RawByteString;
+  TempValue: RawByteString;
 begin
   {$IFDEF UNICODE}
   TempValue := Value;

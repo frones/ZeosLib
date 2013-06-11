@@ -112,8 +112,8 @@ function EncodeBinaryString(const Value: AnsiString): AnsiString;
   @param Value the regular string.
   @return the encoded string.
 }
-function PGEscapeString(Handle: Pointer; const Value: ZAnsiString;
-    ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+function PGEscapeString(Handle: Pointer; const Value: RawByteString;
+    ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 
 {**
   Converts an string from escape PostgreSQL format.
@@ -329,8 +329,8 @@ end;
   @param Value the regular string.
   @return the encoded string.
 }
-function PGEscapeString(Handle: Pointer; const Value: ZAnsiString;
-    ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+function PGEscapeString(Handle: Pointer; const Value: RawByteString;
+    ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 var
   I, LastState: Integer;
   SrcLength, DestLength: Integer;

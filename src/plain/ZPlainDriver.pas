@@ -72,16 +72,16 @@ type
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String;
-    function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString; overload;
-    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): ZAnsiString; overload;
-    function ZDbcUnicodeString(const AStr: ZAnsiString; const FromCP: Word): ZWideString; overload;
+    function ZDbcString(const Ansi: RawByteString; ConSettings: PZConSettings): String;
+    function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
+    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): RawByteString; overload;
+    function ZDbcUnicodeString(const AStr: RawByteString; const FromCP: Word): ZWideString; overload;
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-    ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;
+    ConSettings: PZConSettings; out LogSQL: String): RawByteString;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
-    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload;
+    function EscapeString(Handle: Pointer; const Value: RawByteString;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload;
     procedure Initialize(const Location: String = '');
     function Clone: IZPlainDriver;
   end;
@@ -102,11 +102,11 @@ type
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-      ConSettings: PZConSettings; out LogSQL: String): ZAnsiString; virtual;
+      ConSettings: PZConSettings; out LogSQL: String): RawByteString; virtual;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
-    function EscapeString(Handle: Pointer; const Value: ZAnsiString;
-      ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString; overload; virtual;
+    function EscapeString(Handle: Pointer; const Value: RawByteString;
+      ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload; virtual;
     function GetTokenizer: IZTokenizer;
   public
     constructor Create;
@@ -121,11 +121,13 @@ type
     property Loader: TZNativeLibraryLoader read FLoader;
     procedure AddCodePage(const Name: String; const ID:  Integer;
       Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
-      const ZAlias: String = ''; CharWidth: Integer = 1); virtual;
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
     procedure ResetCodePage(const OldID: Integer; const Name: String;
       const ID:  Integer; {may be an ordinal value of predefined Types...}
       Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
-      const ZAlias: String = ''; CharWidth: Integer = 1);
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
   end;
   {END ADDED by fduenas 15-06-2006}
 
@@ -219,7 +221,7 @@ begin
 end;
 
 function TZAbstractPlainDriver.GetPrepreparedSQL(Handle: Pointer;
-  const SQL: String; ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;
+  const SQL: String; ConSettings: PZConSettings; out LogSQL: String): RawByteString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
@@ -237,7 +239,7 @@ begin
         ttQuoted,  ttWord, ttQuotedIdentifier, ttKeyword:
           Result := Result + ZPlainString(SQLTokens[i].Value, ConSettings)
         else
-          Result := Result + ZAnsiString(SQLTokens[i].Value);
+          Result := Result + RawByteString(SQLTokens[i].Value);
       end;
     end;
   end
@@ -256,8 +258,8 @@ end;
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
   const Value: ZWideString; ConSettings: PZConSettings): ZWideString;
 var
-  StrFrom: ZAnsiString;
-  Outbuffer: ZAnsiString;
+  StrFrom: RawByteString;
+  Outbuffer: RawByteString;
 begin
   StrFrom := ZPlainString(Value, ConSettings);
   Outbuffer := EscapeString(Handle, StrFrom, ConSettings, True);
@@ -268,7 +270,7 @@ begin
   {$ENDIF}
 end;
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
-  const Value: ZAnsiString; ConSettings: PZConSettings; WasEncoded: Boolean = False): ZAnsiString;
+  const Value: RawByteString; ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 begin
   Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(Value, #39);
 end;
@@ -283,7 +285,8 @@ end;
 
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = $ffff; const ZAlias: String = ''; CharWidth: Integer = 1);
+      const CP: Word = $ffff; const ZAlias: String = '';
+      CharWidth: Integer = 1; const ConsistentCP: Boolean = True);
 begin
   SetLength(FCodePages, Length(FCodePages)+1);
   FCodePages[High(FCodePages)].Name := Name;
@@ -292,6 +295,7 @@ begin
   FCodePages[High(FCodePages)].CP := CP;
   FCodePages[High(FCodePages)].CharWidth := CharWidth;
   FCodePages[High(FCodePages)].ZAlias := ZAlias;
+  FCodePages[High(FCodePages)].IsStringFieldCPConsistent := ConsistentCP;
 
   if CP = $ffff then
     FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
@@ -300,7 +304,8 @@ end;
 procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       const CP: Word = $ffff;
-      const ZAlias: String = ''; CharWidth: Integer = 1);
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
 var
   I: Integer;
 begin
@@ -313,6 +318,7 @@ begin
       FCodePages[I].CP := CP;
       FCodePages[I].ZAlias := ZAlias;
       FCodePages[I].CharWidth := CharWidth;
+      FCodePages[I].IsStringFieldCPConsistent := ConsistentCP;
 
       if CP = $ffff then
         FCodePages[I].ZAlias := GetUnicodeCodePageName;

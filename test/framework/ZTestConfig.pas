@@ -233,7 +233,18 @@ implementation
 
 uses ZSysUtils,
   {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}
-  {$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor;
+  {$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor, ZDbcLogging;
+type
+
+  { TZTestLoggingFormatter }
+
+  TZTestLoggingFormatter = class(TZLoggingFormatter)
+  private
+    FCounter: Integer;
+  public
+    function Format(LoggingEvent: TZLoggingEvent) : string; override;
+  end;
+
 
 var
   SQLMonitor : TZSQLMonitor;
@@ -257,6 +268,34 @@ begin
       Result[I] := Temp[I];
   finally
     Temp.Free;
+  end;
+end;
+
+{ TZTestLoggingFormatter }
+
+function TZTestLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): string;
+begin
+  Inc(FCounter);
+  Result := SysUtils.Format('[%10d]', [FCounter]) + ' cat: ';
+  case LoggingEvent.Category of
+    lcConnect: Result := Result + 'Connect';
+    lcDisconnect: Result := Result + 'Disconnect';
+    lcTransaction: Result := Result + 'Transaction';
+    lcExecute: Result := Result + 'Execute';
+    lcPrepStmt: Result := Result + 'Prepare';
+    lcBindPrepStmt: Result := Result + 'Bind prepared';
+    lcExecPrepStmt: Result := Result + 'Execute prepared';
+    lcUnprepStmt: Result := Result + 'Unprepare prepared';
+  else
+    Result := Result + 'Other';
+  end;
+  if LoggingEvent.Protocol <> '' then
+    Result := Result + ', proto: ' + LoggingEvent.Protocol;
+  Result := Result + ', msg: ' + LoggingEvent.Message;
+  if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> '') then
+  begin
+    Result := Result + ', errcode: ' + IntToStr(LoggingEvent.ErrorCode)
+      + ', error: ' + LoggingEvent.Error;
   end;
 end;
 
@@ -569,6 +608,7 @@ begin
   SQLMonitor.FileName := CommandLineSwitches.sqlmonitorfile;
   SQLMonitor.Active := True;
   SQLMonitor.AutoSave := True;
+  SQLMonitor.LoggingFormatter := TZTestLoggingFormatter.Create;
 end;
 
 initialization
@@ -584,9 +624,13 @@ initialization
 finalization
   if Assigned(TestConfig) then
     TestConfig.Free;
-{$IFNDEF FPC}
   if Assigned(SQLMonitor) then
-    SQLMonitor.Free;
-{$ENDIF}
+    begin
+      If Assigned(SQLMonitor.LoggingFormatter) then
+        SQLMonitor.LoggingFormatter.Free;
+       {$IFNDEF FPC}
+       SQLMonitor.Free;
+       {$ENDIF}
+    end;
 end.
 

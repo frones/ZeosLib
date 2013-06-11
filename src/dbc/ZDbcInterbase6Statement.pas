@@ -73,9 +73,9 @@ type
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -182,7 +182,7 @@ end;
     given query; never <code>null</code>
 }
 {$HINTS OFF}
-function TZInterbase6Statement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZInterbase6Statement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 var
   Cursor: AnsiString;
   SQLData: IZResultSQLDA;
@@ -253,7 +253,7 @@ end;
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
 {$HINTS OFF}
-function TZInterbase6Statement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZInterbase6Statement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
@@ -317,7 +317,7 @@ end;
   @see #getMoreResults
 }
 {$HINTS OFF}
-function TZInterbase6Statement.Execute(const SQL: ZAnsiString): Boolean;
+function TZInterbase6Statement.Execute(const SQL: RawByteString): Boolean;
 var
   Cursor: AnsiString;
   SQLData: IZResultSQLDA;

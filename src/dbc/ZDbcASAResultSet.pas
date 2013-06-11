@@ -80,7 +80,7 @@ type
     procedure Open; override;
     procedure PrepareUpdateSQLData; virtual;
     function GetFieldValue(ColumnIndex: Integer): Variant;
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StmtNum: SmallInt; CursorName: AnsiString;
@@ -168,7 +168,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: ZAnsiString; override;
+    function GetString: RawByteString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
     property BlobSize;
@@ -486,7 +486,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.InternalGetString(ColumnIndex: Integer): ZAnsistring;
+function TZASAResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
   CheckClosed;
   CheckColumnConvertion( ColumnIndex, stString);
@@ -1007,7 +1007,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZASABlob.GetString: ZAnsiString;
+function TZASABlob.GetString: RawByteString;
 begin
   ReadBlob;
   Result := inherited GetString;

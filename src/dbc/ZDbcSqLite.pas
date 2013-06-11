@@ -120,7 +120,7 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; override;
   end;
 
 var
@@ -588,7 +588,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZSQLiteConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZSQLiteConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(Value))

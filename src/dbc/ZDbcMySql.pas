@@ -109,7 +109,7 @@ type
     procedure Rollback; override;
 
     function PingServer: Integer; override;
-    function EscapeString(Value: ZAnsiString): ZAnsiString; override;
+    function EscapeString(Value: RawByteString): RawByteString; override;
 
     procedure Open; override;
     procedure Close; override;
@@ -126,7 +126,7 @@ type
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
-    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; override;
+    function GetEscapeString(const Value: RawByteString): RawByteString; override;
   end;
 
 
@@ -474,7 +474,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZMySQLConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
+function TZMySQLConnection.EscapeString(Value: RawByteString): RawByteString;
 begin
   Result := PlainDriver.EscapeString(Self.FHandle,  Value, ConSettings);
 end;
@@ -794,7 +794,7 @@ begin
   Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;
 
-function TZMySQLConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
+function TZMySQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := inherited GetEscapeString(GetPlainDriver.EscapeString(FHandle, Value, ConSettings));
 end;

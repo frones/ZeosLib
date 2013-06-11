@@ -204,7 +204,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
-    function EscapeString(Value: ZAnsiString): ZAnsiString; virtual;
+    function EscapeString(Value: RawByteString): RawByteString; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -230,9 +230,9 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; virtual;
+    function GetBinaryEscapeString(const Value: RawByteString): String; virtual;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
-    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
+    function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
 end;
@@ -286,8 +286,7 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils
-  {$IFDEF WITH_LCONVENCODING}, ZEncoding{$ENDIF}
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
 
 { TZAbstractDriver }
@@ -391,7 +390,7 @@ begin
   Protocols := GetSupportedProtocols;
   for I := Low(Protocols) to High(Protocols) do
   begin
-    Result := StartsWith(Url, Format('zdbc:%s:', [Protocols[I]]));
+    Result := StartsWith(LowerCase(Url), Format('zdbc:%s:', [LowerCase(Protocols[I])]));
     if Result then
       Break;
   end;
@@ -618,6 +617,7 @@ begin
   SetConvertFunctions(ConSettings.CTRL_CP, ConSettings.ClientCodePage.CP,
     ConSettings.PlainConvertFunc, ConSettings.DbcConvertFunc);
   {$ENDIF}
+  ZEncoding.SetConvertFunctions(ConSettings);
 end;
 
 
@@ -695,8 +695,23 @@ begin
   FClientCodePage := Info.Values['codepage'];
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
-  CheckCharEncoding(FClientCodePage, True);
+  ConSettings^.ConvFuncs.ZAnsiToUTF8 := nil;
+  ConSettings^.ConvFuncs.ZUTF8ToAnsi:= nil;
+  ConSettings^.ConvFuncs.ZUTF8ToString:= nil;
+  ConSettings^.ConvFuncs.ZStringToUTF8:= nil;
+  ConSettings^.ConvFuncs.ZAnsiToRaw:= nil;
+  ConSettings^.ConvFuncs.ZRawToAnsi:= nil;
+  ConSettings^.ConvFuncs.ZRawToUTF8:= nil;
+  ConSettings^.ConvFuncs.ZUTF8ToRaw:= nil;
+  ConSettings^.ConvFuncs.ZStringToRaw:= nil;
+  ConSettings^.ConvFuncs.ZRawToString:= nil;
+  ConSettings^.ConvFuncs.ZUnicodeToRaw:= nil;
+  ConSettings^.ConvFuncs.ZRawToUnicode:= nil;
+  ConSettings^.ConvFuncs.ZUnicodeToString:= nil;
+  ConSettings^.ConvFuncs.ZStringToUnicode:= nil;
+
   SetConSettingsFromInfo(Info);
+  CheckCharEncoding(FClientCodePage, True);
 
   FAutoCommit := True;
   FReadOnly := True;
@@ -1088,7 +1103,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZAbstractConnection.EscapeString(Value : ZAnsiString) : ZAnsiString;
+function TZAbstractConnection.EscapeString(Value : RawByteString) : RawByteString;
 begin
   Result := AnsiString(EncodeCString(String(Value)));
 end;
@@ -1300,7 +1315,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZAbstractConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
     Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))
@@ -1330,7 +1345,7 @@ begin
       {$ENDIF}
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
+function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   if GetAutoEncodeStrings then
     if StartsWith(Value, '''') and EndsWith(Value, '''') then

@@ -80,7 +80,7 @@ type
     TempStr: String;
   protected
     procedure Open; override;
-    function InternalGetString(ColumnIndex: Integer): ZAnsistring; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
       SQL: string; Handle: PZMySQLConnect; UseResult: Boolean;
@@ -124,7 +124,7 @@ type
     function bufferasextended(ColumnIndex: Integer):Extended;
 
   protected
-    function InternalGetString(ColumnIndex: Integer): ZAnsistring; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
@@ -372,7 +372,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): ZAnsistring;
+function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 var
   LengthPointer: PULong;
   Length: ULong;
@@ -960,7 +960,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZMySQLPreparedResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
