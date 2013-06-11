@@ -75,11 +75,12 @@ uses ZCompatibility, ZEncoding;
 
 procedure TZAdoPlainDriver.LoadCodePages;
 begin
-  AddCodePage('CP_ADO', 0, ceAnsi, ZDefaultSystemCodePage, '', 1, False);
+  AddCodePage('CP_ADO', 0, ceAnsi, ZDefaultSystemCodePage,'',1, False);
 end;
 
 constructor TZAdoPlainDriver.Create;
 begin
+  LoadCodePages;
 end;
 
 function TZAdoPlainDriver.GetProtocol: string;
