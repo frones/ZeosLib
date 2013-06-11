@@ -316,7 +316,7 @@ begin
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
   sMy_client_Char_Set := String(GetPlainDriver.GetConnectionCharacterSet(FHandle));
-  ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set); //This sets the internal use of Encodings..
+  CheckCharEncoding(sMy_client_Char_Set);
   {EgonHugeist:
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
     before we can change to the CharacterSet we want to have here..

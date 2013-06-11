@@ -500,7 +500,7 @@ begin
   if DefVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := RawByteString(InParamDefaultValues[ParamIndex])
+      Result := ZPlainString(InParamDefaultValues[ParamIndex])
     else
       Result := 'NULL'
   else
@@ -514,7 +514,10 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := GetSQLHexAnsiString(PAnsiChar(RawByteString(SoftVarManager.GetAsString(Value))), Length(RawByteString(SoftVarManager.GetAsString(Value))));
+        begin
+          TempBytes := SoftVarManager.GetAsBytes(Value);
+          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
+        end;
       stString:
         Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
       stUnicodeString:
@@ -1046,7 +1049,10 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := GetSQLHexAnsiString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))), Length(SoftVarManager.GetAsString(Value)));
+        begin
+          TempBytes := SoftVarManager.GetAsBytes(Value);
+          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
+        end;
       stString:
         Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
       stUnicodeString:

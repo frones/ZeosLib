@@ -1116,8 +1116,7 @@ begin
           ParamSqlData.UpdateString(I,
             PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(InParamValues[I]), ConSettings));
       stBytes:
-        ParamSqlData.UpdateBytes(I,
-          StrToBytes(AnsiString(SoftVarManager.GetAsString(InParamValues[I]))));
+        ParamSqlData.UpdateBytes(I, SoftVarManager.GetAsBytes(InParamValues[I]));
       stDate:
         ParamSqlData.UpdateDate(I,
           SoftVarManager.GetAsDateTime(InParamValues[I]));
