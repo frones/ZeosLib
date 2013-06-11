@@ -269,7 +269,7 @@ const
 
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
-  out PlainConvert, DbcConvert: TConvertEncodingFunction);
+  out PlainConvert, DbcConvert: TConvertEncodingFunction); overload;
 {$ELSE}
 
 {$IFDEF WITH_UNICODEFROMLOCALECHARS}
@@ -368,7 +368,7 @@ function ZCompatibleCodePages(const CP1, CP2: Word): Boolean; {$IFDEF WITH_INLIN
   The Results should be as optimal as possible to speed up the behavior
   @param ConSettings a Pointer to the ConnectionSetting
 }
-procedure SetConvertFunctions(ConSettings: PZConSettings);
+procedure SetConvertFunctions(ConSettings: PZConSettings); {$IFDEF WITH_LCONVENCODING}overload;{$ENDIF}
 
 {**
   GetValidatedTextStream the incoming Stream for his given Memory and
@@ -1670,7 +1670,7 @@ begin
       ConSettings^.ConvFuncs.ZUnicodeToRaw := @ZEncoding.UnicodeToUnknownRaw;
     end
     else
-      {$IF defined(Delphi) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)}
+      {$IF (defined(Delphi) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)) and not defined(WITH_LCONVENCODING)}
       if IsFullMultiByteCodePage(ConSettings^.ClientCodePage^.CP) then
       begin
         ConSettings^.ConvFuncs.ZRawToUnicode := @MBCRawToUnicode;
