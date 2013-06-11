@@ -251,6 +251,7 @@ begin
     FAdoConnection.Open(Database, User, Password, -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
     DriverManager.LogMessage(lcConnect, PLainDriver.GetProtocol, LogMessage);
+    if FClientCodePage <> 'CP_ADO' then CheckCharEncoding('CP_ADO', True)
   except
     on E: Exception do
     begin

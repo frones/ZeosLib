@@ -87,7 +87,8 @@ type
     function GetConnectionHandle: PZPostgreSQLConnect;
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
-    function EncodeBinary(const Value: RawByteString): RawByteString;
+    function EncodeBinary(const Value: RawByteString): RawByteString; overload;
+    function EncodeBinary(const Value: TByteDynArray): RawByteString; overload;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
@@ -116,7 +117,8 @@ type
     procedure LoadServerVersion;
     procedure OnPropertiesChange(Sender: TObject); override;
     procedure SetStandardConformingStrings(const Value: Boolean);
-    function EncodeBinary(const Value: RawByteString): RawByteString;
+    function EncodeBinary(const Value: RawByteString): RawByteString; overload;
+    function EncodeBinary(const Value: TByteDynArray): RawByteString; overload;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
@@ -439,6 +441,17 @@ begin
   end;
 end;
 
+{**
+  Encodes a Binary-AnsiString to a PostgreSQL format
+  @param Value the Binary String
+  @result the encoded String
+}
+function TZPostgreSQLConnection.EncodeBinary(const Value: TByteDynArray): RawByteString;
+var Temp: RawByteString;
+begin
+  ZSetString(PAnsiChar(Value), Length(Value), Temp);
+  Result := EncodeBinary(Temp);
+end;
 {**
   Encodes a Binary-AnsiString to a PostgreSQL format
   @param Value the Binary String

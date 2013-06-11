@@ -71,16 +71,16 @@ type
 
 implementation
 
-uses ZCompatibility;
+uses ZCompatibility, ZEncoding;
 
 procedure TZAdoPlainDriver.LoadCodePages;
 begin
-  AddCodePage('Not implemented!', -1);
-   { TODO -oEgonHugeist : Must be completed!!!! }
+  AddCodePage('CP_ADO', 0, ceAnsi, ZDefaultSystemCodePage,'',1, False);
 end;
 
 constructor TZAdoPlainDriver.Create;
 begin
+  LoadCodePages;
 end;
 
 function TZAdoPlainDriver.GetProtocol: string;

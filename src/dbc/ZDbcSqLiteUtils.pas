@@ -85,7 +85,8 @@ procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: RawByteString): RawByteString;
+function EncodeString(Buffer: PAnsiChar; Len: Integer): RawByteString; overload;
+function EncodeString(Value: RawByteString): RawByteString; overload;
 
 {**
   Converts an string from escape PostgreSQL format.
@@ -264,41 +265,42 @@ begin
 end;
 
 
-function NewEncodeString(Value: RawByteString): RawByteString;
+function NewEncodeString(Buffer: PAnsiChar; Len: Integer): RawByteString; overload;
 var
   I: Integer;
-  SrcLength: Integer;
-  SrcBuffer: PAnsiChar;
   ihx : integer;
   shx : ansistring;
 begin
-  SrcLength := Length(Value);
-  SrcBuffer := PAnsiChar(Value);
-  SetLength( Result,3 + SrcLength * 2 );
+  SetLength( Result,3 + Len * 2 );
   Result[1] := 'x'; // set x
   Result[2] := ''''; // set Open Quote
   ihx := 3; // set 1st hex location
-  for I := 1 to SrcLength do
+  for I := 1 to Len do
   begin
-    shx := AnsiString(IntToHex( ord(SrcBuffer^),2 )); // eg. '3E'
+    shx := AnsiString(IntToHex( ord(Buffer^),2 )); // eg. '3E'
     result[ihx] := shx[1]; Inc( ihx,1 ); // copy '3'
     result[ihx] := shx[2]; Inc( ihx,1 ); // copy 'E'
-    Inc( SrcBuffer,1 ); // next byte source location
+    Inc( Buffer,1 ); // next byte source location
   end;
   result[ihx] := ''''; // set Close Quote
 end;
 
+function NewEncodeString(Value: RawByteString): RawByteString; overload;
+begin
+  Result := NewEncodeString(PAnsiChar(Value), Length(Value));
+end;
+
 function NewDecodeString(Value:ansistring):ansistring;
-  var
-    i : integer;
-    srcbuffer : PAnsichar;
-  begin
-    value := copy(value,3,length(value)-4);
-    value := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowercase(value);
-    i := length(value) div 2;
-    srcbuffer := PAnsiChar(value);
-    setlength(result,i);
-    HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
+var
+  i : integer;
+  srcbuffer : PAnsichar;
+begin
+  value := copy(value,3,length(value)-4);
+  value := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowercase(value);
+  i := length(value) div 2;
+  srcbuffer := PAnsiChar(value);
+  setlength(result,i);
+  HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
 end;
 
 {**
@@ -306,7 +308,13 @@ end;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: RawByteString): RawByteString;
+
+function EncodeString(Buffer: PAnsiChar; Len: Integer): RawByteString; overload;
+begin
+  result := NewEncodeString(Buffer, Len);
+end;
+
+function EncodeString(Value: RawByteString): RawByteString; overload;
 begin
   result := NewEncodeString(Value);
 end;
