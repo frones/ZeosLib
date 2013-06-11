@@ -940,7 +940,7 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: AnsiString): TByteDynArray;
-var L: SmallInt;
+var L: Integer;
 begin
   L := Length(Value);
   SetLength(Result, L);
@@ -955,7 +955,7 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: UTF8String): TByteDynArray;
-var L: SmallInt;
+var L: Integer;
 begin
   L := Length(Value);
   SetLength(Result, L);
@@ -968,7 +968,7 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: RawByteString): TByteDynArray;
-var L: SmallInt;
+var L: Integer;
 begin
   L := Length(Value);
   SetLength(Result, L);
@@ -982,7 +982,7 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: WideString): TByteDynArray;
-var L: SmallInt;
+var L: Integer;
 begin
   L := Length(Value)*2;
   SetLength(Result, L);
@@ -996,7 +996,7 @@ end;
 }
 {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
 function StrToBytes(const Value: UnicodeString): TByteDynArray;
-var L: SmallInt;
+var L: Integer;
 begin
   L := Length(Value) * SizeOf(Char);
   SetLength(Result, L);
