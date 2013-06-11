@@ -695,20 +695,6 @@ begin
   FClientCodePage := Info.Values['codepage'];
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
-  ConSettings^.ConvFuncs.ZAnsiToUTF8 := nil;
-  ConSettings^.ConvFuncs.ZUTF8ToAnsi:= nil;
-  ConSettings^.ConvFuncs.ZUTF8ToString:= nil;
-  ConSettings^.ConvFuncs.ZStringToUTF8:= nil;
-  ConSettings^.ConvFuncs.ZAnsiToRaw:= nil;
-  ConSettings^.ConvFuncs.ZRawToAnsi:= nil;
-  ConSettings^.ConvFuncs.ZRawToUTF8:= nil;
-  ConSettings^.ConvFuncs.ZUTF8ToRaw:= nil;
-  ConSettings^.ConvFuncs.ZStringToRaw:= nil;
-  ConSettings^.ConvFuncs.ZRawToString:= nil;
-  ConSettings^.ConvFuncs.ZUnicodeToRaw:= nil;
-  ConSettings^.ConvFuncs.ZRawToUnicode:= nil;
-  ConSettings^.ConvFuncs.ZUnicodeToString:= nil;
-  ConSettings^.ConvFuncs.ZStringToUnicode:= nil;
 
   SetConSettingsFromInfo(Info);
   CheckCharEncoding(FClientCodePage, True);
