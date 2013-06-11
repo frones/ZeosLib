@@ -1370,6 +1370,8 @@ begin
       case Value.VType of
         vtNull:
           Result.VBytes := nil;
+        vtBytes:
+          Result.VBytes := Value.VBytes;
         vtString:
           Result.VBytes := StrToBytes(Value.VString);
         vtAnsiString:
@@ -1677,6 +1679,8 @@ begin
       case Value.VType of
         vtNull:
           Result.VBytes := nil;
+        vtBytes:
+          Result.VBytes := Value.VBytes;
         vtString:
           Result.VBytes := StrToBytes(Value.VString);
         vtAnsiString:
