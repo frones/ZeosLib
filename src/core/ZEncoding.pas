@@ -59,11 +59,10 @@ uses
   Classes,
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
-  {$ELSE}
-    {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
-    Windows,
-    {$IFEND}
   {$ENDIF}
+  {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
+  Windows,
+  {$IFEND}
   ZCompatibility;
 
 const
