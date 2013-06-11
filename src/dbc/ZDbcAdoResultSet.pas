@@ -688,14 +688,14 @@ begin
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
           Result.SetString(GetStatement.GetConnection.GetIZPlainDriver.ZPlainString(WideString(V), ConSettings))
         else
-          Result.SetString(AnsiString(V));
+          Result.SetString(RawByteString(V));
       stUnicodeStream:
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
           Result.SetUnicodeString(WideString(V))
         else
           Result.SetUnicodeString(GetStatement.GetConnection.GetIZPlainDriver.ZDbcUnicodeString(RawByteString(V), ConSettings.CTRL_CP));
       else
-        Result.SetString(AnsiString(V));
+        Result.SetString(RawByteString(V));
     end;
   end;
   if VarIsArray(V) then

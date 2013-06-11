@@ -69,7 +69,8 @@ function ConvertAdoToTypeName(FieldType: SmallInt): string;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertAdoToSqlType(const FieldType: SmallInt;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts a Zeos type into ADO types.
@@ -184,7 +185,8 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertAdoToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertAdoToSqlType(const FieldType: SmallInt;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
     adChar, adVarChar, adBSTR: Result := stString;
