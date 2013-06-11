@@ -392,6 +392,7 @@ begin
     ColumnInfo.ReadOnly := Current.ReadOnly;
     ColumnInfo.Writable := Current.Writable;
     ColumnInfo.DefinitelyWritable := Current.DefinitelyWritable;
+    ColumnInfo.ColumnCodePage := Current.ColumnCodePage;
 
     ToList.Add(ColumnInfo);
   end;

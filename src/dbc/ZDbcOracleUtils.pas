@@ -105,6 +105,7 @@ type
     TypeCode:  ub2;
     Indicator: sb2;
     Blob:      IZBlob;
+    CodePage:  Word;
     _Obj:      POCIObject;
   end;
 

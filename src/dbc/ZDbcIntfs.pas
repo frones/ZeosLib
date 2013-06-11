@@ -850,6 +850,7 @@ type
     function GetColumnDisplaySize(Column: Integer): Integer;
     function GetColumnLabel(Column: Integer): string;
     function GetColumnName(Column: Integer): string;
+    function GetColumnCodePage(const Column: Integer): Word;
     function GetSchemaName(Column: Integer): string;
     function GetPrecision(Column: Integer): Integer;
     function GetScale(Column: Integer): Integer;

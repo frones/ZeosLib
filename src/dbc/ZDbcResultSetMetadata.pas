@@ -91,6 +91,7 @@ type
     FDefinitelyWritable: Boolean;
     FDefaultValue: string;
     FDefaultExpression : string;
+    FColumnCodePage: Word;
   public
     constructor Create;
     function GetColumnTypeName: string;
@@ -120,6 +121,7 @@ type
       write FDefinitelyWritable;
     property DefaultValue: string read FDefaultValue write FDefaultValue;
     property DefaultExpression: string read FDefaultExpression write FDefaultExpression;
+    property ColumnCodePage: Word read FColumnCodePage write FColumnCodePage;
   end;
 
   {** Implements Abstract ResultSet Metadata. }
@@ -169,6 +171,7 @@ type
     function GetColumnDisplaySize(Column: Integer): Integer; virtual;
     function GetColumnLabel(Column: Integer): string; virtual;
     function GetColumnName(Column: Integer): string; virtual;
+    function GetColumnCodePage(const Column: Integer): Word;
     function GetSchemaName(Column: Integer): string; virtual;
     function GetPrecision(Column: Integer): Integer; virtual;
     function GetScale(Column: Integer): Integer; virtual;
@@ -402,6 +405,16 @@ begin
   if not Loaded then
      LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnName;
+end;
+
+{**
+  Get the designated column's codepage.
+  @param column the first column is 1, the second is 2, ...
+  @return schema name or "" if not applicable
+}
+function TZAbstractResultSetMetadata.GetColumnCodePage(const Column: Integer): Word;
+begin
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnCodePage;
 end;
 
 {**

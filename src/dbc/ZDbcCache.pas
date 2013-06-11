@@ -104,6 +104,7 @@ type
     FColumnLengths: array of Integer;
     FColumnOffsets: array of Integer;
     FColumnDefaultExpressions: array of string;
+    FColumnCodePages: array of Word;
     FBuffer: PZRowBuffer;
     FHasBlobs: Boolean;
     FTemp: String;
@@ -252,6 +253,7 @@ begin
   SetLength(FColumnLengths, FColumnCount);
   SetLength(FColumnOffsets, FColumnCount);
   SetLength(FColumnDefaultExpressions, FColumnCount);
+  SetLength(FColumnCodePages, FColumnCount);
   FHasBlobs := False;
 
   for I := 0 to FColumnCount - 1 do
@@ -263,6 +265,7 @@ begin
     FColumnLengths[I] := GetColumnSize(Current);
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
+    FColumnCodePages[I] := Current.ColumnCodePage;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     FColumnsSize:=align(FColumnsSize+1,sizeof(pointer))-1;

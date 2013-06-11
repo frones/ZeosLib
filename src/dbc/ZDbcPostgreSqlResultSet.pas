@@ -257,6 +257,10 @@ begin
 
       FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
+      if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+        ColumnCodePage := ConSettings^.ClientCodePage^.CP
+      else
+        ColumnCodePage := High(Word);
 
       if Precision = 0 then
       begin

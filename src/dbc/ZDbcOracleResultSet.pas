@@ -931,12 +931,18 @@ begin
         CurrentVar.ColType := stUnknown;
     end;
 
-    if (ConSettings.CPType = cCP_UTF16) then
-      case CurrentVar.ColType of
-        stString: CurrentVar.ColType := stUnicodeString;
-        stAsciiStream: if not ( CurrentVar.DataType in [SQLT_LNG]) then
-          CurrentVar.ColType := stUnicodeStream;
-      end;
+    if CurrentVar.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+    begin
+      CurrentVar.CodePage := ConSettings^.ClientCodePage^.CP;
+      if (ConSettings.CPType = cCP_UTF16) then
+        case CurrentVar.ColType of
+          stString: CurrentVar.ColType := stUnicodeString;
+          stAsciiStream: if not ( CurrentVar.DataType in [SQLT_LNG]) then
+            CurrentVar.ColType := stUnicodeStream;
+        end;
+    end
+    else
+      CurrentVar.CodePage := High(Word);
 
 
     InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
@@ -966,7 +972,7 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-
+      ColumnCodePage := CurrentVar.CodePage;
       TempColumnName := nil;
       FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
         @TempColumnName, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle);
@@ -1137,14 +1143,20 @@ begin
       Scale := CurrentVar.Scale;
 
       {Reset the column type which can be changed by user before}
-      if (ColumnType = stUnicodeStream) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
-        ColumnType := stAsciiStream;
-      if (ColumnType = stAsciiStream) and ( Connection.GetConSettings.CPType = cCP_UTF16) then
-        ColumnType := stUnicodeStream;
-      if (ColumnType = stUnicodeString) and not ( Connection.GetConSettings.CPType = cCP_UTF16) then
-        ColumnType := stString;
-      if (ColumnType = stString) and ( Connection.GetConSettings.CPType = cCP_UTF16) then
-        ColumnType := stUnicodeString;
+      if CurrentVar.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+      begin
+        ColumnInfo.ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+        if (ColumnType = stUnicodeStream) and not ( ConSettings^.CPType = cCP_UTF16) then
+          ColumnType := stAsciiStream;
+        if (ColumnType = stAsciiStream) and ( ConSettings^.CPType = cCP_UTF16) then
+          ColumnType := stUnicodeStream;
+        if (ColumnType = stUnicodeString) and not ( ConSettings^.CPType = cCP_UTF16) then
+          ColumnType := stString;
+        if (ColumnType = stString) and ( ConSettings^.CPType = cCP_UTF16) then
+          ColumnType := stUnicodeString;
+      end
+      else
+        ColumnInfo.ColumnCodePage := High(Word);
 
       if ( ColumnType in [stString, stUnicodeString] ) then
       begin

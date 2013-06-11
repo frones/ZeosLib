@@ -695,11 +695,17 @@ begin
       ColumnLabel := ColumnName;
       ColumnType := FieldSqlType;
 
-      case FieldSqlType of
-        stString,
-        stUnicodeString: Precision := GetFieldSize(FieldSqlType, ConSettings,
-          GetFieldLength(I)-4, ConSettings.ClientCodePage.CharWidth, @ColumnDisplaySize, True);
-      end;
+      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+      begin
+        ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+        case FieldSqlType of
+          stString,
+          stUnicodeString: Precision := GetFieldSize(FieldSqlType, ConSettings,
+            GetFieldLength(I)-4, ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
+        end;
+      end
+      else
+        ColumnCodePage := High(Word);
 
       ReadOnly := False;
 

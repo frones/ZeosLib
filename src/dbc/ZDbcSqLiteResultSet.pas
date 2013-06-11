@@ -259,14 +259,21 @@ begin
         ColumnType := ConvertSQLiteTypeToSQLType(ZDbcString(FPlainDriver.column_decltype(FStmtHandle,I-1)),
           FieldPrecision, FieldDecimals, ConSettings.CPType);
       end;
-      if ColumnType = stString then
-        if Zencoding.ZDefaultSystemCodePage = zCP_UTF8 then
-          ColumnDisplaySize := FieldPrecision div 4
-        else
-          ColumnDisplaySize := FieldPrecision div 2;
 
-      if ColumnType = stUnicodeString then
-        ColumnDisplaySize := FieldPrecision div 2;
+      if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+      begin
+        ColumnCodePage := zCP_UTF8;
+        if ColumnType = stString then
+          if Zencoding.ZDefaultSystemCodePage = zCP_UTF8 then
+            ColumnDisplaySize := FieldPrecision div 4
+          else
+            ColumnDisplaySize := FieldPrecision div 2;
+
+        if ColumnType = stUnicodeString then
+          ColumnDisplaySize := FieldPrecision div 2;
+      end
+      else
+        ColumnCodePage := zCP_NONE;
 
       AutoIncrement := False;
       Precision := FieldPrecision;

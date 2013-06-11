@@ -556,56 +556,64 @@ begin
         FieldHandle, FieldFlags, ConSettings.CPType);
     FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
-    if Result.ColumnType in [stString, stUnicodeString] then
-       case PlainDriver.GetFieldCharsetNr(FieldHandle) of
-        1, 84, {Big5}
-        95, 96, {cp932 japanese}
-        19, 85, {euckr}
-        24, 86, {gb2312}
-        38, 87, {gbk}
-        13, 88, {sjis}
-        35, 90, 128..151:  {ucs2}
+
+    if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+    begin
+      Result.ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+      if Result.ColumnType in [stString, stUnicodeString] then
+         case PlainDriver.GetFieldCharsetNr(FieldHandle) of
+          1, 84, {Big5}
+          95, 96, {cp932 japanese}
+          19, 85, {euckr}
+          24, 86, {gb2312}
+          38, 87, {gbk}
+          13, 88, {sjis}
+          35, 90, 128..151:  {ucs2}
+            begin
+              Result.ColumnDisplaySize := (FieldLength div 4);
+              Result.Precision := GetFieldSize(Result.ColumnType, ConSettings,
+                Result.ColumnDisplaySize, 2, nil);
+            end;
+          33, 83, 192..215, { utf8 }
+          97, 98, { eucjpms}
+          12, 91: {ujis}
+            begin
+              Result.ColumnDisplaySize := (FieldLength div 3);
+              Result.Precision := GetFieldSize(Result.ColumnType,
+                ConSettings, Result.ColumnDisplaySize, 3, nil);
+            end;
+          54, 55, 101..124, {utf16}
+          56, 62, {utf16le}
+          60, 61, 160..183, {utf32}
+          45, 46, 224..247: {utf8mb4}
+            begin
+              Result.ColumnDisplaySize := (FieldLength div 4);
+              Result.Precision := GetFieldSize(Result.ColumnType,
+                ConSettings, Result.ColumnDisplaySize, 4, nil);
+            end;
+          else //1-Byte charsets
           begin
-            Result.ColumnDisplaySize := (FieldLength div 4);
-            Result.Precision := GetFieldSize(Result.ColumnType, ConSettings,
-              Result.ColumnDisplaySize, 2, nil);
-          end;
-        33, 83, 192..215, { utf8 }
-        97, 98, { eucjpms}
-        12, 91: {ujis}
-          begin
-            Result.ColumnDisplaySize := (FieldLength div 3);
+            Result.ColumnDisplaySize := FieldLength;
             Result.Precision := GetFieldSize(Result.ColumnType,
-              ConSettings, Result.ColumnDisplaySize, 3, nil);
+              ConSettings, Result.ColumnDisplaySize, 1, nil);
           end;
-        54, 55, 101..124, {utf16}
-        56, 62, {utf16le}
-        60, 61, 160..183, {utf32}
-        45, 46, 224..247: {utf8mb4}
-          begin
-            Result.ColumnDisplaySize := (FieldLength div 4);
-            Result.Precision := GetFieldSize(Result.ColumnType,
-              ConSettings, Result.ColumnDisplaySize, 4, nil);
-          end;
-        else //1-Byte charsets
-        begin
-          Result.ColumnDisplaySize := FieldLength;
-          Result.Precision := GetFieldSize(Result.ColumnType,
-            ConSettings, Result.ColumnDisplaySize, 1, nil);
-        end;
-      end
+        end
+      else
+        Result.Precision := min(MaxBlobSize,FieldLength);
+    end
     else
-      Result.Precision := min(MaxBlobSize,FieldLength);
+      Result.ColumnCodePage := High(Word);
+
     if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING,
       FIELD_TYPE_VAR_STRING] then
       begin
       if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
-        Result.MaxLenghtBytes:=Result.Precision
+        Result.MaxLenghtBytes := Result.Precision
       else
-        Result.MaxLenghtBytes:=PlainDriver.GetFieldMaxLength(FieldHandle);
+        Result.MaxLenghtBytes := PlainDriver.GetFieldMaxLength(FieldHandle);
       end
     else
-      Result.MaxLenghtBytes:=FieldLength;
+      Result.MaxLenghtBytes := FieldLength;
     Result.Scale := PlainDriver.GetFieldDecimals(FieldHandle);
     if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
       or (TIMESTAMP_FLAG and FieldFlags <> 0) then
