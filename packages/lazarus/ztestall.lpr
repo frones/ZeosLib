@@ -121,7 +121,7 @@ end;
 
 function TMyTestRunner.GetShortOpts: string;
 begin
-  Result:=inherited GetShortOpts+'bvcnm';
+  Result:=inherited GetShortOpts+'bvcnm:';
 end;
 
 function TMyTestRunner.GetResultsWriter: TCustomResultsWriter;

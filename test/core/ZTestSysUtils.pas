@@ -148,6 +148,10 @@ begin
  // Incorrect IP - clear string
  IP := '';
  Check(not IsIpAddr(IP), 'ip is ''''');
+
+ // Incorrect IP
+ IP := 'abcd.ddns.com.br';
+ Check(not IsIpAddr(IP), 'abcd.ddns.com.br');
 end;
 
 {**

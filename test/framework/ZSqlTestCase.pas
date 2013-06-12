@@ -556,7 +556,6 @@ begin
       //writeln('create preferprepared');
       TempConfig := TZConnectionConfig.Create(Self, 'preferprepared');
       SetProperty(TempConfig, 'preferprepared', 'True');
-      SetProperty(TempConfig, 'preferpreparedresolver', 'True');
       ConnectionsList.Add(TempConfig);
       TempConfig.ConfigUses:=[cuRealPrepared];
       if ExtendedTest then
