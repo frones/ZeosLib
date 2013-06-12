@@ -138,7 +138,8 @@ implementation
 
 uses
   ZMessages, ZSysUtils, ZDbcUtils, ZDbcMySqlStatement, ZMySqlToken,
-  ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math;
+  ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math,
+  ZEncoding;
 
 { TZMySQLDriver }
 
@@ -316,7 +317,8 @@ begin
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
   sMy_client_Char_Set := String(GetPlainDriver.GetConnectionCharacterSet(FHandle));
-  CheckCharEncoding(sMy_client_Char_Set);
+  ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
+  ZEncoding.SetConvertFunctions(ConSettings);
   {EgonHugeist:
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
     before we can change to the CharacterSet we want to have here..
