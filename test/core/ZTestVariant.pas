@@ -57,7 +57,12 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, SysUtils, Classes, ZVariant;
+uses
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  {$If defined(MSWINDOWS) and not defined(FPC)}
+  Windows,
+  {$IFEND}
+  ZTestCase, SysUtils, Classes, ZVariant, ZCompatibility;
 
 type
 
@@ -82,39 +87,70 @@ type
   TZDefVarManagerConvertCase = class(TZGenericTestCase)
   private
     FManager: IZVariantManager;
+    FConSettings: PZConSettings;
   protected
+    FNotEqualClientCP: Word;
     property Manager: IZVariantManager read FManager write FManager;
+    property ConSettings: PZConSettings read FConSettings write FConSettings;
 
     procedure SetUp; override;
     procedure TearDown; override;
+
+    procedure Test_AnsiStringFromString;
+    procedure Test_AnsiStringFromUTF8String;
+    procedure Test_AnsiStringFromRawByteString;
     procedure Test_AnsiStringFromUnicodeString;
+
+    procedure Test_UTF8StringFromString;
+    procedure Test_UTF8StringFromAnsiString;
+    procedure Test_UTF8StringFromRawByteString;
     procedure Test_UTF8StringFromUnicodeString;
+
     procedure Test_RawByteStringFromUnicodeString; virtual;
     procedure Test_StringFromUnicodeString;
   published
     procedure TestConvert; virtual;
   end;
 
-  TZClientVarManagerConvertCaseUTF8 = Class(TZDefVarManagerConvertCase)
+  TZClientVarManagerConvertCase = class(TZDefVarManagerConvertCase)
   protected
     procedure SetUp; override;
+    procedure SetupConSettings; virtual;
   published
     procedure TestConvert; override;
+  end;
+
+  TZClientVarManagerConvertCaseUTF8 = Class(TZClientVarManagerConvertCase)
+  protected
+    procedure SetupConSettings; override;
   End;
 
-  TZClientVarManagerConvertCaseWin1252 = Class(TZClientVarManagerConvertCaseUTF8)
+  TZClientVarManagerConvertCaseWin1252 = Class(TZClientVarManagerConvertCase)
   protected
-    procedure SetUp; override;
-    procedure Test_RawByteStringFromUnicodeString; override;
+    procedure SetupConSettings; override;
   End;
 
 const
   UnicodeVar: TZVariant = (VType: vtUnicodeString; VUnicodeString: '¸‰ˆﬂ‚·‡');
+  {$IFDEF UNICOE}
+  UStringVar: TZVariant = (VType: vtString; VString: '¸‰ˆﬂ‚·‡');
+  {$ELSE}
+  String_CPUTF8_Var: TZVariant = (VType: vtString; VString: '√º√§√∂√ü√¢√°√†');
+  String_CP1252_Var: TZVariant = (VType: vtString; VString: '¸‰ˆﬂ‚·‡');
+  {$ENDIF}
   AnsiVar: TZVariant = (VType: vtAnsiString; VAnsiString: '¸‰ˆﬂ‚·‡');
+  UTF8Var: TZVariant = (VType: vtUTF8String; VUTF8String: {$IFDEF WITH_RAWBYTESTRING}'¸‰ˆﬂ‚·‡'{$ELSE}'√º√§√∂√ü√¢√°√†'{$ENDIF});
+  Raw_CPUTF8_Var: TZVariant = (VType: vtRawByteString; VRawByteString: RawByteString('√º√§√∂√ü√¢√°√†'));
+  Raw_CP1252_Var: TZVariant = (VType: vtRawByteString; VRawByteString: RawByteString('¸‰ˆﬂ‚·‡'));
 
 implementation
 
 uses ZEncoding;
+
+var
+  TestVar1, TestVar2: TZVariant;
+  TestConSettings: PZConSettings;
+
 { TZTestVariantCase }
 
 {**
@@ -310,6 +346,9 @@ end;
 procedure TZDefVarManagerConvertCase.SetUp;
 begin
   Manager := DefVarManager;
+  ConSettings := TestConSettings;
+  ConSettings^.CTRL_CP := ZDefaultSystemCodePage;
+  ConSettings^.AutoEncode := False;
 end;
 
 procedure TZDefVarManagerConvertCase.TearDown;
@@ -317,9 +356,85 @@ begin
   Manager := nil;
 end;
 
-procedure TZDefVarManagerConvertCase.Test_AnsiStringFromUnicodeString;
+procedure TZDefVarManagerConvertCase.Test_AnsiStringFromString;
 var
-  TestVar1, TestVar2: TZVariant;
+  StringVar: TZVariant;
+begin
+  {$IFDEF UNICOE}
+  StringVar := UStringVar;
+  {$ELSE}
+  if ConSettings^.AutoEncode then
+    if ConSettings^.CTRL_CP = zCP_UTF8 then
+      StringVar := String_CP1252_Var
+    else
+      StringVar := String_CPUTF8_Var
+  else
+    if ConSettings^.CTRL_CP = zCP_UTF8 then
+      StringVar := String_CPUTF8_Var
+    else
+      StringVar := String_CP1252_Var;
+  {$ENDIF}
+  TestVar1 := Manager.Convert(StringVar, vtAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(AnsiString(StringVar.VString)),
+    PAnsiChar(TestVar1.VAnsiString), 'AnsiString from String');
+  Manager.SetAsAnsiString(TestVar2, TestVar1.VAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar2.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(AnsiString(StringVar.VString)),
+    PAnsiChar(TestVar2.VAnsiString), 'AnsiString');
+  CheckEquals(PAnsiChar(TestVar1.VAnsiString),
+    PAnsiChar(TestVar2.VAnsiString), 'SetAsAnsiString');
+  TestVar1 := Manager.Convert(TestVar2, vtString);
+  CheckEquals(Ord(vtString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(StringVar.VString, TestVar1.VString, 'String');
+end;
+
+procedure TZDefVarManagerConvertCase.Test_AnsiStringFromUTF8String;
+begin
+  TestVar1 := Manager.Convert(UTF8Var, vtAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(ZConvertUTF8ToAnsi(UTF8Var.VUTF8String)),
+    PAnsiChar(TestVar1.VAnsiString), 'AnsiString from UTF8String');
+  Manager.SetAsAnsiString(TestVar2, TestVar1.VAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar2.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(ZConvertUTF8ToAnsi(UTF8Var.VUTF8String)),
+    PAnsiChar(TestVar2.VAnsiString), 'AnsiString');
+  CheckEquals(PAnsiChar(TestVar1.VAnsiString),
+    PAnsiChar(TestVar2.VAnsiString), 'SetAsAnsiString');
+  TestVar1 := Manager.Convert(TestVar2, vtUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(UTF8Var.VUTF8String), PAnsichar(TestVar1.VUTF8String), 'UTF8String');
+end;
+
+procedure TZDefVarManagerConvertCase.Test_AnsiStringFromRawByteString;
+var
+  AManager: IZClientVariantManager;
+  RawVar: TZVariant;
+begin
+  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+    RawVar := Raw_CPUTF8_Var
+  else
+    RawVar := Raw_CP1252_Var;
+  TestVar1 := Manager.Convert(RawVar, vtAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(AnsiVar.VAnsiString),
+    PAnsiChar(TestVar1.VAnsiString), 'AnsiString from RawByteString');
+  Manager.SetAsAnsiString(TestVar2, TestVar1.VAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar2.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(AnsiVar.VAnsiString),
+    PAnsiChar(TestVar2.VAnsiString), 'AnsiString');
+  CheckEquals(PAnsiChar(TestVar1.VAnsiString),
+    PAnsiChar(TestVar2.VAnsiString), 'AnsiString');
+  TestVar1 := Manager.Convert(TestVar2, vtRawByteString);
+  CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(RawVar.VRawByteString, TestVar1.VRawByteString, 'RawByteStringString from AnsiString');
+  if Supports(Manager, IZClientVariantManager, AManager) then
+    CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, FNotEqualClientCP)),
+      PAnsiChar(AManager.GetAsRawByteString(TestVar1, FNotEqualClientCP)),
+        'GetAsRawByteString(TZVariant, CP: '+IntToStr(FNotEqualClientCP));
+end;
+
+procedure TZDefVarManagerConvertCase.Test_AnsiStringFromUnicodeString;
 begin
   TestVar1 := Manager.Convert(UnicodeVar, vtAnsiString);
   CheckEquals(Ord(vtAnsiString), Ord(TestVar1.VType), 'ZVariant-Type');
@@ -333,21 +448,97 @@ begin
     PAnsiChar(TestVar2.VAnsiString), 'AnsiString');
   TestVar1 := Manager.Convert(TestVar2, vtUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString');
+  CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString from AnsiString');
+end;
+
+procedure TZDefVarManagerConvertCase.Test_UTF8StringFromString;
+var
+  StringVar: TZVariant;
+begin
+  {$IFDEF UNICOE}
+  StringVar := UStringVar;
+  {$ELSE}
+  if ConSettings^.AutoEncode then
+    if ConSettings^.CTRL_CP = zCP_UTF8 then
+      StringVar := String_CP1252_Var
+    else
+      StringVar := String_CPUTF8_Var
+  else
+    if ConSettings^.CTRL_CP = zCP_UTF8 then
+      StringVar := String_CPUTF8_Var
+    else
+      StringVar := String_CP1252_Var;
+  {$ENDIF}
+  TestVar1 := Manager.Convert(StringVar, vtUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(ZConvertStringToUTF8(StringVar.VString, ConSettings^.CTRL_CP)),
+    PAnsiChar(TestVar1.VUTF8String), 'UTF8String from String');
+  Manager.SetAsUTF8String(TestVar2, TestVar1.VUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar2.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(ZConvertStringToUTF8(StringVar.VString, ConSettings^.CTRL_CP)),
+    PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
+  CheckEquals(PAnsiChar(TestVar1.VUTF8String),
+    PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
+  TestVar1 := Manager.Convert(TestVar2, vtString);
+  CheckEquals(Ord(vtString), Ord(TestVar1.VType), 'ZVariant-Type');
+  if Supports(Manager, IZClientVariantManager) then //only the ClientVarManager can convert other StringCP's than Get_ACP
+    CheckEquals(StringVar.VString, TestVar1.VString, 'String from UTF8String');
+end;
+
+procedure TZDefVarManagerConvertCase.Test_UTF8StringFromAnsiString;
+begin
+  TestVar1 := Manager.Convert(AnsiVar, vtUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(ZConvertAnsiToUTF8(AnsiVar.VAnsiString)),
+    PAnsiChar(TestVar1.VUTF8String), 'UTF8String from AnsiString');
+  Manager.SetAsUTF8String(TestVar2, TestVar1.VUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar2.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(ZConvertAnsiToUTF8(AnsiVar.VAnsiString)),
+    PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
+  CheckEquals(PAnsiChar(TestVar1.VUTF8String),
+    PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
+  TestVar1 := Manager.Convert(TestVar2, vtAnsiString);
+  CheckEquals(Ord(vtAnsiString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(AnsiVar.VAnsiString, TestVar1.VAnsiString, 'AnsiString from UTF8String');
+end;
+
+procedure TZDefVarManagerConvertCase.Test_UTF8StringFromRawByteString;
+var
+  AManager: IZClientVariantManager;
+  RawVar: TZVariant;
+begin
+  if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
+    RawVar := Raw_CPUTF8_Var
+  else
+    RawVar := Raw_CP1252_Var;
+  TestVar1 := Manager.Convert(RawVar, vtUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(UTF8Var.VUTF8String), PAnsiChar(TestVar1.VAnsiString), 'UTF8String from RawByteString');
+  Manager.SetAsUTF8String(TestVar2, TestVar1.VUTF8String);
+  CheckEquals(Ord(vtUTF8String), Ord(TestVar2.VType), 'ZVariant-Type');
+  CheckEquals(PAnsiChar(UTF8Var.VAnsiString),
+    PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
+  CheckEquals(PAnsiChar(TestVar1.VUTF8String),
+    PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
+  TestVar1 := Manager.Convert(TestVar2, vtRawByteString);
+  CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type');
+  CheckEquals(RawVar.VRawByteString, TestVar1.VRawByteString, 'RawByteStringString from UTf8String');
+  if Supports(Manager, IZClientVariantManager, AManager) then
+    CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, FNotEqualClientCP)),
+      PAnsiChar(AManager.GetAsRawByteString(TestVar1, FNotEqualClientCP)),
+        'GetAsRawByteString(TZVariant, CP: '+IntToStr(FNotEqualClientCP));
 end;
 
 procedure TZDefVarManagerConvertCase.Test_UTF8StringFromUnicodeString;
-var
-  TestVar1, TestVar2: TZVariant;
 begin
   TestVar1 := Manager.Convert(UnicodeVar, vtUTF8String);
   CheckEquals(Ord(vtUTF8String), Ord(TestVar1.VType), 'ZVariant-Type');
   {$IFDEF WITH_RAWBYTESTRING}
   CheckEquals(PAnsiChar(UTF8String(UnicodeVar.VUnicodeString)),
-    PAnsiChar(TestVar1.VUTF8String), 'UTF8String');
+    PAnsiChar(TestVar1.VUTF8String), 'UTF8String from UnicodeString');
   {$ELSE}
   CheckEquals(PAnsiChar(UTF8Encode(UnicodeVar.VUnicodeString)),
-    PAnsiChar(TestVar1.VUTF8String), 'UTF8String');
+    PAnsiChar(TestVar1.VUTF8String), 'UTF8String from UnicodeString');
   {$ENDIF}
   Manager.SetAsUTF8String(TestVar2, TestVar1.VUTF8String);
   CheckEquals(Ord(vtUTF8String), Ord(TestVar2.VType), 'ZVariant-Type');
@@ -360,38 +551,41 @@ begin
   CheckEquals(PAnsiChar(TestVar1.VUTF8String), PAnsiChar(TestVar2.VUTF8String), 'UTF8String');
   TestVar1 := Manager.Convert(TestVar2, vtUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString');
+  CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString from UTF8String');
 end;
 
 procedure TZDefVarManagerConvertCase.Test_RawByteStringFromUnicodeString;
 var
-  TestVar1, TestVar2: TZVariant;
+  AManager: IZClientVariantManager;
 begin
   TestVar1 := Manager.Convert(UnicodeVar, vtRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(PAnsiChar(UTF8Encode(UnicodeVar.VUnicodeString)),
-    PAnsiChar(TestVar1.VRawByteString), 'RawByteString');
+  CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, ConSettings^.ClientCodePage^.CP)),
+    PAnsiChar(TestVar1.VRawByteString), 'RawByteString CP:'+IntToStr(ConSettings^.ClientCodePage^.CP));
   Manager.SetAsRawByteString(TestVar2, TestVar1.VRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar2.VType), 'ZVariant-Type');
-  CheckEquals(PAnsiChar(UTF8Encode(UnicodeVar.VUnicodeString)),
-    PAnsiChar(TestVar2.VRawByteString), 'RawByteString');
+  CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, ConSettings^.ClientCodePage^.CP)),
+    PAnsiChar(TestVar2.VRawByteString), 'RawByteString CP: '+IntToStr(ConSettings^.ClientCodePage^.CP));
   CheckEquals(PAnsiChar(TestVar1.VRawByteString),
-    PAnsiChar(TestVar2.VRawByteString), 'RawByteString');
+    PAnsiChar(TestVar2.VRawByteString), 'RawByteString CP: '+IntToStr(ConSettings^.ClientCodePage^.CP));
   TestVar1 := Manager.Convert(TestVar2, vtUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type');
   CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString');
+
+  if Supports(Manager, IZClientVariantManager, AManager) then
+    CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, FNotEqualClientCP)),
+      PAnsiChar(AManager.GetAsRawByteString(TestVar1, FNotEqualClientCP)),
+        'GetAsRawByteString(TZVariant, CP: '+IntToStr(FNotEqualClientCP));
 end;
 
 procedure TZDefVarManagerConvertCase.Test_StringFromUnicodeString;
-var
-  TestVar1, TestVar2: TZVariant;
 begin
   TestVar1 := Manager.Convert(UnicodeVar, vtString);
   CheckEquals(Ord(vtString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(String(UnicodeVar.VUnicodeString), TestVar1.VString, 'String');
+  CheckEquals(ZConvertUnicodeToString(UnicodeVar.VUnicodeString, ConSettings^.CTRL_CP), TestVar1.VString, 'String');
   Manager.SetAsString(TestVar2, TestVar1.VString);
   CheckEquals(Ord(vtString), Ord(TestVar2.VType), 'ZVariant-Type');
-  CheckEquals(String(UnicodeVar.VUnicodeString), TestVar2.VString, 'String');
+  CheckEquals(ZConvertUnicodeToString(UnicodeVar.VUnicodeString, ConSettings^.CTRL_CP), TestVar2.VString, 'String');
   CheckEquals(TestVar1.VString, TestVar2.VString, 'String');
   TestVar1 := Manager.Convert(TestVar2, vtUnicodeString);
   CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type');
@@ -400,7 +594,17 @@ end;
 
 procedure TZDefVarManagerConvertCase.TestConvert;
 begin
+  Test_AnsiStringFromString;
+  Test_AnsiStringFromUTF8String;
+  try
+    Test_AnsiStringFromRawByteString;
+    Check(False, 'Wrong RawByteString behavior');
+  except
+    Check(True);
+  end;
   Test_AnsiStringFromUnicodeString;
+  Test_UTF8StringFromString;
+  Test_UTF8StringFromAnsiString;
   Test_UTF8StringFromUnicodeString;
   Test_StringFromUnicodeString;
   try
@@ -411,50 +615,71 @@ begin
   end;
 end;
 
-{ TZClientVarManagerConvertCaseUTF8 }
+{ TZClientVarManagerConvertCase }
 
-procedure TZClientVarManagerConvertCaseUTF8.SetUp;
+procedure TZClientVarManagerConvertCase.SetUp;
 begin
-  Manager := TZClientVariantManager.Create(65001);
+  ConSettings := TestConSettings;
+  SetupConSettings;
+  SetConvertFunctions(TestConSettings);
+  Manager := TZClientVariantManager.Create(ConSettings);
 end;
 
-procedure TZClientVarManagerConvertCaseUTF8.TestConvert;
+procedure TZClientVarManagerConvertCase.SetupConSettings;
 begin
+  ConSettings^.AutoEncode := False;
+  ConSettings^.CTRL_CP := ZDefaultSystemCodePage;
+  ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage;
+  ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
+  if ConSettings^.CTRL_CP = zCP_UTF8 then
+    FNotEqualClientCP := 1252
+  else
+    FNotEqualClientCP := zCP_UTF8;
+end;
+
+procedure TZClientVarManagerConvertCase.TestConvert;
+begin
+  Test_AnsiStringFromString;
+  Test_AnsiStringFromUTF8String;
+  Test_AnsiStringFromRawByteString;
   Test_AnsiStringFromUnicodeString;
+  Test_UTF8StringFromString;
+  Test_UTF8StringFromAnsiString;
   Test_UTF8StringFromUnicodeString;
   Test_StringFromUnicodeString;
   Test_RawByteStringFromUnicodeString;
 end;
 
-{ TZClientVarManagerConvertCaseWin1252 }
+{ TZClientVarManagerConvertCaseUTF8 }
 
-procedure TZClientVarManagerConvertCaseWin1252.SetUp;
+procedure TZClientVarManagerConvertCaseUTF8.SetupConSettings;
 begin
-  Manager := TZClientVariantManager.Create(1252);
+  inherited;
+  ConSettings^.CTRL_CP := zCP_UTF8;
+  ConSettings^.ClientCodePage^.CP := zCP_UTF8;
+  FNotEqualClientCP := zCP_WIN1252;
 end;
 
-procedure TZClientVarManagerConvertCaseWin1252.Test_RawByteStringFromUnicodeString;
-var
-  TestVar1, TestVar2: TZVariant;
+{ TZClientVarManagerConvertCaseWin1252 }
+
+procedure TZClientVarManagerConvertCaseWin1252.SetupConSettings;
 begin
-  TestVar1 := Manager.Convert(UnicodeVar, vtRawByteString);
-  CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(PAnsiChar(UnicodeToRaw(UnicodeVar.VUnicodeString, 1252)),
-    PAnsiChar(TestVar1.VRawByteString), 'RawByteString');
-  Manager.SetAsRawByteString(TestVar2, TestVar1.VRawByteString);
-  CheckEquals(Ord(vtRawByteString), Ord(TestVar2.VType), 'ZVariant-Type');
-  CheckEquals(PAnsiChar(UnicodeToRaw(UnicodeVar.VUnicodeString, 1252)),
-    PAnsiChar(TestVar2.VRawByteString), 'RawByteString');
-  CheckEquals(PAnsiChar(TestVar1.VRawByteString),
-    PAnsiChar(TestVar2.VRawByteString), 'RawByteString');
-  TestVar1 := Manager.Convert(TestVar2, vtUnicodeString);
-  CheckEquals(Ord(vtUnicodeString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(UnicodeVar.VUnicodeString, TestVar1.VUnicodeString, 'UnicodeString');
+  inherited;
+  ConSettings^.CTRL_CP := zCP_WIN1252;
+  ConSettings^.ClientCodePage^.CP := zCP_WIN1252;
+  FNotEqualClientCP := zCP_UTF8;
 end;
 
 initialization
+  TestConSettings := New(PZConSettings);
+  TestConSettings^.ClientCodePage := New(PZCodePage);
+
   RegisterTest('core',TZTestVariantCase.Suite);
   RegisterTest('core',TZDefVarManagerConvertCase.Suite);
   RegisterTest('core',TZClientVarManagerConvertCaseUTF8.Suite);
   RegisterTest('core',TZClientVarManagerConvertCaseWin1252.Suite);
+
+finalization
+  Dispose(TestConSettings^.ClientCodePage);
+  Dispose(TestConSettings);
 end.
