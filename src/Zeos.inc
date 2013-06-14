@@ -157,6 +157,20 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
+
+// Compilation directives for Delphi XE4
+{$IFDEF VER250}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in code
+  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
@@ -217,6 +231,17 @@
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
 {$ENDIF}
+
+{$IFDEF DELPHI18_UP}
+  {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
+  {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
+  {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
+  {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
+  {$UNDEF WITH_TVALUEBUFFER}
+
+{$ENDIF}
+
+
 // Debug/release compiler options
 {$D+}
 

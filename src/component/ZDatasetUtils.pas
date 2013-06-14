@@ -892,7 +892,11 @@ begin
           Value1 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(KeyValues[I])));
           Value2 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(RowValues[I])));
           if PartialKey then
+            {$IFDEF DELPHI18_UP}
+            Result := SysUtils.AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+            {$ELSE}
             Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+            {$ENDIF}
           else
             Result := Value1 = Value2
         end
@@ -901,7 +905,11 @@ begin
           Value1 := AnsiString(SoftVarManager.GetAsString(KeyValues[I]));
           Value2 := AnsiString(SoftVarManager.GetAsString(RowValues[I]));
           if PartialKey then
+            {$IFDEF DELPHI18_UP}
+            Result := SysUtils.AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+            {$ELSE}
             Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
+            {$ENDIF}
           else
             Result := SoftVarManager.Compare(KeyValues[I], RowValues[I]) = 0;
         end;
@@ -1099,7 +1107,11 @@ begin
 
         if CaseInsensitive then
           AValue2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(AValue2);
+        {$IFDEF DELPHI18_UP}
+        Result := SysUtils.AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
+        {$ELSE}
         Result := AnsiStrLComp(PAnsiChar(AValue2), PAnsiChar(AValue1), Length(AValue1)) = 0;
+        {$ENDIF}
       end;
 
     end
