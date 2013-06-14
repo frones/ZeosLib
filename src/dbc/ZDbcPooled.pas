@@ -157,7 +157,7 @@ type
     procedure CommitPrepared(const transactionid: string);
     procedure RollbackPrepared(const transactionid: string);
     function PingServer: Integer;
-    function EscapeString(Value : ZAnsiString) : ZAnsiString;
+    function EscapeString(Value : RawByteString) : RawByteString;
     procedure Open;
     procedure Close;
     function IsClosed: Boolean;
@@ -180,9 +180,9 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String;
+    function GetBinaryEscapeString(const Value: RawByteString): String;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
-    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
+    function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
   end;
@@ -494,7 +494,7 @@ begin
   Result := GetConnection.CreateStatementWithParams(Info);
 end;
 
-function TZDbcPooledConnection.EscapeString(Value: ZAnsiString): ZAnsiString;
+function TZDbcPooledConnection.EscapeString(Value: RawByteString): RawByteString;
 begin
   Result := GetConnection.EscapeString(Value);
 end;
@@ -673,7 +673,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZDbcPooledConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZDbcPooledConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;
@@ -683,7 +683,7 @@ begin
   Result := GetConnection.GetEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
+function TZDbcPooledConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   Result := GetConnection.GetEscapeString(Value);
 end;

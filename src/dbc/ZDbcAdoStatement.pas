@@ -400,7 +400,7 @@ begin
       end;
     stBytes:
       begin
-        V := StrToBytes(ZAnsiString(VarToStr(V)));
+        V := StrToBytes(RawByteString(VarToStr(V)));
         if (VarType(V) and varArray) <> 0 then
           S := VarArrayHighBound(V, 1) + 1;
         if S = 0 then V := Null;

@@ -102,7 +102,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PChar);
-    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
+    procedure UpdateString(const Index: Integer; Value: RawByteString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -121,7 +121,7 @@ type
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
-    function GetString(const Index: Integer): ZAnsiString;
+    function GetString(const Index: Integer): RawByteString;
     function GetBytes(const Index: Integer): TByteDynArray;
     function GetDate(const Index: Integer): TDateTime;
     function GetTime(const Index: Integer): TDateTime;
@@ -130,7 +130,7 @@ type
 
     procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord);
     procedure ReadBlobToStream(const Index: Word; Stream: TStream);
-    procedure ReadBlobToString(const Index: Word; var str: ZAnsiString);
+    procedure ReadBlobToString(const Index: Word; var str: RawByteString);
     procedure ReadBlobToVariant(const Index: Word; var Value: Variant);
   end;
 
@@ -183,7 +183,7 @@ type
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PChar);
-    procedure UpdateString(const Index: Integer; Value: ZAnsiString);
+    procedure UpdateString(const Index: Integer; Value: RawByteString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
@@ -203,7 +203,7 @@ type
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
-    function GetString(const Index: Integer): ZAnsiString;
+    function GetString(const Index: Integer): RawByteString;
     function GetBytes(const Index: Integer): TByteDynArray;
     function GetDate(const Index: Integer): TDateTime;
     function GetTime(const Index: Integer): TDateTime;
@@ -212,7 +212,7 @@ type
 
     procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord);
     procedure ReadBlobToStream(const Index: Word; Stream: TStream);
-    procedure ReadBlobToString(const Index: Word; var str: ZAnsiString);
+    procedure ReadBlobToString(const Index: Word; var str: RawByteString);
     procedure ReadBlobToVariant(const Index: Word; var Value: Variant);
   end;
 
@@ -254,7 +254,7 @@ procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
   Cursor: AnsiString; SQL: String);
 
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
-   const SQL: ZAnsiString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+   const SQL: RawByteString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 
 procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
@@ -502,7 +502,7 @@ end;
 }
 function TZASASQLDA.GetFieldName(const Index: Word): string;
 {$IFDEF WITH_RAWBYTESTRING}
-var Temp: ZAnsiString;
+var Temp: RawByteString;
 {$ENDIF}
 begin
   CheckIndex(Index);
@@ -897,7 +897,7 @@ end;
 procedure TZASASQLDA.UpdatePChar(const Index: Integer; Value: PChar);
 var
   BlobSize: Integer;
-  AnsiTmp: ZAnsiString;
+  AnsiTmp: RawByteString;
 begin
   CheckIndex( Index);
   AnsiTmp := FPlainDriver.ZPlainString(Value, FConSettings);
@@ -935,7 +935,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateString(const Index: Integer; Value: ZAnsistring);
+procedure TZASASQLDA.UpdateString(const Index: Integer; Value: RawByteString);
 var
   BlobSize: Integer;
 begin
@@ -1193,7 +1193,7 @@ end;
 }
 function TZASASQLDA.GetBigDecimal(const Index: Integer): Extended;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1237,7 +1237,7 @@ end;
 }
 function TZASASQLDA.GetBoolean(const Index: Integer): Boolean;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1281,7 +1281,7 @@ end;
 }
 function TZASASQLDA.GetByte(const Index: Integer): Byte;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1362,7 +1362,7 @@ end;
 }
 function TZASASQLDA.GetDouble(const Index: Integer): Double;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1406,7 +1406,7 @@ end;
 }
 function TZASASQLDA.GetFloat(const Index: Integer): Single;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1450,7 +1450,7 @@ end;
 }
 function TZASASQLDA.GetInt(const Index: Integer): Integer;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1494,7 +1494,7 @@ end;
 }
 function TZASASQLDA.GetLong(const Index: Integer): Int64;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1562,7 +1562,7 @@ end;
    @param Index the field index
    @return the field String value
 }
-function TZASASQLDA.GetString(const Index: Integer): ZAnsiString;
+function TZASASQLDA.GetString(const Index: Integer): RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1572,12 +1572,12 @@ begin
        Exit;
 
     case sqlType and $FFFE of
-      DT_SMALLINT    : Result := ZAnsiString(IntToStr( PSmallint(sqldata)^));
-      DT_UNSSMALLINT : Result := ZAnsiString(IntToStr( PWord(sqldata)^));
-      DT_INT         : Result := ZAnsiString(IntToStr( PInteger(sqldata)^));
-      DT_UNSINT      : Result := ZAnsiString(IntToStr( PLongWord(sqldata)^));
-      DT_FLOAT       : Result := ZAnsiString(FloatToStr( PSingle(sqldata)^));
-      DT_DOUBLE      : Result := ZAnsiString(FloatToStr( PDouble(sqldata)^));
+      DT_SMALLINT    : Result := RawByteString(IntToStr( PSmallint(sqldata)^));
+      DT_UNSSMALLINT : Result := RawByteString(IntToStr( PWord(sqldata)^));
+      DT_INT         : Result := RawByteString(IntToStr( PInteger(sqldata)^));
+      DT_UNSINT      : Result := RawByteString(IntToStr( PLongWord(sqldata)^));
+      DT_FLOAT       : Result := RawByteString(FloatToStr( PSingle(sqldata)^));
+      DT_DOUBLE      : Result := RawByteString(FloatToStr( PDouble(sqldata)^));
       DT_VARCHAR     :
          begin
            {$IFDEF WITH_RAWBYTESTRING}
@@ -1588,11 +1588,11 @@ begin
            {$ENDIF}
          end;
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
-      DT_TIMESTAMP_STRUCT : Result := ZAnsiString(DateToStr( GetTimestamp( Index)));
-      DT_TINYINT     : Result := ZAnsiString(IntToStr( PByte(sqldata)^));
-      DT_BIT         : Result := ZAnsiString(BoolToStr( ( PByte(sqldata)^ = 1), True));
+      DT_TIMESTAMP_STRUCT : Result := RawByteString(DateToStr( GetTimestamp( Index)));
+      DT_TINYINT     : Result := RawByteString(IntToStr( PByte(sqldata)^));
+      DT_BIT         : Result := RawByteString(BoolToStr( ( PByte(sqldata)^ = 1), True));
       DT_BIGINT,
-      DT_UNSBIGINT   : Result := ZAnsiString(IntToStr( PInt64(sqldata)^));
+      DT_UNSBIGINT   : Result := RawByteString(IntToStr( PInt64(sqldata)^));
     else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
@@ -1607,7 +1607,7 @@ end;
 }
 function TZASASQLDA.GetShort(const Index: Integer): SmallInt;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1693,7 +1693,7 @@ end;
 }
 function TZASASQLDA.GetValue(const Index: Word): Variant;
 var
-  s: ZAnsiString;
+  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1845,7 +1845,7 @@ end;
    @param Index an filed index
    @param Str destination string
 }
-procedure TZASASQLDA.ReadBlobToString(const Index: Word; var Str: ZAnsiString);
+procedure TZASASQLDA.ReadBlobToString(const Index: Word; var Str: RawByteString);
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -2187,7 +2187,7 @@ begin
 end;
 
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
-   const SQL: ZAnsiString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+   const SQL: RawByteString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 begin
   with FASAConnection do
   begin

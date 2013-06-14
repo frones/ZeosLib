@@ -80,7 +80,7 @@ type
     VType: TZVariantType;
     VString: String;
     VAnsiString: AnsiString;
-    VRawByteString: ZAnsiString;
+    VRawByteString: RawByteString;
     VUTF8String: UTF8String;
     VUnicodeString: ZWideString;
     VBytes: TByteDynArray;
@@ -120,7 +120,7 @@ type
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): String;
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
-    function GetAsRawByteString(const Value: TZVariant): ZAnsiString;
+    function GetAsRawByteString(const Value: TZVariant): RawByteString;
     function GetAsUTF8String(const Value: TZVariant): UTF8String;
     function GetAsUnicodeString(const Value: TZVariant): ZWideString;
     function GetAsDateTime(const Value: TZVariant): TDateTime;
@@ -134,7 +134,7 @@ type
     procedure SetAsString(var Value: TZVariant; const Data: String);
     procedure SetAsAnsiString(var Value: TZVariant; const Data: AnsiString);
     procedure SetAsUTF8String(var Value: TZVariant; const Data: UTF8String);
-    procedure SetAsRawByteString(var Value: TZVariant; const Data: ZAnsiString);
+    procedure SetAsRawByteString(var Value: TZVariant; const Data: RawByteString);
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: ZWideString);
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
@@ -188,7 +188,7 @@ type
     function GetAsString(const Value: TZVariant): String;
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
     function GetAsUTF8String(const Value: TZVariant): UTF8String;
-    function GetAsRawByteString(const Value: TZVariant): ZAnsiString;
+    function GetAsRawByteString(const Value: TZVariant): RawByteString;
     function GetAsUnicodeString(const Value: TZVariant): ZWideString;
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
@@ -201,7 +201,7 @@ type
     procedure SetAsString(var Value: TZVariant; const Data: String);
     procedure SetAsAnsiString(var Value: TZVariant; const Data: AnsiString);
     procedure SetAsUTF8String(var Value: TZVariant; const Data: UTF8String);
-    procedure SetAsRawByteString(var Value: TZVariant; const Data: ZAnsiString);
+    procedure SetAsRawByteString(var Value: TZVariant; const Data: RawByteString);
     procedure SetAsUnicodeString(var Value: TZVariant; const Data: ZWideString);
     procedure SetAsDateTime(var Value: TZVariant; Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; Data: Pointer);
@@ -391,7 +391,7 @@ function EncodeUTF8String(const Value: UTF8String): TZVariant;
   @param CP the CoodePage of the Value string.
   @returns an encoded custom variant.
 }
-function EncodeRawByteString(const Value: ZAnsiString): TZVariant;
+function EncodeRawByteString(const Value: RawByteString): TZVariant;
 {**
   Encodes a unicodestring into a custom variant.
   @param Value a unicodestring value to be encoded.
@@ -869,7 +869,7 @@ begin
   Result := Convert(Value, vtUTF8String).VUTF8String;
 end;
 
-function TZDefaultVariantManager.GetAsRawByteString(const Value: TZVariant): ZAnsiString;
+function TZDefaultVariantManager.GetAsRawByteString(const Value: TZVariant): RawByteString;
 begin
   Result := Convert(Value, vtRawByteString).VRawByteString;
 end;
@@ -1002,7 +1002,7 @@ end;
   @param CP the CodePage of the Data string
 }
 procedure TZDefaultVariantManager.SetAsRawByteString(var Value: TZVariant;
-  const Data: ZAnsiString);
+  const Data: RawByteString);
 begin
   Value := EncodeRawByteString(Data);
 end;
@@ -2334,7 +2334,7 @@ end;
   Creates a UTF8String variant.
   @param Value a value to be assigned.
 }
-function EncodeRawByteString(const Value: ZAnsiString): TZVariant;
+function EncodeRawByteString(const Value: RawByteString): TZVariant;
 begin
   Result.VType := vtRawByteString;
   Result.VRawByteString := Value;

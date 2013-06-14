@@ -83,7 +83,7 @@ type
   protected
     procedure Open; override;
     procedure FreeHandle;
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; Handle: Psqlite; StmtHandle: Psqlite_vm;
@@ -381,7 +381,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZSQLiteResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 var
   Temp: PPAnsiChar;
 begin

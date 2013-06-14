@@ -470,6 +470,8 @@ type
                   const index_count: ub4; attr_null_status: POCIInd;
                   attr_null_struct, attr_value: PPointer;
                   attr_tdo: PPOCIType): sword;
+    {ociap.h}
+    function Ping(svchp: POCISvcCtx; errhp: POCIError; mode: ub4 = OCI_DEFAULT): sword;
     {ort.h}
     function TypeIterNew(env: POCIEnv; err: POCIError; const tdo: POCIType;
                       iterator_ort: PPOCITypeIter):sword;
@@ -996,6 +998,8 @@ type
                   const index_count: ub4; attr_null_status: POCIInd;
                   attr_null_struct, attr_value: PPointer;
                   attr_tdo: PPOCIType): sword;
+    {ociap.h}
+    function Ping(svchp: POCISvcCtx; errhp: POCIError; mode: ub4 = OCI_DEFAULT): sword;
     {ort.h}
     function TypeIterNew(env: POCIEnv; err: POCIError; const tdo: POCIType;
                       iterator_ort: PPOCITypeIter):sword;
@@ -1612,7 +1616,8 @@ begin
 
     @OracleAPI.OCIObjectGetAttr   := GetAddress('OCIObjectGetAttr');
     @OracleAPI.OCIObjectSetAttr   := GetAddress('OCIObjectSetAttr');
-
+    {ociap.h}
+    @OracleAPI.OCIPing            := GetAddress('OCIPing');
     {ort.h}
     @OracleAPI.OCITypeIterNew     := GetAddress('OCITypeIterNew');
     @OracleAPI.OCITypeIterFree    := GetAddress('OCITypeIterFree');
@@ -2594,6 +2599,12 @@ begin
   Result := OracleAPI.OCIObjectGetAttr(env, err, instance, null_struct, tdo,
     names, lengths, name_count, indexes, index_count, attr_null_status,
     attr_null_struct, attr_value, attr_tdo);
+end;
+
+function TZOracle9iPlainDriver.Ping(svchp: POCISvcCtx; errhp: POCIError;
+  mode: ub4 = OCI_DEFAULT): sword;
+begin
+  Result := OracleAPI.OCIPing(svchp, errhp, mode);
 end;
 
 function TZOracle9iPlainDriver.ServerAttach(srvhp: POCIServer;

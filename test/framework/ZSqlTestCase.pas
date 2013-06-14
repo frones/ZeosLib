@@ -846,12 +846,12 @@ end;
 function TZAbstractSQLTestCase.GetDBTestString(const Value: String;
   ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False;
   MaxLen: Integer = -1): String;
-var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSE}String{$ENDIF};
+var Temp: {$IFNDEF UNICODE}RawByteString{$ELSE}String{$ENDIF};
 begin
   Result := Value;
   if ConSettings.CPType = cCP_UTF16 then
     if isUTF8Encoded then
-      Temp := UTF8ToString(ZAnsiString(Value))
+      Temp := UTF8ToString(RawByteString(Value))
     else
       Temp := Value
   else
@@ -898,12 +898,12 @@ end;
 
 function TZAbstractSQLTestCase.GetDBValidString(const Value: String;
   ConSettings: PZConSettings; IsUTF8Encoded: Boolean = False): String;
-var Temp: {$IFNDEF UNICODE}ZAnsiString{$ELSe}String{$ENDIF};
+var Temp: {$IFNDEF UNICODE}RawByteString{$ELSe}String{$ENDIF};
 begin
   Result := Value;
   if ConSettings.CPType = cCP_UTF16 then
     if isUTF8Encoded then
-      Temp := UTF8ToString(ZAnsiString(Value))
+      Temp := UTF8ToString(RawByteString(Value))
     else
       Temp := Value
   else
@@ -932,13 +932,13 @@ function TZAbstractSQLTestCase.GetDBTestStream(const Value: String; ConSettings:
   PZConSettings; IsUTF8Encoded: Boolean = False): TStream;
 var
   WS: ZWideString;
-  Ansi: ZAnsiString;
+  Ansi: RawByteString;
 begin
   Result := TMemoryStream.Create;
   if ( ConSettings.CPType = cCP_UTF16 ) then
   begin
     if isUTF8Encoded then
-      WS := UTF8ToString(ZAnsiString(Value))
+      WS := UTF8ToString(RawByteString(Value))
     else
       WS := ZWideString(Value);
     Result.Write(PWideChar(WS)^, Length(WS)*2);
@@ -950,23 +950,23 @@ begin
       ceAnsi:
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
-            Ansi := ZAnsiString(Value)
+            Ansi := RawByteString(Value)
           else
             Ansi := UTF8Encode(WideString(Value))
         else  //Return the expected value to test
           if IsUTF8Encoded then
-            Ansi := ZAnsiString(UTF8ToAnsi(ZAnsiString(Value)))
+            Ansi := RawByteString(UTF8ToAnsi(RawByteString(Value)))
           else
-            Ansi := ZAnsiString(Value);
+            Ansi := RawByteString(Value);
       else //ceUTF8, ceUTF16, ceUTF32
         if ConSettings.AutoEncode then //Revert the expected value to test
           if IsUTF8Encoded then
-            Ansi := ZAnsiString(UTF8ToAnsi(ZAnsiString(Value)))
+            Ansi := RawByteString(UTF8ToAnsi(RawByteString(Value)))
           else
-            Ansi := ZAnsiString(Value)
+            Ansi := RawByteString(Value)
         else
           if IsUTF8Encoded then
-            Ansi := ZAnsiString(Value)
+            Ansi := RawByteString(Value)
           else
             Ansi := UTF8Encode(WideString(Value)); //Return the expected value to test
     end;

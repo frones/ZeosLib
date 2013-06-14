@@ -160,19 +160,22 @@ function GetProcAddress(Module: HMODULE; Proc: PChar): Pointer;
 
 {EgonHugeist:}
 type
-  ZAnsiString = {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ELSE}AnsiString{$ENDIF};
+  {$IFNDEF WITH_RAWBYTESTRING}
+  RawByteString = AnsiString;
+  {$ENDIF}
+
   ZWideString = {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
 
 type
   {declare move or converter functions for the String Types}
-  TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): ZAnsiString;
-  TZRawToAnsi = function (const Src: ZAnsiString; const RawCP: Word): AnsiString;
+  TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): RawByteString;
+  TZRawToAnsi = function (const Src: RawByteString; const RawCP: Word): AnsiString;
   TZAnsiToUTF8 = function (const Src: AnsiString): UTF8String;
   TZUTF8ToAnsi = function (const Src: UTF8String): AnsiString;
-  TZRawToUTF8 = function (const Src: ZAnsiString; const CP: Word): UTF8String;
-  TZUTF8ToRaw = function (const Src: UTF8String; const CP: Word): ZAnsiString;
-  TZRawToString = function (const Src: ZAnsiString; const RawCP: Word): String;
-  TZStringToRaw = function (const Src: String; const RawCP: Word): ZAnsiString;
+  TZRawToUTF8 = function (const Src: RawByteString; const CP: Word): UTF8String;
+  TZUTF8ToRaw = function (const Src: UTF8String; const CP: Word): RawByteString;
+  TZRawToString = function (const Src: RawByteString; const RawCP: Word): String;
+  TZStringToRaw = function (const Src: String; const RawCP: Word): RawByteString;
   TZUTF8ToString = function (const Src: UTF8String): String;
   TZStringToUTF8 = function (const Src: String): UTF8String;
 
@@ -214,21 +217,21 @@ type
   private
     FConSettings: PZConSettings;
   protected
-    function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String; overload;
-    function ZDbcString(const Ansi: ZAnsiString; FromCP: Word): String; overload;
-    function ZDbcString(const Ansi: ZAnsiString; const Encoding: TZCharEncoding = ceDefault): String; overload;
+    function ZDbcString(const Ansi: RawByteString; ConSettings: PZConSettings): String; overload;
+    function ZDbcString(const Ansi: RawByteString; FromCP: Word): String; overload;
+    function ZDbcString(const Ansi: RawByteString; const Encoding: TZCharEncoding = ceDefault): String; overload;
     function ZDbcString(const AStr: ZWideString; const Encoding: TZCharEncoding = ceDefault): String; overload;
-    function ZDbcUnicodeString(const AStr: ZAnsiString): ZWideString; overload;
-    function ZDbcUnicodeString(const AStr: ZAnsiString; const FromCP: Word): ZWideString; overload;
+    function ZDbcUnicodeString(const AStr: RawByteString): ZWideString; overload;
+    function ZDbcUnicodeString(const AStr: RawByteString; const FromCP: Word): ZWideString; overload;
     {$IFDEF WITH_RAWBYTESTRING}
     function ZDbcUnicodeString(const AStr: String; const FromCP: Word): ZWideString; overload;
     {$ENDIF}
-    function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString; overload;
-    function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString; overload;
-    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): ZAnsiString; overload;
-    function ZPlainString(const AStr: WideString; const Encoding: TZCharEncoding = ceDefault): ZAnsiString; overload;
-    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): ZAnsiString; overload;
-    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString; overload;
+    function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
+    function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
+    function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): RawByteString; overload;
+    function ZPlainString(const AStr: WideString; const Encoding: TZCharEncoding = ceDefault): RawByteString; overload;
+    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): RawByteString; overload;
+    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
     function ZPlainUnicodeString(const AStr: String): WideString;
     procedure SetConSettingsFromInfo(Info: TStrings);
     property ConSettings: PZConSettings read FConSettings write FConSettings;
@@ -271,7 +274,7 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
 
 {$IF not Declared(UTF8ToString)}
 {$DEFINE ZUTF8ToString}
-function UTF8ToString(const s: ZAnsiString): ZWideString;
+function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
 
 implementation
@@ -405,10 +408,10 @@ end;
   IS there a need for it? AnsiEncoded adaps automaticaly to WideString
   So what about coming UTF16/32????
 }
-function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString;
+function TZCodePagedObject.ZDbcString(const Ansi: RawByteString;
   ConSettings: PZConSettings): String;
 {$IFDEF WITH_FPC_STRING_CONVERSATION}
-var TempAnsi: ZAnsiString;
+var TempAnsi: RawByteString;
 {$ENDIF}
 begin
   {$IFNDEF UNICODE}
@@ -501,7 +504,7 @@ begin
       end;
 end;
 
-function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString; FromCP: Word): String;
+function TZCodePagedObject.ZDbcString(const Ansi: RawByteString; FromCP: Word): String;
 var
   CurrentCP: Word;
   CurrentEncoding: TZCharEncoding;
@@ -523,7 +526,7 @@ begin
   end;
 end;
 
-function TZCodePagedObject.ZDbcString(const Ansi: ZAnsiString;
+function TZCodePagedObject.ZDbcString(const Ansi: RawByteString;
   const Encoding: TZCharEncoding = ceDefault): String;
 var
   TempEncoding, UseEncoding: TZCharEncoding;
@@ -549,7 +552,7 @@ begin
   end;
 end;
 
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: ZAnsiString): ZWideString;
+function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString): ZWideString;
 begin
   {$IFNDEF WITH_LCONVENCODING}
   Result := AnsiToWide(AStr, FConSettings.ClientCodePage.CP);
@@ -566,7 +569,7 @@ end;
 function TZCodePagedObject.ZDbcString(const AStr: ZWideString; const Encoding: TZCharEncoding = ceDefault): String;
 {$IFDEF WITH_FPC_STRING_CONVERSATION}
 var
-  TempAnsi: ZAnsiString;
+  TempAnsi: RawByteString;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
@@ -589,7 +592,7 @@ begin
   {$ENDIF}
 end;
 
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: ZAnsiString;
+function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString;
   const FromCP: Word): ZWideString;
 begin
   {$IFNDEF WITH_LCONVENCODING}
@@ -643,10 +646,10 @@ EgonHugeist:
      UTF8 instead of Latin1. (SSL-Keys eventualy)
 }
 function TZCodePagedObject.ZPlainString(const AStr: String;
-  ConSettings: PZConSettings): ZAnsiString;
+  ConSettings: PZConSettings): RawByteString;
 {$IFDEF WITH_FPC_STRING_CONVERSATION}
 var
-  TempAnsi: ZAnsiString;
+  TempAnsi: RawByteString;
 {$ENDIF}
 begin
   case ConSettings.ClientCodePage.Encoding of
@@ -733,7 +736,7 @@ begin
   end;
 end;
 
-function TZCodePagedObject.ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString;
+function TZCodePagedObject.ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): RawByteString;
 var
   CurrentCP: Word;
   CurrentEncoding: TZCharEncoding;
@@ -756,7 +759,7 @@ begin
 end;
 
 function TZCodePagedObject.ZPlainString(const AStr: String;
-  const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
+  const Encoding: TZCharEncoding = ceDefault): RawByteString;
 var
   TempEncoding, UseEncoding: TZCharEncoding;
 begin
@@ -782,7 +785,7 @@ begin
 end;
 
 function TZCodePagedObject.ZPlainString(const AStr: WideString;
-  const Encoding: TZCharEncoding = ceDefault): ZAnsiString;
+  const Encoding: TZCharEncoding = ceDefault): RawByteString;
 var
   TempEncoding, UseEncoding: TZCharEncoding;
 begin
@@ -801,7 +804,7 @@ begin
 end;
 
 function TZCodePagedObject.ZPlainString(const AStr: WideString;
-  ConSettings: PZConSettings): ZAnsiString;
+  ConSettings: PZConSettings): RawByteString;
 begin
   {$IFDEF WITH_LCONVENCODING}
   Result := ConSettings.PlainConvertFunc(UTF8Encode(AStr));
@@ -810,7 +813,7 @@ begin
   {$ENDIF}
 end;
 
-function TZCodePagedObject.ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString;
+function TZCodePagedObject.ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): RawByteString;
 var
   CurrentCP: Word;
   CurrentEncoding: TZCharEncoding;
@@ -997,7 +1000,7 @@ end;
 {$ENDIF}
 
 {$IFDEF  ZUTF8ToString}
-function UTF8ToString(const s: ZAnsiString): ZWideString;
+function UTF8ToString(const s: RawByteString): ZWideString;
 begin
   Result := UTF8Decode(s);
 end;

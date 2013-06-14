@@ -75,9 +75,9 @@ type
     constructor Create(PlainDriver: IZSQLitePlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: Psqlite);
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. }
@@ -87,7 +87,7 @@ type
     FPlainDriver: IZSQLitePlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -105,7 +105,7 @@ type
        ColumnCount: Integer; ColumnNames: PPAnsiChar;
        ColumnValues: PPAnsiChar): IZResultSet;
   protected
-    procedure SetASQL(const Value: ZAnsiString); override;
+    procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -184,7 +184,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZSQLiteStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZSQLiteStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 var
   ErrorCode: Integer;
   StmtHandle: Psqlite3_stmt;
@@ -223,7 +223,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZSQLiteStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZSQLiteStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   ErrorCode: Integer;
   ErrorMessage: PAnsichar;
@@ -256,7 +256,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZSQLiteStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZSQLiteStatement.Execute(const SQL: RawByteString): Boolean;
 var
   ErrorCode: Integer;
   StmtHandle: Psqlite_vm;
@@ -338,7 +338,7 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
@@ -358,7 +358,7 @@ begin
             else
                Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
         Result := EncodeString(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
@@ -370,13 +370,13 @@ begin
         Result := AnsiQuotedStr(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), #39);
         {$ENDIF}
       stDate:
-        Result := '''' + ZAnsiString(FormatDateTime('yyyy-mm-dd',
+        Result := '''' + RawByteString(FormatDateTime('yyyy-mm-dd',
           SoftVarManager.GetAsDateTime(Value))) + '''';
       stTime:
-        Result := '''' + ZAnsiString(FormatDateTime('hh:mm:ss',
+        Result := '''' + RawByteString(FormatDateTime('hh:mm:ss',
           SoftVarManager.GetAsDateTime(Value))) + '''';
       stTimestamp:
-        Result := '''' + ZAnsiString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+        Result := '''' + RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
           SoftVarManager.GetAsDateTime(Value))) + '''';
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
@@ -398,7 +398,11 @@ end;
 
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
 begin
+  {$IFDEF DELPHI18_UP}
+  SysUtils.StrDispose(Value);
+  {$ELSE}
   StrDispose(Value);
+  {$ENDIF}
 end;
 
 { TZSQLiteCAPIPreparedStatement }
@@ -432,7 +436,7 @@ begin
   Result := CachedResultSet;
 end;
 
-procedure TZSQLiteCAPIPreparedStatement.SetASQL(const Value: ZAnsiString);
+procedure TZSQLiteCAPIPreparedStatement.SetASQL(const Value: RawByteString);
 begin
   if ( ASQL <> Value ) and Prepared then
     Unprepare;
@@ -457,9 +461,9 @@ var
   Value: TZVariant;
   TempBlob: IZBlob;
   I, L: Integer;
-  TempAnsi: ZAnsiString;
+  TempAnsi: RawByteString;
 
-  Function AsPAnsiChar(Const S : ZAnsiString; Len: Integer) : PAnsiChar;
+  Function AsPAnsiChar(Const S : RawByteString; Len: Integer) : PAnsiChar;
   begin
     Result := {$IFDEF UNICODE}AnsiStrAlloc{$ELSE}StrAlloc{$ENDIF}(Len);
     System.Move(PAnsiChar(S)^, Result^, Len);
@@ -479,10 +483,18 @@ begin
         stBoolean:
           if SoftVarManager.GetAsBoolean(Value) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            {$IFDEF DELPHI18_UP}
+              SysUtils.StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
+            {$ELSE}
               StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
+            {$ENDIF}
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            {$IFDEF DELPHI18_UP}
+              SysUtils.StrNew(PAnsichar('N')), 1, @BindingDestructor);
+            {$ELSE}
               StrNew(PAnsichar('N')), 1, @BindingDestructor);
+            {$ENDIF}
         stByte, stShort, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             SoftVarManager.GetAsInteger(Value));
@@ -494,32 +506,53 @@ begin
             SoftVarManager.GetAsFloat(Value));
         stBytes:
           begin
-            TempAnsi := ZAnsiString(SoftVarManager.GetAsString(Value));
+            TempAnsi := RawByteString(SoftVarManager.GetAsString(Value));
             L := Length(TempAnsi);
             FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
               AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
           end;
         stString:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            {$IFDEF DELPHI18_UP}
+            SysUtils.StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
+            {$ELSE}
             StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
+            {$ENDIF}
               -1, @BindingDestructor);
         stUnicodeString:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+            {$IFDEF DELPHI18_UP}
+            SysUtils.StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
+            {$ELSE}
             StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
+            {$ENDIF}
+
                -1, @BindingDestructor);
         stDate:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            StrNew(PAnsichar(ZAnsiString(FormatDateTime('yyyy-mm-dd',
+            {$IFDEF DELPHI18_UP}
+            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
+             {$ELSE}
+            StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
+            {$ENDIF}
             SoftVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            StrNew(PAnsichar(ZAnsiString(FormatDateTime('hh:mm:ss',
+            {$IFDEF DELPHI18_UP}
+            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
+            {$ELSE}
+            StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
+            {$ENDIF}
             SoftVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            StrNew(PAnsichar(ZAnsiString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            {$IFDEF DELPHI18_UP}
+            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            {$ELSE}
+            StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            {$ENDIF}
             SoftVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         { works equal but selects from data which was written in string format
@@ -544,7 +577,11 @@ begin
                 TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                   TempBlob.Length, TempBlob.WasDecoded, ConSettings);
                 FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+                  {$IFDEF DELPHI18_UP}
+                  SysUtils.StrNew(PAnsiChar(TempAnsi)),
+                  {$ELSE}
                   StrNew(PAnsiChar(TempAnsi)),
+                  {$ENDIF}
                   Length(TempAnsi), @BindingDestructor);
               end
             else

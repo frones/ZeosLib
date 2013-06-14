@@ -268,7 +268,7 @@ begin
         ftBytes, ftVarBytes:
           begin
             {$IFDEF WITH_ASBYTES}
-            TempBytes := StrToBytes(ZAnsiString(FCallableStatement.GetString(I + 1)));
+            TempBytes := StrToBytes(RawByteString(FCallableStatement.GetString(I + 1)));
             SetLength(Bts, High(TempBytes)+1);
             Move(PAnsiChar(TempBytes)^, PAnsiChar(Bts)^, High(TempBytes)+1);
             Param.AsBytes := Bts;

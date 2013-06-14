@@ -69,7 +69,7 @@ type
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
 
-    procedure InternalExecuteStatement(SQL: ZAnsiString);
+    procedure InternalExecuteStatement(SQL: RawByteString);
     procedure FetchResults; virtual;
 
   public
@@ -78,9 +78,9 @@ type
 
     function GetMoreResults: Boolean; override;
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
   end;
 
   {** Implements Prepared SQL Statement. With emulation}
@@ -89,7 +89,7 @@ type
     FPlainDriver: IZDBLibPlainDriver;
   protected
     function GetEscapeString(Value: string): string;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
     function CreateExecStatement: IZStatement; override;
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
@@ -200,8 +200,8 @@ end;
   @param Handle a DBLib connection handle.
   @sql string containing the statements to execute
 }
-procedure TZDBLibStatement.InternalExecuteStatement(SQL: ZAnsiString);
-var Ansi: ZAnsiString;
+procedure TZDBLibStatement.InternalExecuteStatement(SQL: RawByteString);
+var Ansi: RawByteString;
 begin
   if FDBLibConnection.GetProvider = dpMsSQL then
     //This one is to avoid a bug in dblib interface as it drops a single backslash before line end
@@ -332,7 +332,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZDBLibStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZDBLibStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := nil;
   if ASQL <> SQL then
@@ -362,7 +362,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZDBLibStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZDBLibStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
   if ASQL <> SQL then
     ASQL := SQL;
@@ -393,7 +393,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZDBLibStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZDBLibStatement.Execute(const SQL: RawByteString): Boolean;
 begin
   if ASQL <> SQL then
     ASQL := SQL;
@@ -436,7 +436,7 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 begin
   if InParamCount <= ParamIndex then
     Result := 'NULL'
@@ -655,7 +655,7 @@ var
   DatInteger: Integer;
   DatFloat: Single;
   DatDouble: Double;
-  DatString: ZAnsiString;
+  DatString: RawByteString;
   DatMoney: Currency;
   DatDBDATETIME: DBDATETIME;
   DatBytes: TByteDynArray;

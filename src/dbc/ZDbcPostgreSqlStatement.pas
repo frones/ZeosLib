@@ -83,9 +83,9 @@ type
       Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function IsOidAsBlob: Boolean;
   end;
@@ -96,7 +96,7 @@ type
     FPlainDriver: IZPostgreSQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
     function GetConnectionHandle: PZPostgreSQLConnect;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
@@ -106,18 +106,18 @@ type
   {** EgonHugeist: Implements Prepared SQL Statement with AnsiString usage }
   TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
   private
-    FPlanName: ZAnsiString;
-    FExecSQL: ZAnsiString;
+    FPlanName: RawByteString;
+    FExecSQL: RawByteString;
     FCachedQuery: TStrings;
     FPostgreSQLConnection: IZPostgreSQLConnection;
     FPlainDriver: IZPostgreSQLPlainDriver;
     QueryHandle: PZPostgreSQLResult;
 
-    function GetAnsiSQLQuery: ZAnsiString;
+    function GetAnsiSQLQuery: RawByteString;
 
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
   protected
-    function PrepareAnsiSQLParam(ParamIndex: Integer; Escaped: Boolean): ZAnsiString;
+    function PrepareAnsiSQLParam(ParamIndex: Integer; Escaped: Boolean): RawByteString;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -127,9 +127,9 @@ type
 
     procedure Prepare; override;
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -149,10 +149,10 @@ type
     FPQparamLengths: TPQparamLengths;
     FPQparamFormats: TPQparamFormats;
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
-    function ExectuteInternal(const SQL: ZAnsiString; const LogSQL: String;
+    function ExectuteInternal(const SQL: RawByteString; const LogSQL: String;
       const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
   protected
-    procedure SetASQL(const Value: ZAnsiString); override;
+    procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -174,8 +174,8 @@ type
   private
     FPlainDriver: IZPostgreSQLPlainDriver;
     function GetProcedureSql: string;
-    function FillParams(const ASql: String): ZAnsiString;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+    function FillParams(const ASql: String): RawByteString;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
   protected
     function GetConnectionHandle:PZPostgreSQLConnect;
     function GetPlainDriver:IZPostgreSQLPlainDriver;
@@ -186,8 +186,8 @@ type
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -279,7 +279,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZPostgreSQLStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZPostgreSQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
@@ -308,7 +308,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZPostgreSQLStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZPostgreSQLStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
@@ -353,7 +353,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZPostgreSQLStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZPostgreSQLStatement.Execute(const SQL: RawByteString): Boolean;
 var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
@@ -440,7 +440,7 @@ end;
   @return a string representation of the parameter.
 }
 function TZPostgreSQLEmulatedPreparedStatement.PrepareAnsiSQLParam(
-  ParamIndex: Integer): ZAnsiString;
+  ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
@@ -462,9 +462,9 @@ begin
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(ZAnsiString(SoftVarManager.GetAsString(Value)));
+        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(RawByteString(SoftVarManager.GetAsString(Value)));
       stString:
         if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
@@ -480,13 +480,13 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
             ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
-        Result := ZAnsiString(Format('''%s''::date',
+        Result := RawByteString(Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
       stTime:
-        Result := ZAnsiString(Format('''%s''::time',
+        Result := RawByteString(Format('''%s''::time',
           [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
       stTimestamp:
-        Result := ZAnsiString(Format('''%s''::timestamp',
+        Result := RawByteString(Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
             SoftVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -505,7 +505,7 @@ begin
                       Self.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := ZAnsiString(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := RawByteString(IntToStr(WriteTempBlob.GetBlobOid));
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;
@@ -638,7 +638,7 @@ begin
 end;
 
 function TZPostgreSQLPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer;
-  Escaped: Boolean): ZAnsiString;
+  Escaped: Boolean): RawByteString;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
@@ -660,7 +660,7 @@ begin
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := #39+ZAnsiString(SoftVarManager.GetAsString(Value))+#39;
+        Result := #39+RawByteString(SoftVarManager.GetAsString(Value))+#39;
       stBytes:
         Result := FPostgreSQLConnection.EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
@@ -679,22 +679,22 @@ begin
             ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), FPostgreSQLConnection.GetConSettings, True);
       stDate:
         if Escaped then
-          Result := ZAnsiString(Format('''%s''::date',
+          Result := RawByteString(Format('''%s''::date',
             [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+ZAnsiString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+RawByteString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value)))+#39;
       stTime:
         if Escaped then
-          Result := ZAnsiString(Format('''%s''::time',
+          Result := RawByteString(Format('''%s''::time',
             [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+ZAnsiString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+RawByteString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
       stTimestamp:
         if Escaped then
-          Result := ZAnsiString(Format('''%s''::timestamp',
+          Result := RawByteString(Format('''%s''::timestamp',
            [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+ZAnsiString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+RawByteString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -711,7 +711,7 @@ begin
                       FPostgreSQLConnection.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := ZAnsiString(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := RawByteString(IntToStr(WriteTempBlob.GetBlobOid));
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;
@@ -839,7 +839,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZPostgreSQLPreparedStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZPostgreSQLPreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := nil;
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
@@ -865,7 +865,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZPostgreSQLPreparedStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZPostgreSQLPreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
@@ -909,7 +909,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZPostgreSQLPreparedStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZPostgreSQLPreparedStatement.Execute(const SQL: RawByteString): Boolean;
 var
   QueryHandle: PZPostgreSQLResult;
   ResultStatus: TZPostgreSQLExecStatusType;
@@ -1024,13 +1024,13 @@ begin
     Result := NativeResultSet;
 end;
 
-function TZPostgreSQLCAPIPreparedStatement.ExectuteInternal(const SQL: ZAnsiString;
+function TZPostgreSQLCAPIPreparedStatement.ExectuteInternal(const SQL: RawByteString;
   const LogSQL: String; const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
 begin
   case LoggingCategory of
     lcPrepStmt:
       begin
-        Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(ZAnsiString(FPlanName)),
+        Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(RawByteString(FPlanName)),
           PAnsiChar(SQL), InParamCount, nil);
         CheckPostgreSQLError(Connection, FPlainDriver, FPostgreSQLConnection.GetConnectionHandle,
           LoggingCategory, LogSQL, Result);
@@ -1040,7 +1040,7 @@ begin
       end;
     lcExecPrepStmt:
       Result := FPlainDriver.ExecPrepared(FConnectionHandle,
-        PAnsiChar(ZAnsiString(FPLanName)), InParamCount, FPQparamValues,
+        PAnsiChar(RawByteString(FPLanName)), InParamCount, FPQparamValues,
         FPQparamLengths, FPQparamFormats, 0);
     lcUnprepStmt:
       if Assigned(FPostgreSQLConnection.GetConnectionHandle) then
@@ -1055,7 +1055,7 @@ begin
   DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
 end;
 
-procedure TZPostgreSQLCAPIPreparedStatement.SetASQL(const Value: ZAnsiString);
+procedure TZPostgreSQLCAPIPreparedStatement.SetASQL(const Value: RawByteString);
 begin
   if ( ASQL <> Value ) and Prepared then
     Unprepare;
@@ -1083,7 +1083,7 @@ var
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
   ParamIndex: Integer;
-  Temp: ZAnsiString;
+  Temp: RawByteString;
 
   procedure UpdateNull(const Index: Integer);
   begin
@@ -1094,7 +1094,7 @@ var
     FPQparamFormats[Index] := 0;
   end;
 
-  procedure UpdateString(Value: ZAnsiString; const Index: Integer);
+  procedure UpdateString(Value: RawByteString; const Index: Integer);
   begin
     UpdateNull(Index);
 
@@ -1125,12 +1125,12 @@ begin
     begin
       case InParamTypes[ParamIndex] of
         stBoolean:
-          UpdateString(ZAnsiString(UpperCase(BoolToStrEx(SoftVarManager.GetAsBoolean(Value)))), ParamIndex);
+          UpdateString(RawByteString(UpperCase(BoolToStrEx(SoftVarManager.GetAsBoolean(Value)))), ParamIndex);
         stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-          UpdateString(ZAnsiString(SoftVarManager.GetAsString(Value)), ParamIndex);
+          UpdateString(RawByteString(SoftVarManager.GetAsString(Value)), ParamIndex);
         stBytes:
           begin
-            Temp := ZAnsiString(SoftVarManager.GetAsString(Value));
+            Temp := RawByteString(SoftVarManager.GetAsString(Value));
             UpdateBinary(PAnsiChar(Temp), Length(Temp), ParamIndex);
           end;
         stString:
@@ -1141,11 +1141,11 @@ begin
           else
             UpdateString(AnsiString(SoftVarManager.GetAsUnicodeString(Value)), ParamIndex);
         stDate:
-          UpdateString(ZAnsiString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stTime:
-          UpdateString(ZAnsiString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(RawByteString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stTimestamp:
-          UpdateString(ZAnsiString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1162,7 +1162,7 @@ begin
                         FPostgreSQLConnection.GetConnectionHandle, 0, ChunkSize);
                       WriteTempBlob.SetStream(TempStream);
                       WriteTempBlob.WriteBlob;
-                      UpdateString(ZAnsiString(IntToStr(WriteTempBlob.GetBlobOid)), ParamIndex);
+                      UpdateString(RawByteString(IntToStr(WriteTempBlob.GetBlobOid)), ParamIndex);
                     finally
                       WriteTempBlob := nil;
                       TempStream.Free;
@@ -1259,7 +1259,7 @@ begin
   begin
     inherited Unprepare;
     TempSQL := 'DEALLOCATE "'+FPlanName+'";';
-    QueryHandle := ExectuteInternal(ZAnsiString(TempSQL), TempSQL, lcUnprepStmt);
+    QueryHandle := ExectuteInternal(RawByteString(TempSQL), TempSQL, lcUnprepStmt);
     FPlainDriver.Clear(QueryHandle);
     FPostgreSQLConnection.UnregisterPreparedStmtName(FPlanName);
   end;
@@ -1429,7 +1429,7 @@ end;
   @return a string representation of the parameter.
 }
 function TZPostgreSQLCallableStatement.PrepareAnsiSQLParam(
-  ParamIndex: Integer): ZAnsiString;
+  ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
@@ -1451,7 +1451,7 @@ begin
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
         Result := (Connection as IZPostgreSQLConnection).EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
       stString:
@@ -1469,13 +1469,13 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
             ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
-        Result := ZAnsiString(Format('''%s''::date',
+        Result := RawByteString(Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
       stTime:
-        Result := ZAnsiString(Format('''%s''::time',
+        Result := RawByteString(Format('''%s''::time',
           [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
       stTimestamp:
-        Result := ZAnsiString(Format('''%s''::timestamp',
+        Result := RawByteString(Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
             SoftVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -1494,7 +1494,7 @@ begin
                       Self.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := ZAnsiString(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := RawByteString(IntToStr(WriteTempBlob.GetBlobOid));
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;
@@ -1533,7 +1533,7 @@ end;
     given query; never <code>null</code>
 }
 function TZPostgreSQLCallableStatement.ExecuteQuery(
-  const SQL: ZAnsiString): IZResultSet;
+  const SQL: RawByteString): IZResultSet;
 var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
@@ -1596,7 +1596,7 @@ end;
    Fills the parameter (?) tokens with corresponding parameter value
    @return a prepared SQL query for execution
 }
-function TZPostgreSQLCallableStatement.FillParams(const ASql: String): ZAnsiString;
+function TZPostgreSQLCallableStatement.FillParams(const ASql: String): RawByteString;
 var I: Integer;
   Tokens: TStrings;
   ParamIndex: Integer;
@@ -1633,7 +1633,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZPostgreSQLCallableStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZPostgreSQLCallableStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;

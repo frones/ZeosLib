@@ -75,7 +75,7 @@ type
   protected
     procedure Open; override;
     function GetFieldValue(ColumnIndex: Integer): Variant;
-    function InternalGetString(ColumnIndex: Integer): ZAnsiString; override;
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
@@ -123,7 +123,7 @@ type
     function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
-    function GetString: ZAnsiString; override;
+    function GetString: RawByteString; override;
     function GetUnicodeString: WideString; override;
     function GetBytes: TByteDynArray; override;
   end;
@@ -486,7 +486,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.InternalGetString(ColumnIndex: Integer): ZAnsiString;
+function TZInterbase6ResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
   CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
@@ -791,7 +791,7 @@ begin
   Result := inherited GetStream;
 end;
 
-function TZInterbase6Blob.GetString: ZAnsiString;
+function TZInterbase6Blob.GetString: RawByteString;
 begin
   ReadBlob;
   Result := inherited GetString;

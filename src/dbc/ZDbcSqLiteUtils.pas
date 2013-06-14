@@ -85,7 +85,7 @@ procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: Zansistring): Zansistring;
+function EncodeString(Value: RawByteString): RawByteString;
 
 {**
   Converts an string from escape PostgreSQL format.
@@ -264,7 +264,7 @@ begin
 end;
 
 
-function NewEncodeString(Value: Zansistring): Zansistring;
+function NewEncodeString(Value: RawByteString): RawByteString;
 var
   I: Integer;
   SrcLength: Integer;
@@ -306,7 +306,7 @@ end;
   @param Value a regular string.
   @return a string in PostgreSQL escape format.
 }
-function EncodeString(Value: Zansistring): Zansistring;
+function EncodeString(Value: RawByteString): RawByteString;
 begin
   result := NewEncodeString(Value);
 end;

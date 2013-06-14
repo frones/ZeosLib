@@ -437,8 +437,8 @@ type
       override;
     function BookmarkValid(Bookmark: TBookmark): Boolean; override;
 
-    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
-    function GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+    function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
+    function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean): Boolean; override;
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
@@ -506,7 +506,7 @@ end;
 
 procedure EZDatabaseError.SetStatusCode(const Value: String);
 begin
- FStatusCode:=value;
+  FStatusCode := value;
 end;
 
 { TZDataLink }
@@ -1143,7 +1143,12 @@ begin
   // we always use same TDataSet-level buffer, because we can see only one row
   {$IFNDEF WITH_FUNIDIRECTIONAL}
   if IsUniDirectional then
+    {$IFDEF DELPHI18_UP}
+
+    {$ELSE}
     Buffer := Buffers[0];
+    {$ENDIF}
+
   {$ENDIF}
   Result := grOK;
   case GetMode of
@@ -1249,7 +1254,9 @@ begin
   Result := RowBuffer <> nil;
 end;
 
-function TZAbstractRODataset.GetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+function TZAbstractRODataset.GetFieldData(Field: TField;
+  {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
+  {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
   if Field.DataType in [ftWideString] then
@@ -1264,7 +1271,8 @@ end;
   @return <code>True</code> if non-null value was retrieved.
 }
 function TZAbstractRODataset.GetFieldData(Field: TField;
-  Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
+  {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
+    {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
@@ -1329,7 +1337,7 @@ begin
         { Processes all other fields. }
         else
           begin
-            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, PWideChar(Buffer)^,
+            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, Pointer(Buffer)^,
             RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
@@ -3483,6 +3491,18 @@ const
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
+{$IFDEF VER250}
+const
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
+    ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
+    ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftParadoxOle, ftDBaseOle, ftTypedBinary,
+    ftCursor, ftFixedChar, ftWideString, ftLargeint, ftADT, ftArray, ftReference,
+    ftDataSet, ftOraBlob, ftOraClob, ftVariant, ftInterface, ftIDispatch, ftGuid,
+    ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
+    ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
+    ftTimeStampOffset, ftObject, ftSingle );
+{$ELSE}
  const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
@@ -3490,8 +3510,8 @@ const
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);
-
- {$ENDIF}
+{$ENDIF}
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}

@@ -243,7 +243,7 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: ZAnsiString; LogSQL: String; Handle: POCIStmt; ErrorHandle: POCIError;
+  SQL: RawByteString; LogSQL: String; Handle: POCIStmt; ErrorHandle: POCIError;
   PrefetchCount: ub4; ConSettings: PZConSettings);
 
 {**
@@ -806,7 +806,7 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(PlainDriver: IZOraclePlainDriver;
-  SQL: ZAnsiString; LogSQL: String; Handle: POCIStmt;
+  SQL: RawByteString; LogSQL: String; Handle: POCIStmt;
   ErrorHandle: POCIError; PrefetchCount: ub4; ConSettings: PZConSettings);
 var
   Status: Integer;
@@ -888,7 +888,7 @@ var
     FConnection: IZOracleConnection;
     list_attibutes: POCIParam;
     name: PAnsiChar;
-    temp: ZAnsiString;
+    temp: RawByteString;
     len: ub4;
     I: ub2;
     Fld: POCIObject;

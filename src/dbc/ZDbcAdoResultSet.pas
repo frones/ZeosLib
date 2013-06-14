@@ -693,7 +693,7 @@ begin
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
           Result.SetUnicodeString(WideString(V))
         else
-          Result.SetUnicodeString(GetStatement.GetConnection.GetIZPlainDriver.ZDbcUnicodeString(ZAnsiString(V), ConSettings.CTRL_CP));
+          Result.SetUnicodeString(GetStatement.GetConnection.GetIZPlainDriver.ZDbcUnicodeString(RawByteString(V), ConSettings.CTRL_CP));
       else
         Result.SetString(AnsiString(V));
     end;

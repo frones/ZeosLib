@@ -204,7 +204,7 @@ type
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
-    function EscapeString(Value: ZAnsiString): ZAnsiString; virtual;
+    function EscapeString(Value: RawByteString): RawByteString; virtual;
 
     procedure Open; virtual;
     procedure Close; virtual;
@@ -230,9 +230,9 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; virtual;
+    function GetBinaryEscapeString(const Value: RawByteString): String; virtual;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
-    function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
+    function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
 end;
@@ -1088,7 +1088,7 @@ end;
   @param value string that should be escaped
   @return Escaped string
 }
-function TZAbstractConnection.EscapeString(Value : ZAnsiString) : ZAnsiString;
+function TZAbstractConnection.EscapeString(Value : RawByteString) : RawByteString;
 begin
   Result := AnsiString(EncodeCString(String(Value)));
 end;
@@ -1300,7 +1300,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZAbstractConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
   if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
     Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))
@@ -1330,7 +1330,7 @@ begin
       {$ENDIF}
 end;
 
-function TZAbstractConnection.GetEscapeString(const Value: ZAnsiString): ZAnsiString;
+function TZAbstractConnection.GetEscapeString(const Value: RawByteString): RawByteString;
 begin
   if GetAutoEncodeStrings then
     if StartsWith(Value, '''') and EndsWith(Value, '''') then

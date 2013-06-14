@@ -88,9 +88,9 @@ type
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; Info: TStrings; Handle: PZMySQLConnect);
 
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
-    function Execute(const SQL: ZAnsiString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function GetMoreResults: Boolean; override;
 
@@ -105,7 +105,7 @@ type
     FPlainDriver: IZMySQLPlainDriver;
   protected
     function CreateExecStatement: IZStatement; override;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -178,10 +178,10 @@ type
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
-    function GetCallSQL: ZAnsiString;
+    function GetCallSQL: RawByteString;
     function GetOutParamSQL: String;
-    function GetSelectFunctionSQL: ZAnsiString;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+    function GetSelectFunctionSQL: RawByteString;
+    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
     function GetStmtHandle : PZMySqlPrepStmt;
   protected
     procedure ClearResultSets; override;
@@ -195,9 +195,9 @@ type
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: PZMySQLConnect);
 
-    function Execute(const SQL: ZAnsiString): Boolean; override;
-    function ExecuteQuery(const SQL: ZAnsiString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZAnsiString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -300,7 +300,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZMySQLStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZMySQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   ASQL := SQL;
   Result := nil;
@@ -326,7 +326,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZMySQLStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
@@ -386,7 +386,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZMySQLStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZMySQLStatement.Execute(const SQL: RawByteString): Boolean;
 var
   HasResultset : Boolean;
 begin
@@ -485,7 +485,7 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZMySQLEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+function TZMySQLEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
   TempBytes: TByteDynArray;
@@ -500,7 +500,7 @@ begin
   if DefVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := ZAnsiString(InParamDefaultValues[ParamIndex])
+      Result := RawByteString(InParamDefaultValues[ParamIndex])
     else
       Result := 'NULL'
   else
@@ -512,9 +512,9 @@ begin
         else
            Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := GetSQLHexAnsiString(PAnsiChar(ZAnsiString(SoftVarManager.GetAsString(Value))), Length(ZAnsiString(SoftVarManager.GetAsString(Value))));
+        Result := GetSQLHexAnsiString(PAnsiChar(RawByteString(SoftVarManager.GetAsString(Value))), Length(RawByteString(SoftVarManager.GetAsString(Value))));
       stString:
         Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
       stUnicodeString:
@@ -523,21 +523,21 @@ begin
         begin
           DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := ZAnsiString('''' + Format('%0.4d-%0.2d-%0.2d',
+          Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d',
             [AYear, AMonth, ADay]) + '''');
         end;
       stTime:
         begin
           DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := ZAnsiString('''' + Format('%0.2d:%0.2d:%0.2d',
+          Result := RawByteString('''' + Format('%0.2d:%0.2d:%0.2d',
             [AHour, AMinute, ASecond]) + '''');
         end;
       stTimestamp:
         begin
           DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := ZAnsiString('''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
+          Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
             [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''');
         end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -672,7 +672,7 @@ var
   MyType: TMysqlFieldTypes;
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
-  TempAnsi: ZAnsiString;
+  TempAnsi: RawByteString;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
@@ -929,8 +929,8 @@ end;
    Create sql string for calling stored procedure.
    @return a Stored Procedure SQL string
 }
-function TZMySQLCallableStatement.GetCallSQL: ZAnsiString;
-  function GenerateParamsStr(Count: integer): ZAnsiString;
+function TZMySQLCallableStatement.GetCallSQL: RawByteString;
+  function GenerateParamsStr(Count: integer): RawByteString;
   var
     I: integer;
   begin
@@ -945,7 +945,7 @@ function TZMySQLCallableStatement.GetCallSQL: ZAnsiString;
   end;
 
 var
-  InParams: ZAnsiString;
+  InParams: RawByteString;
 begin
   if HasOutParameter then
     InParams := GenerateParamsStr(OutParamCount)
@@ -986,8 +986,8 @@ begin
   Result := 'SELECT '+ OutParams;
 end;
 
-function TZMySQLCallableStatement.GetSelectFunctionSQL: ZAnsiString;
-  function GenerateInParamsStr: ZAnsiString;
+function TZMySQLCallableStatement.GetSelectFunctionSQL: RawByteString;
+  function GenerateInParamsStr: RawByteString;
   var
     I: Integer;
   begin
@@ -999,7 +999,7 @@ function TZMySQLCallableStatement.GetSelectFunctionSQL: ZAnsiString;
         Result := Result+', '+ PrepareAnsiSQLParam(I);
   end;
 var
-  InParams: ZAnsiString;
+  InParams: RawByteString;
 begin
   InParams := GenerateInParamsStr;
   Result := 'SELECT '+ZPlainString(SQL)+'('+InParams+')';
@@ -1017,7 +1017,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLCallableStatement.PrepareAnsiSQLParam(ParamIndex: Integer): ZAnsiString;
+function TZMySQLCallableStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
   TempBytes: TByteDynArray;
@@ -1032,7 +1032,7 @@ begin
   if DefVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := ZAnsiString(InParamDefaultValues[ParamIndex])
+      Result := RawByteString(InParamDefaultValues[ParamIndex])
     else
       Result := 'NULL'
   else
@@ -1044,7 +1044,7 @@ begin
         else
           Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := ZAnsiString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
         Result := GetSQLHexAnsiString(PAnsiChar(AnsiString(SoftVarManager.GetAsString(Value))), Length(SoftVarManager.GetAsString(Value)));
       stString:
@@ -1055,21 +1055,21 @@ begin
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + ZAnsiString(Format('%0.4d-%0.2d-%0.2d',
+        Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d',
           [AYear, AMonth, ADay])) + '''';
       end;
       stTime:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + ZAnsiString(Format('%0.2d:%0.2d:%0.2d',
+        Result := '''' + RawByteString(Format('%0.2d:%0.2d:%0.2d',
           [AHour, AMinute, ASecond])) + '''';
       end;
       stTimestamp:
       begin
         DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + ZAnsiString(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
+        Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond])) + '''';
       end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -1107,7 +1107,7 @@ end;
 procedure TZMySQLCallableStatement.BindInParameters;
 var
   I: integer;
-  ExecQuery: ZAnsiString;
+  ExecQuery: RawByteString;
 begin
   I := 0;
   ExecQuery := '';
@@ -1272,7 +1272,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     given query; never <code>null</code>
 }
-function TZMySQLCallableStatement.ExecuteQuery(const SQL: ZAnsiString): IZResultSet;
+function TZMySQLCallableStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := nil;
   ASQL := SQL;
@@ -1310,7 +1310,7 @@ end;
   @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
     or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
 }
-function TZMySQLCallableStatement.ExecuteUpdate(const SQL: ZAnsiString): Integer;
+function TZMySQLCallableStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
   Result := -1;
   ASQL := SQL;
@@ -1367,7 +1367,7 @@ end;
   @return <code>true</code> if the next result is a <code>ResultSet</code> object;
   <code>false</code> if it is an update count or there are no more results
 }
-function TZMySQLCallableStatement.Execute(const SQL: ZAnsiString): Boolean;
+function TZMySQLCallableStatement.Execute(const SQL: RawByteString): Boolean;
 var
   HasResultset : Boolean;
 begin

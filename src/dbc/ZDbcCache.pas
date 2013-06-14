@@ -2302,7 +2302,7 @@ begin
     stAsciiStream:
       GetBlob(ColumnIndex, IsNull).SetString(ZPlainString(Value, ConSettings, ConSettings.CTRL_CP));
     stBinaryStream:
-      GetBlob(ColumnIndex, IsNull).SetString(ZAnsiString(Value));
+      GetBlob(ColumnIndex, IsNull).SetString(RawByteString(Value));
   end;
 end;
 
