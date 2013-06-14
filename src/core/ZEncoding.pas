@@ -340,6 +340,12 @@ function ZMoveStringToRaw(const Src: String; const StringCP, RawCP: Word): RawBy
 function ZMoveUTF8ToString(const Src: UTF8String; StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZMoveStringToUTF8(const Src: String; const StringCP: Word): UTF8String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 
+{$IFDEF UNICODE}
+function ZConvertSBCRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String; inline;
+function ZConvertStringToSBCRaw(const Src: String; const StringCP, RawCP: Word): RawByteString; inline;
+function ZConvertMBCRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String; inline;
+function ZConvertStringToMBCRaw(const Src: String; const StringCP, RawCP: Word): RawByteString; inline;
+{$ENDIF}
 {$IF defined(Delphi) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)}
 function ZMBCRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 function ZSBCRawToUnicode(const S: RawByteString;
@@ -408,6 +414,28 @@ implementation
 
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
   ZSysUtils;
+
+{$IFDEF UNICODE}
+function ZConvertSBCRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String;
+begin
+  Result := ZSBCRawToUnicode(Src, RawCP);
+end;
+
+function ZConvertStringToSBCRaw(const Src: String; const StringCP, RawCP: Word): RawByteString;
+begin
+  Result := ZUnicodeToSBCRaw(Src, RawCP);
+end;
+
+function ZConvertMBCRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String;
+begin
+  Result := ZMBCRawToUnicode(Src, RawCP);
+end;
+
+function ZConvertStringToMBCRaw(const Src: String; const StringCP, RawCP: Word): RawByteString;
+begin
+  Result := ZUnicodeToSBCRaw(Src, RawCP);
+end;
+{$ENDIF}
 
 {$IF defined(Delphi) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER) or defined(MSWINDOWS)}
 function ZMBCRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
@@ -2034,13 +2062,13 @@ begin
     {$IFDEF UNICODE}
     if IsFullMultiByteCodePage(ConSettings^.ClientCodePage^.CP) then
     begin
-      Consettings^.ConvFuncs.ZStringToRaw := @ZUnicodeToMBCRaw;
-      Consettings^.ConvFuncs.ZRawToString := @ZMBCRawToUnicode;
+      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToSBCRaw;
+      Consettings^.ConvFuncs.ZRawToString := @ZConvertMBCRawToString;
     end
     else
     begin
-      Consettings^.ConvFuncs.ZStringToRaw := @ZUnicodeToSBCRaw;
-      Consettings^.ConvFuncs.ZRawToString := @ZSBCRawToUnicode;
+      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToSBCRaw;
+      Consettings^.ConvFuncs.ZRawToString := @ZConvertSBCRawToString;
     end;
     ConSettings^.ConvFuncs.ZUnicodeToString := @ZConvertUnicodeToString;
     Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicode;
