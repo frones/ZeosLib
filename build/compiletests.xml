@@ -274,7 +274,7 @@
       <arg value="-B"/>
       <arg value="-N${build.dir}"/>
       <arg value="-E${build.dir}"/>
-      <arg value="-U${build.dir};${bpl.dir};${test.dunit.dir};../../test/core/;../../test/plain/;../../test/parsesql/;../../test/dbc/;../../test/component/;../../test/bugreport/"/>
+      <arg value="-U${build.dir};${bpl.dir};../../test/core/;../../test/plain/;../../test/parsesql/;../../test/dbc/;../../test/component/;../../test/bugreport/;../../test/external/;"/>
       <arg value="-LE${bpl.dir}"/>
       <arg value="-LN${bpl.dir}"/>
       <arg value="${project.name}"/>

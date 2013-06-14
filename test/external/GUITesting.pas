@@ -1,7 +1,7 @@
-{ #(@)$Id: GUITesting.pas,v 1.35 2004/10/17 10:39:00 neuromancer Exp $ }
+{ #(@)$Id: GUITesting.pas 35 2011-04-15 18:52:09Z medington $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.35 $ 2001/03/08 uberto
+   @version $Revision: 35 $ 2001/03/08 uberto
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -60,7 +60,7 @@ uses
   Classes;
 
 const
-  rcs_id: string = '#(@)$Id: GUITesting.pas,v 1.35 2004/10/17 10:39:00 neuromancer Exp $';
+  rcs_id: string = '#(@)$Id: GUITesting.pas 35 2011-04-15 18:52:09Z medington $';
 
 {$IFDEF DUNIT_CLX}
 const
@@ -83,18 +83,10 @@ type
     FGUI         :TControl; // this is the control we're testing
     FActionDelay :Integer;
 
-    function  FindControl(Comp: TComponent; const CtlName: string; Addr :Pointer = nil): TControl; overload;
-    function  FindControl(const Name: string; Addr :Pointer = nil): TControl;                      overload;
+    function  FindControl(Comp: TComponent; const CtlName: string; Addrs :Pointer = nil): TControl; overload;
+    function  FindControl(const AName: string; Addrs :Pointer = nil): TControl;                      overload;
 
     function  FindParentWinControl(Control :TControl):TWinControl;
-
-(* I belive this is now dead code - if so remove it by Dec 2003
-   Windows doesn't use shift/alt like this at all so I was assuming this was
-   qt/clx code but it now looks like it's not used there.
-{$IFNDEF DUNIT_CLX}
-    function  ShiftStateToKeyData(ShiftState :TShiftState):Longint;
-{$ENDIF}
-*)
 
 {$IFNDEF DUNIT_CLX}
     { Windows specific keyboard state code }
@@ -130,21 +122,21 @@ type
 
     procedure Tab(n :Integer =1);
 
-    procedure CheckTabTo(Control :TControl; Addr :Pointer = nil); overload;
+    procedure CheckTabTo(Control :TControl; Addrs :Pointer = nil); overload;
     procedure CheckTabTo(ControlName :string);                    overload;
 
     function  GetFocused :TControl;
     function  IsFocused(Control : TControl) : boolean;
-    procedure SetFocus(Control :TControl; Addr :Pointer = nil); overload;
+    procedure SetFocus(Control :TControl; Addrs :Pointer = nil); overload;
     procedure SetFocus(ControlName :string);                    overload;
 
-    procedure CheckFocused(Control :TControl; Addr :Pointer = nil); overload;
+    procedure CheckFocused(Control :TControl; Addrs :Pointer = nil); overload;
     procedure CheckFocused(ControlName :string);                    overload;
 
-    procedure CheckEnabled(Control :TControl; Addr :Pointer = nil);  overload;
+    procedure CheckEnabled(Control :TControl; Addrs :Pointer = nil);  overload;
     procedure CheckEnabled(ControlName :string);                     overload;
 
-    procedure CheckVisible(Control :TControl; Addr :Pointer = nil);  overload;
+    procedure CheckVisible(Control :TControl; Addrs :Pointer = nil);  overload;
     procedure CheckVisible(ControlName :string);                     overload;
     procedure CheckVisible;                                          overload;
 
@@ -157,7 +149,7 @@ implementation
 
 // assertions are always on so we can check for own consistency
 {$ASSERTIONS ON}
-// need stack frames to use CallerAddr
+// need stack frames to use CallerAddr/ReturnAddress
 {$STACKFRAMES ON}
 
 { TGUITestCase }
@@ -181,7 +173,7 @@ begin
   FGUI := nil;
 end;
 
-function TGUITestCase.FindControl(Comp: TComponent; const CtlName: string; Addr :Pointer): TControl;
+function TGUITestCase.FindControl(Comp: TComponent; const CtlName: string; Addrs :Pointer): TControl;
 
   function DoFind(C :TComponent; const CName :string) :TControl;
   var
@@ -203,12 +195,12 @@ function TGUITestCase.FindControl(Comp: TComponent; const CtlName: string; Addr 
     end;
   end;
 begin
-  if Addr = nil then
-    Addr := CallerAddr;
+  if Addrs = nil then
+    Addrs := ReturnAddress;
 
 
   if Trim(CtlName) = '' then
-    Fail('No control name', Addr);
+    Fail('No control name', Addrs);
 
   Result := DoFind(Comp, UpperCase(CtlName));
 
@@ -243,17 +235,17 @@ begin
     QApplication_sendEvent(TWidgetControl(Control).Handle, evMouse);
 {$ELSE}
     P := SmallPoint(Control.Width  div 2, Control.Height div 2);
-    PostMessage(TWinControl(Control).Handle, WM_LBUTTONDOWN, 0, Longint(P));
-    PostMessage(TWinControl(Control).Handle, WM_LBUTTONUP, 0,   Longint(P));
+    PostMessage(TWinControl(Control).Handle, WM_LBUTTONDOWN, 0, MakeLParam(P.x, P.y));
+    PostMessage(TWinControl(Control).Handle, WM_LBUTTONUP, 0,   MakeLParam(P.x, P.y));
 {$ENDIF}
     Sleep(ActionDelay);
   end;
   Application.ProcessMessages;
 end;
 
-function TGUITestCase.FindControl(const Name: string; Addr :Pointer): TControl;
+function TGUITestCase.FindControl(const AName: string; Addrs :Pointer): TControl;
 begin
-  Result := FindControl(Screen.ActiveForm, Name, Addr);
+  Result := FindControl(Screen.ActiveForm, AName, Addrs);
 end;
 
 function TGUITestCase.FindParentWinControl(Control: TControl): TWinControl;
@@ -262,23 +254,6 @@ begin
     Control := Control.Parent;
   Result := TWinControl(Control);
 end;
-
-(* I believe this is now dead code - if so remove this code by Dec 2003
-{$IFNDEF DUNIT_CLX}
-function TGUITestCase.ShiftStateToKeyData(ShiftState :TShiftState):Longint;
-const
-  AltMask = $20000000;
-begin
-  Result := 0;
-  if ssShift in ShiftState then
-    Result := Result or VK_SHIFT;
-  if ssCtrl in ShiftState then
-    Result := Result or VK_CONTROL;
-  if ssAlt in ShiftState then
-    Result := Result or AltMask;
-end;
-{$ENDIF}
-*)
 
 {$ifndef DUNIT_CLX}
 { Windows specific keyboard state code }
@@ -342,7 +317,7 @@ end;
 
 procedure TGUITestCase.Click(ControlName: string);
 begin
-  Click(FindControl(ControlName, CallerAddr));
+  Click(FindControl(ControlName, ReturnAddress));
 end;
 
 procedure TGUITestCase.Click(Control: TControl);
@@ -407,7 +382,7 @@ begin
     SetKeyboardStateDown(TWinControl(Control), ShiftState);
     if ssAlt in ShiftState then
     begin
-      PostMessage(TWinControl(Control).Handle, WM_SYSKEYDOWN, Key, integer($20000000));
+      PostMessage(TWinControl(Control).Handle, WM_SYSKEYDOWN, Key, Windows.LPARAM($20000000));
     end
     else
     begin
@@ -426,11 +401,11 @@ begin
 {$ELSE}
     if ssAlt in ShiftState then
     begin
-      PostMessage(TWinControl(Control).Handle, WM_SYSKEYUP, Key, integer($E0000000));
+      PostMessage(TWinControl(Control).Handle, WM_SYSKEYUP, Key, Windows.LPARAM($E0000000));
     end
     else
     begin
-      PostMessage(TWinControl(Control).Handle, WM_KEYUP, Key, integer($C0000000));
+      PostMessage(TWinControl(Control).Handle, WM_KEYUP, Key, Windows.LPARAM($C0000000));
     end;
     SetKeyboardStateUp( TWinControl(Control), ShiftState );
 {$ENDIF}
@@ -441,7 +416,7 @@ end;
 
 procedure TGUITestCase.EnterKeyInto(ControlName: string; Key: Word; const ShiftState: TShiftState);
 begin
-  EnterKeyInto(FindControl(ControlName, CallerAddr), Key, ShiftState);
+  EnterKeyInto(FindControl(ControlName, ReturnAddress), Key, ShiftState);
 end;
 
 procedure TGUITestCase.EnterKey(Key: Char; const ShiftState: TShiftState);
@@ -466,7 +441,7 @@ end;
 
 procedure TGUITestCase.EnterTextInto(ControlName, Text: string);
 begin
-  EnterTextInto(FindControl(ControlName, CallerAddr), Text);
+  EnterTextInto(FindControl(ControlName, ReturnAddress), Text);
 end;
 
 procedure TGUITestCase.EnterTextInto(Control: TControl; Text: string);
@@ -504,7 +479,7 @@ end;
 
 procedure TGUITestCase.Show(ControlName: string; OnOff: boolean);
 begin
-  Show(FindControl(ControlName, CallerAddr), OnOff);
+  Show(FindControl(ControlName, ReturnAddress), OnOff);
 end;
 
 procedure TGUITestCase.Show(Control: TControl; OnOff: boolean);
@@ -560,23 +535,23 @@ begin
   Result := GetFocused = Control;
 end;
 
-procedure TGUITestCase.CheckTabTo(Control: TControl; Addr :Pointer = nil);
+procedure TGUITestCase.CheckTabTo(Control: TControl; Addrs :Pointer = nil);
 var
   i :Integer;
 begin
-  if Addr = nil then
-    Addr := CallerAddr;
+  if Addrs = nil then
+    Addrs := ReturnAddress;
 
   if not (Control is TWinControl) then
      Fail(
-        Format('%s: Expected a TWinControl, but %s is a %s',
+        Format('Expected a TWinControl, but %s is a %s',
                [Control.Name, Control.ClassName]),
-               Addr
+               Addrs
         );
   if not TWinControl(Control).CanFocus then
       Fail(
         Format('Control %s:%s cannot focus', [Control.Name, Control.ClassName]),
-        Addr
+        Addrs
         );
 
   for i := 1 to Screen.ActiveForm.ComponentCount do
@@ -585,29 +560,29 @@ begin
        EXIT;
      Tab;
   end;
-  Fail(Format('Could not Tab to control "%s"', [Control.Name]), Addr);
+  Fail(Format('Could not Tab to control "%s"', [Control.Name]), Addrs);
 end;
 
 
-procedure TGUITestCase.CheckFocused(Control: TControl; Addr :Pointer);
+procedure TGUITestCase.CheckFocused(Control: TControl; Addrs :Pointer);
 var
   F :TControl;
 begin
   Assert(Control <> nil, 'No control');
 
-  if Addr = nil then
-    Addr := CallerAddr;
+  if Addrs = nil then
+    Addrs := ReturnAddress;
 
   if not (Control is TWinControl) then
     Fail(
         Format('Expected a TWinControl, but %s is a %s',
                [Control.Name, Control.ClassName]),
-        Addr
+        Addrs
         );
   if not TWinControl(Control).CanFocus then
      Fail(
         Format('Control %s cannot focus', [Control.ClassName]),
-        Addr
+        Addrs
         );
   if (Control.Owner <> nil) and (Control.Owner is TCustomForm) then
     F := (Control.Owner as TCustomForm).ActiveControl
@@ -616,71 +591,71 @@ begin
   if  F <> Control then
   begin
     if F <> nil then
-      Fail(Format('Expected control %s to have focus, but %s had it.', [Control.Name, F.Name]), Addr)
+      Fail(Format('Expected control %s to have focus, but %s had it.', [Control.Name, F.Name]), Addrs)
     else
-      Fail(Format('Expected control %s to have focus', [Control.Name]), Addr);
+      Fail(Format('Expected control %s to have focus', [Control.Name]), Addrs);
   end
 end;
 
 procedure TGUITestCase.CheckFocused(ControlName: string);
 begin
-  CheckFocused(FindControl(ControlName, CallerAddr), CallerAddr);
+  CheckFocused(FindControl(ControlName, ReturnAddress), ReturnAddress);
 end;
 
 procedure TGUITestCase.CheckTabTo(ControlName: string);
 begin
-  CheckTabTo(FindControl(ControlName, CallerAddr), CallerAddr);
+  CheckTabTo(FindControl(ControlName, ReturnAddress), ReturnAddress);
 end;
 
-procedure TGUITestCase.CheckEnabled(Control: TControl; Addr :Pointer = nil);
+procedure TGUITestCase.CheckEnabled(Control: TControl; Addrs :Pointer = nil);
 begin
   if not Control.Enabled then
-    Fail(Format('Expected control %s to be enabled', [Control.Name]), CallerAddr);
+    Fail(Format('Expected control %s to be enabled', [Control.Name]), ReturnAddress);
 end;
 
 procedure TGUITestCase.CheckEnabled(ControlName: string);
 begin
-  CheckEnabled(FindControl(ControlName, CallerAddr), CallerAddr);
+  CheckEnabled(FindControl(ControlName, ReturnAddress), ReturnAddress);
 end;
 
-procedure TGUITestCase.SetFocus(Control: TControl; Addr: Pointer);
+procedure TGUITestCase.SetFocus(Control: TControl; Addrs: Pointer);
 begin
-  if Addr = nil then
-    Addr := CallerAddr;
+  if Addrs = nil then
+    Addrs := ReturnAddress;
 
   if not (Control is TWinControl) then
      Fail(
-        Format('%s: Expected a TWinControl, but %s is a %s',
+        Format('Expected a TWinControl, but %s is a %s',
                [Control.Name, Control.ClassName]),
-               Addr
+               Addrs
         );
   if not TWinControl(Control).CanFocus then
       Fail(
         Format('Control %s:%s cannot focus', [Control.Name, Control.ClassName]),
-        Addr
+        Addrs
         );
   TWinControl(Control).SetFocus;
 end;
 
 procedure TGUITestCase.SetFocus(ControlName: string);
 begin
-  SetFocus(FindControl(ControlName, CallerAddr), CallerAddr);
+  SetFocus(FindControl(ControlName, ReturnAddress), ReturnAddress);
 end;
 
-procedure TGUITestCase.CheckVisible(Control: TControl; Addr: Pointer);
+procedure TGUITestCase.CheckVisible(Control: TControl; Addrs: Pointer);
 begin
   if not Control.Visible then
-    Fail(Format('Expected control %s to be visible', [Control.Name]), CallerAddr);
+    Fail(Format('Expected control %s to be visible', [Control.Name]), ReturnAddress);
 end;
 
 procedure TGUITestCase.CheckVisible(ControlName: string);
 begin
-  CheckVisible(FindControl(ControlName, CallerAddr), CallerAddr);
+  CheckVisible(FindControl(ControlName, ReturnAddress), ReturnAddress);
 end;
 
 procedure TGUITestCase.CheckVisible;
 begin
-  CheckVisible(GUI, CallerAddr);
+  CheckVisible(GUI, ReturnAddress);
 end;
 
 end.

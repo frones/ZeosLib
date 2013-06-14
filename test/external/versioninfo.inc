@@ -1,12 +1,12 @@
 ReleaseNo : array[1..3] of Integer
-              = (9,2,1);
-ReleaseStr     = '9.2.1';
+              = (9,4,0);
+ReleaseStr     = '9.4.0';
 ReleaseName    = '';
 ReleaseWhen : array[1..6] of Integer
-              = (2005,09,25,17,30,00);
-ReleaseYear    = 2005;
-ReleaseMonth   = 09;
-ReleaseDay     = 25;
-ReleaseHour    = 17;
-ReleaseMinute  = 30;
+              = (2008,08,21,00,00,00);
+ReleaseYear    = 2008;
+ReleaseMonth   = 08;
+ReleaseDay     = 21;
+ReleaseHour    = 00;
+ReleaseMinute  = 00;
 

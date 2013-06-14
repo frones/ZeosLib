@@ -1,7 +1,7 @@
-{ $Id: TestExtensions.pas,v 1.41 2005/02/11 04:45:51 judc Exp $ }
+{ $Id: TestExtensions.pas 41 2011-04-16 01:13:25Z medington $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.41 $
+   @version $Revision: 41 $
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -43,7 +43,8 @@ interface
 uses
   Classes,
   IniFiles,
-  TestFramework;
+  TestFramework,
+  DUnitConsts;
 
 type
   TMemorySize = Longint;
@@ -59,6 +60,11 @@ type
     FTests: IInterfaceList;
 
     function GetTest: ITest;
+
+    {: Overrides the inherited behavior and executes the
+       decorated test's RunTest instead }
+    procedure RunTest(ATestResult: TTestResult); override;
+
   public
     {: Decorate a test. If no name parameter is given, the decorator
        will be named as the decorated test, with some extra information
@@ -73,10 +79,6 @@ type
     { ITestDecorator implementation }
     function  GetName: string;                  override;
     function  Tests: IInterfaceList;            override;
-
-    {: Overrides the inherited behavior and executes the
-       decorated test's RunTest instead }
-    procedure RunTest(ATestResult: TTestResult); override;
 
     procedure LoadConfiguration(const iniFile :TCustomIniFile; const section :string);  override;
     procedure SaveConfiguration(const iniFile :TCustomIniFile; const section :string);  override;
@@ -114,9 +116,28 @@ type
       Result := TRepeatedTest.Create(ATestArithmetic.Suite, 10);
     end;
     </code> }
-  TRepeatedTest = class(TTestDecorator)
+
+  {: General interface for test decorators}
+  IRepeatedTest = interface(IUnknown)
+  ['{DF3B52FF-2645-42C2-958A-174FF87A19B8}']
+
+    function  GetHaltOnError: Boolean;
+    procedure SetHaltOnError(const Value: Boolean);
+    property  HaltOnError: Boolean read GetHaltOnError write SetHaltOnError;
+  end;
+
+  TRepeatedTest = class(TTestDecorator, IRepeatedTest)
   private
     FTimesRepeat: integer;
+    FHaltOnError: Boolean;
+
+    function  GetHaltOnError: Boolean;
+    procedure SetHaltOnError(const Value: Boolean);
+  protected
+    {: Overrides the behavior of the base class as to execute
+       the test repeatedly. }
+    procedure RunTest(ATestResult: TTestResult);  override;
+
   public
     {: Construct decorator that repeats the decorated test.
        The ITest parameter can hold a single test or a suite. The Name parameter
@@ -135,9 +156,8 @@ type
        @return Iterations * inherited CountEnabledTestCases }
     function  CountEnabledTestCases: integer;     override;
 
-    {: Overrides the behavior of the base class as to execute
-       the test repeatedly. }
-    procedure RunTest(ATestResult: TTestResult);  override;
+  published
+    property  HaltOnError: Boolean read GetHaltOnError write SetHaltOnError;
   end;
 
   {: A test decorator for running tests in a separate thread
@@ -152,8 +172,8 @@ type
   end;
 
   {: A test decorator for running tests while checking memory when a test is
-   succesfull, expecting the memory to be equal before and after the setup,
-   run and teardown.
+   successful, expecting the memory to be equal before and after the SetUp,
+   Run and TearDown.
    This decorator does not function correctly when the tested code
    creates singleton objects or strings that are not set to ''.
    Testing after the normal test run tests the memory with singletons in place.
@@ -166,6 +186,7 @@ type
     </code> }
 
 {$IFNDEF CLR}
+{$IFNDEF MACOS}
   EMemoryError = class(ETestFailure);
 
   TMemoryTestTypes = (mttMemoryTestBeforeNormalTest, mttExecuteNormalTest, mttMemoryTestAfterNormalTest);
@@ -179,11 +200,17 @@ type
     procedure RunTest(ATestResult: TTestResult); override;
   end;
 {$ENDIF}
+{$ENDIF}
 
 implementation
 
 uses
-  {$IFDEF LINUX} Libc, {$ENDIF}
+  {$IFDEF LINUX}
+    Libc,
+  {$ENDIF}
+  {$IFDEF FASTMM}
+     FastMM4,
+  {$ENDIF}
   SysUtils;
 
 { TTestDecorator }
@@ -228,23 +255,23 @@ end;
 procedure TTestDecorator.LoadConfiguration(const iniFile: TCustomIniFile; const section: string);
 var
   i    : integer;
-  Tests: IInterfaceList;
+  LTests: IInterfaceList;
 begin
   inherited LoadConfiguration(iniFile, section);
-  Tests := self.Tests;
-  for i := 0 to Tests.count-1 do
-    (Tests[i] as ITest).LoadConfiguration(iniFile, section + '.' + self.GetName);
+  LTests := self.Tests;
+  for i := 0 to LTests.count-1 do
+    (LTests[i] as ITest).LoadConfiguration(iniFile, section + '.' + self.GetName);
 end;
 
 procedure TTestDecorator.SaveConfiguration(const iniFile: TCustomIniFile; const section: string);
 var
   i    : integer;
-  Tests: IInterfaceList;
+  LTests: IInterfaceList;
 begin
   inherited SaveConfiguration(iniFile, section);
-  Tests := self.Tests;
-  for i := 0 to Tests.count-1 do
-    (Tests[i] as ITest).SaveConfiguration(iniFile, section + '.' + self.GetName);
+  LTests := self.Tests;
+  for i := 0 to LTests.count-1 do
+    (LTests[i] as ITest).SaveConfiguration(iniFile, section + '.' + self.GetName);
 end;
 
 function TTestDecorator.tests: IInterfaceList;
@@ -277,7 +304,7 @@ type
 
 procedure TTestSetupStub.SetUp;
 begin
-  // Delegate the setup to the real implementation
+  // Delegate the set up to the real implementation
   FStubTest.SetUp;
 end;
 
@@ -289,9 +316,6 @@ end;
 
 { TTestSetup }
 
-type
-  TSetupTestResult = class(TTestResult);
-
 constructor TTestSetup.Create(ATest: ITest; AName: string);
 begin
   inherited Create(ATest, AName);
@@ -299,7 +323,7 @@ end;
 
 function TTestSetup.GetName: string;
 begin
-  Result := Format('Setup decorator (%s)', [inherited GetName]);
+  Result := Format(sSetupDecorator, [inherited GetName]);
 end;
 
 { TRepeatedTest }
@@ -321,6 +345,16 @@ begin
   FTimesRepeat := Iterations;
 end;
 
+function TRepeatedTest.GetHaltOnError: Boolean;
+begin
+  Result := FHaltOnError;
+end;
+
+procedure TRepeatedTest.SetHaltOnError(const Value: Boolean);
+begin
+  FHaltOnError := Value;
+end;
+
 function TRepeatedTest.GetName: string;
 begin
   Result := Format('%d x %s', [FTimesRepeat, getTest.Name]);
@@ -329,12 +363,20 @@ end;
 procedure TRepeatedTest.RunTest(ATestResult: TTestResult);
 var
   i: integer;
+  ErrorCount: Integer;
+  FailureCount: integer;
 begin
   assert(assigned(ATestResult));
 
+  ErrorCount := ATestResult.ErrorCount;
+  FailureCount := ATestResult.FailureCount;
+
   for i := 0 to FTimesRepeat - 1 do
   begin
-    if ATestResult.shouldStop then
+    if ATestResult.shouldStop or
+      (Self.HaltOnError and
+      ((ATestResult.ErrorCount > ErrorCount) or
+       (ATestResult.FailureCount > FailureCount))) then
       Break;
     inherited RunTest(ATestResult);
   end;
@@ -342,18 +384,32 @@ end;
 
 { TMemoryTest }
 {$IFNDEF CLR}
+{$IFNDEF MACOS}
 function TMemoryTest.GetName: string;
 begin
-  Result := Format('Test memory of %s', [getTest.Name]);
+  Result := Format(sTestMemory, [getTest.Name]);
 end;
 
 function TMemoryTest.MemoryAllocated: TMemorySize;
 begin
-{$IFDEF CONDITIONALEXPRESSIONS} // Delphi 6+ or Kylix
-   Result := AllocMemSize;
-{$ELSE}
-   Result := GetHeapStatus.TotalAllocated
-{$ENDIF}
+  {$IFDEF FASTMM}
+    Result := FastMM4.FastGetHeapStatus.TotalAllocated;
+  {$ELSE}
+    {$IFDEF CONDITIONALEXPRESSIONS }  // Delphi 6+ or Kylix
+      {$WARN SYMBOL_DEPRECATED OFF}   // Ignore the deprecated warning
+      {$WARN SYMBOL_PLATFORM OFF}     // Ignore the platform warning
+      {$IF CompilerVersion >= 18.0}   // Delphi 2006+
+        Result := GetHeapStatus.TotalAllocated;
+      {$IFEND}
+      {$IF CompilerVersion < 18.0}    // Delphi 2005- (cannot use an $ELSE here)
+        Result := AllocMemSize;
+      {$IFEND}
+      {$WARN SYMBOL_PLATFORM ON}
+      {$WARN SYMBOL_DEPRECATED ON}
+    {$ELSE}
+      Result := GetHeapStatus.TotalAllocated;
+    {$ENDIF}
+  {$ENDIF}
 end;
 
 procedure TMemoryTest.RunTest(ATestResult: TTestResult);
@@ -368,13 +424,14 @@ begin
     Memory := MemoryAllocated - Memory;
 
     if LocalResult.WasSuccessful then
-      CheckEquals(0, Memory, Format('Memory use changed in %d bytes', [Memory]))
+      CheckEquals(0, Memory, Format(sMemoryChanged, [Memory]))
     else
       inherited;
   finally
     LocalResult.Free;
   end;
 end;
+{$ENDIF}
 {$ENDIF}
 
 end.

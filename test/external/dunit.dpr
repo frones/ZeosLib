@@ -1,7 +1,7 @@
-{ $Id: dunit.dpr,v 1.10 2004/04/29 18:52:46 juanco Exp $ }
+{ $Id: dunit.dpr 36 2011-04-15 19:26:16Z medington $ }
 {: DUnit: An XTreme testing framework for Delphi programs.
    @author  The DUnit Group.
-   @version $Revision: 1.10 $
+   @version $Revision: 36 $
 }
 (*
  * The contents of this file are subject to the Mozilla Public
@@ -34,27 +34,34 @@
  *
  *)
 
-program dunit;
+program DUnit;
 
 uses
-  ShareMem,
+{$IFNDEF CLR}
+  {$IFDEF FASTMM}
+    FastMM4,
+  {$ELSE}
+    ShareMem,
+  {$ENDIF}
+{$ENDIF}
   Windows,
   SysUtils,
   Forms,
   Dialogs,
-  GUITestRunner,
+  GUITestRunner in 'GUITestRunner.pas' {GUITestRunner},
   TestFramework in 'TestFramework.pas',
   TextTestRunner in 'TextTestRunner.pas',
   DUnitMainForm in 'DUnitMainForm.pas',
-  DunitAbout in 'DunitAbout.pas' {DunitAboutBox},
+  DUnitAbout in 'DUnitAbout.pas' {DUnitAboutBox},
   TestModules in 'TestModules.pas',
-  TestExtensions in 'TestExtensions.pas';
+  TestExtensions in 'TestExtensions.pas',
+  DUnitConsts in 'DUnitConsts.pas';
 
 {$R *.RES}
 {$R versioninfo.res }
 
 const
-  rcs_id :string = '#(@)$Id: dunit.dpr,v 1.10 2004/04/29 18:52:46 juanco Exp $';
+  rcs_id :string = '#(@)$Id: dunit.dpr 36 2011-04-15 19:26:16Z medington $';
   SwitchChars = ['-','/'];
 
 procedure RunInConsoleMode;
@@ -66,7 +73,7 @@ begin
       Windows.AllocConsole;
     for i := 1 to ParamCount do
     begin
-      if not (ParamStr(i)[1] in SwitchChars) then
+      if not (AnsiChar(ParamStr(i)[1]) in SwitchChars) then
          RegisterModuleTests(ParamStr(i));
     end;
     TextTestRunner.RunRegisteredTests(rxbHaltOnFailures);
@@ -77,16 +84,26 @@ begin
 end;
 
 begin
+{$IFDEF VER140}
+  {$IFDEF FASTMM}
+    // It is Delphi 6 and FASTMM so register its known memory leaks
+    RegisterExpectedMemoryLeak(36, 1); // TWinHelpViewer x 1
+    RegisterExpectedMemoryLeak(20, 3); // TObjectList x 3
+    RegisterExpectedMemoryLeak(20, 3); // Unknown x 3
+    RegisterExpectedMemoryLeak(52, 1); // THelpManager x 1
+  {$ENDIF}
+{$ENDIF}
+
   if FindCmdLineSwitch('c', SwitchChars, true) then
     RunInConsoleMode
   else
   begin
     Application.Initialize;
-    Application.Title := 'DUnit - An Extreme Testing Framework';
+    Application.Title := sTitle;
     if not SysUtils.FindCmdLineSwitch('nologo', ['/','-'], true) then
       DUnitAbout.Splash;
     Application.CreateForm(TDUnitForm, DUnitForm);
-    try
+  try
       Application.Run;
     except
        on e:Exception do

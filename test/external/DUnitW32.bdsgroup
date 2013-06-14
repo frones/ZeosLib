@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <PersonalityInfo>
+    <Option>
+      <Option Name="Personality">Default.Personality</Option>
+      <Option Name="ProjectType"></Option>
+      <Option Name="Version">1.0</Option>
+      <Option Name="GUID">{62F946F4-52E2-42E5-9A1C-D0192235797E}</Option>
+    </Option>
+  </PersonalityInfo>
+  <Default.Personality>
+    
+    
+    
+    <Projects>
+      <Projects Name="DUnitW32.exe">DUnitW32.bdsproj</Projects>
+      <Projects Name="DUnitTestLibW32.dtl">..\tests\DUnitTestLibW32.bdsproj</Projects>
+      <Projects Name="UnitTestsW32.exe">..\tests\UnitTestsW32.bdsproj</Projects>
+      <Projects Name="Targets">DUnitW32.exe DUnitTestLibW32.dtl UnitTestsW32.exe</Projects>
+    </Projects>
+    <Dependencies/>
+  </Default.Personality>
+</BorlandProject>

@@ -150,7 +150,7 @@ begin
     + ' VALUES(:Id, :Name, :Address)';
   CheckEquals(3, Query.Params.Count);
   CheckEquals('Id', Query.Params[0].Name);
-  CheckEquals(TEST_ROW_ID, Query.Params[0].Value);
+  CheckEquals(TEST_ROW_ID, Query.Params[0].AsInteger);
   CheckEquals(Ord(ftInteger), Ord(Query.Params[0].DataType));
   CheckEquals('Name', Query.Params[1].Name);
   CheckEquals(True, Query.Params[1].IsNull);
