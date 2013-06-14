@@ -1974,7 +1974,7 @@ begin
     if ConSettings^.AutoEncode then
       ConSettings^.ConvFuncs.ZStringToAnsi := @ZConvertStringToAnsiWithAutoEncode
     else
-      ConSettings^.ConvFuncs.ZStringToAnsi := @ZConvertStringToAnsi;
+      ConSettings^.ConvFuncs.ZStringToAnsi := @ZMoveStringToAnsi;
   end
   else
   begin
@@ -2041,7 +2041,7 @@ begin
 
     //last but not least the String to/from converters
     //string represents the DataSet/IZResultSet Strings
-    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) then
+    if ZCompatibleCodePages(ConSettings^.CTRL_CP, zCP_UTF8) then
     begin
       ConSettings^.ConvFuncs.ZUTF8ToString := @ZMoveUTF8ToString;
       if ConSettings^.AutoEncode then
@@ -2087,7 +2087,7 @@ begin
         if ConSettings^.AutoEncode then
           Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode
         else
-          Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+          Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRaw;
       end;
 
       {String To/From Unicode}
