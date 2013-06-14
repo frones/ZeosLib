@@ -433,7 +433,7 @@ end;
 
 function ZConvertStringToMBCRaw(const Src: String; const StringCP, RawCP: Word): RawByteString;
 begin
-  Result := ZUnicodeToSBCRaw(Src, RawCP);
+  Result := ZUnicodeToMBCRaw(Src, RawCP);
 end;
 {$ENDIF}
 
@@ -1411,7 +1411,7 @@ begin
       if (RawCP = zCP_UTF8) then
         ZSetString(PAnsiChar(Src), Result)
       else
-        ZConvertStringToRaw(Src, zCP_UTF8, RawCP);
+        Result := ZConvertStringToRaw(Src, zCP_UTF8, RawCP);
   end;
   {$ENDIF}
 end;
@@ -2062,7 +2062,7 @@ begin
     {$IFDEF UNICODE}
     if IsFullMultiByteCodePage(ConSettings^.ClientCodePage^.CP) then
     begin
-      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToSBCRaw;
+      Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToMBCRaw;
       Consettings^.ConvFuncs.ZRawToString := @ZConvertMBCRawToString;
     end
     else
