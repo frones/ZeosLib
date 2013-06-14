@@ -1741,7 +1741,7 @@ begin
         vtString:
           Result.VString := Value.VString;
         vtAnsiString:
-          Result.VString := String(Value.VAnsiString);
+          Result.VString := FConSettings^.ConvFuncs.ZAnsiToString(Value.VAnsiString, FConSettings^.CTRL_CP);
         vtUTF8String:
           Result.VString := FConSettings^.ConvFuncs.ZUTF8ToString(Value.VUTF8String, FConSettings^.CTRL_CP);
         vtRawByteString:
@@ -1769,7 +1769,7 @@ begin
         vtFloat:
           Result.VAnsiString := {$IFDEF UNICODE}AnsiString{$ENDIF}(FloatToSqlStr(Value.VFloat));
         vtString:
-          Result.VAnsiString := {$IFDEF UNICODE}AnsiString{$ENDIF}(Value.VString);
+          Result.VAnsiString := FConSettings^.ConvFuncs.ZStringToAnsi(Value.VString, FConSettings^.CTRL_CP);
         vtAnsiString:
           Result.VAnsiString := Value.VAnsiString;
         vtUTF8String:

@@ -1988,8 +1988,7 @@ begin
   if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
   begin
     // raw to/from UTF8
-    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) or
-      ( not ConSettings^.AutoEncode) then
+    if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, zCP_UTF8) then
     begin
       ConSettings^.ConvFuncs.ZRawToUTF8 := @ZMoveRawToUTF8;
       ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZMoveUTF8ToRaw;
