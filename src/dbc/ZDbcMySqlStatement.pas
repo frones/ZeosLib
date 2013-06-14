@@ -220,7 +220,7 @@ implementation
 
 uses
   Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding, ZDbcResultSet;
 
 { TZMySQLStatement }
 
@@ -701,7 +701,7 @@ begin
           begin
             TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                       TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-            TempBlob := TempBlob.Clone;
+            TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
             TempBlob.SetString(TempAnsi);
             InParamValues[I].VInterface  := TempBlob;
             FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
