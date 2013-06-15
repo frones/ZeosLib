@@ -828,18 +828,19 @@ begin
   Result := nil;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     try
-        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-     except
-       FreeAndNil(FBindBuffer);  //MemLeak closed
- 	     raise;
-     end;
+    try
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+    except
+      if Assigned(FBindBuffer) then
+        FreeAndNil(FBindBuffer);
+      raise;
+    end;
 
   if Assigned(FBindBuffer) then
      FreeAndNil(FBindBuffer);
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
+    raise EZSQLException.Create(SCanNotOpenResultSet);
   Result := CreateResultSet(SQL);
   inherited ExecuteQueryPrepared;
 end;
