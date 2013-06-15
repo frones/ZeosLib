@@ -686,29 +686,36 @@ begin
   For I := 0 to InParamCount - 1 do
   begin
     MyType := GetFieldType(InParamValues[I]);
-    if MyType = FIELD_TYPE_VARCHAR then
-      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString))),false)
-    else
-      if MyType =FIELD_TYPE_BLOB then
-      begin
-        TempBlob := (InParamValues[I].VInterface as IZBlob);
-        if TempBlob.IsEmpty then
-          DefVarManager.SetNull(InParamValues[I])
-        else
-          if InParamTypes[I] = stBinaryStream then
-            FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
+    case MyType of
+      FIELD_TYPE_VARCHAR:
+        FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString))),false);
+      FIELD_TYPE_BLOB:
+        begin
+          TempBlob := (InParamValues[I].VInterface as IZBlob);
+          if TempBlob.IsEmpty then
+            DefVarManager.SetNull(InParamValues[I])
           else
-          begin
-            TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                      TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-            TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
-            TempBlob.SetString(TempAnsi);
-            InParamValues[I].VInterface  := TempBlob;
-            FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
-          end;
-      end
+            if InParamTypes[I] = stBinaryStream then
+              FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
+            else
+            begin
+              TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                        TempBlob.Length, TempBlob.WasDecoded, ConSettings);
+              TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
+              TempBlob.SetString(TempAnsi);
+              InParamValues[I].VInterface  := TempBlob;
+              FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
+            end;
+        end;
+      FIELD_TYPE_LONGLONG:
+        FBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
+      FIELD_TYPE_TINY:
+        FBindBuffer.AddColumn(MyType,SizeOf(Byte),false);
+      FIELD_TYPE_TINY_BLOB:
+        FBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
         FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1,false);
+    end;
     PBuffer := @FColumnArray[I].buffer[0];
 
     if InParamValues[I].VType=vtNull then
@@ -744,7 +751,9 @@ begin
             PMYSQL_TIME(PBuffer)^.second := second;
             PMYSQL_TIME(PBuffer)^.second_part := millisecond;
           end;
-          FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+          FIELD_TYPE_TINY_BLOB:
+            System.Move(PAnsiChar(InParamValues[i].VBytes)^, PBuffer^, Length(InParamValues[i].VBytes));
+          FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
           FIELD_TYPE_BLOB:
             begin
               if TempBlob.Length<=ChunkSize then
@@ -805,6 +814,7 @@ begin
   case testVariant.vType of
     vtNull:      Result := FIELD_TYPE_TINY;
     vtBoolean:   Result := FIELD_TYPE_TINY;
+    vtBytes:     Result := FIELD_TYPE_TINY_BLOB;
     vtInteger:   Result := FIELD_TYPE_LONGLONG;
     vtFloat:     Result := FIELD_TYPE_DOUBLE;
     vtString:    Result := FIELD_TYPE_STRING;
@@ -1204,6 +1214,8 @@ begin
         DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
       stByte:
         DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+      stBytes:
+        DefVarManager.SetAsBytes(Temp, ResultSet.GetBytes(I));
       stShort:
         DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
       stInteger:
