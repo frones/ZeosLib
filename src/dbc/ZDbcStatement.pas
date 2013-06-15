@@ -2361,7 +2361,7 @@ end;
 function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer):
   TByteDynArray;
 begin
-  Result := StrToBytes(AnsiString(SoftVarManager.GetAsString(GetOutParam(ParameterIndex))));
+  Result := SoftVarManager.GetAsBytes(GetOutParam(ParameterIndex));
 end;
 
 {**
