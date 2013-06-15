@@ -687,7 +687,7 @@ begin
   begin
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_VARCHAR then
-      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))+1,false)
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString))){+1},false)
     else
       if MyType =FIELD_TYPE_BLOB then
       begin
