@@ -1452,6 +1452,8 @@ begin
             Result.VString := 'TRUE'
           else
             Result.VString := 'FALSE';
+        vtBytes:
+          ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
           Result.VString := IntToStr(Value.VInteger);
         vtFloat:
