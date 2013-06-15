@@ -1539,7 +1539,7 @@ begin
   else
   begin
     SetLength(Dest, Len div 2);
-    Move(Src^, PAnsiChar(Dest)^, Len);
+    Move(Src^, PWideChar(Dest)^, Len);
   end;
 end;
 
