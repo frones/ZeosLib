@@ -710,7 +710,7 @@ begin
       FIELD_TYPE_LONGLONG:
         FBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
       FIELD_TYPE_TINY:
-        FBindBuffer.AddColumn(MyType,SizeOf(Byte),false);
+        FBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
       FIELD_TYPE_TINY_BLOB:
         FBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
@@ -723,19 +723,24 @@ begin
     else
       FColumnArray[I].is_null := 0;
       case FBindBuffer.GetBufferType(I+1) of
+
         FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
         FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
         FIELD_TYPE_STRING:
-          begin
-            if MyType = FIELD_TYPE_VARCHAR then
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))
-            else
-            if MyType = FIELD_TYPE_BLOB then
-            begin
-              if TempBlob.Length<=ChunkSize then
-                StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
-              TempBlob := nil;
-            end
+          case MyType of
+            FIELD_TYPE_TINY:
+              if InParamValues[I].VBoolean then
+                PAnsiChar(PBuffer)^ := 'Y'
+              else
+                PAnsiChar(PBuffer)^ := 'N';
+            FIELD_TYPE_VARCHAR:
+              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)));
+            FIELD_TYPE_BLOB:
+              begin
+                if TempBlob.Length<=ChunkSize then
+                  StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+                TempBlob := nil;
+              end;
             else
               StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
           end;
