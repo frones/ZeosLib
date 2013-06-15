@@ -687,7 +687,7 @@ begin
   begin
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_VARCHAR then
-      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString))){+1},false)
+      FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString))),false)
     else
       if MyType =FIELD_TYPE_BLOB then
       begin
@@ -828,17 +828,19 @@ begin
   Result := nil;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     try
-        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-     except
-       FBindBuffer.Free;  //MemLeak closed
- 	     raise;
-     end;
+    try
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+    except
+      if Assigned(FBindBuffer) then
+        FreeAndNil(FBindBuffer);
+      raise;
+    end;
 
-  FBindBuffer.Free;
+  if Assigned(FBindBuffer) then
+     FreeAndNil(FBindBuffer);
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
-      raise EZSQLException.Create(SCanNotOpenResultSet);
+    raise EZSQLException.Create(SCanNotOpenResultSet);
   Result := CreateResultSet(SQL);
   inherited ExecuteQueryPrepared;
 end;
@@ -857,14 +859,16 @@ function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     try
-        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-     except
-       FBindBuffer.Free;  //MemLeak closed
- 	     raise;
-     end;
+    try
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+    except
+      if Assigned(FBindBuffer) then
+        FreeAndNil(FBindBuffer); //MemLeak closed
+      raise;
+    end;
 
-  FBindBuffer.Free;
+  if Assigned(FBindBuffer) then
+    FreeAndNil(FBindBuffer); //MemLeak closed
 
     { Process queries with result sets }
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
@@ -898,26 +902,29 @@ function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
 begin
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-     try
-        checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
-     except
-       FBindBuffer.Free;  //MemLeak closed
-       raise;
-     end;
+    try
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+    except
+      if Assigned(FBindBuffer) then
+        FreeAndNil(FBindBuffer); //MemLeak closed
+      raise;
+    end;
 
-  FBindBuffer.Free;
+  if Assigned(FBindBuffer) then
+    FreeAndNil(FBindBuffer); //MemLeak closed
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
-    begin
-      Result := True;
-      LastResultSet := CreateResultSet(SQL);
-    end
-    { Processes regular query. }
+  begin
+    Result := True;
+    LastResultSet := CreateResultSet(SQL);
+  end
+  { Processes regular query. }
   else
-    begin
-      Result := False;
-      LastUpdateCount := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
-    end;
+  begin
+    Result := False;
+    LastUpdateCount := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
+  end;
+
   inherited ExecutePrepared;
 end;
 
