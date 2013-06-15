@@ -627,7 +627,7 @@ begin
       {$IFDEF WITH_FPC_STRING_CONVERSATION}
       begin
         //avoid string conversion -> move memory
-        TempAnsi := UnicodeToRaw(AStr, FConSettings.CTRL_CP);
+        TempAnsi := ZUnicodeToRaw(AStr, FConSettings.CTRL_CP);
         SetLength(Result, Length(TempAnsi));
         Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
       end
@@ -661,7 +661,7 @@ begin
   Result := AStr;
   {$ELSE}
     {$IFNDEF WITH_LCONVENCODING}
-    Result := RawToUnicode(AStr, FromCP);
+    Result := ZRawToUnicode(AStr, FromCP);
     {$ELSE}
     if FromCP = zCP_UTF8 then
       Result := UTF8Decode(AStr)
