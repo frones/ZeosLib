@@ -923,7 +923,8 @@ begin
   if Assigned(FResultMetaData) then
     FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
-  FBindBuffer.Free;
+  if Assigned(FBindBuffer) then
+    FreeAndNil(FBindBuffer);
   if Assigned(FPrepStmt) then
     begin
       FPlainDriver.FreePreparedResult(FPrepStmt);
