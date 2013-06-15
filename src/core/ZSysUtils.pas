@@ -398,6 +398,7 @@ procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
@@ -1528,6 +1529,17 @@ begin
   begin
     SetLength(Dest, Len);
     Move(Src^, PAnsiChar(Dest)^, Len);
+  end;
+end;
+
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
+begin
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+  begin
+    SetLength(Dest, Len div 2);
+    Move(Src^, PWideChar(Dest)^, Len);
   end;
 end;
 
