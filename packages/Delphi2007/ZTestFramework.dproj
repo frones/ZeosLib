@@ -35,10 +35,10 @@
     <DCC_HppOutput>build</DCC_HppOutput>
     <DCC_BplOutput>build</DCC_BplOutput>
     <DCC_DcpOutput>build</DCC_DcpOutput>
-    <DCC_UnitSearchPath>build</DCC_UnitSearchPath>
-    <DCC_ResourcePath>build</DCC_ResourcePath>
-    <DCC_ObjPath>build</DCC_ObjPath>
-    <DCC_IncludePath>build</DCC_IncludePath>
+    <DCC_UnitSearchPath>build;..\..\test\external</DCC_UnitSearchPath>
+    <DCC_ResourcePath>build;..\..\test\external</DCC_ResourcePath>
+    <DCC_ObjPath>build;..\..\test\external</DCC_ObjPath>
+    <DCC_IncludePath>build;..\..\test\external</DCC_IncludePath>
   </PropertyGroup>
   <ProjectExtensions>
     <Borland.Personality>Delphi.Personality</Borland.Personality>
@@ -51,21 +51,21 @@
     <DelphiCompile Include="ZTestFramework.dpk">
       <MainSource>MainSource</MainSource>
     </DelphiCompile>
-    <DCCReference Include="$(SystemRoot)\system32\dbrtl.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\designide.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\dsnap.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\dsnapcon.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\rtl.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\vcl.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\vclactnband.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\vclx.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\ZComponent.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\ZCore.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\ZDbc.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\ZParseSql.dcp" />
-    <DCCReference Include="$(SystemRoot)\system32\ZPlain.dcp" />
-    <DCCReference Include="..\..\..\..\DUnit\src\TestFramework.pas" />
+    <DCCReference Include="..\..\test\external\dbrtl.dcp" />
+    <DCCReference Include="..\..\test\external\designide.dcp" />
+    <DCCReference Include="..\..\test\external\dsnap.dcp" />
+    <DCCReference Include="..\..\test\external\dsnapcon.dcp" />
     <DCCReference Include="..\..\test\external\MemCheck.pas" />
+    <DCCReference Include="..\..\test\external\rtl.dcp" />
+    <DCCReference Include="..\..\test\external\TestFrameWork.pas" />
+    <DCCReference Include="..\..\test\external\vcl.dcp" />
+    <DCCReference Include="..\..\test\external\vclactnband.dcp" />
+    <DCCReference Include="..\..\test\external\vclx.dcp" />
+    <DCCReference Include="..\..\test\external\ZComponent.dcp" />
+    <DCCReference Include="..\..\test\external\ZCore.dcp" />
+    <DCCReference Include="..\..\test\external\ZDbc.dcp" />
+    <DCCReference Include="..\..\test\external\ZParseSql.dcp" />
+    <DCCReference Include="..\..\test\external\ZPlain.dcp" />
     <DCCReference Include="..\..\test\framework\ZPerformanceTestCase.pas" />
     <DCCReference Include="..\..\test\framework\ZSqlTestCase.pas" />
     <DCCReference Include="..\..\test\framework\ZTestCase.pas" />

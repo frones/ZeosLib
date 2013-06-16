@@ -25,7 +25,7 @@
 			<Base>true</Base>
 		</PropertyGroup>
 		<PropertyGroup Condition="'$(Base)'!=''">
-			<DCC_UnitSearchPath>$(BDS)\source\DUnit\Src;build;..\..\test\framework;..\..\test\core;..\..\test\parsesql;..\..\test\dbc;..\..\test\component;..\..\test\bugreport;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+			<DCC_UnitSearchPath>build;..\..\test\framework;..\..\test\core;..\..\test\parsesql;..\..\test\dbc;..\..\test\component;..\..\test\bugreport;..\..\test\external;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
 			<DCC_UnitAlias>WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;$(DCC_UnitAlias)</DCC_UnitAlias>
 			<DCC_ExeOutput>build</DCC_ExeOutput>
 			<DCC_DcuOutput>build</DCC_DcuOutput>
