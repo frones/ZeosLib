@@ -1905,6 +1905,8 @@ end;
 procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
 var
   SQLCode: SmallInt;
+  TempStr: string;
+  TempFloat: Extended;
 begin
   CheckRange(Index);
 
@@ -1922,7 +1924,18 @@ begin
         SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * GetIBScaleDivisor(sqlscale));//IBScaleDivisor[sqlscale]); //AVZ - Trunc was cutting off decimals
+        SQL_QUAD   : //PInt64(sqldata)^    := Trunc(Value * GetIBScaleDivisor(sqlscale)); EgonHugeist: Trunc seems to have rounding issues!
+          begin
+            if sqlscale > 0 then
+              TempFloat := RoundTo(Value, sqlscale*-1)
+            else
+              TempFloat := RoundTo(Value, sqlscale);
+            TempStr := FloatToStrF(TempFloat * GetIBScaleDivisor(sqlscale), ffFixed, 18, 0);
+            //remain issues if decimal digits > scale than we've school learned rounding success randomly only
+            //each aproach did fail: RoundTo(Value, sqlscale*-1), Round etc.
+            //so the developer has to take
+            PInt64(sqldata)^    := StrToInt64(TempStr);
+          end;
         SQL_DOUBLE : PDouble(sqldata)^   := Value;                                        //I have tested with Query.ParamByName ().AsCurrency to check this, problem does not lie with straight SQL
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
