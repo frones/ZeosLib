@@ -765,6 +765,11 @@ procedure TZInterbase6CallableStatement.Unprepare;
 begin
   inherited Unprepare;
   FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_unprepare);
+  if FStmtHandle <> 0 then // Free statement-hande! On the other hand: Exception!
+  begin
+    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
+    FStmtHandle := 0;
+  end;
 end;
 
 destructor TZInterbase6CallableStatement.Destroy;
