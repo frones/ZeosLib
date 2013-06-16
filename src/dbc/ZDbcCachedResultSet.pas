@@ -1924,6 +1924,7 @@ begin
       Precision := Metadata.GetPrecision(I);
       Scale := Metadata.GetScale(I);
       ColumnType := Metadata.GetColumnType(I);
+      ColumnCodePage := MetaData.GetColumnCodePage(I);
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;
