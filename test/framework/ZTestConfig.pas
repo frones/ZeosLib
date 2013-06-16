@@ -232,7 +232,8 @@ procedure EnableZSQLMonitor;
 implementation
 
 uses ZSysUtils,
-  {$IFDEF DELPHI16_UP}Vcl.Forms{$ELSE}Forms{$ENDIF}{$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor;
+  {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}
+  {$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor;
 
 var
   SQLMonitor : TZSQLMonitor;

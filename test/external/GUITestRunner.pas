@@ -44,7 +44,7 @@ uses
 
   Windows,
   Math,
-  {$IFDEF DELPHI16_UP}
+  {$IFDEF WITH_VCL_PREFIX}
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.ComCtrls, Vcl.ExtCtrls,
   Vcl.StdCtrls, Vcl.ImgList, Vcl.Buttons, Vcl.Menus, Vcl.ActnList, Vcl.ToolWin,
   {$ELSE}
@@ -461,7 +461,7 @@ uses
 {$ENDIF}
   Registry,
   SysUtils,
-  {$IFDEF DELPHI16_UP}
+  {$IFDEF WITH_VCL_PREFIX}
   Vcl.Clipbrd
   {$ELSE}
   Clipbrd
