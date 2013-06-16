@@ -168,7 +168,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer; var IsNull: Boolean): PChar;
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
-    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): WideString;
+    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString;
     function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
     function GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
     function GetShort(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
@@ -204,7 +204,7 @@ type
     procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure SetPChar(ColumnIndex: Integer; Value: PChar);
     procedure SetString(ColumnIndex: Integer; Value: String);
-    procedure SetUnicodeString(ColumnIndex: Integer; Value: WideString);
+    procedure SetUnicodeString(ColumnIndex: Integer; Value: ZWideString);
     procedure SetBytes(ColumnIndex: Integer; Value: TByteDynArray);
     procedure SetDate(ColumnIndex: Integer; Value: TDateTime);
     procedure SetTime(ColumnIndex: Integer; Value: TDateTime);
@@ -1139,14 +1139,14 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>WideString</code> in the ObjectPascal programming language.
+  a <code>WideString/UnicodeString</code> in the ObjectPascal programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean):
-   WideString;
+   ZWideString;
 var
   TempBlob: IZBlob;
 begin
@@ -1169,7 +1169,7 @@ begin
       stString: Result := ZDbcUnicodeString(GetString(ColumnIndex, IsNull), ConSettings.CTRL_CP);
       {$ENDIF}
       else
-        Result := WideString(GetString(ColumnIndex, IsNull));
+        Result := ZWideString(GetString(ColumnIndex, IsNull));
     end;
     IsNull := False;
   end
@@ -2310,7 +2310,7 @@ begin
 end;
 
 {**
-  Sets the designated column with a <code>WideString</code> value.
+  Sets the designated column with a <code>WideString/UnicodeString</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
@@ -2319,7 +2319,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: WideString);
+procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: ZWideString);
 var IsNull: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}

@@ -250,6 +250,9 @@ type
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual;
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
@@ -321,7 +324,10 @@ type
     function IsNull(ParameterIndex: Integer): Boolean; virtual;
     function GetPChar(ParameterIndex: Integer): PChar; virtual;
     function GetString(ParameterIndex: Integer): String; virtual;
-    function GetUnicodeString(ParameterIndex: Integer): WideString; virtual;
+    function GetAnsiString(ParameterIndex: Integer): AnsiString; virtual;
+    function GetUTF8String(ParameterIndex: Integer): UTF8String; virtual;
+    function GetRawByteString(ParameterIndex: Integer): RawByteString; virtual;
+    function GetUnicodeString(ParameterIndex: Integer): ZWideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
     function GetByte(ParameterIndex: Integer): Byte; virtual;
     function GetShort(ParameterIndex: Integer): SmallInt; virtual;
@@ -1588,6 +1594,66 @@ begin
 end;
 
 {**
+  Sets the designated parameter to a Java <code>AnsiString</code> value.
+  The driver converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetAnsiString(ParameterIndex: Integer;
+   const Value: AnsiString);
+var
+  Temp: TZVariant;
+begin
+  DefVarManager.SetAsAnsiString(Temp, Value);
+  SetInParam(ParameterIndex, stString, Temp);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>UTF8String</code> value.
+  The driver converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetUTF8String(ParameterIndex: Integer;
+   const Value: UTF8String);
+var
+  Temp: TZVariant;
+begin
+  DefVarManager.SetAsUTF8String(Temp, Value);
+  SetInParam(ParameterIndex, stString, Temp);
+end;
+
+{**
+  Sets the designated parameter to a Java <code>RawByteString</code> value.
+  The driver dosn't converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetRawByteString(ParameterIndex: Integer;
+   const Value: RawByteString);
+var
+  Temp: TZVariant;
+begin
+  DefVarManager.SetAsRawByteString(Temp, Value);
+  SetInParam(ParameterIndex, stString, Temp);
+end;
+
+{**
   Sets the designated parameter to a Object Pascal <code>WideString</code>
   value. The driver converts this
   to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
@@ -2207,7 +2273,7 @@ end;
   <p>
   For the fixed-length type JDBC <code>CHAR</code>,
   the <code>String</code> object
-  returned has exactly the same value the JDBC
+  returned is ControlsCodePage encoded value the JDBC
   <code>CHAR</code> value had in the
   database, including any padding added by the database.
   @param parameterIndex the first parameter is 1, the second is 2,
@@ -2227,6 +2293,69 @@ end;
   the Java programming language.
   <p>
   For the fixed-length type JDBC <code>CHAR</code>,
+  the <code>AsniString</code> object
+  returned is a Ansi(CP_GETACP) encoded value the JDBC
+  <code>CHAR</code> value had in the
+  database, including any padding added by the database.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+  @exception SQLException if a database access error occurs
+}
+function TZAbstractCallableStatement.GetAnsiString(ParameterIndex: Integer): AnsiString;
+begin
+  Result := SoftVarManager.GetAsAnsiString(GetOutParam(ParameterIndex));
+end;
+
+{**
+  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
+  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
+  the Java programming language.
+  <p>
+  For the fixed-length type JDBC <code>CHAR</code>,
+  the <code>UTF8String</code> object
+  returned is a UTF8 encoded value the JDBC
+  <code>CHAR</code> value had in the
+  database, including any padding added by the database.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+  @exception SQLException if a database access error occurs
+}
+function TZAbstractCallableStatement.GetUTF8String(ParameterIndex: Integer): UTF8String;
+begin
+  Result := SoftVarManager.GetAsUTF8String(GetOutParam(ParameterIndex));
+end;
+
+{**
+  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
+  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
+  the Java programming language.
+  <p>
+  For the fixed-length type JDBC <code>CHAR</code>,
+  the <code>RawByteString</code> object
+  returned has exactly the same value the JDBC
+  <code>CHAR</code> value had in the
+  database, including any padding added by the database.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value. If the value is SQL <code>NULL</code>, the result
+  is <code>null</code>.
+  @exception SQLException if a database access error occurs
+}
+function TZAbstractCallableStatement.GetRawByteString(ParameterIndex: Integer): RawByteString;
+begin
+  Result := SoftVarManager.GetAsRawByteString(GetOutParam(ParameterIndex));
+end;
+
+{**
+  Retrieves the value of a JDBC <code>CHAR</code>, <code>VARCHAR</code>,
+  or <code>LONGVARCHAR</code> parameter as a <code>String</code> in
+  the Java programming language.
+  <p>
+  For the fixed-length type JDBC <code>CHAR</code>,
   the <code>WideString</code> object
   returned has exactly the same value the JDBC
   <code>CHAR</code> value had in the
@@ -2238,7 +2367,7 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZAbstractCallableStatement.GetUnicodeString(
-  ParameterIndex: Integer): WideString;
+  ParameterIndex: Integer): ZWideString;
 begin
   Result := SoftVarManager.GetAsUnicodeString(GetOutParam(ParameterIndex));
 end;

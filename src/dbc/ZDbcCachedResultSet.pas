@@ -172,7 +172,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PChar; override;
     function GetString(ColumnIndex: Integer): String; override;
-    function GetUnicodeString(ColumnIndex: Integer): Widestring; override;
+    function GetUnicodeString(ColumnIndex: Integer): ZWidestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -213,7 +213,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
@@ -816,7 +816,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetUnicodeString(ColumnIndex: Integer): Widestring;
+function TZAbstractCachedResultSet.GetUnicodeString(ColumnIndex: Integer): ZWidestring;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -1298,7 +1298,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeString(ColumnIndex: Integer;
-  const Value: WideString);
+  const Value: ZWideString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;

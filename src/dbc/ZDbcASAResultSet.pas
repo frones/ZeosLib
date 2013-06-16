@@ -126,7 +126,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); override;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
@@ -169,7 +169,7 @@ type
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
     function GetString: RawByteString; override;
-    function GetUnicodeString: WideString; override;
+    function GetUnicodeString: ZWideString; override;
     function GetBytes: TByteDynArray; override;
     property BlobSize;
     property BlobData;
@@ -837,7 +837,7 @@ begin
   FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
-procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
+procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
@@ -1019,7 +1019,7 @@ begin
   Result := inherited GetString;
 end;
 
-function TZASABlob.GetUnicodeString: WideString;
+function TZASABlob.GetUnicodeString: ZWideString;
 begin
   Result := inherited GetUnicodeString;
 end;

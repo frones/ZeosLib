@@ -84,7 +84,7 @@ type
     function GetRow: Integer; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): String; override;
-    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -381,7 +381,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetUnicodeString(ColumnIndex: Integer): WideString;
+function TZAdoResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 {var
   NL: Integer;}
 begin

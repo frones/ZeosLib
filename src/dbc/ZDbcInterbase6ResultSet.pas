@@ -89,7 +89,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): String; override;
-    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -124,7 +124,7 @@ type
     function Clone: IZBlob; override;
     function GetStream: TStream; override;
     function GetString: RawByteString; override;
-    function GetUnicodeString: WideString; override;
+    function GetUnicodeString: ZWideString; override;
     function GetBytes: TByteDynArray; override;
   end;
 
@@ -583,13 +583,13 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>WideString</code> in the Delphi programming language.
+  a <code>ZWideString</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetUnicodeString(ColumnIndex: Integer): WideString;
+function TZInterbase6ResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 begin
   CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
@@ -808,7 +808,7 @@ begin
   Result := inherited GetString;
 end;
 
-function TZInterbase6Blob.GetUnicodeString: WideString;
+function TZInterbase6Blob.GetUnicodeString: ZWideString;
 begin
   ReadBlob;
   Result := inherited GetUnicodeString;

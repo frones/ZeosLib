@@ -131,8 +131,11 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString; virtual;
     function GetBinaryString(ColumnIndex: Integer): RawByteString;
-    function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
     function GetByte(ColumnIndex: Integer): Byte; virtual;
     function GetShort(ColumnIndex: Integer): SmallInt; virtual;
@@ -160,8 +163,11 @@ type
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PChar; virtual;
     function GetStringByName(const ColumnName: string): String; virtual;
+    function GetAnsiStringByName(const ColumnName: string): AnsiString; virtual;
+    function GetUTF8StringByName(const ColumnName: string): UTF8String; virtual;
+    function GetRawByteStringByName(const ColumnName: string): RawByteString; virtual;
     function GetBinaryStringByName(const ColumnName: string): RawByteString;
-    function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
+    function GetUnicodeStringByName(const ColumnName: string): ZWideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
     function GetByteByName(const ColumnName: string): Byte; virtual;
     function GetShortByName(const ColumnName: string): SmallInt; virtual;
@@ -244,8 +250,11 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
+    procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); virtual;
+    procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString);
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString); virtual;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); virtual;
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); virtual;
@@ -272,8 +281,11 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended); virtual;
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar); virtual;
     procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
+    procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString); virtual;
+    procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String); virtual;
+    procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString); virtual;
     procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString);
-    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString); virtual;
+    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString); virtual;
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime); virtual;
     procedure UpdateTimeByName(const ColumnName: string; Value: TDateTime); virtual;
@@ -328,8 +340,8 @@ type
 
     function GetString: RawByteString; virtual;
     procedure SetString(const Value: RawByteString); virtual;
-    function GetUnicodeString: WideString; virtual;
-    procedure SetUnicodeString(const Value: WideString); virtual;
+    function GetUnicodeString: ZWideString; virtual;
+    procedure SetUnicodeString(const Value: ZWideString); virtual;
     function GetBytes: TByteDynArray; virtual;
     procedure SetBytes(const Value: TByteDynArray); virtual;
     function GetUnicodeStream: TStream; virtual;
@@ -638,7 +650,52 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 begin
-  Result := ZDbcString(InternalGetString(ColumnIndex));
+  Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex),
+    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>AnsiString</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
+begin
+  Result := ConSettings^.ConvFuncs.ZRawToAnsi(InternalGetString(ColumnIndex),
+    ConSettings^.ClientCodePage^.CP);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+begin
+  Result := ConSettings^.ConvFuncs.ZRawToUTF8(InternalGetString(ColumnIndex),
+    ConSettings^.ClientCodePage^.CP);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
+begin
+  Result := InternalGetString(ColumnIndex);
 end;
 
 {**
@@ -664,12 +721,13 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetUnicodeString(ColumnIndex: Integer): WideString;
+function TZAbstractResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result := ZDbcUnicodeString(InternalGetString(ColumnIndex));
+  Result := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex),
+    ConSettings^.ClientCodePage^.CP);
 end;
 
 {**
@@ -1159,6 +1217,48 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>AnsiString</code> in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetAnsiStringByName(const ColumnName: string): AnsiString;
+begin
+  Result := GetAnsiString(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetUTF8StringByName(const ColumnName: string): UTF8String;
+begin
+  Result := GetUTF8String(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>RawByteString</code> in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetRawByteStringByName(const ColumnName: string): RawByteString;
+begin
+  Result := GetRawByteString(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>String</code> in the Java programming language.
 
   @param columnName the SQL name of the column
@@ -1180,7 +1280,7 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetUnicodeStringByName(const ColumnName: string):
-  WideString;
+  ZWideString;
 begin
   Result := GetUnicodeString(GetColumnIndex(ColumnName));
 end;
@@ -2097,7 +2197,56 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
+procedure TZAbstractResultSet.UpdateString(ColumnIndex: Integer;
+  const Value: String);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
+  Updates the designated column with a <code>AnsiString</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateAnsiString(ColumnIndex: Integer;
+  const Value: AnsiString);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
+  Updates the designated column with a <code>UTF8String</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateUTF8String(ColumnIndex: Integer;
+  const Value: UTF8String);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
+  Updates the designated column with a <code>RawByteString</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateRawByteString(ColumnIndex: Integer; const
+  Value: RawByteString);
 begin
   RaiseReadOnlyException;
 end;
@@ -2133,7 +2282,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateUnicodeString(ColumnIndex: Integer;
-  const Value: WideString);
+  const Value: ZWideString);
 begin
   RaiseReadOnlyException;
 end;
@@ -2466,6 +2615,54 @@ begin
 end;
 
 {**
+  Updates the designated column with a <code>AnsiString</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateAnsiStringByName(const ColumnName: string;
+   const Value: AnsiString);
+begin
+  UpdateAnsiString(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>UTF8String</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateUTF8StringByName(const ColumnName: string;
+   const Value: UTF8String);
+begin
+  UpdateUTF8String(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>RawByteString</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateRawByteStringByName(const ColumnName: string;
+   const Value: RawByteString);
+begin
+  UpdateRawByteString(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
   Updates the designated column with a <code>String</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -2492,7 +2689,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateUnicodeStringByName(const ColumnName: string;
-  const Value: WideString);
+  const Value: ZWideString);
 begin
   UpdateUnicodeString(GetColumnIndex(ColumnName), Value);
 end;
@@ -3018,7 +3215,7 @@ end;
   Gets the wide string from the stored data.
   @return a string which contains the stored data.
 }
-function TZAbstractBlob.GetUnicodeString: WideString;
+function TZAbstractBlob.GetUnicodeString: ZWideString;
 var
   Bytes: TByteDynArray;
 begin
@@ -3050,7 +3247,7 @@ end;
   Sets a new string data to this blob content.
   @param Value a new wide string data.
 }
-procedure TZAbstractBlob.SetUnicodeString(const Value: WideString);
+procedure TZAbstractBlob.SetUnicodeString(const Value: ZWideString);
 begin
   Clear;
   FBlobSize := System.Length(Value) *2;

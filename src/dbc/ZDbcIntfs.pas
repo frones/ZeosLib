@@ -580,6 +580,9 @@ type
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
+    procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
+    procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
+    procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
     procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
     procedure SetTime(ParameterIndex: Integer; Value: TDateTime);
     procedure SetTimestamp(ParameterIndex: Integer; Value: TDateTime);
@@ -618,7 +621,10 @@ type
     function IsNull(ParameterIndex: Integer): Boolean;
     function GetPChar(ParameterIndex: Integer): PChar;
     function GetString(ParameterIndex: Integer): String;
-    function GetUnicodeString(ParameterIndex: Integer): WideString;
+    function GetAnsiString(ParameterIndex: Integer): AnsiString;
+    function GetUTF8String(ParameterIndex: Integer): UTF8String;
+    function GetRawByteString(ParameterIndex: Integer): RawByteString;
+    function GetUnicodeString(ParameterIndex: Integer): ZWideString;
     function GetBoolean(ParameterIndex: Integer): Boolean;
     function GetByte(ParameterIndex: Integer): Byte;
     function GetShort(ParameterIndex: Integer): SmallInt;
@@ -655,8 +661,11 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
     function GetString(ColumnIndex: Integer): String;
-    function GetBinaryString(ColumnIndex: Integer): RawByteString;
-    function GetUnicodeString(ColumnIndex: Integer): WideString;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString;
+    function GetBinaryString(ColumnIndex: Integer): RawByteString; deprecated;
+    function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): SmallInt;
@@ -684,8 +693,11 @@ type
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PChar;
     function GetStringByName(const ColumnName: string): String;
-    function GetBinaryStringByName(const ColumnName: string): RawByteString;
-    function GetUnicodeStringByName(const ColumnName: string): WideString;
+    function GetAnsiStringByName(const ColumnName: string): AnsiString;
+    function GetUTF8StringByName(const ColumnName: string): UTF8String;
+    function GetRawByteStringByName(const ColumnName: string): RawByteString;
+    function GetBinaryStringByName(const ColumnName: string): RawByteString; deprecated;
+    function GetUnicodeStringByName(const ColumnName: string): ZWideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
     function GetShortByName(const ColumnName: string): SmallInt;
@@ -768,8 +780,11 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
-    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString);
-    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: WideString);
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
+    procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
+    procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
+    procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString); deprecated;
+    procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
     procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime);
@@ -796,8 +811,11 @@ type
     procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
     procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
-    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString);
-    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: WideString);
+    procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
+    procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String);
+    procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
+    procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString); deprecated;
+    procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
     procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
     procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
     procedure UpdateTimeByName(const ColumnName: string; Value: TDateTime);
@@ -877,8 +895,8 @@ type
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
-    function GetUnicodeString: WideString;
-    procedure SetUnicodeString(const Value: WideString);
+    function GetUnicodeString: ZWideString;
+    procedure SetUnicodeString(const Value: ZWideString);
     function GetBytes: TByteDynArray;
     procedure SetBytes(const Value: TByteDynArray);
     function GetUnicodeStream: TStream;
