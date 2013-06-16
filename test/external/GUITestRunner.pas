@@ -38,14 +38,20 @@
 unit GUITestRunner;
 interface
 
+  {$I ..\..\Src\Zeos.inc}
 uses
   TestFramework,
 
   Windows,
   Math,
-  Graphics, Controls, Forms, 
-  ComCtrls, ExtCtrls, StdCtrls, ImgList, Buttons, Menus, ActnList,
-  Classes, IniFiles, ToolWin, DUnitConsts;
+  {$IFDEF DELPHI16_UP}
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.ComCtrls, Vcl.ExtCtrls,
+  Vcl.StdCtrls, Vcl.ImgList, Vcl.Buttons, Vcl.Menus, Vcl.ActnList, Vcl.ToolWin,
+  {$ELSE}
+  Graphics, Controls, Forms,
+  ComCtrls, ExtCtrls, StdCtrls, ImgList, Buttons, Menus, ActnList, ToolWin,
+  {$ENDIF}
+  Classes, IniFiles, DUnitConsts;
 
 
 
@@ -455,7 +461,11 @@ uses
 {$ENDIF}
   Registry,
   SysUtils,
-  Clipbrd;
+  {$IFDEF DELPHI16_UP}
+  Vcl.Clipbrd
+  {$ELSE}
+  Clipbrd
+  {$ENDIF};
 
 {$BOOLEVAL OFF}  // Required or you'll get an AV
 {$R *.DFM}

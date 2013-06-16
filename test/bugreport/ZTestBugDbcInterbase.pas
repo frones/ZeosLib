@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts, ZEncoding;
+uses ZTestCase, ZTestConsts;
 
 { TZTestDbcInterbaseBugReport }
 

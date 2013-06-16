@@ -52,13 +52,7 @@ contains
   {$IFNDEF WITH_REPORTMEMORYLEAKSONSHUTDOWN}
   MemCheck in '..\..\test\external\MemCheck.pas',
   {$ENDIF}
-  ZPerformanceTestCase in '..\..\test\framework\ZPerformanceTestCase.pas';
-
-{TextTestRunner in '..\..\test\external\TextTestRunner.pas',
-  GUITestRunner in '..\..\test\external\GUITestRunner.pas',
-  ZMidasTestServer_TLB in '..\..\test\framework\ZMidasTestServer_TLB.pas',
-  ZMidasTestCase in '..\..\test\framework\ZMidasTestCase.pas';}
-
-  {ZRemoteDM: TRemoteDataModule;}
+  DUnitConsts in '..\..\test\external\DUnitConsts.pas',
+  TestFrameWork in '..\..\test\external\TestFrameWork.pas';
 
 end.
