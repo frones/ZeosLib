@@ -314,7 +314,7 @@ function ZConvertRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String
 function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertRawToString(const Src: RawByteString; const RawCP, StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertStringToRaw(const Src: String; const StringCP, RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZConvertStringToRawWithAutoEncode(const Src: String; const StringCP, RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertStringToRawWithAutoEncode(const Src: String; const StringCP, RawCP: Word): RawByteString; {$IFDEF UNICODE}inline;{$ENDIF}
 function ZConvertUTF8ToString(const Src: UTF8String; const StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertStringToUTF8(const Src: String; const StringCP: Word): UTF8String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String; {$IFDEF UNICODE}inline;{$ENDIF}
@@ -1393,6 +1393,7 @@ end;
   {$HINTS ON}
 {$ENDIF}
 
+{$WARNINGS OFF}
 function ZConvertStringToRawWithAutoEncode(const Src: String;
   const StringCP, RawCP: Word): RawByteString;
 begin
@@ -1415,6 +1416,7 @@ begin
   end;
   {$ENDIF}
 end;
+{$WARNINGS ON}
 
 function ZConvertUTF8ToString(const Src: UTF8String;
   const StringCP: Word): String;
@@ -1727,6 +1729,7 @@ end;
   @param Stream the Stream with the unknown format and data
   @return a valid utf8 encoded stringstram
 }
+{$WARNINGS OFF}
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
@@ -1787,6 +1790,7 @@ begin
     end;
   end;
 end;
+{$WARNINGS ON}
 
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString;
