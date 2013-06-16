@@ -618,7 +618,7 @@ type
     function GetString(ParameterIndex: Integer): String;
     function GetUnicodeString(ParameterIndex: Integer): WideString;
     function GetBoolean(ParameterIndex: Integer): Boolean;
-    function GetByte(ParameterIndex: Integer): ShortInt;
+    function GetByte(ParameterIndex: Integer): Byte;
     function GetShort(ParameterIndex: Integer): SmallInt;
     function GetInt(ParameterIndex: Integer): Integer;
     function GetLong(ParameterIndex: Integer): Int64;
@@ -656,7 +656,7 @@ type
     function GetBinaryString(ColumnIndex: Integer): ZAnsiString;
     function GetUnicodeString(ColumnIndex: Integer): WideString;
     function GetBoolean(ColumnIndex: Integer): Boolean;
-    function GetByte(ColumnIndex: Integer): ShortInt;
+    function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): SmallInt;
     function GetInt(ColumnIndex: Integer): Integer;
     function GetLong(ColumnIndex: Integer): Int64;
@@ -684,7 +684,7 @@ type
     function GetBinaryStringByName(const ColumnName: string): ZAnsiString;
     function GetUnicodeStringByName(const ColumnName: string): WideString;
     function GetBooleanByName(const ColumnName: string): Boolean;
-    function GetByteByName(const ColumnName: string): ShortInt;
+    function GetByteByName(const ColumnName: string): Byte;
     function GetShortByName(const ColumnName: string): SmallInt;
     function GetIntByName(const ColumnName: string): Integer;
     function GetLongByName(const ColumnName: string): Int64;

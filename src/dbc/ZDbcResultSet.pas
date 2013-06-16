@@ -134,7 +134,7 @@ type
     function GetBinaryString(ColumnIndex: Integer): ZAnsiString;
     function GetUnicodeString(ColumnIndex: Integer): WideString; virtual;
     function GetBoolean(ColumnIndex: Integer): Boolean; virtual;
-    function GetByte(ColumnIndex: Integer): ShortInt; virtual;
+    function GetByte(ColumnIndex: Integer): Byte; virtual;
     function GetShort(ColumnIndex: Integer): SmallInt; virtual;
     function GetInt(ColumnIndex: Integer): Integer; virtual;
     function GetLong(ColumnIndex: Integer): Int64; virtual;
@@ -162,7 +162,7 @@ type
     function GetBinaryStringByName(const ColumnName: string): ZAnsiString;
     function GetUnicodeStringByName(const ColumnName: string): WideString; virtual;
     function GetBooleanByName(const ColumnName: string): Boolean; virtual;
-    function GetByteByName(const ColumnName: string): ShortInt; virtual;
+    function GetByteByName(const ColumnName: string): Byte; virtual;
     function GetShortByName(const ColumnName: string): SmallInt; virtual;
     function GetIntByName(const ColumnName: string): Integer; virtual;
     function GetLongByName(const ColumnName: string): Int64; virtual;
@@ -693,7 +693,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetByte(ColumnIndex: Integer): ShortInt;
+function TZAbstractResultSet.GetByte(ColumnIndex: Integer): Byte;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
@@ -1189,7 +1189,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractResultSet.GetByteByName(const ColumnName: string): ShortInt;
+function TZAbstractResultSet.GetByteByName(const ColumnName: string): Byte;
 begin
   Result := GetByte(GetColumnIndex(ColumnName));
 end;
