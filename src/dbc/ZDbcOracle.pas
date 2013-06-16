@@ -116,6 +116,8 @@ type
     procedure Commit; override;
     procedure Rollback; override;
 
+    function PingServer: Integer; override;
+
     procedure Open; override;
     procedure Close; override;
 
@@ -535,6 +537,18 @@ begin
 
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
+end;
+
+{**
+  Ping Current Connection's server, if client was disconnected,
+  the connection is resumed.
+  @return 0 if succesfull or error code if any error occurs
+}
+function TZOracleConnection.PingServer: Integer;
+begin
+  Result := GetPlainDriver.Ping(FContextHandle, FErrorHandle);
+  CheckOracleError(GetPlainDriver, FErrorHandle, Result, lcExecute, 'Ping Server');
+  Result := 0; //only possible if CheckOracleError dosn't raise an exception
 end;
 
 {**

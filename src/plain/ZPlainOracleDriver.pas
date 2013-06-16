@@ -268,6 +268,8 @@ type
       out Value: sb4): sword;
     procedure ClientVersion(major_version, minor_version, update_num,
       patch_num, port_update_num: psword);
+    {ociap.h}
+    function Ping(svchp: POCISvcCtx; errhp: POCIError; mode: ub4 = OCI_DEFAULT): sword;
   end;
 
   {** Implements a driver for Oracle 9i }
@@ -341,7 +343,7 @@ type
       value_sz: sb4; dty: ub2; indp: Pointer; alenp: Pointer; rcodep: Pointer;
       maxarr_len: ub4; curelep: Pointer; mode: ub4): sword;
     function BindDynamic(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
-    icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
+      icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword;
 
     function DefineObject(defnpp:POCIDefine; errhp:POCIError;
       _type:POCIHandle; pgvpp,pvszsp,indpp,indszp:pointer): sword;
@@ -478,6 +480,8 @@ type
     procedure ClientVersion(major_version, minor_version, update_num,
       patch_num, port_update_num: psword);
 
+    {ociap.h}
+    function Ping(svchp: POCISvcCtx; errhp: POCIError; mode: ub4 = OCI_DEFAULT): sword;
   end;
 
 implementation
@@ -887,6 +891,8 @@ begin
     //@OracleAPI.OCILobOpen         := GetAddress('OCILobFileOpen');
 
     @OracleAPI.OCIDescribeAny     := GetAddress('OCIDescribeAny');
+    {ociap.h}
+    @OracleAPI.OCIPing            := GetAddress('OCIPing');
   end;
 end;
 
@@ -1266,6 +1272,12 @@ procedure TZOracle9iPlainDriver.ClientVersion(major_version, minor_version,
 begin
   OracleAPI.OCIClientVersion(major_version, minor_version,
     update_num, patch_num, port_update_num);
+end;
+
+function TZOracle9iPlainDriver.Ping(svchp: POCISvcCtx; errhp: POCIError;
+  mode: ub4 = OCI_DEFAULT): sword;
+begin
+  Result := OracleAPI.OCIPing(svchp, errhp, mode);
 end;
 
 function TZOracle9iPlainDriver.ServerAttach(srvhp: POCIServer;

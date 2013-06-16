@@ -971,6 +971,10 @@ type
       patch_num, port_update_num: psword); cdecl;
 
 type
+(*--------------------------------orciap.h-----------------------------------*
+
+(*-------------------------------- OCIPing ----------------------------------*)
+  TOCIPing = function(svchp: POCISvcCtx; errhp: POCIError; mode: ub4): sword; cdecl;
   OracleOCI_API = record
     OCIPasswordChange:      TOCIPasswordChange;
     OCIInitialize:          TOCIInitialize;
@@ -1050,6 +1054,8 @@ type
     OCIResultSetToStmt:     TOCIResultSetToStmt;
     OCINlsNumericInfoGet:   TOCINlsNumericInfoGet;
     OCIClientVersion:       TOCIClientVersion;
+    {ociap.h}
+    OCIPing:                TOCIPing;
   end;
 
 implementation
