@@ -218,6 +218,7 @@
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
   {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
   {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
+  {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}

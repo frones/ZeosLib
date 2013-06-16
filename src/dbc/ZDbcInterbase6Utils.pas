@@ -889,11 +889,11 @@ var
 begin
   { Allocate an sql statement }
   PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL);
+  CheckInterbase6Error(PlainDriver, StatusVector, lcOther, LogSQL);
   { Prepare an sql statement }
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
     0, PAnsiChar(SQL), Dialect, nil);
-  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcExecute, LogSQL); //Check for disconnect AVZ
+  iError := CheckInterbase6Error(PlainDriver, StatusVector, lcPrepStmt, LogSQL); //Check for disconnect AVZ
 
   { Set Statement Type }
   if (iError <> DISCONNECT_ERROR) then //AVZ

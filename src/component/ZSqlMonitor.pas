@@ -63,6 +63,9 @@ type
   {** Repeat declaration of TZLoggingEvent. }
   TZLoggingEvent = ZDbcLogging.TZLoggingEvent;
 
+  {** Repeat declaration of TZLoggingFormatter. }
+  TZLoggingFormatter = ZDbcLogging.TZLoggingFormatter;
+
   {** Declares event before logging. }
   TZTraceEvent = procedure(Sender: TObject; Event: TZLoggingEvent;
     var LogTrace: Boolean) of object;
@@ -82,6 +85,7 @@ type
     FTraceList: TObjectList;
     FOnTrace: TZTraceEvent;
     FOnLogTrace: TZTraceLogEvent;
+    FLoggingFormatter : TZLoggingFormatter;
 
     function GetTraceCount: Integer;
     function GetTraceItem(Index: Integer): TZLoggingEvent;
@@ -101,6 +105,7 @@ type
 
     property TraceCount: Integer read GetTraceCount;
     property TraceList[Index: Integer]: TZLoggingEvent read GetTraceItem;
+    property LoggingFormatter: TZLoggingFormatter read FLoggingFormatter write FLoggingFormatter;
   published
     property Active: Boolean read FActive write SetActive default False;
     property AutoSave: Boolean read FAutoSave write FAutoSave default False;
@@ -287,7 +292,7 @@ begin
       Stream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareDenyWrite);
     try
       Stream.Seek(0, soFromEnd);
-      Temp := AnsiString(Event.AsString + LineEnding);
+      Temp := AnsiString(Event.AsString(FLoggingFormatter) + LineEnding);
 Buffer := PAnsiChar(Temp); 
 Stream.Write(Buffer^, StrLen(Buffer)*sizeof(Ansichar)); 
     finally
