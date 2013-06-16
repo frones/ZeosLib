@@ -317,15 +317,15 @@ function ZConvertStringToRaw(const Src: String; const StringCP, RawCP: Word): Ra
 function ZConvertStringToRawWithAutoEncode(const Src: String; const StringCP, RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertUTF8ToString(const Src: UTF8String; const StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertStringToUTF8(const Src: String; const StringCP: Word): UTF8String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertStringToUTF8WithAutoEncode(const Src: String; const StringCP: Word): UTF8String; {$IFDEF UNICODE}inline;{$ENDIF}
 function ZConvertStringToAnsi(const Src: String; const StringCP: Word): AnsiString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZConvertStringToAnsiWithAutoEncode(const Src: String; const StringCP: Word): AnsiString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertStringToAnsiWithAutoEncode(const Src: String; const StringCP: Word): AnsiString; {$IFDEF UNICODE}inline;{$ENDIF}
 function ZConvertAnsiToString(const Src: AnsiString; const StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertUnicodeToString(const Src: ZWideString; const StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString; const StringCP: Word): String; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertStringToUnicode(const Src: String; const StringCP: Word): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertString_CPUTF8ToUnicode(const Src: String; const StringCP: Word): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
-function ZConvertStringToUnicodeWithAutoEncode(const Src: String; const StringCP: Word): ZWideString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
+function ZConvertStringToUnicodeWithAutoEncode(const Src: String; const StringCP: Word): ZWideString; {$IFDEF UNICODE}inline;{$ENDIF}
 {move functions for the String types}
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
