@@ -399,13 +399,13 @@ begin
             Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := ZAnsiString('''' + FormatDateTime('yyyy/mm/dd',
+        Result := ZAnsiString('''' + FormatDateTime(ConSettings^.DateFormat,
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stTime:
         Result := ZAnsiString('''' + FormatDateTime('hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stTimestamp:
-        Result := ZAnsiString('''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
+        Result := ZAnsiString('''' + FormatDateTime(ConSettings^.DateFormat+' hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin

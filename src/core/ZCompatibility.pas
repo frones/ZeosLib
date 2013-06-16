@@ -194,6 +194,7 @@ type
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;
     {$ENDIF}
+    DateFormat: String;
   end;
 
   TZCodePagedObject = Class(TInterfacedObject)
