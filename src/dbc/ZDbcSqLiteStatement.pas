@@ -342,6 +342,7 @@ function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): Raw
 var
   Value: TZVariant;
   TempBlob: IZBlob;
+  TempBytes: TByteDynArray;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -360,7 +361,10 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := EncodeString(AnsiString(SoftVarManager.GetAsString(Value)));
+        begin
+          TempBytes := SoftVarManager.GetAsBytes(Value);
+          Result := EncodeString(@TempBytes, Length(TempBytes));
+        end;
       stString:
         Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39));
       stUnicodeString:
@@ -383,7 +387,7 @@ begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             if InParamTypes[ParamIndex] = stBinaryStream then
-              Result := EncodeString(TempBlob.GetString)
+              Result := EncodeString(TempBlob.GetBuffer, TempBlob.Length)
             else
               Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
                 GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,

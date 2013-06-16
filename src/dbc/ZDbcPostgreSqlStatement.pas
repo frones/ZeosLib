@@ -464,7 +464,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(RawByteString(SoftVarManager.GetAsString(Value)));
+        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(SoftVarManager.GetAsBytes(Value));
       stString:
         if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
@@ -662,7 +662,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := #39+RawByteString(SoftVarManager.GetAsString(Value))+#39;
       stBytes:
-        Result := FPostgreSQLConnection.EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
+        Result := FPostgreSQLConnection.EncodeBinary(SoftVarManager.GetAsBytes(Value));
       stString:
         if FPlainDriver.SupportsStringEscaping(FPostgreSQLConnection.ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
@@ -1083,7 +1083,7 @@ var
   TempStream: TStream;
   WriteTempBlob: IZPostgreSQLBlob;
   ParamIndex: Integer;
-  Temp: RawByteString;
+  TempBytes: TByteDynArray;
 
   procedure UpdateNull(const Index: Integer);
   begin
@@ -1130,16 +1130,13 @@ begin
           UpdateString(RawByteString(SoftVarManager.GetAsString(Value)), ParamIndex);
         stBytes:
           begin
-            Temp := RawByteString(SoftVarManager.GetAsString(Value));
-            UpdateBinary(PAnsiChar(Temp), Length(Temp), ParamIndex);
+            TempBytes := SoftVarManager.GetAsBytes(Value);
+            UpdateBinary(PAnsiChar(TempBytes), Length(TempBytes), ParamIndex);
           end;
         stString:
           UpdateString(ZPlainString(SoftVarManager.GetAsString(Value), GetConnection.GetEncoding), ParamIndex);
         stUnicodeString:
-          if GetConnection.GetEncoding = ceUTF8 then
-            UpdateString(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)), ParamIndex)
-          else
-            UpdateString(AnsiString(SoftVarManager.GetAsUnicodeString(Value)), ParamIndex);
+          UpdateString(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ParamIndex);
         stDate:
           UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
         stTime:
@@ -1453,7 +1450,7 @@ begin
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := RawByteString(SoftVarManager.GetAsString(Value));
       stBytes:
-        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(AnsiString(SoftVarManager.GetAsString(Value)));
+        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(SoftVarManager.GetAsBytes(Value));
       stString:
         if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,

@@ -392,7 +392,7 @@ begin
           Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings),'''');
       stBytes:
         begin
-          TempBytes := StrToBytes(AnsiString(SoftVarManager.GetAsString(Value)));
+          TempBytes := SoftVarManager.GetAsBytes(Value);
           if Length(TempBytes) = 0 then
             Result := 'NULL'
           else

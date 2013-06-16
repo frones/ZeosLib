@@ -1622,7 +1622,7 @@ procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
 var
   Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, String(BytesToStr(Value)));
+  DefVarManager.SetAsBytes(Temp, Value);
   SetInParam(ParameterIndex, stBytes, Temp);
 end;
 
