@@ -650,8 +650,7 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 begin
-  Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex),
-    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  Result := ZDbcString(InternalGetString(ColumnIndex));
 end;
 
 {**
