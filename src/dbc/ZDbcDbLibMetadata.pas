@@ -1913,8 +1913,9 @@ begin
     with GetStatement.ExecuteQuery(
       Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat,'
       + ' c.status, c.iscomputed from syscolumns c inner join'
-      + ' sysobjects o on (o.id = c.id) where o.name = %s and c.number=0 order by colid',
+      + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = %s and c.number=0 order by colid',
       [AQSNull(TableNamePattern)])) do
+      // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
     begin
       while Next do
       begin
@@ -1927,7 +1928,7 @@ begin
           and (GetIntByName('iscomputed') = 0));
         Result.UpdateBooleanByName('WRITABLE',
           ((GetShortByName('status') and $80) = 0)
-          and (GetShortByName('type') <> 37)
+          (*and (GetShortByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
           and (GetIntByName('iscomputed') = 0));
         Result.UpdateBooleanByName('DEFINITELYWRITABLE',
           Result.GetBooleanByName('WRITABLE'));
@@ -3040,7 +3041,7 @@ begin
           not (GetShortByName('type') in [34, 35]));
         Result.UpdateBooleanByName('WRITABLE',
           ((GetShortByName('status') and $80) = 0)
-          and (GetShortByName('type') <> 37));
+          (*and (GetShortByName('type') <> 37)*));   // <<<< *DEBUG WARUM?
         Result.UpdateBooleanByName('DEFINITELYWRITABLE',
           Result.GetBooleanByName('WRITABLE'));
         Result.UpdateBooleanByName('READONLY',

@@ -1483,10 +1483,9 @@ function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   begin
     while Next do
     begin
-      {}
-      sName :=GetString(1);
-      if GetString(2)<>'' then
-        sName := sName+'.'+GetString(2);
+      sName := GetIdentifierConvertor.Quote(GetString(1));
+      if GetString(2) <> '' then
+        sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(2));
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
       Result.UpdateNull(2);
