@@ -121,11 +121,13 @@ type
     property Loader: TZNativeLibraryLoader read FLoader;
     procedure AddCodePage(const Name: String; const ID:  Integer;
       Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
-      const ZAlias: String = ''; CharWidth: Integer = 1); virtual;
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
     procedure ResetCodePage(const OldID: Integer; const Name: String;
       const ID:  Integer; {may be an ordinal value of predefined Types...}
       Encoding: TZCharEncoding = ceAnsi; const CP: Word = $ffff;
-      const ZAlias: String = ''; CharWidth: Integer = 1);
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
   end;
   {END ADDED by fduenas 15-06-2006}
 
@@ -283,7 +285,8 @@ end;
 
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
-      const CP: Word = $ffff; const ZAlias: String = ''; CharWidth: Integer = 1);
+      const CP: Word = $ffff; const ZAlias: String = '';
+      CharWidth: Integer = 1; const ConsistentCP: Boolean = True);
 begin
   SetLength(FCodePages, Length(FCodePages)+1);
   FCodePages[High(FCodePages)].Name := Name;
@@ -292,6 +295,7 @@ begin
   FCodePages[High(FCodePages)].CP := CP;
   FCodePages[High(FCodePages)].CharWidth := CharWidth;
   FCodePages[High(FCodePages)].ZAlias := ZAlias;
+  FCodePages[High(FCodePages)].IsStringFieldCPConsistent := ConsistentCP;
 
   if CP = $ffff then
     FCodePages[High(FCodePages)].ZAlias := GetUnicodeCodePageName;
@@ -300,7 +304,8 @@ end;
 procedure TZAbstractPlainDriver.ResetCodePage(const OldID: Integer;
       const Name: String; const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
       const CP: Word = $ffff;
-      const ZAlias: String = ''; CharWidth: Integer = 1);
+      const ZAlias: String = ''; CharWidth: Integer = 1;
+      const ConsistentCP: Boolean = True);
 var
   I: Integer;
 begin
@@ -313,6 +318,7 @@ begin
       FCodePages[I].CP := CP;
       FCodePages[I].ZAlias := ZAlias;
       FCodePages[I].CharWidth := CharWidth;
+      FCodePages[I].IsStringFieldCPConsistent := ConsistentCP;
 
       if CP = $ffff then
         FCodePages[I].ZAlias := GetUnicodeCodePageName;

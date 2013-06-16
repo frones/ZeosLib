@@ -439,11 +439,11 @@ var
 begin
   TestVar1 := Manager.Convert(UnicodeVar, vtRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type');
-  CheckEquals(PAnsiChar(WideToAnsi(UnicodeVar.VUnicodeString, 1252)),
+  CheckEquals(PAnsiChar(UnicodeToRaw(UnicodeVar.VUnicodeString, 1252)),
     PAnsiChar(TestVar1.VRawByteString), 'RawByteString');
   Manager.SetAsRawByteString(TestVar2, TestVar1.VRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar2.VType), 'ZVariant-Type');
-  CheckEquals(PAnsiChar(WideToAnsi(UnicodeVar.VUnicodeString, 1252)),
+  CheckEquals(PAnsiChar(UnicodeToRaw(UnicodeVar.VUnicodeString, 1252)),
     PAnsiChar(TestVar2.VRawByteString), 'RawByteString');
   CheckEquals(PAnsiChar(TestVar1.VRawByteString),
     PAnsiChar(TestVar2.VRawByteString), 'RawByteString');

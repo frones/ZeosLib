@@ -399,13 +399,13 @@ begin
             Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := RawByteString('''' + FormatDateTime('yyyy/mm/dd',
+        Result := RawByteString('''' + FormatDateTime(ConSettings^.DateFormat,
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stTime:
         Result := RawByteString('''' + FormatDateTime('hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stTimestamp:
-        Result := RawByteString('''' + FormatDateTime('yyyy/mm/dd hh":"mm":"ss":"zzz',
+        Result := RawByteString('''' + FormatDateTime(ConSettings^.DateFormat+' hh":"mm":"ss":"zzz',
           SoftVarManager.GetAsDateTime(Value)) + '''');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
