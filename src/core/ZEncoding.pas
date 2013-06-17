@@ -2086,13 +2086,16 @@ begin
           Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
       end
       else
-      begin
-        Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
         if ConSettings^.AutoEncode then
-          Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode
+        begin
+          Consettings^.ConvFuncs.ZRawToString := @ZConvertRawToString;
+          Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRawWithAutoEncode;
+        end
         else
-          Consettings^.ConvFuncs.ZStringToRaw := @ZConvertStringToRaw;
-      end;
+        begin
+          Consettings^.ConvFuncs.ZStringToRaw := @ZMoveStringToRaw;
+          Consettings^.ConvFuncs.ZRawToString := @ZMoveRawToString;
+        end;
 
       {String To/From Unicode}
       if ConSettings^.CTRL_CP = zCP_UTF8 then

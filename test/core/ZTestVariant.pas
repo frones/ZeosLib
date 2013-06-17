@@ -606,20 +606,30 @@ begin
   StringVar := GetTestStringVar;
   TestVar1 := Manager.Convert(StringVar, vtRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals(PAnsiChar(ZConvertStringToRaw(GetExpectedStringVar.VString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
-    PAnsiChar(TestVar1.VRawByteString), 'RawByteString from String'+GetOptionString);
+  if ConSettings^.AutoEncode then
+    CheckEquals(PAnsiChar(ZConvertStringToRaw(GetExpectedStringVar.VString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+      PAnsiChar(TestVar1.VRawByteString), 'RawByteString from String'+GetOptionString)
+  else
+    CheckEquals(PAnsiChar(ZMoveStringToRaw(StringVar.VString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+      PAnsiChar(TestVar1.VRawByteString), 'RawByteString from String'+GetOptionString);
   Manager.SetAsRawByteString(TestVar2, TestVar1.VRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar2.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals(PAnsiChar(ZConvertStringToRaw(GetExpectedStringVar.VString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
-    PAnsiChar(TestVar2.VRawByteString), 'RawByteString'+GetOptionString);
+  if ConSettings^.AutoEncode then
+    CheckEquals(PAnsiChar(ZConvertStringToRaw(GetExpectedStringVar.VString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+      PAnsiChar(TestVar2.VRawByteString), 'RawByteString'+GetOptionString)
+  else
+    CheckEquals(PAnsiChar(ZMoveStringToRaw(GetExpectedStringVar.VString, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)),
+      PAnsiChar(TestVar2.VRawByteString), 'RawByteString'+GetOptionString);
   CheckEquals(PAnsiChar(TestVar1.VRawByteString),
     PAnsiChar(TestVar2.VRawByteString), 'RawByteString'+GetOptionString);
   TestVar1 := Manager.Convert(TestVar2, vtString);
   CheckEquals(Ord(vtString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals(GetExpectedStringVar.VString, TestVar1.VString, 'String from RawByteString'+GetOptionString);
+  if ConSettings^.AutoEncode then
+    CheckEquals(GetExpectedStringVar.VString, TestVar1.VString, 'String from RawByteString'+GetOptionString)
+  else
+    CheckEquals(StringVar.VString, TestVar1.VString, 'String from RawByteString'+GetOptionString);
   if Supports(Manager, IZClientVariantManager, AManager) then //only the ClientVarManager can convert other StringCP's than Get_ACP
   begin
-    CheckEquals(GetExpectedStringVar.VString, TestVar1.VString, 'String from RawByteString'+GetOptionString);
     CheckEquals(PAnsiChar(ZUnicodeToRaw(UnicodeVar.VUnicodeString, FNotEqualClientCP)),
       PAnsiChar(AManager.GetAsRawByteString(TestVar1, FNotEqualClientCP)),
         'GetAsRawByteString(TZVariant, CP: '+IntToStr(FNotEqualClientCP)+')'+GetOptionString);
@@ -754,17 +764,28 @@ begin
     RawVar := Raw_CP1252_Var;
   TestVar1 := Manager.Convert(RawVar, vtString);
   CheckEquals(Ord(vtString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals(ZConvertRawToString(RawVar.VRawByteString,
-    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
-    TestVar1.VString, 'String from RawByteString'+GetOptionString);
+  if ConSettings^.AutoEncode then
+    CheckEquals(ZConvertRawToString(RawVar.VRawByteString,
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
+      TestVar1.VString, 'String from RawByteString'+GetOptionString)
+  else
+    CheckEquals(ZMoveRawToString(RawVar.VRawByteString,
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
+      TestVar1.VString, 'String from RawByteString'+GetOptionString);
   Manager.SetAsString(TestVar2, TestVar1.VString);
   CheckEquals(Ord(vtString), Ord(TestVar2.VType), 'ZVariant-Type'+GetOptionString);
-  CheckEquals(ZConvertRawToString(RawVar.VRawByteString,
-    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
-    TestVar2.VString, 'String'+GetOptionString);
+  if ConSettings^.AutoEncode then
+    CheckEquals(ZConvertRawToString(RawVar.VRawByteString,
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
+      TestVar2.VString, 'String'+GetOptionString)
+  else
+    CheckEquals(ZMoveRawToString(RawVar.VRawByteString,
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
+      TestVar2.VString, 'String'+GetOptionString);
   CheckEquals(TestVar1.VString, TestVar2.VString, 'String'+GetOptionString);
   TestVar1 := Manager.Convert(TestVar2, vtRawByteString);
   CheckEquals(Ord(vtRawByteString), Ord(TestVar1.VType), 'ZVariant-Type'+GetOptionString);
+
   CheckEquals(PAnsiChar(RawVar.VRawByteString), PAnsiChar(TestVar1.VRawByteString), 'RawByteString from String'+GetOptionString);
 end;
 
