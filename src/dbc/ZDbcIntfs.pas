@@ -288,6 +288,7 @@ type
     property AutoEncodeStrings: Boolean read GetAutoEncodeStrings write SetAutoEncodeStrings;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
+    function GetClientVariantManager: IZClientVariantManager;
   end;
 
   {** Database metadata interface. }

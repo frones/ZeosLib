@@ -121,6 +121,7 @@ type
     FClosed: Boolean;
     FURL: TZURL;
     FUseMetadata: Boolean;
+    FClientVarManager: IZClientVariantManager;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -139,6 +140,7 @@ type
     procedure InternalCreate; virtual; abstract;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
+    function GetClientVariantManager: IZClientVariantManager;
     procedure CheckCharEncoding(const CharSet: String; const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
     function GetAutoEncodeStrings: Boolean; //EgonHugeist
@@ -597,6 +599,11 @@ begin
   Result := ConSettings;
 end;
 
+function TZAbstractConnection.GetClientVariantManager: IZClientVariantManager;
+begin
+  Result := FClientVarManager;
+end;
+
 {**
   EgonHugeist: Check if the given Charset for Compiler/Database-Support!!
     Not supported means if there is a pissible String-DataLoss.
@@ -618,6 +625,7 @@ begin
     ConSettings.PlainConvertFunc, ConSettings.DbcConvertFunc);
   {$ENDIF}
   ZEncoding.SetConvertFunctions(ConSettings);
+  FClientVarManager := TZClientVariantManager.Create(ConSettings);
 end;
 
 
@@ -626,7 +634,7 @@ end;
     Zeos is now able to preprepare direct insered SQL-Statements.
     Means do the UTF8-preparation if the CharacterSet was choosen.
     So we do not need to do the SQLString + UTF8Encode(Edit1.Test) for example.
-  @result True if coPreprepareSQL was choosen in the TZAbstractConnection
+  @result if AutoEncodeStrings should be used
 }
 function TZAbstractConnection.GetAutoEncodeStrings: Boolean;
 begin
@@ -718,6 +726,7 @@ begin
   FIZPlainDriver := nil;
   FDriver := nil;
   Dispose(ConSettings);
+  FClientVarManager := nil;
   inherited Destroy;
 end;
 

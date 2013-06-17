@@ -70,7 +70,8 @@ uses
   ZDbcConnection,
   ZDbcIntfs,
   ZPlainDriver,
-  ZMessages;
+  ZMessages,
+  ZVariant;
 
 type
   TConnectionPool = class;
@@ -138,6 +139,7 @@ type
     procedure CheckCharEncoding(CharSet: String;
       const DoArrange: Boolean = False);
     function GetClientCodePageInformations: PZCodePage; //EgonHugeist
+    function GetClientVariantManager: IZClientVariantManager;
     function GetAutoEncodeStrings: Boolean; //EgonHugeist
     procedure SetAutoEncodeStrings(const Value: Boolean);
     function CreateStatement: IZStatement;
@@ -690,7 +692,7 @@ end;
 
 function TZDbcPooledConnection.GetEncoding: TZCharEncoding;
 begin
-  Result := ConSettings.ClientCodePage^.Encoding;
+  Result := ConSettings^.ClientCodePage^.Encoding;
 end;
 
 function TZDbcPooledConnection.GetConSettings: PZConSettings;
@@ -707,7 +709,12 @@ end;
 }
 function TZDbcPooledConnection.GetClientCodePageInformations: PZCodePage; //EgonHugeist
 begin
-  Result := ConSettings.ClientCodePage
+  Result := ConSettings^.ClientCodePage
+end;
+
+function TZDbcPooledConnection.GetClientVariantManager: IZClientVariantManager;
+begin
+  Result := GetConnection.GetClientVariantManager;
 end;
 
 { TZDbcPooledConnectionDriver }
