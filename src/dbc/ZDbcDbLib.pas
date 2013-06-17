@@ -459,6 +459,7 @@ begin
   begin
     if FClientCodePage = '' then
     begin
+      FDisposeCodePage := True;
       ConSettings^.ClientCodePage := New(PZCodePage);
       ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage; //need a tempory CP for the SQL preparation
       ConSettings^.ClientCodePage^.Encoding := ceAnsi;
@@ -653,7 +654,6 @@ var
   Rs: IZResultSet;
 begin
   Stmt := CreateRegularStatement(Self.Info);
-  Result := '';
   try
     RS := Stmt.ExecuteQuery('SELECT DATABASEPROPERTYEX('+AnsiQuotedStr(DataBase, #39)+', ''Collation'') as DatabaseCollation');
     if RS.Next then
@@ -661,10 +661,11 @@ begin
     else
       Result := '';
     RS := nil;
-  finally
-    Stmt.close;
-    Stmt := nil;
+  except
+    Result := '';
   end;
+  Stmt.close;
+  Stmt := nil;
 end;
 
 function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
@@ -680,10 +681,11 @@ begin
     else
       Result := High(Word);
     RS := nil;
-  finally
-    Stmt.close;
-    Stmt := nil;
+  except
+    Result := High(Word);
   end;
+  Stmt.close;
+  Stmt := nil;
 end;
 
 {**
