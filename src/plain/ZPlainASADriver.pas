@@ -331,38 +331,39 @@ end;
 procedure TZASABasePlainDriver.LoadCodePages;
 begin
   { MultiByte }
-  //AddCodePage('874THAIBIN', 1, ceAnsi, 874); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
-  //AddCodePage('932JPN', 2, ceAnsi, 932 {Japanese Shift-JIS mit Microsoft-Erweiterungen}
-  //AddCodePage('936ZHO', 3, ceAnsi, 936); {Vereinfachtes Chinesisch, PRC GBK}
-  //AddCodePage('949KOR', 4, ceAnsi, 949); {Korean KS C 5601-1987-Codierung, Wansung}
-  //AddCodePage('950ZHO_HK', 5, ceAnsi, 950); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
-  //AddCodePage('950ZHO_TW', 6, ceAnsi, 950); {Traditionelles Chinesisch, Big 5-Kodierung}
-  //AddCodePage('EUC_CHINA', 21, ceAnsi, zCP_GB2312); {GB2312-80 Simplified Chinese}
-  //AddCodePage('EUC_JAPAN', 22, ceAnsi, zCP_SHIFTJS); {Japanisch EUC JIS X 0208-1990 und JIS X 0212-1990-Zeichensatz}
-  //AddCodePage('EUC_KOREA', 23, ceAnsi, 1361); { Koreanisch KS C 5601-1992 8-Bit-Zeichensatz, Johab}
-  //AddCodePage('EUC_TAIWAN', 24, ceAnsi, 964); {EUC-TW-Kodierung}
-  //AddCodePage('UCA', 29, ceUTF16, zCP_UTF16, 'utf8'); {UCA	UCA-Standardkollatierung}
-  AddCodePage('UTF-8', 30, ceUTF8, zCP_UTF8, '', 3); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
+  AddCodePage('TIS-620', 1, ceAnsi, 874); {Windows Thailändisch, ISO8859-11, binäre Sortierung}
+  AddCodePage('Windows-31J', 2, ceAnsi, 932); {Japanese Shift-JIS mit Microsoft-Erweiterungen}
+  AddCodePage('GBK', 3, ceAnsi, 936); {GB2312-80 Simplified Chinese}
+  AddCodePage('IBM949', 4, ceAnsi, 949); {Korean KS C 5601-1987-Codierung, Wansung}
+  AddCodePage('BIG5', 5, ceAnsi, 950); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
+  AddCodePage('EUC_CHINA', 6, ceAnsi, zCP_GB2312); {GB2312-80 Simplified Chinese}
+  AddCodePage('UTF-8', 7, ceUTF8, zCP_UTF8, '', 3); {UTF-8, 8-Bit-Mehrbyte-Zeichensatz für Unicode, binäre Reihenfolge}
 
   { SingleByte }
-  //AddCodePage('1250LATIN2', 7, ceAnsi, 1250); {Windows Latin 2, Mittel- und Osteuropa}
-  //AddCodePage('1250POL', 8, ceAnsi, 1250); {Windows Latin 2, Polnisch}
-  //AddCodePage('1251CYR', 9, ceAnsi, 1251); {Windows Kyrillisch}
-  //AddCodePage('1252LATIN1', 10, ceAnsi, 1252); { Windows Latin 1, Western}
-  //AddCodePage('1252LT1ACC', 11, ceAnsi, 1252); {Windows-Spezial Latin 1, Western, Zeichen mit Akzent nicht gleich}
-  //AddCodePage('1252NOR', 12, ceAnsi, 1252); {Windows Latin 1, Norwegisch}
-  //AddCodePage('1252SPA', 13, ceAnsi, 1252); {Windows Latin 1, Spanisch}
-  //AddCodePage('1252SWEFIN', 14, ceAnsi, 1252); {Windows Latin 1, Schwedisch/Finnisch}
-  //AddCodePage('1253ELL', 15, ceAnsi, 1253); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
-  //AddCodePage('1254TRK', 16, ceAnsi, 1254); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
-  //AddCodePage('1254TRKALT', 17, ceAnsi, 1254); {Windows Türkisch, ISO8859-9 mit Erweiterungen, I mit I-Punkt gleich I ohne I-Punkt}
-  //AddCodePage('1255HEB', 18, ceAnsi, 1255); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
-  //AddCodePage('1256ARA', 19, ceAnsi, 1256); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
-  //AddCodePage('1257LIT', 20, ceAnsi, 1257); {Windows Baltische Staaten, Litauisch}
-  //AddCodePage('ISO1LATIN1', 25, ceAnsi, zCP_L1_ISO_8859_1); {ISO8859-1, ISO Latin 1, Western, Latin 1-Sortierreihenfolge}
-  //AddCodePage('ISO9LATIN1', 26, ceAnsi, zCP_ISO_8859_9); {	ISO8859-15, ISO Latin 9, Western, Latin 1-Sortierreihenfolge}
-  //AddCodePage('ISO_1', 27, ceAnsi, zCP_L1_ISO_8859_1); {ISO8859-1, ISO Latin 1, Western}
-  //AddCodePage('ISO_BINENG', 28, ceAnsi, zCP_ACP); {Binäre Sortierreihenfolge, Englisch ISO/ASCII 7-Bit-Zuordnung nach Groß- und Kleinschreibung}
+  AddCodePage('Windows-1250', 8, ceAnsi, 1250); {Windows Latin 2, Polnisch}
+  AddCodePage('Windows-1251', 9, ceAnsi, 1251); {Windows Kyrillisch}
+  AddCodePage('Windows-1252', 10, ceAnsi, 1252); { Windows Latin 1, Western}
+  AddCodePage('Windows-1253', 11, ceAnsi, 1253); {Windows Griechisch, ISO8859-7 mit Erweiterungen}
+  AddCodePage('Windows-1254', 12, ceAnsi, 1254); {Windows Türkisch, ISO8859-9 mit Erweiterungen}
+  AddCodePage('Windows-1255', 13, ceAnsi, 1255); {Windows Hebräisch, ISO8859-8 mit Erweiterungen}
+  AddCodePage('Windows-1256', 14, ceAnsi, 1256); {Windows Arabisch, ISO8859-6 mit Erweiterungen}
+  AddCodePage('Windows-1257', 15, ceAnsi, 1257); {Windows Baltische Staaten, Litauisch}
+  AddCodePage('Windows-1258', 16, ceAnsi, 1258); {Windows }
+
+  {*nix}
+  AddCodePage('ISO_8859-6:1987', 17, ceAnsi, 1256); {Arabisch, ISO8859-6 mit Erweiterungen}
+  AddCodePage('ISO_8859-2:1987', 18, ceAnsi, 1251); {Zentral- und Osteuropäisch}
+  //ISO-8859-15 //ISO9LATIN1
+  //ISO_8859-7:1987 //Griechisch
+  //ISO_8859-8:1988 //Hebräisch
+  //ISO-8859-15 //Italienisch
+  //EUC-JP //Japanisch
+  //EUC-KR //Koreanisch
+  //ISO_8859-5:1988 //Russisch
+  AddCodePage('GB2312', 19, ceAnsi, zCP_GB2312); {GB2312-80 Simplified Chinese}
+  //EUC-TW //Traditionelles Chinesisch - Taiwan
+  AddCodePage('Big5-HKSCS', 20, ceAnsi, 950); {Traditionelles Chinesisch, Big 5-Kodierung mit HKSCS}
+  AddCodePage('ISO_8859-9:1989', 21, ceAnsi, 920); //Türkisch
 end;
 
 constructor TZASABasePlainDriver.Create;

@@ -1918,6 +1918,7 @@ begin
   end;
 end;
 
+{$WARNINGS OFF} //suppress [Pascal Warning] ZVariant.pas(1926): W1035 Return value of function 'TZClientVariantManager.GetAsRawByteString' might be undefined
 function TZClientVariantManager.GetAsRawByteString(const Value: TZVariant;
   const RawCP: Word): RawByteString;
 begin
@@ -1960,6 +1961,7 @@ begin
       RaiseTypeMismatchError;
   end;
 end;
+{$WARNINGS ON}
 
 { TZAnyValue }
 
