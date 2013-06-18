@@ -220,7 +220,8 @@ implementation
 
 uses
   Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding, ZDbcResultSet;
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding, ZDbcResultSet,
+  Math;
 
 { TZMySQLStatement }
 
@@ -688,7 +689,7 @@ begin
     MyType := GetFieldType(InParamValues[I]);
     case MyType of
       FIELD_TYPE_VARCHAR:
-        FBindBuffer.AddColumn(FIELD_TYPE_STRING, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString))),false);
+        FBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
       FIELD_TYPE_BLOB:
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
@@ -696,7 +697,7 @@ begin
             DefVarManager.SetNull(InParamValues[I])
           else
             if InParamTypes[I] = stBinaryStream then
-              FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length,TempBlob.Length > ChunkSize)
+              FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
             else
             begin
               TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
@@ -714,7 +715,7 @@ begin
       FIELD_TYPE_TINY_BLOB:
         FBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FBindBuffer.AddColumn(MyType,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))+1,false);
+        FBindBuffer.AddColumn(MyType,Max(1, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
