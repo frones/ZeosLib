@@ -743,8 +743,7 @@ begin
       GetDBHandle, GetTrHandle, GetDialect, ZPlainString(ProcSql), ProcSQL, FStmtHandle);
     PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
       SQL, FStmtHandle, FResultSQLData);
-    PrepareParameters(GetPlainDriver, ProcSql, InParamValues, InParamTypes,
-      InParamCount, GetDialect, FStmtHandle, FParamSQLData, FIBConnection.GetEncoding);
+    PrepareParameters(GetPlainDriver, ProcSql, GetDialect, FStmtHandle, FParamSQLData);
   end;
 end;
 

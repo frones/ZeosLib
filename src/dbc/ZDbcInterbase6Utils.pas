@@ -304,9 +304,7 @@ type
     Handle: PISC_DB_HANDLE; Dialect: Word; LogSQL: string;
     var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
   procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
-    InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
-    const Encoding: TZCharEncoding);
+    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
   procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
     InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
     InParamCount: Integer; ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
@@ -1023,17 +1021,12 @@ end;
 {**
    Prepare sql statement parameters and fill parameters by values
    @param PlainDriver a interbase plain driver
-   @param InParamValues a array of parameters values
-   @param InParamTypes a array of parameters sql types
-   @param InParamCount a parameters count
    @param Dialect a interbase sql dialect number
    @param StmtHandle a statement handle
    @param SqlData a interbase sql result data
 }
 procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
-  InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-  Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
-  const Encoding: TZCharEncoding);
+   Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin

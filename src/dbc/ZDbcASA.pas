@@ -89,6 +89,7 @@ type
     FHandle: PZASASQLCA;
   private
     procedure StartTransaction; virtual;
+    function DetermineASACharSet: String;
   protected
     procedure InternalCreate; override;
   public
@@ -470,6 +471,9 @@ begin
   end;
 
   inherited Open;
+
+  if FClientCodePage = ''  then
+    CheckCharEncoding(DetermineASACharSet);
 end;
 
 {**
@@ -539,6 +543,22 @@ begin
   if ASATL > 1 then
     ASATL := ASATL - 1;
   SetOption( 1, nil, 'ISOLATION_LEVEL', IntToStr( ASATL));
+end;
+
+function TZASAConnection.DetermineASACharSet: String;
+var
+  Stmt: IZStatement;
+  RS: IZResultSet;
+begin
+  Stmt := Self.CreateRegularStatement(Info);
+  RS := Stmt.ExecuteQuery('SELECT DB_PROPERTY( ''CharSet'')');
+  if RS.Next then
+    Result := RS.GetString(1)
+  else
+    Result := '';
+  RS := nil;
+  Stmt.Close;
+  Stmt := nil;
 end;
 
 { TZASACachedResolver }
