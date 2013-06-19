@@ -106,7 +106,6 @@ type
     procedure RecordChanged(Field: TField); override;
   public
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
-
   end;
 
   {** Abstract dataset component optimized for read/only access. }
@@ -1274,6 +1273,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
+  ACurrency: Currency;
   {$IFNDEF WITH_WIDESTRUTILS}
   WS: WideString;
   {$ENDIF}
@@ -1331,10 +1331,17 @@ begin
           end;
         {$ENDIF}
         { Processes all other fields. }
+        ftCurrency:
+          begin
+            {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
+            ACurrency := RowAccessor.GetBigDecimal(ColumnIndex, Result);
+            System.Move(Pointer(@ACurrency)^, Pointer(Buffer)^, SizeOf(Currency));
+            Result := not Result;
+          end;
         else
           begin
-            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, Pointer(Buffer)^,
-            RowAccessor.GetColumnDataSize(ColumnIndex));
+            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
+              Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
       end;
@@ -1377,6 +1384,7 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
+  Curr: Currency;
 begin
   WasNull := False;
   if not Active then
@@ -1427,7 +1435,12 @@ begin
         {$ELSE}
         RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
         {$ENDIF}
-
+      end
+  	  else if Field.DataType = ftCurrency then
+      begin
+        {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
+        Curr := PCurrency(Buffer)^;
+        RowAccessor.SetBigDecimal(ColumnIndex, Curr); //cast Currrency to Extented
       end
       { Processes all other fields. }
       else if {$IFNDEF DELPHI12_UP}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
@@ -1443,7 +1456,7 @@ begin
       end
       else  //process all others also calculatets
       begin
-        System.Move(PWideChar(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
+        System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
         RowAccessor.GetColumnDataSize(ColumnIndex));
         RowAccessor.SetNotNull(ColumnIndex);
       end;

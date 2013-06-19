@@ -1104,9 +1104,9 @@ begin
     J := R;
     P := SortList^[(L + R) shr 1];
     repeat
-      while SCompare(SortList^[I], P) < 0 do
+      while (I < R) And (SCompare(SortList^[I], P) < 0) do //check I against R too since the pointer can be nil
         Inc(I);
-      while SCompare(SortList^[J], P) > 0 do
+      while (J > L) And (SCompare(SortList^[J], P) > 0) do //check j against L too since the pointer can be nil
         Dec(J);
       if I <= J then
       begin
