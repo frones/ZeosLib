@@ -115,21 +115,32 @@ type
   TZMysqlColumnBuffer = Array of PDOBindRecord2;
   { TZMySQLBindBuffer }
   {** Encapsulates a MySQL bind buffer. }
-  TZMySQLBindBuffer = class(TZAbstractObject)
+  TZMySQLAbstractBindBuffer = class(TZAbstractObject)
   protected
     FAddedColumnCount : Integer;
     FBindOffsets: MYSQL_BINDOFFSETS;
     FBindArray: Array of byte;
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
-    constructor Create(PlainDriver:IZMysqlPlainDriver; NumColumns : Integer; var ColumnArray:TZMysqlColumnBuffer);
-    destructor Destroy; override;
-    procedure AddColumn(buffertype:TMysqlFieldTypes; field_length:integer; largeblobparameter:boolean);
+    constructor Create(PlainDriver:IZMysqlPlainDriver;
+      const BindCount : Integer; var ColumnArray:TZMysqlColumnBuffer);
     function GetColumnArray : TZMysqlColumnBuffer;
     function GetBufferAddress : Pointer;
     function GetBufferType(ColumnIndex: Integer) : TMysqlFieldTypes;
   end;
 
+  {** Encapsulates a MySQL bind buffer for ResultSets. }
+  TZMySQLResultSetBindBuffer = class(TZMySQLAbstractBindBuffer)
+  public
+    procedure AddColumn(PlainDriver: IZMysqlPlainDriver; const FieldHandle: PZMySQLField);
+  end;
+
+  {** Encapsulates a MySQL bind buffer for updates. }
+  TZMySQLParamBindBuffer = class(TZMySQLAbstractBindBuffer)
+  public
+    procedure AddColumn(buffertype: TMysqlFieldTypes; const field_length: integer;
+      const largeblobparameter: boolean);
+  end;
   {** Implements Prepared SQL Statement. }
 
   { TZMySQLPreparedStatement }
@@ -143,22 +154,22 @@ type
     FUseResult: Boolean;
 
     FColumnArray: TZMysqlColumnBuffer;
-    FBindBuffer: TZMysqlBindBuffer;
+    FParamBindBuffer: TZMySQLParamBindBuffer;
 
     function CreateResultSet(const SQL: string): IZResultSet;
 
     function getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
   protected
     function GetStmtHandle : PZMySqlPrepStmt;
-    procedure PrepareInParameters; override;
+    //procedure PrepareInParameters; override; //not supported
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
     property StmtHandle: PZMySqlPrepStmt read GetStmtHandle;
-    constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection; const SQL: string; Info: TStrings);
-    destructor Destroy; override;
-
+    constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection;
+      const SQL: string; Info: TStrings);
     procedure Prepare; override;
+    destructor Destroy; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -662,13 +673,6 @@ begin
     Result := NativeResultSet;
 end;
 
-procedure TZMySQLPreparedStatement.PrepareInParameters;
-begin
-  // Empty : Mysql can't prepare datastructures before the actual parameters are known, because the
-  // number/datatype of parameters isn't returned by the server.
-  inherited PrepareInParameters;
-end;
-
 procedure TZMysqlPreparedStatement.BindInParameters;
 var
   PBuffer: Pointer;
@@ -682,14 +686,14 @@ begin
   if InParamCount = 0 then
      exit;
   { Initialize Bind Array and Column Array }
-  FBindBuffer := TZMysqlBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
+  FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
 
   For I := 0 to InParamCount - 1 do
   begin
     MyType := GetFieldType(InParamValues[I]);
     case MyType of
       FIELD_TYPE_VARCHAR:
-        FBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
+        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
       FIELD_TYPE_BLOB:
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
@@ -697,7 +701,7 @@ begin
             DefVarManager.SetNull(InParamValues[I])
           else
             if InParamTypes[I] = stBinaryStream then
-              FBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
+              FParamBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
             else
             begin
               TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
@@ -705,17 +709,17 @@ begin
               TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
               TempBlob.SetString(TempAnsi);
               InParamValues[I].VInterface  := TempBlob;
-              FBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
+              FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
             end;
         end;
       FIELD_TYPE_LONGLONG:
-        FBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
+        FParamBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
       FIELD_TYPE_TINY:
-        FBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
+        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
       FIELD_TYPE_TINY_BLOB:
-        FBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
+        FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FBindBuffer.AddColumn(MyType,Max(1, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
+        FParamBindBuffer.AddColumn(MyType,Max(1, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
@@ -723,7 +727,7 @@ begin
       FColumnArray[I].is_null := 1
     else
       FColumnArray[I].is_null := 0;
-      case FBindBuffer.GetBufferType(I+1) of
+      case FParamBindBuffer.GetBufferType(I+1) of
 
         FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
         FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
@@ -770,7 +774,7 @@ begin
       end;
   end;
 
-  if (FPlainDriver.BindParameters(FStmtHandle, FBindBuffer.GetBufferAddress) <> 0) then
+  if (FPlainDriver.BindParameters(FStmtHandle, FParamBindBuffer.GetBufferAddress) <> 0) then
   begin
     checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
     exit;
@@ -780,7 +784,7 @@ begin
   // Send large blobs in chuncks
   For I := 0 to InParamCount - 1 do
   begin
-    if FBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
+    if FParamBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
       begin
         MyType := GetFieldType(InParamValues[I]);
         if MyType = FIELD_TYPE_BLOB then
@@ -847,13 +851,13 @@ begin
     try
       checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
     except
-      if Assigned(FBindBuffer) then
-        FreeAndNil(FBindBuffer);
+      if Assigned(FParamBindBuffer) then
+        FreeAndNil(FParamBindBuffer);
       raise;
     end;
 
-  if Assigned(FBindBuffer) then
-     FreeAndNil(FBindBuffer);
+  if Assigned(FParamBindBuffer) then
+     FreeAndNil(FParamBindBuffer);
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
     raise EZSQLException.Create(SCanNotOpenResultSet);
@@ -878,13 +882,13 @@ begin
     try
       checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
     except
-      if Assigned(FBindBuffer) then
-        FreeAndNil(FBindBuffer); //MemLeak closed
+      if Assigned(FParamBindBuffer) then
+        FreeAndNil(FParamBindBuffer); //MemLeak closed
       raise;
     end;
 
-  if Assigned(FBindBuffer) then
-    FreeAndNil(FBindBuffer); //MemLeak closed
+  if Assigned(FParamBindBuffer) then
+    FreeAndNil(FParamBindBuffer); //MemLeak closed
 
     { Process queries with result sets }
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
@@ -921,13 +925,13 @@ begin
     try
       checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
     except
-      if Assigned(FBindBuffer) then
-        FreeAndNil(FBindBuffer); //MemLeak closed
+      if Assigned(FParamBindBuffer) then
+        FreeAndNil(FParamBindBuffer); //MemLeak closed
       raise;
     end;
 
-  if Assigned(FBindBuffer) then
-    FreeAndNil(FBindBuffer); //MemLeak closed
+  if Assigned(FParamBindBuffer) then
+    FreeAndNil(FParamBindBuffer); //MemLeak closed
 
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
   begin
@@ -1615,9 +1619,10 @@ begin
   Result := FResultSets.Count;
 end;
 
-{ TZMySQLBindBuffer }
+{ TZMySQLAbstractBindBuffer }
 
-constructor TZMySQLBindBuffer.Create(PlainDriver: IZMysqlPlainDriver; NumColumns: Integer; var ColumnArray:TZMysqlColumnBuffer);
+constructor TZMySQLAbstractBindBuffer.Create(PlainDriver: IZMysqlPlainDriver;
+  const BindCount: Integer; var ColumnArray: TZMysqlColumnBuffer);
 begin
   inherited Create;
   FBindOffsets := PlainDriver.GetBindOffsets;
@@ -1625,24 +1630,83 @@ begin
     raise EZSQLException.Create('Unknown dll version : '+IntToStr(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
   setlength(FBindArray,0);
-  setlength(ColumnArray,NumColumns);
-  setlength(FBindArray,NumColumns*FBindOffsets.size);
+  setlength(ColumnArray,BindCount);
+  setlength(FBindArray,BindCount*FBindOffsets.size);
 end;
 
-destructor TZMySQLBindBuffer.Destroy;
+function TZMySQLAbstractBindBuffer.GetColumnArray: TZMysqlColumnBuffer;
 begin
-  inherited Destroy;
+  result := FPColumnArray^;
 end;
 
+function TZMySQLAbstractBindBuffer.GetBufferAddress: Pointer;
+begin
+  result:=@FBindArray[0];
+end;
+
+function TZMySQLAbstractBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
+begin
+  result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.buffer_type])^;
+end;
+
+
+{ TZMySQLResultSetBindBuffer }
+
+procedure TZMySQLResultSetBindBuffer.AddColumn(PlainDriver: IZMysqlPlainDriver;
+  const FieldHandle: PZMySQLField);
+var
+  buffertype: TMysqlFieldTypes;
+  ColOffset: NativeUInt;
+begin
+  buffertype := PlainDriver.GetFieldType(FieldHandle);
+  Inc(FAddedColumnCount);
+  With FPColumnArray^[FAddedColumnCount-1] do
+  begin
+      case buffertype of
+        FIELD_TYPE_DATE:        Length := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_TIME:        Length := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_DATETIME:    Length := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_TIMESTAMP:   Length := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_TINY:        Length := 1;
+        FIELD_TYPE_SHORT:       Length := 2;
+        FIELD_TYPE_LONG:        Length := 4;
+        FIELD_TYPE_LONGLONG:    Length := 8;
+        FIELD_TYPE_FLOAT:       Length := 4;
+        FIELD_TYPE_DOUBLE:      Length := 8;
+        FIELD_TYPE_NEWDECIMAL:  Length := 11;
+        FIELD_TYPE_BLOB,
+        FIELD_TYPE_MEDIUM_BLOB,
+        FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_GEOMETRY:
+          Length := PlainDriver.GetFieldMaxLength(FieldHandle)+1;
+        FIELD_TYPE_VARCHAR,
+        FIELD_TYPE_VAR_STRING,
+        FIELD_TYPE_STRING:
+            Length := Min(MaxBlobSize, Max(PlainDriver.GetFieldLength(FieldHandle), PlainDriver.GetFieldMaxLength(FieldHandle)))+1;
+      else
+        Length := PlainDriver.GetFieldLength(FieldHandle);
+      end;
+    SetLength(Buffer, Length);
+  end;
+  ColOffset := NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);
+  PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^ := buffertype;
+  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
+  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= 0;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount-1].buffer[0];
+  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount-1].length;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;
+end;
+
+{ TZMySQLParamBindBuffer }
 
 // largeblobparameter: true to indicate that parameter is a blob that will be
 // sent chunked. Set to false for result set columns.
 
-procedure TZMySQLBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
-  field_length: integer; largeblobparameter:boolean);
-  var
-    tempbuffertype: TMysqlFieldTypes;
-    ColOffset:NativeUInt;
+procedure TZMySQLParamBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
+  const field_length: integer; const largeblobparameter: boolean);
+var
+  tempbuffertype: TMysqlFieldTypes;
+  ColOffset:NativeUInt;
 begin
   Case buffertype of
     FIELD_TYPE_DECIMAL,
@@ -1652,29 +1716,29 @@ begin
   End;
   Inc(FAddedColumnCount);
   With FPColumnArray^[FAddedColumnCount-1] do
+  begin
+    length := getMySQLFieldSize(tempbuffertype,field_length);
+    if largeblobparameter then
     begin
-      length := getMySQLFieldSize(tempbuffertype,field_length);
-      if largeblobparameter then
-      begin
-        is_Null := 0;
-        buffer := nil;
-      end
-      else if field_length = 0 then
-      begin
-        is_Null := 1;
-        buffer := nil;
-      end
+      is_Null := 0;
+      buffer := nil;
+    end
+    else if field_length = 0 then
+    begin
+      is_Null := 1;
+      buffer := nil;
+    end
+    else
+    begin
+      if tempbuffertype in [FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
+           FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING] then
+      //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
+        SetLength(buffer,length+1)
       else
-      begin
-        if tempbuffertype in [FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
-	           FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING] then
-        //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
-          SetLength(buffer,length+1)
-        else
-          SetLength(buffer,length);
-        is_null := 0;
-      end;
+        SetLength(buffer,length);
+      is_null := 0;
     end;
+  end;
   ColOffset:=NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);
   PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^:=tempbuffertype;
   PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
@@ -1683,21 +1747,5 @@ begin
   PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount-1].length;
   PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;
 end;
-
-function TZMySQLBindBuffer.GetColumnArray: TZMysqlColumnBuffer;
-begin
-  result := FPColumnArray^;
-end;
-
-function TZMySQLBindBuffer.GetBufferAddress: Pointer;
-begin
-  result:=@FBindArray[0];
-end;
-
-function TZMySQLBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
-begin
-  result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.buffer_type])^;
-end;
-
 
 end.
