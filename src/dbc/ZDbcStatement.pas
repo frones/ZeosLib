@@ -194,8 +194,10 @@ type
     FInParamCount: Integer;
     FPrepared : Boolean;
     FExecCount: Integer;
+    FClientVariantManger: IZClientVariantManager;
   protected
     FStatementId : Integer;
+    function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
@@ -215,6 +217,7 @@ type
     property InParamDefaultValues: TStringDynArray
       read FInParamDefaultValues write FInParamDefaultValues;
     property InParamCount: Integer read FInParamCount write FInParamCount;
+    property ClientVarManager: IZClientVariantManager read FClientVariantManger;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -1115,6 +1118,7 @@ constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, Info);
+  FClientVariantManger := Connection.GetClientVariantManager;
   FSQL := SQL;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
   FInParamCount := 0;
@@ -1250,6 +1254,15 @@ begin
   Result := ExecutePrepared;
 end;
 
+
+{**
+  Return a VariantManager which supports client encoded RawByteStrings
+  @returns IZClientVariantManager
+}
+function TZAbstractPreparedStatement.GetClientVariantManger: IZClientVariantManager;
+begin
+  Result := FClientVariantManger;
+end;
 
 {**
   Prepares eventual structures for binding input parameters.

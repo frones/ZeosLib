@@ -492,7 +492,6 @@ var
   TempBlob: IZBlob;
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
-  TempBytes := nil;
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
@@ -507,38 +506,36 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
            Result := '''Y'''
         else
            Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
-          TempBytes := SoftVarManager.GetAsBytes(Value);
+          TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
-      stString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
-      stUnicodeString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+      stString, stUnicodeString:
+        Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
         begin
-          DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
           Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d',
             [AYear, AMonth, ADay]) + '''');
         end;
       stTime:
         begin
-          DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
           Result := RawByteString('''' + Format('%0.2d:%0.2d:%0.2d',
             [AHour, AMinute, ASecond]) + '''');
         end;
       stTimestamp:
         begin
-          DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
           Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
             [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''');
@@ -1064,38 +1061,36 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
           Result := '''Y'''
         else
           Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
-          TempBytes := SoftVarManager.GetAsBytes(Value);
+          TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
-      stString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
-      stUnicodeString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+      stString, stUnicodeString:
+        Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-      begin
-        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d',
-          [AYear, AMonth, ADay])) + '''';
-      end;
+        begin
+          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
+            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+          Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d',
+            [AYear, AMonth, ADay])) + '''';
+        end;
       stTime:
-      begin
-        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + RawByteString(Format('%0.2d:%0.2d:%0.2d',
-          [AHour, AMinute, ASecond])) + '''';
-      end;
+        begin
+          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
+            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+          Result := '''' + RawByteString(Format('%0.2d:%0.2d:%0.2d',
+            [AHour, AMinute, ASecond])) + '''';
+        end;
       stTimestamp:
       begin
-        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
+        DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
         Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond])) + '''';

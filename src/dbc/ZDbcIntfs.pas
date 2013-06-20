@@ -562,9 +562,6 @@ type
     function ExecutePrepared: Boolean;
 
     function GetSQL : String;
-//    procedure Prepare;
-//    procedure Unprepare;
-//    function IsPrepared: Boolean;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
