@@ -266,16 +266,7 @@ begin
         end;
         {$ENDIF}
         ftBytes, ftVarBytes:
-          begin
-            {$IFDEF WITH_ASBYTES}
-            TempBytes := StrToBytes(RawByteString(FCallableStatement.GetString(I + 1)));
-            SetLength(Bts, High(TempBytes)+1);
-            Move(PAnsiChar(TempBytes)^, PAnsiChar(Bts)^, High(TempBytes)+1);
-            Param.AsBytes := Bts;
-            {$ELSE}
-            Param.AsString := FCallableStatement.GetString(I + 1);
-            {$ENDIF}
-          end;
+          Param.Value := FCallableStatement.GetBytes(I + 1);
         ftDate:
           Param.AsDate := FCallableStatement.GetDate(I + 1);
         ftTime:

@@ -1736,6 +1736,8 @@ begin
             Result.VString := 'TRUE'
           else
             Result.VString := 'FALSE';
+        vtBytes:
+          Result.VString := {$IFDEF UNICODE}String{$ENDIF}(BytesToStr(Value.VBytes));
         vtInteger:
           Result.VString := IntToStr(Value.VInteger);
         vtFloat:
