@@ -443,7 +443,7 @@ begin
   else
   begin
     Result := PrepareSQLParameter(InParamValues[ParamIndex],
-      InParamTypes[ParamIndex], ConSettings, FPlainDriver);
+      InParamTypes[ParamIndex], ClientVarManager, ConSettings);
   end;
 end;
 

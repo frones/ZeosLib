@@ -107,8 +107,8 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
-  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): RawByteString;
+function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
+  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings): RawByteString;
 
 implementation
 
@@ -363,8 +363,8 @@ end;
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
-  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): RawByteString;
+function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
+  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings): RawByteString;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
@@ -377,22 +377,17 @@ begin
   begin
     case ParamType of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
           Result := '1'
         else
           Result := '0';
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
-      stString:
-        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
-      stUnicodeString:
-        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          Result := 'N'+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
-        else
-          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings),'''');
+        Result := ClientVarManager.GetAsRawByteString(Value);
+      stString, stUnicodeString:
+        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stBytes:
         begin
-          TempBytes := SoftVarManager.GetAsBytes(Value);
+          TempBytes := ClientVarManager.GetAsBytes(Value);
           if Length(TempBytes) = 0 then
             Result := 'NULL'
           else
@@ -400,13 +395,13 @@ begin
         end;
       stDate:
         Result := RawByteString('''' + FormatDateTime(ConSettings^.DateFormat,
-          SoftVarManager.GetAsDateTime(Value)) + '''');
+          ClientVarManager.GetAsDateTime(Value)) + '''');
       stTime:
         Result := RawByteString('''' + FormatDateTime('hh":"mm":"ss":"zzz',
-          SoftVarManager.GetAsDateTime(Value)) + '''');
+          ClientVarManager.GetAsDateTime(Value)) + '''');
       stTimestamp:
         Result := RawByteString('''' + FormatDateTime(ConSettings^.DateFormat+' hh":"mm":"ss":"zzz',
-          SoftVarManager.GetAsDateTime(Value)) + '''');
+          ClientVarManager.GetAsDateTime(Value)) + '''');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
