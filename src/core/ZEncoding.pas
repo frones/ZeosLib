@@ -1405,7 +1405,10 @@ begin
     etUSASCII: ZSetString(PAnsiChar(Src), Result);
     etAnsi:
       if (RawCP = zCP_UTF8) then
-        Result := ZConvertStringToRaw(Src, StringCP, RawCP)
+        if ZCompatibleCodePages(StringCP, zCP_UTF8 ) then
+          Result := ZUnicodeToRaw(ZWideString(Src), RawCP) //Random success unknown String CP
+        else
+          Result := ZConvertStringToRaw(Src, StringCP, RawCP)
       else
         ZSetString(PAnsiChar(Src), Result);
     etUTF8:
