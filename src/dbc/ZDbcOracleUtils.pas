@@ -472,8 +472,10 @@ var
   TempStream: TStream;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   OracleConnection: IZOracleConnection;
+  ClientVarManager: IZClientVariantManager;
 begin
   OracleConnection := Connection as IZOracleConnection;
+  ClientVarManager := Connection.GetClientVariantManager;
   for I := 0 to Variables.ActualNum - 1 do
   begin
     CurrentVar := @Variables.Variables[I + 1];
@@ -488,30 +490,11 @@ begin
       CurrentVar.Indicator := 0;
       case CurrentVar.TypeCode of
         SQLT_INT:
-          begin
-            PLongInt(CurrentVar.Data)^ :=
-              DefVarManager.GetAsInteger(Values[I]);
-          end;
+          PLongInt(CurrentVar.Data)^ := DefVarManager.GetAsInteger(Values[I]);
         SQLT_FLT:
-          begin
-            PDouble(CurrentVar.Data)^ :=
-              DefVarManager.GetAsFloat(Values[I]);
-          end;
+          PDouble(CurrentVar.Data)^ := DefVarManager.GetAsFloat(Values[I]);
         SQLT_STR:
-          begin
-            case Values[i].VType of
-              vtString:
-                StrLCopy(PAnsiChar(CurrentVar.Data),
-                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
-              vtUnicodeString:
-                StrLCopy(PAnsiChar(CurrentVar.Data),
-                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
-            end;
-          end;
-        SQLT_VST:
-          begin
-            StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
-          end;
+          StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(ClientVarManager.GetAsRawByteString(Values[I])), 1024);
         SQLT_TIMESTAMP:
           begin
             TempDate := DefVarManager.GetAsDateTime(Values[I]);
