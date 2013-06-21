@@ -426,7 +426,7 @@ end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(FIBConnection.GetPlainDriver, InParamValues,
+  BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager, InParamValues,
     InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings);
   inherited BindInParameters;
 end;
@@ -745,8 +745,8 @@ end;
 
 procedure TZInterbase6CallableStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(FIBConnection.GetPlainDriver, InParamValues,
-    InParamTypes, InParamCount, FParamSQLData, ConSettings);
+  BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager,
+    InParamValues, InParamTypes, InParamCount, FParamSQLData, ConSettings);
   inherited BindInParameters;
 end;
 

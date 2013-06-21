@@ -308,8 +308,9 @@ type
     Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA;
     const Encoding: TZCharEncoding);
   procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
-    InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-    InParamCount: Integer; ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
+    ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
+    InParamTypes: TZSQLTypeArray; InParamCount: Integer;
+    ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
   procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
     StatementHandle: TISC_STMT_HANDLE; Options : Word);
   function GetStatementType(PlainDriver: IZInterbasePlainDriver;
@@ -1055,8 +1056,9 @@ begin
 end;
 
 procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
-  InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
-  InParamCount: Integer; ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
+  ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
+  InParamTypes: TZSQLTypeArray; InParamCount: Integer;
+  ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
 var
   I: Integer;
   TempBlob: IZBlob;
@@ -1075,57 +1077,46 @@ begin
     case InParamTypes[I] of
       stBoolean:
         ParamSqlData.UpdateBoolean(I,
-          SoftVarManager.GetAsBoolean(InParamValues[I]));
+          ClientVarManager.GetAsBoolean(InParamValues[I]));
       stByte:
         ParamSqlData.UpdateByte(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
+          ClientVarManager.GetAsInteger(InParamValues[I]));
       stShort:
         ParamSqlData.UpdateShort(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
+          ClientVarManager.GetAsInteger(InParamValues[I]));
       stInteger:
         ParamSqlData.UpdateInt(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
+          ClientVarManager.GetAsInteger(InParamValues[I]));
       stLong:
         ParamSqlData.UpdateLong(I,
-          SoftVarManager.GetAsInteger(InParamValues[I]));
+          ClientVarManager.GetAsInteger(InParamValues[I]));
       stFloat:
         ParamSqlData.UpdateFloat(I,
-          SoftVarManager.GetAsFloat(InParamValues[I]));
+          ClientVarManager.GetAsFloat(InParamValues[I]));
       stDouble:
         ParamSqlData.UpdateDouble(I,
-          SoftVarManager.GetAsFloat(InParamValues[I]));
+          ClientVarManager.GetAsFloat(InParamValues[I]));
       stBigDecimal:
         ParamSqlData.UpdateBigDecimal(I,
-          SoftVarManager.GetAsFloat(InParamValues[I]));
-      stString:
+          ClientVarManager.GetAsFloat(InParamValues[I]));
+      stString, stUnicodeString:
          if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
             (ParamSqlData.GetIbSqlSubType(I) = CS_NONE) then //CharSet 'NONE' writes data 'as is'!
-          ParamSqlData.UpdateString(I,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]),
-            ConSettings, PlainDriver.ValidateCharEncoding(ParamSqlData.GetIbSqlSubType(I)).CP))
+          ParamSqlData.UpdateString(I, ClientVarManager.GetAsRawByteString(InParamValues[I],
+            PlainDriver.ValidateCharEncoding(ParamSqlData.GetIbSqlSubType(I))^.CP))
         else
-          ParamSqlData.UpdateString(I,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsString(InParamValues[I]), ConSettings));
-      stUnicodeString:
-         if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
-            (ParamSqlData.GetIbSqlSubType(I) = CS_NONE) then //CharSet 'NONE' writes data 'as is'!
-          ParamSqlData.UpdateString(I,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(InParamValues[I]),
-            ConSettings, PlainDriver.ValidateCharEncoding(ParamSqlData.GetIbSqlSubType(I)).CP))
-        else
-          ParamSqlData.UpdateString(I,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(InParamValues[I]), ConSettings));
+          ParamSqlData.UpdateString(I, ClientVarManager.GetAsRawByteString(InParamValues[I]));
       stBytes:
-        ParamSqlData.UpdateBytes(I, SoftVarManager.GetAsBytes(InParamValues[I]));
+        ParamSqlData.UpdateBytes(I, ClientVarManager.GetAsBytes(InParamValues[I]));
       stDate:
         ParamSqlData.UpdateDate(I,
-          SoftVarManager.GetAsDateTime(InParamValues[I]));
+          ClientVarManager.GetAsDateTime(InParamValues[I]));
       stTime:
         ParamSqlData.UpdateTime(I,
-          SoftVarManager.GetAsDateTime(InParamValues[I]));
+          ClientVarManager.GetAsDateTime(InParamValues[I]));
       stTimestamp:
         ParamSqlData.UpdateTimestamp(I,
-          SoftVarManager.GetAsDateTime(InParamValues[I]));
+          ClientVarManager.GetAsDateTime(InParamValues[I]));
       stAsciiStream,
       stUnicodeStream,
       stBinaryStream:
