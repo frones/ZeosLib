@@ -1391,7 +1391,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateUTF8String(ColumnIndex: Integer;
-  const Value: String);
+  const Value: UTF8String);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
