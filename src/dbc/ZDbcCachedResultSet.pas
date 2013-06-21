@@ -172,6 +172,9 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPChar(ColumnIndex: Integer): PChar; override;
     function GetString(ColumnIndex: Integer): String; override;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWidestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -213,6 +216,9 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
+    procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
+    procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
+    procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
     procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
@@ -257,6 +263,9 @@ type
     procedure DisposeCachedUpdates; virtual;
   end;
 
+  TZStringFieldAssignFromResultSet = procedure(RowAccessor: TZRowAccessor;
+    ResultSet: IZResultSet; const ColumnIndex: Integer);
+
   {**
     Implements Abstract cached ResultSet. This class should be extended
     with database specific logic to form SQL data manipulation statements.
@@ -264,6 +273,7 @@ type
   TZCachedResultSet = class(TZAbstractCachedResultSet)
   private
     FResultSet: IZResultSet;
+    FStringFieldAssignFromResultSet: TZStringFieldAssignFromResultSet;
   protected
     procedure Open; override;
     function Fetch: Boolean; virtual;
@@ -288,6 +298,18 @@ type
 implementation
 
 uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding;
+
+procedure ZStringFieldAssignFromResultSet_RawEncoded(RowAccessor: TZRowAccessor;
+    ResultSet: IZResultSet; const ColumnIndex: Integer);
+begin
+  RowAccessor.SetRawByteString(ColumnIndex, ResultSet.GetRawByteString(ColumnIndex));
+end;
+
+procedure ZStringFieldAssignFromResultSet_UnicodeEncoded(RowAccessor: TZRowAccessor;
+    ResultSet: IZResultSet; const ColumnIndex: Integer);
+begin
+  RowAccessor.SetUnicodeString(ColumnIndex, ResultSet.GetUnicodeString(ColumnIndex));
+end;
 
 { TZAbstractCachedResultSet }
 
@@ -787,7 +809,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
-  Result := FRowAccessor.GetPChar(ColumnIndex, LastWasNull);
+  Result := PChar(FRowAccessor.GetString(ColumnIndex, LastWasNull));
 end;
 
 {**
@@ -805,6 +827,57 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetString(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>AnsiString</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractCachedResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetAnsiString(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractCachedResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetUTF8String(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>RawByteString</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractCachedResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetRawByteString(ColumnIndex, LastWasNull);
 end;
 
 {**
@@ -1285,6 +1358,66 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetString(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>AnsiString</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateAnsiString(ColumnIndex: Integer;
+  const Value: String);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetAnsiString(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>UTF8String</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateUTF8String(ColumnIndex: Integer;
+  const Value: String);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetUTF8String(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>RawByteString</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateRawByteString(ColumnIndex: Integer;
+  const Value: String);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetRawByteString(ColumnIndex, Value);
 end;
 
 {**
@@ -1826,6 +1959,11 @@ begin
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := Resolver;
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
+  if Statement.GetConnection.GetIZPlainDriver.IsAnsiDriver and
+    ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_RawEncoded
+    else
+      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_UnicodeEncoded;
   Open;
 end;
 
