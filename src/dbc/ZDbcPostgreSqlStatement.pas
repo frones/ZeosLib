@@ -457,38 +457,38 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
           Result := 'TRUE'
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := RawByteString(ClientVarManager.GetAsString(Value));
       stBytes:
-        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(SoftVarManager.GetAsBytes(Value));
+        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(ClientVarManager.GetAsBytes(Value));
       stString:
         if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+            ZPlainString(ClientVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
         else
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
+            ZPlainString(ClientVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stUnicodeString:
         if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+            ZPlainString(ClientVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
         else
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
+            ZPlainString(ClientVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
         Result := RawByteString(Format('''%s''::date',
-          [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
+          [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]));
       stTime:
         Result := RawByteString(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
+          [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]));
       stTimestamp:
         Result := RawByteString(Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
-            SoftVarManager.GetAsDateTime(Value))]));
+            ClientVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -655,46 +655,39 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
           Result := 'TRUE'
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := #39+RawByteString(SoftVarManager.GetAsString(Value))+#39;
+        Result := #39+ClientVarManager.GetAsRawByteString(Value)+#39;
       stBytes:
-        Result := FPostgreSQLConnection.EncodeBinary(SoftVarManager.GetAsBytes(Value));
-      stString:
+        Result := FPostgreSQLConnection.EncodeBinary(ClientVarManager.GetAsBytes(Value));
+      stString,stUnicodeString:
         if FPlainDriver.SupportsStringEscaping(FPostgreSQLConnection.ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings, True)
+            ClientVarManager.GetAsRawByteString(Value), FPostgreSQLConnection.GetConSettings, True)
         else
           Result := ZDbcPostgreSqlUtils.PGEscapeString(FPostgreSQLConnection.GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsString(Value)), FPostgreSQLConnection.GetConSettings, True);
-      stUnicodeString:
-        if FPlainDriver.SupportsStringEscaping(FPostgreSQLConnection.ClientSettingsChanged) then
-          Result := FPlainDriver.EscapeString(FPostgreSQLConnection.GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), FPostgreSQLConnection.GetConSettings, True)
-        else
-          Result := ZDbcPostgreSqlUtils.PGEscapeString(FPostgreSQLConnection.GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), FPostgreSQLConnection.GetConSettings, True);
+            ClientVarManager.GetAsRawByteString(Value), FPostgreSQLConnection.GetConSettings, True);
       stDate:
         if Escaped then
           Result := RawByteString(Format('''%s''::date',
-            [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]))
+            [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+RawByteString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+RawByteString(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value)))+#39;
       stTime:
         if Escaped then
           Result := RawByteString(Format('''%s''::time',
-            [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]))
+            [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+RawByteString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+RawByteString(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
       stTimestamp:
         if Escaped then
           Result := RawByteString(Format('''%s''::timestamp',
-           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]))
+           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+RawByteString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+RawByteString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1125,24 +1118,25 @@ begin
     begin
       case InParamTypes[ParamIndex] of
         stBoolean:
-          UpdateString(RawByteString(UpperCase(BoolToStrEx(SoftVarManager.GetAsBoolean(Value)))), ParamIndex);
+          if ClientVarManager.GetAsBoolean(Value) then
+            UpdateString(RawByteString('TRUE'), ParamIndex)
+          else
+            UpdateString(RawByteString('FALSE'), ParamIndex);
         stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-          UpdateString(RawByteString(SoftVarManager.GetAsString(Value)), ParamIndex);
+          UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stBytes:
           begin
-            TempBytes := SoftVarManager.GetAsBytes(Value);
+            TempBytes := ClientVarManager.GetAsBytes(Value);
             UpdateBinary(PAnsiChar(TempBytes), Length(TempBytes), ParamIndex);
           end;
-        stString:
-          UpdateString(ZPlainString(SoftVarManager.GetAsString(Value), GetConnection.GetEncoding), ParamIndex);
-        stUnicodeString:
-          UpdateString(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ParamIndex);
+        stString, stUnicodeString:
+          UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stDate:
-          UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
         stTime:
-          UpdateString(RawByteString(FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(RawByteString(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
         stTimestamp:
-          UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(RawByteString(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1443,38 +1437,31 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
           Result := 'TRUE'
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
-        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(SoftVarManager.GetAsBytes(Value));
-      stString:
+        Result := (Connection as IZPostgreSQLConnection).EncodeBinary(ClientVarManager.GetAsBytes(Value));
+      stString, stUnicodeString:
         if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
           Result :=  FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
+            ClientVarManager.GetAsRawByteString(Value), (Connection as IZPostgreSQLConnection).GetConSettings, True)
         else
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
-      stUnicodeString:
-        if FPlainDriver.SupportsStringEscaping((Connection as IZPostgreSQLConnection).ClientSettingsChanged) then
-          Result := FPlainDriver.EscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True)
-        else
-          Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
-            ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), (Connection as IZPostgreSQLConnection).GetConSettings, True);
+            ClientVarManager.GetAsRawByteString(Value), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
         Result := RawByteString(Format('''%s''::date',
-          [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
+          [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]));
       stTime:
         Result := RawByteString(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
+          [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]));
       stTimestamp:
         Result := RawByteString(Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
-            SoftVarManager.GetAsDateTime(Value))]));
+            ClientVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
