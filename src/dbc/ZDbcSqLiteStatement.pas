@@ -512,9 +512,9 @@ begin
         stString, stUnicodeString:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(ZPlainString(ClientVarManager.GetAsRawByteString(Value)))),
+            SysUtils.StrNew(PAnsichar(ClientVarManager.GetAsRawByteString(Value))),
             {$ELSE}
-            StrNew(PAnsichar(ZPlainString(ClientVarManager.GetAsRawByteString(Value)))),
+            StrNew(PAnsichar(ClientVarManager.GetAsRawByteString(Value))),
             {$ENDIF}
               -1, @BindingDestructor);
         stDate:
