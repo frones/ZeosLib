@@ -354,34 +354,28 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-            if SoftVarManager.GetAsBoolean(Value) then
-               Result := '''Y'''
-            else
-               Result := '''N''';
+        if ClientVarManager.GetAsBoolean(Value) then
+           Result := '''Y'''
+        else
+           Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
-          TempBytes := SoftVarManager.GetAsBytes(Value);
+          TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := EncodeString(@TempBytes, Length(TempBytes));
         end;
-      stString:
-        Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39));
-      stUnicodeString:
-        {$IFDEF UNICODE}
-        Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsUnicodeString(Value), #39));
-        {$ELSE}
-        Result := AnsiQuotedStr(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), #39);
-        {$ENDIF}
+      stString, stUnicodeString:
+        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stDate:
         Result := '''' + RawByteString(FormatDateTime('yyyy-mm-dd',
-          SoftVarManager.GetAsDateTime(Value))) + '''';
+          ClientVarManager.GetAsDateTime(Value))) + '''';
       stTime:
         Result := '''' + RawByteString(FormatDateTime('hh:mm:ss',
-          SoftVarManager.GetAsDateTime(Value))) + '''';
+          ClientVarManager.GetAsDateTime(Value))) + '''';
       stTimestamp:
         Result := '''' + RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          SoftVarManager.GetAsDateTime(Value))) + '''';
+          ClientVarManager.GetAsDateTime(Value))) + '''';
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -485,7 +479,7 @@ begin
     begin
       case InParamTypes[I-1] of
         stBoolean:
-          if SoftVarManager.GetAsBoolean(Value) then
+          if ClientVarManager.GetAsBoolean(Value) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
               SysUtils.StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
@@ -501,37 +495,28 @@ begin
             {$ENDIF}
         stByte, stShort, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
-            SoftVarManager.GetAsInteger(Value));
+            ClientVarManager.GetAsInteger(Value));
         stLong:
           FErrorcode := FPlainDriver.bind_int64(FStmtHandle, i,
-            SoftVarManager.GetAsInteger(Value));
+            ClientVarManager.GetAsInteger(Value));
         stBigDecimal, stFloat, stDouble:
           FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
-            SoftVarManager.GetAsFloat(Value));
+            ClientVarManager.GetAsFloat(Value));
         stBytes:
           begin
-            TempAnsi := RawByteString(SoftVarManager.GetAsString(Value));
+            TempAnsi := BytesToStr(ClientVarManager.GetAsBytes(Value));
             L := Length(TempAnsi);
             FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
               AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
           end;
-        stString:
+        stString, stUnicodeString:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
+            SysUtils.StrNew(PAnsichar(ZPlainString(ClientVarManager.GetAsRawByteString(Value)))),
             {$ELSE}
-            StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
+            StrNew(PAnsichar(ZPlainString(ClientVarManager.GetAsRawByteString(Value)))),
             {$ENDIF}
               -1, @BindingDestructor);
-        stUnicodeString:
-          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
-            {$ELSE}
-            StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
-            {$ENDIF}
-
-               -1, @BindingDestructor);
         stDate:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
@@ -539,7 +524,7 @@ begin
              {$ELSE}
             StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
             {$ENDIF}
-            SoftVarManager.GetAsDateTime(Value))))),
+            ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
@@ -548,7 +533,7 @@ begin
             {$ELSE}
             StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
             {$ENDIF}
-            SoftVarManager.GetAsDateTime(Value))))),
+            ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
@@ -557,14 +542,14 @@ begin
             {$ELSE}
             StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             {$ENDIF}
-            SoftVarManager.GetAsDateTime(Value))))),
+            ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         { works equal but selects from data which was written in string format
           won't match! e.G. TestQuery etc. On the other hand-> i've prepared
           this case on the resultsets too. JULIAN_DAY_PRECISION?}
         {stDate, stTime, stTimestamp:
           FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
-            SoftVarManager.GetAsDateTime(Value));}
+            ClientVarManager.GetAsDateTime(Value));}
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
