@@ -256,7 +256,7 @@ procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
    const SQL: RawByteString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 
-procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
+procedure PrepareParameters( ClientVarManager: IZClientVariantManager;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
   InParamCount: Integer; ParamSqlData: IZASASQLDA;
   ConSettings: PZConSettings);
@@ -2247,7 +2247,7 @@ begin
   end;
 end;
 
-procedure PrepareParameters( PlainDriver: IZASAPlainDriver;
+procedure PrepareParameters( ClientVarManager: IZClientVariantManager;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
   InParamCount: Integer; ParamSqlData: IZASASQLDA; ConSettings: PZConSettings);
 var
@@ -2264,45 +2264,41 @@ begin
       case InParamTypes[i] of
         stBoolean:
           ParamSqlData.UpdateBoolean( i,
-            SoftVarManager.GetAsBoolean( InParamValues[i]));
+            ClientVarManager.GetAsBoolean( InParamValues[i]));
         stByte:
           ParamSqlData.UpdateByte( i,
-            SoftVarManager.GetAsInteger( InParamValues[i]));
+            ClientVarManager.GetAsInteger( InParamValues[i]));
         stShort:
           ParamSqlData.UpdateShort( i,
-            SoftVarManager.GetAsInteger( InParamValues[i]));
+            ClientVarManager.GetAsInteger( InParamValues[i]));
         stInteger:
           ParamSqlData.UpdateInt( i,
-            SoftVarManager.GetAsInteger( InParamValues[i]));
+            ClientVarManager.GetAsInteger( InParamValues[i]));
         stLong:
           ParamSqlData.UpdateLong( i,
-            SoftVarManager.GetAsInteger( InParamValues[i]));
+            ClientVarManager.GetAsInteger( InParamValues[i]));
         stFloat:
           ParamSqlData.UpdateFloat( i,
-            SoftVarManager.GetAsFloat( InParamValues[i]));
+            ClientVarManager.GetAsFloat( InParamValues[i]));
         stDouble:
           ParamSqlData.UpdateDouble( i,
-            SoftVarManager.GetAsFloat( InParamValues[i]));
+            ClientVarManager.GetAsFloat( InParamValues[i]));
         stBigDecimal:
           ParamSqlData.UpdateBigDecimal( i,
-            SoftVarManager.GetAsFloat( InParamValues[i]));
-        stString:
-          ParamSqlData.UpdateString( i,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsString( InParamValues[i]), ConSettings));
-        stUnicodeString:
-          ParamSqlData.UpdateString( i,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString( InParamValues[i]), ConSettings));
+            ClientVarManager.GetAsFloat( InParamValues[i]));
+        stString, stUnicodeString:
+          ParamSqlData.UpdateString( i, ClientVarManager.GetAsRawByteString( InParamValues[i]));
         stBytes:
-          ParamSqlData.UpdateBytes( i, SoftVarManager.GetAsBytes( InParamValues[i]));
+          ParamSqlData.UpdateBytes( i, ClientVarManager.GetAsBytes( InParamValues[i]));
         stDate:
           ParamSqlData.UpdateDate( i,
-            SoftVarManager.GetAsDateTime( InParamValues[i]));
+            ClientVarManager.GetAsDateTime( InParamValues[i]));
         stTime:
           ParamSqlData.UpdateTime( i,
-            SoftVarManager.GetAsDateTime( InParamValues[i]));
+            ClientVarManager.GetAsDateTime( InParamValues[i]));
         stTimestamp:
           ParamSqlData.UpdateTimestamp( i,
-            SoftVarManager.GetAsDateTime( InParamValues[i]));
+            ClientVarManager.GetAsDateTime( InParamValues[i]));
         stAsciiStream,
         stUnicodeStream,
         stBinaryStream:

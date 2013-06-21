@@ -548,7 +548,7 @@ var
 begin
   with FASAConnection do
   begin
-    PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
+    PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
       InParamCount, FParamSQLData, FASAConnection.GetConSettings);
     if ResultSetConcurrency = rcUpdatable then
       CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
@@ -624,7 +624,7 @@ begin
   with FASAConnection do
   begin
 
-    PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
+    PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
       InParamCount, FParamSQLData, FASAConnection.GetConSettings);
     GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
       FParamSQLData.GetData, nil);
@@ -834,7 +834,7 @@ begin
   begin
     with FASAConnection do
     begin
-      PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
+      PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
         InParamCount, FParamSQLData, FASAConnection.GetConSettings);
       if ResultSetConcurrency = rcUpdatable then
         CursorOptions := CUR_OPEN_DECLARE + CUR_UPDATE
@@ -917,7 +917,7 @@ begin
     with FASAConnection do
     begin
 
-      PrepareParameters( GetPlainDriver, InParamValues, InParamTypes,
+      PrepareParameters( ClientVarManager, InParamValues, InParamTypes,
         InParamCount, FParamSQLData, FASAConnection.GetConSettings);
       GetPlainDriver.db_execute_into( GetDBHandle, nil, nil, @FStmtNum,
         FParamSQLData.GetData, FSQLData.GetData);
