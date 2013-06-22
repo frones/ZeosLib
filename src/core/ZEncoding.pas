@@ -306,6 +306,42 @@ function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IFNDEF
 
 function ZRawCPConvert(const Src: RawByteString; Const FromCP, ToCP: Word): RawByteString;
 {converter functions for the String-types}
+{$IFDEF WITH_LCONVENCODING}
+function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw28591(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw28592ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw28592(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1250ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1250(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1251ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1251(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1252ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1252(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1253ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1253(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1254ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1254(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1255ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1255(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1256ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1256(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1257ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1257(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw1258ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw1258(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw437ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw437(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw850ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw850(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw852ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw852(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw866(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw874ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw874(Const Src: UTF8String; const CP: Word): RawByteString;
+function ZConvertRaw20866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+function ZConvertUTF8ToRaw20866(Const Src: UTF8String; const CP: Word): RawByteString;
+{$ENDIF}
 function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString; {$IFNDEF WITH_LCONVENCODING} {$IFDEF WITH_INLINE}inline;{$ENDIF} {$ENDIF}
 function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String; {$IFDEF WITH_INLINE}inline;{$ENDIF}
@@ -790,6 +826,176 @@ end;
 
 {$ELSE}
 
+function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := ISO_8859_1ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw28591(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToISO_8859_1(PAnsiChar(Src));
+end;
+
+function ZConvertRaw28592ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := ISO_8859_2ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw28592(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToISO_8859_2(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1250ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1250ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1250(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1250(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1251ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1251ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1251(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1251(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1252ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1252ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1252(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1252(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1253ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1253ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1253(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1253(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1254ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1254ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1254(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1254(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1255ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1255ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1255(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1255(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1256ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1256ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1256(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1256(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1257ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1257ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1257(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1257(PAnsiChar(Src));
+end;
+
+function ZConvertRaw1258ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP1258ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw1258(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP1258(PAnsiChar(Src));
+end;
+
+function ZConvertRaw437ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP437ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw437(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP437(PAnsiChar(Src));
+end;
+
+function ZConvertRaw850ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP850ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw850(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP850(PAnsiChar(Src));
+end;
+
+function ZConvertRaw852ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP852ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw852(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP852(PAnsiChar(Src));
+end;
+
+function ZConvertRaw866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP866ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw866(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP866(PAnsiChar(Src));
+end;
+
+function ZConvertRaw874ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := CP874ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw874(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToCP874(PAnsiChar(Src));
+end;
+
+function ZConvertRaw20866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
+begin
+  Result := KOI8ToUTF8(PAnsiChar(Src));
+end;
+
+function ZConvertUTF8ToRaw20866(Const Src: UTF8String; const CP: Word): RawByteString;
+begin
+  Result := UTF8ToKOI8(PAnsiChar(Src));
+end;
+
 function IsLConvEncodingCodePage(const CP: Word): Boolean;
 var
   I: Integer;
@@ -1126,125 +1332,27 @@ end;
 
 function ZConvertRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 var
-  {$IFDEF WITH_LCONVENCODING}
-  sUTF8: String;
-  {$ELSE}
   US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-  {$ENDIF}
 begin
   if Src = '' then
     Result := ''
   else
   begin
-    {$IFDEF WITH_LCONVENCODING}
-    Result := '';
-    case CP of
-      28591: //ISO_8859_1
-        sUTF8 := ISO_8859_1ToUTF8(PAnsiChar(Src));
-      28592:  //ISO_8859_2
-        sUTF8 := ISO_8859_2ToUTF8(PAnsiChar(Src));
-      1250: //WIN1250
-        sUTF8 := CP1250ToUTF8(PAnsiChar(Src));
-      1251: //WIN1251
-        sUTF8 := CP1251ToUTF8(PAnsiChar(Src));
-      1252: //WIN1252
-        sUTF8 := CP1252ToUTF8(PAnsiChar(Src));
-      1253: //WIN1253
-        sUTF8 := CP1253ToUTF8(PAnsiChar(Src));
-      1254: //WIN1254
-        sUTF8 := CP1254ToUTF8(PAnsiChar(Src));
-      1255: //WIN1255
-        sUTF8 := CP1255ToUTF8(PAnsiChar(Src));
-      1256: //WIN1256
-        sUTF8 := CP1256ToUTF8(PAnsiChar(Src));
-      1257: //WIN1257
-        sUTF8 := CP1257ToUTF8(PAnsiChar(Src));
-      1258: //WIN1258
-        sUTF8 := CP1258ToUTF8(PAnsiChar(Src));
-      437: //CP437
-        sUTF8 := CP437ToUTF8(PAnsiChar(Src));
-      850: //CP850
-        sUTF8 := CP850ToUTF8(PAnsiChar(Src));
-      852: //CP852
-        sUTF8 := CP852ToUTF8(PAnsiChar(Src));
-      866: //CP866
-        sUTF8 := CP866ToUTF8(PAnsiChar(Src));
-      874: //CP874
-        sUTF8 := CP874ToUTF8(PAnsiChar(Src));
-      20866: //KOI8 (Russian)
-        sUTF8 := KOI8ToUTF8(PAnsiChar(Src));
-      65001: //utf8
-        sUTF8 := PAnsiChar(Src);
-      else
-        sUTF8 := PAnsiChar(Src);
-    end;
-    ZSetString(PAnsichar(sUTF8), Result);
-  {$ELSE}
     US := ZRawToUnicode(Src, CP);
     Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
-  {$ENDIF}
   end;
 end;
 
 function ZConvertUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
 var
-  {$IFDEF WITH_LCONVENCODING}
-  sUTF8: String;
-  {$ELSE}
   US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-  {$ENDIF}
 begin
   if Src = '' then
     Result := ''
   else
   begin
-  {$IFDEF WITH_LCONVENCODING}
-    case CP of
-      28591: //ISO_8859_1
-        sUTF8 := UTF8ToISO_8859_1(PAnsiChar(Src));
-      28592:  //ISO_8859_2
-        sUTF8 := UTF8ToISO_8859_2(PAnsiChar(Src));
-      1250: //WIN1250
-        sUTF8 := UTF8ToCP1250(PAnsiChar(Src));
-      1251: //WIN1251
-        sUTF8 := UTF8ToCP1251(PAnsiChar(Src));
-      1252: //WIN1252
-        sUTF8 := UTF8ToCP1252(PAnsiChar(Src));
-      1253: //WIN1253
-        sUTF8 := UTF8ToCP1253(PAnsiChar(Src));
-      1254: //WIN1254
-        sUTF8 := UTF8ToCP1254(PAnsiChar(Src));
-      1255: //WIN1255
-        sUTF8 := UTF8ToCP1255(PAnsiChar(Src));
-      1256: //WIN1256
-        sUTF8 := UTF8ToCP1256(PAnsiChar(Src));
-      1257: //WIN1257
-        sUTF8 := UTF8ToCP1257(PAnsiChar(Src));
-      1258: //WIN1258
-        sUTF8 := UTF8ToCP1258(PAnsiChar(Src));
-      437: //CP437
-        sUTF8 := UTF8ToCP437(PAnsiChar(Src));
-      850: //CP850
-        sUTF8 := UTF8ToCP850(PAnsiChar(Src));
-      852: //CP852
-        sUTF8 := UTF8ToCP852(PAnsiChar(Src));
-      866: //CP866
-        sUTF8 := UTF8ToCP866(PAnsiChar(Src));
-      874: //CP874
-        sUTF8 := UTF8ToCP874(PAnsiChar(Src));
-      20866: //KOI8 (Russian)
-        sUTF8 := UTF8ToKOI8(PAnsiChar(Src));
-      65001: //UTF8
-        sUTF8 := PAnsiChar(Src);
-      else
-        sUTF8 := PAnsiChar(Src);
-    end;
-    Result := ''; //Makes compler happy
-    ZSetString(PAnsiChar(sUTF8), Result);
-  {$ELSE}
     US := UTF8ToString(PAnsiChar(Src));
     Result := ZUnicodeToRaw(US, CP);
-  {$ENDIF}
   end;
 end;
 
@@ -2002,8 +2110,103 @@ begin
     end
     else
     begin
+      {$IFDEF WITH_LCONVENCODING}
+      case ConSettings^.ClientCodePage^.CP of
+        28591:  //ISO_8859_1
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw28591ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw28591;
+          end;
+        28592:  //ISO_8859_2
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw28592ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw28592;
+          end;
+        1250:   //WIN1250
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1250ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1250;
+          end;
+        1251:   //WIN1251
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1251ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1251;
+          end;
+        1252:   //WIN1252
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1252ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1252;
+          end;
+        1253:   //WIN1253
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1253ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1253;
+          end;
+        1254:   //WIN1254
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1254ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1254;
+          end;
+        1255:   //WIN1255
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1255ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1255;
+          end;
+        1256:   //WIN1256
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1256ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1256;
+          end;
+        1257:   //WIN1257
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1257ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1257;
+          end;
+        1258:   //WIN1258
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw1258ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw1258;
+          end;
+        437:    //CP437
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw437ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw437;
+          end;
+        850:    //CP850
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw850ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw850;
+          end;
+        852:    //CP852
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw852ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw852;
+          end;
+        866:    //CP866
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw866ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw866;
+          end;
+        874:    //CP874
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw874ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw874;
+          end;
+        20866:   //KOI8 (Russian)
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw20866ToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw20866;
+          end;
+        else
+          begin
+            ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
+            ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
+          end;
+      end;
+      {$ELSE}
       ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRawToUTF8;
       ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw;
+      {$ENDIF}
     end;
 
     // raw to/from ansi
