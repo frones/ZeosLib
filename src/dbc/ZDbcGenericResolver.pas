@@ -561,8 +561,10 @@ var
   Current: TZResolverParameter;
   RowAccessor: TZRowAccessor;
   WasNull: Boolean;
+  ConSettings: PZConSettings;
 begin
   WasNull := False;
+  ConSettings := Statement.GetConnection.GetConSettings;
   for I := 0 to Params.Count - 1 do
   begin
     Current := TZResolverParameter(Params[I]);
@@ -594,11 +596,13 @@ begin
       stBigDecimal:
         Statement.SetBigDecimal(I + 1,
           RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
-      stString:
-        Statement.SetString(I + 1, RowAccessor.GetString(ColumnIndex, WasNull));
-      stUnicodeString:
-        Statement.SetUnicodeString(I + 1,
-          RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Statement.SetRawByteString(I + 1, 
+            RowAccessor.GetRawByteString(ColumnIndex, WasNull))
+        else
+          Statement.SetUnicodeString(I + 1,
+            RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
       stBytes:
         Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stDate:

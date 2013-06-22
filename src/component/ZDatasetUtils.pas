@@ -456,12 +456,11 @@ begin
         RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
       ftCurrency:
         RowAccessor.SetBigDecimal(FieldIndex, ResultSet.GetBigDecimal(ColumnIndex));
-      ftString:
-        // gto: do we need PChar here?
-        //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
-      ftWidestring:
-        RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
+      ftString, ftWideString:
+        if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          RowAccessor.SetRawByteString(FieldIndex, ResultSet.GetRawByteString(ColumnIndex))
+        else
+          RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
@@ -532,7 +531,8 @@ begin
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString:
-        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));
+        ResultSet.UpdateString(ColumnIndex,
+          RowAccessor.GetString(FieldIndex, WasNull));
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
@@ -1046,7 +1046,7 @@ begin
                     // true in this point, or should that be converted higher up?
             DecodedKeyValues[I].VString :=
               WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString));
-            {$ELSE} 
+            {$ELSE}
             DecodedKeyValues[I].VString := 
               AnsiUpperCase(DecodedKeyValues[I].VString); 
             {$ENDIF} 
@@ -1143,26 +1143,18 @@ begin
         stShort,
         stInteger,
         stLong:
-          begin
-            Result := KeyValues[I].VInteger =
-              ResultSet.GetLong(ColumnIndex);
-          end;
+          Result := KeyValues[I].VInteger = ResultSet.GetLong(ColumnIndex);
         stFloat:
-            Result := Abs(KeyValues[I].VFloat -
-              ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
+          Result := Abs(KeyValues[I].VFloat -
+            ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
         stDouble,
         stBigDecimal:
-          begin
-            Result := Abs(KeyValues[I].VFloat -
-              ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
-          end;
+          Result := Abs(KeyValues[I].VFloat -
+            ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
         stDate,
         stTime,
         stTimestamp:
-          begin
-            Result := KeyValues[I].VDateTime =
-              ResultSet.GetTimestamp(ColumnIndex);
-          end;
+          Result := KeyValues[I].VDateTime = ResultSet.GetTimestamp(ColumnIndex);
         stUnicodeString:
           begin
             if CaseInsensitive then
@@ -1180,12 +1172,12 @@ begin
           if CaseInsensitive then
           begin
             {$IFDEF LAZARUSUTF8HACK}
-            Result := KeyValues[I].VString = 
-              AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex))); 
-            {$ELSE} 
-            Result := KeyValues[I].VString = 
-              AnsiUpperCase(ResultSet.GetString(ColumnIndex)); 
-            {$ENDIF} 
+            Result := KeyValues[I].VString =
+              AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex)));
+            {$ELSE}
+            Result := KeyValues[I].VString =
+              AnsiUpperCase(ResultSet.GetString(ColumnIndex));
+            {$ENDIF}
           end
           else
           begin

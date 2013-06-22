@@ -1337,7 +1337,7 @@ begin
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetPChar(ColumnIndex, Value);
+  FRowAccessor.SetString(ColumnIndex, Value);
 end;
 
 {**
@@ -2006,11 +2006,7 @@ begin
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
-        //stString: RowAccessor.SetPChar(I, ResultSet.GetPChar(I));
-        // gto: do we need PChar here? (Unicode problems)
-        stString: RowAccessor.SetString(I, ResultSet.GetString(I));
-        stUnicodeString: RowAccessor.SetUnicodeString(I,
-                  ResultSet.GetUnicodeString(I));
+        stString, stUnicodeString: FStringFieldAssignFromResultSet(RowAccessor, ResultSet, i);
         stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));

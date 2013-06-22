@@ -108,6 +108,9 @@ type
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
   end;
 
+  TStringFieldSetter = procedure(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar);
+  TStringFieldGetter = function(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
   TZAbstractRODataset = class(TWideDataSet)
@@ -167,6 +170,9 @@ type
     FPrepared: Boolean;
     FDoNotCloseResultset: Boolean;
     FUseCurrentStatment: Boolean;
+    FStringFieldSetter: TStringFieldSetter;
+    FStringFieldGetter: TStringFieldGetter;
+    procedure SetStringFieldSetterAndSetter;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -482,6 +488,62 @@ uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
 
+{$IFNDEF UNICODE}
+procedure RowAccessorStringFieldSetterFromRawAutoEncode(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  case DetectUTF8Encoding(Buffer) of
+    etUSASCII: RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+    etAnsi: RowAccessor.SetAnsiString(ColumnIndex, Buffer);
+    etUTF8: RowAccessor.SetUTF8String(ColumnIndex, Buffer);
+  end;
+end;
+{$ENDIF}
+
+procedure RowAccessorStringFieldSetterFromUTF8(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+var
+  Tmp: UTF8String;
+begin
+  ZSetString(Buffer, Tmp);
+  RowAccessor.SetUTF8String(ColumnIndex, Tmp);
+end;
+
+procedure RowAccessorStringFieldSetterFromAnsi(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+var Tmp: AnsiString;
+begin
+  ZSetString(Buffer, Tmp);
+  RowAccessor.SetAnsiString(ColumnIndex, Tmp);
+end;
+
+procedure RowAccessorStringFieldSetterFromRaw(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+end;
+
+function RowAccessorStringFieldGetterFromUTF8(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+begin
+  StrPLCopy(Buffer, PAnsiChar(RowAccessor.GetUTF8String(ColumnIndex, Result)),
+    RowAccessor.GetColumnDataSize(ColumnIndex));
+end;
+
+function RowAccessorStringFieldGetterFromAnsi(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+begin
+  StrPLCopy(Buffer, PAnsiChar(RowAccessor.GetAnsiString(ColumnIndex, Result)),
+    RowAccessor.GetColumnDataSize(ColumnIndex));
+end;
+
+function RowAccessorStringFieldGetterFromRaw(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+begin
+  StrPLCopy(Buffer, PAnsiChar(RowAccessor.GetRawByteString(ColumnIndex, Result)),
+    RowAccessor.GetColumnDataSize(ColumnIndex));
+end;
+
 { EZDatabaseError }
 
 {**
@@ -641,6 +703,41 @@ end;
 function TZAbstractRODataset.GetUniDirectional: boolean;
 begin
   Result := inherited IsUniDirectional;
+end;
+
+
+procedure TZAbstractRODataset.SetStringFieldSetterAndSetter;
+begin
+  {$IFNDEF UNICODE}
+  //Hint: the UnicodeIDE's do return allways a AnsiString casted UnicodeString
+  //So it's impossible to retrieve a UTF8 encoded string SAFELY
+  //It might be possible a user did Assign such a casted value. But that's
+  //not Unicode-Save since the AnsiString(AUnicodeString) cast.
+  //Known issues: Simplified chinese or Persian f.e. have some equal UTF8
+  //two/four byte sequense wich lead to data loss. So success is randomly!!
+  if Connection.AutoEncodeStrings then
+  begin
+    FStringFieldSetter := @RowAccessorStringFieldSetterFromRawAutoEncode;
+    if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
+      FStringFieldGetter := @RowAccessorStringFieldGetterFromUTF8
+    else
+      FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
+  end
+  else
+  begin
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromRaw;
+    FStringFieldSetter := @RowAccessorStringFieldSetterFromRaw;
+  end;
+    {if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
+    begin
+      FStringFieldGetter := @RowAccessorStringFieldGetterFromUTF8;
+      FStringFieldSetter := @RowAccessorStringFieldSetterFromUTF8;
+    end
+    else}
+  {$ELSE}
+  FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
+  FStringFieldSetter := @RowAccessorStringFieldSetterFromAnsi;
+  {$ENDIF}
 end;
 
 {**
@@ -1326,10 +1423,7 @@ begin
             Result := not Result;
           end;
         ftString:
-          begin
-            StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
-            Result := not Result;
-          end;
+            Result := not FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTDATASETSUPPORT}
         ftDataSet:
           Result := not RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
@@ -1381,9 +1475,6 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
-  {$IFNDEF UNICODE}
-  Temp: String;
-  {$ENDIF}
 begin
   WasNull := False;
   if not Active then
@@ -1423,21 +1514,7 @@ begin
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
         ftString: { Processes string fields. }
-          {$IFDEF UNICODE}
-          RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
-          {$ELSE}
-          begin
-            SetLength(Temp, StrLen(PAnsiChar(Buffer)));
-            Move(PAnsiChar(Buffer)^, PAnsiChar(Temp)^,StrLen(PAnsiChar(Buffer)));
-            RowAccessor.SetString(ColumnIndex, Temp);
-          end;
-          {$ENDIF}
-          (*if {$IFNDEF UNICODE}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
-          (Length(PAnsiChar(Buffer)) <= RowAccessor.GetColumnDataSize(ColumnIndex)) then
-        begin
-          RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
-          RowAccessor.SetNotNull(ColumnIndex);
-        end *)
+          FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
         else  { Processes all other fields. }
           begin
             System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
@@ -1773,6 +1850,8 @@ begin
     end;
     FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
     FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+
+    SetStringFieldSetterAndSetter;
 
     FieldsLookupTable := CreateFieldsLookupTable(Fields);
     InitFilterFields := False;
