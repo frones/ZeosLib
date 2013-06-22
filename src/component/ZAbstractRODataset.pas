@@ -728,12 +728,6 @@ begin
     FStringFieldGetter := @RowAccessorStringFieldGetterFromRaw;
     FStringFieldSetter := @RowAccessorStringFieldSetterFromRaw;
   end;
-    {if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
-    begin
-      FStringFieldGetter := @RowAccessorStringFieldGetterFromUTF8;
-      FStringFieldSetter := @RowAccessorStringFieldSetterFromUTF8;
-    end
-    else}
   {$ELSE}
   FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
   FStringFieldSetter := @RowAccessorStringFieldSetterFromAnsi;

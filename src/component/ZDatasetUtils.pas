@@ -530,12 +530,13 @@ begin
       ftCurrency:
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
-      ftString:
-        ResultSet.UpdateString(ColumnIndex,
-          RowAccessor.GetString(FieldIndex, WasNull));
-      ftWidestring:
-        ResultSet.UpdateUnicodeString(ColumnIndex,
-          RowAccessor.GetUnicodeString(FieldIndex, WasNull));
+      ftString, ftWidestring:
+        if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          ResultSet.UpdateRawByteString(ColumnIndex,
+            RowAccessor.GetRawByteString(FieldIndex, WasNull))
+        else
+          ResultSet.UpdateUnicodeString(ColumnIndex,
+            RowAccessor.GetUnicodeString(FieldIndex, WasNull));
       ftBytes:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
