@@ -1371,7 +1371,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateAnsiString(ColumnIndex: Integer;
-  const Value: String);
+  const Value: AnsiString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1411,7 +1411,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateRawByteString(ColumnIndex: Integer;
-  const Value: String);
+  const Value: RawByteString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
