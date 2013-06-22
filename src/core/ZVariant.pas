@@ -1884,15 +1884,15 @@ begin
         vtFloat:
           Result.VDateTime := Value.VFloat;
         vtString:
-          Result.VDateTime := AnsiSQLDateToDateTime(String(Value.VString));
+          Result.VDateTime := AnsiSQLDateToDateTime(Value.VString);
         vtAnsiString:
-          Result.VDateTime := AnsiSQLDateToDateTime(String(Value.VAnsiString));
+          Result.VDateTime := AnsiSQLDateToDateTime({$IFDEF UNICODE}String{$ENDIF}(Value.VAnsiString));
         vtUTF8String:
-          Result.VDateTime := AnsiSQLDateToDateTime(String(Value.VUTF8String));
+          Result.VDateTime := AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.VUTF8String));
         vtRawByteString:
-          Result.VDateTime := AnsiSQLDateToDateTime(String(Value.VRawByteString));
+          Result.VDateTime := AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.VRawByteString));
         vtUnicodeString:
-          Result.VDateTime := AnsiSQLDateToDateTime(String(Value.VUnicodeString));
+          Result.VDateTime := AnsiSQLDateToDateTime({$IFNDEF UNICODE}String{$ENDIF}(Value.VUnicodeString));
         vtDateTime:
           Result.VDateTime := Value.VDateTime;
         else
@@ -1923,6 +1923,7 @@ end;
 {$WARNINGS OFF} //suppress [Pascal Warning] ZVariant.pas(1926): W1035 Return value of function 'TZClientVariantManager.GetAsRawByteString' might be undefined
 function TZClientVariantManager.GetAsRawByteString(const Value: TZVariant;
   const RawCP: Word): RawByteString;
+var US: ZWideString;
 begin
   case Value.VType of
     vtNull:
@@ -1954,7 +1955,10 @@ begin
       if ZCompatibleCodePages(FConSettings^.ClientCodePage^.CP, RawCP) then
         Result := Value.VRawByteString
       else
-        Result := ZRawCPConvert(Value.VRawByteString, FConSettings^.ClientCodePage^.CP, RawCP);
+      begin
+        US := ZRawToUnicode(Value.VRawByteString, FConSettings^.ClientCodePage^.CP);
+        Result := ZUnicodeToRaw(US, RawCP);
+      end;
     vtUnicodeString:
       Result := ZUnicodeToRaw(Value.VUnicodeString, RawCP);
     vtDateTime:
