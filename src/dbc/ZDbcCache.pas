@@ -1187,7 +1187,7 @@ begin
           {$IFDEF WITH_RAWBYTESTRING}
           Result := UTF8String(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
           {$ELSE}
-          Result := UTF8Encode(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+          Result := UTF8Encode(ZWideString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^));
           {$ENDIF}
       stUnicodeStream:
         begin
