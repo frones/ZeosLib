@@ -244,19 +244,23 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnLabel := ZDbcString(StrPas(FieldName^));
+      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(StrPas(FieldName^),
+        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       Inc(FieldName);
       TableName := '';
       ReadOnly := False;
       if TypeName^ <> nil then
       begin
-        ColumnType := ConvertSQLiteTypeToSQLType(ZDbcString(TypeName^),
+        ColumnType := ConvertSQLiteTypeToSQLType(ConSettings^.ConvFuncs.ZRawToString(TypeName^,
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
           FieldPrecision, FieldDecimals, ConSettings.CPType);
         Inc(TypeName);
       end
       else
       begin
-        ColumnType := ConvertSQLiteTypeToSQLType(ZDbcString(FPlainDriver.column_decltype(FStmtHandle,I-1)),
+        ColumnType := ConvertSQLiteTypeToSQLType(ConSettings^.ConvFuncs.ZRawToString(
+          FPlainDriver.column_decltype(FStmtHandle,I-1),
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
           FieldPrecision, FieldDecimals, ConSettings.CPType);
       end;
 

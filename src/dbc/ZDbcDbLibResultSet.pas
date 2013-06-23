@@ -167,8 +167,8 @@ begin
   SetLength(DBLibColTypeCache, DBLibColumnCount + 1);
   for I := 1 to DBLibColumnCount do
   begin
-    ColName := FPlainDriver.ZDbcString(FPlainDriver.dbColName(FHandle, I),
-      FDBLibConnection.GetConSettings);
+    ColName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColName(FHandle, I),
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     ColType := FPlainDriver.dbColtype(FHandle, I);
     ColumnInfo := TZColumnInfo.Create;
 

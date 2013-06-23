@@ -241,12 +241,9 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-      {$IFDEF DELPHI18_UP}
-      ColumnLabel := ZDbcString(SysUtils.StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
-      {$ELSE}
-      ColumnLabel := ZDbcString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
-      {$ENDIF}
 
+      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString({$IFDEF WITH_SYSUITLS_PREFIX}SysUtils.{$ENDIF}
+        StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;

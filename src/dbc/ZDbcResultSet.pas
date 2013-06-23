@@ -650,7 +650,7 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 begin
-  Result := ZDbcString(InternalGetString(ColumnIndex));
+  Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 end;
 
 {**
@@ -2266,7 +2266,7 @@ begin
     stBytes: UpdateBytes(ColumnIndex, StrToBytes(Value));
     stBinaryStream: GetBlob(ColumnIndex).SetString(Value);
     else
-      UpdateString(ColumnIndex, ZDbcString(Value));
+      UpdateRawByteString(ColumnIndex, Value);
   end;
 end;
 

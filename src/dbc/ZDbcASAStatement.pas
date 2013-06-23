@@ -970,9 +970,11 @@ begin
       stBigDecimal:
         DefVarManager.SetAsFloat(Temp, Value.GetBigDecimal(I));
       stString:
-        DefVarManager.SetAsString(Temp, ZDbcString(Value.GetString(I)));
+        DefVarManager.SetAsString(Temp, ConSettings^.ConvFuncs.ZRawToString(
+          Value.GetString(I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, ZDbcUnicodeString(Value.GetString(I)));
+        DefVarManager.SetAsUnicodeString(Temp, ConSettings^.ConvFuncs.ZRawToUnicode(
+          Value.GetString(I), ConSettings^.ClientCodePage^.CP));
       stBytes:
         DefVarManager.SetAsBytes( Temp, Value.GetBytes( I));
       stDate:

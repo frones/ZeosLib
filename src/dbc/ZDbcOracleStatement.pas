@@ -885,7 +885,9 @@ var
           GetMem(ps,1025);
           try
             StrLCopy( ps, (CurrentVar.Data), 1024);
-            DefVarManager.SetAsString( OutParamValues[Index], ZDbcString(ps) );
+            DefVarManager.SetAsString( OutParamValues[Index],
+              ConSettings^.ConvFuncs.ZRawToString(ps,
+              ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
           finally
             FreeMem(ps);
           end;

@@ -748,7 +748,8 @@ begin
     Tokens := Connection.GetDriver.GetTokenizer.
       TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
     try
-      TempSQL := 'PREPARE '+ZDbcString(FPlanName)+' AS ';
+      TempSQL := 'PREPARE '+ConSettings^.ConvFuncs.ZRawToString(FPlanName,
+        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)+' AS ';
       N := 0;
       for I := 0 to Tokens.Count - 1 do
       begin

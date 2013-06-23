@@ -649,7 +649,8 @@ var
    function GetMessage(AMessage: PAnsiChar): String;
    begin
     if Assigned(Connection) then
-      Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetConSettings))
+      Result := Trim(Connection.GetConSettings^.ConvFuncs.ZRawToString(StrPas(AMessage),
+        Connection.GetConSettings^.ClientCodePage^.CP, Connection.GetConSettings^.CTRL_CP))
     else
       {$IFDEF UNICODE}
       Result := Trim(UTF8ToString(StrPas(AMessage)));

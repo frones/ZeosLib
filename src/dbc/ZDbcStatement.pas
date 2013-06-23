@@ -472,7 +472,7 @@ begin
     {$IFDEF UNICODE}
     FaSQL := GetEncodedSQL(Value);
     {$ELSE}
-    FaSQL := ZPlainString(Value);
+    FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
     {$ENDIF}
     FWSQL := Value;
   end;
@@ -484,10 +484,10 @@ begin
   begin
     {$IFNDEF UNICODE}
     FASQL := GetEncodedSQL(Value);
-    FWSQL := ZDbcUnicodeString(Value, ConSettings.CTRL_CP);
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.CTRL_CP);
     {$else}
     FASQL := Value;
-    FWSQL := ZDbcString(Value);
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.ClientCodePage^.CP);
     {$ENDIF}
   end;
 end;

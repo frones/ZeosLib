@@ -358,7 +358,8 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  TempStr := ZDbcString(FPlainDriver.GetFieldData(FRowHandle, ColumnIndex - 1));
+  TempStr := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldData(
+    FRowHandle, ColumnIndex - 1), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   Result := PChar(TempStr);
   LastWasNull := Result = nil;
 end;

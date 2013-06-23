@@ -509,7 +509,7 @@ begin
   {$IFDEF WITH_RAWBYTESTRING}
   SetLength(Temp, FSQLDA.sqlvar[Index].sqlname.length-1);
   Move(FSQLDA.sqlvar[Index].sqlname.data, PAnsiChar(Temp)^, FSQLDA.sqlvar[Index].sqlname.length-1);
-  Result := FPlainDriver.ZDbcString(Temp, FConSettings);
+  Result := FConSettings^.ConvFuncs.ZRawToString(Temp, FConSettings^.ClientCodePage^.CP, FConSettings^.CTRL_CP);
   {$ELSE}
   SetString( Result, FSQLDA.sqlvar[Index].sqlname.data,
     FSQLDA.sqlvar[Index].sqlname.length-1);

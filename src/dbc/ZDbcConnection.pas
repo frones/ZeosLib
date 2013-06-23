@@ -1349,7 +1349,7 @@ begin
       {$IFDEF WITH_UNITANSISTRINGS}
       AnsiStrings.AnsiQuotedStr(Value, #39)
       {$ELSE}
-      Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZDbcString(Value), #39))
+      Result := GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(Value, #39))
       {$ENDIF}
   else
     if StartsWith(Value, '''') and EndsWith(Value, '''') then

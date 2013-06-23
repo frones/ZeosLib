@@ -72,7 +72,6 @@ type
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ZDbcString(const Ansi: RawByteString; ConSettings: PZConSettings): String;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
     function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): RawByteString; overload;
     function ZDbcUnicodeString(const AStr: RawByteString; const FromCP: Word): ZWideString; overload;
@@ -234,10 +233,16 @@ begin
     begin
       case (SQLTokens[i].TokenType) of
         ttEscape:
-          Result := Result + {$IFDEF UNICODE}ZPlainString(SQLTokens[i].Value,
-            ConSettings){$ELSE}SQLTokens[i].Value{$ENDIF};
+          Result := Result +
+            {$IFDEF UNICODE}
+            ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
+              ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+            {$ELSE}
+            SQLTokens[i].Value
+            {$ENDIF};
         ttQuoted,  ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ZPlainString(SQLTokens[i].Value, ConSettings)
+          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
         else
           Result := Result + RawByteString(SQLTokens[i].Value);
       end;
@@ -245,7 +250,7 @@ begin
   end
   else
     {$IFDEF UNICODE}
-    Result := ZPlainString(SQL, ConSettings);
+    Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
     Result := SQL;
     {$ENDIF}
@@ -261,14 +266,11 @@ var
   StrFrom: RawByteString;
   Outbuffer: RawByteString;
 begin
-  StrFrom := ZPlainString(Value, ConSettings);
+  StrFrom := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
   Outbuffer := EscapeString(Handle, StrFrom, ConSettings, True);
-  {$IFDEF UNICODE}
-  Result := ZDbcString(OutBuffer, ConSettings);
-  {$ELSE}
-  Result := ZDbcUnicodeString(Outbuffer, ConSettings.ClientCodePage.CP);
-  {$ENDIF}
+  Result := ConSettings^.ConvFuncs.ZRawToUnicode(OutBuffer, ConSettings^.ClientCodePage^.CP);
 end;
+
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
   const Value: RawByteString; ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
 begin

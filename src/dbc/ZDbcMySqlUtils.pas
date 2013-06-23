@@ -547,9 +547,9 @@ begin
     Result := TZColumnInfo.Create;
     FieldFlags := PlainDriver.GetFieldFlags(FieldHandle);
 
-    Result.ColumnLabel := PlainDriver.ZDbcString(PlainDriver.GetFieldName(FieldHandle), ConSettings);
-    Result.ColumnName := PlainDriver.ZDbcString(PlainDriver.GetFieldOrigName(FieldHandle), ConSettings);
-    Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), ConSettings);
+    Result.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(PlainDriver.GetFieldName(FieldHandle), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    Result.ColumnName := ConSettings^.ConvFuncs.ZRawToString(PlainDriver.GetFieldOrigName(FieldHandle), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    Result.TableName := ConSettings^.ConvFuncs.ZRawToString(PlainDriver.GetFieldTable(FieldHandle), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
     Result.Writable := not Result.ReadOnly;
     Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,

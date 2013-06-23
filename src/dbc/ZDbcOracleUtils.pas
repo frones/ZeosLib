@@ -845,6 +845,7 @@ function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnecti
   ParamHandle: POCIParam; stmt_handle: POCIHandle; obj: POCIObject; Level: ub2): POCIObject;
 var
   type_ref: POCIRef;
+  ConSettings: PZConSettings;
 
   function AllocateObject: POCIObject;
   begin
@@ -900,7 +901,8 @@ var
 
     SetLength(temp, len+1);
     temp := StrPLCopy(PAnsiChar(temp), name, len);
-    Obj.type_schema := PlainDriver.ZDbcString(temp, Connection.GetConSettings);
+    Obj.type_schema := ConSettings^.ConvFuncs.ZRawToString(temp,
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
     //Get the TypeName of the Object
     CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
@@ -910,7 +912,8 @@ var
 
     SetLength(temp, len+1);
     temp := StrPLCopy(PAnsiChar(temp), name, len);
-    Obj.type_name := PlainDriver.ZDbcString(temp, Connection.GetConSettings);
+    Obj.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
     //Get the TypeCode of the Object
     CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
@@ -974,7 +977,8 @@ var
 
         SetLength(temp, len+1);
         temp := StrPLCopy(PAnsiChar(temp), name, len);
-        Fld.type_name := PlainDriver.ZDbcString(temp, Connection.GetConSettings);
+        Fld.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
         // get the typeCode of the attribute
         CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
@@ -1021,6 +1025,8 @@ var
     end;
   end;
 begin
+  ConSettings := Connection.GetConSettings;
+
   if Assigned(obj) then
     Result := obj
   else

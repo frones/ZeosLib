@@ -569,15 +569,18 @@ begin
     case FSqlData.GetIbSqlType(ColumnIndex -1) of
       SQL_VARYING, SQL_TEXT:
         if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
-          Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1))
+          Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
         else
-          Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1),
-            FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
+          Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+            FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP, ConSettings^.CTRL_CP);
       else
-        Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1));
+        Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     end
   else
-    Result := ZDbcString(FSqlData.GetString(ColumnIndex - 1));
+    Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 end;
 
 {**

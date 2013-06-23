@@ -1495,7 +1495,7 @@ begin
   CheckRange(Index);
   {$R-}
   SetString(Temp, FXSQLDA.sqlvar[Index].aliasname, FXSQLDA.sqlvar[Index].aliasname_length);
-  Result := ZDbcString(Temp);
+  Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1657,7 +1657,7 @@ begin
   {$ELSE}
   SetString(Temp, FXSQLDA.sqlvar[Index].OwnName, FXSQLDA.sqlvar[Index].OwnName_length);
   {$ENDIF}
-  Result := ZDbcString(Temp);
+  Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1678,7 +1678,7 @@ begin
     {$ELSE}
     SetString(Temp, FXSQLDA.sqlvar[Index].RelName, FXSQLDA.sqlvar[Index].RelName_length);
     {$ENDIF}
-    Result := ZDbcString(Temp);
+    Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -1714,7 +1714,7 @@ begin
     {$ELSE}
     SetString(Temp, FXSQLDA.sqlvar[Index].sqlname, FXSQLDA.sqlvar[Index].sqlname_length);
     {$ENDIF}
-    Result := ZDbcString(Temp);
+    Result := ConSettings^.ConvFuncs.ZRawToString(Temp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -2924,7 +2924,8 @@ function TZResultSQLDA.GetPChar(const Index: Integer): PChar;
 var
   TempStr: String;
 begin
-  TempStr := ZDbcString(GetString(Index));
+  TempStr := ConSettings^.ConvFuncs.ZRawToString(GetString(Index),
+    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   Result := PChar(TempStr);
 end;
 
