@@ -1829,9 +1829,9 @@ begin
           else
             Result.VRawByteString := 'FALSE';
         vtInteger:
-          Result.VRawByteString := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(IntToStr(Value.VInteger));
+          Result.VRawByteString := StringToASCII7(IntToStr(Value.VInteger));
         vtFloat:
-          Result.VRawByteString := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(FloatToSqlStr(Value.VFloat));
+          Result.VRawByteString := StringToASCII7(FloatToSqlStr(Value.VFloat));
         vtString:
           Result.VRawByteString := FConSettings^.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP);
         vtAnsiString:
@@ -1857,9 +1857,9 @@ begin
           else
             Result.VUnicodeString := 'FALSE';
         vtInteger:
-          Result.VUnicodeString := ZWideString(IntToStr(Value.VInteger));
+          Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(Value.VInteger));
         vtFloat:
-          Result.VUnicodeString := ZWideString(FloatToSqlStr(Value.VFloat));
+          Result.VUnicodeString := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FloatToSqlStr(Value.VFloat));
         vtString:
           Result.VUnicodeString := FConSettings^.ConvFuncs.ZStringToUnicode(Value.VString, FConSettings^.CTRL_CP);
         vtAnsiString:
@@ -1936,9 +1936,9 @@ begin
     vtBytes:
       ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result);
     vtInteger:
-      Result := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(IntToStr(Value.VInteger));
+      Result := StringToASCII7(IntToStr(Value.VInteger));
     vtFloat:
-      Result := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(FloatToSqlStr(Value.VFloat));
+      Result := StringToASCII7(FloatToSqlStr(Value.VFloat));
     vtString:
       Result := ZConvertStringToRawWithAutoEncode(Value.VString, FConSettings^.CTRL_CP, RawCP);
     vtAnsiString:

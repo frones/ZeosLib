@@ -1084,21 +1084,21 @@ begin
         begin
           DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d',
+          Result := '''' + StringToASCII7(Format('%0.4d-%0.2d-%0.2d',
             [AYear, AMonth, ADay])) + '''';
         end;
       stTime:
         begin
           DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
             AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := '''' + RawByteString(Format('%0.2d:%0.2d:%0.2d',
+          Result := '''' + StringToASCII7(Format('%0.2d:%0.2d:%0.2d',
             [AHour, AMinute, ASecond])) + '''';
         end;
       stTimestamp:
       begin
         DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
           AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
+        Result := '''' + StringToASCII7(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
           [AYear, AMonth, ADay, AHour, AMinute, ASecond])) + '''';
       end;
       stAsciiStream, stUnicodeStream, stBinaryStream:

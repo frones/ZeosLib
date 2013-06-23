@@ -368,13 +368,13 @@ begin
       stString, stUnicodeString:
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stDate:
-        Result := '''' + RawByteString(FormatDateTime('yyyy-mm-dd',
+        Result := '''' + StringToASCII7(FormatDateTime('yyyy-mm-dd',
           ClientVarManager.GetAsDateTime(Value))) + '''';
       stTime:
-        Result := '''' + RawByteString(FormatDateTime('hh:mm:ss',
+        Result := '''' + StringToASCII7(FormatDateTime('hh:mm:ss',
           ClientVarManager.GetAsDateTime(Value))) + '''';
       stTimestamp:
-        Result := '''' + RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+        Result := '''' + StringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
           ClientVarManager.GetAsDateTime(Value))) + '''';
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin

@@ -93,7 +93,7 @@ function EncodeString(Value: RawByteString): RawByteString; overload;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: ansistring): ansistring;
+function DecodeString(Value: RawByteString): RawByteString;
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
@@ -324,7 +324,7 @@ end;
   @param Value a string in PostgreSQL escape format.
   @return a regular string.
 }
-function DecodeString(Value: ansistring): ansistring;
+function DecodeString(Value: RawByteString): RawByteString;
 var
   SrcLength, DestLength: Integer;
   SrcBuffer, DestBuffer: PAnsiChar;
@@ -333,6 +333,7 @@ begin
     result := NewDecodeString(value)
   else
   begin
+    Result := '';
     SrcLength := Length(Value);
     SrcBuffer := PAnsiChar(Value);
     SetLength(Result, SrcLength);
