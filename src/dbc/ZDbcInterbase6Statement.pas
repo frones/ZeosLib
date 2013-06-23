@@ -967,6 +967,8 @@ begin
         DefVarManager.SetAsBoolean(Temp, Value.GetBoolean(I));
       stByte:
         DefVarManager.SetAsInteger(Temp, Value.GetByte(I));
+      stBytes:
+        DefVarManager.SetAsBytes(Temp, Value.GetBytes(I));
       stShort:
         DefVarManager.SetAsInteger(Temp, Value.GetShort(I));
       stInteger:
