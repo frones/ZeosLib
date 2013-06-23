@@ -64,6 +64,7 @@ type
   TZLoggingEvent = ZDbcLogging.TZLoggingEvent;
 
   {** Repeat declaration of TZLoggingFormatter. }
+  IZLoggingFormatter = ZDbcLogging.IZLoggingFormatter;
   TZLoggingFormatter = ZDbcLogging.TZLoggingFormatter;
 
   {** Declares event before logging. }
@@ -85,7 +86,7 @@ type
     FTraceList: TObjectList;
     FOnTrace: TZTraceEvent;
     FOnLogTrace: TZTraceLogEvent;
-    FLoggingFormatter : TZLoggingFormatter;
+    FLoggingFormatter : IZLoggingFormatter;
 
     function GetTraceCount: Integer;
     function GetTraceItem(Index: Integer): TZLoggingEvent;
@@ -105,7 +106,7 @@ type
 
     property TraceCount: Integer read GetTraceCount;
     property TraceList[Index: Integer]: TZLoggingEvent read GetTraceItem;
-    property LoggingFormatter: TZLoggingFormatter read FLoggingFormatter write FLoggingFormatter;
+    property LoggingFormatter: IZLoggingFormatter read FLoggingFormatter write FLoggingFormatter;
   published
     property Active: Boolean read FActive write SetActive default False;
     property AutoSave: Boolean read FAutoSave write FAutoSave default False;
