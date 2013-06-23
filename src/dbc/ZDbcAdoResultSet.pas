@@ -686,14 +686,14 @@ begin
     case GetMetadata.GetColumnType(ColumnIndex) of
       stAsciiStream:
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          Result.SetString(GetStatement.GetConnection.GetIZPlainDriver.ZPlainString(WideString(V), ConSettings))
+          Result.SetString(GetStatement.GetConnection.GetIZPlainDriver.ZPlainString(ZWideString(V), ConSettings))
         else
           Result.SetString(RawByteString(V));
       stUnicodeStream:
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          Result.SetUnicodeString(WideString(V))
+          Result.SetUnicodeString(ZWideString(V))
         else
-          Result.SetUnicodeString(GetStatement.GetConnection.GetIZPlainDriver.ZDbcUnicodeString(RawByteString(V), ConSettings.CTRL_CP));
+          Result.SetUnicodeString(ConSettings^.ConvFuncs.ZRawToUnicode(RawByteString(V), ConSettings.CTRL_CP));
       else
         Result.SetString(RawByteString(V));
     end;

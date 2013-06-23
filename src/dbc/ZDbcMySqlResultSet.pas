@@ -1278,7 +1278,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));
+  WS := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
   Result := TMemoryStream.Create;
   Result.Write(PWideChar(WS)^, Length(WS) *2);
   Result.Position := 0;

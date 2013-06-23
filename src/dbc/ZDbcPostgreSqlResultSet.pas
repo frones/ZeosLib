@@ -645,7 +645,7 @@ begin
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
           else
             begin
-              WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));
+              WS := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
               Stream := WideStringStream(Ws);
             end;
         end;

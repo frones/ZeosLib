@@ -1327,7 +1327,11 @@ begin
       {$IFDEF UNICODE}
       Result := AnsiQuotedStr(Value, #39)
       {$ELSE}
-      Result := ZDbcUnicodeString(GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(ZPlainString(Value), #39)))
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(
+        GetDriver.GetTokenizer.GetEscapeString(AnsiQuotedStr(
+          ConSettings^.ConvFuncs.ZUnicodeToRaw(Value,
+            ConSettings^.ClientCodePage^.CP), #39)),
+            ConSettings^.ClientCodePage^.CP)
       {$ENDIF}
   else
     if StartsWith(Value, '''') and EndsWith(Value, '''') then
@@ -1336,7 +1340,9 @@ begin
       {$IFDEF UNICODE}
       Result := AnsiQuotedStr(Value, #39);
       {$ELSE}
-      Result := ZDbcUnicodeString(AnsiQuotedStr(ZPlainString(Value), #39));
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(
+        AnsiQuotedStr(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value,
+        ConSettings^.ClientCodePage^.CP), #39), ConSettings^.ClientCodePage^.CP);
       {$ENDIF}
 end;
 

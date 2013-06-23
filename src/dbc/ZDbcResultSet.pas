@@ -3235,7 +3235,7 @@ begin
         System.Move(PWidechar(Bytes)^, PWideChar(Result)^, FBlobSize);
       end
       else
-        Result := FConnection.GetIZPlainDriver.ZDbcUnicodeString(PAnsiChar(Bytes), FConnection.GetConSettings.CTRL_CP);
+        Result := FConnection.GetConSettings^.ConvFuncs.ZRawToUnicode(PAnsiChar(Bytes), FConnection.GetConSettings.CTRL_CP);
       SetLength(Bytes, 0);
     end
   else

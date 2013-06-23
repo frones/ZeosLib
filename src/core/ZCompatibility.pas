@@ -245,11 +245,6 @@ type
   private
     FConSettings: PZConSettings;
   protected
-    function ZDbcUnicodeString(const AStr: RawByteString): ZWideString; overload;
-    function ZDbcUnicodeString(const AStr: RawByteString; const FromCP: Word): ZWideString; overload;
-    {$IFDEF WITH_RAWBYTESTRING}
-    function ZDbcUnicodeString(const AStr: String; const FromCP: Word): ZWideString; overload;
-    {$ENDIF}
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
     function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): RawByteString; overload;
@@ -403,57 +398,6 @@ begin
     Result := etUTF8  //UTF8
   else
     Result := etANSI; //Ansi
-end;
-{$ENDIF}
-
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString): ZWideString;
-begin
-  {$IFNDEF WITH_LCONVENCODING}
-  Result := ZRawToUnicode(AStr, FConSettings.ClientCodePage.CP);
-  {$ELSE}
-    case Consettings.ClientCodePage.Encoding of
-      ceAnsi:
-        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr)); //!!!!SLOW, Job down twice (Ansi up to wide to UTF8 to Wide)
-      else
-        Result := UTF8ToString(AStr)
-    end;
-  {$ENDIF}
-end;
-
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString;
-  const FromCP: Word): ZWideString;
-begin
-  {$IFNDEF WITH_LCONVENCODING}
-  Result := ZRawToUnicode(AStr, FromCP);
-  {$ELSE}
-  if FromCP = zCP_UTF8 then
-    Result := UTF8Decode(AStr)
-  else
-    if FromCP = ConSettings.ClientCodePage.CP then
-      Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr))
-    else
-      Result := WideString(AStr); //default WideString cast, can't convert
-  {$ENDIF}
-end;
-
-{$IFDEF WITH_RAWBYTESTRING}
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: String; const FromCP: Word): ZWideString;
-begin
-  {$IFDEF UNICODE}
-  Result := AStr;
-  {$ELSE}
-    {$IFNDEF WITH_LCONVENCODING}
-    Result := ZRawToUnicode(AStr, FromCP);
-    {$ELSE}
-    if FromCP = zCP_UTF8 then
-      Result := UTF8Decode(AStr)
-    else
-      if FromCP = ConSettings.ClientCodePage.CP then
-        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr))
-      else
-        Result := WideString(AStr); //default WideString cast, can't convert
-    {$ENDIF}
-  {$ENDIF}
 end;
 {$ENDIF}
 

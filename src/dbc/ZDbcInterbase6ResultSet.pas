@@ -603,15 +603,18 @@ begin
     case FSqlData.GetIbSqlType(ColumnIndex -1) of
       SQL_VARYING, SQL_TEXT:
         if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
-          Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1))
+          Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+            ConSettings^.ClientCodePage^.CP)
         else
-          Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1),
+          Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
             FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
       else
-        Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1));
+        Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+          ConSettings^.ClientCodePage^.CP);
     end
   else
-    Result := ZDbcUnicodeString(FSqlData.GetString(ColumnIndex - 1));
+    Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+      ConSettings^.ClientCodePage^.CP);
 end;
 
 {**
