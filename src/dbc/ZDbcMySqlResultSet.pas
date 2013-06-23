@@ -119,9 +119,9 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
     FColumnArray: TZMysqlColumnBuffer;
-    FBindBuffer: TZMysqlBindBuffer;
-    function bufferasint64(ColumnIndex: Integer):   Int64;
-    function bufferasextended(ColumnIndex: Integer):Extended;
+    FBindBuffer: TZMySqlResultSetBindBuffer;
+    function bufferasint64(ColumnIndex: Integer): Int64;
+    function bufferasextended(ColumnIndex: Integer): Extended;
 
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -878,12 +878,12 @@ begin
   end;
 
     { Initialize Bind Array and Column Array }
-  FBindBuffer := TZMysqlBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
+  FBindBuffer := TZMySqlResultSetBindBuffer.Create(FPlainDriver,FieldCount,FColumnArray);
 
   { Fills the column info. }
   ColumnsInfo.Clear;
   for I := 0 to FPlainDriver.GetFieldCount(FResultMetaData) - 1 do
-    begin
+  begin
     FPlainDriver.SeekField(FResultMetaData, I);
     FieldHandle := FPlainDriver.FetchField(FResultMetaData);
     if FieldHandle = nil then
@@ -894,8 +894,8 @@ begin
 
     ColumnsInfo.Add(ColumnInfo);
 
-    FBindBuffer.AddColumn(FPlainDriver.GetFieldType(FieldHandle),ColumnInfo.MaxLenghtBytes,false);
-    end;
+    FBindBuffer.AddColumn(FPlainDriver, FieldHandle);
+  end;
   FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
 
@@ -923,7 +923,8 @@ begin
   if Assigned(FResultMetaData) then
     FPlainDriver.FreeResult(FResultMetaData);
   FResultMetaData := nil;
-  FBindBuffer.Free;
+  if Assigned(FBindBuffer) then
+    FreeAndNil(FBindBuffer);
   if Assigned(FPrepStmt) then
     begin
       FPlainDriver.FreePreparedResult(FPrepStmt);
@@ -1371,11 +1372,11 @@ end;
 
 function TZMySQLPreparedResultSet.bufferasextended(ColumnIndex: Integer): Extended;
 begin
-   Case FColumnArray[ColumnIndex-1].length of
-   4: Result := psingle(FColumnArray[ColumnIndex-1].buffer)^;
-   8: Result := pdouble(FColumnArray[ColumnIndex-1].buffer)^;
+   Case FBindBuffer.GetBufferType(ColumnIndex) of
+     FIELD_TYPE_FLOAT: Result := psingle(FColumnArray[ColumnIndex-1].buffer)^;
+     FIELD_TYPE_DOUBLE: Result := pdouble(FColumnArray[ColumnIndex-1].buffer)^;
    else
-    Result := 0;
+      Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
    End
 end;
 

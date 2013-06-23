@@ -99,11 +99,14 @@ type
   private
     FProvider: TDBLibProvider;
     FFreeTDS: Boolean;
+    FDisposeCodePage: Boolean;
     function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure ReStartTransactionSupport;
     procedure InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
     procedure DetermineMSDateFormat;
+    function DetermineMSServerCollation: String;
+    function DetermineMSServerCodePage(const Collation: String): Word;
   protected
     FHandle: PDBPROCESS;
     procedure InternalCreate; override;
@@ -149,7 +152,7 @@ var
 implementation
 
 uses
-  SysUtils, ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement,
+  SysUtils, ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF FPC}, ZClasses{$ENDIF};
 
 { TZDBLibDriver }
@@ -227,6 +230,7 @@ end;
 }
 procedure TZDBLibConnection.InternalCreate;
 begin
+  FDisposeCodePage := False;
   if Pos('mssql', LowerCase(Url.Protocol)) > 0  then
   begin
     FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
@@ -251,6 +255,8 @@ end;
 destructor TZDBLibConnection.Destroy;
 begin
   Close;
+  if FDisposeCodePage then
+    Dispose(ConSettings^.ClientCodePage);
   inherited Destroy;
 end;
 
@@ -450,9 +456,23 @@ begin
   inherited Open;
 
   if FProvider = dpMsSQL then
-    DetermineMSDateFormat
+  begin
+    if FClientCodePage = '' then
+    begin
+      FDisposeCodePage := True;
+      ConSettings^.ClientCodePage := New(PZCodePage);
+      ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage; //need a tempory CP for the SQL preparation
+      ConSettings^.ClientCodePage^.Encoding := ceAnsi;
+      ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
+      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
+      ConSettings^.ClientCodePage^.CP := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
+      SetConvertFunctions(ConSettings);
+    end;
+    DetermineMSDateFormat;
+  end
   else
     ConSettings.DateFormat := 'yyyy/mm/dd';
+
   InternalSetTransactionIsolation(GetTransactionIsolation);
   ReStartTransactionSupport;
 end;
@@ -626,6 +646,46 @@ begin
     ConSettings.DateFormat := 'mm/dd/yyyy'
   else
     ConSettings.DateFormat := 'yyyy/mm/dd'
+end;
+
+function TZDBLibConnection.DetermineMSServerCollation: String;
+var
+  Stmt: IZStatement;
+  Rs: IZResultSet;
+begin
+  Stmt := CreateRegularStatement(Self.Info);
+  try
+    RS := Stmt.ExecuteQuery('SELECT DATABASEPROPERTYEX('+AnsiQuotedStr(DataBase, #39)+', ''Collation'') as DatabaseCollation');
+    if RS.Next then
+      Result := RS.GetString(1)
+    else
+      Result := '';
+    RS := nil;
+  except
+    Result := '';
+  end;
+  Stmt.close;
+  Stmt := nil;
+end;
+
+function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
+var
+  Stmt: IZStatement;
+  Rs: IZResultSet;
+begin
+  Stmt := CreateRegularStatement(Self.Info);
+  try
+    RS := Stmt.ExecuteQuery('SELECT COLLATIONPROPERTY('+AnsiQuotedStr(Collation, #39)+', ''Codepage'') AS CodePage');
+    if RS.Next then
+      Result := RS.GetInt(1)
+    else
+      Result := High(Word);
+    RS := nil;
+  except
+    Result := High(Word);
+  end;
+  Stmt.close;
+  Stmt := nil;
 end;
 
 {**
