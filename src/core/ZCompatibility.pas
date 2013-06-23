@@ -271,39 +271,6 @@ type
   function NoConvert(const s: string): string;
   {$ENDIF}
 
-const
-  ClientCodePageDummy: TZCodepage =
-    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
-      CP: $ffff; ZAlias: '');
-
-  ConSettingsDummy: TZConSettings =
-    (AutoEncode: False;
-      CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
-      CTRL_CP: $ffff;
-      ConvFuncs : (
-        ZAnsiToUTF8: nil;
-        ZUTF8ToAnsi: nil;
-        ZUTF8ToString: nil;
-        ZStringToUTF8: nil;
-        ZAnsiToRaw: nil;
-        ZRawToAnsi: nil;
-        ZRawToUTF8: nil;
-        ZUTF8ToRaw: nil;
-        ZStringToRaw: nil;
-        ZRawToString: nil;
-        ZAnsiToString: nil;
-        ZStringToAnsi: nil;
-        ZUnicodeToRaw: nil;
-        ZRawToUnicode: nil;
-        ZUnicodeToString: nil;
-        ZStringToUnicode: nil;
-      );
-      ClientCodePage: @ClientCodePageDummy;
-      {$IFDEF WITH_LCONVENCODING}
-      PlainConvertFunc: @NoConvert;
-      DbcConvertFunc: @NoConvert;
-      {$ENDIF}
-    );
 
 {$IF not Declared(DetectUTF8Encoding)}
 {$DEFINE ZDetectUTF8Encoding}
@@ -322,6 +289,21 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
 {$DEFINE ZUTF8ToString}
 function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
+
+var
+  ClientCodePageDummy: TZCodepage =
+    (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
+      CP: $ffff; ZAlias: '');
+
+  ConSettingsDummy: TZConSettings =
+    (AutoEncode: False;
+      CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
+      ClientCodePage: @ClientCodePageDummy;
+      {$IFDEF WITH_LCONVENCODING}
+      PlainConvertFunc: @NoConvert;
+      DbcConvertFunc: @NoConvert;
+      {$ENDIF}
+    );
 
 implementation
 
@@ -1054,6 +1036,13 @@ end;
 {$ENDIF}
 
 
+initialization
+  case ConSettingsDummy.CPType of
+    cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZDefaultSystemCodePage;
+    cCP_UTF8: ConSettingsDummy.CTRL_CP := zCP_UTF8;
+  end;
+  SetConvertFunctions(@ConSettingsDummy);
+  
 end.
 
 

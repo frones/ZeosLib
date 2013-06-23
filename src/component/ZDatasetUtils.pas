@@ -876,13 +876,13 @@ begin
               {$IFDEF UNICODE}
               Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
               {$ELSE}
-              Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
-              Value2 := UTF8ToAnsi(UTF8Encode(WValue2));
+              Value1 := AnsiString(WValue1);
+              Value2 := AnsiString(WValue2);
               Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
               {$ENDIF}
             end
             else
-              Result := Value1 = Value2
+              Result := WValue1 = WValue2
           end
           else
           begin
@@ -893,8 +893,8 @@ begin
               {$IFDEF UNICODE}
               Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
               {$ELSE}
-              Value1 := UTF8ToAnsi(UTF8Encode(WValue1));
-              Value2 := UTF8ToAnsi(UTF8Encode(WValue2));
+              Value1 := AnsiString(WValue1);
+              Value2 := AnsiString(WValue2);
               Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
               {$ENDIF}
             end

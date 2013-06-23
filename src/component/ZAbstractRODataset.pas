@@ -1367,6 +1367,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
+  ACurrency: Currency;
   {$IFNDEF WITH_WIDESTRUTILS}
   WS: WideString;
   {$ENDIF}
@@ -1423,10 +1424,17 @@ begin
           Result := not RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
         {$ENDIF}
         { Processes all other fields. }
+        ftCurrency:
+          begin
+            {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
+            ACurrency := RowAccessor.GetBigDecimal(ColumnIndex, Result);
+            System.Move(Pointer(@ACurrency)^, Pointer(Buffer)^, SizeOf(Currency));
+            Result := not Result;
+          end;
         else
           begin
-            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^, Pointer(Buffer)^,
-            RowAccessor.GetColumnDataSize(ColumnIndex));
+            System.Move(RowAccessor.GetColumnData(ColumnIndex, Result)^,
+              Pointer(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
       end;
@@ -1469,6 +1477,7 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
+  Curr: Currency;
 begin
   WasNull := False;
   if not Active then
@@ -1509,6 +1518,12 @@ begin
           {$ENDIF}
         ftString: { Processes string fields. }
           FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
+        ftCurrency:
+          begin
+            {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
+            Curr := PCurrency(Buffer)^;
+            RowAccessor.SetBigDecimal(ColumnIndex, Curr); //cast Currrency to Extented
+          end;
         else  { Processes all other fields. }
           begin
             System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
