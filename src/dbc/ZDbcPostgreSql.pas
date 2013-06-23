@@ -96,6 +96,9 @@ type
   end;
 
   {** Implements PostgreSQL Database Connection. }
+
+  { TZPostgreSQLConnection }
+
   TZPostgreSQLConnection = class(TZAbstractConnection, IZPostgreSQLConnection)
   private
     FStandardConformingStrings: Boolean;
@@ -163,6 +166,9 @@ type
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetServerSetting(const AName: string): string;
     procedure SetServerSetting(const AName, AValue: string);
+    {$IFDEF ZEOS_TEST_ONLY}
+    constructor Create(const ZUrl: TZURL);
+    {$ENDIF}
   end;
 
   {** Implements a Postgres sequence. }
@@ -631,18 +637,19 @@ begin
   if IsClosed then
      Open;
 
-  if Assigned(Info) then
-    if StrToBoolEx(Info.Values['preferprepared']) then
+  {$IFDEF ZEOS_TEST_ONLY}
+  Case GetTestMode of
+    0:
+  {$ENDIF}
       if self.GetServerMajorVersion >= 8 then
         Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
       else
-        Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
-    else
-      Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
-        Self, SQL, Info)
-  else
-    Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver,
-      Self, SQL, Info);
+        Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
+  {$IFDEF ZEOS_TEST_ONLY}
+    1: Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
+    2: Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
+  end;
+  {$ENDIF}
 end;
 
 
@@ -1143,6 +1150,13 @@ begin
 
   GetPlainDriver.Clear(QueryHandle);
 end;
+
+{$IFDEF ZEOS_TEST_ONLY}
+constructor TZPostgreSQLConnection.Create(const ZUrl: TZURL);
+begin
+ inherited Create(ZUrl);
+end;
+{$ENDIF}
 
 procedure TZPostgreSQLConnection.SetStandardConformingStrings(const Value: Boolean);
 begin

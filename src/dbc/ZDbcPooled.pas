@@ -126,12 +126,18 @@ type
 
   { This class embedds a real connection and redirects all methods to it.
     When it is droped or closed, it returns the real connection to the pool. }
+
+  { TZDbcPooledConnection }
+
   TZDbcPooledConnection = class(TZCodePagedObject, IZConnection)
   private
     FConnection: IZConnection;
     FConnectionPool: TConnectionPool;
     FAutoEncodeStrings: Boolean;
     FUseMetadata: Boolean;
+    {$IFDEF ZEOS_TEST_ONLY}
+    FTestMode: Byte;
+    {$ENDIF}
     function GetConnection: IZConnection;
   protected // IZConnection
     FClientCodePage: String;
@@ -185,6 +191,10 @@ type
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
+    {$IFDEF ZEOS_TEST_ONLY}
+    function GetTestMode : Byte;
+    procedure SetTestMode(Mode: Byte);
+    {$ENDIF}
   end;
 
   {$WARNINGS OFF}
@@ -417,6 +427,9 @@ end;
 constructor TZDbcPooledConnection.Create(const ConnectionPool: TConnectionPool);
 begin
   FConnectionPool := ConnectionPool;
+  {$IFDEF ZEOS_TEST_ONLY}
+  FTestMode := 0;
+  {$ENDIF}
 end;
 
 destructor TZDbcPooledConnection.Destroy;
@@ -697,6 +710,19 @@ function TZDbcPooledConnection.GetConSettings: PZConSettings;
 begin
   Result := @ConSettings;
 end;
+
+{$IFDEF ZEOS_TEST_ONLY}
+function TZDbcPooledConnection.GetTestMode: Byte;
+begin
+  Result := FTestMode;
+end;
+
+procedure TZDbcPooledConnection.SetTestMode(Mode: Byte);
+begin
+  FTestMode := Mode;
+end;
+{$ENDIF}
+
 {**
   Result 100% Compiler-Compatible
   And sets it Result to ClientCodePage by calling the
