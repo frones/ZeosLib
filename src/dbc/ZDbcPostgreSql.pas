@@ -381,6 +381,12 @@ begin
     AddParamToResult('requiressl', Info.Values['requiressl']);
   end;
 
+  if Info.Values['sslcompression'] <> '' then AddParamToResult('sslcompression', Info.Values['sslcompression']);
+  if Info.Values['sslcert'] <> '' then AddParamToResult('sslcert', Info.Values['sslcert']);
+  if Info.Values['sslkey'] <> '' then AddParamToResult('sslkey', Info.Values['sslkey']);
+  if Info.Values['sslrootcert'] <> '' then AddParamToResult('sslrootcert', Info.Values['sslrootcert']);
+  if Info.Values['sslcrl'] <> '' then AddParamToResult('sslcrl', Info.Values['sslcrl']);
+
   { Sets a connection timeout. }
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
