@@ -511,6 +511,8 @@ end;
 function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
+  if StmtHandle = 0 then Prepare;
+
   with FIBConnection do
   begin
     try
@@ -584,6 +586,8 @@ function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   iError : Integer; //Check for database disconnect AVZ
 begin
+  if StmtHandle = 0 then Prepare;
+
   with FIBConnection do
   begin
     try
@@ -661,6 +665,8 @@ var
   iError : Integer; //Implementation for graceful disconnect AVZ
 begin
   Result := -1;
+
+  if StmtHandle = 0 then Prepare;
 
   with FIBConnection do
   begin
