@@ -1277,7 +1277,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stUnicodeString:
+      stUnicodeString, stString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := ConSettings^.ConvFuncs.ZRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP)
         else
@@ -1288,12 +1288,6 @@ begin
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
             Result := TempBlob.GetUnicodeString;
         end;
-      stString:
-        {$IFDEF UNICODE}
-        Result := GetString(ColumnIndex, IsNull);
-        {$ELSE}
-        Result := ConSettings^.ConvFuncs.ZRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP);
-        {$ENDIF}
       else
         Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
     end;
@@ -2513,7 +2507,7 @@ begin
     stUnicodeStream:
       GetBlob(ColumnIndex, IsNull).SetUnicodeString(Value);
     else
-      SetString(ColumnIndex, ZDbcString(Value));
+      SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
   end;
 end;
 
