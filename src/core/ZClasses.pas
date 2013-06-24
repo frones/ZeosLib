@@ -61,9 +61,9 @@ uses
 const
   ZEOS_MAJOR_VERSION = 7;
   ZEOS_MINOR_VERSION = 0;
-  ZEOS_SUB_VERSION = 3;
+  ZEOS_SUB_VERSION = 4;
   ZEOS_STATUS = 'stable';
-  ZEOS_VERSION = '7.0.3-stable';
+  ZEOS_VERSION = '7.0.4-stable';
 {$IFDEF ENABLE_POOLED}
   {Pooled Protocol Prefix, including final dot}
   PooledPrefix = 'pooled.';
