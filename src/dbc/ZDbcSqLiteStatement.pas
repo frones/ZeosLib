@@ -368,13 +368,13 @@ begin
       stString, stUnicodeString:
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stDate:
-        Result := '''' + StringToASCII7(FormatDateTime('yyyy-mm-dd',
+        Result := '''' + NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd',
           ClientVarManager.GetAsDateTime(Value))) + '''';
       stTime:
-        Result := '''' + StringToASCII7(FormatDateTime('hh:mm:ss',
+        Result := '''' + NotEmptyStringToASCII7(FormatDateTime('hh:mm:ss',
           ClientVarManager.GetAsDateTime(Value))) + '''';
       stTimestamp:
-        Result := '''' + StringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+        Result := '''' + NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
           ClientVarManager.GetAsDateTime(Value))) + '''';
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
@@ -522,25 +522,25 @@ begin
             {$IFDEF DELPHI18_UP}
             SysUtils.StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd',
              {$ELSE}
-            StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd',
+            StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd',
             {$ENDIF}
             ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(StringToASCII7(RawByteString(FormatDateTime('hh:mm:ss',
+            SysUtils.StrNew(NotEmptyStringToASCII7(RawByteString(FormatDateTime('hh:mm:ss',
             {$ELSE}
-            StrNew(PAnsichar(StringToASCII7(FormatDateTime('hh:mm:ss',
+            StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('hh:mm:ss',
             {$ENDIF}
             ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            SysUtils.StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             {$ELSE}
-            StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             {$ENDIF}
             ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);

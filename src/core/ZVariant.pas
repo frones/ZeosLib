@@ -1828,9 +1828,9 @@ begin
           else
             Result.VRawByteString := 'FALSE';
         vtInteger:
-          Result.VRawByteString := StringToASCII7(IntToStr(Value.VInteger));
+          Result.VRawByteString := NotEmptyStringToASCII7(IntToStr(Value.VInteger));
         vtFloat:
-          Result.VRawByteString := StringToASCII7(FloatToSqlStr(Value.VFloat));
+          Result.VRawByteString := NotEmptyStringToASCII7(FloatToSqlStr(Value.VFloat));
         vtString:
           Result.VRawByteString := FConSettings^.ConvFuncs.ZStringToRaw(Value.VString, FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP);
         vtAnsiString:
@@ -1935,9 +1935,9 @@ begin
     vtBytes:
       ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result);
     vtInteger:
-      Result := StringToASCII7(IntToStr(Value.VInteger));
+      Result := NotEmptyStringToASCII7(IntToStr(Value.VInteger));
     vtFloat:
-      Result := StringToASCII7(FloatToSqlStr(Value.VFloat));
+      Result := NotEmptyStringToASCII7(FloatToSqlStr(Value.VFloat));
     vtString:
       Result := ZConvertStringToRawWithAutoEncode(Value.VString, FConSettings^.CTRL_CP, RawCP);
     vtAnsiString:

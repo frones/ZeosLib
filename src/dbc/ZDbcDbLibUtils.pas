@@ -394,13 +394,13 @@ begin
             Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := StringToASCII7('''' + FormatDateTime(ConSettings^.DateFormat,
+        Result := NotEmptyStringToASCII7('''' + FormatDateTime(ConSettings^.DateFormat,
           ClientVarManager.GetAsDateTime(Value)) + '''');
       stTime:
-        Result := StringToASCII7('''' + FormatDateTime('hh":"mm":"ss":"zzz',
+        Result := NotEmptyStringToASCII7('''' + FormatDateTime('hh":"mm":"ss":"zzz',
           ClientVarManager.GetAsDateTime(Value)) + '''');
       stTimestamp:
-        Result := StringToASCII7('''' + FormatDateTime(ConSettings^.DateFormat+' hh":"mm":"ss":"zzz',
+        Result := NotEmptyStringToASCII7('''' + FormatDateTime(ConSettings^.DateFormat+' hh":"mm":"ss":"zzz',
           ClientVarManager.GetAsDateTime(Value)) + '''');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin

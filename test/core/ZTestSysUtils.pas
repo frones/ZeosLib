@@ -73,6 +73,9 @@ type
     procedure TestObjectComparison;
     procedure TestReplaceChar;
     procedure TestMatch;
+    {$IFDEF UNICODE}
+    procedure TestASCII7ToString_VS_RawByteToString;
+    {$ENDIF}
   end;
 
 implementation
@@ -256,6 +259,112 @@ begin
   CheckEquals(False, IsMatch('*qwe*', 'xyz'));
   CheckEquals(True, IsMatch('*qwe*', 'xyzqweabc'));
 end;
+
+{$IFDEF UNICODE}
+procedure TZTestSysUtilsCase.TestASCII7ToString_VS_RawByteToString;
+var
+  tm: RawByteString;
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: String;
+
+    function TestNotEmptyASCII7ToString: String;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Result := Result + NotEmptyASCII7ToString(tm);
+      end;
+    end;
+
+    function TestPosEmptyASCII7ToString: String;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Result := Result + PosEmptyASCII7ToString(tm);
+      end;
+    end;
+
+    function RawByteToString: String;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Result := Result + String(tm);
+      end;
+    end;
+begin
+  ZSetString(PAnsiChar(RawByteString(Format('''%s''::timestamp', [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', now)]))), tm);
+
+  Start := GetTickCount;
+  S1 := TestNotEmptyASCII7ToString;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := RawByteToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): RawToString');
+  system.WriteLn('NotEmptyASCII7ToString with UnknownCP filled RawByteString:');
+  system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
+
+  Start := GetTickCount;
+  S1 := TestPosEmptyASCII7ToString;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := RawByteToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
+
+  system.WriteLn('PosEmptyASCII7ToString with SystemCP filled RawByteString:');
+  system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
+
+  tm := '';
+
+  Start := GetTickCount;
+  S1 := TestNotEmptyASCII7ToString;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := RawByteToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
+
+  system.WriteLn('NotEmptyASCII7ToString from empty RawByteString:');
+  system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
+
+  Start := GetTickCount;
+  S1 := TestPosEmptyASCII7ToString;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := RawByteToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
+
+  system.WriteLn('PosEmptyASCII7ToString from empty RawByteString:');
+  system.WriteLn(Format('Zeos: %d ms VS. system String cast: %d ms', [Between1, Between2]));
+  system.WriteLn('');
+end;
+{$ENDIF}
 
 initialization
   RegisterTest('core',TZTestSysUtilsCase.Suite);

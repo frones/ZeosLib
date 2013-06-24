@@ -407,7 +407,7 @@ begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
-          Result := Result + ':P' + StringToASCII7(IntToStr(N));
+          Result := Result + ':P' + NotEmptyStringToASCII7(IntToStr(N));
         end else
           Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[I],
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
@@ -1003,7 +1003,7 @@ begin
     InParams := GenerateParamsStr( FOracleParamsCount );
     TempResult := 'BEGIN ' + sFunc +SQL + InParams+'; END;';
   end;
-  Result := ZPlainString(TempResult);
+  Result := NotEmptyStringToASCII7(TempResult);
 end;
 
 function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;

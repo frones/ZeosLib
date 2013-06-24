@@ -452,7 +452,7 @@ function RandomString(Len: integer): RawByteString;
 begin
   Result := '';
   while Length(Result) < Len do
-    Result := Result + StringToASCII7(IntToStr(Trunc(Random(High(Integer)))));
+    Result := Result + NotEmptyStringToASCII7(IntToStr(Trunc(Random(High(Integer)))));
   if Length(Result) > Len then
     Result := Copy(Result, 1, Len);
 end;
@@ -511,7 +511,7 @@ begin
     case ParamNo of
       0: Continue;
       isc_dpb_set_db_SQL_dialect:
-        Dialect := StrToIntDef(ASCII7ToString(ParamValue), 0);
+        Dialect := StrToIntDef(NotEmptyASCII7ToString(ParamValue), 0);
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
@@ -523,7 +523,7 @@ begin
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
       isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
         begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(ASCII7ToString(ParamValue)));
+          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(NotEmptyASCII7ToString(ParamValue)));
           Inc(FDPBLength, 3);
         end;
       isc_dpb_sweep:
@@ -533,7 +533,7 @@ begin
         end;
       isc_dpb_sweep_interval:
         begin
-          PValue := StrToInt(ASCII7ToString(ParamValue));
+          PValue := StrToInt(NotEmptyASCII7ToString(ParamValue));
           DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
                  PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
           Inc(FDPBLength, 6);
@@ -1924,8 +1924,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(FloatToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(FloatToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -1975,8 +1975,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := ord(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := ord(Value);
         SQL_INT64     : PInt64(sqldata)^ := ord(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(ord(Value))));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(ord(Value))));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(IntToStr(ord(Value))));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(IntToStr(ord(Value))));
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
@@ -2032,8 +2032,8 @@ begin
                      end;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
@@ -2159,8 +2159,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(FloatToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(FloatToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2213,8 +2213,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(FloatToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(FloatToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2265,8 +2265,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2317,8 +2317,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2430,8 +2430,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, NotEmptyStringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, NotEmptyStringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2466,7 +2466,7 @@ begin
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(ASCII7ToString(Value));
+      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(PosEmptyASCII7ToString(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
@@ -2577,18 +2577,13 @@ function TZResultSQLDA.DecodeString(const Code: Smallint;
    const Index: Word): RawByteString;
 var
    l: integer;
-  procedure SetAnsi(Ansi: PAnsiChar; Len: Longint);
-  begin
-    SetLength(Result, Len);
-    System.Move(Ansi^, PAnsiChar(Result)^, Len);
-  end;
 begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   case Code of
     SQL_TEXT:
       begin
-        SetAnsi(sqldata, sqllen);
+        ZSetString(sqldata, sqllen, Result);
         // Trim only spaces. TrimRight also removes other characters)
         l := sqllen;
         while (l > 0) and (Result[l] = ' ') do
@@ -2596,7 +2591,7 @@ begin
         if l < sqllen then
            result := copy(result, 1, l);
       end;
-    SQL_VARYING : SetAnsi(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+    SQL_VARYING : ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, Result);
   end;
   {$IFOPT D+}
 {$R+}
@@ -2655,8 +2650,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToFloat(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2707,8 +2702,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := StrToInt(ASCII7ToString(DecodeString(SQL_TEXT, Index))) <> 0;
-        SQL_VARYING   : Result := StrToInt(ASCII7ToString(DecodeString(SQL_VARYING, Index))) <> 0;
+        SQL_TEXT      : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index))) <> 0;
+        SQL_VARYING   : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index))) <> 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2789,8 +2784,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToFloat(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2841,8 +2836,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToFloat(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2903,8 +2898,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToInt(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2969,8 +2964,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToInt(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3003,11 +2998,11 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : Result := StringToASCII7(FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]));
-        SQL_LONG   : Result := StringToASCII7(FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]));
+        SQL_SHORT  : Result := NotEmptyStringToASCII7(FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]));
+        SQL_LONG   : Result := NotEmptyStringToASCII7(FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]));
         SQL_INT64,
-        SQL_QUAD   : Result := StringToASCII7(FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]));
-        SQL_DOUBLE : Result := StringToASCII7(FloatToStr(PDouble(sqldata)^));
+        SQL_QUAD   : Result := NotEmptyStringToASCII7(FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]));
+        SQL_DOUBLE : Result := NotEmptyStringToASCII7(FloatToStr(PDouble(sqldata)^));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3015,17 +3010,17 @@ begin
     end
     else
       case SQLCode of
-        SQL_DOUBLE    : Result := StringToASCII7(FloatToStr(PDouble(sqldata)^));
-        SQL_LONG      : Result := StringToASCII7(IntToStr(PInteger(sqldata)^));
+        SQL_DOUBLE    : Result := NotEmptyStringToASCII7(FloatToStr(PDouble(sqldata)^));
+        SQL_LONG      : Result := NotEmptyStringToASCII7(IntToStr(PInteger(sqldata)^));
         SQL_D_FLOAT,
-        SQL_FLOAT     : Result := StringToASCII7(FloatToStr(PSingle(sqldata)^));
+        SQL_FLOAT     : Result := NotEmptyStringToASCII7(FloatToStr(PSingle(sqldata)^));
         SQL_BOOLEAN   :
           if Boolean(PSmallint(sqldata)^) = True then
             Result := 'YES'
           else
             Result := 'NO';
-        SQL_SHORT     : Result := StringToASCII7(IntToStr(PSmallint(sqldata)^));
-        SQL_INT64     : Result := StringToASCII7(IntToStr(PInt64(sqldata)^));
+        SQL_SHORT     : Result := NotEmptyStringToASCII7(IntToStr(PSmallint(sqldata)^));
+        SQL_INT64     : Result := NotEmptyStringToASCII7(IntToStr(PInt64(sqldata)^));
         SQL_TEXT      : DecodeString2(SQL_TEXT, Index, Result);
         SQL_VARYING   : DecodeString2(SQL_VARYING, Index, Result);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then

@@ -473,13 +473,13 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
             ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-        Result := StringToASCII7(Format('''%s''::date',
+        Result := NotEmptyStringToASCII7(Format('''%s''::date',
           [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]));
       stTime:
-        Result := StringToASCII7(Format('''%s''::time',
+        Result := NotEmptyStringToASCII7(Format('''%s''::time',
           [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]));
       stTimestamp:
-        Result := StringToASCII7(Format('''%s''::timestamp',
+        Result := NotEmptyStringToASCII7(Format('''%s''::timestamp',
           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
             ClientVarManager.GetAsDateTime(Value))]));
       stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -665,22 +665,22 @@ begin
             ClientVarManager.GetAsRawByteString(Value), FPostgreSQLConnection.GetConSettings, True);
       stDate:
         if Escaped then
-          Result := StringToASCII7(Format('''%s''::date',
+          Result := NotEmptyStringToASCII7(Format('''%s''::date',
             [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+StringToASCII7(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value)))+#39;
       stTime:
         if Escaped then
-          Result := StringToASCII7(Format('''%s''::time',
+          Result := NotEmptyStringToASCII7(Format('''%s''::time',
             [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+StringToASCII7(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+NotEmptyStringToASCII7(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
       stTimestamp:
         if Escaped then
-          Result := StringToASCII7(Format('''%s''::timestamp',
+          Result := NotEmptyStringToASCII7(Format('''%s''::timestamp',
            [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]))
         else
-          Result := #39+StringToASCII7(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
+          Result := #39+NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -697,7 +697,7 @@ begin
                       FPostgreSQLConnection.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := StringToASCII7(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := NotEmptyStringToASCII7(IntToStr(WriteTempBlob.GetBlobOid));
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;
@@ -1126,11 +1126,11 @@ begin
         stString, stUnicodeString:
           UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stDate:
-          UpdateString(StringToASCII7(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
         stTime:
-          UpdateString(StringToASCII7(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(NotEmptyStringToASCII7(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
         stTimestamp:
-          UpdateString(StringToASCII7(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1147,7 +1147,7 @@ begin
                         FPostgreSQLConnection.GetConnectionHandle, 0, ChunkSize);
                       WriteTempBlob.SetStream(TempStream);
                       WriteTempBlob.WriteBlob;
-                      UpdateString(StringToASCII7(IntToStr(WriteTempBlob.GetBlobOid)), ParamIndex);
+                      UpdateString(NotEmptyStringToASCII7(IntToStr(WriteTempBlob.GetBlobOid)), ParamIndex);
                     finally
                       WriteTempBlob := nil;
                       TempStream.Free;

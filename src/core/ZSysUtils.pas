@@ -404,10 +404,15 @@ procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
 {$ENDIF}
 
-function ASCII7ToString(const Src: RawByteString): string; overload;
-function ASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
-function StringToASCII7(const Src: string): RawByteString; overload;
-function StringToASCII7(Src: PChar): RawByteString; overload;
+function NotEmptyASCII7ToString(const Src: RawByteString): string; overload;
+function NotEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
+function NotEmptyStringToASCII7(const Src: string): RawByteString; overload;
+function NotEmptyStringToASCII7(Src: PChar): RawByteString; overload;
+
+function PosEmptyASCII7ToString(const Src: RawByteString): string; overload;
+function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
+function PosEmptyStringToASCII7(const Src: string): RawByteString; overload;
+function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
 
 implementation
 
@@ -1460,29 +1465,29 @@ begin
   if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
     if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
       //No DecimalSeparator and no ThousandSeparator
-      Result := StrToFloat(ASCII7ToString(Value))
+      Result := StrToFloat(NotEmptyASCII7ToString(Value))
     else
     begin
       //wrong DecimalSepartor
       {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
       {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
-      Result := StrToFloat({$IFDEF UNICODE}ASCII7ToString{$ENDIF}(Value));
+      Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value));
     end
   else
     if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
       //default DecimalSepartor
-      Result := StrToFloat({$IFDEF UNICODE}ASCII7ToString{$ENDIF}(Value))
+      Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value))
     else
       if StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
         StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
           //default DecimalSepartor and ThousandSeparator
-        Result := StrToFloat({$IFDEF UNICODE}ASCII7ToString{$ENDIF}(Value))
+        Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value))
       else
       begin
         //wrong DecimalSepartor and ThousandSeparator
         {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
         {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
-        Result := StrToFloat({$IFDEF UNICODE}ASCII7ToString{$ENDIF}(Value));
+        Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value));
       end;
 
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
@@ -1509,7 +1514,7 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
-  Dest := '';
+  Dest := ''; //speeds up for SetLength
   if ( Len = 0 ) or ( Src = nil ) then
     exit
   else
@@ -1534,14 +1539,14 @@ begin
     Exit
   else
   begin
-    SetLength(Dest, Len);
+    SetLength(Dest, Len); //speeds up for SetLength
     Move(Src^, PAnsiChar(Dest)^, Len);
   end;
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
 begin
-  Dest := '';
+  Dest := ''; //speeds up for SetLength
   if ( Len = 0 ) or ( Src = nil ) then
     Exit
   else
@@ -1573,22 +1578,22 @@ begin
 end;
 {$ENDIF}
 
-function ASCII7ToString(const Src: RawByteString): string;
+function NotEmptyASCII7ToString(const Src: RawByteString): string;
 {$IFDEF UNICODE}
 var i, l: integer;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  l := Length(Src);
+  l := Length(Src); //temp l speeds x2
   SetString(result,nil,l);
   for i := 0 to l-1 do
-    PWordArray(result)[i] := PByteArray(Src)[i];
+    PWordArray(result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
   {$ELSE}
   Result := Src;
   {$ENDIF}
 end;
 
-function ASCII7ToString(Src: PAnsiChar; Len: integer): string;
+function NotEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string;
 {$IFDEF UNICODE}
 var i: integer;
 {$ENDIF}
@@ -1596,19 +1601,35 @@ begin
   {$IFDEF UNICODE}
   System.SetString(result, nil, Len);
   for i := 0 to Len-1 do
-    PWordArray(Result)[i] := PByteArray(Src)[i];
+    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
   {$ELSE}
   System.SetString(Result, PAnsiChar(Src), Len);
   {$ENDIF}
 end;
 
-function StringToASCII7(const Src: string): RawByteString;
+function NotEmptyStringToASCII7(const Src: string): RawByteString;
 {$IFDEF UNICODE}
 var i, l: integer;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  L := System.Length(Src);
+  L := System.Length(Src); //temp l speeds x2
+  System.SetString(Result,nil, l);
+  for i := 0 to l-1 do
+    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..127 equals to widechars
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
+end;
+
+
+function NotEmptyStringToASCII7(Src: PChar): RawByteString;
+{$IFDEF UNICODE}
+var i, l: integer;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  L := System.Length(Src); //temp l speeds x2
   System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PByteArray(Result)[i] := PWordArray(Src)[i];
@@ -1617,21 +1638,84 @@ begin
   {$ENDIF}
 end;
 
-
-function StringToASCII7(Src: PChar): RawByteString;
+function PosEmptyASCII7ToString(const Src: RawByteString): string;
 {$IFDEF UNICODE}
 var i, l: integer;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  L := System.Length(Src);
-  System.SetString(Result,nil, l);
-  for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i];
+  l := Length(Src); //temp l speeds x2
+  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    SetString(result,nil,l);
+    for i := 0 to l-1 do
+      PWordArray(result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
+  end;
   {$ELSE}
   Result := Src;
   {$ENDIF}
 end;
 
+function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string;
+{$IFDEF UNICODE}
+var i: integer;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  if Len = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if Len = 0
+    Result := ''
+  else
+  begin
+    System.SetString(result, nil, Len);
+    for i := 0 to Len-1 do
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
+  end;
+  {$ELSE}
+  System.SetString(Result, PAnsiChar(Src), Len);
+  {$ENDIF}
+end;
+
+function PosEmptyStringToASCII7(const Src: string): RawByteString;
+{$IFDEF UNICODE}
+var i, l: integer;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  L := System.Length(Src); //temp l speeds x2
+  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    System.SetString(Result,nil, l);
+    for i := 0 to l-1 do
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..127 equals to widechars
+  end;
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
+end;
+
+
+function PosEmptyStringToASCII7(Src: PChar): RawByteString;
+{$IFDEF UNICODE}
+var i, l: integer;
+{$ENDIF}
+begin
+  {$IFDEF UNICODE}
+  L := system.Length(Src); //temp l speeds x2
+  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    System.SetString(Result,nil, l);
+    for i := 0 to l-1 do
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..127 equals to widechars
+  end;
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
+end;
 
 end.
