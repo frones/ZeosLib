@@ -71,7 +71,7 @@ type
 
   { Paparameter string name and it value}
   TZIbParam = record
-    Name: AnsiString;
+    Name: RawByteString;
     Number: word;
   end;
   PZIbParam = ^TZIbParam;
@@ -265,18 +265,18 @@ type
     function GetQuad(const Index: Integer): TISC_QUAD;
   end;
 
-  function RandomString(Len: integer): AnsiString;
+  function RandomString(Len: integer): RawByteString;
   function GetCachedResultSet(SQL: string; Statement: IZStatement;
     NativeResultSet: IZResultSet): IZResultSet;
 
   {Interbase6 Connection Functions}
   function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
   function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
-  function GetInterbase6DatabaseParamNumber(const Value: AnsiString): word;
-  function GetInterbase6TransactionParamNumber(const Value: AnsiString): word;
+  function GetInterbase6DatabaseParamNumber(const Value: RawByteString): word;
+  function GetInterbase6TransactionParamNumber(const Value: RawByteString): word;
 
   { Interbase6 errors functions }
-  function GetNameSqlType(Value: Word): AnsiString;
+  function GetNameSqlType(Value: Word): RawByteString;
   function CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
     StatusVector: TARRAY_ISC_STATUS; LoggingCategory: TZLoggingCategory = lcOther;
     SQL: string = '') : Integer;
@@ -339,7 +339,7 @@ const
   { count database parameters }
   MAX_DPB_PARAMS = 67;
   { prefix database parameters names it used in paramters scann procedure }
-  BPBPrefix = 'isc_dpb_';
+  BPBPrefix = RawByteString('isc_dpb_');
   { list database parameters and their apropriate numbers }
   DatabaseParams: array [0..MAX_DPB_PARAMS]of TZIbParam = (
     (Name:'isc_dpb_version1';         Number: isc_dpb_version1),
@@ -415,7 +415,7 @@ const
   { count transaction parameters }
   MAX_TPB_PARAMS = 16;
   { prefix transaction parameters names it used in paramters scann procedure }
-  TPBPrefix = 'isc_tpb_';
+  TPBPrefix = RawByteString('isc_tpb_');
   { list transaction parameters and their apropriate numbers }
   TransactionParams: array [0..MAX_TPB_PARAMS]of TZIbParam = (
     (Name:'isc_tpb_version1';         Number: isc_tpb_version1),
@@ -448,11 +448,11 @@ uses
    @param Len a length result string
    @return random string
 }
-function RandomString(Len: integer): AnsiString;
+function RandomString(Len: integer): RawByteString;
 begin
   Result := '';
   while Length(Result) < Len do
-    Result := Result + AnsiString(IntToStr(Trunc(Random(High(Integer)))));
+    Result := Result + StringToASCII7(IntToStr(Trunc(Random(High(Integer)))));
   if Length(Result) > Len then
     Result := Copy(Result, 1, Len);
 end;
@@ -494,7 +494,7 @@ var
   I, Pos, PValue: Integer;
   ParamNo: Word;
   Buffer: String;
-  DPB, ParamName, ParamValue: AnsiString;
+  DPB, ParamName, ParamValue: RawByteString;
 begin
   FDPBLength := 1;
   DPB := AnsiChar(isc_dpb_version1);
@@ -505,13 +505,13 @@ begin
     Pos := FirstDelimiter(' ='#9#10#13, Buffer);
     ParamName := AnsiString(Copy(Buffer, 1, Pos - 1));
     Delete(Buffer, 1, Pos);
-    ParamValue := AnsiString(Buffer);
+    ParamValue := RawByteString(Buffer);
     ParamNo := GetInterbase6DatabaseParamNumber(ParamName);
 
     case ParamNo of
       0: Continue;
       isc_dpb_set_db_SQL_dialect:
-        Dialect := StrToIntDef(String(ParamValue), 0);
+        Dialect := StrToIntDef(ASCII7ToString(ParamValue), 0);
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
@@ -523,7 +523,7 @@ begin
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
       isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
         begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(String(ParamValue)));
+          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(ASCII7ToString(ParamValue)));
           Inc(FDPBLength, 3);
         end;
       isc_dpb_sweep:
@@ -533,7 +533,7 @@ begin
         end;
       isc_dpb_sweep_interval:
         begin
-          PValue := StrToInt(String(ParamValue));
+          PValue := StrToInt(ASCII7ToString(ParamValue));
           DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
                  PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
           Inc(FDPBLength, 6);
@@ -581,7 +581,7 @@ begin
   { Prepare transaction parameters string }
   for I := 0 to Params.Count - 1 do
   begin
-    ParamValue := AnsiString(Params.Strings[I]);
+    ParamValue := RawbyteString(Params.Strings[I]);
     ParamNo := GetInterbase6TransactionParamNumber(ParamValue);
 
     case ParamNo of
@@ -645,14 +645,14 @@ end;
   @param Value - a connection parameter name
   @return - connection parameter number
 }
-function GetInterbase6DatabaseParamNumber(const Value: AnsiString): Word;
+function GetInterbase6DatabaseParamNumber(const Value: RawByteString): Word;
 var
  I: Integer;
  ParamName: AnsiString;
 begin
   ParamName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(BPBPrefix, String(ParamName)) = 1 then
+  if System.Pos(BPBPrefix, ParamName) = 1 then
     for I := 1 to MAX_DPB_PARAMS do
     begin
       if ParamName = DatabaseParams[I].Name then
@@ -668,14 +668,14 @@ end;
   @param Value - a transaction parameter name
   @return - transaction parameter number
 }
-function GetInterbase6TransactionParamNumber(const Value: AnsiString): Word;
+function GetInterbase6TransactionParamNumber(const Value: RawByteString): Word;
 var
  I: Integer;
- ParamName: AnsiString;
+ ParamName: RawByteString;
 begin
   ParamName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(TPBPrefix, String(ParamName)) = 1 then
+  if System.Pos(TPBPrefix, ParamName) = 1 then
     for I := 1 to MAX_TPB_PARAMS do
     begin
       if ParamName = TransactionParams[I].Name then
@@ -772,7 +772,7 @@ end;
    Return Interbase SqlType by it number
    @param Value the SqlType number
 }
-function GetNameSqlType(Value: Word): AnsiString;
+function GetNameSqlType(Value: Word): RawByteString;
 begin
   case Value of
     SQL_VARYING: Result := 'SQL_VARYING';
@@ -1924,8 +1924,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(FloatToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(FloatToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -1975,8 +1975,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := ord(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := ord(Value);
         SQL_INT64     : PInt64(sqldata)^ := ord(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(ord(Value))));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(ord(Value))));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(ord(Value))));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(ord(Value))));
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
@@ -2032,8 +2032,8 @@ begin
                      end;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
@@ -2159,8 +2159,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(FloatToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(FloatToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2213,8 +2213,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
         SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(FloatToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(FloatToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(FloatToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(FloatToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2265,8 +2265,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2317,8 +2317,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2357,7 +2357,7 @@ end;
 }
 procedure TZParamsSQLDA.UpdatePChar(const Index: Integer; Value: PAnsiChar);
 var
-  TempString: AnsiString;
+  TempString: RawByteString;
 begin
   TempString := Value;
   UpdateString(Index, TempString);
@@ -2430,8 +2430,8 @@ begin
         SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, AnsiString(IntToStr(Value)));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, AnsiString(IntToStr(Value)));
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, StringToASCII7(IntToStr(Value)));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, StringToASCII7(IntToStr(Value)));
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2466,7 +2466,7 @@ begin
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(String(Value));
+      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(ASCII7ToString(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
@@ -2655,8 +2655,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2707,8 +2707,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index))) <> 0;
-        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index))) <> 0;
+        SQL_TEXT      : Result := StrToInt(ASCII7ToString(DecodeString(SQL_TEXT, Index))) <> 0;
+        SQL_VARYING   : Result := StrToInt(ASCII7ToString(DecodeString(SQL_VARYING, Index))) <> 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2789,8 +2789,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2841,8 +2841,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToFloat(String(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToFloat(String(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToFloat(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2903,8 +2903,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToInt(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2969,8 +2969,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(String(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToInt(String(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := StrToInt(ASCII7ToString(DecodeString(SQL_TEXT, Index)));
+        SQL_VARYING   : Result := StrToInt(ASCII7ToString(DecodeString(SQL_VARYING, Index)));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3003,11 +3003,11 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : Result := RawByteString(FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]));
-        SQL_LONG   : Result := RawByteString(FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]));
+        SQL_SHORT  : Result := StringToASCII7(FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]));
+        SQL_LONG   : Result := StringToASCII7(FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]));
         SQL_INT64,
-        SQL_QUAD   : Result := RawByteString(FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]));
-        SQL_DOUBLE : Result := RawByteString(FloatToStr(PDouble(sqldata)^));
+        SQL_QUAD   : Result := StringToASCII7(FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]));
+        SQL_DOUBLE : Result := StringToASCII7(FloatToStr(PDouble(sqldata)^));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3015,17 +3015,17 @@ begin
     end
     else
       case SQLCode of
-        SQL_DOUBLE    : Result := RawByteString(FloatToStr(PDouble(sqldata)^));
-        SQL_LONG      : Result := RawByteString(IntToStr(PInteger(sqldata)^));
+        SQL_DOUBLE    : Result := StringToASCII7(FloatToStr(PDouble(sqldata)^));
+        SQL_LONG      : Result := StringToASCII7(IntToStr(PInteger(sqldata)^));
         SQL_D_FLOAT,
-        SQL_FLOAT     : Result := RawByteString(FloatToStr(PSingle(sqldata)^));
+        SQL_FLOAT     : Result := StringToASCII7(FloatToStr(PSingle(sqldata)^));
         SQL_BOOLEAN   :
           if Boolean(PSmallint(sqldata)^) = True then
             Result := 'YES'
           else
             Result := 'NO';
-        SQL_SHORT     : Result := RawByteString(IntToStr(PSmallint(sqldata)^));
-        SQL_INT64     : Result := RawByteString(IntToStr(PInt64(sqldata)^));
+        SQL_SHORT     : Result := StringToASCII7(IntToStr(PSmallint(sqldata)^));
+        SQL_INT64     : Result := StringToASCII7(IntToStr(PInt64(sqldata)^));
         SQL_TEXT      : DecodeString2(SQL_TEXT, Index, Result);
         SQL_VARYING   : DecodeString2(SQL_VARYING, Index, Result);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then

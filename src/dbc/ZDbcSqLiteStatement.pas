@@ -520,27 +520,27 @@ begin
         stDate:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
+            SysUtils.StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd',
              {$ELSE}
-            StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
+            StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd',
             {$ENDIF}
             ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
+            SysUtils.StrNew(StringToASCII7(RawByteString(FormatDateTime('hh:mm:ss',
             {$ELSE}
-            StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
+            StrNew(PAnsichar(StringToASCII7(FormatDateTime('hh:mm:ss',
             {$ENDIF}
             ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            SysUtils.StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             {$ELSE}
-            StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+            StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             {$ENDIF}
             ClientVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);

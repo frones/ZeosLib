@@ -1468,7 +1468,6 @@ begin
           Result.VString := Value.VUnicodeString; //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
         vtDateTime:
           Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
-          // gto: Not a real threat, as it's converting dates (unicode safe)
         else
           RaiseTypeMismatchError;
       end;
@@ -1508,9 +1507,9 @@ begin
           else
             Result.VUTF8String := 'FALSE';
         vtInteger:
-          Result.VUTF8String := UTF8String(IntToStr(Value.VInteger));
+          Result.VUTF8String := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ENDIF}(IntToStr(Value.VInteger));
         vtFloat:
-          Result.VUTF8String := UTF8String(FloatToSqlStr(Value.VFloat));
+          Result.VUTF8String := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ENDIF}(FloatToSqlStr(Value.VFloat));
         vtString:
           Result.VUTF8String := ZStringToUTF8(Value.VString, FSystemCodePage);
         vtAnsiString:

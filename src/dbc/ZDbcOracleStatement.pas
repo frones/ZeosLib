@@ -407,9 +407,10 @@ begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
-          Result := Result + ':P' + RawByteString(IntToStr(N));
+          Result := Result + ':P' + StringToASCII7(IntToStr(N));
         end else
-          Result := Result + ZPlainString(Tokens[I]);
+          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[I],
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
       end;
     finally
       Tokens.Free;
