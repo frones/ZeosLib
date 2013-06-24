@@ -267,24 +267,24 @@ begin
   begin
     case SQLVarHolder.TypeCode of
       SQLT_INT:
-        Result := AnsiString(IntToStr(PLongInt(SQLVarHolder.Data)^));
+        Result := IntToRaw(PLongInt(SQLVarHolder.Data)^);
       SQLT_FLT:
         begin
           OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-          Result := AnsiString(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
+          Result := NotEmptyStringToASCII7(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
         Result := StrPas(PAnsiChar(SQLVarHolder.Data));
       SQLT_LVB, SQLT_LVC:
         begin
-          Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
-            PInteger(SQLVarHolder.Data)^));
+          ZSetString(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
+            PInteger(SQLVarHolder.Data)^, Result);
         end;
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
-          Result := AnsiString(DateTimeToAnsiSQLDate(
+          Result := NotEmptyStringToASCII7(DateTimeToAnsiSQLDate(
             GetAsDateTimeValue(ColumnIndex, SQLVarHolder)));
         end;
       SQLT_BLOB, SQLT_CLOB:

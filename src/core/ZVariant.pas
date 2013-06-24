@@ -1768,9 +1768,9 @@ begin
           else
             Result.VAnsiString := 'FALSE';
         vtInteger:
-          Result.VAnsiString := {$IFDEF UNICODE}AnsiString{$ENDIF}(IntToStr(Value.VInteger));
+          Result.VAnsiString := IntToRaw(Value.VInteger);
         vtFloat:
-          Result.VAnsiString := {$IFDEF UNICODE}AnsiString{$ENDIF}(FloatToSqlStr(Value.VFloat));
+          Result.VAnsiString := NotEmptyStringToASCII7(FloatToSqlStr(Value.VFloat));
         vtString:
           Result.VAnsiString := FConSettings^.ConvFuncs.ZStringToAnsi(Value.VString, FConSettings^.CTRL_CP);
         vtAnsiString:
@@ -1796,9 +1796,9 @@ begin
           else
             Result.VUTF8String := 'FALSE';
         vtInteger:
-          Result.VUTF8String := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ENDIF}(IntToStr(Value.VInteger));
+          Result.VUTF8String := IntToRaw(Value.VInteger);
         vtFloat:
-          Result.VUTF8String := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ENDIF}(FloatToSqlStr(Value.VFloat));
+          Result.VUTF8String := NotEmptyStringToASCII7(FloatToSqlStr(Value.VFloat));
         vtString:
           Result.VUTF8String := FConSettings^.ConvFuncs.ZStringToUTF8(Value.VString, FConSettings^.CTRL_CP);
         vtAnsiString:
@@ -1814,7 +1814,7 @@ begin
           Result.VUTF8String := UTF8Encode(Value.VUnicodeString);
           {$ENDIF}
         vtDateTime:
-          Result.VUTF8String := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VUTF8String := NotEmptyStringToASCII7(DateTimeToAnsiSQLDate(Value.VDateTime));
         else
           RaiseTypeMismatchError;
       end;
@@ -1828,7 +1828,7 @@ begin
           else
             Result.VRawByteString := 'FALSE';
         vtInteger:
-          Result.VRawByteString := NotEmptyStringToASCII7(IntToStr(Value.VInteger));
+          Result.VRawByteString := IntToRaw(Value.VInteger);
         vtFloat:
           Result.VRawByteString := NotEmptyStringToASCII7(FloatToSqlStr(Value.VFloat));
         vtString:
@@ -1842,7 +1842,7 @@ begin
         vtUnicodeString:
           Result.VRawByteString := FConSettings^.ConvFuncs.ZUnicodeToRaw(Value.VUnicodeString, FConSettings^.ClientCodePage^.CP);
         vtDateTime:
-          Result.VRawByteString := {$IFDEF WITH_RAWBYTESTRING}RawByteString{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VRawByteString := NotEmptyStringToASCII7(DateTimeToAnsiSQLDate(Value.VDateTime));
         else
           RaiseTypeMismatchError;
       end;
@@ -1889,7 +1889,7 @@ begin
         vtUTF8String:
           Result.VDateTime := AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.VUTF8String));
         vtRawByteString:
-          Result.VDateTime := AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.VRawByteString));
+          Result.VDateTime := AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}PosEmptyASCII7ToString{$ENDIF}(Value.VRawByteString));
         vtUnicodeString:
           Result.VDateTime := AnsiSQLDateToDateTime({$IFNDEF UNICODE}String{$ENDIF}(Value.VUnicodeString));
         vtDateTime:
@@ -1935,7 +1935,7 @@ begin
     vtBytes:
       ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result);
     vtInteger:
-      Result := NotEmptyStringToASCII7(IntToStr(Value.VInteger));
+      Result := IntToRaw(Value.VInteger);
     vtFloat:
       Result := NotEmptyStringToASCII7(FloatToSqlStr(Value.VFloat));
     vtString:

@@ -414,6 +414,9 @@ function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
 function PosEmptyStringToASCII7(const Src: string): RawByteString; overload;
 function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
 
+function IntToRaw(I: Integer): RawByteString; overload;
+function IntToRaw(I: Int64): RawByteString; overload;
+
 implementation
 
 uses ZMatchPattern, StrUtils;
@@ -620,10 +623,10 @@ begin
     OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-    if not CharInSet(Char(String(Str)[1]), ['0'..'9', '-']) then
-      AString := ConvertMoneyToFloat(String(Str))
+    if not CharInSet(Char(NotEmptyASCII7ToString(Str)[1]), ['0'..'9', '-']) then
+      AString := ConvertMoneyToFloat(NotEmptyASCII7ToString(Str))
     else
-      AString := String(Str);
+      AString := NotEmptyASCII7ToString(Str);
     Result := StrToFloatDef(AString, Def);
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
@@ -1715,6 +1718,24 @@ begin
   end;
   {$ELSE}
   Result := Src;
+  {$ENDIF}
+end;
+
+function IntToRaw(I: Integer): RawbyteString;
+begin
+  {$IFDEF UNICODE}
+  Str(I: SizeOf(Integer), Result);  //In average 300ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
+  {$ELSE}
+  Result := IntToStr(i); //In average 10ms slower of exec count 10.000.000x instead of direct calling IntToStr
+  {$ENDIF}
+end;
+
+function IntToRaw(I: Int64): RawByteString;
+begin
+  {$IFDEF UNICODE}
+  Str(I: SizeOf(Int64), Result);   //In average 100ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
+  {$ELSE}
+  Result := IntToStr(i); //In average 10ms slower of exec count 10.000.000x instead of direct calling IntToStr
   {$ENDIF}
 end;
 

@@ -1230,17 +1230,25 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          Result := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^
+      stBoolean:
+        if GetBoolean(ColumnIndex, IsNull) then
+          Result := 'True'
         else
-          Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP);
-      stUnicodeString:
+          Result := 'False';
+      stByte: Result := IntToRaw(GetByte(ColumnIndex, IsNull));
+      stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
+      stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
+      stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
+      stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^
         else
           Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP);
       stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
+      stDate: Result := NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull)));
+      stTime: Result := NotEmptyStringToASCII7(FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull)));
+      stTimestamp: Result := NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
+          GetTimestamp(ColumnIndex, IsNull)));
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);

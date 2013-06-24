@@ -407,7 +407,7 @@ begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
-          Result := Result + ':P' + NotEmptyStringToASCII7(IntToStr(N));
+          Result := Result + ':P' + IntToRaw(N);
         end else
           Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[I],
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);

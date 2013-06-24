@@ -498,7 +498,7 @@ begin
                       Self.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := RawByteString(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := IntToRaw(WriteTempBlob.GetBlobOid);
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;
@@ -697,7 +697,7 @@ begin
                       FPostgreSQLConnection.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := NotEmptyStringToASCII7(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := IntToRaw(WriteTempBlob.GetBlobOid);
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;
@@ -808,7 +808,7 @@ begin
   FPostgreSQLConnection := Connection;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-  FPlanName := '"'+AnsiString(IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(Connection.GetConnectionHandle)))+'"';
+  FPlanName := '"'+IntToRaw(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(Connection.GetConnectionHandle))+'"';
 end;
 
 procedure TZPostgreSQLPreparedStatement.Prepare;
@@ -1147,7 +1147,7 @@ begin
                         FPostgreSQLConnection.GetConnectionHandle, 0, ChunkSize);
                       WriteTempBlob.SetStream(TempStream);
                       WriteTempBlob.WriteBlob;
-                      UpdateString(NotEmptyStringToASCII7(IntToStr(WriteTempBlob.GetBlobOid)), ParamIndex);
+                      UpdateString(IntToRaw(WriteTempBlob.GetBlobOid), ParamIndex);
                     finally
                       WriteTempBlob := nil;
                       TempStream.Free;
@@ -1472,7 +1472,7 @@ begin
                       Self.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
                     WriteTempBlob.WriteBlob;
-                    Result := RawByteString(IntToStr(WriteTempBlob.GetBlobOid));
+                    Result := IntToRaw(WriteTempBlob.GetBlobOid);
                   finally
                     WriteTempBlob := nil;
                     TempStream.Free;

@@ -616,7 +616,7 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length := 1;
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( ord( Value)), sqllen-3);
+                                IntToRaw( ord( Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := ord(Value);
@@ -651,9 +651,9 @@ begin
       DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length :=
-                                Length( IntToStr( Value));
+                                Length( IntToRaw( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                                IntToRaw( Value), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -688,9 +688,9 @@ begin
       DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length :=
-                                Length( IntToStr( Value));
+                                Length( IntToRaw( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                                IntToRaw( Value), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -725,9 +725,9 @@ begin
       DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length :=
-                                Length( IntToStr( Value));
+                                Length( IntToRaw( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                                IntToRaw( Value), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -762,9 +762,9 @@ begin
       DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length :=
-                                Length( IntToStr( Value));
+                                Length( IntToRaw( Value));
                               StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                                IntToRaw( Value), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -1572,10 +1572,10 @@ begin
        Exit;
 
     case sqlType and $FFFE of
-      DT_SMALLINT    : Result := RawByteString(IntToStr( PSmallint(sqldata)^));
-      DT_UNSSMALLINT : Result := RawByteString(IntToStr( PWord(sqldata)^));
-      DT_INT         : Result := RawByteString(IntToStr( PInteger(sqldata)^));
-      DT_UNSINT      : Result := RawByteString(IntToStr( PLongWord(sqldata)^));
+      DT_SMALLINT    : Result := IntToRaw( PSmallint(sqldata)^);
+      DT_UNSSMALLINT : Result := IntToRaw( PWord(sqldata)^);
+      DT_INT         : Result := IntToRaw( PInteger(sqldata)^);
+      DT_UNSINT      : Result := IntToRaw( PLongWord(sqldata)^);
       DT_FLOAT       : Result := RawByteString(FloatToStr( PSingle(sqldata)^));
       DT_DOUBLE      : Result := RawByteString(FloatToStr( PDouble(sqldata)^));
       DT_VARCHAR     :
@@ -1588,11 +1588,11 @@ begin
            {$ENDIF}
          end;
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
-      DT_TIMESTAMP_STRUCT : Result := RawByteString(DateToStr( GetTimestamp( Index)));
-      DT_TINYINT     : Result := RawByteString(IntToStr( PByte(sqldata)^));
-      DT_BIT         : Result := RawByteString(BoolToStr( ( PByte(sqldata)^ = 1), True));
+      DT_TIMESTAMP_STRUCT : Result := NotEmptyStringToASCII7(DateToStr( GetTimestamp( Index)));
+      DT_TINYINT     : Result := IntToRaw( PByte(sqldata)^);
+      DT_BIT         : Result := NotEmptyStringToASCII7(BoolToStr( ( PByte(sqldata)^ = 1), True));
       DT_BIGINT,
-      DT_UNSBIGINT   : Result := RawByteString(IntToStr( PInt64(sqldata)^));
+      DT_UNSBIGINT   : Result := IntToRaw( PInt64(sqldata)^);
     else
       CreateException( Format( SErrorConvertionField,
         [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
