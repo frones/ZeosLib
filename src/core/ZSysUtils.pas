@@ -1724,7 +1724,7 @@ end;
 function IntToRaw(I: Integer): RawbyteString;
 begin
   {$IFDEF UNICODE}
-  Str(I: SizeOf(Integer), Result);  //In average 300ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
+  Str(I: 1, Result);  //In average 300ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
   {$ELSE}
   Result := IntToStr(i); //In average 10ms slower of exec count 10.000.000x instead of direct calling IntToStr
   {$ENDIF}
@@ -1733,7 +1733,7 @@ end;
 function IntToRaw(I: Int64): RawByteString;
 begin
   {$IFDEF UNICODE}
-  Str(I: SizeOf(Int64), Result);   //In average 100ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
+  Str(I: 1, Result);   //In average 100ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
   {$ELSE}
   Result := IntToStr(i); //In average 10ms slower of exec count 10.000.000x instead of direct calling IntToStr
   {$ENDIF}
