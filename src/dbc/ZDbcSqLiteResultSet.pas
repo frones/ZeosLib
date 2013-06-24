@@ -424,7 +424,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
+  Temp := UpperCase(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -443,7 +443,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
+  Result := Byte(StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -460,7 +460,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
+  Result := SmallInt(StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -477,7 +477,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -494,7 +494,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(String(InternalGetString(ColumnIndex)), 0);
+  Result := StrToInt64Def(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -584,7 +584,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := String(InternalGetString(ColumnIndex));
+  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
   if IsMatch('????-??-??*', Value) then
     Result := Trunc(AnsiSQLDateToDateTime(Value))
   else
@@ -614,7 +614,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := String(InternalGetString(ColumnIndex));
+  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
   if IsMatch('*??:??:??*', Value) then
     Result := Frac(AnsiSQLDateToDateTime(Value))
   else
@@ -645,7 +645,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Value := String(InternalGetString(ColumnIndex));
+  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
   if IsMatch('????-??-??*', Value) then
     Result := AnsiSQLDateToDateTime(Value)
   else

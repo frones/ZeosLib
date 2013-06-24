@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
+  Classes, SysUtils, Types, ZDbcIntfs,
   Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
   ZDbcMySqlStatement, ZPlainMySqlDriver, ZPlainMySqlConstants;
@@ -181,7 +181,8 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding;
+  Math,
+  ZSysUtils, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding;
 
 { TZMySQLResultSetMetadata }
 
@@ -395,14 +396,7 @@ begin
   LastWasNull := Buffer = nil;
   Result := '';
   if not LastWasNull then
-  {$IFDEF WITH_RAWBYTESTRING}
-  begin
-    SetLength(Result, Length);
-    Move(Buffer^, PAnsiChar(Result)^, Length);
-  end;
-  {$ELSE}
-    SetString(Result, Buffer, Length);
-  {$ENDIF}
+    ZSetString(Buffer, Length, Result);
 end;
 
 {**
@@ -421,7 +415,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
+  Temp := UpperCase(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -440,7 +434,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
+  Result := Byte(StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -457,7 +451,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
+  Result := SmallInt(StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -474,7 +468,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(String(InternalGetString(ColumnIndex)), 0);
+  Result := StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -491,7 +485,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(String(InternalGetString(ColumnIndex)), 0);
+  Result := StrToInt64Def(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -580,7 +574,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := String(InternalGetString(ColumnIndex));
+  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
 
   LastWasNull := (LastWasNull or (Copy(Value, 1, 10)='0000-00-00'));
   if LastWasNull then
@@ -612,7 +606,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := String(InternalGetString(ColumnIndex));
+  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
 
   LastWasNull := (LastWasNull or (Copy(Value, 1, 8)='00:00:00'));
   if LastWasNull then
@@ -644,7 +638,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Temp := String(GetPChar(ColumnIndex));
+  Temp := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
 
   if LastWasNull then
   begin

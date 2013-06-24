@@ -626,7 +626,7 @@ begin
     and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
     if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
-      BlobOid := StrToIntDef(String(InternalGetString(ColumnIndex)), 0)
+      BlobOid := StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0)
     else
       BlobOid := 0;
 
