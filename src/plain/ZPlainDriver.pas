@@ -74,7 +74,6 @@ type
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
     function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): RawByteString; overload;
-    function ZDbcUnicodeString(const AStr: RawByteString; const FromCP: Word): ZWideString; overload;
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
     ConSettings: PZConSettings; out LogSQL: String): RawByteString;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
