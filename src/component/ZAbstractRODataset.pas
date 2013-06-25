@@ -1143,13 +1143,9 @@ begin
   // we always use same TDataSet-level buffer, because we can see only one row
   {$IFNDEF WITH_FUNIDIRECTIONAL}
   if IsUniDirectional then
-    {$IFDEF DELPHI18_UP}
-
-    {$ELSE}
     Buffer := Buffers[0];
-    {$ENDIF}
-
   {$ENDIF}
+
   Result := grOK;
   case GetMode of
     gmNext:
