@@ -808,7 +808,7 @@ begin
   FPostgreSQLConnection := Connection;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-  FPlanName := '"'+IntToRaw(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(Connection.GetConnectionHandle))+'"';
+  FPlanName := '"'+{$IFDEF UNICODE}IntToRaw{$ELSE}IntToStr{$ENDIF}(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(Connection.GetConnectionHandle))+'"';
 end;
 
 procedure TZPostgreSQLPreparedStatement.Prepare;
