@@ -1590,7 +1590,7 @@ begin
   l := Length(Src); //temp l speeds x2
   SetString(result,nil,l);
   for i := 0 to l-1 do
-    PWordArray(result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
+    PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1604,7 +1604,7 @@ begin
   {$IFDEF UNICODE}
   System.SetString(result, nil, Len);
   for i := 0 to Len-1 do
-    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
+    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
   {$ELSE}
   System.SetString(Result, PAnsiChar(Src), Len);
   {$ENDIF}
@@ -1619,7 +1619,7 @@ begin
   L := System.Length(Src); //temp l speeds x2
   System.SetString(Result,nil, l);
   for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..127 equals to widechars
+    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1654,7 +1654,7 @@ begin
   begin
     SetString(result,nil,l);
     for i := 0 to l-1 do
-      PWordArray(result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
+      PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
   end;
   {$ELSE}
   Result := Src;
@@ -1673,7 +1673,7 @@ begin
   begin
     System.SetString(result, nil, Len);
     for i := 0 to Len-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..127 equals to widechars
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
   end;
   {$ELSE}
   System.SetString(Result, PAnsiChar(Src), Len);
@@ -1693,7 +1693,7 @@ begin
   begin
     System.SetString(Result,nil, l);
     for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..127 equals to widechars
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
   end;
   {$ELSE}
   Result := Src;
@@ -1714,7 +1714,7 @@ begin
   begin
     System.SetString(Result,nil, l);
     for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..127 equals to widechars
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
   end;
   {$ELSE}
   Result := Src;

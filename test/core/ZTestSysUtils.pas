@@ -57,6 +57,7 @@ interface
 
 {$I ZCore.inc}
 
+{.$DEFINE BENCHMARK}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZSysUtils, SysUtils, ZClasses, ZVariant,
   ZMatchPattern;
 
@@ -73,12 +74,18 @@ type
     procedure TestObjectComparison;
     procedure TestReplaceChar;
     procedure TestMatch;
-    {$IFDEF UNICODE}
+    {$IFDEF BENCHMARK}
     procedure TestASCII7ToString_VS_RawByteToString;
+    procedure TestIntToRaw_VS_IntToStr;
+    procedure TestInt64ToRaw_VS_IntToStr;
+    procedure TestUnicodeFromLocalChars;
+    procedure TestLocalCharsFromUnicode;
     {$ENDIF}
   end;
 
 implementation
+
+uses ZCompatibility, ZEncoding;
 
 { TZTestSysUtilsCase }
 
@@ -260,7 +267,7 @@ begin
   CheckEquals(True, IsMatch('*qwe*', 'xyzqweabc'));
 end;
 
-{$IFDEF UNICODE}
+{$IFDEF BENCHMARK}
 procedure TZTestSysUtilsCase.TestASCII7ToString_VS_RawByteToString;
 var
   tm: RawByteString;
@@ -315,8 +322,8 @@ begin
   CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
 
   system.WriteLn('');
-  system.WriteLn('Benchmarking(x 10.000.000): RawToString');
-  system.WriteLn('NotEmptyASCII7ToString with UnknownCP filled RawByteString:');
+  system.WriteLn('Benchmarking(x 10.000.000): RawByteString To UnicodeString');
+  system.WriteLn('NotEmptyASCII7ToString from filled RawByteString:');
   system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
 
   Start := GetTickCount;
@@ -330,7 +337,7 @@ begin
 
   CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
 
-  system.WriteLn('PosEmptyASCII7ToString with SystemCP filled RawByteString:');
+  system.WriteLn('PosEmptyASCII7ToString from filled RawByteString:');
   system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
 
   tm := '';
@@ -363,6 +370,284 @@ begin
   system.WriteLn('PosEmptyASCII7ToString from empty RawByteString:');
   system.WriteLn(Format('Zeos: %d ms VS. system String cast: %d ms', [Between1, Between2]));
   system.WriteLn('');
+end;
+
+procedure TZTestSysUtilsCase.TestIntToRaw_VS_IntToStr;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+
+    function TestIntToRaw: RawByteString;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+        Result := IntToRaw(i);
+    end;
+
+    function TestIntToString: RawByteString;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+        Result := NotEmptyStringToASCII7(IntToStr(i));
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TestIntToRaw;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestIntToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of IntToRaw VS. IntToStr');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Integer to RawByteString');
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+NotEmptyStringToASCII7: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestInt64ToRaw_VS_IntToStr;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+
+    function TestIntToRaw: RawByteString;
+    var
+      I: Integer;
+      I64: Int64;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        I64 := i * i;
+        Result := IntToRaw(I64);
+      end;
+      Result := IntToRaw(High(Int64));
+    end;
+
+    function TestIntToString: RawByteString;
+    var
+      I: Integer;
+      I64: Int64;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        I64 := i * i;
+        Result := NotEmptyStringToASCII7(IntToStr(I64));
+      end;
+      Result := NotEmptyStringToASCII7(IntToStr(High(Int64)));
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TestIntToRaw;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestIntToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of IntToRaw VS. IntToStr');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Int64 to RawByteString');
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+NotEmptyStringToASCII7: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestLocalCharsFromUnicode;
+const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+
+    function TestUTF8EncodeOversized: RawByteString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        wlen := Length(TestString);
+        setlength(Result, wlen*6);
+        ulen := LocaleCharsFromUnicode(65001, 0, PWideChar(TestString), wlen, PAnsiChar(Result), wlen*6, NIL, NIL);
+        setlength(Result, ulen);
+      end;
+    end;
+
+    function TestUTF8EncodeTestSize: RawByteString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        wlen := Length(TestString);
+        ulen := LocaleCharsFromUnicode(65001, 0, PWideChar(TestString), wlen, NIL, 0, NIL, NIL);
+        setlength(Result, ulen);
+        LocaleCharsFromUnicode(65001, 0, PWideChar(TestString), wlen, PAnsiChar(Result), ulen, NIL, NIL);
+      end;
+    end;
+
+    function Test1252EncodeOversized: RawByteString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        wlen := Length(TestString);
+        setlength(Result, wlen*4);
+        ulen := LocaleCharsFromUnicode(1252, 0, PWideChar(TestString), wlen, PAnsiChar(Result), wlen*4, NIL, NIL);
+        setlength(Result, ulen);
+      end;
+    end;
+
+    function Test1252EncodeTestSize: RawByteString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        wlen := Length(TestString);
+        ulen := LocaleCharsFromUnicode(1252, 0, PWideChar(TestString), wlen, NIL, 0, NIL, NIL);
+        setlength(Result, ulen);
+        LocaleCharsFromUnicode(1252, 0, PWideChar(TestString), wlen, PAnsiChar(Result), ulen, NIL, NIL);
+      end;
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TestUTF8EncodeOversized;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestUTF8EncodeTestSize;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of oversized VS. tested size');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Unicode to CPUTF8 RawByteString');
+  system.WriteLn(Format('TestUTF8EncodeOversized: %d ms VS. TestUTF8EncodeTestSize: %d ms', [Between1, Between2]));
+
+  Start := GetTickCount;
+  S1 := Test1252EncodeOversized;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := Test1252EncodeTestSize;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of oversized VS. tested size');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Unicode to CP1252 RawByteString');
+  system.WriteLn(Format('TestUTF8EncodeOversized: %d ms VS. TestUTF8EncodeTestSize: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestUnicodeFromLocalChars;
+const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  RBS: RawByteString;
+
+    function TestUTF8EncodeOversized: ZWideString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Ulen := Length(RBS);
+        Wlen := Ulen * 2;
+        SetLength(Result, Wlen);
+        wlen := UnicodeFromLocaleChars(65001, 0, PAnsiChar(RBS), ulen, PWideChar(Result), Wlen); // wlen is the number of UCS2 without NULL terminater.
+        if wlen = 0 then exit;
+        SetLength(result, wlen);
+      end;
+    end;
+
+    function TestUTF8EncodeTestSize: ZWideString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Ulen := Length(RBS);
+        wlen := UnicodeFromLocaleChars(65001, 0, PAnsiChar(RBS), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
+        if wlen = 0 then exit;
+        SetLength(result, wlen);
+        UnicodeFromLocaleChars(65001, 0, PAnsiChar(RBS), ulen, PWideChar(Result), wlen);
+      end;
+    end;
+
+    function Test1252EncodeOversized: ZWideString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Ulen := Length(RBS);
+        Wlen := Ulen * 2;
+        SetLength(Result, Wlen);
+        wlen := UnicodeFromLocaleChars(1252, 1, PAnsiChar(RBS), ulen, PWideChar(Result), Wlen); // wlen is the number of UCS2 without NULL terminater.
+        SetLength(result, wlen);
+      end;
+    end;
+
+    function Test1252EncodeTestSize: ZWideString;
+    var i, wlen, ulen: Integer;
+    begin
+      for i := 0 to 10000000 do
+      begin
+        Result := '';
+        Ulen := Length(RBS);
+        wlen := UnicodeFromLocaleChars(1252, 1, PAnsiChar(RBS), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
+        if wlen = 0 then exit;
+        SetLength(result, wlen);
+        UnicodeFromLocaleChars(1252, 1, PAnsiChar(RBS), ulen, PWideChar(Result), wlen);
+      end;
+    end;
+begin
+  RBS := UTF8Encode(TestString);
+  Start := GetTickCount;
+  S1 := TestUTF8EncodeOversized;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestUTF8EncodeTestSize;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of oversized VS. tested size');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Unicode to CPUTF8 RawByteString');
+  system.WriteLn(Format('TestUTF8EncodeOversized: %d ms VS. TestUTF8EncodeTestSize: %d ms', [Between1, Between2]));
+
+  RBS := AnsiString(TestString);
+  Start := GetTickCount;
+  S1 := Test1252EncodeOversized;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := Test1252EncodeTestSize;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of oversized VS. tested size');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Unicode to CP1252 RawByteString');
+  system.WriteLn(Format('TestUTF8EncodeOversized: %d ms VS. TestUTF8EncodeTestSize: %d ms', [Between1, Between2]));
+
 end;
 {$ENDIF}
 
