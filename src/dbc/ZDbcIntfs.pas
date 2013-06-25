@@ -288,6 +288,11 @@ type
     property AutoEncodeStrings: Boolean read GetAutoEncodeStrings write SetAutoEncodeStrings;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
+
+    {$IFDEF ZEOS_TEST_ONLY}
+    function GetTestMode : Byte;
+    procedure SetTestMode(Mode: Byte);
+    {$ENDIF}
   end;
 
   {** Database metadata interface. }

@@ -136,6 +136,9 @@ type
     FUndefinedVarcharAsStringLength: Integer; //used for PostgreSQL and SQLite
     FClientCodePage: String;
     FMetadata: TContainedObject;
+    {$IFDEF ZEOS_TEST_ONLY}
+    FTestMode: Byte;
+    {$ENDIF}
     procedure InternalCreate; virtual; abstract;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
@@ -235,6 +238,10 @@ type
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
+    {$IFDEF ZEOS_TEST_ONLY}
+    function GetTestMode : Byte;
+    procedure SetTestMode(Mode: Byte);
+    {$ENDIF}
 end;
 
   {** Implements Abstract Database notification. }
@@ -704,6 +711,9 @@ begin
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   InternalCreate;
+  {$IFDEF ZEOS_TEST_ONLY}
+  FTestMode := 0;
+  {$ENDIF}
 end;
 
 {**
@@ -1292,6 +1302,18 @@ procedure TZAbstractConnection.SetUseMetadata(Value: Boolean);
 begin
   FUseMetadata := Value;
 end;
+
+{$IFDEF ZEOS_TEST_ONLY}
+function TZAbstractConnection.GetTestMode: Byte;
+begin
+  Result := FTestMode;
+end;
+
+procedure TZAbstractConnection.SetTestMode(Mode: Byte);
+begin
+  FTestMode := Mode;
+end;
+{$ENDIF}
 
 {**
   EgonHugeist:
