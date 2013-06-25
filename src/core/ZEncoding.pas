@@ -272,32 +272,6 @@ procedure SetConvertFunctions(const CTRL_CP, DB_CP: Word;
 
 {$ELSE}
 
-{$IFDEF WITH_UNICODEFROMLOCALECHARS}
-const
-  MB_PRECOMPOSED = 1; { use precomposed chars }
-  MB_COMPOSITE = 2; { use composite chars }
-  MB_USEGLYPHCHARS = 4; { use glyph chars, not ctrl chars }
-  MB_ERR_INVALID_CHARS = 8;  { error for invalid chars }
-
-  WC_DEFAULTCHECK = $100; { check for default char }
-  WC_COMPOSITECHECK = $200; { convert composite to precomposed }
-  WC_NO_BEST_FIT_CHARS = $400; { do not use best fit chars }
-  WC_DISCARDNS = $10; { discard non-spacing chars }
-  WC_SEPCHARS = $20; { generate separate chars }
-  WC_DEFAULTCHAR = $40; { replace w default char }
-  // Windows >= Vista
-  WC_ERR_INVALID_CHARS = $80; { error for invalid chars }
-{$ENDIF}
-
-const
-  ZFullMultiByteCodePages: array[0..20] of Word = (zCP_iso_2022_jp,
-    zCP_csISO2022JP, zCP_x_iso_2022_jp, zCP_iso_2022_kr,
-    zCP_x_cp50227, zCP_EUC_TC_ISO220, zCP_hz_gb_2312, zCP_GB18030,
-    zCP_x_iscii_de, zCP_x_iscii_be, zCP_x_iscii_ta, zCP_x_iscii_te,
-    zCP_x_iscii_as, zCP_x_iscii_or, zCP_x_iscii_ka, zCP_x_iscii_ma,
-    zCP_x_iscii_gu, zCP_x_iscii_pa, zCP_UTF7, zCP_UTF8, 42);
-
-function IsFullMultiByteCodePage(CP: Word): Boolean; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 function WideToAnsi(const ws: {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF}; CP: Word):
@@ -347,17 +321,6 @@ implementation
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
 
 {$IFNDEF WITH_LCONVENCODING}
-function IsFullMultiByteCodePage(CP: Word): Boolean;
-var
-  I: Integer;
-begin
-  for i := 0 to High(ZFullMultiByteCodePages) do
-  begin
-    Result := CP = ZFullMultiByteCodePages[i];
-    if Result then Break;
-  end;
-end;
-
 function AnsiToWide(const S: ZAnsiString;
   const CP: Word): {$IFDEF WITH_UNICODEFROMLOCALECHARS}UnicodeString{$ELSE}WideString{$ENDIF};
 {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
@@ -374,7 +337,6 @@ begin
       WidestringManager.Ansi2WideMoveProc(PAnsiChar(s), CP, Result, Length(s));
       {$ELSE}
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-        if ( IsFullMultiByteCodePage(CP) ) then //dwFlags must be set to 0!!!
         begin
           {$IFDEF WITH_UNICODEFROMLOCALECHARS}
           ulen := Length(s);
@@ -390,22 +352,6 @@ begin
             - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
           {$ENDIF}
         end
-        else
-        begin
-          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-          ulen := Length(s);
-          wlen := UnicodeFromLocaleChars(cp, MB_PRECOMPOSED, PAnsiChar(S), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
-          if wlen = 0 then exit;
-          SetLength(result, wlen);
-          UnicodeFromLocaleChars(cp, MB_PRECOMPOSED, PAnsiChar(S), ulen, PWideChar(Result), wlen);
-          {$ELSE}
-          l := MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]), - 1, nil, 0); //Checkout the Result-Lengh
-          if l = 0 then Exit;
-          SetLength(Result, l - 1);
-          MultiByteToWideChar(CP, MB_PRECOMPOSED, PAnsiChar(@s[1]),
-            - 1, PWideChar(@Result[1]), l - 1); //Convert Ansi to Wide with supported Chars
-          {$ENDIF}
-        end;
         {$ELSE} //FPC.6-
           Result := ZWideString(s); //random success!
         {$IFEND}
@@ -429,7 +375,6 @@ begin
       WidestringManager.Wide2AnsiMoveProc(PWideChar(WS), Result, CP, Length(WS));
       {$ELSE}
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-        if ( IsFullMultiByteCodePage(CP)) then //dwFlags MUST be Set to 0!!!!
         begin
           {$IFDEF WITH_UNICODEFROMLOCALECHARS}
           wlen := Length(ws);
@@ -441,28 +386,6 @@ begin
           if l = 0 then Exit;
           SetLength(Result, l - 1); //SetResult Length
           WideCharToMultiByte(CP,0, @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
-          {$ENDIF}
-        end
-        else
-        begin
-          {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-          wlen := Length(ws);
-          ulen := LocaleCharsFromUnicode(CP, WC_COMPOSITECHECK or
-            WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-            PWideChar(WS), wlen, NIL, 0, NIL, NIL);
-          setlength(Result, ulen);
-          LocaleCharsFromUnicode(CP, WC_COMPOSITECHECK or
-            WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-            PWideChar(WS), wlen, PAnsiChar(Result), ulen, NIL, NIL);
-          {$ELSE}
-          l := WideCharToMultiByte(CP,
-            WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-            @ws[1], - 1, nil, 0, nil, nil); //Checkout the result length
-          if l = 0 then Exit;
-          SetLength(Result, l - 1); //SetResult Length
-          WideCharToMultiByte(CP,
-            WC_COMPOSITECHECK or WC_DISCARDNS or WC_SEPCHARS or WC_DEFAULTCHAR,
-            @ws[1], - 1, @Result[1], l - 1, nil, nil); // Convert Wide down to Ansi
           {$ENDIF}
         end;
         {$ELSE} //FPC2.6-
