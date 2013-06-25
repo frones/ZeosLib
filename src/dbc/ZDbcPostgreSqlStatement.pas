@@ -90,6 +90,7 @@ type
     function IsOidAsBlob: Boolean;
   end;
 
+  {$IFDEF ZEOS_TEST_ONLY}
   {** Implements Emulated Prepared SQL Statement. }
   TZPostgreSQLEmulatedPreparedStatement = class(TZEmulatedPreparedStatement)
   private
@@ -102,6 +103,7 @@ type
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings);
   end;
+  {$ENDIF}
 
   {** EgonHugeist: Implements Prepared SQL Statement with AnsiString usage }
   TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
@@ -406,6 +408,7 @@ begin
     Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
 end;
 
+{$IFDEF ZEOS_TEST_ONLY}
 { TZPostgreSQLEmulatedPreparedStatement }
 
 {**
@@ -539,6 +542,7 @@ begin
   else
     Result := (self.Connection as IZPostgreSQLConnection).GetConnectionHandle;
 end;
+{$ENDIF}
 
 { TZPostgreSQLPreparedStatement }
 

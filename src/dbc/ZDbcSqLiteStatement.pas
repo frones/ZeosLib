@@ -80,6 +80,7 @@ type
     function Execute(const SQL: RawByteString): Boolean; override;
   end;
 
+  {$IFDEF ZEOS_TEST_ONLY}
   {** Implements Prepared SQL Statement. }
   TZSQLitePreparedStatement = class(TZEmulatedPreparedStatement)
   private
@@ -93,6 +94,7 @@ type
       Connection: IZConnection; const SQL: string; Info: TStrings;
       Handle: Psqlite);
   end;
+  {$ENDIF}
 
   {** Implements CAPI Prepared SQL Statement. }
   TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement)
@@ -304,6 +306,7 @@ begin
   end;
 end;
 
+{$IFDEF ZEOS_TEST_ONLY}
 { TZSQLitePreparedStatement }
 
 {**
@@ -392,6 +395,7 @@ begin
     end;
   end;
 end;
+{$ENDIF}
 
 
 procedure BindingDestructor(Value: PAnsiChar); cdecl;

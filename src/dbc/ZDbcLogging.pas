@@ -66,11 +66,15 @@ type
   {** Defines a object for logging event. }
   TZLoggingEvent = class;
 
-  {** Defines a object for logging event. }
+  {** Defines an interface to format logging events. }
+  IZLoggingFormatter = interface (IZInterface)
+//    ['{53559F5F-AC22-4DDC-B2EA-45D21ADDD2D5}']
+    function Format(LoggingEvent: TZLoggingEvent) : string;
+  end;
 
   { TZLoggingFormatter }
-
-  TZLoggingFormatter = class (TObject)
+  {** Defines a object for logging event. }
+  TZLoggingFormatter = class (TInterfacedObject, IZLoggingFormatter)
   private
   public
     function Format(LoggingEvent: TZLoggingEvent) : string; virtual;
@@ -89,7 +93,7 @@ type
     constructor Create(Category: TZLoggingCategory; Protocol: string;
       Msg: string; ErrorCode: Integer; Error: string);
 
-    function AsString(LoggingFormatter:TZLoggingFormatter = nil): string;
+    function AsString(LoggingFormatter:IZLoggingFormatter = nil): string;
 
     property Category: TZLoggingCategory read FCategory;
     property Protocol: string read FProtocol;
@@ -160,7 +164,7 @@ end;
   Gets a string representation for this event.
   @returns a string representation.
 }
-function TZLoggingEvent.AsString(LoggingFormatter:TZLoggingFormatter = nil): string;
+function TZLoggingEvent.AsString(LoggingFormatter:IZLoggingFormatter = nil): string;
 begin
   If Assigned(LoggingFormatter) then
     Result := LoggingFormatter.Format(Self)

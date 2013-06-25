@@ -85,6 +85,9 @@ type
   end;
 
   {** Implements SQLite Database Connection. }
+
+  { TZSQLiteConnection }
+
   TZSQLiteConnection = class(TZAbstractConnection, IZSQLiteConnection)
   private
     FCatalog: string;
@@ -121,6 +124,9 @@ type
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
+    {$IFDEF ZEOS_TEST_ONLY}
+    constructor Create(const ZUrl: TZURL);
+    {$ENDIF}
   end;
 
 var
@@ -404,16 +410,15 @@ function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
     Open;
-  if Assigned(Info) then
-    if StrToBoolEx(Info.Values['preferprepared']) then
-      Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL,
-        Info, FHandle)
-    else
-      Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL,
-        Info, FHandle)
-  else
-    Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL,
-      Info, FHandle);
+  {$IFDEF ZEOS_TEST_ONLY}
+  Case GetTestMode of
+    0:
+  {$ENDIF}
+      Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
+  {$IFDEF ZEOS_TEST_ONLY}
+    1: Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
+  end;
+  {$ENDIF}
 end;
 
 {**
@@ -595,6 +600,13 @@ begin
   else
     Result := String(ZDbcSqLiteUtils.EncodeString(Value));
 end;
+
+{$IFDEF ZEOS_TEST_ONLY}
+constructor TZSQLiteConnection.Create(const ZUrl: TZURL);
+begin
+  inherited Create(ZUrl);
+ end;
+ {$ENDIF}
 
 function TZSQLiteConnection.GetHostVersion: Integer;
 begin

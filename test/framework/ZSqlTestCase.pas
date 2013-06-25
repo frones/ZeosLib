@@ -78,7 +78,7 @@ const
   pl_all_oracle = 'oracle,oracle-9i';
 
   // Protocols needing prefererealprepared option for real prepared statements
-  pl_realpreparable = pl_all_mysql+','+pl_all_postgresql+','+pl_all_sqlite;
+  pl_realpreparable = pl_all_mysql;
 
 type
   TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared, cuAutoEncoded);
@@ -111,6 +111,7 @@ type
     FExtended_Codepages: Boolean;
     FExtended_AutoEncoding: Boolean;
     FSkip_RealPrepared: Boolean;
+    FTestMode: Byte;
     procedure SetConfigUses(AValue: TZConfigUses);
   public
     constructor Create; overload;
@@ -146,6 +147,7 @@ type
     property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
     property Skip_RealPrepared: Boolean read FSkip_RealPrepared;
     property ConfigUses:TZConfigUses read FConfigUses write SetConfigUses;
+    property TestMode:Byte read FTestMode write FTestMode;
   end;
 
   {** Implements an abstract class for all SQL test cases. }
@@ -380,6 +382,7 @@ begin
     EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
   FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
+  FTestMode := 0;
 end;
 
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);
@@ -444,7 +447,10 @@ end;
 }
 procedure TZConnectionConfig.CreateExtendedConfigurations(ConnectionsList: TObjectList);
 var
-  TempConfig:TZConnectionConfig;
+  TempConfig: TZConnectionConfig;
+  {$IFDEF ZEOS_TEST_ONLY}
+  MaxTestMode, TestMode: Byte;
+  {$ENDIF}
 
   procedure SetCharacterSets(const Current: TZConnectionConfig);
   var
@@ -568,6 +574,25 @@ begin
     end;
   end;
 
+  {$IFDEF ZEOS_TEST_ONLY}
+  // Test Modes
+  MaxTestMode := 0;
+  if ProtocolInProtocols(self.Protocol,pl_all_postgresql) then
+    MaxTestMode := 2;
+  if ProtocolInProtocols(self.Protocol,pl_all_sqlite) then
+    MaxTestMode := 1;
+  For TestMode := 1 to MaxTestMode do
+  begin
+    //writeln('create TestMode_'+IntToStr(TestMode));
+    TempConfig := TZConnectionConfig.Create(Self, 'test_mode_'+IntToStr(TestMode));
+    ConnectionsList.Add(TempConfig);
+    TempConfig.TestMode := TestMode;
+    if ExtendedTest then
+    begin
+      create_charsets_encodings(TempConfig);
+    end;
+  end;
+  {$ENDIF}
 end;
 
 { TZAbstractSQLTestCase }
@@ -713,6 +738,8 @@ begin
     Selection := True;
     Objection := Objection or Not(isAutoEncodableTest) //AutoEncoded connections are only usefull for specific tests
   end;
+  If Config.TestMode > 0 then
+    Selection := True;
   Result := Selection and not(Objection);
 end;
 
@@ -1034,6 +1061,9 @@ begin
     TempProperties.Add(Properties[I])
   end;
   Result := DriverManager.GetConnectionWithParams(URL, TempProperties);
+  {$IFDEF ZEOS_TEST_ONLY}
+  Result.SetTestMode(ConnectionConfig.TestMode);
+  {$ENDIF}
   TempProperties.Free;
 end;
 
@@ -1057,6 +1087,9 @@ begin
   begin
     Result.Properties.Add(Properties[I])
   end;
+  {$IFDEF ZEOS_TEST_ONLY}
+  Result.TestMode := ConnectionConfig.TestMode;
+  {$ENDIF}
 end;
 
 {**

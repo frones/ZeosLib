@@ -103,6 +103,9 @@ type
     FUseMetaData: Boolean;
     {$IFNDEF UNICODE}FAutoEncode: Boolean;{$ENDIF}
     FControlsCodePage: TZControlsCodePage;
+    {$IFDEF ZEOS_TEST_ONLY}
+    FTestMode: Byte;
+    {$ENDIF}
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
     procedure SetVersion(const Value: string);
@@ -302,6 +305,9 @@ type
     property OnLogin: TZLoginEvent read FOnLogin write FOnLogin;
     property OnStartTransaction: TNotifyEvent
       read FOnStartTransaction write FOnStartTransaction;
+    {$IFDEF ZEOS_TEST_ONLY}
+    property TestMode : Byte read FTestMode write FTestMode;
+    {$ENDIF}
   end;
 
 implementation
@@ -850,6 +856,9 @@ begin
           SetTransactionIsolation(FTransactIsolationLevel);
           SetUseMetadata(FUseMetadata);
           Open;
+          {$IFDEF ZEOS_TEST_ONLY}
+          SetTestMode(FTestMode);
+          {$ENDIF}
         end;
       except
         FConnection := nil;
