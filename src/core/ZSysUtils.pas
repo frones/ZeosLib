@@ -414,8 +414,10 @@ function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
 function PosEmptyStringToASCII7(const Src: string): RawByteString; overload;
 function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
 
-function IntToRaw(I: Integer): RawByteString; overload;
-function IntToRaw(I: Int64): RawByteString; overload;
+function IntToRaw(Value: Integer): RawByteString; overload;
+function IntToRaw(Value: Int64): RawByteString; overload;
+
+function RawToInt(Value: RawbyteString): Integer;
 
 implementation
 
@@ -1721,22 +1723,223 @@ begin
   {$ENDIF}
 end;
 
-function IntToRaw(I: Integer): RawbyteString;
+function RawToInt(Value: RawbyteString): Integer;
 begin
   {$IFDEF UNICODE}
-  Str(I: 1, Result);  //In average 300ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
+  Result := StrToInt(PosEmptyASCII7ToString(Value));
   {$ELSE}
-  Result := IntToStr(i); //In average 10ms slower of exec count 10.000.000x instead of direct calling IntToStr
+  Result := StrToInt(Value);
   {$ENDIF}
 end;
 
-function IntToRaw(I: Int64): RawByteString;
+const
+  TwoDigitLookupA : packed array[0..99] of array[1..2] of AnsiChar =
+    ('00','01','02','03','04','05','06','07','08','09',
+     '10','11','12','13','14','15','16','17','18','19',
+     '20','21','22','23','24','25','26','27','28','29',
+     '30','31','32','33','34','35','36','37','38','39',
+     '40','41','42','43','44','45','46','47','48','49',
+     '50','51','52','53','54','55','56','57','58','59',
+     '60','61','62','63','64','65','66','67','68','69',
+     '70','71','72','73','74','75','76','77','78','79',
+     '80','81','82','83','84','85','86','87','88','89',
+     '90','91','92','93','94','95','96','97','98','99');
+
+  TwoDigitLookupW : packed array[0..99] of array[1..2] of WideChar =
+    (ZWideString('00'),ZWideString('01'),ZWideString('02'),ZWideString('03'),ZWideString('04'),ZWideString('05'),ZWideString('06'),ZWideString('07'),ZWideString('08'),ZWideString('09'),
+     ZWideString('10'),ZWideString('11'),ZWideString('12'),ZWideString('13'),ZWideString('14'),ZWideString('15'),ZWideString('16'),ZWideString('17'),ZWideString('18'),ZWideString('19'),
+     ZWideString('20'),ZWideString('21'),ZWideString('22'),ZWideString('23'),ZWideString('24'),ZWideString('25'),ZWideString('26'),ZWideString('27'),ZWideString('28'),ZWideString('29'),
+     ZWideString('30'),ZWideString('31'),ZWideString('32'),ZWideString('33'),ZWideString('34'),ZWideString('35'),ZWideString('36'),ZWideString('37'),ZWideString('38'),ZWideString('39'),
+     ZWideString('40'),ZWideString('41'),ZWideString('42'),ZWideString('43'),ZWideString('44'),ZWideString('45'),ZWideString('46'),ZWideString('47'),ZWideString('48'),ZWideString('49'),
+     ZWideString('50'),ZWideString('51'),ZWideString('52'),ZWideString('53'),ZWideString('54'),ZWideString('55'),ZWideString('56'),ZWideString('57'),ZWideString('58'),ZWideString('59'),
+     ZWideString('60'),ZWideString('61'),ZWideString('62'),ZWideString('63'),ZWideString('64'),ZWideString('65'),ZWideString('66'),ZWideString('67'),ZWideString('68'),ZWideString('69'),
+     ZWideString('70'),ZWideString('71'),ZWideString('72'),ZWideString('73'),ZWideString('74'),ZWideString('75'),ZWideString('76'),ZWideString('77'),ZWideString('78'),ZWideString('79'),
+     ZWideString('80'),ZWideString('81'),ZWideString('82'),ZWideString('83'),ZWideString('84'),ZWideString('85'),ZWideString('86'),ZWideString('87'),ZWideString('88'),ZWideString('89'),
+     ZWideString('90'),ZWideString('91'),ZWideString('92'),ZWideString('93'),ZWideString('94'),ZWideString('95'),ZWideString('96'),ZWideString('97'),ZWideString('98'),ZWideString('99'));
+
+const
+  MinInt64Uni : WideString = '-9223372036854775808';
+  MinInt64Raw : RawByteString = '-9223372036854775808';
+
+function IntToRaw(Value: Integer): RawbyteString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  Negative       : Boolean;
+  I, J, K        : Cardinal;
+  Digits         : Integer;
+  P              : PByte;
+  NewLen, OldLen : Integer;
 begin
-  {$IFDEF UNICODE}
-  Str(I: 1, Result);   //In average 100ms faster of exec count 10.000.000x instead of casting or using ASCII7 function to get a RawByteString
-  {$ELSE}
-  Result := IntToStr(i); //In average 10ms slower of exec count 10.000.000x instead of direct calling IntToStr
-  {$ENDIF}
+  Negative := (Value < 0);
+  I := Abs(Value);
+  if I >= 10000 then
+    if I >= 1000000 then
+      if I >= 100000000 then
+        Digits := 9 + Ord(I >= 1000000000)
+      else
+        Digits := 7 + Ord(I >= 10000000)
+    else
+      Digits := 5 + Ord(I >= 100000)
+  else
+    if I >= 100 then
+      Digits := 3 + Ord(I >= 1000)
+    else
+      Digits := 1 + Ord(I >= 10);
+  NewLen  := Digits + Ord(Negative);
+  if Result = '' then
+    OldLen := 0
+  else
+    {$IFDEF FPC}
+    if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
+      OldLen := (PInteger(PInteger(@Result)^ - 4)^)
+    {$ELSE}
+    if PInteger(Integer(Result) - 8)^ = 1 then {Ref Count}
+      OldLen := (PInteger(Integer(Result) - 4)^)
+    {$ENDIF}
+    else
+      OldLen := 0;
+  if NewLen <> OldLen then
+    SetLength(Result, NewLen);
+  P := Pointer(Result);
+  P^ := Byte('-');
+  Inc(P, Ord(Negative));
+  if Digits > 2 then
+    repeat
+      J  := I div 100;           {Dividend div 100}
+      K  := J * 100;
+      K  := I - K;               {Dividend mod 100}
+      I  := J;                   {Next Dividend}
+      Dec(Digits, 2);
+      PWord(@PByteArray(P)[Digits])^ := Word(TwoDigitLookupA[K]);
+    until Digits <= 2;
+  if Digits = 2 then
+    PWord(@PByteArray(P)[Digits-2])^ := Word(TwoDigitLookupA[I])
+  else
+    P^ := I or ord('0');
+end;
+
+function IntToRaw(Value: Int64): RawByteString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr64_JOH_PAS_5(Value: Int64): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  Negative           : Boolean;
+  I64, J64, K64      : Int64;
+  I32, J32, K32, L32 : Cardinal;
+  Digits             : Byte;
+  P                  : PByte;
+  OldLen, NewLen     : Integer;
+  C                  : AnsiChar;
+begin
+  if Value = $8000000000000000 then
+    begin {Special RawByteString since ABS($8000000000000000) Fails}
+      Result := MinInt64Raw;
+      Exit;
+    end;
+  if (Value >= -MaxInt-1) and (Value <= MaxInt) then
+    begin {Within Integer Range - Use Faster Integer Version}
+      Result := IntToRaw(Integer(Value));
+      Exit;
+    end;
+  Negative := Value < 0;
+  I64 := Abs(Value);
+  if I64 >= 100000000000000 then
+    if I64 >= 10000000000000000 then
+      if I64 >= 1000000000000000000 then
+        Digits := 19
+      else
+        Digits := 17 + Ord(I64 >= 100000000000000000)
+    else
+      Digits := 15 + Ord(I64 >= 1000000000000000)
+  else
+    if I64 >= 1000000000000 then
+      Digits := 13 + Ord(I64 >= 10000000000000)
+    else
+      if I64 >= 10000000000 then
+        Digits := 11 + Ord(I64 >= 100000000000)
+      else
+        Digits := 10;
+  NewLen  := Digits + Ord(Negative);
+  if Result = '' then
+    OldLen := 0
+  else
+    {$IFDEF FPC}
+    if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
+      OldLen := (PInteger(PInteger(@Result)^ - 4)^)
+    {$ELSE}
+    if PInteger(Integer(Result) - 8)^ = 1 then {Ref Count}
+      OldLen := (PInteger(Integer(Result) - 4)^)
+    {$ENDIF}
+    else
+      OldLen := 0;
+  if NewLen <> OldLen then
+    SetLength(Result, NewLen);
+  P := Pointer(Result);
+  P^ := Byte('-');
+  Inc(P, Ord(Negative));
+  if Digits > 17 then
+    begin {18 or 19 Digits}
+      if Digits = 19 then
+        begin
+          C := '0';
+          while I64 >= 1000000000000000000 do
+            begin
+              Dec(I64, 1000000000000000000);
+              Inc(C);
+            end;
+          P^ := Ord(C);
+          Inc(P);
+        end;
+      C := '0';
+      while I64 >= 100000000000000000 do
+        begin
+          Dec(I64, 100000000000000000);
+          Inc(C);
+        end;
+      P^ := Ord(C);
+      Inc(P);
+      Digits := 17;
+    end;
+  J64 := I64 div 100000000; {Very Slow prior to Delphi 2005}
+  K64 := I64 - (J64 * 100000000); {Remainder = 0..99999999}
+  I32 := K64;
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  I32 := J32 div 100;
+  L32 := I32 * 100;
+  L32 := J32 - L32;
+  Dec(Digits, 4);
+  J32 := (Word(TwoDigitLookupA[K32]) shl 16) + Word(TwoDigitLookupA[L32]);
+  PInteger(@PByteArray(P)[Digits])^ := J32;
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  Dec(Digits, 4);
+  I32 := (Word(TwoDigitLookupA[K32]) shl 16) + Word(TwoDigitLookupA[J32]);
+  PInteger(@PByteArray(P)[Digits])^ := I32;
+  I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
+  if Digits > 2 then
+    repeat
+      J32 := I32 div 100;
+      K32 := J32 * 100;
+      K32 := I32 - K32;
+      I32 := J32;
+      Dec(Digits, 2);
+      PWord(@PByteArray(P)[Digits])^ := Word(TwoDigitLookupA[K32]);
+    until Digits <= 2;
+  if Digits = 2 then
+    PWord(@PByteArray(P)[Digits-2])^ := Word(TwoDigitLookupA[I32])
+  else
+    P^ := I32 or ord('0');
 end;
 
 end.

@@ -211,6 +211,7 @@
   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
   {$IFDEF WIN64}
     {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
+    {$DEFINE PUREPASCAL}
   {$ENDIF}
 {$ENDIF}
 
@@ -402,3 +403,7 @@
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
 {.$DEFINE USE_SYNEDIT}
+
+//run ZSysUtils benchmarks
+{.$DEFINE BENCHMARK}
+

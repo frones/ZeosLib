@@ -57,7 +57,6 @@ interface
 
 {$I ZCore.inc}
 
-{.$DEFINE BENCHMARK}
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZSysUtils, SysUtils, ZClasses, ZVariant,
   ZMatchPattern;
 
@@ -78,8 +77,11 @@ type
     procedure TestASCII7ToString_VS_RawByteToString;
     procedure TestIntToRaw_VS_IntToStr;
     procedure TestInt64ToRaw_VS_IntToStr;
+    {$IFDEF WITH_UNICODEFROMLOCALECHARS}
     procedure TestUnicodeFromLocalChars;
     procedure TestLocalCharsFromUnicode;
+    {$ENDIF}
+    procedure TestRawToInt;
     {$ENDIF}
   end;
 
@@ -460,6 +462,7 @@ begin
 
 end;
 
+{$IFDEF WITH_UNICODEFROMLOCALECHARS}
 procedure TZTestSysUtilsCase.TestLocalCharsFromUnicode;
 const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
 var
@@ -649,6 +652,46 @@ begin
   system.WriteLn(Format('TestUTF8EncodeOversized: %d ms VS. TestUTF8EncodeTestSize: %d ms', [Between1, Between2]));
 
 end;
+{$ENDIF}
+procedure TZTestSysUtilsCase.TestRawToInt;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Integer;
+
+    function TRawToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+        Result := RawToInt(RawByteString('-999999999'));
+    end;
+
+    function TStrToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+        Result := StrToInt(RawByteString('-999999999'));
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToInt VS. StrToInt');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): RawToInt', [High(Integer)]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToInt: %d ms', [Between1, Between2]));
+
+end;
+
 {$ENDIF}
 
 initialization
