@@ -283,9 +283,7 @@ implementation
 
 uses
   ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZDbcUtils
-  {$IFNDEF WITHOUT_VARBYTESASSTRING}, ZSysUtils{$ENDIF}
-  {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
+  ZDbcUtils, ZSysUtils {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
 
 {**
   Converts DBC Field Type to TDataset Field Type.
