@@ -417,6 +417,7 @@ function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
 function IntToRaw(Value: Integer): RawByteString; overload;
 function IntToRaw(Value: Int64): RawByteString; overload;
 
+function IntToUnicode(Value: Integer): ZWideString; overload;
 function RawToInt(Value: RawbyteString): Integer;
 
 implementation
@@ -1942,4 +1943,65 @@ begin
     P^ := I32 or ord('0');
 end;
 
+function IntToUnicode(Value: Integer): ZWideString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  Negative       : Boolean;
+  I, J, K        : Cardinal;
+  Digits         : Integer;
+  P              : PByte;
+  NewLen, OldLen : Integer;
+begin
+  Negative := (Value < 0);
+  I := Abs(Value);
+  if I >= 10000 then
+    if I >= 1000000 then
+      if I >= 100000000 then
+        Digits := 9 + Ord(I >= 1000000000)
+      else
+        Digits := 7 + Ord(I >= 10000000)
+    else
+      Digits := 5 + Ord(I >= 100000)
+  else
+    if I >= 100 then
+      Digits := 3 + Ord(I >= 1000)
+    else
+      Digits := 1 + Ord(I >= 10);
+  NewLen  := Digits + Ord(Negative);
+  if Result = '' then
+    OldLen := 0
+  else
+    {$IFDEF FPC}
+    if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
+      OldLen := (PInteger(PInteger(@Result)^ - 4)^)
+    {$ELSE}
+    if PInteger(Integer(Result) - 8)^ = 1 then {Ref Count}
+      OldLen := (PInteger(Integer(Result) - 4)^)
+    {$ENDIF}
+    else
+      OldLen := 0;
+  if NewLen <> OldLen then
+    SetLength(Result, NewLen);
+  P := Pointer(Result);
+  P^ := Word('-');
+  Inc(P, Ord(Negative)*2);
+  if Digits > 2 then
+    repeat
+      J  := I div 100;           {Dividend div 100}
+      K  := J * 100;
+      K  := I - K;               {Dividend mod 100}
+      I  := J;                   {Next Dividend}
+      Dec(Digits, 2);
+      PLongWord(@PWordArray(P)[Digits])^ := LongWord(TwoDigitLookupW[K]);
+    until Digits <= 2;
+  if Digits = 2 then
+    PLongWord(@PWordArray(P)[Digits-2])^ := LongWord(TwoDigitLookupW[I])
+  else
+    PWord(P)^ := I or Word('0');
+end;
 end.
