@@ -2183,7 +2183,11 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
   end;
 end;
 
@@ -2215,7 +2219,11 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
   end;
 end;
 
@@ -2247,7 +2255,11 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
   end;
 end;
 
@@ -2279,7 +2291,11 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
   end;
 end;
 
