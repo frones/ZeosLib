@@ -76,7 +76,9 @@ type
     {$IFDEF BENCHMARK}
     procedure TestASCII7ToString_VS_RawByteToString;
     procedure TestIntToRaw_VS_IntToStr;
+    procedure TestIntToUnicode_VS_IntToStr;
     procedure TestInt64ToRaw_VS_IntToStr;
+    procedure TestInt64ToUnicode_VS_IntToStr;
     {$IFDEF WITH_UNICODEFROMLOCALECHARS}
     procedure TestUnicodeFromLocalChars;
     procedure TestLocalCharsFromUnicode;
@@ -413,6 +415,45 @@ begin
 
 end;
 
+procedure TZTestSysUtilsCase.TestIntToUnicode_VS_IntToStr;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+
+    function TestIntToRaw: ZWideString;
+    var
+      I: Integer;
+    begin
+      for i := -1 to 10000000 do
+        Result := IntToUnicode(i);
+    end;
+
+    function TestIntToString: ZWideString;
+    var
+      I: Integer;
+    begin
+      for i := -1 to 10000000 do
+        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(i));
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TestIntToRaw;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestIntToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of IntToUnicode VS. IntToStr');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Integer to UnicodeString');
+  system.WriteLn(Format('Zeos: %d ms VS. ZWideString(SysUtils.IntToStr): %d ms', [Between1, Between2]));
+
+end;
+
 procedure TZTestSysUtilsCase.TestInt64ToRaw_VS_IntToStr;
 var
   Between1, Between2: Cardinal;
@@ -459,6 +500,55 @@ begin
   system.WriteLn('');
   system.WriteLn('Benchmarking(x 10.000.000): Int64 to RawByteString');
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+NotEmptyStringToASCII7: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestInt64ToUnicode_VS_IntToStr;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+
+    function TestIntToRaw: ZWideString;
+    var
+      I: Integer;
+      I64: Int64;
+    begin
+      for i := -10 to 10000000 do
+      begin
+        I64 := Int64(i) * Int64(i);
+        Result := IntToUnicode(I64);
+      end;
+      Result := IntToUnicode(High(Int64)-1);
+    end;
+
+    function TestIntToString: ZWideString;
+    var
+      I: Integer;
+      I64: Int64;
+    begin
+      for i := -10 to 10000000 do
+      begin
+        I64 := Int64(i) * Int64(i);
+        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(I64));
+      end;
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(High(Int64)-1));
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TestIntToRaw;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestIntToString;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of IntToRaw VS. IntToStr');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Int64 to UnicodeString');
+  system.WriteLn(Format('Zeos: %d ms VS. ZWideString(SysUtils.IntToStr): %d ms', [Between1, Between2]));
 
 end;
 

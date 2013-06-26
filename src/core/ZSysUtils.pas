@@ -242,7 +242,7 @@ procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
   @param Value an array of bytes to be converted.
   @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): AnsiString;
+function BytesToStr(const Value: TByteDynArray): RawByteString;
 
 {**
   Converts AnsiString into an array of bytes.
@@ -414,10 +414,22 @@ function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
 function PosEmptyStringToASCII7(const Src: string): RawByteString; overload;
 function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
 
+function NotEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
+function NotEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString; overload;
+function NotEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
+function NotEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
+
+function PosEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
+function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString; overload;
+function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
+function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
+
 function IntToRaw(Value: Integer): RawByteString; overload;
 function IntToRaw(Value: Int64): RawByteString; overload;
 
 function IntToUnicode(Value: Integer): ZWideString; overload;
+function IntToUnicode(Value: Int64): ZWideString; overload;
+
 function RawToInt(Value: RawbyteString): Integer;
 
 implementation
@@ -946,9 +958,19 @@ end;
   @param Value an array of bytes to be converted.
   @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): AnsiString;
+function BytesToStr(const Value: TByteDynArray): RawByteString;
+{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+var L: Integer;
+{$ENDIF}
 begin
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  Result := '';
+  L := Length(Value);
+  SetLength(Result, L);
+  System.Move(Pointer(Value)^, PAnsiChar(Result)^, L);
+  {$ELSE}
   SetString(Result, PAnsiChar(@Value[0]), Length(Value))
+  {$ENDIF}
 end;
 
 {**
@@ -1512,42 +1534,38 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
 begin
-  if Assigned(Src) then
-    ZSetString(Src, StrLen(Src), Dest)
-  else
-    Dest := '';
+  SetString(Dest, Src, StrLen(Src));
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
-  Dest := ''; //speeds up for SetLength
-  if ( Len = 0 ) or ( Src = nil ) then
-    exit
-  else
-  begin
-    SetLength(Dest, Len);
-    Move(Src^, PAnsiChar(Dest)^, Len);
-  end;
+  SetString(Dest, Src, Len);
 end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String);
+{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+var Len: Integer;
+{$ENDIF}
 begin
-  if Assigned(Src) then
-    ZSetString(Src, StrLen(Src), Dest)
-  else
-    Dest := '';
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  Dest := '';
+  Len := StrLen(Src);
+  SetLength(Dest, Len);
+  Move(Src^, PAnsiChar(Dest)^, Len);
+  {$ELSE}
+  SetString(Dest, Src, StrLen(Src));
+  {$ENDIF}
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
 begin
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
-  if ( Len = 0 ) or ( Src = nil ) then
-    Exit
-  else
-  begin
-    SetLength(Dest, Len); //speeds up for SetLength
-    Move(Src^, PAnsiChar(Dest)^, Len);
-  end;
+  SetLength(Dest, Len);
+  Move(Src^, PAnsiChar(Dest)^, Len);
+  {$ELSE}
+  SetString(Dest, Src, Len);
+  {$ENDIF}
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
@@ -1564,23 +1582,29 @@ end;
 
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString);
+{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+var Len: Integer;
+{$ENDIF}
 begin
-  if Assigned(Src) then
-    ZSetString(Src, StrLen(Src), Dest)
-  else
-    Dest := '';
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  Dest := '';
+  Len := StrLen(Src);
+  SetLength(Dest, Len);
+  Move(Src^, PAnsiChar(Dest)^, Len);
+  {$ELSE}
+  SetString(Dest, Src, StrLen(Src));
+  {$ENDIF}
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
-  if ( Len = 0 ) or ( Src = nil ) then
-    exit
-  else
-  begin
-    SetLength(Dest, Len);
-    Move(Src^, PAnsiChar(Dest)^, Len);
-  end;
+  SetLength(Dest, Len);
+  Move(Src^, PAnsiChar(Dest)^, Len);
+  {$ELSE}
+  SetString(Dest, Src, Len);
+  {$ENDIF}
 end;
 {$ENDIF}
 
@@ -1724,6 +1748,118 @@ begin
   {$ENDIF}
 end;
 
+function NotEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
+var i, l: integer;
+begin
+  l := Length(Src); //temp l speeds x2
+  SetString(result,nil,l);
+  for i := 0 to l-1 do
+    PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+end;
+
+function NotEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString;
+var i: integer;
+begin
+  System.SetString(result, nil, Len);
+  for i := 0 to Len-1 do
+    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+end;
+
+function NotEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString;
+var i, l: integer;
+begin
+  L := System.Length(Src); //temp l speeds x2
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  Result := ''; //speeds up SetLength x2
+  SetLength(Result, l);
+  {$ELSE}
+  System.SetString(Result,nil, l);
+  {$ENDIF}
+  for i := 0 to l-1 do
+    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+end;
+
+
+function NotEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString;
+var i, l: integer;
+begin
+  L := System.Length(Src); //temp l speeds x2
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  Result := ''; //speeds up SetLength x2
+  SetLength(Result, l);
+  {$ELSE}
+  System.SetString(Result,nil, l);
+  {$ENDIF}
+  for i := 0 to l-1 do
+    PByteArray(Result)[i] := PWordArray(Src)[i];
+end;
+
+function PosEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
+var i, l: integer;
+begin
+  l := Length(Src); //temp l speeds x2
+  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    SetString(result,nil,l);
+    for i := 0 to l-1 do
+      PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+  end;
+end;
+
+function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString;
+var i: integer;
+begin
+  if Len = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if Len = 0
+    Result := ''
+  else
+  begin
+    System.SetString(result, nil, Len);
+    for i := 0 to Len-1 do
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+  end;
+end;
+
+function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString;
+var i, l: integer;
+begin
+  L := System.Length(Src); //temp l speeds x2
+  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    Result := ''; //speeds up SetLength x2
+    SetLength(Result, l);
+    {$ELSE}
+    System.SetString(Result,nil, l);
+    {$ENDIF}
+    for i := 0 to l-1 do
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+  end;
+end;
+
+
+function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString;
+var i, l: integer;
+begin
+  L := system.Length(Src); //temp l speeds x2
+  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    Result := ''; //speeds up SetLength x2
+    SetLength(Result, l);
+    {$ELSE}
+    System.SetString(Result,nil, l);
+    {$ENDIF}
+    for i := 0 to l-1 do
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+  end;
+end;
+
 function RawToInt(Value: RawbyteString): Integer;
 begin
   {$IFDEF UNICODE}
@@ -1795,13 +1931,8 @@ begin
   if Result = '' then
     OldLen := 0
   else
-    {$IFDEF FPC}
     if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
       OldLen := (PInteger(PInteger(@Result)^ - 4)^)
-    {$ELSE}
-    if PInteger(Integer(Result) - 8)^ = 1 then {Ref Count}
-      OldLen := (PInteger(Integer(Result) - 4)^)
-    {$ENDIF}
     else
       OldLen := 0;
   if NewLen <> OldLen then
@@ -1872,13 +2003,8 @@ begin
   if Result = '' then
     OldLen := 0
   else
-    {$IFDEF FPC}
     if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
       OldLen := (PInteger(PInteger(@Result)^ - 4)^)
-    {$ELSE}
-    if PInteger(Integer(Result) - 8)^ = 1 then {Ref Count}
-      OldLen := (PInteger(Integer(Result) - 4)^)
-    {$ENDIF}
     else
       OldLen := 0;
   if NewLen <> OldLen then
@@ -1976,13 +2102,8 @@ begin
   if Result = '' then
     OldLen := 0
   else
-    {$IFDEF FPC}
     if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
       OldLen := (PInteger(PInteger(@Result)^ - 4)^)
-    {$ELSE}
-    if PInteger(Integer(Result) - 8)^ = 1 then {Ref Count}
-      OldLen := (PInteger(Integer(Result) - 4)^)
-    {$ENDIF}
     else
       OldLen := 0;
   if NewLen <> OldLen then
@@ -2004,4 +2125,24 @@ begin
   else
     PWord(P)^ := I or Word('0');
 end;
+
+function IntToUnicode(Value: Int64): ZWideString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr64_JOH_PAS_5(Value: Int64): string;
+begin
+  if Value = $8000000000000000 then
+    begin {Special UnicodeString since ABS($8000000000000000) Fails}
+      Result := MinInt64Uni;
+      Exit;
+    end;
+  if (Value >= -MaxInt-1) and (Value <= MaxInt) then
+    begin {Within Integer Range - Use Faster Integer Version}
+      Result := IntToUnicode(Integer(Value));
+      Exit;
+    end
+  else
+    Result := NotEmptyASCII7ToUnicodeString(IntToRaw(Value)); //this convesion is improved, because the original code (see above uses ByteArrys but here, we've two byte-block and we currupt the Data)
+end;
+
 end.
