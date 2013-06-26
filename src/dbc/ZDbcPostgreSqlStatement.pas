@@ -1198,7 +1198,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
-  FPlanName := IntToString(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle));
+  FPlanName := IntToString(Int64(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle)));
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;

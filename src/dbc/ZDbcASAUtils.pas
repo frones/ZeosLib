@@ -1255,13 +1255,8 @@ begin
       DT_DOUBLE      : Result := PDouble(sqldata)^ <> 0;
       DT_VARCHAR:
          begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := StrToInt(String(s)) = 1;
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           Result := RawToInt(s) = 1;
          end;
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^ <> 0;
@@ -1299,13 +1294,8 @@ begin
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := StrToInt(String(s));
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           Result := RawToInt(s);
          end;
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
@@ -1468,13 +1458,8 @@ begin
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := StrToInt(String(s));
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           Result := RawToInt(s);
          end;
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
@@ -1512,13 +1497,9 @@ begin
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := StrToInt64(String(s));
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           Result := RawToInt(s);
+           Result := StrToInt64({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(s));
          end;
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
@@ -1576,17 +1557,9 @@ begin
       DT_UNSSMALLINT : Result := IntToRaw( PWord(sqldata)^);
       DT_INT         : Result := IntToRaw( PInteger(sqldata)^);
       DT_UNSINT      : Result := IntToRaw( PLongWord(sqldata)^);
-      DT_FLOAT       : Result := RawByteString(FloatToStr( PSingle(sqldata)^));
-      DT_DOUBLE      : Result := RawByteString(FloatToStr( PDouble(sqldata)^));
-      DT_VARCHAR     :
-         begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(Result, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(Result)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(Result, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-         end;
+      DT_FLOAT       : Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FloatToStr( PSingle(sqldata)^));
+      DT_DOUBLE      : Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FloatToStr( PDouble(sqldata)^));
+      DT_VARCHAR     : ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, Result);
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
       DT_TIMESTAMP_STRUCT : Result := NotEmptyStringToASCII7(DateToStr( GetTimestamp( Index)));
       DT_TINYINT     : Result := IntToRaw( PByte(sqldata)^);
@@ -1625,13 +1598,8 @@ begin
       DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := StrToInt(String(s));
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           Result := RawToInt(s);
          end;
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;

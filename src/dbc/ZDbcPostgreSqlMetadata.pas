@@ -1582,7 +1582,7 @@ begin
     begin
       while Next do
       begin
-        ReturnType := StrToInt(GetStringByName('prorettype'));
+        ReturnType := RawToInt(GetRawByteStringByName('prorettype'));
         ReturnTypeType := GetStringByName('typtype');
 
         ArgTypes.Clear;

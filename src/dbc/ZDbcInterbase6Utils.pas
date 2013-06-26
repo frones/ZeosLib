@@ -2466,7 +2466,7 @@ begin
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(PosEmptyASCII7ToString(Value));
+      SQL_SHORT     : PInteger (sqldata)^ := RawToInt(Value);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
@@ -2702,8 +2702,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index))) <> 0;
-        SQL_VARYING   : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index))) <> 0;
+        SQL_TEXT      : Result := RawToInt(DecodeString(SQL_TEXT, Index)) <> 0;
+        SQL_VARYING   : Result := RawToInt(DecodeString(SQL_VARYING, Index)) <> 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2898,8 +2898,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := RawToInt(DecodeString(SQL_TEXT, Index));
+        SQL_VARYING   : Result := RawToInt(DecodeString(SQL_VARYING, Index));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2964,8 +2964,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_TEXT, Index)));
-        SQL_VARYING   : Result := StrToInt(PosEmptyASCII7ToString(DecodeString(SQL_VARYING, Index)));
+        SQL_TEXT      : Result := RawToInt(DecodeString(SQL_TEXT, Index));
+        SQL_VARYING   : Result := RawToInt(DecodeString(SQL_VARYING, Index));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
