@@ -3124,7 +3124,7 @@ begin
     case (sqltype and not(1)) of
       SQL_QUAD, SQL_DOUBLE, SQL_INT64, SQL_BLOB, SQL_ARRAY: result := PISC_QUAD(sqldata)^;
     else
-      raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + inttostr((sqltype and not(1))));
+      raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + IntToString((sqltype and not(1))));
     end
   else
     raise EZIBConvertError.Create('Invalid State.');
@@ -3176,7 +3176,7 @@ begin
                      begin
                        if FPlainDriver.GetProtocol <> 'interbase-7' then
                          raise EZIBConvertError.Create(SUnsupportedDataType);
-                       Result := IntToStr(PSmallint(sqldata)^);
+                       Result := IntToString(PSmallint(sqldata)^);
                      end;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;

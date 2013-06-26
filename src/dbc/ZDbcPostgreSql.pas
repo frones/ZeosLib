@@ -369,7 +369,7 @@ begin
   else
     AddParamToResult('host', HostName);
 
-  AddParamToResult('port', IntToStr(Port));
+  AddParamToResult('port', IntToString(Port));
   AddParamToResult('dbname', Database);
   AddParamToResult('user', User);
   AddParamToResult('password', Password);
@@ -396,7 +396,7 @@ begin
   { Sets a connection timeout. }
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    AddParamToResult('connect_timeout', IntToStr(ConnectTimeout));
+    AddParamToResult('connect_timeout', IntToString(ConnectTimeout));
 
   { Sets the application name }
   if Info.Values['application_name'] <> '' then

@@ -362,7 +362,7 @@ begin
 
   ConnectTimeout := StrToIntDef(URL.Properties.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    URL.Properties.Values['isc_dpb_connect_timeout'] := IntToStr(ConnectTimeout);
+    URL.Properties.Values['isc_dpb_connect_timeout'] := IntToString(ConnectTimeout);
 
 end;
 
@@ -460,7 +460,7 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      StrPCopy(DBName, ZPlainString(HostName + '/' + IntToStr(Port) + ':' + Database))
+      StrPCopy(DBName, ZPlainString(HostName + '/' + IntToString(Port) + ':' + Database))
     else
       StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end

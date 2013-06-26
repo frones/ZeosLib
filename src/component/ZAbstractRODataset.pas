@@ -2159,7 +2159,7 @@ begin
           if DetailField is TLargeIntField then
             TLargeIntField(DetailField).{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Temp
           else
-            DetailField.AsString := IntToStr(Temp);
+            DetailField.AsString := IntToString(Temp);
         end
         // Processes all other fields.
         else

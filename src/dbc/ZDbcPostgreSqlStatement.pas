@@ -753,7 +753,7 @@ begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
-          TempSQL := TempSQL + '$' + IntToStr(N);
+          TempSQL := TempSQL + '$' + IntToString(N);
         end else
           TempSQL := TempSQL + Tokens[I];
       end;
@@ -1198,7 +1198,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
-  FPlanName := IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle));
+  FPlanName := IntToString(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle));
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;
@@ -1221,7 +1221,7 @@ begin
           if Tokens[I] = '?' then
           begin
             Inc(N);
-            TempSQL := TempSQL + '$' + IntToStr(N);
+            TempSQL := TempSQL + '$' + IntToString(N);
           end else
             TempSQL := TempSQL + Tokens[I];
         end;

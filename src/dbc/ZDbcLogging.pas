@@ -111,6 +111,9 @@ type
   end;
 
 implementation
+
+uses ZSysUtils;
+
 var DefaultLoggingFormatter: TZLoggingFormatter;
 
 { TZLoggingFormatter }
@@ -135,7 +138,7 @@ begin
   Result := Result + ', msg: ' + LoggingEvent.Message;
   if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> '') then
   begin
-    Result := Result + ', errcode: ' + IntToStr(LoggingEvent.ErrorCode)
+    Result := Result + ', errcode: ' + IntToString(LoggingEvent.ErrorCode)
       + ', error: ' + LoggingEvent.Error;
   end;
 end;

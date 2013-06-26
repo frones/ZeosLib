@@ -1658,7 +1658,7 @@ begin
           end;
         end;
       else
-        raise EZDatabaseError.Create(SUnKnownParamDataType + IntToStr(Ord(Param.DataType)));
+        raise EZDatabaseError.Create(SUnKnownParamDataType + IntToString(Ord(Param.DataType)));
     end;
   end;
 end;

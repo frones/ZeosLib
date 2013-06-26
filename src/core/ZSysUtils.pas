@@ -424,11 +424,14 @@ function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideStrin
 function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
 function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
 
-function IntToRaw(Value: Integer): RawByteString; overload;
-function IntToRaw(Value: Int64): RawByteString; overload;
+function IntToRaw(const Value: Integer): RawByteString; overload;
+function IntToRaw(const Value: Int64): RawByteString; overload;
 
-function IntToUnicode(Value: Integer): ZWideString; overload;
-function IntToUnicode(Value: Int64): ZWideString; overload;
+function IntToUnicode(const Value: Integer): ZWideString; overload;
+function IntToUnicode(const Value: Int64): ZWideString; overload;
+
+function IntToString(const Value: Integer): String; overload;
+function IntToString(const Value: Int64): String; overload;
 
 function RawToInt(Value: RawbyteString): Integer;
 
@@ -1475,7 +1478,7 @@ var
    MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
- Result := IntToStr(MajorVersion)+'.'+IntToStr(MinorVersion)+'.'+IntToStr(SubVersion);
+ Result := IntToString(MajorVersion)+'.'+IntToString(MinorVersion)+'.'+IntToString(SubVersion);
 end;
 
 {**
@@ -1898,7 +1901,7 @@ const
   MinInt64Uni : WideString = '-9223372036854775808';
   MinInt64Raw : RawByteString = '-9223372036854775808';
 
-function IntToRaw(Value: Integer): RawbyteString;
+function IntToRaw(const Value: Integer): RawbyteString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr_JOH_PAS_5(Value: Integer): string;
@@ -1955,7 +1958,7 @@ begin
     P^ := I or ord('0');
 end;
 
-function IntToRaw(Value: Int64): RawByteString;
+function IntToRaw(const Value: Int64): RawByteString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr64_JOH_PAS_5(Value: Int64): string;
@@ -2069,7 +2072,7 @@ begin
     P^ := I32 or ord('0');
 end;
 
-function IntToUnicode(Value: Integer): ZWideString;
+function IntToUnicode(const Value: Integer): ZWideString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr_JOH_PAS_5(Value: Integer): string;
@@ -2126,7 +2129,7 @@ begin
     PWord(P)^ := I or Word('0');
 end;
 
-function IntToUnicode(Value: Int64): ZWideString;
+function IntToUnicode(const Value: Int64): ZWideString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr64_JOH_PAS_5(Value: Int64): string;
@@ -2143,6 +2146,16 @@ begin
     end
   else
     Result := NotEmptyASCII7ToUnicodeString(IntToRaw(Value)); //this convesion is improved, because the original code (see above uses ByteArrys but here, we've two byte-block and we currupt the Data)
+end;
+
+function IntToString(const Value: Integer): String;
+begin
+  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
+end;
+
+function IntToString(const Value: Int64): String;
+begin
+  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
 end;
 
 end.

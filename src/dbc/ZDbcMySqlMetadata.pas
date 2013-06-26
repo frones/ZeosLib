@@ -2272,7 +2272,7 @@ begin
   SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
       'NULL AS RESERVED3, p.comment AS REMARKS, '+
-      IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
+      IntToString(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
       'WHERE 1=1' + SchemaCondition + ProcedureNameCondition+
       ' ORDER BY p.db, p.name';
     Result := CopyToVirtualResultSet(
@@ -2356,10 +2356,10 @@ var
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        if Names.IndexOf(AName+IntToString(N)) = -1 then
         begin
-          Names.Add(AName+IntToStr(N));
-          Result := AName+IntToStr(N);
+          Names.Add(AName+IntToString(N));
+          Result := AName+IntToString(N);
           Break;
         end;
   end;
@@ -2433,7 +2433,7 @@ begin
 
   SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
-    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
+    IntToString(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
     ' from  mysql.proc p where 1 = 1'+SchemaCondition+ProcedureNameCondition+
     ' ORDER BY p.db, p.name';
 

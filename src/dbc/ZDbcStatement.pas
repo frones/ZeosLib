@@ -1356,10 +1356,18 @@ begin
     case VType of
       vtNull : result := '(NULL)';
       vtBoolean : If VBoolean then result := '(TRUE)' else result := '(FALSE)';
-      vtInteger : result := IntToStr(VInteger);
+      vtBytes:
+        begin
+          SetLength(Result, Length(VBytes)*2);
+          BinToHex(PAnsiChar(VBytes), PChar(Result), Length(VBytes));
+        end;
+      vtInteger : result := IntToString(VInteger);
       vtFloat : result := FloatToStr(VFloat);
       vtString : result := '''' + VString + '''';
-      vtUnicodeString : result := '''' + VUnicodeString + '''';
+      vtAnsiString: result := '''' + ConSettings^.ConvFuncs.ZAnsiToString(VAnsiString, ConSettings^.CTRL_CP)+'''';
+      vtUTF8String: result := '''' + ConSettings^.ConvFuncs.ZUTF8ToString(VUTF8String, ConSettings^.CTRL_CP)+'''';
+      vtRawByteString: result := '''' + ConSettings^.ConvFuncs.ZRawToString(VRawByteString, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)+'''';
+      vtUnicodeString : result := '''' + ConSettings^.ConvFuncs.ZUnicodeToString(VUnicodeString, ConSettings^.CTRL_CP) + '''';
       vtDateTime : result := DateTimeToStr(VDateTime);
       vtPointer : result := '(POINTER)';
       vtInterface : result := '(INTERFACE)';

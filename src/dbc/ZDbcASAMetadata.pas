@@ -250,7 +250,7 @@ type
 
 implementation
 
-uses ZDbcASAUtils, ZDbcUtils;
+uses ZDbcASAUtils, ZDbcUtils, ZSysUtils;
 
 { TZASADatabaseInfo }
 
@@ -2525,7 +2525,7 @@ begin
     begin
       if Length(UDTypes) > 0 then
         UDTypes := UDTypes + ',';
-      UDTypes := UDTypes + AnsiQuotedStr(IntToStr(Types[I]), '''');
+      UDTypes := UDTypes + AnsiQuotedStr(IntToString(Types[I]), '''');
     end;
 
     with GetStatement.ExecuteQuery(

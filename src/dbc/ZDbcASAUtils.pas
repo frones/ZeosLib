@@ -2332,7 +2332,7 @@ function RandomString( Len: integer): string;
 begin
   Result := '';
   while Length( Result) < Len do
-    Result := Result + IntToStr( Trunc( Random( High( Integer))));
+    Result := Result + IntToString( Trunc( Random( High( Integer))));
   if Length( Result) > Len then
     Result := Copy( Result, 1, Len);
 end;

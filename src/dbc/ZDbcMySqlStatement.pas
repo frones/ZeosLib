@@ -1261,10 +1261,10 @@ begin
   FParamNames[ParameterIndex] := ParamName;
   if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
      ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-    FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+    FParamTypeNames[ParameterIndex] := 'CHAR('+IntToString(ColumnSize)+')'
   else
     if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-      FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+      FParamTypeNames[ParameterIndex] := 'CHAR('+IntToString(ColumnSize)+')'
     else
       if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
          ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
@@ -1281,7 +1281,7 @@ begin
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
               if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
-                FParamTypeNames[ParameterIndex] := 'BINARY('+IntToStr(ColumnSize)+')'
+                FParamTypeNames[ParameterIndex] := 'BINARY('+IntToString(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
 end;
@@ -1623,7 +1623,7 @@ begin
   inherited Create;
   FBindOffsets := PlainDriver.GetBindOffsets;
   if FBindOffsets.buffer_type=0 then
-    raise EZSQLException.Create('Unknown dll version : '+IntToStr(PlainDriver.GetClientVersion));
+    raise EZSQLException.Create('Unknown dll version : '+IntToString(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
   setlength(FBindArray,0);
   setlength(ColumnArray,BindCount);

@@ -386,7 +386,7 @@ begin
       if ColumnName = '' then
         ColumnName := 'Column';
       if N > 0 then
-        ColumnName := ColumnName + '_' + IntToStr(N);
+        ColumnName := ColumnName + '_' + IntToString(N);
       FColumnsLabels.Add(ColumnName);
     end;
   end;

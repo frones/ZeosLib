@@ -4566,7 +4566,7 @@ var
 begin
   Result := '';
   for I := Low(Types) to High(Types) do
-    Result := Result + ':' + IntToStr(Types[I]);
+    Result := Result + ':' + IntToString(Types[I]);
   Result := Format('get-udts:%s:%s:%s%s',
     [Catalog, SchemaPattern, TypeNamePattern, Result]);
 end;

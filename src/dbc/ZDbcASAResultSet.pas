@@ -912,7 +912,7 @@ begin
     FASAConnection.GetPlainDriver.db_update( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, 'Update row:' + IntToStr( RowNo));
+      FASAConnection.GetDBHandle, lcOther, 'Update row:' + IntToString( RowNo));
 
     FUpdate := false;
     FUpdateSQLData.FreeSQLDA;

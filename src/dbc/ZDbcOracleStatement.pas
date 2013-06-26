@@ -756,7 +756,7 @@ begin
   with FOracleParams[ParameterIndex-1] do
   begin
     if not GetConnection.UseMetadata then
-      pName := 'pOut'+IntToStr(ParameterIndex);
+      pName := 'pOut'+IntToString(ParameterIndex);
     pSQLType := SQLType;
   end;
 end;
@@ -801,7 +801,7 @@ begin
   begin
     AConnection := GetConnection;
     if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
-      pName := 'p'+IntToStr(ParameterIndex);
+      pName := 'p'+IntToString(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
   end;

@@ -1078,10 +1078,10 @@ begin
           Result := 'True'
         else
           Result := 'False';
-      stByte: Result := IntToStr(GetByte(ColumnIndex, IsNull));
-      stShort: Result := IntToStr(GetShort(ColumnIndex, IsNull));
-      stInteger: Result := IntToStr(GetInt(ColumnIndex, IsNull));
-      stLong: Result := IntToStr(GetLong(ColumnIndex, IsNull));
+      stByte: Result := IntToString(GetByte(ColumnIndex, IsNull));
+      stShort: Result := IntToString(GetShort(ColumnIndex, IsNull));
+      stInteger: Result := IntToString(GetInt(ColumnIndex, IsNull));
+      stLong: Result := IntToString(GetLong(ColumnIndex, IsNull));
       stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
@@ -2183,7 +2183,7 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToStr(Value));
+    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
   end;
 end;
 
@@ -2215,7 +2215,7 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToStr(Value));
+    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
   end;
 end;
 
@@ -2247,7 +2247,7 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToStr(Value));
+    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
   end;
 end;
 
@@ -2279,7 +2279,7 @@ begin
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, IntToStr(Value));
+    stString, stUnicodeString: SetString(ColumnIndex, IntToString(Value));
   end;
 end;
 

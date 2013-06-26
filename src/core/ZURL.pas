@@ -117,7 +117,7 @@ type
 
 implementation
 
-uses ZCompatibility;
+uses ZCompatibility, ZSysUtils;
 
 {TZURLStringList}
 function TZURLStringList.GetTextStr: string;
@@ -279,7 +279,7 @@ begin
   begin
     Result := Result + HostName;
     if Port <> 0 then
-      Result := Result + ':' + IntToStr(Port);
+      Result := Result + ':' + IntToString(Port);
   end;
 
   // Database

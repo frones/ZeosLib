@@ -2193,7 +2193,7 @@ begin
 {$ifdef fpc}
         Result := Value.VInteger;
 {$else}
-        Result := IntToStr(Value.VInteger);
+        Result := IntToString(Value.VInteger);
 {$endif}
     vtFloat: Result := Value.VFloat;
     vtString: Result := Value.VString;

@@ -129,7 +129,7 @@ implementation
 
 uses
   ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcLogging;
+  ZSybaseAnalyser, ZDbcLogging, ZSysUtils;
 
 { TZASADriver }
 
@@ -441,7 +441,7 @@ begin
     if Info.Values['LINKS'] <> ''
       then Links := 'LINKS=' + Info.Values['LINKS'];
     if (Links = '') and (Port <> 0)
-      then Links := 'LINKS=tcpip(PORT=' + IntToStr(Port) + ')';
+      then Links := 'LINKS=tcpip(PORT=' + IntToString(Port) + ')';
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
@@ -542,7 +542,7 @@ begin
   ASATL := Ord( TransactIsolationLevel);
   if ASATL > 1 then
     ASATL := ASATL - 1;
-  SetOption( 1, nil, 'ISOLATION_LEVEL', IntToStr( ASATL));
+  SetOption( 1, nil, 'ISOLATION_LEVEL', IntToString( ASATL));
 end;
 
 function TZASAConnection.DetermineASACharSet: String;

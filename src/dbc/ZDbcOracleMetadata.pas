@@ -1292,9 +1292,9 @@ var
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(NewName+IntToStr(N)) = -1 then
+        if Names.IndexOf(NewName+IntToString(N)) = -1 then
         begin
-          Result := NewName+IntToStr(N);
+          Result := NewName+IntToString(N);
           Names.Add(Result);
           Break;
         end;

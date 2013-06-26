@@ -437,7 +437,7 @@ begin
   else
   begin
     FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter(
-      'P' + IntToStr(ParameterIndex), T, ParamDirection, S, V));
+      'P' + IntToString(ParameterIndex), T, ParamDirection, S, V));
   end;
 end;
 
