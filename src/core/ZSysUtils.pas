@@ -1868,10 +1868,12 @@ begin
   end;
 end;
 
+{$IF defined (WIN32) and not defined(FPC)}
 procedure StrToIntError(const S: string);
 begin
   raise EConvertError.CreateResFmt(@SInvalidInteger, [S]);
 end;
+{$IFEND}
 
 function RawToInt(const Value: RawbyteString): Integer;
 {$IF defined (WIN32) and not defined(FPC)}
