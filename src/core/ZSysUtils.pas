@@ -2414,28 +2414,28 @@ begin
   P^ := Byte('-');
   Inc(P, Ord(Negative));
   if Digits > 17 then
-    begin {18 or 19 Digits}
-      if Digits = 19 then
-        begin
-          C := '0';
-          while I64 >= 1000000000000000000 do
-            begin
-              Dec(I64, 1000000000000000000);
-              Inc(C);
-            end;
-          P^ := Ord(C);
-          Inc(P);
-        end;
+  begin {18 or 19 Digits}
+    if Digits = 19 then
+    begin
       C := '0';
-      while I64 >= 100000000000000000 do
+      while I64 >= 1000000000000000000 do
         begin
-          Dec(I64, 100000000000000000);
+          Dec(I64, 1000000000000000000);
           Inc(C);
         end;
       P^ := Ord(C);
       Inc(P);
-      Digits := 17;
     end;
+    C := '0';
+    while I64 >= 100000000000000000 do
+      begin
+        Dec(I64, 100000000000000000);
+        Inc(C);
+      end;
+    P^ := Ord(C);
+    Inc(P);
+    Digits := 17;
+  end;
   J64 := I64 div 100000000; {Very Slow prior to Delphi 2005}
   K64 := I64 - (J64 * 100000000); {Remainder = 0..99999999}
   I32 := K64;
@@ -2531,9 +2531,21 @@ function IntToUnicode(const Value: Int64): ZWideString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr64_JOH_PAS_5(Value: Int64): string;
+{$IFNDEF WITH_FASTCODE_INTTOSTR}
+var
+  Negative           : Boolean;
+  I64, J64, K64      : Int64;
+  I32, J32, K32, L32 : Cardinal;
+  Digits             : Byte;
+  P                  : PWideChar;
+  NewLen             : Integer;
+{$ENDIF}
 begin
+  {$IFDEF WITH_FASTCODE_INTTOSTR}
+  Result := IntToStr(Value);
+  {$ELSE}
   if Value = $8000000000000000 then
-    begin {Special UnicodeString since ABS($8000000000000000) Fails}
+    begin {Special WideString since ABS($8000000000000000) Fails}
       Result := MinInt64Uni;
       Exit;
     end;
@@ -2541,9 +2553,83 @@ begin
     begin {Within Integer Range - Use Faster Integer Version}
       Result := IntToUnicode(Integer(Value));
       Exit;
-    end
+    end;
+  Negative := Value < 0;
+  I64 := Value;
+  if I64 >= 100000000000000 then
+    if I64 >= 10000000000000000 then
+      if I64 >= 1000000000000000000 then
+        Digits := 19
+      else
+        Digits := 17 + Ord(I64 >= 100000000000000000)
+    else
+      Digits := 15 + Ord(I64 >= 1000000000000000)
   else
-    Result := NotEmptyASCII7ToUnicodeString(IntToRaw(Value)); //this convesion is improved, because the original code (see above uses ByteArrys but here, we've two byte-block and we currupt the Data)
+    if I64 >= 1000000000000 then
+      Digits := 13 + Ord(I64 >= 10000000000000)
+    else
+      if I64 >= 10000000000 then
+        Digits := 11 + Ord(I64 >= 100000000000)
+      else
+        Digits := 10;
+  NewLen  := Digits + Ord(Negative);
+  SetLength(Result, NewLen);
+  P := PWideChar(Result);
+  P^ := '-';
+  Inc(P, Ord(Negative));
+  if Digits > 17 then
+  begin {18 or 19 Digits}
+    if Digits = 19 then
+    begin
+      P^ := WideChar('0');
+      while I64 >= 1000000000000000000 do
+      begin
+        Dec(I64, 1000000000000000000);
+        Inc(P^);
+      end;
+      Inc(P);
+    end;
+    P^ := WideChar('0');
+    while I64 >= 100000000000000000 do
+    begin
+      Dec(I64, 100000000000000000);
+      Inc(P^);
+    end;
+    Inc(P);
+    Digits := 17;
+  end;
+  J64 := I64 div 100000000;
+  K64 := I64 - (J64 * 100000000); {Remainder = 0..99999999}
+  I32 := K64;
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  PLongWord(P + Digits - 2)^ := LongWord(TwoDigitLookupW[K32]);
+  I32 := J32 div 100;
+  L32 := I32 * 100;
+  L32 := J32 - L32;
+  PLongWord(P + Digits - 4)^ := LongWord(TwoDigitLookupw[L32]);
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  PLongWord(P + Digits - 6)^ := LongWord(TwoDigitLookupW[K32]);
+  PLongWord(P + Digits - 8)^ := LongWord(TwoDigitLookupW[J32]);
+  Dec(Digits, 8);
+  I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
+  if Digits > 2 then
+    repeat
+      J32 := I32 div 100;
+      K32 := J32 * 100;
+      K32 := I32 - K32;
+      I32 := J32;
+      Dec(Digits, 2);
+      PLongWord(P + Digits)^ := LongWord(TwoDigitLookupW[K32]);
+    until Digits <= 2;
+  if Digits = 2 then
+    PLongWord(P + Digits-2)^ := LongWord(TwoDigitLookupW[I32])
+  else
+    P^ := WideChar(I32 or ord('0'));
+  {$ENDIF}
 end;
 
 function IntToString(const Value: Integer): String;
