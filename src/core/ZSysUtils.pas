@@ -437,11 +437,7 @@ function RawToInt(const Value: RawbyteString): Integer;
 
 implementation
 
-uses ZMatchPattern, StrUtils
-  {$IF defined(WIN32) and not defined(FPC)}
-  , SysConst
-  {$IFEND}
-  ;
+uses ZMatchPattern, StrUtils, SysConst;
 
 
 {**

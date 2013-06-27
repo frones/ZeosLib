@@ -1498,7 +1498,6 @@ begin
       DT_VARCHAR:
          begin
            ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
-           Result := RawToInt(s);
            Result := StrToInt64({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(s));
          end;
       DT_TINYINT,
