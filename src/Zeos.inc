@@ -228,6 +228,7 @@
   {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
+  {$DEFINE WITH_SYSTEM_PREFIX}
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
@@ -243,7 +244,7 @@
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
-  {$DEFINE WITH_SYSUITLS_PREFIX} 	//Need SysUtils. unit declaration for some functions like StrNew,StrAlloc
+  {$DEFINE WITH_FASTCODE_INTTOSTR}      //using fastcode StrToInt implementations of http://fastcode.sourceforge.net/
 {$ENDIF}
 
 
