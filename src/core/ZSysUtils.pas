@@ -2789,7 +2789,7 @@ asm
   jmp   @@Finished          {Exit Setting Error Code}
 end;
 {$ELSE}
-{$HINTS OFF} //value digits might not be initialized
+{$WARNINGS OFF} //value digits might not be initialized
 function ValLong_JOH_PAS_4_b(const s; var code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
@@ -2877,7 +2877,7 @@ begin
   if (not Valid) or (P^ <> #0) then
     Code := P-@S+1;
 end;
-{$HINTS ON}
+{$WARNINGS ON}
 {$IFEND}
 
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
@@ -2890,6 +2890,104 @@ begin
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(Pointer(S)^, E);
   {$IFEND}
+  if E <> 0 then Result := Default;
+end;
+
+{$WARNINGS OFF} //value digits might not be initialized
+function ValLong_JOH_PAS_4_b_unicode(const s; var code: Integer): Longint;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+var
+  Digit: Integer;
+  Neg, Hex, Valid: Boolean;
+  P: PWideChar;
+begin
+  Code := 0;
+  P    := @S;
+  if not Assigned(P) then
+    begin
+      Result := 0;
+      inc(Code);
+      Exit;
+    end;
+  Neg   := False;
+  Hex   := False;
+  Valid := False;
+  while P^ = ' ' do
+    Inc(P);
+  if CharInSet(P^, ['+', '-']) then
+    begin
+      Neg := (P^ = '-');
+      inc(P);
+    end;
+  if P^ = '$' then
+    begin
+      inc(P);
+      Hex := True;
+    end
+  else
+    begin
+      if P^ = '0' then
+        begin
+          inc(P);
+          Valid := True;
+        end;
+      if Upcase(P^) = 'X' then
+        begin
+          Hex := True;
+          inc(P);
+        end;
+    end;
+  Result := 0;
+  if Hex then
+    begin
+      Valid := False;
+      while True do
+        begin
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - Ord('a') + 10;
+            'A'..'F': Digit := Ord(P^) - Ord('A') + 10;
+            else Break;
+          end;
+          if (Result < 0) or (Result > $0FFFFFFF) then
+            Break;
+          Result := (Result shl 4) + Digit;
+          Valid := True;
+          inc(P);
+        end;
+    end
+  else
+    begin
+      while True do
+        begin
+          if not CharInSet(P^, ['0'..'9']) then
+            break;
+          if Result > (MaxInt div 10) then
+            break;
+          Result := (Result * 10) + Ord(P^) - Ord('0');
+          Valid := True;
+          inc(P);
+        end;
+      if Result < 0 then {Possible Overflow}
+        if (Cardinal(Result) <> $80000000) or (not neg) then
+          begin {Min(LongInt) = $80000000 is a Valid Result}
+            Dec(P);
+            Valid := False;
+          end;
+    end;
+  if Neg then
+    Result := -Result;
+  if (not Valid) or (P^ <> #0) then
+    Code := P-@S+1;
+end;
+{$WARNINGS ON}
+
+function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer;
+var
+  E: Integer;
+begin
+  Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S)^, E);
   if E <> 0 then Result := Default;
 end;
 

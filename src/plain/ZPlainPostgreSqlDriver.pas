@@ -1100,7 +1100,7 @@ begin
   if ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) then
   begin
     Xpos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiPos('x', Value); //get pos of 'x'
-    L := Length(value)-Xpos div 2;
+    L := (Length(value)-Xpos) div 2;
     SetLength(Result, L); //Set length of binary-result
     HexToBin(PAnsiChar(Value)+Xpos{inc pointer ove '\x'}, PAnsichar(Result), L); //convert hex to binary
   end
