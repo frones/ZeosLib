@@ -181,7 +181,7 @@ type
 implementation
 
 uses
-  Math,
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding;
 
 { TZMySQLResultSetMetadata }
@@ -409,15 +409,11 @@ end;
     value returned is <code>false</code>
 }
 function TZMySQLResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
-var
-  Temp: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := UpperCase(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)));
-  Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
-    (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
+  Result := StrToBoolEx(InternalGetString(ColumnIndex));
 end;
 
 {**
@@ -434,7 +430,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0));
+  Result := Byte(RawToIntDef(InternalGetString(ColumnIndex), 0));
 end;
 
 {**
@@ -451,7 +447,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0));
+  Result := SmallInt(RawToIntDef(InternalGetString(ColumnIndex), 0));
 end;
 
 {**
@@ -468,7 +464,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := StrToIntDef(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0);
+  Result := RawToIntDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -976,14 +972,14 @@ end;
 }
 function TZMySQLPreparedResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var
-  Temp: string;
+  Temp: RawByteString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-   Temp := UpperCase(String(InternalGetString(ColumnIndex)));
+   Temp := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(InternalGetString(ColumnIndex));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
-    (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
+    (Temp = 'TRUE') or (RawToIntDef(Temp, 0) <> 0);
 end;
 
 {**

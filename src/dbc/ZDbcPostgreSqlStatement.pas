@@ -326,7 +326,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := RawToIntDef(StrPas(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -379,15 +379,15 @@ begin
     PGRES_COMMAND_OK:
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := RawToIntDef(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
     else
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := RawToIntDef(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
   end;
@@ -871,7 +871,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := RawToIntDef(StrPas(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -925,15 +925,15 @@ begin
     PGRES_COMMAND_OK:
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := RawToIntDef(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
     else
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := RawToIntDef(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
   end;
@@ -1288,7 +1288,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := RawToIntDef(StrPas(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -1323,15 +1323,15 @@ begin
     PGRES_COMMAND_OK:
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := RawToIntDef(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
     else
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := RawToIntDef(StrPas(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
   end;
@@ -1631,7 +1631,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := RawToIntDef(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FetchOutParams(CreateResultSet(SSQL, QueryHandle));
   end;
 

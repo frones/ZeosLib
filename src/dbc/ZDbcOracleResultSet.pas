@@ -484,7 +484,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := String(GetAsStringValue(ColumnIndex, nil));
+  Temp := PosEmptyASCII7ToString(GetAsStringValue(ColumnIndex, nil));
   Result := (StrToIntDef(Temp, 0) <> 0) or StrToBoolEx(Temp);
 end;
 

@@ -511,7 +511,7 @@ begin
     case ParamNo of
       0: Continue;
       isc_dpb_set_db_SQL_dialect:
-        Dialect := StrToIntDef(NotEmptyASCII7ToString(ParamValue), 0);
+        Dialect := RawToIntDef(ParamValue, 0);
       isc_dpb_user_name, isc_dpb_password, isc_dpb_password_enc,
       isc_dpb_sys_user_name, isc_dpb_license, isc_dpb_encrypt_key,
       isc_dpb_lc_messages, isc_dpb_lc_ctype, isc_dpb_sql_role_name,
@@ -2466,7 +2466,7 @@ begin
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
       SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := RawToInt(Value);
+      SQL_SHORT     : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
@@ -2702,8 +2702,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := RawToInt(DecodeString(SQL_TEXT, Index)) <> 0;
-        SQL_VARYING   : Result := RawToInt(DecodeString(SQL_VARYING, Index)) <> 0;
+        SQL_TEXT      : Result := StrToBoolEx(DecodeString(SQL_TEXT, Index));
+        SQL_VARYING   : Result := StrToBoolEx(DecodeString(SQL_VARYING, Index));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));

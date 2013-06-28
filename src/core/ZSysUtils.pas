@@ -151,10 +151,17 @@ function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
 
 {**
   Converts a string into boolean value.
-  @param Str a string value.
+  @param Str a RawByteString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: string): Boolean;
+function StrToBoolEx(Str: RawByteString): Boolean; overload;
+
+{**
+  Converts a string into boolean value.
+  @param Str a ZWideString value.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+}
+function StrToBoolEx(Str: ZWideString): Boolean; overload;
 
 {**
   Converts a boolean into string value.
@@ -434,10 +441,12 @@ function IntToString(const Value: Integer): String; overload;
 function IntToString(const Value: Int64): String; overload;
 
 function RawToInt(const Value: RawbyteString): Integer;
+function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
 
 implementation
 
-uses ZMatchPattern, StrUtils, SysConst;
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} StrUtils, SysConst,
+  ZMatchPattern;
 
 
 {**
@@ -719,14 +728,27 @@ end;
 
 {**
   Converts a string into boolean value.
-  @param Str a string value.
+  @param Str a RawByteString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: string): Boolean;
+function StrToBoolEx(Str: RawByteString): Boolean;
 begin
-  Str := UpperCase(Str);
+  Str := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(Str);
   Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
-    or (StrToIntDef(Str, 0) <> 0);
+    or (RawToIntDef(Str, 0) <> 0);
+end;
+
+{**
+  Converts a string into boolean value.
+  @param Str a ZWideString value.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+}
+function StrToBoolEx(Str: ZWideString): Boolean;
+var tmp: String;
+begin
+  tmp := UpperCase({$IFNDEF UNICODE}String{$ENDIF}(Str));
+  Result := (tmp = 'Y') or (tmp = 'YES') or (tmp = 'T') or (tmp = 'TRUE')
+    or (StrToIntDef(tmp, 0) <> 0);
 end;
 
 {**
@@ -2640,6 +2662,235 @@ end;
 function IntToString(const Value: Int64): String;
 begin
   Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value);
+end;
+
+{$IF defined(WIN32) and not defined(FPC)}
+function ValLong_JOH_IA32_4_b(const s; var code: Integer): Longint;
+//fast asm by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+asm
+  test  eax, eax
+  jz    @@Null
+  push  ebx
+  push  esi
+  push  eax                 {Save String Pointer}
+  mov   esi, eax            {String Pointer}
+  xor   ebx, ebx            {Clear Valid Flag and Sign Flag}
+  xor   eax, eax            {Clear Result}
+  jmp   @@TrimEntry
+@@Null:
+  mov   [edx], eax
+  inc   [edx]               {Code = 1}
+  ret
+@@Trim:                     {Strip Leading Spaces}
+  inc   esi
+@@TrimEntry:
+  movzx ecx, [esi]
+  cmp   cl, ' '
+  je    @@Trim
+  cmp   cl, '0'
+  jle   @@CheckFirstChar
+@@CheckAlpha:
+  test  cl, $87
+  jz    @@CheckX            {May be 'x' or 'X'}
+@@NumLoop:
+  sub   ecx, '0'
+  cmp   ecx, 9
+  ja    @@NumDone           {Not '0'..'9'}
+  cmp   eax, MaxInt/10
+  ja    @@NumDone
+  lea   eax, [eax*4+eax]
+  lea   eax, [eax*2+ecx]    {Result = Result * 10 + Digit}
+  inc   esi
+  mov   bl, 1               {Valid := True}
+  movzx ecx, [esi]
+  jmp   @@NumLoop
+@@NumDone:
+  cmp   eax, $80000000
+  jb    @@SetSign           {No Overflow}
+  jne   @@Overflow
+  test  ebx, ebx            {Sign Flag}
+  js    @@Setsign           {Result is Valid (-MaxInt-1)}
+@@Overflow:
+  dec   esi
+  mov   bl, 0               {Valid := False}
+  jmp   @@SetSign
+@@CheckFirstChar:
+  cmp   cl, '-'
+  je    @@PlusMinus
+  cmp   cl, '+'
+  jne   @@SignSet
+@@PlusMinus:                {Starts with '+' or '-'}
+  mov   bl, '+'+1
+  sub   ebx, ecx            {Set Sign Flag: '+' -> +1, '-' -> -1}
+  inc   esi
+  mov   bl, 0               {Valid := False}
+  movzx ecx, [esi]          {Character after '+' or '-'}
+@@SignSet:
+  cmp   cl, '$'
+  je    @@Hex               {Hexadecimal}
+  cmp   cl, '0'
+  jne   @@CheckAlpha        {May start with 'x' or 'X'}
+  inc   esi
+  mov   bl, 1               {Assume Valid = True}
+  movzx ecx, [esi]          {Character after '0'}
+  jmp   @@CheckAlpha        {May start with '0x' or '0X'}
+@@CheckX:
+  mov   bh, cl
+  or    bh, $20             {'X' -> 'x'}
+  cmp   bh, 'x'
+  jne   @@NumLoop
+@@Hex:
+  mov   bl, 0               {Valid := False}
+@@HexLoop:
+  inc   esi
+  movzx ecx, [esi]
+  sub   cl, '0'
+  cmp   cl, 9
+  jna   @@CheckRange        {'0'..'9'}
+  mov   bh, cl              {Check for Valid Hex Character}
+  sub   bh, 'a'-'0'         {'a' -> 0}
+  cmp   bh, 'z'-'a'+1       {Carry if 'a'..'z'}
+  sbb   bh, bh              {=$FF if 'a'..'z' else $00}
+  and   bh, $20             {=$20 if 'a'..'z' else $00}
+  sub   cl, bh              {'a'..'z' -> 'A'..'Z'}
+  sub   cl, 'A'-'0'-10      {'A'..'Z' -> 10..15}
+  cmp   cl, 15
+  ja    @@NotHex            {Not Hex Character}
+@@CheckRange:
+  cmp   eax, MaxInt/8       {High(ULONG) div 16}
+  ja    @@SetSign
+  shl   eax, 4              {Result = Result * 16}
+  mov   bl, 1               {Valid := True}
+  add   eax, ecx
+  jmp   @@HexLoop
+@@NotHex:
+  add   cl, 'A'-'0'-10      {Restore Char-'0'}
+@@SetSign:
+  mov   ch, bl              {Save Valid Flag}
+  sar   ebx, 31             {Set Each Bit to Top Bit}
+  xor   eax, ebx            {Negate Result if Necessary}
+  sub   eax, ebx
+  dec   ch                  {0 if Valid, -1 if Invalid}
+  or    cl, ch              {If Invalid, Force CL = -1}
+  cmp   cl, -'0'            {Last Character = #0?}
+  jne   @@Error             {Not Valid or Not End of String}
+  xor   esi, esi            {Code := 0}
+  pop   ecx                 {Dump String Pointer}
+@@Finished:
+  mov   [edx], esi          {Set Error Code}
+  pop   esi
+  pop   ebx
+  ret
+@@Error:
+  inc   esi
+  pop   ecx                 {String Pointer}
+  sub   esi, ecx
+  jmp   @@Finished          {Exit Setting Error Code}
+end;
+{$ELSE}
+{$HINTS OFF} //value digits might not be initialized
+function ValLong_JOH_PAS_4_b(const s; var code: Integer): Longint;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+var
+  Digit: Integer;
+  Neg, Hex, Valid: Boolean;
+  P: PAnsiChar;
+begin
+  Code := 0;
+  P    := @S;
+  if not Assigned(P) then
+    begin
+      Result := 0;
+      inc(Code);
+      Exit;
+    end;
+  Neg   := False;
+  Hex   := False;
+  Valid := False;
+  while P^ = ' ' do
+    Inc(P);
+  if P^ in ['+', '-'] then
+    begin
+      Neg := (P^ = '-');
+      inc(P);
+    end;
+  if P^ = '$' then
+    begin
+      inc(P);
+      Hex := True;
+    end
+  else
+    begin
+      if P^ = '0' then
+        begin
+          inc(P);
+          Valid := True;
+        end;
+      if Upcase(P^) = 'X' then
+        begin
+          Hex := True;
+          inc(P);
+        end;
+    end;
+  Result := 0;
+  if Hex then
+    begin
+      Valid := False;
+      while True do
+        begin
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - Ord('a') + 10;
+            'A'..'F': Digit := Ord(P^) - Ord('A') + 10;
+            else Break;
+          end;
+          if (Result < 0) or (Result > $0FFFFFFF) then
+            Break;
+          Result := (Result shl 4) + Digit;
+          Valid := True;
+          inc(P);
+        end;
+    end
+  else
+    begin
+      while True do
+        begin
+          if not (P^ in ['0'..'9']) then
+            break;
+          if Result > (MaxInt div 10) then
+            break;
+          Result := (Result * 10) + Ord(P^) - Ord('0');
+          Valid := True;
+          inc(P);
+        end;
+      if Result < 0 then {Possible Overflow}
+        if (Cardinal(Result) <> $80000000) or (not neg) then
+          begin {Min(LongInt) = $80000000 is a Valid Result}
+            Dec(P);
+            Valid := False;
+          end;
+    end;
+  if Neg then
+    Result := -Result;
+  if (not Valid) or (P^ <> #0) then
+    Code := P-@S+1;
+end;
+{$HINTS ON}
+{$IFEND}
+
+function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
+var
+  E: Integer;
+begin
+//  Val(S, Result, E); {when system._ValLong updated}
+  {$IF defined(WIN32) and not defined(FPC)}
+  Result := ValLong_JOH_IA32_4_b(Pointer(S)^, E);
+  {$ELSE}
+  Result := ValLong_JOH_PAS_4_b(Pointer(S)^, E);
+  {$IFEND}
+  if E <> 0 then Result := Default;
 end;
 
 end.

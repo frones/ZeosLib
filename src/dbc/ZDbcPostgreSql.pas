@@ -885,8 +885,8 @@ begin
     FTypeList := TStringList.Create;
     for I := 0 to GetPlainDriver.GetRowCount(QueryHandle)-1 do
     begin
-      TypeCode := StrToIntDef(String(StrPas(
-        GetPlainDriver.GetValue(QueryHandle, I, 0))), 0);
+      TypeCode := RawToIntDef(StrPas(
+        GetPlainDriver.GetValue(QueryHandle, I, 0)), 0);
       isEnum := LowerCase(String(StrPas(GetPlainDriver.GetValue(QueryHandle, I, 3)))) = 'e';
       if isEnum then 
         TypeName := 'enum' 
@@ -896,8 +896,8 @@ begin
       if LastVersion then
         BaseTypeCode := 0
       else
-        BaseTypeCode := StrToIntDef(String(StrPas(
-          GetPlainDriver.GetValue(QueryHandle, I, 2))), 0);
+        BaseTypeCode := RawToIntDef(StrPas(
+          GetPlainDriver.GetValue(QueryHandle, I, 2)), 0);
 
       if BaseTypeCode <> 0 then
       begin

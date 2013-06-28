@@ -1412,7 +1412,7 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
-      stString, stUnicodeString: Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
+      stString, stUnicodeString: Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
   end
@@ -1450,7 +1450,7 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
-      stString, stUnicodeString: Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
+      stString, stUnicodeString: Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
   end
@@ -1490,7 +1490,7 @@ begin
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
-        Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
+        Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
   end
@@ -1530,7 +1530,7 @@ begin
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
-        Result := StrToIntDef(GetString(ColumnIndex, IsNull), 0);
+        Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
     end;
     IsNull := False;
   end
@@ -2425,10 +2425,10 @@ begin
     stByte: SetByte(ColumnIndex, StrToIntDef(Value, 0));
     stShort: SetShort(ColumnIndex, StrToIntDef(Value, 0));
     stInteger: SetInt(ColumnIndex, StrToIntDef(Value, 0));
-    stLong: SetLong(ColumnIndex, StrToIntDef(Value, 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(AnsiString(Value), 0));
+    stLong: SetLong(ColumnIndex, StrToInt64Def(Value, 0));
+    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stString:
       begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2514,10 +2514,10 @@ begin
         SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
           or (TempStr = 'YES') or (TempStr = 'TRUE'));
       end;
-    stByte: SetByte(ColumnIndex, StrToIntDef({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value), 0));
-    stShort: SetShort(ColumnIndex, StrToIntDef({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value), 0));
-    stInteger: SetInt(ColumnIndex, StrToIntDef({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value), 0));
-    stLong: SetLong(ColumnIndex, StrToIntDef({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value), 0));
+    stByte: SetByte(ColumnIndex, RawToIntDef(Value, 0));
+    stShort: SetShort(ColumnIndex, RawToIntDef(Value, 0));
+    stInteger: SetInt(ColumnIndex, RawToIntDef(Value, 0));
+    stLong: SetLong(ColumnIndex, StrToInt64Def({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value), 0));
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
@@ -2550,11 +2550,29 @@ end;
 }
 procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: ZWideString);
 var IsNull: Boolean;
+{$IFDEF UNICODE}
+  tempStr: String;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
+    {$IFDEF UNICODE}
+    stBoolean:
+      begin
+        TempStr := UpperCase(Value);
+        SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
+          or (TempStr = 'YES') or (TempStr = 'TRUE'));
+      end;
+    stByte: SetByte(ColumnIndex, StrToIntDef(Value, 0));
+    stShort: SetShort(ColumnIndex, StrToIntDef(Value, 0));
+    stInteger: SetInt(ColumnIndex, StrToIntDef(Value, 0));
+    stLong: SetLong(ColumnIndex, StrToInt64Def(Value, 0));
+    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    {$ENDIF}
     stUnicodeString, stString:
       begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2565,6 +2583,11 @@ begin
       end;
     stUnicodeStream:
       GetBlob(ColumnIndex, IsNull).SetUnicodeString(Value);
+    {$IFDEF UNICODE}
+    stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
+    stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
+    stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
+    {$ENDIF}
     else
       SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
   end;
