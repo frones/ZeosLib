@@ -1094,14 +1094,15 @@ function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: RawByteString;
 var
   decoded: PAnsiChar;
   len: Longword;
-  Xpos: Integer;
+  L, Xpos: Integer;
 begin
   Result := ''; //speeds up SetLength *2
   if ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) then
   begin
-    Xpos := AnsiPos('x', Value); //get pos of 'x'
-    SetLength(Result, (Len-Xpos) div 2); //Set length of binary-result
-    HexToBin(PAnsiChar(Value)+Xpos{inc pointer ove '\x'}, PAnsichar(Result), (Len-2) div 2); //convert hex to binary
+    Xpos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiPos('x', Value); //get pos of 'x'
+    L := Length(value)-Xpos div 2;
+    SetLength(Result, L); //Set length of binary-result
+    HexToBin(PAnsiChar(Value)+Xpos{inc pointer ove '\x'}, PAnsichar(Result), L); //convert hex to binary
   end
   else
     if Assigned(POSTGRESQL_API.PQUnescapeBytea) then
@@ -1817,4 +1818,5 @@ begin
 end;
 
 end.
+
 
