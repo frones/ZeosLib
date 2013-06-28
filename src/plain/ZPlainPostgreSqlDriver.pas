@@ -1155,11 +1155,8 @@ begin
       encoded := POSTGRESQL_API.PQescapeBytea(PAnsiChar(value),leng,@len);
     SetLength(result, len -1); //removes the #0 byte
 
-    {$IFDEF DELPHI18_UP}
-    SysUtils.StrCopy(PAnsiChar(result), encoded);
-    {$ELSE}
-    StrCopy(PAnsiChar(result), encoded);
-    {$ENDIF}
+    {$IFDEF DELPHI18_UP}SysUtils.{$ENDIF}StrLCopy(PAnsiChar(result), encoded, len - 1);
+    
     POSTGRESQL_API.PQFreemem(encoded);
     if Quoted then
       result := ''''+result+'''';

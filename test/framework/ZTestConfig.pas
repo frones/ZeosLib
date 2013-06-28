@@ -238,11 +238,11 @@ type
 
   { TZTestLoggingFormatter }
 
-  TZTestLoggingFormatter = class(TZLoggingFormatter)
+  TZTestLoggingFormatter = class(TInterfacedObject, IZLoggingFormatter)
   private
     FCounter: Integer;
   public
-    function Format(LoggingEvent: TZLoggingEvent) : string; override;
+    function Format(LoggingEvent: TZLoggingEvent) : string;
   end;
 
 
@@ -626,11 +626,9 @@ finalization
     TestConfig.Free;
   if Assigned(SQLMonitor) then
     begin
-      If Assigned(SQLMonitor.LoggingFormatter) then
-        SQLMonitor.LoggingFormatter.Free;
-       {$IFNDEF FPC}
-       SQLMonitor.Free;
-       {$ENDIF}
+     {$IFNDEF FPC}
+     SQLMonitor.Free;
+     {$ENDIF}
     end;
 end.
 
