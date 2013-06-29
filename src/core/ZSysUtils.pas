@@ -441,6 +441,7 @@ function IntToString(const Value: Integer): String; overload;
 function IntToString(const Value: Int64): String; overload;
 
 function RawToInt(const Value: RawbyteString): Integer;
+function UnicodeToInt(const Value: ZWideString): Integer;
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
 
 implementation
@@ -2292,6 +2293,95 @@ asm
 {$IFEND}
 end;
 
+{$WARNINGS OFF}
+function UnicodeToInt(const Value: ZWideString): Integer;
+//function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
+//originally wrtten by John O'Harrow
+//http://fastcode.sourceforge.net/
+const
+  AdjustLowercase = Ord('a') - 10;
+  AdjustUppercase = Ord('A') - 10;
+var
+  Digit: Integer;
+  Neg, Hex, Valid: Boolean;
+  P: PWideChar;
+begin
+  P := Pointer(Value);
+  if not Assigned(P) then
+    raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
+  Neg   := False;
+  Hex   := False;
+  Valid := False;
+  while P^ = ' ' do
+    Inc(P);
+  if CharInSet(P^, ['+', '-']) then
+    begin
+      Neg := (P^ = WideChar('-'));
+      inc(P);
+    end;
+  if P^ = WideChar('$') then
+    begin
+      Hex := True;
+      inc(P);
+    end
+  else
+    begin
+      if P^ = WideChar('0') then
+        begin
+          Valid := True;
+          inc(P);
+        end;
+      if (Ord(P^) or $20) = ord('x') then
+        begin {Upcase(P^) = 'X'}
+          Hex := True;
+          inc(P);
+        end;
+    end;
+  Result := 0;
+  if Hex then
+    begin
+      Valid := False;
+      while True do
+        begin
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - AdjustLowercase;
+            'A'..'F': Digit := Ord(P^) - AdjustUppercase;
+            else      Break;
+          end;
+          if Cardinal(Result) > MaxInt div 8 then
+            Break;
+          Result := (Result shl 4) + Digit;
+          Valid := True;
+          inc(P);
+        end;
+    end
+  else
+    begin
+      while True do
+        begin
+          if not (CharInSet(P^, ['0'..'9'])) then
+            Break;
+          if Result > (MaxInt div 10) then
+            Break;
+          Result := (Result * 10) + Ord(P^) - Ord('0');
+          Valid := True;
+          inc(P);
+        end;
+      if Result < 0 then {Possible Overflow}
+        if (Cardinal(Result) <> $80000000) or (not neg) then
+          begin {Min(LongInt) = $80000000 is a Valid Result}
+            Dec(P);
+            Valid := False;
+          end;
+    end;
+  if Neg then
+    Result := -Result;
+  if (not Valid) or (P^ <> #0) then
+    raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
+end;
+{$WARNINGS ON}
+
 const
   TwoDigitLookupA : packed array[0..99] of array[1..2] of AnsiChar =
     ('00','01','02','03','04','05','06','07','08','09',
@@ -2532,7 +2622,7 @@ begin
   if NewLen <> OldLen then
     SetLength(Result, NewLen);
   P := Pointer(Result);
-  P^ := Word('-');
+  PWord(P)^ := Word('-');
   Inc(P, Ord(Negative)*2);
   if Digits > 2 then
     repeat
@@ -2892,6 +2982,17 @@ begin
   {$IFEND}
   if E <> 0 then Result := Default;
 end;
+
+{$IFNDEF UNICODE}
+function UpCase(Ch: WideChar): WideChar;
+begin
+  Result := Ch;
+  case Ch of
+    'a'..'z':
+      Result := WideChar(Word(Ch) and $FFDF);
+  end;
+end;
+{$ENDIF}
 
 {$WARNINGS OFF} //value digits might not be initialized
 function ValLong_JOH_PAS_4_b_unicode(const s; var code: Integer): Longint;
