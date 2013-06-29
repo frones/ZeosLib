@@ -443,6 +443,7 @@ function IntToString(const Value: Int64): String; overload;
 function RawToInt(const Value: RawbyteString): Integer;
 function UnicodeToInt(const Value: ZWideString): Integer;
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
+function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer;
 
 implementation
 

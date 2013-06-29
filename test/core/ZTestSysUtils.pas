@@ -86,6 +86,7 @@ type
     procedure TestRawToInt;
     procedure TestRawToIntDef;
     procedure TestUnicodeToInt;
+    procedure TestUnicodeToIntDef;
     {$ENDIF}
   end;
 
@@ -864,10 +865,61 @@ begin
   CheckEquals(s1, s2, 'Results of UnicodeToInt VS. StrToInt');
 
   system.WriteLn('');
-  system.WriteLn(Format('Benchmarking(x %d): UnicodeToInt', [High(Integer)]));
+  system.WriteLn(Format('Benchmarking(x %d): UnicodeToInt', [10000000+20]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToInt: %d ms', [Between1, Between2]));
 
 end;
+
+procedure TZTestSysUtilsCase.TestUnicodeToIntDef;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Integer;
+
+    function TRawToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := -20 to 10000000 do
+        Result := UnicodeToIntDef(IntToUnicode(I),1);
+      Result := Result + UnicodeToIntDef(ZWideString('test'), -999);
+    end;
+
+    function TStrToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := -20 to 10000000 do
+        Result :=
+          {$IFDEF UNICODE}
+            StrToIntDef(IntToStr(I),1);
+          {$ELSE}
+            StrToIntDef(String(ZWideString(IntToStr(I))), 1);
+          {$ENDIF}
+        {$IFDEF UNICODE}
+          Result := Result +  StrToIntDef('test', -999);
+        {$ELSE}
+          Result := Result + StrToIntDef(String(ZWideString('test')), -999);
+        {$ENDIF}
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of UnicodeToIntDef VS. StrToIntDef');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): UnicodeToIntDef', [10000000+20]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
+
+end;
+
 {$ENDIF}
 
 initialization
