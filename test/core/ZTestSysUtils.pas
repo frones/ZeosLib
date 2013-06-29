@@ -84,6 +84,7 @@ type
     procedure TestLocalCharsFromUnicode;
     {$ENDIF}
     procedure TestRawToInt;
+    procedure TestUnicodeToInt;
     {$ENDIF}
   end;
 
@@ -754,7 +755,7 @@ var
       I: Integer;
     begin
       for i := 0 to 10000000 do
-        Result := RawToInt(RawByteString('-999999999'));
+        Result := RawToInt(IntToRaw(i));
     end;
 
     function TStrToInt: Integer;
@@ -762,7 +763,7 @@ var
       I: Integer;
     begin
       for i := 0 to 10000000 do
-        Result := StrToInt(RawByteString('-999999999'));
+        Result := StrToInt(IntToStr(i));
     end;
 begin
   Start := GetTickCount;
@@ -782,6 +783,49 @@ begin
 
 end;
 
+procedure TZTestSysUtilsCase.TestUnicodeToInt;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Integer;
+
+    function TRawToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := -20 to 10000000 do
+        Result := UnicodeToInt(IntToUnicode(I));
+    end;
+
+    function TStrToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := -20 to 10000000 do
+        Result :=
+          {$IFDEF UNICODE}
+            StrToInt(IntToStr(I));
+          {$ELSE}
+            StrToInt(String(ZWideString(IntToStr(I))));
+          {$ENDIF}
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToInt VS. StrToInt');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): RawToInt', [High(Integer)]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToInt: %d ms', [Between1, Between2]));
+
+end;
 {$ENDIF}
 
 initialization
