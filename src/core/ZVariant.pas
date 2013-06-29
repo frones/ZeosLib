@@ -1399,15 +1399,15 @@ begin
         vtFloat:
           Result.VInteger := Trunc(Value.VFloat);
         vtString:
-          Result.VInteger := StrToInt64Def(Value.VString, 0);
+          Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         vtAnsiString:
-          Result.VInteger := StrToInt64Def({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VAnsiString), 0);
+          Result.VInteger := RawToInt64Def(Value.VAnsiString, 0);
         vtUTF8String:
-          Result.VInteger := StrToInt64Def({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VUTF8String), 0);
+          Result.VInteger := RawToInt64Def(Value.VUTF8String, 0);
         vtRawByteString:
-          Result.VInteger := StrToInt64Def({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VRawByteString), 0);
+          Result.VInteger := RawToInt64Def(Value.VRawByteString, 0);
         vtUnicodeString:
-          Result.VInteger := StrToInt64Def({$IFNDEF UNICODE}PosEmptyUnicodeStringToASCII7{$ENDIF}(Value.VUnicodeString), 0);
+          Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         vtDateTime:
           Result.VInteger := Trunc(Value.VDateTime);
         vtPointer:
@@ -1643,7 +1643,7 @@ begin
         vtRawByteString:
           Result.VBoolean := StrToBoolEx({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VRawByteString));
         vtUnicodeString:
-          Result.VBoolean := StrToBoolEx({$IFNDEF UNICODE}String{$ENDIF}(Value.VUnicodeString));
+          Result.VBoolean := StrToBoolEx(Value.VUnicodeString);
         vtDateTime:
           Result.VBoolean := Value.VDateTime <> 0;
         else
@@ -1682,15 +1682,15 @@ begin
         vtFloat:
           Result.VInteger := Trunc(Value.VFloat);
         vtString:
-          Result.VInteger := StrToInt64Def(Value.VString, 0);
+          Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         vtAnsiString:
-          Result.VInteger := StrToInt64Def({$IFDEF UNICODE}String{$ENDIF}(Value.VAnsiString), 0);
+          Result.VInteger := RawToInt64Def(Value.VAnsiString, 0);
         vtUTF8String:
-          Result.VInteger := StrToInt64Def({$IFDEF UNICODE}String{$ENDIF}(Value.VUTF8String), 0);
+          Result.VInteger := RawToInt64Def(Value.VUTF8String, 0);
         vtRawByteString:
-          Result.VInteger := StrToInt64Def({$IFDEF UNICODE}String{$ENDIF}(Value.VRawByteString), 0);
+          Result.VInteger := RawToInt64Def(Value.VRawByteString, 0);
         vtUnicodeString:
-          Result.VInteger := StrToInt64Def({$IFNDEF UNICODE}String{$ENDIF}(Value.VUnicodeString), 0);
+          Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         vtDateTime:
           Result.VInteger := Trunc(Value.VDateTime);
         vtPointer:

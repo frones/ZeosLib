@@ -444,6 +444,8 @@ function RawToInt(const Value: RawbyteString): Integer;
 function UnicodeToInt(const Value: ZWideString): Integer;
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer;
+function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
+function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
 
 implementation
 
@@ -1049,12 +1051,15 @@ end;
   @return a converted array of bytes.
 }
 function StrToBytes(const Value: WideString): TByteDynArray;
-var L: Integer;
+var
+  L: Integer;
+  RBS: RawByteString;
 begin
-  L := Length(Value)*2;
+  RBS := RawByteString(Value);
+  L := Length(RBS);
   SetLength(Result, L);
   if Value <> '' then
-    Move(Value[1], Result[0], L)
+    Move(RBS[1], Result[0], L)
 end;
 {**
   Converts a String into an array of bytes.
@@ -2984,17 +2989,6 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-{$IFNDEF UNICODE}
-function UpCase(Ch: WideChar): WideChar;
-begin
-  Result := Ch;
-  case Ch of
-    'a'..'z':
-      Result := WideChar(Word(Ch) and $FFDF);
-  end;
-end;
-{$ENDIF}
-
 {$WARNINGS OFF} //value digits might not be initialized
 function ValLong_JOH_PAS_4_b_unicode(const s; var code: Integer): Longint;
 //fast pascal from John O'Harrow see:
@@ -3003,6 +2997,16 @@ var
   Digit: Integer;
   Neg, Hex, Valid: Boolean;
   P: PWideChar;
+  {$IFNDEF UNICODE}
+  function UpCase(Ch: WideChar): WideChar;
+  begin
+    Result := Ch;
+    case Ch of
+      'a'..'z':
+        Result := WideChar(Word(Ch) and $FFDF);
+    end;
+  end;
+  {$ENDIF}
 begin
   Code := 0;
   P    := @S;
@@ -3090,6 +3094,215 @@ var
   E: Integer;
 begin
   Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S)^, E);
+  if E <> 0 then Result := Default;
+end;
+
+{$WARNINGS OFF} //value digits might not be initialized
+function ValInt64_JOH_PAS_4_b(const s; var code: Integer): Int64;
+//function ValLong_JOH_PAS_4_b(const s; var code: Integer): LongInt;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for Int64
+var
+  Digit: Integer;
+  Neg, Hex, Valid: Boolean;
+  P: PAnsiChar;
+begin
+  Code := 0;
+  P    := @S;
+  if not Assigned(P) then
+    begin
+      Result := 0;
+      inc(Code);
+      Exit;
+    end;
+  Neg   := False;
+  Hex   := False;
+  Valid := False;
+  while P^ = ' ' do
+    Inc(P);
+  if P^ in ['+', '-'] then
+    begin
+      Neg := (P^ = '-');
+      inc(P);
+    end;
+  if P^ = '$' then
+    begin
+      inc(P);
+      Hex := True;
+    end
+  else
+    begin
+      if P^ = '0' then
+        begin
+          inc(P);
+          Valid := True;
+        end;
+      if Upcase(P^) = 'X' then
+        begin
+          Hex := True;
+          inc(P);
+        end;
+    end;
+  Result := 0;
+  if Hex then
+    begin
+      Valid := False;
+      while True do
+        begin
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - Ord('a') + 10;
+            'A'..'F': Digit := Ord(P^) - Ord('A') + 10;
+            else Break;
+          end;
+          if (Result < 0) or (Result > (High(Int64) shr 3)) then
+            Break;
+          Result := (Result shl 4) + Digit;
+          Valid := True;
+          inc(P);
+        end;
+    end
+  else
+    begin
+      while True do
+        begin
+          if not (P^ in ['0'..'9']) then
+            break;
+          if Result > (High(Int64) div 10) then
+            break;
+          Result := (Result * 10) + Ord(P^) - Ord('0');
+          Valid := True;
+          inc(P);
+        end;
+      if (Result <> 0) and (Neg <> (Result < 0)) then
+          begin {Possible Overflow}
+            Dec(P);
+            Valid := False;
+          end;
+    end;
+  if Neg then
+    Result := -Result;
+  if (not Valid) or (P^ <> #0) then
+    Code := P-@S+1;
+end;
+{$WARNINGS ON}
+
+function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
+var
+  E: Integer;
+begin
+  Result := ValInt64_JOH_PAS_4_b(Pointer(S)^, E);
+  if E <> 0 then Result := Default;
+end;
+
+
+{$WARNINGS OFF} //value digits might not be initialized
+function ValInt64_JOH_PAS_4_b_unicode(const s; var code: Integer): Int64;
+//function ValLong_JOH_PAS_4_b(const s; var code: Integer): LongInt;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for Int64
+var
+  Digit: Integer;
+  Neg, Hex, Valid: Boolean;
+  P: PWideChar;
+  {$IFNDEF UNICODE}
+  function UpCase(Ch: WideChar): WideChar;
+  begin
+    Result := Ch;
+    case Ch of
+      'a'..'z':
+        Result := WideChar(Word(Ch) and $FFDF);
+    end;
+  end;
+  {$ENDIF}
+begin
+  Code := 0;
+  P    := @S;
+  if not Assigned(P) then
+    begin
+      Result := 0;
+      inc(Code);
+      Exit;
+    end;
+  Neg   := False;
+  Hex   := False;
+  Valid := False;
+  while P^ = ' ' do
+    Inc(P);
+  if CharInSet(P^, ['+', '-']) then
+    begin
+      Neg := (P^ = '-');
+      inc(P);
+    end;
+  if P^ = '$' then
+    begin
+      inc(P);
+      Hex := True;
+    end
+  else
+    begin
+      if P^ = '0' then
+        begin
+          inc(P);
+          Valid := True;
+        end;
+      if Upcase(P^) = 'X' then
+        begin
+          Hex := True;
+          inc(P);
+        end;
+    end;
+  Result := 0;
+  if Hex then
+    begin
+      Valid := False;
+      while True do
+        begin
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - Ord('a') + 10;
+            'A'..'F': Digit := Ord(P^) - Ord('A') + 10;
+            else Break;
+          end;
+          if (Result < 0) or (Result > (High(Int64) shr 3)) then
+            Break;
+          Result := (Result shl 4) + Digit;
+          Valid := True;
+          inc(P);
+        end;
+    end
+  else
+    begin
+      while True do
+        begin
+          if not CharInSet(P^, ['0'..'9']) then
+            break;
+          if Result > (High(Int64) div 10) then
+            break;
+          Result := (Result * 10) + Ord(P^) - Ord('0');
+          Valid := True;
+          inc(P);
+        end;
+      if (Result <> 0) and (Neg <> (Result < 0)) then
+          begin {Possible Overflow}
+            Dec(P);
+            Valid := False;
+          end;
+    end;
+  if Neg then
+    Result := -Result;
+  if (not Valid) or (P^ <> #0) then
+    Code := P-@S+1;
+end;
+{$WARNINGS ON}
+
+function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
+var
+  E: Integer;
+begin
+  Result := ValInt64_JOH_PAS_4_b_unicode(Pointer(S)^, E);
   if E <> 0 then Result := Default;
 end;
 

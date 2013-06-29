@@ -85,8 +85,10 @@ type
     {$ENDIF}
     procedure TestRawToInt;
     procedure TestRawToIntDef;
+    procedure TestRawToInt64Def;
     procedure TestUnicodeToInt;
     procedure TestUnicodeToIntDef;
+    procedure TestUnicodeToInt64Def;
     {$ENDIF}
   end;
 
@@ -826,6 +828,51 @@ begin
 
 end;
 
+procedure TZTestSysUtilsCase.TestRawToInt64Def;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Int64;
+
+    function TRawToInt: Int64;
+    var
+      I: Integer;
+    begin
+      CheckEquals(Low(Int64), RawToInt64Def(IntToRaw(Low(Int64)), 0), 'Results of RawToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), RawToInt64Def(IntToRaw(High(Int64)), 0), 'Results of RawToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := RawToInt64Def(IntToRaw(Int64(i)*Int64(i)), 1);
+      Result := Result + RawToInt64Def('test', -999);
+    end;
+
+    function TStrToInt: Int64;
+    var
+      I: Integer;
+    begin
+      CheckEquals(Low(Int64), StrToInt64Def(IntToStr(Low(Int64)), 0), 'Results of RawToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(IntToStr(High(Int64)), 0), 'Results of RawToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := StrToInt64Def(IntToStr(Int64(i)*Int64(i)), 1);
+      Result := Result + StrToInt64Def('test', -999);
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToInt64Def VS. StrToInt64Def');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): RawToInt64Def', [10000000]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
+
+end;
+
 procedure TZTestSysUtilsCase.TestUnicodeToInt;
 var
   Between1, Between2: Cardinal;
@@ -920,6 +967,58 @@ begin
 
 end;
 
+procedure TZTestSysUtilsCase.TestUnicodeToInt64Def;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Int64;
+
+    function TRawToInt: Int64;
+    var
+      I: Integer;
+    begin
+      CheckEquals(Low(Int64), UnicodeToInt64Def(IntToRaw(Low(Int64)), 0), 'Results of UnicodeToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), UnicodeToInt64Def(IntToRaw(High(Int64)), 0), 'Results of UnicodeToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := UnicodeToInt64Def(IntToRaw(Int64(i)*Int64(i)), 1);
+      Result := Result + UnicodeToInt64Def('test', -999);
+    end;
+
+    function TStrToInt: Int64;
+    var
+      I: Integer;
+    begin
+      {$IFDEF UNICODE}
+      CheckEquals(Low(Int64), StrToInt64Def(IntToStr(Low(Int64)), 0), 'Results of StrToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(IntToStr(High(Int64)), 0), 'Results of StrToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := StrToInt64Def(IntToStr(Int64(i)*Int64(i)), 1);
+      Result := Result + StrToInt64Def('test', -999);
+      {$ELSE}
+      CheckEquals(Low(Int64), StrToInt64Def(String(ZWideString(IntToStr(Low(Int64)))), 0), 'Results of StrToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(String(ZWideString(IntToStr(High(Int64)))), 0), 'Results of StrToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := StrToInt64Def(String(ZWideString(IntToStr(Int64(i)*Int64(i)))), 1);
+      Result := Result + StrToInt64Def('test', -999);
+      {$ENDif}
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToInt64Def VS. StrToInt64Def');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): UnicodeToInt64Def', [10000000]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
+
+end;
 {$ENDIF}
 
 initialization
