@@ -84,6 +84,7 @@ type
     procedure TestLocalCharsFromUnicode;
     {$ENDIF}
     procedure TestRawToInt;
+    procedure TestRawToIntDef;
     procedure TestUnicodeToInt;
     {$ENDIF}
   end;
@@ -778,8 +779,49 @@ begin
   CheckEquals(s1, s2, 'Results of RawToInt VS. StrToInt');
 
   system.WriteLn('');
-  system.WriteLn(Format('Benchmarking(x %d): RawToInt', [High(Integer)]));
+  system.WriteLn(Format('Benchmarking(x %d): RawToInt', [S1]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToInt: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestRawToIntDef;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Integer;
+
+    function TRawToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+        Result := RawToIntDef(IntToRaw(i), 1);
+      Result := Result + RawToIntDef('test', -999);
+    end;
+
+    function TStrToInt: Integer;
+    var
+      I: Integer;
+    begin
+      for i := 0 to 10000000 do
+        Result := StrToIntDef(IntToStr(i), 1);
+      Result := Result + StrToIntDef('test', -999);
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToIntDef VS. StrToIntDef');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): RawToIntDef', [10000000]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
 
 end;
 
@@ -819,10 +861,10 @@ begin
   Stop := GetTickCount;
   Between2 := Stop - Start;
 
-  CheckEquals(s1, s2, 'Results of RawToInt VS. StrToInt');
+  CheckEquals(s1, s2, 'Results of UnicodeToInt VS. StrToInt');
 
   system.WriteLn('');
-  system.WriteLn(Format('Benchmarking(x %d): RawToInt', [High(Integer)]));
+  system.WriteLn(Format('Benchmarking(x %d): UnicodeToInt', [High(Integer)]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToInt: %d ms', [Between1, Between2]));
 
 end;
