@@ -2422,10 +2422,10 @@ begin
         SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
           or (TempStr = 'YES') or (TempStr = 'TRUE'));
       end;
-    stByte: SetByte(ColumnIndex, StrToIntDef(Value, 0));
-    stShort: SetShort(ColumnIndex, StrToIntDef(Value, 0));
-    stInteger: SetInt(ColumnIndex, StrToIntDef(Value, 0));
-    stLong: SetLong(ColumnIndex, StrToInt64Def(Value, 0));
+    stByte: SetByte(ColumnIndex, {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0));
+    stShort: SetShort(ColumnIndex, {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0));
+    stInteger: SetInt(ColumnIndex, {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0));
+    stLong: SetLong(ColumnIndex, {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0));
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
@@ -2517,7 +2517,7 @@ begin
     stByte: SetByte(ColumnIndex, RawToIntDef(Value, 0));
     stShort: SetShort(ColumnIndex, RawToIntDef(Value, 0));
     stInteger: SetInt(ColumnIndex, RawToIntDef(Value, 0));
-    stLong: SetLong(ColumnIndex, StrToInt64Def({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value), 0));
+    stLong: SetLong(ColumnIndex, RawToInt64Def(Value, 0));
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
@@ -2565,10 +2565,12 @@ begin
         SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
           or (TempStr = 'YES') or (TempStr = 'TRUE'));
       end;
-    stByte: SetByte(ColumnIndex, StrToIntDef(Value, 0));
-    stShort: SetShort(ColumnIndex, StrToIntDef(Value, 0));
-    stInteger: SetInt(ColumnIndex, StrToIntDef(Value, 0));
-    stLong: SetLong(ColumnIndex, StrToInt64Def(Value, 0));
+    {$ENDIF}
+    stByte: SetByte(ColumnIndex, UnicodeToIntDef(Value, 0));
+    stShort: SetShort(ColumnIndex, UnicodeToIntDef(Value, 0));
+    stInteger: SetInt(ColumnIndex, UnicodeToIntDef(Value, 0));
+    stLong: SetLong(ColumnIndex, UnicodeToInt64Def(Value, 0));
+    {$IFDEF UNICODE}
     stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));

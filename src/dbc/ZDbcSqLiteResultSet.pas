@@ -490,7 +490,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := StrToInt64Def(PosEmptyASCII7ToString(InternalGetString(ColumnIndex)), 0);
+  Result := RawToInt64Def(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
