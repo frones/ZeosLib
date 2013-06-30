@@ -430,7 +430,8 @@ var
 implementation
 
 uses
-  Variants, Math, ZMessages, ZEncoding;
+  Variants, Math, ZMessages, ZEncoding
+  {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}, AnsiStrings{$ENDIF};
 
 { TZDefaultVariantManager }
 
@@ -746,13 +747,13 @@ begin
   String typed needs to be reviewed for a more optimal way.
   Simple ByteCompare instead of functions which are codepage dependent should be faster, thought. }
     vtString:
-      Result := AnsiStrComp(PChar(Value1.VString), PChar(GetAsString(Value2)));
+      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PChar(Value1.VString), PChar(GetAsString(Value2)));
     vtAnsiString:
-      Result := AnsiStrComp(PAnsiChar(Value1.VAnsiString), PAnsiChar(GetAsAnsiString(Value2)));
+      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PAnsiChar(Value1.VAnsiString), PAnsiChar(GetAsAnsiString(Value2)));
     vtUTF8String:
-      Result := AnsiStrComp(PAnsiChar(GetAsAnsiString(Value1)), PAnsiChar(GetAsAnsiString(Value2)));
+      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PAnsiChar(GetAsAnsiString(Value1)), PAnsiChar(GetAsAnsiString(Value2)));
     vtRawByteString:
-      Result := AnsiStrComp(PAnsiChar(GetAsAnsiString(Value1)), PAnsiChar(GetAsAnsiString(Value2)));
+      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PAnsiChar(GetAsAnsiString(Value1)), PAnsiChar(GetAsAnsiString(Value2)));
     vtUnicodeString:
 {$IFNDEF FPC}
    {$IFDEF UNICODE}

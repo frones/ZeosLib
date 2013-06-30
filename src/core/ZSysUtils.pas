@@ -406,7 +406,7 @@ procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByt
 
 implementation
 
-uses ZMatchPattern, StrUtils;
+uses ZMatchPattern, StrUtils {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Determines a position of a first delimiter.
@@ -1452,8 +1452,8 @@ begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
 
-  if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
-    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+  if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
+    if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
       //No DecimalSeparator and no ThousandSeparator
       Result := StrToFloat(String(Value))
     else
@@ -1464,12 +1464,12 @@ begin
       Result := StrToFloat(String(Value));
     end
   else
-    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+    if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
       //default DecimalSepartor
       Result := StrToFloat(String(Value))
     else
-      if StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
-        StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
+      if {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen({$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
+          {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen({$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
           //default DecimalSepartor and ThousandSeparator
         Result := StrToFloat(String(Value))
       else
@@ -1497,7 +1497,7 @@ end;
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
 begin
   if Assigned(Src) then
-    ZSetString(Src, StrLen(Src), Dest)
+    ZSetString(Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src), Dest)
   else
     Dest := '';
 end;
@@ -1516,7 +1516,7 @@ end;
 procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String);
 begin
   if Assigned(Src) then
-    ZSetString(Src, StrLen(Src), Dest)
+    ZSetString(Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src), Dest)
   else
     Dest := '';
 end;
@@ -1547,7 +1547,7 @@ end;
 procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString);
 begin
   if Assigned(Src) then
-    ZSetString(Src, StrLen(Src), Dest)
+    ZSetString(Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src), Dest)
   else
     Dest := '';
 end;
