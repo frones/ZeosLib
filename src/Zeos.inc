@@ -250,7 +250,7 @@
   {$DEFINE WITH_ANSISTRCOMP_DEPRECATED} //AnsiStrComp is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRDISPOSE_DEPRECATED} //StrDispose is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRNEW_DEPRECATED} //StrNew is deprecated moved to AnsiStrings
-  {$DEFINE WITH_STRLCOPY_DEPRECATED} //StrNew is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRCOPY_DEPRECATED} //StrCopy is deprecated moved to AnsiStrings
 {$ENDIF}
 
 
