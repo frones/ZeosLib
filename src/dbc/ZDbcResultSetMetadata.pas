@@ -594,6 +594,7 @@ function TZAbstractResultSetMetadata.ReadColumnByName(FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
 var
   TableColumns: IZResultSet;
+  tempColType: TZSQLType;
 begin
   Result := False;
   TableColumns := GetTableColumns(TableRef);
@@ -627,7 +628,19 @@ begin
 //If the returned column information is null then the value assigned during
 //the resultset.open will be kept
   if not TableColumns.IsNull(5) then
-    ColumnInfo.ColumnType := TZSQLType(TableColumns.GetInt(5));
+  begin
+    //since Pointer referencing by RowAccessor we've a pointer and GetBlob
+    //raises an exception if the pointer is a reference to PPAnsiChar or
+    //ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
+    //assume a IZLob-Pointer. So let's prevent this case and check for
+    //stByte, stString, stUnicoeString first. If this type is returned from the
+    //ResultSet-Metadata we do NOT overwrite the column-type
+    //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
+    tempColType := TZSQLType(TableColumns.GetInt(5));
+    if not ( tempColType in [stBinaryStream, stAsciiStream, stUnicodeStream] )
+      and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] ) then
+    ColumnInfo.ColumnType := tempColType;
+  end;
   if not TableColumns.IsNull(11) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(11));
   if not TableColumns.IsNull(19) then
