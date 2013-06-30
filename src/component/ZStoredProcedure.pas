@@ -215,10 +215,6 @@ var
   Param: TParam;
   FCallableStatement: IZCallableStatement;
   TempBlob: IZBlob;
-  {$IFDEF WITH_ASBYTES}
-  TempBytes: TByteDynArray;
-  Bts: TBytes;
-  {$ENDIF}
 begin
   if Assigned(Statement) then
     Statement.QueryInterface(IZCallableStatement, FCallableStatement);
