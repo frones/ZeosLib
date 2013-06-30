@@ -637,8 +637,8 @@ begin
     //ResultSet-Metadata we do NOT overwrite the column-type
     //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
     tempColType := TZSQLType(TableColumns.GetInt(5));
-    if not ( tempColType in [stBinaryStream, stAsciiStream, stUnicodeStream] )
-      and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] ) then
+    if not (( tempColType in [stBinaryStream, stAsciiStream, stUnicodeStream] )
+      and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] )) then
     ColumnInfo.ColumnType := tempColType;
   end;
   if not TableColumns.IsNull(11) then
