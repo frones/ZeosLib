@@ -376,7 +376,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): String;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -458,7 +458,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): PAnsiChar;
+    function ErrorString(code: Integer): String;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -632,7 +632,7 @@ begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLiteBaseDriver.ErrorString(code: Integer): PAnsiChar;
+function TZSQLiteBaseDriver.ErrorString(code: Integer): String;
 begin
    case code of
     SQLITE_OK:         Result := 'not an error';

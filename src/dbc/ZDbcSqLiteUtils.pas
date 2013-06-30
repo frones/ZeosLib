@@ -256,7 +256,7 @@ begin
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
   begin
     if Error = '' then
-      Error := String(StrPas(PlainDriver.ErrorString(ErrorCode)));
+      Error := PlainDriver.ErrorString(ErrorCode);
 
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, Error);
