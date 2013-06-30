@@ -2761,7 +2761,7 @@ begin
 end;
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValLong_JOH_IA32_4_b(const s; var code: Integer): Longint;
+function ValLong_JOH_IA32_8_a(const s: RawByteString; var code: Integer): Longint;
 //fast asm by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 asm
@@ -2787,14 +2787,14 @@ asm
   cmp   cl, '0'
   jle   @@CheckFirstChar
 @@CheckAlpha:
-  test  cl, $87
+  test  cl, not 'x'
   jz    @@CheckX            {May be 'x' or 'X'}
 @@NumLoop:
-  sub   ecx, '0'
-  cmp   ecx, 9
+  sub   cl, '0'
+  cmp   cl, 9
   ja    @@NumDone           {Not '0'..'9'}
   cmp   eax, MaxInt/10
-  ja    @@NumDone
+  ja    @@SetSign
   lea   eax, [eax*4+eax]
   lea   eax, [eax*2+ecx]    {Result = Result * 10 + Digit}
   inc   esi
@@ -2806,15 +2806,15 @@ asm
   jb    @@SetSign           {No Overflow}
   jne   @@Overflow
   test  ebx, ebx            {Sign Flag}
-  js    @@Setsign           {Result is Valid (-MaxInt-1)}
+  js    @@SetSign           {Result is Valid (-MaxInt-1)}
 @@Overflow:
   dec   esi
   mov   bl, 0               {Valid := False}
   jmp   @@SetSign
 @@CheckFirstChar:
-  cmp   cl, '-'
-  je    @@PlusMinus
   cmp   cl, '+'
+  je    @@PlusMinus
+  cmp   cl, '-'
   jne   @@SignSet
 @@PlusMinus:                {Starts with '+' or '-'}
   mov   bl, '+'+1
@@ -2841,33 +2841,32 @@ asm
 @@HexLoop:
   inc   esi
   movzx ecx, [esi]
+  cmp   cl, 'a'
+  jb    @@CheckNum
+  sub   cl, 'a'-'A'         {'a' > 'A'}
+@@CheckNum:
   sub   cl, '0'
   cmp   cl, 9
-  jna   @@CheckRange        {'0'..'9'}
-  mov   bh, cl              {Check for Valid Hex Character}
-  sub   bh, 'a'-'0'         {'a' -> 0}
-  cmp   bh, 'z'-'a'+1       {Carry if 'a'..'z'}
-  sbb   bh, bh              {=$FF if 'a'..'z' else $00}
-  and   bh, $20             {=$20 if 'a'..'z' else $00}
-  sub   cl, bh              {'a'..'z' -> 'A'..'Z'}
-  sub   cl, 'A'-'0'-10      {'A'..'Z' -> 10..15}
-  cmp   cl, 15
-  ja    @@NotHex            {Not Hex Character}
-@@CheckRange:
+  jna   @@CheckHexRange     {'0'..'9'}
+  sub   cl, 'A'-'0'
+  cmp   cl, 5               {Valid Hex Character?}
+  ja    @@NotHex            {No, Invalid}
+  add   cl, 10              {Yes, Adjust Digit}
+@@CheckHexRange:
   cmp   eax, MaxInt/8       {High(ULONG) div 16}
-  ja    @@SetSign
+  ja    @@SetSign           {Overflow}
   shl   eax, 4              {Result = Result * 16}
   mov   bl, 1               {Valid := True}
   add   eax, ecx
   jmp   @@HexLoop
 @@NotHex:
-  add   cl, 'A'-'0'-10      {Restore Char-'0'}
+  add   cl, 'A'-'0'         {Restore Char-'0'}
 @@SetSign:
   mov   ch, bl              {Save Valid Flag}
   sar   ebx, 31             {Set Each Bit to Top Bit}
+  dec   ch                  {0 if Valid, -1 if Invalid}
   xor   eax, ebx            {Negate Result if Necessary}
   sub   eax, ebx
-  dec   ch                  {0 if Valid, -1 if Invalid}
   or    cl, ch              {If Invalid, Force CL = -1}
   cmp   cl, -'0'            {Last Character = #0?}
   jne   @@Error             {Not Valid or Not End of String}
@@ -2885,7 +2884,7 @@ asm
   jmp   @@Finished          {Exit Setting Error Code}
 end;
 {$ELSE}
-{$WARNINGS OFF} //value digits might not be initialized
+{$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
 function ValLong_JOH_PAS_4_b(const s; var code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
@@ -2982,7 +2981,7 @@ var
 begin
 //  Val(S, Result, E); {when system._ValLong updated}
   {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValLong_JOH_IA32_4_b(Pointer(S)^, E);
+  Result := ValLong_JOH_IA32_8_a(S, E);
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(Pointer(S)^, E);
   {$IFEND}
