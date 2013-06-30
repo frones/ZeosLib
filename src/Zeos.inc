@@ -248,6 +248,9 @@
   {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings
   {$DEFINE WITH_TOBJECTLIST_INLINE} //TObjectList.Remove, add ... are inlined 	need System.Types
   {$DEFINE WITH_ANSISTRCOMP_DEPRECATED} //AnsiStrComp is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRDISPOSE_DEPRECATED} //StrDispose is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRNEW_DEPRECATED} //StrNew is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRLCOPY_DEPRECATED} //StrNew is deprecated moved to AnsiStrings
 {$ENDIF}
 
 
