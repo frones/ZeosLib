@@ -2318,7 +2318,6 @@ function TZInterbase6DatabaseMetadata.UncachedGetExportedKeys(const Catalog: str
 var
   SQL: string;
   LTable: string;
-  KEY_SEQ: SmallInt;
 begin
     Result:=inherited UncachedGetExportedKeys(Catalog, Schema, Table);
 
@@ -2350,10 +2349,8 @@ begin
 
     with GetConnection.CreateStatement.ExecuteQuery(SQL) do
     begin
-      KEY_SEQ := 0;
       while Next do
       begin
-        Inc(KEY_SEQ);
         Result.MoveToInsertRow;
         Result.UpdateNull(1); //PKTABLE_CAT
         Result.UpdateNull(2); //PKTABLE_SCHEM
@@ -2363,7 +2360,7 @@ begin
         Result.UpdateNull(6); //FKTABLE_SCHEM'
         Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
         Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
-        Result.UpdateShort(9, KEY_SEQ); //KEY_SEQ
+        Result.UpdateInt(9, GetInt(5) + 1); //KEY_SEQ
 
         if GetString(6) = 'RESTRICT' then //UPDATE_RULE
           Result.UpdateInt(10, Ord(ikRestrict))
@@ -2386,6 +2383,7 @@ begin
           Result.UpdateInt(11, Ord(ikCascade))
         else if GetString(7) = 'SET NULL' then
           Result.UpdateInt(11, Ord(ikSetNull));
+
         Result.UpdateString(12, GetString(8)); //FK_NAME
         Result.UpdateString(13, GetString(9)); //PK_NAME
         Result.UpdateNull(14); //DEFERABILITY
