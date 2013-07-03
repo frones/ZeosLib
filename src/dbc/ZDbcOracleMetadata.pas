@@ -1424,7 +1424,8 @@ var
   function CheckSchema: Boolean;
   begin
     with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_OBJECTS WHERE OWNER = '#39+TmpSchemaPattern+#39) do
-    begin 
+    begin
+      Next;
       Result := GetInt(1) > 0;
       Close;
     end;
