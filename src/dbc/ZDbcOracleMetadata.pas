@@ -1517,7 +1517,7 @@ begin
         sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(4));
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
-      Result.UpdateNull(2);//Result.UpdateString(2, GetString(2));
+      Result.UpdateString(2, GetString(2));
       Result.UpdateString(3, sName); //PROCEDURE_NAME
       Result.UpdateString(4, GetString(5)); //PROCGEDURE_OVERLOAD
       Result.UpdateNull(5);
