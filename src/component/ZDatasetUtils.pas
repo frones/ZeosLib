@@ -1620,9 +1620,7 @@ begin
                 ObjectName := SL.Strings[1];
               end
               else
-              begin
                 ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
-              end;
           end;
         3:
           if SupportsCatalogs then
