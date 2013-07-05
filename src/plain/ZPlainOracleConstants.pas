@@ -1021,7 +1021,7 @@ type
         const locp: POCILobLocator; csfrm: pub1): sword; cdecl;
 
   TOCILobCharSetId = function( envhp: POCIEnv; errhp: POCIError;
-        const locp: POCILobLocator; csid: pub2): sword;
+        const locp: POCILobLocator; csid: pub2): sword; cdecl;
 
   TOCILobGetLength = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator; var lenp: ub4): sword; cdecl;
