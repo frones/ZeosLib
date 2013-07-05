@@ -480,7 +480,8 @@ implementation
 uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
+  {$IFDEF WITh_UNITANSISRINGS}, AnsiStrings{$ENDIF};
 
 { EZDatabaseError }
 
@@ -1324,7 +1325,7 @@ begin
           end;
         ftString:
           begin
-            StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
+            {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
           end;
         {$IFDEF WITH_FTDATASETSUPPORT}
@@ -1386,6 +1387,7 @@ var
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
   Curr: Currency;
+  L: Cardinal;
   {$IFNDEF UNICODE}
   Temp: String;
   {$ENDIF}
@@ -1432,8 +1434,9 @@ begin
           RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
           {$ELSE}
           begin
-            SetLength(Temp, StrLen(PAnsiChar(Buffer)));
-            Move(PAnsiChar(Buffer)^, PAnsiChar(Temp)^,StrLen(PAnsiChar(Buffer)));
+            L := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(Buffer));
+            SetLength(Temp, L);
+            Move(PAnsiChar(Buffer)^, PAnsiChar(Temp)^, L);
             RowAccessor.SetString(ColumnIndex, Temp);
           end;
           {$ENDIF}
