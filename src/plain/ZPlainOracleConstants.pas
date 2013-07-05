@@ -1017,6 +1017,12 @@ type
   TOCILobFreeTemporary = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator): sword; cdecl;
 
+  TOCILobCharSetForm = function ( envhp: POCIEnv; errhp: POCIError;
+        const locp: POCILobLocator; csfrm: pub1): sword; cdecl;
+
+  TOCILobCharSetId = function( envhp: POCIEnv; errhp: POCIError;
+        const locp: POCILobLocator; csid: pub2): sword;
+
   TOCILobGetLength = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator; var lenp: ub4): sword; cdecl;
 
@@ -7728,6 +7734,8 @@ type
     OCILobFileSetName:      TOCILobFileSetName;
     OCILobFlushBuffer:      TOCILobFlushBuffer;
     OCILobFreeTemporary:    TOCILobFreeTemporary;
+    OCILobCharSetForm:      TOCILobCharSetForm;
+    OCILobCharSetId:        TOCILobCharSetId;
     OCILobGetLength:        TOCILobGetLength;
     OCILobIsOpen:           TOCILobIsOpen;
     OCILobIsTemporary:      TOCILobIsTemporary;
