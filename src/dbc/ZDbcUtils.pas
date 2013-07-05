@@ -123,22 +123,6 @@ function DefineStatementParameter(Statement: IZStatement; const ParamName: strin
   const Default: string): string;
 
 {**
-  AnsiQuotedStr or NullText
-  @param S the string
-  @param NullText the "NULL"-Text
-  @param QuoteChar the char that is used for quotation
-  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
-}
-function AQSNullText(const Value, NullText: string; QuoteChar: Char = ''''): string;
-
-{**
-  AnsiQuotedStr or Null
-  @param S the string
-  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
-}
-function AQSNull(const Value: string; QuoteChar: Char = ''''): string;
-
-{**
   ToLikeString returns the given string or if the string is empty it returns '%'
   @param Value the string
   @return given Value or '%'
@@ -413,32 +397,6 @@ begin
     Result := Statement.GetConnection.GetParameters.Values[ParamName];
   if Result = '' then
     Result := Default;
-end;
-
-{**
-  AnsiQuotedStr or NullText
-  @param S the string
-  @param NullText the "NULL"-Text
-  @param QuoteChar the char that is used for quotation
-  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
-}
-function AQSNullText(const Value, NullText: string; QuoteChar: Char): string;
-begin
-  if Value = '' then
-    Result := NullText
-  else
-    Result := AnsiQuotedStr(Value, QuoteChar);
-end;
-
-{**
-  AnsiQuotedStr or Null
-  @param S the string
-  @param QuoteChar the char that is used for quotation
-  @return 'null' if S is '', otherwise AnsiQuotedStr(S)
-}
-function AQSNull(const Value: string; QuoteChar: Char): string;
-begin
-  Result := AQSNullText(Value, 'null', QuoteChar);
 end;
 
 {**

@@ -39,8 +39,7 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
-
-// Compilation directives for Lazarus
+ // Compilation directives for Lazarus
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
 {$ELSE}
@@ -245,6 +244,7 @@
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
   {$DEFINE WITH_FASTCODE_INTTOSTR}      //using fastcode StrToInt implementations of http://fastcode.sourceforge.net/
+  {$DEFINE WITH_BUFFERS_IS_TRECBUF}
 {$ENDIF}
 
 

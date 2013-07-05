@@ -558,7 +558,8 @@ type
 
     function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): RawByteString;
-    function DecodeBYTEA(const value: RawByteString; Handle: PZPostgreSQLConnect): RawByteString;
+    function DecodeBYTEA(const value: RawByteString; const Is_bytea_output_hex: Boolean;
+      Handle: PZPostgreSQLConnect): RawByteString;
     function SupportsEncodeBYTEA: Boolean;
     function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
     function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
@@ -698,7 +699,7 @@ type
 
     function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): RawByteString;
-    function DecodeBYTEA(const value: RawByteString;
+    function DecodeBYTEA(const value: RawByteString; const Is_bytea_output_hex: Boolean;
       Handle: PZPostgreSQLConnect): RawByteString;
 
     function SupportsEncodeBYTEA: Boolean;
@@ -1090,14 +1091,14 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: RawByteString;
-  Handle: PZPostgreSQLConnect): RawByteString;
+  const Is_bytea_output_hex: Boolean; Handle: PZPostgreSQLConnect): RawByteString;
 var
   decoded: PAnsiChar;
   len: Longword;
   L, Xpos: Integer;
 begin
   Result := ''; //speeds up SetLength *2
-  if ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) then
+  if ( Is_bytea_output_hex ) then
   begin
     Xpos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiPos('x', Value); //get pos of 'x'
     L := (Length(value)-Xpos) div 2;
@@ -1156,11 +1157,8 @@ begin
       encoded := POSTGRESQL_API.PQescapeBytea(PAnsiChar(value),leng,@len);
     SetLength(result, len -1); //removes the #0 byte
 
-    {$IFDEF DELPHI18_UP}
-    SysUtils.StrCopy(PAnsiChar(result), encoded);
-    {$ELSE}
-    StrCopy(PAnsiChar(result), encoded);
-    {$ENDIF}
+    {$IFDEF DELPHI18_UP}SysUtils.{$ENDIF}StrLCopy(PAnsiChar(result), encoded, len - 1);
+    
     POSTGRESQL_API.PQFreemem(encoded);
     if Quoted then
       result := ''''+result+'''';

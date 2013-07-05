@@ -94,6 +94,7 @@ type
     procedure Test1043252;
     procedure TestMantis240;
     procedure TestMantis229;
+    procedure TestLobTypeCast;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -865,6 +866,25 @@ begin
   TestMantis229_AsString;
 end;
 
+//since Pointer referencing by RowAccessor we've a pointer and GetBlob
+//raises an exception if the pointer is a reference to PPAnsiChar or
+//ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
+//assume a IZLob-Pointer. So let's prevent this case and check for
+//stByte, stString, stUnicoeString first. If this type is returned from the
+//ResultSet-Metadata we do NOT overwrite the column-type
+//f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
+procedure TZTestCompPostgreSQLBugReport.TestLobTypeCast;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  Query.SQL.Text := 'select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings';
+  Query.Open;
+  CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(Query.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
+  Query.Close;
+  Query.Free;
+end;
 { TZTestCompPostgreSQLBugReportMBCs }
 function TZTestCompPostgreSQLBugReportMBCs.GetSupportedProtocols: string;
 begin

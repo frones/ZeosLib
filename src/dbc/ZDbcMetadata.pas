@@ -126,6 +126,7 @@ type
     function StripEscape(const Pattern: string): string;
     function HasNoWildcards(const Pattern: string): boolean;
   protected
+    FIC: IZIdentifierConvertor;
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
     function EscapeString(const S: string): string; virtual;
@@ -1772,6 +1773,7 @@ constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection as IZConnection);
+  FIC := Self.GetIdentifierConvertor;
   FConnection := Pointer(Connection as IZConnection);
   FUrl := Url;
   FCachedResultSets := TZHashMap.Create;
@@ -1865,6 +1867,7 @@ end;
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
+  FIC := nil;
   FUrl := nil;
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
