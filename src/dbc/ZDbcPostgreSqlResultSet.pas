@@ -622,7 +622,7 @@ begin
 
   Connection := Statement.GetConnection;
   if (GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream)
-    and (Statement.GetConnection as IZPostgreSQLConnection).IsOidAsBlob then
+    and (Connection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
     if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
       BlobOid := StrToIntDef(String(InternalGetString(ColumnIndex)), 0)
@@ -639,7 +639,8 @@ begin
       try
         case GetMetadata.GetColumnType(ColumnIndex) of
           stBinaryStream:
-            Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex), Self.FHandle));
+            Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex),
+              (Connection as IZPostgreSQLConnection).Is_bytea_output_hex, Self.FHandle));
           stAsciiStream:
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
           else

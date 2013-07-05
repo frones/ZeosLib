@@ -88,7 +88,6 @@ type
     procedure TestMetadataGetVersionColumns;
     procedure TestMetadataGetPrimaryKeys;
     procedure TestMetadataGetImportedKeys;
-    procedure TestMetadataGetExportedKeys;
     procedure TestMetadataGetCrossReference;
     procedure TestMetadataGetIndexInfo;
     procedure TestMetadataGetProcedures;
@@ -325,37 +324,6 @@ begin
   CheckEquals(12, Resultset.FindColumn('FK_NAME'));
   CheckEquals(13, Resultset.FindColumn('PK_NAME'));
   CheckEquals(14, Resultset.FindColumn('DEFERRABILITY'));
-  ResultSet.Close;
-end;
-
-procedure TZASATestDbcMetadata.TestMetadataGetExportedKeys;
-  procedure CheckExportedKey(PKTable, PKColumn, FKTable, FKColumn: string; KeySeq, UpdateRule, DeleteRule: Integer);
-  begin
-    CheckEquals(Catalog, Resultset.GetStringByName('PKTABLE_CAT'));
-    CheckEquals(Schema, Resultset.GetStringByName('PKTABLE_SCHEM'));
-    CheckEquals(PKTable, UpperCase(Resultset.GetStringByName('PKTABLE_NAME')));
-    CheckEquals(PKColumn, UpperCase(Resultset.GetStringByName('PKCOLUMN_NAME')));
-    CheckEquals(Catalog, Resultset.GetStringByName('FKTABLE_CAT'));
-    CheckEquals(Schema, Resultset.GetStringByName('FKTABLE_SCHEM'));
-    CheckEquals(FKTable, UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
-    CheckEquals(FKColumn, UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
-    CheckEquals(KeySeq, Resultset.GetShortByName('KEY_SEQ'));
-    CheckEquals(UpdateRule, Resultset.GetShortByName('UPDATE_RULE'));
-    CheckEquals(DeleteRule, Resultset.GetShortByName('DELETE_RULE'));
-    CheckEquals(12, Resultset.FindColumn('FK_NAME'));
-    CheckEquals(13, Resultset.FindColumn('PK_NAME'));
-    CheckEquals(14, Resultset.FindColumn('DEFERRABILITY'));
-  end;
-begin
-  ResultSet := MD.GetExportedKeys(Catalog, Schema, 'DEPARTMENT');
-  PrintResultSet(ResultSet, False);
-  CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
-  CheckExportedKey('DEPARTMENT', 'DEP_ID', 'CARGO', 'C_DEP_ID', 1, 1, 1);
-  CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
-  CheckExportedKey('DEPARTMENT', 'DEP_ID', 'EQUIPMENT2', 'DEP_ID', 1, 1, 1);
-  //CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
-  //CheckExportedKey('DEPARTMENT', 'DEP_ID', 'PEOPLE', 'P_DEP_ID', 1, 1, 1);
-  //CheckEquals(False, ResultSet.Next, 'There should not be more imported key in the department table');
   ResultSet.Close;
 end;
 

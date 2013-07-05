@@ -81,6 +81,7 @@ type
     ['{8E62EA93-5A49-4F20-928A-0EA44ABCE5DB}']
 
     function IsOidAsBlob: Boolean;
+    function Is_bytea_output_hex: Boolean;
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: IZPostgreSQLPlainDriver;
@@ -112,6 +113,7 @@ type
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
     FPreparedStmts: TStrings;
     FClientSettingsChanged: Boolean;
+    FIs_bytea_output_hex: Boolean;
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
@@ -149,6 +151,7 @@ type
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     function IsOidAsBlob: Boolean;
+    function Is_bytea_output_hex: Boolean;
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: IZPostgreSQLPlainDriver;
@@ -414,6 +417,15 @@ begin
 end;
 
 {**
+  Checks is bytea_output hex.
+  @return <code>True</code> if hex is set.
+}
+function TZPostgreSQLConnection.Is_bytea_output_hex: Boolean;
+begin
+  Result := FIs_bytea_output_hex;
+end;
+
+{**
   Starts a transaction support.
 }
 procedure TZPostgreSQLConnection.StartTransactionSupport;
@@ -552,9 +564,9 @@ begin
       SetServerSetting(standard_conforming_strings, SCS);
       FClientSettingsChanged := True;
     end;
-
     //if not FOidAsBlob then
       //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;
+    FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
 
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -875,8 +887,8 @@ begin
     if LastVersion then
       SQL := 'SELECT oid, typname FROM pg_type WHERE oid<10000'
     else
-      SQL := 'SELECT oid, typname, typbasetype,typtype FROM pg_type' + 
-             ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid'; 
+      SQL := 'SELECT oid, typname, typbasetype,typtype FROM pg_type' +
+             ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid';
 
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, SQL);
     CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, String(SQL),QueryHandle);
@@ -1109,8 +1121,8 @@ var
   SQL: string;
   QueryHandle: PZPostgreSQLResult;
 begin
-  SQL := Format('SHOW %s', [AName]);
-  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
+  SQL := Format('select setting from pg_settings where name = %s', [AName]);
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(SQL)));
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 

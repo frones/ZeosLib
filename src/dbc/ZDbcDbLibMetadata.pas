@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZURL,
-  ZCompatibility, ZDbcConnection;
+  ZCompatibility, ZDbcConnection, ZSelectSchema;
 
 type
 
@@ -216,14 +216,15 @@ type
   {** Implements DbLib Database Metadata. }
   TZDbLibBaseDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
+    function ComposeObjectString(const S: String; Const NullText: String = 'null';
+      QuoteChar: Char = #39): String;
+    function DeComposeObjectString(const S: String): String;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
 
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
-  public
-    destructor Destroy; override;
   end;
 
   {** Implements MsSql Database Metadata. }
@@ -257,8 +258,6 @@ type
     function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetTypeInfo: IZResultSet; override;
-  public
-    destructor Destroy; override;
   end;
 
   {** Implements Sybase Database Metadata. }
@@ -298,8 +297,6 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-  public
-    destructor Destroy; override;
   end;
 
 implementation
@@ -522,7 +519,7 @@ end;
 }
 function TZDbLibDatabaseInfo.GetSearchStringEscape: string;
 begin
-{ TODO -ofjanos -cgeneral : 
+{ TODO -ofjanos -cgeneral :
 In sql server this must be specified as the parameter of like.
 example: WHERE ColumnA LIKE '%5/%%' ESCAPE '/' }
   Result := '/';
@@ -1194,13 +1191,43 @@ end;
 { TZDbLibBaseDatabaseMetadata }
 
 {**
-  Destroys this object and cleanups the memory.
+  Composes a object name, AnsiQuotedStr or NullText
+  @param S the object string
+  @param NullText the "NULL"-Text default: 'null'
+  @param QuoteChar the QuoteChar default: '
+  @return 'null' if S is '' or S if s is already Quoted or AnsiQuotedStr(S, #39)
 }
-destructor TZDbLibBaseDatabaseMetadata.Destroy;
+function TZDbLibBaseDatabaseMetadata.ComposeObjectString(const S: String;
+  Const NullText: String = 'null'; QuoteChar: Char = #39): String;
 begin
-  inherited Destroy;
+  if S = '' then
+    Result := NullText
+  else
+    if FIC.IsQuoted(s) then
+      Result := S
+    else
+      Result := AnsiQuotedStr(S, QuoteChar);
 end;
 
+{**
+  Decomposes a object name, AnsiQuotedStr or NullText
+  @param S the object string
+  @param NullText the "NULL"-Text
+  @return 'null' if S is '' or S if s is already Quoted or AnsiQuotedStr(S, #39)
+}
+function TZDbLibBaseDatabaseMetadata.DeComposeObjectString(const S: String): String;
+begin
+  if S = '' then
+    Result := 'null'
+  else
+  begin
+    if FIC.IsQuoted(s) then
+      Result := FIC.ExtractQuote(s)
+    else
+      Result := S;
+    Result := AnsiQuotedStr(Result, #39);
+  end;
+end;
 {**
   Constructs a database information object and returns the interface to it. Used
   internally by the constructor.
@@ -1414,14 +1441,6 @@ end;
 { TZMsSqlDatabaseMetadata }
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZMsSqlDatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
   Constructs a database information object and returns the interface to it. Used
   internally by the constructor.
   @return the database information object interface
@@ -1471,7 +1490,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_stored_procedures %s, %s, %s',
-      [AQSNull(ProcedureNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog)])) do
+      [ComposeObjectString(ProcedureNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog)])) do
     begin
       while Next do
       begin
@@ -1556,7 +1575,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_sproc_columns %s, %s, %s, %s',
-      [AQSNull(ProcedureNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog), AQSNull(ColumnNamePattern)])) do
+      [ComposeObjectString(ProcedureNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(ColumnNamePattern)])) do
     begin
       while Next do
       begin
@@ -1650,7 +1669,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_tables %s, %s, %s, %s',
-      [AQSNull(TableNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog), TableTypes])) do
+      [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), TableTypes])) do
     begin
       while Next do
       begin
@@ -1814,21 +1833,23 @@ end;
 function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
-var SQLType: TZSQLType;
+var
+  SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_columns %s, %s, %s, %s',
-      [AQSNull(TableNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog), AQSNull(ColumnNamePattern)])) do
+        [ComposeObjectString(TableNamePattern),
+         ComposeObjectString(SchemaPattern),
+         ComposeObjectString(Catalog),
+         ComposeObjectString(ColumnNamePattern)])) do
     begin
       while Next do
       begin
         Result.MoveToInsertRow;
         Result.UpdateStringByName('TABLE_CAT', GetStringByName('TABLE_QUALIFIER'));
-          //''{GetStringByName('TABLE_QUALIFIER')});
         Result.UpdateStringByName('TABLE_SCHEM', GetStringByName('TABLE_OWNER'));
-          //''{GetStringByName('TABLE_OWNER')});
         Result.UpdateStringByName('TABLE_NAME',
           GetStringByName('TABLE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
@@ -1840,33 +1861,22 @@ begin
           Result.UpdateNullByName('DATA_TYPE')
         else
           Result.UpdateShortByName('DATA_TYPE', Ord(SQLType));
-        Result.UpdateStringByName('TYPE_NAME',
-          GetStringByName('TYPE_NAME'));
-        Result.UpdateIntByName('COLUMN_SIZE',
-          GetIntByName('LENGTH'));
-        Result.UpdateIntByName('BUFFER_LENGTH',
-          GetIntByName('LENGTH'));
-        Result.UpdateIntByName('DECIMAL_DIGITS',
-          GetIntByName('SCALE'));
-        Result.UpdateIntByName('NUM_PREC_RADIX',
-          GetShortByName('RADIX'));
+        Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
+        Result.UpdateIntByName('COLUMN_SIZE', GetIntByName('LENGTH'));
+        Result.UpdateIntByName('BUFFER_LENGTH', GetIntByName('LENGTH'));
+        Result.UpdateIntByName('DECIMAL_DIGITS', GetIntByName('SCALE'));
+        Result.UpdateIntByName('NUM_PREC_RADIX', GetShortByName('RADIX'));
         Result.UpdateIntByName('NULLABLE', 2);
         if GetStringByName('IS_NULLABLE') = 'NO' then
           Result.UpdateShortByName('NULLABLE', 0);
         if GetStringByName('IS_NULLABLE') = 'YES' then
           Result.UpdateShortByName('NULLABLE', 1);
-        Result.UpdateStringByName('REMARKS',
-          GetStringByName('REMARKS'));
-        Result.UpdateStringByName('COLUMN_DEF',
-          GetStringByName('COLUMN_DEF'));
-        Result.UpdateShortByName('SQL_DATA_TYPE',
-          GetShortByName('SQL_DATA_TYPE'));
-        Result.UpdateShortByName('SQL_DATETIME_SUB',
-          GetShortByName('SQL_DATETIME_SUB'));
-        Result.UpdateIntByName('CHAR_OCTET_LENGTH',
-          GetIntByName('CHAR_OCTET_LENGTH'));
-        Result.UpdateIntByName('ORDINAL_POSITION',
-          GetIntByName('ORDINAL_POSITION'));
+        Result.UpdateStringByName('REMARKS', GetStringByName('REMARKS'));
+        Result.UpdateStringByName('COLUMN_DEF', GetStringByName('COLUMN_DEF'));
+        Result.UpdateShortByName('SQL_DATA_TYPE', GetShortByName('SQL_DATA_TYPE'));
+        Result.UpdateShortByName('SQL_DATETIME_SUB', GetShortByName('SQL_DATETIME_SUB'));
+        Result.UpdateIntByName('CHAR_OCTET_LENGTH', GetIntByName('CHAR_OCTET_LENGTH'));
+        Result.UpdateIntByName('ORDINAL_POSITION', GetIntByName('ORDINAL_POSITION'));
         Result.UpdateStringByName('IS_NULLABLE',
           GetStringByName('IS_NULLABLE'));
 
@@ -1883,7 +1893,7 @@ begin
       Format('select c.colid, c.name, c.type, c.prec, c.scale, c.colstat,'
       + ' c.status, c.iscomputed from syscolumns c inner join'
       + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = %s and c.number=0 order by colid',
-      [AQSNull(TableNamePattern)])) do
+      [DeComposeObjectString(TableNamePattern)])) do
       // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
     begin
       while Next do
@@ -1950,7 +1960,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_column_privileges %s, %s, %s, %s',
-      [AQSNull(Table), AQSNull(Schema), AQSNull(Catalog), AQSNull(ColumnNamePattern)])) do
+      [ComposeObjectString(Table), ComposeObjectString(Schema), ComposeObjectString(Catalog), ComposeObjectString(ColumnNamePattern)])) do
     begin
       while Next do
       begin
@@ -2017,7 +2027,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_table_privileges %s, %s, %s',
-      [AQSNull(TableNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog)])) do
+      [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog)])) do
     begin
       while Next do
       begin
@@ -2084,7 +2094,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_special_columns %s, %s, %s, %s',
-      [AQSNull(Table), AQSNull(Schema), AQSNull(Catalog), MSCol_Type])) do
+      [ComposeObjectString(Table), ComposeObjectString(Schema), ComposeObjectString(Catalog), MSCol_Type])) do
     begin
       while Next do
       begin
@@ -2141,7 +2151,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_pkeys %s, %s, %s',
-      [AQSNull(Table), AQSNull(Schema), AQSNull(Catalog)])) do
+      [ComposeObjectString(Table), ComposeObjectString(Schema), ComposeObjectString(Catalog)])) do
     begin
       while Next do
       begin
@@ -2250,8 +2260,8 @@ begin
   KeySeq := 0;
   with GetStatement.ExecuteQuery(
     Format('exec sp_fkeys %s, %s, %s, %s, %s, %s',
-    [AQSNull(PrimaryTable), AQSNull(PrimarySchema), AQSNull(PrimaryCatalog),
-     AQSNull(ForeignTable), AQSNull(ForeignSchema), AQSNull(ForeignCatalog)])) do
+    [ComposeObjectString(PrimaryTable), ComposeObjectString(PrimarySchema), ComposeObjectString(PrimaryCatalog),
+     ComposeObjectString(ForeignTable), ComposeObjectString(ForeignSchema), ComposeObjectString(ForeignCatalog)])) do
   begin
     while Next do
     begin
@@ -2455,7 +2465,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_statistics %s, %s, %s, ''%%'', %s, %s',
-      [AQSNull(Table), AQSNull(Schema), AQSNull(Catalog), Is_Unique, Accuracy])) do
+      [ComposeObjectString(Table), ComposeObjectString(Schema), ComposeObjectString(Catalog), Is_Unique, Accuracy])) do
     begin
       while Next do
       begin
@@ -2494,15 +2504,6 @@ begin
 end;
 
 { TZSybaseDatabaseMetadata }
-
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZSybaseDatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
 
 {**
   Constructs a database information object and returns the interface to it. Used
@@ -2554,7 +2555,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_stored_procedures %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(SchemaPattern), AQSNull(ProcedureNamePattern)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern), ComposeObjectString(ProcedureNamePattern)])) do
     begin
       while Next do
       begin
@@ -2643,7 +2644,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getprocedurecolumns %s, %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(SchemaPattern), AQSNull(ProcedureNamePattern), AQSNull(ColumnNamePattern)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern), ComposeObjectString(ProcedureNamePattern), ComposeObjectString(ColumnNamePattern)])) do
     begin
       while Next do
       begin
@@ -2780,7 +2781,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_tables %s, %s, %s, %s',
-      [AQSNull(TableNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog), AQSNull(TableTypes, '"')])) do
+      [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes, '"')])) do
     begin
       while Next do
       begin
@@ -2948,7 +2949,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_columns %s, %s, %s, %s',
-      [AQSNull(TableNamePattern), AQSNull(SchemaPattern), AQSNull(Catalog), AQSNull(ColumnNamePattern)])) do
+      [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(ColumnNamePattern)])) do
     begin
       while Next do
       begin
@@ -3061,8 +3062,8 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getcolumnprivileges %s, %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table),
-       AQSNullText(ColumnNamePattern, '''%''')])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table),
+       ComposeObjectString(ColumnNamePattern, '''%''')])) do
     begin
       while Next do
       begin
@@ -3128,7 +3129,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_gettableprivileges %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(SchemaPattern), AQSNull(TableNamePattern)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern), ComposeObjectString(TableNamePattern)])) do
     begin
       while Next do
       begin
@@ -3190,7 +3191,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getversioncolumns %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
     begin
       while Next do
       begin
@@ -3246,7 +3247,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_primarykey %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
     begin
       while Next do
       begin
@@ -3343,7 +3344,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_importkey %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
     begin
       while Next do
       begin
@@ -3456,7 +3457,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_exportkey %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table)])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table)])) do
     begin
       while Next do
       begin
@@ -3579,8 +3580,8 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getcrossreferences %s, %s, %s, %s, %s, %s',
-      [AQSNull(PrimaryCatalog), AQSNull(PrimarySchema), AQSNull(PrimaryTable),
-       AQSNull(ForeignCatalog), AQSNull(ForeignSchema), AQSNull(ForeignTable)])) do
+      [ComposeObjectString(PrimaryCatalog), ComposeObjectString(PrimarySchema), ComposeObjectString(PrimaryTable),
+       ComposeObjectString(ForeignCatalog), ComposeObjectString(ForeignSchema), ComposeObjectString(ForeignTable)])) do
     begin
       while Next do
       begin
@@ -3783,7 +3784,7 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getindexinfo %s, %s, %s, %s, %s',
-      [AQSNull(Catalog), AQSNull(Schema), AQSNull(Table), Is_Unique, Accuracy])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(Schema), ComposeObjectString(Table), Is_Unique, Accuracy])) do
     begin
       while Next do
       begin
@@ -3874,8 +3875,8 @@ begin
 
     with GetStatement.ExecuteQuery(
       Format('exec sp_jdbc_getudts %s, %s, %s, %s',
-      [AQSNull(Catalog), AQSNullText(SchemaPattern, '''%'''),
-       AQSNullText(TypeNamePattern, '''%'''), AQSNull(UDTypes, '"')])) do
+      [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern, '''%'''),
+       ComposeObjectString(TypeNamePattern, '''%'''), ComposeObjectString(UDTypes, '"')])) do
     begin
       while Next do
       begin
@@ -3899,5 +3900,6 @@ begin
 end;
 
 end.
+
 
 

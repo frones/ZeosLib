@@ -39,7 +39,6 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
-
 // Compilation directives for Lazarus
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
@@ -243,6 +242,7 @@
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
   {$DEFINE WITH_SYSUITLS_PREFIX} 	//Need SysUtils. unit declaration for some functions like StrNew,StrAlloc
+  {$DEFINE WITH_BUFFERS_IS_TRECBUF}
 {$ENDIF}
 
 
