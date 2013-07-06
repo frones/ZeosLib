@@ -308,13 +308,33 @@ function VarToBytes(const Value: Variant): TByteDynArray;
 function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 
 {**
-  Converts Ansi SQL Date/Time (yyyy-mm-dd or DateFormat)
+  Converts Ansi SQL Date (yyyy-mm-dd or DateFormat)
   to TDateTime
   @param Value a date and time string.
   @param Dateformat a DateFormat.
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+
+{**
+  Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Timeformat a TimeFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLTimeToDateTime(const Value, TimeFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+
+{**
+  Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
+    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
+  @param Value a date and time string.
+  @param DateTimeformat a DateTimeFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateTimeToDateTime(const Value, DateTimeFormat: RawByteString;
   var Failed: Boolean): TDateTime;
 
 {**
@@ -1144,7 +1164,7 @@ var
     Min := StrToIntDef(Copy(AString, 4, 2), 0);
     Sec := StrToIntDef(Copy(AString, 7, 2), 0);
 
-    //it the time Length is bigger than 8, it can have milliseconds and it ...
+    //if the time Length is bigger than 8, it can have milliseconds and it ...
     dotPos := 0;
     MSec := 0;
     if Length(AString) > 8 then
@@ -1194,7 +1214,7 @@ begin
 end;
 
 {**
-  Converts Ansi SQL Date/Time (yyyy-mm-dd or DateFormat)
+  Converts Ansi SQL Date (yyyy-mm-dd or DateFormat)
   to TDateTime
   @param Value a date and time string.
   @param Dateformat a DateFormat.
@@ -1204,9 +1224,9 @@ function RawSQLDateToDateTime(const Value, DateFormat: RawByteString;
   var Failed: Boolean): TDateTime;
 var
   Year, Month, Day: Word;
-  I, YPos, MPos, DPos, Code1, Code2, Code3: Integer;
+  I, YPos, MPos, DPos, CodeY, CodeM, CodeD: Integer;
   PDateFormat: PAnsiChar;
-  rYear: Array [0..4] of AnsiChar;
+  rYear: Array [0..3] of AnsiChar;
   rMonth: Array [0..1] of AnsiChar;
   rDay: Array [0..1] of AnsiChar;
 begin
@@ -1216,14 +1236,15 @@ begin
   begin
     if DateFormat = '' then
     begin
-      Year := ValRawInt(Copy(Value, 1, 4), Code1);
-      Month := ValRawInt(Copy(Value, 6, 2), Code2);
-      Day := ValRawInt(Copy(Value, 9, 2), Code3);
+      Year := ValRawInt(Copy(Value, 1, 4), CodeY);
+      Month := ValRawInt(Copy(Value, 6, 2), CodeM);
+      Day := ValRawInt(Copy(Value, 9, 2), CodeD);
+      Day := ValRawInt(Copy(Value, 9, 2), CodeD);
     end
     else
     begin
       YPos := 0; MPos := 0; DPos := 0;
-      FillChar(rYear, 0, 0); //avoid remaining chars
+      FillChar(rYear, 4, 0); //avoid remaining chars from previous call
       PDateFormat := PAnsiChar(DateFormat);
       for i := 1 to Length(DateFormat) do
       begin
@@ -1246,16 +1267,200 @@ begin
         end;
         Inc(PDateFormat);
       end;
-      Year := ValRawInt(PAnsiChar(@rYear), Code1);
-      Month := ValRawInt(rMonth, Code2);
-      Day := ValRawInt(rMonth, Code3);
+      Year := ValRawInt(rYear, CodeY);
+      Month := ValRawInt(rMonth, CodeM);
+      Day := ValRawInt(rMonth, CodeD);
     end;
-    Failed := ( Code1 and Code2 and Code3 ) <> 0;
-    if ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) or (not Failed) then
+    Failed := ( CodeY and CodeM and CodeD ) <> 0;
+    if (not Failed) and ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
       try
         Result := EncodeDate(Year, Month, Day);
       except
       end;
+  end;
+end;
+
+{**
+  Converts Ansi SQL Time (hh-nn-ss or hh:mm:nn.zzz or TimeFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Timeformat a TimeFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLTimeToDateTime(const Value, TimeFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+var
+  Hour, Minute, Sec, MSec: Word;
+  I, HPos, NPos, SPos, MPos, CodeH, CodeN, CodeS, CodeM, LVal, LFormat: Integer;
+  PTimeFormat: PAnsiChar;
+  rHour: Array [0..1] of AnsiChar;
+  rMin: Array [0..1] of AnsiChar;
+  rSec: Array [0..1] of AnsiChar;
+  rMSec: Array [0..2] of AnsiChar;
+begin
+  Result := 0;
+  Failed := False;
+  if not (Value = '') then
+  begin
+    LVal := Length(Value);
+    LFormat := Length(TimeFormat);
+    if (TimeFormat = '') or ( LFormat <> LVal) then
+    begin
+      Hour := ValRawInt(Copy(Value, 1, 2), CodeH);
+      Minute := ValRawInt(Copy(Value, 4, 2), CodeN);
+      Sec := ValRawInt(Copy(Value, 7, 2), CodeS);
+      if LVal > 8 then
+        MSec := ValRawInt(Copy(Value, 10, 3), CodeM)
+      else
+        MSec := 0;
+    end
+    else
+    begin
+      HPos := 0; NPos := 0; SPos := 0; MPos := 0;
+      FillChar(rMSec, 3, 0); //avoid remaining chars from previous call
+      PTimeFormat := PAnsiChar(TimeFormat);
+      for i := 1 to LFormat do
+      begin
+        case PTimeFormat^ of
+          'H', 'h':
+            begin
+              rHour[HPos] := Value[i];
+              Inc(HPos);
+            end;
+          'N', 'n':
+            begin
+              rMin[NPos] := Value[i];
+              Inc(NPos);
+            end;
+          'S', 's':
+            begin
+              rSec[SPos] := Value[i];
+              Inc(SPos);
+            end;
+          'Z', 'z':
+            begin
+              rMSec[MPos] := Value[i];
+              Inc(MPos);
+            end;
+        end;
+        Inc(PTimeFormat);
+      end;
+      Hour := ValRawInt(rHour, CodeH);
+      Minute := ValRawInt(rMin, CodeN);
+      Sec := ValRawInt(rSec, CodeS);
+      MSec := ValRawInt(rMSec, CodeM);
+    end;
+    Failed := ( CodeH and CodeN and CodeS and CodeM) <> 0;
+    if (not Failed) then
+      try
+        Result := EncodeTime(Hour, Minute, Sec, MSec);
+      except
+      end;
+  end;
+end;
+
+{**
+  Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
+    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
+  @param Value a date and time string.
+  @param DateTimeformat a DateTimeFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateTimeToDateTime(const Value, DateTimeFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+var
+  Year, Month, Day, Hour, Minute, Sec, MSec: Word;
+  I, YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
+     CodeY, CodeM, CodeD, CodeH, CodeN, CodeS, CodeMS: Integer;
+  PDateTimeFormat: PAnsiChar;
+  rYear: Array [0..3] of AnsiChar;
+  rMonth, rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
+  rMSec: Array [0..2] of AnsiChar;
+begin
+  Result := 0;
+  Failed := False;
+  MSec := 0;
+  if not (Value = '') then
+  begin
+    if PDateTimeFormat = '' then
+    begin
+      Year := ValRawInt(Copy(Value, 1, 4), CodeY);
+      Month := ValRawInt(Copy(Value, 6, 2), CodeM);
+      Day := ValRawInt(Copy(Value, 9, 2), CodeD);
+      Hour := ValRawInt(Copy(Value, 11, 2), CodeH);
+      Minute := ValRawInt(Copy(Value, 14, 2), CodeN);
+      Sec := ValRawInt(Copy(Value, 17, 2), CodeS);
+      if Length(Value) > 19 then
+        MSec := ValRawInt(Copy(Value, 20, 3), CodeM);
+    end
+    else
+    begin
+      YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
+      FillChar(rYear, 4, 0); //avoid remaining chars from previous call
+      FillChar(rMSec, 3, 0); //avoid remaining chars from previous call
+      PDateTimeFormat := PAnsiChar(PDateTimeFormat);
+      for i := 1 to Length(PDateTimeFormat) do
+      begin
+        case PDateTimeFormat^ of
+          'Y', 'y':
+            begin
+              rYear[YPos] := Value[i];
+              Inc(YPos);
+            end;
+          'M', 'm':
+            begin
+              rMonth[MPos] := Value[i];
+              Inc(MPos);
+            end;
+          'D', 'd':
+            begin
+              rDay[DPos] := Value[i];
+              Inc(DPos);
+            end;
+          'H', 'h':
+            begin
+              rHour[HPos] := Value[i];
+              Inc(HPos);
+            end;
+          'N', 'n':
+            begin
+              rMin[NPos] := Value[i];
+              Inc(NPos);
+            end;
+          'S', 's':
+            begin
+              rSec[SPos] := Value[i];
+              Inc(SPos);
+            end;
+          'Z', 'z':
+            begin
+              rMSec[MSPos] := Value[i];
+              Inc(MSPos);
+            end;
+        end;
+        Inc(PDateTimeFormat);
+      end;
+      Year := ValRawInt(rYear, CodeY);
+      Month := ValRawInt(rMonth, CodeM);
+      Day := ValRawInt(rMonth, CodeD);
+      Hour := ValRawInt(rHour, CodeH);
+      Minute := ValRawInt(rMin, CodeN);
+      Sec := ValRawInt(rSec, CodeS);
+      MSec := ValRawInt(rMSec, CodeMS);
+    end;
+    Failed := ( CodeY and CodeM and CodeD and CodeH and CodeN and CodeS and CodeMS) <> 0;
+    if (not Failed) and ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
+    begin
+      try
+        Result := EncodeDate(Year, Month, Day);
+      except end;
+      try
+        if Result >= 0 then
+          Result := Result + EncodeTime(Hour, Min, Sec, MSec)
+        else
+          Result := Result - EncodeTime(Hour, Min, Sec, MSec)
+      except end;
+    end;
   end;
 end;
 
