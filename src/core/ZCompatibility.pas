@@ -235,6 +235,8 @@ type
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
     DateFormat: String;
+    TimeFormat: String;
+    DateTimeFormat: String;
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;

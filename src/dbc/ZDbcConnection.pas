@@ -713,6 +713,9 @@ begin
 
   SetConSettingsFromInfo(Info);
   CheckCharEncoding(FClientCodePage, True);
+  ConSettings^.DateFormat := UpperCase(Info.Values['dateformat']);
+  ConSettings^.TimeFormat := UpperCase(Info.Values['timeformat']);
+  ConSettings^.DateTimeFormat := UpperCase(Info.Values['datetimeformat']);
 
   FAutoCommit := True;
   FReadOnly := True;
