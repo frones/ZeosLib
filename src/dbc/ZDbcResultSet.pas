@@ -313,6 +313,21 @@ type
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
   end;
 
+  {** Implements a raw string-based ResultSet with spezial Date,Time,DateTime converters}
+  TZAbstractRawStringResultSet = class(TZAbstractResultSet)
+  Protected
+    FDateFormat: RawByteString;
+    FTimeFormat: RawByteString;
+    FDateTimeFormat: RawByteString;
+    FDateTimeConvAlignArray: TIntegerDynArray;
+    function SupportsMilliSeconds: Boolean; virtual;
+    procedure SetDateTimeConverters; virtual; abstract;
+    procedure Open; override;
+  public
+    constructor Create(Statement: IZStatement; SQL: string;
+      Metadata: TContainedObject; ConSettings: PZConSettings);
+  end;
+
   {** Implements external or internal blob wrapper object. }
   TZAbstractBlob = class(TInterfacedObject, IZBlob)
   private
@@ -365,6 +380,7 @@ uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding;
   @param Statement an SQL statement object.
   @param SQL an SQL query string.
   @param Metadata a resultset metadata object.
+  @param ConSettings the pointer to Connection Settings record
 }
 constructor TZAbstractResultSet.Create(Statement: IZStatement; SQL: string;
   Metadata: TContainedObject; ConSettings: PZConSettings);
@@ -3044,6 +3060,52 @@ end;
 function TZAbstractResultSet.GetConSettings: PZConsettings;
 begin
   Result := ConSettings;
+end;
+
+{ TZAbstractRawStringResultSet }
+
+function TZAbstractRawStringResultSet.SupportsMilliSeconds: Boolean;
+begin
+  Result := False;
+end;
+
+procedure TZAbstractRawStringResultSet.Open;
+begin
+  SetDateTimeConverters;
+  inherited Open;
+end;
+
+{**
+  Creates this object and assignes the main properties.
+  @param Statement an SQL statement object.
+  @param SQL an SQL query string.
+  @param Metadata a resultset metadata object.
+  @param ConSettings the pointer to Connection Settings record
+}
+constructor TZAbstractRawStringResultSet.Create(Statement: IZStatement;
+  SQL: string; Metadata: TContainedObject; ConSettings: PZConSettings);
+begin
+  inherited Create(Statement, SQL, MetaData, ConSettings);
+  if ConSettings^.DateFormat = '' then
+    FDateFormat := 'YYYY-MM-DD'
+  else
+    FDateFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
+
+  if ConSettings^.TimeFormat = '' then
+    if SupportsMilliSeconds then
+      FTimeFormat := 'HH:NN:SS.ZZZ'
+    else
+      FTimeFormat := 'HH:NN:SS'
+  else
+    FDateFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
+
+  if ConSettings^.DateTimeFormat = '' then
+    if SupportsMilliSeconds then
+      FTimeFormat := 'YYYY-MM-DD HH:NN:SS.ZZZ'
+    else
+      FTimeFormat := 'YYYY-MM-DD HH:NN:SS'
+  else
+    FTimeFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
 end;
 
 { TZAbstractBlob }
