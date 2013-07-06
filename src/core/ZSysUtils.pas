@@ -1239,7 +1239,6 @@ begin
       Year := ValRawInt(Copy(Value, 1, 4), CodeY);
       Month := ValRawInt(Copy(Value, 6, 2), CodeM);
       Day := ValRawInt(Copy(Value, 9, 2), CodeD);
-      Day := ValRawInt(Copy(Value, 9, 2), CodeD);
     end
     else
     begin
@@ -1382,7 +1381,7 @@ begin
   MSec := 0;
   if not (Value = '') then
   begin
-    if PDateTimeFormat = '' then
+    if DateTimeFormat = '' then
     begin
       Year := ValRawInt(Copy(Value, 1, 4), CodeY);
       Month := ValRawInt(Copy(Value, 6, 2), CodeM);
@@ -1398,7 +1397,7 @@ begin
       YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
       FillChar(rYear, 4, 0); //avoid remaining chars from previous call
       FillChar(rMSec, 3, 0); //avoid remaining chars from previous call
-      PDateTimeFormat := PAnsiChar(PDateTimeFormat);
+      PDateTimeFormat := PAnsiChar(DateTimeFormat);
       for i := 1 to Length(PDateTimeFormat) do
       begin
         case PDateTimeFormat^ of
@@ -1456,9 +1455,9 @@ begin
       except end;
       try
         if Result >= 0 then
-          Result := Result + EncodeTime(Hour, Min, Sec, MSec)
+          Result := Result + EncodeTime(Hour, Minute, Sec, MSec)
         else
-          Result := Result - EncodeTime(Hour, Min, Sec, MSec)
+          Result := Result - EncodeTime(Hour, Minute, Sec, MSec)
       except end;
     end;
   end;
