@@ -308,6 +308,16 @@ function VarToBytes(const Value: Variant): TByteDynArray;
 function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 
 {**
+  Converts Ansi SQL Date/Time (yyyy-mm-dd or DateFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a DateFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateToDateTime(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+
+{**
   Converts Timestamp String to TDateTime
   @param Value a timestamp string.
   @return a decoded TDateTime value.
@@ -431,6 +441,7 @@ function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideStrin
 function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
 function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
 
+{ Integer convertion in Raw and Unicode Format}
 function IntToRaw(const Value: Integer): RawByteString; overload;
 function IntToRaw(const Value: Int64): RawByteString; overload;
 
@@ -447,10 +458,16 @@ function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer
 function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
 
+{ Float convertion in Raw and Unicode Format}
+function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended;
+function RawToFloatDef(const s: RawByteString; const DecimalSep: AnsiChar; const Default: Extended): Extended;
+function ValRawExt(const s: RawByteString; const DecimalSep: AnsiChar; var code: Integer): Extended;
+function ValRawInt(const s: RawByteString; var code: Integer): Integer;
+
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} StrUtils, SysConst,
-  ZMatchPattern;
+  ZMatchPattern, Math;
 
 
 {**
@@ -1173,6 +1190,72 @@ begin
         Result := Result - EncodeTime(Hour, Min, Sec, MSec)
     except
     end;
+  end;
+end;
+
+{**
+  Converts Ansi SQL Date/Time (yyyy-mm-dd or DateFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a DateFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateToDateTime(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+var
+  Year, Month, Day: Word;
+  I, YPos, MPos, DPos, Code1, Code2, Code3: Integer;
+  PDateFormat: PAnsiChar;
+  rYear: Array [0..4] of AnsiChar;
+  rMonth: Array [0..1] of AnsiChar;
+  rDay: Array [0..1] of AnsiChar;
+begin
+  Result := 0;
+  Failed := False;
+  if not (Value = '') then
+  begin
+    if DateFormat = '' then
+    begin
+      Year := ValRawInt(Copy(Value, 1, 4), Code1);
+      Month := ValRawInt(Copy(Value, 6, 2), Code2);
+      Day := ValRawInt(Copy(Value, 9, 2), Code3);
+    end
+    else
+    begin
+      YPos := 0; MPos := 0; DPos := 0;
+      FillChar(rYear, 0, 0); //avoid remaining chars
+      PDateFormat := PAnsiChar(DateFormat);
+      for i := 1 to Length(DateFormat) do
+      begin
+        case PDateFormat^ of
+          'Y', 'y':
+            begin
+              rYear[YPos] := Value[i];
+              Inc(YPos);
+            end;
+          'M', 'm':
+            begin
+              rMonth[MPos] := Value[i];
+              Inc(MPos);
+            end;
+          'D', 'd':
+            begin
+              rDay[DPos] := Value[i];
+              Inc(DPos);
+            end;
+        end;
+        Inc(PDateFormat);
+      end;
+      Year := ValRawInt(PAnsiChar(@rYear), Code1);
+      Month := ValRawInt(rMonth, Code2);
+      Day := ValRawInt(rMonth, Code3);
+    end;
+    Failed := ( Code1 and Code2 and Code3 ) <> 0;
+    if ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) or (not Failed) then
+      try
+        Result := EncodeDate(Year, Month, Day);
+      except
+      end;
   end;
 end;
 
@@ -3468,5 +3551,123 @@ begin
   Result := ValInt64_JOH_PAS_4_b_unicode(Pointer(S)^, E);
   if E <> 0 then Result := Default;
 end;
+
+function RawToFloatDef(const s: RawByteString; const DecimalSep: AnsiChar;
+  const Default: Extended): Extended;
+var
+  E: Integer;
+begin
+  Result :=  ValRawExt(s, DecimalSep, E);
+  if E <> 0 then Result := Default;
+end;
+
+function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended;
+var
+  E: Integer;
+begin
+  Result :=  ValRawExt(s, DecimalSep, E);
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
+function ValRawExt(const s: RawByteString; const DecimalSep: AnsiChar; var code: Integer): Extended;
+//function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified for varying DecimalSeperator
+var
+  Digits, ExpValue: Integer;
+  Ch: AnsiChar;
+  Neg, NegExp, Valid: Boolean;
+begin
+  Result := 0.0;
+  Code   := 0;
+  if s = '' then
+    begin
+      inc(Code);
+      Exit;
+    end;
+  Neg    := False;
+  NegExp := False;
+  Valid  := False;
+  while S[code+1] = ' ' do
+    Inc(Code);
+  Ch := S[code+1];
+  if Ch in ['+', '-'] then
+  begin
+    inc(Code);
+    Neg := (Ch = '-');
+  end;
+  while true do
+  begin
+    Ch := S[code+1];
+    inc(Code);
+    if not (Ch in ['0'..'9']) then
+      break;
+    Result := (Result * 10) + Ord(Ch) - Ord('0');
+    Valid := True;
+  end;
+  Digits := 0;
+  if Ch = DecimalSep then
+  begin
+    while true do
+      begin
+        Ch := S[code+1];
+        inc(Code);
+        if not (Ch in ['0'..'9']) then
+        begin
+          if not valid then {Starts with '.'}
+          begin
+            if Ch = #0 then
+              dec(code); {s = '.'}
+          end;
+          break;
+        end;
+        Result := (Result * 10) + Ord(Ch) - Ord('0');
+        Dec(Digits);
+        Valid := true;
+      end;
+    end;
+  ExpValue := 0;
+  if (Ord(Ch) or $20) = ord('e') then
+    begin {Ch in ['E','e']}
+      Valid := false;
+      Ch := S[code+1];
+      if Ch in ['+', '-'] then
+        begin
+          inc(Code);
+          NegExp := (Ch = '-');
+          Ch := S[code+1];
+        end;
+      while true do
+        begin
+          Ch := S[code+1];
+          inc(Code);
+          if not (Ch in ['0'..'9']) then
+            break;
+          ExpValue := (ExpValue * 10) + Ord(Ch) - Ord('0');
+          Valid := true;
+        end;
+     if NegExp then
+       ExpValue := -ExpValue;
+    end;
+  Digits := Digits + ExpValue;
+  if Digits <> 0 then
+    Result := Result * IntPower(10, Digits);
+  if Neg then
+    Result := -Result;
+  if Valid and (ch = #0) then
+    code := 0;
+end;
+
+function ValRawInt(const s: RawByteString; var code: Integer): Integer;
+begin
+  {$IF defined(WIN32) and not defined(FPC)}
+  Result := ValInt64_JOH_IA32_8_a(s, Code);
+  {$ELSE}
+  Result := ValInt64_JOH_PAS_4_b(Pointer(S)^, Code);
+  {$IFEND}
+end;
+
 
 end.
