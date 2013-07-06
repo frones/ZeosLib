@@ -1348,6 +1348,8 @@ var
   end;
 
   function GetColumnSQL(PosChar: String; Package: String = ''): String;
+  var
+    OwnerCondition, PackageNameCondition, PackageAsProcCondition, PackageProcNameCondition: string;
 
     procedure SplitPackageAndProc(Value: String);
     var
@@ -1358,26 +1360,31 @@ var
       iPos := Pos('.', Value);
         if (iPos > 0) then
         begin
+          PackageNameCondition := ConstructNameCondition(Copy(Value, 1, iPos-1),'package_name');
+          PackageProcNameCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'object_name');
+          PackageAsProcCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'package_name');
           PackageName := '= '+#39+FIC.ExtractQuote(Copy(Value, 1, iPos-1))+#39;
           ProcName := FIC.ExtractQuote(Copy(Value, iPos+1,Length(Value)-iPos));
         end
         else
         begin
+          PackageNameCondition := 'package_name IS NULL';
+          PackageProcNameCondition := ConstructNameCondition(Value,'object_name');
+          PackageAsProcCondition := ConstructNameCondition(Value,'package_name');
           PackageName := 'IS NULL';
           ProcName := FIC.ExtractQuote(Value);
         end;
     end;
   begin
+    OwnerCondition := ConstructNameCondition(TmpSchemaPattern,'OWNER');
     SplitPackageAndProc(TempProcedureNamePattern);
-    Result := 'select * from user_arguments where (package_name '+PackageName+
-      ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
-      ' OR package_name like '''+ ToLikeString(ProcName)+''' )'+
-        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
-{ TODO : rewrite similar to following code:
-     Result := 'select * from user_arguments where ('+ConstructNameCondition(PackageName,'package_name') +
-      ' AND'+ ConstructNameCondition(ProcName,'object_name') +
-      ' OR '+ ConstructNameCondition(ProcName,'package_name')+')'+
-        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';}
+    Result := 'select * from all_arguments where ('+PackageNameCondition+
+      ' AND '+PackageProcNameCondition+
+      ' OR '+ PackageAsProcCondition+')'+
+        'AND POSITION '+PosChar+' 0';
+    If OwnerCondition <> '' then
+      Result := Result + ' AND ' + OwnerCondition;
+    Result := Result + ' ORDER BY POSITION';
   end;
 
   procedure AddColumns(WasNext: Boolean; WasFunc: Boolean);
@@ -1423,12 +1430,15 @@ var
 
   function CheckSchema: Boolean;
   begin
-    with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_OBJECTS WHERE OWNER = '#39+TmpSchemaPattern+#39) do
-    begin
-      Next;
-      Result := GetInt(1) > 0;
-      Close;
-    end;
+    if TmpSchemaPattern = '' then
+      Result := False
+    else
+      with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_USERS WHERE '+ConstructNameCondition(TmpSchemaPattern,'username')) do
+      begin
+        Next;
+        Result := GetInt(1) > 0;
+        Close;
+      end;
   end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
@@ -1445,50 +1455,55 @@ begin
       if CheckSchema then
         TempProcedureNamePattern := ProcedureNamePattern //Schema exists not a package
       else
-        TempProcedureNamePattern := TmpSchemaPattern+'.'+ProcedureNamePattern; //no Schema so it's a PackageName
-
-  Names := TStringList.Create;
-  Procs := TStringList.Create;
-
-  IZStmt := GetConnection.CreateStatement;
-  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
-
-  with TempSet  do
+        begin
+          TempProcedureNamePattern := TmpSchemaPattern+'.'+ProcedureNamePattern; //no Schema so it's a PackageName
+          TmpSchemaPattern := '';
+        end;
+  if TempProcedureNamePattern <> '' then
   begin
-    ColumnIndexes[1] := FindColumn('object_name');
-    ColumnIndexes[2] := FindColumn('argument_name');
-    ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
-    ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
-    ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
-    ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
-    ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
-    ColumnIndexes[8] := FindColumn('package_name');
-    ColumnIndexes[9] := FindColumn('object_name');
-  end;
-    if ( PackageName <> 'IS NULL' ) and ( ProcName <> '' ) then
-      AddColumns(False, False)
-    else
-      if TempSet.Next then
-        if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
-        {Package without proc found}
-          GetMoreProcedures
-        else
-          AddColumns(True, False)
+    Names := TStringList.Create;
+    Procs := TStringList.Create;
+
+    IZStmt := GetConnection.CreateStatement;
+    TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
+
+    with TempSet  do
+    begin
+      ColumnIndexes[1] := FindColumn('object_name');
+      ColumnIndexes[2] := FindColumn('argument_name');
+      ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
+      ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
+      ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
+      ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
+      ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
+      ColumnIndexes[8] := FindColumn('package_name');
+      ColumnIndexes[9] := FindColumn('object_name');
+    end;
+      if ( PackageName <> 'IS NULL' ) and ( ProcName <> '' ) then
+        AddColumns(False, False)
       else
-      begin
-        TempSet.Close;
-        TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ParameterValues have allways Position > 0
         if TempSet.Next then
           if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
           {Package without proc found}
             GetMoreProcedures
           else
-            AddColumns(True, True)
-      end;
-  TempSet := nil;
-  IZStmt.Close;
-  FreeAndNil(Names);
-  FreeAndNil(Procs);
+            AddColumns(True, False)
+        else
+        begin
+          TempSet.Close;
+          TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ParameterValues have allways Position > 0
+          if TempSet.Next then
+            if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
+            {Package without proc found}
+              GetMoreProcedures
+            else
+              AddColumns(True, True)
+        end;
+    TempSet := nil;
+    IZStmt.Close;
+    FreeAndNil(Names);
+    FreeAndNil(Procs);
+  end;
 end;
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
