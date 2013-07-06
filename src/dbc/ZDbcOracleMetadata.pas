@@ -1509,19 +1509,23 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  SQL: string;
-  LProcedureNamePattern: string;
+  SQL, where: string;
+  LProcedureNamePattern, LSchemaNamePattern: string;
   sName:string;
 begin
   Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
   LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,object_name||''.''||procedure_name)');
-  SQL := 'select NULL AS PROCEDURE_CAT, AO.OWNER AS PROCEDURE_SCHEM, '+
-    'UP.OBJECT_NAME, UP.PROCEDURE_NAME AS PROCEDURE_NAME, '+
-    'UP.OVERLOAD AS PROCEDURE_OVERLOAD, UP.OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
-    'USER_PROCEDURES UP LEFT JOIN ALL_OBJECTS AO ON UP.OBJECT_ID=AO.OBJECT_ID';
+  LSchemaNamePattern := ConstructNameCondition(SchemaPattern,'owner');
+  SQL := 'select NULL AS PROCEDURE_CAT, OWNER AS PROCEDURE_SCHEM, '+
+    'OBJECT_NAME, PROCEDURE_NAME AS PROCEDURE_NAME, '+
+    'OVERLOAD AS PROCEDURE_OVERLOAD, OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
+    'ALL_PROCEDURES WHERE 1=1';
   if LProcedureNamePattern <> '' then
-    SQL := SQL + ' WHERE ' + LProcedureNamePattern;
+    SQL := SQL + ' AND ' + LProcedureNamePattern;
+  if LSchemaNamePattern <> '' then
+    SQL := SQL + ' AND ' + LSchemaNamePattern;
+  SQL := SQL + ' ORDER BY decode(owner,user,0,1),owner,object_name,procedure_name,overload';
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
@@ -1534,7 +1538,7 @@ begin
       Result.UpdateNull(1);
       Result.UpdateString(2, GetString(2));
       Result.UpdateString(3, sName); //PROCEDURE_NAME
-      Result.UpdateString(4, GetString(5)); //PROCGEDURE_OVERLOAD
+      Result.UpdateString(4, GetString(5)); //PROCEDURE_OVERLOAD
       Result.UpdateNull(5);
       Result.UpdateNull(6);
       Result.UpdateNull(7);
