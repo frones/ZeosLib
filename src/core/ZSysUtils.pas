@@ -308,13 +308,32 @@ function VarToBytes(const Value: Variant): TByteDynArray;
 function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 
 {**
+  Converts Ansi SQL Date (DateFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a DateFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateToDateTimeWithProperFormat(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+
+{**
   Converts Ansi SQL Date (yyyy-mm-dd or DateFormat)
   to TDateTime
   @param Value a date and time string.
   @param Dateformat a DateFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLDateToDateTime(const Value, DateFormat: RawByteString;
+function RawSQLDateToDateTimeFixedSize(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+
+{**
+  Converts Ansi SQL Date (y*?m*?d* d* or float or  no DateFormat) to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a DateFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateToDateTimeVaringSize(const Value, DateFormat: RawByteString;
   var Failed: Boolean): TDateTime;
 
 {**
@@ -1214,68 +1233,219 @@ begin
 end;
 
 {**
+  Converts Ansi SQL Date (DateFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a DateFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateToDateTimeWithProperFormat(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+var
+  Year, Month, Day: Word;
+  I, LenDateFormat, Code, YPos, MPos, DPos: Integer;
+  PDateFormat: PAnsiChar;
+  rYear: Array [0..3] of AnsiChar;
+  rMonth, rDay: Array [0..1] of AnsiChar;
+begin
+  Result := 0;
+  LenDateFormat := Length(DateFormat);
+  Failed := False;
+  if not (Value = '') then
+  begin
+    Failed := LenDateFormat = 0;
+    if not Failed then
+    begin
+      if DateFormat = 'FLOAT' then
+      begin
+        Result := ValRawExt(Value, '.', Code);
+        Failed := Code <> 0;
+        if Failed then Result := 0;
+      end
+      else
+      begin
+        YPos := 0; MPos := 0; DPos := 0;
+        PDateFormat := PAnsiChar(DateFormat);
+        FillChar(rYear, 4, 0);
+        for i := 1 to LenDateFormat do
+        begin
+          case PDateFormat^ of
+            'Y', 'y':
+              begin
+                rYear[YPos] := Value[i];
+                Inc(YPos);
+              end;
+            'M', 'm':
+              begin
+                rMonth[MPos] := Value[i];
+                Inc(MPos);
+              end;
+            'D', 'd':
+              begin
+                rDay[DPos] := Value[i];
+                Inc(DPos);
+              end;
+          end;
+          Inc(PDateFormat);
+        end;
+        Year := RawToIntDef(rYear, 0);
+        Month := RawToIntDef(rMonth, 0);
+        Day := RawToIntDef(rDay, 0);
+        Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
+        if not Failed then
+          try
+            Result := EncodeDate(Year, Month, Day);
+          except
+          end;
+      end;
+    end;
+  end;
+end;
+
+{**
   Converts Ansi SQL Date (yyyy-mm-dd or DateFormat)
   to TDateTime
   @param Value a date and time string.
   @param Dateformat a DateFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLDateToDateTime(const Value, DateFormat: RawByteString;
+function RawSQLDateToDateTimeFixedSize(const Value, DateFormat: RawByteString;
   var Failed: Boolean): TDateTime;
 var
   Year, Month, Day: Word;
-  I, YPos, MPos, DPos, CodeY, CodeM, CodeD: Integer;
-  PDateFormat: PAnsiChar;
-  rYear: Array [0..3] of AnsiChar;
-  rMonth: Array [0..1] of AnsiChar;
-  rDay: Array [0..1] of AnsiChar;
 begin
   Result := 0;
   Failed := False;
   if not (Value = '') then
   begin
-    if DateFormat = '' then
+    Failed := not ( Length(Value) = 10 );
+    if not Failed then
     begin
-      Year := ValRawInt(Copy(Value, 1, 4), CodeY);
-      Month := ValRawInt(Copy(Value, 6, 2), CodeM);
-      Day := ValRawInt(Copy(Value, 9, 2), CodeD);
-    end
+      Year := RawToIntDef(Copy(Value, 1, 4), 0);
+      Month := RawToIntDef(Copy(Value, 6, 2), 0);
+      Day := RawToIntDef(Copy(Value, 9, 2), 0);
+      Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) ;
+      if not Failed then
+        try
+          Result := EncodeDate(Year, Month, Day);
+        except
+        end;
+    end;
+  end;
+end;
+
+{**
+  Converts Ansi SQL Date (y*?m*?d* or float or no DateFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a DateFormat.
+  @return a decoded TDateTime value.
+}
+function RawSQLDateToDateTimeVaringSize(const Value, DateFormat: RawByteString;
+  var Failed: Boolean): TDateTime;
+var
+  Year, Month, Day: Word;
+  DateLenCount, DateLen, MonthLen, YPos, MPos, DPos, Code: Integer;
+  PDateValue: PAnsiChar;
+  rYear, rMonth, rDay: Array [0..10] of AnsiChar;
+  Tmp: RawByteString;
+begin
+  Result := 0;
+  Failed := False;
+  if not (Value = '') then
+  begin
+    DateLen := Length(Value);
+    YPos := 0; MPos := 0; DPos := 0; DateLenCount := 0;
+    PDateValue := PAnsiChar(Value);
+    FillChar(rYear, 11, 0);
+    FillChar(rMonth, 11, 0);
+    FillChar(rDay, 11, 0);
+    while ( DateLenCount < DateLen ) and (not (PDateValue^ in ['-','/','\']) ) do
+    begin
+      rYear[YPos] := PDateValue^;
+      Inc(YPos);
+      Inc(PDateValue);
+      Inc(DateLenCount);
+    end;
+    while (not (PDateValue^ in ['0'..'9']) ) and ( DateLenCount < DateLen ) do
+    begin
+      Inc(PDateValue);
+      Inc(DateLenCount);
+    end;
+    while ( DateLenCount < DateLen ) and (not (PDateValue^ in ['-','/','\']) ) do
+    begin
+      rMonth[MPos] := PDateValue^;
+      Inc(MPos);
+      Inc(PDateValue);
+      Inc(DateLenCount);
+    end;
+    while (not (PDateValue^ in ['0'..'9']) ) and ( DateLenCount < DateLen ) do
+    begin
+      Inc(PDateValue);
+      Inc(DateLenCount);
+    end;
+    while ( DateLenCount < DateLen ) and (not (PDateValue^ in ['-','/','\']) ) do
+    begin
+      rDay[DPos] := PDateValue^;
+      Inc(DPos);
+      Inc(PDateValue);
+      Inc(DateLenCount);
+    end;
+    Tmp := rYear;
+    DateLenCount := Length(Tmp);
+    Tmp := rMonth;
+    MonthLen := Length(Tmp);
+    if MonthLen > 2 then //float value
+    begin
+      Result := Trunc(ValRawExt(Value, '.', Code));
+      if Code <> 0 then
+        Result := 0;
+      Exit;
+    end;
+    if DateLenCount > 4 then //We've a problem! No date delimiters found? -> YYYYMMDD or YYMMDD or ....Float!
+      if DateLenCount = 8 then
+      begin //Let's start from the premise we've LongDateFormat YYYYMMDD
+        rMonth[0] := rYear[4];
+        rMonth[1] := rYear[5];
+        rDay[0] := rYear[6];
+        rDay[1] := rYear[7];
+        FillChar((PAnsiChar(@rYear)+4)^, 4, 0); //Reset useless chars
+      end
+      else
+        if DateLenCount = 6 then
+        //Let's start from the premise we've ShortDateFormat YYMMDD
+        begin
+          rMonth[0] := rYear[2];
+          rMonth[1] := rYear[3];
+          rDay[0] := rYear[4];
+          rDay[1] := rYear[5];
+          FillChar((PAnsiChar(@rYear)+2)^, 4, 0);
+        end
+        else
+        begin
+          Result := Trunc(ValRawExt(Value, '.', Code));
+          if Code <> 0 then
+            Result := 0;
+          Exit;
+        end;
+    Year := RawToIntDef(rYear, 0);
+    Month := RawToIntDef(rMonth, 0);
+    Day := RawToIntDef(rDay, 0);
+    Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
+    if not Failed then
+      try
+        Result := EncodeDate(Year, Month, Day); //Reset useless chars
+      except
+        Result := Trunc(ValRawExt(Value, '.', Code));
+        if Code <> 0 then
+          Result := 0;
+      end
     else
     begin
-      YPos := 0; MPos := 0; DPos := 0;
-      FillChar(rYear, 4, 0); //avoid remaining chars from previous call
-      PDateFormat := PAnsiChar(DateFormat);
-      for i := 1 to Length(DateFormat) do
-      begin
-        case PDateFormat^ of
-          'Y', 'y':
-            begin
-              rYear[YPos] := Value[i];
-              Inc(YPos);
-            end;
-          'M', 'm':
-            begin
-              rMonth[MPos] := Value[i];
-              Inc(MPos);
-            end;
-          'D', 'd':
-            begin
-              rDay[DPos] := Value[i];
-              Inc(DPos);
-            end;
-        end;
-        Inc(PDateFormat);
-      end;
-      Year := ValRawInt(rYear, CodeY);
-      Month := ValRawInt(rMonth, CodeM);
-      Day := ValRawInt(rMonth, CodeD);
+      Result := Trunc(ValRawExt(Value, '.', Code));
+      if Code <> 0 then
+        Result := 0;
     end;
-    Failed := ( CodeY and CodeM and CodeD ) <> 0;
-    if (not Failed) and ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
-      try
-        Result := EncodeDate(Year, Month, Day);
-      except
-      end;
   end;
 end;
 
@@ -1292,9 +1462,7 @@ var
   Hour, Minute, Sec, MSec: Word;
   I, HPos, NPos, SPos, MPos, CodeH, CodeN, CodeS, CodeM, LVal, LFormat: Integer;
   PTimeFormat: PAnsiChar;
-  rHour: Array [0..1] of AnsiChar;
-  rMin: Array [0..1] of AnsiChar;
-  rSec: Array [0..1] of AnsiChar;
+  rHour, rMin, rSec: Array [0..1] of AnsiChar;
   rMSec: Array [0..2] of AnsiChar;
 begin
   Result := 0;
@@ -1316,7 +1484,6 @@ begin
     else
     begin
       HPos := 0; NPos := 0; SPos := 0; MPos := 0;
-      FillChar(rMSec, 3, 0); //avoid remaining chars from previous call
       PTimeFormat := PAnsiChar(TimeFormat);
       for i := 1 to LFormat do
       begin
@@ -1349,7 +1516,7 @@ begin
       Sec := ValRawInt(rSec, CodeS);
       MSec := ValRawInt(rMSec, CodeM);
     end;
-    Failed := ( CodeH and CodeN and CodeS and CodeM) <> 0;
+    Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
     if (not Failed) then
       try
         Result := EncodeTime(Hour, Minute, Sec, MSec);
@@ -1369,8 +1536,9 @@ function RawSQLDateTimeToDateTime(const Value, DateTimeFormat: RawByteString;
   var Failed: Boolean): TDateTime;
 var
   Year, Month, Day, Hour, Minute, Sec, MSec: Word;
-  I, YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
-     CodeY, CodeM, CodeD, CodeH, CodeN, CodeS, CodeMS: Integer;
+  I, LVal, LFormat,
+  YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
+  CodeY, CodeM, CodeD, CodeH, CodeN, CodeS, CodeMS: Integer;
   PDateTimeFormat: PAnsiChar;
   rYear: Array [0..3] of AnsiChar;
   rMonth, rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
@@ -1381,7 +1549,9 @@ begin
   MSec := 0;
   if not (Value = '') then
   begin
-    if DateTimeFormat = '' then
+    LVal := Length(Value);
+    LFormat := Length(DateTimeFormat);
+    if ( LFormat = 0 ) or ( LVal <> LFormat ) then
     begin
       Year := ValRawInt(Copy(Value, 1, 4), CodeY);
       Month := ValRawInt(Copy(Value, 6, 2), CodeM);
@@ -1395,8 +1565,6 @@ begin
     else
     begin
       YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
-      FillChar(rYear, 4, 0); //avoid remaining chars from previous call
-      FillChar(rMSec, 3, 0); //avoid remaining chars from previous call
       PDateTimeFormat := PAnsiChar(DateTimeFormat);
       for i := 1 to Length(PDateTimeFormat) do
       begin
@@ -1447,8 +1615,9 @@ begin
       Sec := ValRawInt(rSec, CodeS);
       MSec := ValRawInt(rMSec, CodeMS);
     end;
-    Failed := ( CodeY and CodeM and CodeD and CodeH and CodeN and CodeS and CodeMS) <> 0;
-    if (not Failed) and ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
+    Failed := ( ( CodeY or CodeM or CodeD or CodeH or CodeN or CodeS or CodeMS) <> 0) and
+      ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
+    if not Failed then
     begin
       try
         Result := EncodeDate(Year, Month, Day);

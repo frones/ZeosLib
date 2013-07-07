@@ -1352,13 +1352,13 @@ begin
         vtString:
           Result.VBoolean := StrToBoolEx(Value.VString);
         vtAnsiString:
-          Result.VBoolean := StrToBoolEx({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VAnsiString));
+          Result.VBoolean := StrToBoolEx(Value.VAnsiString);
         vtUTF8String:
-          Result.VBoolean := StrToBoolEx({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VUTF8String));
+          Result.VBoolean := StrToBoolEx(Value.VUTF8String);
         vtRawByteString:
-          Result.VBoolean := StrToBoolEx({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VRawByteString));
+          Result.VBoolean := StrToBoolEx(Value.VRawByteString);
         vtUnicodeString:
-          Result.VBoolean := StrToBoolEx({$IFNDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VUnicodeString));
+          Result.VBoolean := StrToBoolEx(Value.VUnicodeString);
         vtDateTime:
           Result.VBoolean := Value.VDateTime <> 0;
         vtPointer:
@@ -1431,11 +1431,11 @@ begin
         vtString:
           Result.VFloat := SqlStrToFloatDef(Value.VString, 0);
         vtAnsiString:
-          Result.VFloat := SqlStrToFloatDef({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VAnsiString), 0);
+          Result.VFloat := RawToFloatDef(Value.VAnsiString, '.', 0);
         vtUTF8String:
-          Result.VFloat := SqlStrToFloatDef({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(Value.VUTF8String), 0);
+          Result.VFloat := RawToFloatDef(Value.VUTF8String, '.', 0);
         vtRawByteString:
-          Result.VFloat := SqlStrToFloatDef(Value.VRawByteString, 0);
+          Result.VFloat := RawToFloatDef(Value.VRawByteString, '.', 0);
         vtUnicodeString:
           Result.VFloat := SqlStrToFloatDef({$IFNDEF UNICODE}AnsiString{$ENDIF}(Value.VUnicodeString), 0);
         vtDateTime:
