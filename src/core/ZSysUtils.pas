@@ -311,40 +311,20 @@ function AnsiSQLDateToDateTime(const Value: string): TDateTime;
   Converts Ansi SQL Date (DateFormat)
   to TDateTime
   @param Value a date and time string.
-  @param Dateformat a DateFormat.
+  @param Dateformat a Pointer to DateFormat. May be nil;
   @return a decoded TDateTime value.
 }
-function RawSQLDateToDateTimeWithProperFormat(const Value, DateFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
+function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
+  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
-  Converts Ansi SQL Date (yyyy-mm-dd or DateFormat)
-  to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a DateFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLDateToDateTimeFixedSize(const Value, DateFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
-
-{**
-  Converts Ansi SQL Date (y*?m*?d* d* or float or  no DateFormat) to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a DateFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLDateToDateTimeVaringSize(const Value, DateFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
-
-{**
-  Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat)
-  to TDateTime
+  Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
   @param Value a date and time string.
   @param Timeformat a TimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLTimeToDateTime(const Value, TimeFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
+function RawSQLTimeToDateTime(Value, TimeFormat: PAnsichar;
+  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -353,8 +333,8 @@ function RawSQLTimeToDateTime(const Value, TimeFormat: RawByteString;
   @param DateTimeformat a DateTimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLDateTimeToDateTime(const Value, DateTimeFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
+function RawTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
+  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
   Converts Timestamp String to TDateTime
@@ -1236,57 +1216,57 @@ end;
   Converts Ansi SQL Date (DateFormat)
   to TDateTime
   @param Value a date and time string.
-  @param Dateformat a DateFormat.
+  @param Dateformat a Pointer to DateFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLDateToDateTimeWithProperFormat(const Value, DateFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
+function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
+  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Year, Month, Day: Word;
-  I, LenDateFormat, Code, YPos, MPos, DPos: Integer;
-  PDateFormat: PAnsiChar;
-  rYear: Array [0..3] of AnsiChar;
-  rMonth, rDay: Array [0..1] of AnsiChar;
-begin
-  Result := 0;
-  LenDateFormat := Length(DateFormat);
-  Failed := False;
-  if not (Value = '') then
+
+  procedure TryExtractDateFromFormat;
+  var
+    I, LenDateFormat, Code, YPos, MPos, DPos: Integer;
+    rYear: Array [0..3] of AnsiChar;
+    rMonth, rDay: Array [0..1] of AnsiChar;
   begin
+    Result := 0;
+    if Assigned(DateFormat) then
+      LenDateFormat := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(DateFormat)
+    else
+      LenDateFormat := 0;
     Failed := LenDateFormat = 0;
     if not Failed then
-    begin
       if DateFormat = 'FLOAT' then
       begin
-        Result := ValRawExt(Value, '.', Code);
+        Result := Trunc(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
       end
       else
       begin
         YPos := 0; MPos := 0; DPos := 0;
-        PDateFormat := PAnsiChar(DateFormat);
         FillChar(rYear, 4, 0);
-        for i := 1 to LenDateFormat do
+        for i := 0 to LenDateFormat-1 do
         begin
-          case PDateFormat^ of
+          case DateFormat^ of
             'Y', 'y':
               begin
-                rYear[YPos] := Value[i];
+                rYear[YPos] := (Value+i)^;
                 Inc(YPos);
               end;
             'M', 'm':
               begin
-                rMonth[MPos] := Value[i];
+                rMonth[MPos] := (Value+i)^;
                 Inc(MPos);
               end;
             'D', 'd':
               begin
-                rDay[DPos] := Value[i];
+                rDay[DPos] := (Value+i)^;
                 Inc(DPos);
               end;
           end;
-          Inc(PDateFormat);
+          Inc(DateFormat);
         end;
         Year := RawToIntDef(rYear, 0);
         Month := RawToIntDef(rMonth, 0);
@@ -1298,27 +1278,12 @@ begin
           except
           end;
       end;
-    end;
   end;
-end;
 
-{**
-  Converts Ansi SQL Date (yyyy-mm-dd or DateFormat)
-  to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a DateFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLDateToDateTimeFixedSize(const Value, DateFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
-var
-  Year, Month, Day: Word;
-begin
-  Result := 0;
-  Failed := False;
-  if not (Value = '') then
+  procedure TryExtractDateFromFixedSize;
   begin
-    Failed := not ( Length(Value) = 10 );
+    Result := 0;
+    Failed := not ( ValLen = 10 );
     if not Failed then
     begin
       Year := RawToIntDef(Copy(Value, 1, 4), 0);
@@ -1332,196 +1297,326 @@ begin
         end;
     end;
   end;
-end;
 
-{**
-  Converts Ansi SQL Date (y*?m*?d* or float or no DateFormat)
-  to TDateTime
-  @param Value a date and time string.
-  @param Dateformat a DateFormat.
-  @return a decoded TDateTime value.
-}
-function RawSQLDateToDateTimeVaringSize(const Value, DateFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
-var
-  Year, Month, Day: Word;
-  DateLenCount, DateLen, MonthLen, YPos, MPos, DPos, Code: Integer;
-  PDateValue: PAnsiChar;
-  rYear, rMonth, rDay: Array [0..10] of AnsiChar;
-  Tmp: RawByteString;
-begin
-  Result := 0;
-  Failed := False;
-  if not (Value = '') then
+  procedure TryExtractDateFromUnknownSize;
+  var
+    DateLenCount: Cardinal;
+    YPos, MPos, DPos, Code: Integer;
+    rYear, rMonth: Array [0..19] of AnsiChar;
+    rDay: Array[0..1] of AnsiChar;
   begin
-    DateLen := Length(Value);
-    YPos := 0; MPos := 0; DPos := 0; DateLenCount := 0;
-    PDateValue := PAnsiChar(Value);
-    FillChar(rYear, 11, 0);
-    FillChar(rMonth, 11, 0);
-    FillChar(rDay, 11, 0);
-    while ( DateLenCount < DateLen ) and (not (PDateValue^ in ['-','/','\']) ) do
+    Result := 0;
+    Failed := False;
+    if not (Value = '') then
     begin
-      rYear[YPos] := PDateValue^;
-      Inc(YPos);
-      Inc(PDateValue);
-      Inc(DateLenCount);
-    end;
-    while (not (PDateValue^ in ['0'..'9']) ) and ( DateLenCount < DateLen ) do
-    begin
-      Inc(PDateValue);
-      Inc(DateLenCount);
-    end;
-    while ( DateLenCount < DateLen ) and (not (PDateValue^ in ['-','/','\']) ) do
-    begin
-      rMonth[MPos] := PDateValue^;
-      Inc(MPos);
-      Inc(PDateValue);
-      Inc(DateLenCount);
-    end;
-    while (not (PDateValue^ in ['0'..'9']) ) and ( DateLenCount < DateLen ) do
-    begin
-      Inc(PDateValue);
-      Inc(DateLenCount);
-    end;
-    while ( DateLenCount < DateLen ) and (not (PDateValue^ in ['-','/','\']) ) do
-    begin
-      rDay[DPos] := PDateValue^;
-      Inc(DPos);
-      Inc(PDateValue);
-      Inc(DateLenCount);
-    end;
-    Tmp := rYear;
-    DateLenCount := Length(Tmp);
-    Tmp := rMonth;
-    MonthLen := Length(Tmp);
-    if MonthLen > 2 then //float value
-    begin
-      Result := Trunc(ValRawExt(Value, '.', Code));
-      if Code <> 0 then
-        Result := 0;
-      Exit;
-    end;
-    if DateLenCount > 4 then //We've a problem! No date delimiters found? -> YYYYMMDD or YYMMDD or ....Float!
-      if DateLenCount = 8 then
-      begin //Let's start from the premise we've LongDateFormat YYYYMMDD
-        rMonth[0] := rYear[4];
-        rMonth[1] := rYear[5];
-        rDay[0] := rYear[6];
-        rDay[1] := rYear[7];
-        FillChar((PAnsiChar(@rYear)+4)^, 4, 0); //Reset useless chars
-      end
-      else
-        if DateLenCount = 6 then
-        //Let's start from the premise we've ShortDateFormat YYMMDD
-        begin
-          rMonth[0] := rYear[2];
-          rMonth[1] := rYear[3];
-          rDay[0] := rYear[4];
-          rDay[1] := rYear[5];
-          FillChar((PAnsiChar(@rYear)+2)^, 4, 0);
+      YPos := 0; MPos := 0; DPos := 0; DateLenCount := 0;
+      FillChar(rYear, 20, 0);
+      FillChar(rMonth, 20, 0);
+      FillChar(rDay, 2, 0);
+      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
+      begin
+        rYear[YPos] := (Value+DateLenCount)^;
+        Inc(YPos); Inc(DateLenCount);
+      end;
+      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['0'..'9']) ) do
+        Inc(DateLenCount);
+      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
+      begin
+        rMonth[MPos] := (Value+DateLenCount)^;
+        Inc(MPos); Inc(DateLenCount);
+      end;
+      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['0'..'9']) ) do
+        Inc(DateLenCount);
+      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
+      begin
+        rDay[DPos] := (Value+DateLenCount)^;
+        Inc(DPos); Inc(DateLenCount);
+      end;
+      if MPos > 2 then //float ValueTmp
+      begin
+        Result := Trunc(ValRawExt(Value, '.', Code));
+        Failed := Code <> 0;
+          if Failed then Result := 0;
+        Exit;
+      end;
+      if YPos > 4 then //We've a problem! No date delimiters found? -> YYYYMMDD or YYMMDD or ....Float!
+        if YPos = 8 then
+        begin //Let's start from the premise we've LongDateFormat YYYYMMDD
+          rMonth[0] := rYear[4]; rMonth[1] := rYear[5];
+          rDay[0] := rYear[6]; rDay[1] := rYear[7];
+          FillChar((PAnsiChar(@rYear)+4)^, 4, 0); //Reset useless chars
         end
         else
-        begin
+          if YPos = 6 then
+          //Let's start from the premise we've ShortDateFormat YYMMDD
+          begin
+            rMonth[0] := rYear[2]; rMonth[1] := rYear[3];
+            rDay[0] := rYear[4]; rDay[1] := rYear[5];
+            FillChar((PAnsiChar(@rYear)+2)^, 4, 0);
+          end
+          else
+          begin
+            Result := Trunc(ValRawExt(Value, '.', Code));
+            if Code <> 0 then
+              Result := 0;
+            Exit;
+          end;
+      Year := RawToIntDef(rYear, 0);
+      Month := RawToIntDef(rMonth, 0);
+      Day := RawToIntDef(rDay, 0);
+      Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
+      if not Failed then
+        try
+          Result := EncodeDate(Year, Month, Day);
+        except
           Result := Trunc(ValRawExt(Value, '.', Code));
-          if Code <> 0 then
-            Result := 0;
-          Exit;
+          Failed := Code <> 0;
+          if Failed then Result := 0;
         end;
-    Year := RawToIntDef(rYear, 0);
-    Month := RawToIntDef(rMonth, 0);
-    Day := RawToIntDef(rDay, 0);
-    Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
-    if not Failed then
-      try
-        Result := EncodeDate(Year, Month, Day); //Reset useless chars
-      except
-        Result := Trunc(ValRawExt(Value, '.', Code));
-        if Code <> 0 then
-          Result := 0;
-      end
-    else
-    begin
-      Result := Trunc(ValRawExt(Value, '.', Code));
-      if Code <> 0 then
-        Result := 0;
     end;
+  end;
+begin
+  Failed := False;
+  if Value = '' then
+    Result := 0
+  else
+  begin
+    TryExtractDateFromFormat;
+    if Failed then
+      TryExtractDateFromFixedSize;
+    if Failed then
+      TryExtractDateFromUnknownSize;
   end;
 end;
 
 {**
-  Converts Ansi SQL Time (hh-nn-ss or hh:mm:nn.zzz or TimeFormat)
+  Converts Ansi SQL Time (TimeFormat)
   to TDateTime
   @param Value a date and time string.
   @param Timeformat a TimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLTimeToDateTime(const Value, TimeFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
+function RawSQLTimeToDateTime(Value, TimeFormat: PAnsiChar;
+  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Hour, Minute, Sec, MSec: Word;
-  I, HPos, NPos, SPos, MPos, CodeH, CodeN, CodeS, CodeM, LVal, LFormat: Integer;
-  PTimeFormat: PAnsiChar;
-  rHour, rMin, rSec: Array [0..1] of AnsiChar;
-  rMSec: Array [0..2] of AnsiChar;
-begin
-  Result := 0;
-  Failed := False;
-  if not (Value = '') then
+  CodeH, CodeN, CodeS, CodeM: Integer;
+
+  procedure TryExtractTimeFromFormat;
+  var
+    I, HPos, NPos, SPos, MPos: Integer;
+    LFormat: Cardinal;
+    rHour, rMin, rSec: Array [0..1] of AnsiChar;
+    rMSec: Array [0..3] of AnsiChar;
   begin
-    LVal := Length(Value);
-    LFormat := Length(TimeFormat);
-    if (TimeFormat = '') or ( LFormat <> LVal) then
+    Result := 0;
+    if Assigned(TimeFormat) then
+      LFormat := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(TimeFormat)
+    else
+      LFormat := 0;
+    Failed := ( LFormat = 0 );
+    if not Failed then
+    begin
+      if TimeFormat = 'FLOAT' then
+      begin
+        Result := Frac(ValRawExt(Value, '.', CodeH));
+        Failed := CodeH <> 0;
+        if Failed then Result := 0;
+      end
+      else
+      begin
+        Failed := ( LFormat <> ValLen );
+        if not Failed then
+        begin
+          HPos := 0; NPos := 0; SPos := 0; MPos := 0;
+          PWord(rMSec) := nil; //faster than fillchar
+          for i := 0 to LFormat-1 do
+          begin
+            case TimeFormat^ of
+              'H', 'h':
+                begin
+                  rHour[HPos] := (Value+i)^;
+                  Inc(HPos);
+                end;
+              'N', 'n':
+                begin
+                  rMin[NPos] := (Value+i)^;
+                  Inc(NPos);
+                end;
+              'S', 's':
+                begin
+                  rSec[SPos] := (Value+i)^;
+                  Inc(SPos);
+                end;
+              'Z', 'z':
+                begin
+                  rMSec[MPos] := (Value+i)^;
+                  Inc(MPos);
+                end;
+            end;
+            Inc(TimeFormat);
+          end;
+          if MPos = 0 then rMSec[0] := '0';
+          Hour := ValRawInt(rHour, CodeH);
+          Minute := ValRawInt(rMin, CodeN);
+          Sec := ValRawInt(rSec, CodeS);
+          MSec := ValRawInt(rMSec, CodeM);
+          Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
+          if (not Failed) then
+            try
+              Result := EncodeTime(Hour, Minute, Sec, MSec);
+            except
+              Failed := True;
+            end;
+        end;
+      end;
+    end;
+  end;
+
+  procedure TryExtractTimeFromFixedSize;
+  begin
+    Result := 0;
+    Failed := not ((ValLen = 8 ) or (ValLen = 12));
+    if not Failed then
     begin
       Hour := ValRawInt(Copy(Value, 1, 2), CodeH);
       Minute := ValRawInt(Copy(Value, 4, 2), CodeN);
       Sec := ValRawInt(Copy(Value, 7, 2), CodeS);
-      if LVal > 8 then
+      if ValLen > 8 then
         MSec := ValRawInt(Copy(Value, 10, 3), CodeM)
       else
-        MSec := 0;
-    end
-    else
-    begin
-      HPos := 0; NPos := 0; SPos := 0; MPos := 0;
-      PTimeFormat := PAnsiChar(TimeFormat);
-      for i := 1 to LFormat do
       begin
-        case PTimeFormat^ of
-          'H', 'h':
-            begin
-              rHour[HPos] := Value[i];
-              Inc(HPos);
-            end;
-          'N', 'n':
-            begin
-              rMin[NPos] := Value[i];
-              Inc(NPos);
-            end;
-          'S', 's':
-            begin
-              rSec[SPos] := Value[i];
-              Inc(SPos);
-            end;
-          'Z', 'z':
-            begin
-              rMSec[MPos] := Value[i];
-              Inc(MPos);
-            end;
-        end;
-        Inc(PTimeFormat);
+        MSec := 0;
+        CodeM := 0;
       end;
+      Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
+      if (not Failed) then
+        try
+          Result := EncodeTime(Hour, Minute, Sec, MSec);
+        except
+          Failed := True;
+        end;
+    end;
+  end;
+
+  procedure TryExtractTimeFromVaryingSize;
+  var
+    HPos, NPos, SPos, MPos: Integer;
+    Code: Integer;
+    TimeLenCount: Cardinal;
+    rHour, rMin: Array [0..19] of AnsiChar;
+    rSec: Array[0..1] of AnsiChar;
+    rMSec: Array[0..2] of AnsiChar;
+  begin
+    Result := 0;
+    Failed := False;
+    if not (Value = '') then
+    begin
+      HPos := 0; NPos := 0; SPos := 0; MPos := 0; TimeLenCount := 0;
+      FillChar(rHour, 19, 0);
+      FillChar(rMin, 19, 0);
+      FillChar(rSec, 2, 0);
+      FillChar(rMSec, 3, 0);
+      while ( TimeLenCount < ValLen ) and (not (Value^ in [':','-','/','\','.']) ) do
+      begin
+        rHour[HPos] := Value^;
+        Inc(HPos); Inc(Value); Inc(TimeLenCount);
+      end;
+      while ( TimeLenCount < ValLen ) and (not (Value^ in ['0'..'9']) ) do
+      begin
+        Inc(Value);
+        Inc(TimeLenCount);
+      end;
+      while ( TimeLenCount < ValLen ) and (not (Value^ in [':','-','/','\','.']) ) do
+      begin
+        rMin[NPos] := Value^;
+        Inc(NPos); Inc(Value); Inc(TimeLenCount);
+      end;
+      while ( TimeLenCount < ValLen ) and (not (Value^ in ['0'..'9']) ) do
+      begin
+        Inc(Value);
+        Inc(TimeLenCount);
+      end;
+      while ( TimeLenCount < ValLen ) and (not (Value^ in [':','-','/','\','.']) ) do
+      begin
+        rSec[SPos] := Value^;
+        Inc(SPos); Inc(Value); Inc(TimeLenCount);
+      end;
+      while ( TimeLenCount < ValLen ) and (not (Value^ in ['0'..'9']) ) do
+      begin
+        Inc(Value);
+        Inc(TimeLenCount);
+      end;
+      while ( TimeLenCount < ValLen ) and (not (Value^ in [':','-','/','\','.']) ) do
+      begin
+        rMSec[MPos] := Value^;
+        Inc(MPos); Inc(Value); Inc(TimeLenCount);
+      end;
+      if NPos > 2 then //float value
+      begin
+        Result := Frac(ValRawExt(rHour+'.'+rMin, '.', Code));
+        Failed := Code <> 0;
+        if Failed then
+          Result := 0;
+        Exit;
+      end;
+      if HPos > 4 then //We've a problem! No date delimiters found? -> HHNNSSZZZ or HHNNSS or ....Float!
+        if HPos = 9 then
+        begin //Let's start from the premise we've LongTimeFormat HHNNSSZZ
+          rMin[0] := rHour[2]; rMin[1] := rHour[3];
+          rSec[0] := rHour[4]; rSec[1] := rHour[5];
+          rMSec[0] := rHour[6]; rMSec[1] := rHour[7]; rMSec[2] := rHour[8];
+          FillChar((PAnsiChar(@rHour)+2)^, 9, 0); //Reset useless chars
+        end
+        else
+          if HPos = 6 then
+          //Let's start from the premise we've ShortTimeFormat HHNNSS
+          begin
+            rMin[0] := rHour[2]; rMin[1] := rHour[3];
+            rSec[0] := rHour[4]; rSec[1] := rHour[5];
+            rMSec[0] := '0';
+            FillChar((PAnsiChar(@rHour)+2)^, 17, 0);
+          end
+          else
+          begin
+            Result := Frac(ValRawExt(Value, '.', Code));
+            Failed := Code <> 0;
+            if Failed then Result := 0;
+            Exit;
+          end
+      else if MPos = 0 then rMSec[0] := '0';
       Hour := ValRawInt(rHour, CodeH);
       Minute := ValRawInt(rMin, CodeN);
       Sec := ValRawInt(rSec, CodeS);
       MSec := ValRawInt(rMSec, CodeM);
-    end;
-    Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
-    if (not Failed) then
-      try
-        Result := EncodeTime(Hour, Minute, Sec, MSec);
-      except
+      Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
+      if not Failed then
+        try
+          Result := EncodeTime(Hour, Minute, Sec, MSec); //Reset useless chars
+        except
+          Result := Frac(ValRawExt(Value, '.', Code));
+          Failed := Code <> 0;
+          if Failed then Result := 0;
+        end
+      else
+      begin
+        Result := Trunc(ValRawExt(Value, '.', Code));
+        Failed := Code <> 0;
+        if Failed then Result := 0;
       end;
+    end;
+  end;
+begin
+  Failed := False;
+  if ValLen = 0 then
+    Result := 0
+  else
+  begin
+    TryExtractTimeFromFormat;
+    if Failed then
+      TryExtractTimeFromFixedSize;
+    if Failed then
+      TryExtractTimeFromVaryingSize;
   end;
 end;
 
@@ -1532,14 +1627,13 @@ end;
   @param DateTimeformat a DateTimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLDateTimeToDateTime(const Value, DateTimeFormat: RawByteString;
-  var Failed: Boolean): TDateTime;
+function RawTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
+  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Year, Month, Day, Hour, Minute, Sec, MSec: Word;
-  I, LVal, LFormat,
-  YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
+  LFormat: Cardinal;
+  I, YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
   CodeY, CodeM, CodeD, CodeH, CodeN, CodeS, CodeMS: Integer;
-  PDateTimeFormat: PAnsiChar;
   rYear: Array [0..3] of AnsiChar;
   rMonth, rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
   rMSec: Array [0..2] of AnsiChar;
@@ -1549,9 +1643,8 @@ begin
   MSec := 0;
   if not (Value = '') then
   begin
-    LVal := Length(Value);
-    LFormat := Length(DateTimeFormat);
-    if ( LFormat = 0 ) or ( LVal <> LFormat ) then
+    LFormat := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(TimeStampFormat);
+    if ( LFormat = 0 ) or ( ValLen <> LFormat ) then
     begin
       Year := ValRawInt(Copy(Value, 1, 4), CodeY);
       Month := ValRawInt(Copy(Value, 6, 2), CodeM);
@@ -1565,10 +1658,9 @@ begin
     else
     begin
       YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
-      PDateTimeFormat := PAnsiChar(DateTimeFormat);
-      for i := 1 to Length(PDateTimeFormat) do
+      for i := 1 to Length(TimeStampFormat) do
       begin
-        case PDateTimeFormat^ of
+        case TimeStampFormat^ of
           'Y', 'y':
             begin
               rYear[YPos] := Value[i];
@@ -1605,7 +1697,7 @@ begin
               Inc(MSPos);
             end;
         end;
-        Inc(PDateTimeFormat);
+        Inc(TimeStampFormat);
       end;
       Year := ValRawInt(rYear, CodeY);
       Month := ValRawInt(rMonth, CodeM);

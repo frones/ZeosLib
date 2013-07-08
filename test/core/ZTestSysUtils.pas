@@ -74,6 +74,7 @@ type
     procedure TestReplaceChar;
     procedure TestMatch;
     procedure TestRawSQLDateToDateTime;
+    procedure TestRawSQLTimeToDateTime;
     {$IFDEF BENCHMARK}
     procedure TestASCII7ToString_VS_RawByteToString;
     procedure TestIntToRaw_VS_IntToStr;
@@ -279,122 +280,166 @@ end;
 
 procedure TZTestSysUtilsCase.TestRawSQLDateToDateTime;
 const
-  Time1_0 = RawByteString('1999-12-31');
-  Time2_0 = RawByteString('1999/12/31');
-  Time3_0 = RawByteString('1999\12\31');
-  Time4_0 = RawByteString('1999-12-31');
-  Time5_0 = RawByteString('19991231');
+  Date1_0 = RawByteString('1999-12-31');
+  Date2_0 = RawByteString('1999/12/31');
+  Date3_0 = RawByteString('1999\12\31');
+  Date4_0 = RawByteString('1999-12-31');
+  Date5_0 = RawByteString('19991231');
 
-  Time1_1 = RawByteString('99-12-31');
-  Time2_1 = RawByteString('99/12/31');
-  Time3_1 = RawByteString('99\12\31');
-  Time4_1 = RawByteString('99-12-31');
-  Time5_1 = RawByteString('991231');
+  Date1_1 = RawByteString('99-12-31');
+  Date2_1 = RawByteString('99/12/31');
+  Date3_1 = RawByteString('99\12\31');
+  Date4_1 = RawByteString('99-12-31');
+  Date5_1 = RawByteString('991231');
 
-  Time1_2 = RawByteString('199a-12-31');
-  Time2_2 = RawByteString('1999/1a/31');
-  Time3_2 = RawByteString('1999\12\3a');
-  Time4_2 = RawByteString('0000-00-00');
-  Time5_2 = RawByteString('00000000');
+  Date1_2 = RawByteString('199a-12-31');
+  Date2_2 = RawByteString('1999/1a/31');
+  Date3_2 = RawByteString('1999\12\3a');
+  Date4_2 = RawByteString('0000-00-00');
+  Date5_2 = RawByteString('00000000');
 
-  Time1_3 = RawByteString('36525');
-  Time2_3 = RawByteString('36525.0');
-  Time3_3 = RawByteString('36525a');
-  Time4_3 = RawByteString('36525.0a');
+  Date1_3 = RawByteString('36525');
+  Date2_3 = RawByteString('36525.0');
+  Date3_3 = RawByteString('36525a');
+  Date4_3 = RawByteString('36525.0a');
 
-  procedure RawSQLDateToDateTimeProperFormat(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString);
+  procedure TestRawSQLDateToDateTime(Value: RawByteString;
+    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString = '');
   var Failed: Boolean;
   begin
-    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTimeWithProperFormat(Value, DateFormat, Failed), 'Expected Date');
-    CheckEquals(ExpFailed, Failed, 'Fail value');
-  end;
-
-  procedure RawSQLDateToDateTimeFixedSize(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean);
-  var Failed: Boolean;
-  begin
-    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTimeFixedSize(Value, '', Failed), 'Expected Date');
-    CheckEquals(ExpFailed, Failed, 'Fail value');
-  end;
-
-  procedure RawSQLDateToDateTimeVaryingSize(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean);
-  var Failed: Boolean;
-  begin
-    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTimeVaringSize(Value, '', Failed), 'Expected Date');
+    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTime(PAnsiChar(Value), PAnsiChar(DateFormat), Length(Value), Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
 
 begin
-  RawSQLDateToDateTimeProperFormat(Time1_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time2_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time3_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time4_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time5_0, EncodeDate(1999, 12, 31), False, 'YYYYMMDD');
+  TestRawSQLDateToDateTime(Date1_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date2_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date3_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date4_0, EncodeDate(1999, 12, 31), False, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date5_0, EncodeDate(1999, 12, 31), False, 'YYYYMMDD');
 
-  RawSQLDateToDateTimeProperFormat(Time1_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time2_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time3_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time4_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time5_1, EncodeDate(99, 12, 31), False, 'YYMMDD');
+  TestRawSQLDateToDateTime(Date1_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
+  TestRawSQLDateToDateTime(Date2_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
+  TestRawSQLDateToDateTime(Date3_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
+  TestRawSQLDateToDateTime(Date4_1, EncodeDate(99, 12, 31), False, 'YY-MM-DD');
+  TestRawSQLDateToDateTime(Date5_1, EncodeDate(99, 12, 31), False, 'YYMMDD');
 
-  RawSQLDateToDateTimeProperFormat(Time1_2, 0, True, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time2_2, 0, True, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time3_2, 0, True, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time4_2, 0, True, 'YYYY-MM-DD');
-  RawSQLDateToDateTimeProperFormat(Time5_2, 0, True, 'YYYYMMDD');
+  TestRawSQLDateToDateTime(Date1_2, 0, True, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date2_2, 0, True, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date3_2, 0, True, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date4_2, 0, True, 'YYYY-MM-DD');
+  TestRawSQLDateToDateTime(Date5_2, 0, True, 'YYYYMMDD');
 
-  RawSQLDateToDateTimeProperFormat(Time1_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
-  RawSQLDateToDateTimeProperFormat(Time2_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
-  RawSQLDateToDateTimeProperFormat(Time3_3, 0, True, 'FLOAT');
-  RawSQLDateToDateTimeProperFormat(Time4_3, 0, True, 'FLOAT');
+  TestRawSQLDateToDateTime(Date1_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
+  TestRawSQLDateToDateTime(Date2_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
+  TestRawSQLDateToDateTime(Date3_3, 0, True, 'FLOAT');
+  TestRawSQLDateToDateTime(Date4_3, 0, True, 'FLOAT');
 
-  RawSQLDateToDateTimeFixedSize(Time1_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeFixedSize(Time2_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeFixedSize(Time3_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeFixedSize(Time4_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeFixedSize(Time5_0, 0, True);
+  TestRawSQLDateToDateTime(Date1_0, EncodeDate(1999, 12, 31), False);
+  TestRawSQLDateToDateTime(Date2_0, EncodeDate(1999, 12, 31), False);
+  TestRawSQLDateToDateTime(Date3_0, EncodeDate(1999, 12, 31), False);
+  TestRawSQLDateToDateTime(Date4_0, EncodeDate(1999, 12, 31), False);
+  TestRawSQLDateToDateTime(Date5_0, EncodeDate(1999, 12, 31), False);
 
-  RawSQLDateToDateTimeFixedSize(Time1_1, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time2_1, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time3_1, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time4_1, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time5_1, 0, True);
+  TestRawSQLDateToDateTime(Date1_1, EncodeDate(99, 12, 31), False);
+  TestRawSQLDateToDateTime(Date2_1, EncodeDate(99, 12, 31), False);
+  TestRawSQLDateToDateTime(Date3_1, EncodeDate(99, 12, 31), False);
+  TestRawSQLDateToDateTime(Date4_1, EncodeDate(99, 12, 31), False);
+  TestRawSQLDateToDateTime(Date5_1, EncodeDate(99, 12, 31), False);
 
-  RawSQLDateToDateTimeFixedSize(Time1_2, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time2_2, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time3_2, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time4_2, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time5_2, 0, True);
+  TestRawSQLDateToDateTime(Date1_2, 0, True);
+  TestRawSQLDateToDateTime(Date2_2, 0, True);
+  TestRawSQLDateToDateTime(Date3_2, 0, True);
+  TestRawSQLDateToDateTime(Date4_2, 0, True);
+  TestRawSQLDateToDateTime(Date5_2, 0, True);
 
-  RawSQLDateToDateTimeFixedSize(Time1_3, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time2_3, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time3_3, 0, True);
-  RawSQLDateToDateTimeFixedSize(Time4_3, 0, True);
+  TestRawSQLDateToDateTime(Date1_3, EncodeDate(1999, 12, 31), False);
+  TestRawSQLDateToDateTime(Date2_3, EncodeDate(1999, 12, 31), False);
+  TestRawSQLDateToDateTime(Date3_3, 0, True);
+  TestRawSQLDateToDateTime(Date4_3, 0, True);
+end;
 
-  RawSQLDateToDateTimeVaryingSize(Time1_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time2_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time3_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time4_0, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time5_0, EncodeDate(1999, 12, 31), False);
+procedure TZTestSysUtilsCase.TestRawSQLTimeToDateTime;
+const
+  Time1_0 = RawByteString('23:59:59.999');
+  Time2_0 = RawByteString('23/59/59/999');
+  Time3_0 = RawByteString('23-59-59-999');
+  Time4_0 = RawByteString('23-59/59\999');
+  Time5_0 = RawByteString('235959999');
 
-  RawSQLDateToDateTimeVaryingSize(Time1_1, EncodeDate(99, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time2_1, EncodeDate(99, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time3_1, EncodeDate(99, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time4_1, EncodeDate(99, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time5_1, EncodeDate(99, 12, 31), False);
+  Time1_1 = RawByteString('23:59:59');
+  Time2_1 = RawByteString('23/59/59');
+  Time3_1 = RawByteString('23-59-59');
+  Time4_1 = RawByteString('23-59/59');
+  Time5_1 = RawByteString('235959');
 
-  RawSQLDateToDateTimeVaryingSize(Time1_2, 0, True);
-  RawSQLDateToDateTimeVaryingSize(Time2_2, 0, True);
-  RawSQLDateToDateTimeVaryingSize(Time3_2, 0, True);
-  RawSQLDateToDateTimeVaryingSize(Time4_2, 0, True);
-  RawSQLDateToDateTimeVaryingSize(Time5_2, 0, True);
+  Time1_2 = RawByteString('2a:59:59.999');
+  Time2_2 = RawByteString('23/5a/59/999');
+  Time3_2 = RawByteString('23-59-5a-999');
+  Time4_2 = RawByteString('23-59/59\9a9');
+  Time5_2 = RawByteString('235959z99');
 
-  RawSQLDateToDateTimeVaryingSize(Time1_3, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time2_3, EncodeDate(1999, 12, 31), False);
-  RawSQLDateToDateTimeVaryingSize(Time3_3, 0, True);
-  RawSQLDateToDateTimeVaryingSize(Time4_3, 0, True);
+  Time1_3 = RawByteString('0.999999988425926');
+  Time2_3 = RawByteString('00.999999988425926');
+  Time3_3 = RawByteString('a.999999988425926');
+  Time4_3 = RawByteString('0.9a9999988425926');
+  Time5_3 = RawByteString('00000000000.999999988425926');
+
+  procedure TestRawSQLTimeToDateTime(Value: RawByteString;
+    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString = '');
+  var Failed: Boolean;
+  begin
+    CheckEquals(Expected, ZSysUtils.RawSQLTimeToDateTime(PAnsiChar(Value), PAnsiChar(DateFormat), Length(Value), Failed), 'Expected Date');
+    CheckEquals(ExpFailed, Failed, 'Fail value');
+  end;
+begin
+  TestRawSQLTimeToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False, 'HHNNSSZZZ');
+
+  TestRawSQLTimeToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
+  TestRawSQLTimeToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
+  TestRawSQLTimeToDateTime(Time3_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
+  TestRawSQLTimeToDateTime(Time4_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
+  TestRawSQLTimeToDateTime(Time5_1, EncodeTime(23, 59, 59, 0), False, 'HHNNSS');
+
+  TestRawSQLTimeToDateTime(Time1_2, 0, True, 'HH-NN-SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time2_2, 0, True, 'HH-NN-SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time3_2, 0, True, 'HH-NN-SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time4_2, 0, True, 'HH-NN-SS.ZZZ');
+  TestRawSQLTimeToDateTime(Time5_2, 0, True, 'HHNNSSZZZ');
+
+  TestRawSQLTimeToDateTime(Time1_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
+  TestRawSQLTimeToDateTime(Time2_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
+  TestRawSQLTimeToDateTime(Time3_3, 0, True, 'FLOAT');
+  TestRawSQLTimeToDateTime(Time4_3, 0, True, 'FLOAT');
+  TestRawSQLTimeToDateTime(Time5_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
+
+  TestRawSQLTimeToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False);
+
+  TestRawSQLTimeToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False);
+  TestRawSQLTimeToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False);
+  TestRawSQLTimeToDateTime(Time3_1, EncodeTime(23, 59, 59, 0), False);
+  TestRawSQLTimeToDateTime(Time4_1, EncodeTime(23, 59, 59, 0), False);
+  TestRawSQLTimeToDateTime(Time5_1, EncodeTime(23, 59, 59, 0), False);
+
+  TestRawSQLTimeToDateTime(Time1_2, 0, True);
+  TestRawSQLTimeToDateTime(Time2_2, 0, True);
+  TestRawSQLTimeToDateTime(Time3_2, 0, True);
+  TestRawSQLTimeToDateTime(Time4_2, 0, True);
+  TestRawSQLTimeToDateTime(Time5_2, 0, True);
+
+  TestRawSQLTimeToDateTime(Time1_3, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time2_3, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time3_3, 0, True);
+  TestRawSQLTimeToDateTime(Time4_3, 0, True);
+  TestRawSQLTimeToDateTime(Time5_3, EncodeTime(23, 59, 59, 999), False);
 end;
 
 {$IFDEF BENCHMARK}
