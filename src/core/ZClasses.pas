@@ -63,7 +63,7 @@ const
   ZEOS_MINOR_VERSION = 1;
   ZEOS_SUB_VERSION = 0;
   ZEOS_STATUS = 'alfa';
-  ZEOS_VERSION = '7.1.0-beta';
+  ZEOS_VERSION = '7.2.0-alfa';
 {$IFDEF ENABLE_POOLED}
   {Pooled Protocol Prefix, including final dot}
   PooledPrefix = 'pooled.';
