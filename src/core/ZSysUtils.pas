@@ -315,7 +315,7 @@ function AnsiSQLDateToDateTime(const Value: string): TDateTime;
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
-  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
+  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
@@ -324,7 +324,7 @@ function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeToDateTime(Value, TimeFormat: PAnsichar;
-  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
+  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -333,8 +333,8 @@ function RawSQLTimeToDateTime(Value, TimeFormat: PAnsichar;
   @param DateTimeformat a DateTimeFormat.
   @return a decoded TDateTime value.
 }
-function RawTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
-  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
+  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
   Converts Timestamp String to TDateTime
@@ -1220,22 +1220,18 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
-  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
+  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Year, Month, Day: Word;
 
   procedure TryExtractDateFromFormat;
   var
-    I, LenDateFormat, Code, YPos, MPos, DPos: Integer;
+    I, Code, YPos, MPos, DPos: Integer;
     rYear: Array [0..3] of AnsiChar;
     rMonth, rDay: Array [0..1] of AnsiChar;
   begin
     Result := 0;
-    if Assigned(DateFormat) then
-      LenDateFormat := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(DateFormat)
-    else
-      LenDateFormat := 0;
-    Failed := LenDateFormat = 0;
+    Failed := FormatLen = 0;
     if not Failed then
       if DateFormat = 'FLOAT' then
       begin
@@ -1247,7 +1243,7 @@ var
       begin
         YPos := 0; MPos := 0; DPos := 0;
         FillChar(rYear, 4, 0);
-        for i := 0 to LenDateFormat-1 do
+        for i := 0 to FormatLen-1 do
         begin
           case DateFormat^ of
             'Y', 'y':
@@ -1397,7 +1393,7 @@ end;
   @return a decoded TDateTime value.
 }
 function RawSQLTimeToDateTime(Value, TimeFormat: PAnsiChar;
-  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
+  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Hour, Minute, Sec, MSec: Word;
   CodeH, CodeN, CodeS, CodeM: Integer;
@@ -1405,16 +1401,11 @@ var
   procedure TryExtractTimeFromFormat;
   var
     I, HPos, NPos, SPos, MPos: Integer;
-    LFormat: Cardinal;
     rHour, rMin, rSec: Array [0..1] of AnsiChar;
     rMSec: Array [0..3] of AnsiChar;
   begin
     Result := 0;
-    if Assigned(TimeFormat) then
-      LFormat := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(TimeFormat)
-    else
-      LFormat := 0;
-    Failed := ( LFormat = 0 );
+    Failed := ( FormatLen = 0 );
     if not Failed then
     begin
       if TimeFormat = 'FLOAT' then
@@ -1425,12 +1416,12 @@ var
       end
       else
       begin
-        Failed := ( LFormat <> ValLen );
+        Failed := ( FormatLen <> ValLen ) and not (ValLen <= FormatLen-4);
         if not Failed then
         begin
           HPos := 0; NPos := 0; SPos := 0; MPos := 0;
           PWord(rMSec) := nil; //faster than fillchar
-          for i := 0 to LFormat-1 do
+          for i := 0 to FormatLen-1 do
           begin
             case TimeFormat^ of
               'H', 'h':
@@ -1455,6 +1446,7 @@ var
                 end;
             end;
             Inc(TimeFormat);
+            if i+1 = ValLen then Break;
           end;
           if MPos = 0 then rMSec[0] := '0';
           Hour := ValRawInt(rHour, CodeH);
@@ -1612,11 +1604,13 @@ begin
     Result := 0
   else
   begin
-    TryExtractTimeFromFormat;
+    TryExtractTimeFromFormat; //prefered. Adapts to given Format-Mask
     if Failed then
+    begin
       TryExtractTimeFromFixedSize;
-    if Failed then
-      TryExtractTimeFromVaryingSize;
+      if Failed then
+        TryExtractTimeFromVaryingSize;
+    end;
   end;
 end;
 
@@ -1627,100 +1621,171 @@ end;
   @param DateTimeformat a DateTimeFormat.
   @return a decoded TDateTime value.
 }
-function RawTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
-  const ValLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
+  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Year, Month, Day, Hour, Minute, Sec, MSec: Word;
-  LFormat: Cardinal;
   I, YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
-  CodeY, CodeM, CodeD, CodeH, CodeN, CodeS, CodeMS: Integer;
-  rYear: Array [0..3] of AnsiChar;
-  rMonth, rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
+  CodeH, CodeN, CodeS, CodeMS, Code: Integer;
+  rYear, rMonth: Array [0..19] of AnsiChar;
+  rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
   rMSec: Array [0..2] of AnsiChar;
-begin
-  Result := 0;
-  Failed := False;
-  MSec := 0;
-  if not (Value = '') then
+
+  procedure CheckFailAndEncode;
   begin
-    LFormat := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(TimeStampFormat);
-    if ( LFormat = 0 ) or ( ValLen <> LFormat ) then
-    begin
-      Year := ValRawInt(Copy(Value, 1, 4), CodeY);
-      Month := ValRawInt(Copy(Value, 6, 2), CodeM);
-      Day := ValRawInt(Copy(Value, 9, 2), CodeD);
-      Hour := ValRawInt(Copy(Value, 11, 2), CodeH);
-      Minute := ValRawInt(Copy(Value, 14, 2), CodeN);
-      Sec := ValRawInt(Copy(Value, 17, 2), CodeS);
-      if Length(Value) > 19 then
-        MSec := ValRawInt(Copy(Value, 20, 3), CodeM);
+    if ((Year <> 0) and (Month <> 0) and (Day <> 0)) then
+    try
+      Result := EncodeDate(Year, Month, Day);
+    except
+      Result := 0;
+      Failed := True;
     end
-    else
-    begin
-      YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
-      for i := 1 to Length(TimeStampFormat) do
-      begin
-        case TimeStampFormat^ of
-          'Y', 'y':
-            begin
-              rYear[YPos] := Value[i];
-              Inc(YPos);
-            end;
-          'M', 'm':
-            begin
-              rMonth[MPos] := Value[i];
-              Inc(MPos);
-            end;
-          'D', 'd':
-            begin
-              rDay[DPos] := Value[i];
-              Inc(DPos);
-            end;
-          'H', 'h':
-            begin
-              rHour[HPos] := Value[i];
-              Inc(HPos);
-            end;
-          'N', 'n':
-            begin
-              rMin[NPos] := Value[i];
-              Inc(NPos);
-            end;
-          'S', 's':
-            begin
-              rSec[SPos] := Value[i];
-              Inc(SPos);
-            end;
-          'Z', 'z':
-            begin
-              rMSec[MSPos] := Value[i];
-              Inc(MSPos);
-            end;
-        end;
-        Inc(TimeStampFormat);
-      end;
-      Year := ValRawInt(rYear, CodeY);
-      Month := ValRawInt(rMonth, CodeM);
-      Day := ValRawInt(rMonth, CodeD);
-      Hour := ValRawInt(rHour, CodeH);
-      Minute := ValRawInt(rMin, CodeN);
-      Sec := ValRawInt(rSec, CodeS);
-      MSec := ValRawInt(rMSec, CodeMS);
-    end;
-    Failed := ( ( CodeY or CodeM or CodeD or CodeH or CodeN or CodeS or CodeMS) <> 0) and
-      ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
-    if not Failed then
-    begin
-      try
-        Result := EncodeDate(Year, Month, Day);
-      except end;
+    else Failed := True;
+    if ( ( CodeH or CodeN or CodeS or CodeMS) = 0) and ( not Failed )then
       try
         if Result >= 0 then
           Result := Result + EncodeTime(Hour, Minute, Sec, MSec)
         else
           Result := Result - EncodeTime(Hour, Minute, Sec, MSec)
-      except end;
+      except
+        Result := 0;
+        Failed := True;
+      end
+    else
+      Failed := True;
+  end;
+
+  procedure TryExtractTimeStampFromFormat;
+  var
+    I: Integer;
+    rYear: Array [0..3] of AnsiChar;
+    rMonth, rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
+    rMSec: Array [0..2] of AnsiChar;
+  begin
+    Failed := FormatLen = 0;
+    if TimeStampFormat = 'FLOAT' then
+    begin
+      Result := ValRawExt(Value, '.', Code);
+      Failed := Code <> 0;
+      if Failed then Result := 0;
+    end
+    else
+    begin
+      Failed  := (FormatLen <> ValLen) and not (ValLen <= FormatLen-4);
+      if not Failed then
+      begin
+        FillChar(rYear, 4, 0); FillChar(rMonth, 2, 0); FillChar(rDay, 2, 0);
+        FillChar(rHour, 2, 0); FillChar(rMin, 2 , 0); FillChar(rSec, 2, 0);
+        FillChar(rMSec, 3, 0);
+        rHour[0] := '0'; rMin[0] := '0'; rSec[0] := '0'; rMSec[0] := '0';
+        YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
+        for i := 0 to FormatLen -1 do
+        begin
+          case TimeStampFormat^ of
+            'Y', 'y':
+              begin
+                rYear[YPos] := (Value+ i)^;
+                Inc(YPos);
+              end;
+            'M', 'm':
+              begin
+                rMonth[MPos] := (Value+ i)^;
+                Inc(MPos);
+              end;
+            'D', 'd':
+              begin
+                rDay[DPos] := (Value+ i)^;
+                Inc(DPos);
+              end;
+            'H', 'h':
+              begin
+                rHour[HPos] := (Value+ i)^;
+                Inc(HPos);
+              end;
+            'N', 'n':
+              begin
+                rMin[NPos] := (Value+ i)^;
+                Inc(NPos);
+              end;
+            'S', 's':
+              begin
+                rSec[SPos] := (Value+ i)^;
+                Inc(SPos);
+              end;
+            'Z', 'z':
+              begin
+                rMSec[MSPos] := (Value+ i)^;
+                Inc(MSPos);
+              end;
+          end;
+          Inc(TimeStampFormat);
+          if i+1 = ValLen then Break;
+
+        end;
+        Year := RawToIntDef(rYear, 0);
+        Month := RawToIntDef(rMonth, 0);
+        Day := RawToIntDef(rDay, 0);
+        Hour := ValRawInt(rHour, CodeH);
+        Minute := ValRawInt(rMin, CodeN);
+        Sec := ValRawInt(rSec, CodeS);
+        MSec := ValRawInt(rMSec, CodeMS);
+        CheckFailAndEncode;
+      end;
     end;
+  end;
+
+  procedure TryExtractTimeStampWithFixedSize;
+  var OffSet: Integer;
+  begin
+    Failed := not ((ValLen = 8)  //shortdate or time ??
+              or  (ValLen = 10) //date
+              or  (ValLen = 12) //time
+              or  (ValLen = 19) //timeStamp
+              or  (ValLen = 17) //timeStamp ShortDate
+              or  (ValLen = 23));//timeStamp
+    if not Failed then
+    begin
+      if (ValLen = 10) or (ValLen = 17) or (ValLen = 19) or (ValLen = 23) then
+      begin
+        if ValLen = 17 then
+          OffSet := 4
+        else
+          OffSet := 6;
+        Year := RawToIntDef(Copy(Value, 1, OffSet-2), 0);
+        Month := RawToIntDef(Copy(Value, OffSet, 2), 0);
+        Day := RawToIntDef(Copy(Value, OffSet+3, 2), 0);
+        OffSet := OffSet+6;
+      end
+      else OffSet := 1;
+      if (ValLen = 8) or ( ValLen > 10 ) then
+      begin
+        Hour := ValRawInt(Copy(Value, offset, 2), CodeH);
+        Minute := ValRawInt(Copy(Value, OffSet+3, 2), CodeN);
+        Sec := ValRawInt(Copy(Value, OffSet + 6, 2), CodeS);
+        if ValLen > 19 then
+          MSec := ValRawInt(Copy(Value, OffSet+9, 3), CodeMS)
+        else
+        begin
+          MSec := 0;
+          CodeMS := 0;
+        end;
+      end
+      else
+      begin
+        Hour := 0; Minute := 0; Sec := 0; MSec := 0;
+        CodeH := 0; CodeN := 0; CodeS := 0; CodeMS := 0;
+      end;
+      CheckFailAndEncode;
+    end;
+  end;
+begin
+  Failed := False;
+  Result := 0;
+  if ValLen > 0 then
+  begin
+    TryExtractTimeStampFromFormat;
+    if Failed {and ( FormatLen = 0 ) }then
+      TryExtractTimeStampWithFixedSize
   end;
 end;
 

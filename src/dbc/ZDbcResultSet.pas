@@ -317,8 +317,11 @@ type
   TZAbstractRawStringResultSet = class(TZAbstractResultSet)
   Protected
     FDateFormat: RawByteString;
+    FDateFormatLen: Cardinal;
     FTimeFormat: RawByteString;
+    FTimeFormatLen: Cardinal;
     FDateTimeFormat: RawByteString;
+    FDateTimeFormatLen: Cardinal;
     FDateTimeConvAlignArray: TIntegerDynArray;
     function SupportsMilliSeconds: Boolean; virtual;
     procedure SetDateTimeConverters; virtual; abstract;
@@ -3090,6 +3093,7 @@ begin
     FDateFormat := 'YYYY-MM-DD'
   else
     FDateFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
+  FDateFormatLen := Length(FDateFormat);
 
   if ConSettings^.TimeFormat = '' then
     if SupportsMilliSeconds then
@@ -3098,14 +3102,16 @@ begin
       FTimeFormat := 'HH:NN:SS'
   else
     FDateFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
+  FTimeFormatLen := Length(FTimeFormat);
 
   if ConSettings^.DateTimeFormat = '' then
     if SupportsMilliSeconds then
-      FTimeFormat := 'YYYY-MM-DD HH:NN:SS.ZZZ'
+      FDateTimeFormat := 'YYYY-MM-DD HH:NN:SS.ZZZ'
     else
-      FTimeFormat := 'YYYY-MM-DD HH:NN:SS'
+      FDateTimeFormat := 'YYYY-MM-DD HH:NN:SS'
   else
-    FTimeFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
+    FDateTimeFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
+  FDateTimeFormatLen := Length(FDateTimeFormat);
 end;
 
 { TZAbstractBlob }
