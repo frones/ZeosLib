@@ -476,15 +476,14 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
             ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-        Result := NotEmptyStringToASCII7(Format('''%s''::date',
-          [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]));
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          'YYYY-MM-DD', 10, True, '::date');
       stTime:
-        Result := NotEmptyStringToASCII7(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]));
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+         'hh:nn:ss.zzz', 12, True, '::time');
       stTimestamp:
-        Result := NotEmptyStringToASCII7(Format('''%s''::timestamp',
-          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
-            ClientVarManager.GetAsDateTime(Value))]));
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+         'yyyy-mm-dd hh:nn:ss.zzz', 23, True, '::timestamp');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -669,22 +668,25 @@ begin
             ClientVarManager.GetAsRawByteString(Value), FPostgreSQLConnection.GetConSettings, True);
       stDate:
         if Escaped then
-          Result := NotEmptyStringToASCII7(Format('''%s''::date',
-            [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]))
+          Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+            'YYYY-MM-DD', 10, True, '::date')
         else
-          Result := #39+NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value)))+#39;
+          Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+            'YYYY-MM-DD', 10, True);
       stTime:
         if Escaped then
-          Result := NotEmptyStringToASCII7(Format('''%s''::time',
-            [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]))
+          Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+            'hh:nn:ss.zzz', 12, True, '::time')
         else
-          Result := #39+NotEmptyStringToASCII7(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
+          Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+            'hh:nn:ss.zzz', 12, True);
       stTimestamp:
         if Escaped then
-          Result := NotEmptyStringToASCII7(Format('''%s''::timestamp',
-           [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]))
+          Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+            'yyyy-mm-dd hh:nn:ss.zzz', 23, True, '::timestamp')
         else
-          Result := #39+NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value)))+#39;
+          Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+            'yyyy-mm-dd hh:nn:ss.zzz', 23, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1130,11 +1132,14 @@ begin
         stString, stUnicodeString:
           UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stDate:
-          UpdateString(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+            'YYYY-MM-DD', 10, False), ParamIndex);
         stTime:
-          UpdateString(NotEmptyStringToASCII7(FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+            'hh:nn:ss.zzz', 12, False), ParamIndex);
         stTimestamp:
-          UpdateString(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))), ParamIndex);
+          UpdateString(DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+            'yyyy-mm-dd hh:nn:ss.zzz', 23, False), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1451,15 +1456,14 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString((Connection as IZPostgreSQLConnection).GetConnectionHandle,
             ClientVarManager.GetAsRawByteString(Value), (Connection as IZPostgreSQLConnection).GetConSettings, True);
       stDate:
-        Result := RawByteString(Format('''%s''::date',
-          [FormatDateTime('yyyy-mm-dd', ClientVarManager.GetAsDateTime(Value))]));
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          'YYYY-MM-DD', 10, True, '::date');
       stTime:
-        Result := RawByteString(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss"."zzz', ClientVarManager.GetAsDateTime(Value))]));
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          'hh:nn:ss.zzz', 12, True, '::time');
       stTimestamp:
-        Result := RawByteString(Format('''%s''::timestamp',
-          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
-            ClientVarManager.GetAsDateTime(Value))]));
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          'yyyy-mm-dd hh:nn:ss.zzz', 23, True, '::timestamp');
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;

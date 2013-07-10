@@ -313,6 +313,10 @@ type
     property ColumnsInfo: TObjectList read FColumnsInfo write FColumnsInfo;
   end;
 
+  {** implents a optimal Converter function for Date, Time, DateTime conversion }
+  TDateTimeConverter = function (Value, Format: PAnsiChar;
+    Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
+
   {** Implements a raw string-based ResultSet with spezial Date,Time,DateTime converters}
   TZAbstractRawStringResultSet = class(TZAbstractResultSet)
   Protected
@@ -323,8 +327,9 @@ type
     FDateTimeFormat: RawByteString;
     FDateTimeFormatLen: Cardinal;
     FDateTimeConvAlignArray: TIntegerDynArray;
+    FDateTimeConvFuncArray: Array of TDateTimeConverter;
     function SupportsMilliSeconds: Boolean; virtual;
-    procedure SetDateTimeConverters; virtual; abstract;
+    procedure SetDateTimeConverters;
     procedure Open; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
@@ -3070,6 +3075,25 @@ end;
 function TZAbstractRawStringResultSet.SupportsMilliSeconds: Boolean;
 begin
   Result := False;
+end;
+
+procedure TZAbstractRawStringResultSet.SetDateTimeConverters;
+var I, H: Integer;
+begin
+  SetLength(FDateTimeConvAlignArray, ColumnsInfo.Count);
+  SetLength(FDateTimeConvFuncArray, 0);
+  for i := 0 to ColumnsInfo.Count -1 do
+    if TZColumnInfo(ColumnsInfo[i]).ColumnType in [stDate, stTime, stTimeStamp] then
+    begin
+      H := Length(FDateTimeConvFuncArray);
+      SetLength(FDateTimeConvFuncArray, H+1);
+      FDateTimeConvAlignArray[i] := H;
+      case TZColumnInfo(ColumnsInfo[i]).ColumnType of
+        stDate: FDateTimeConvFuncArray[H] := @ZDbcUtils.ZTestDateConv;
+        stTime: FDateTimeConvFuncArray[H] := @ZDbcUtils.ZTestTimeConv;
+        stTimeStamp: FDateTimeConvFuncArray[H] := @ZDbcUtils.ZTestTimeStampConv;
+      end;
+    end;
 end;
 
 procedure TZAbstractRawStringResultSet.Open;

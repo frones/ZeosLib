@@ -60,11 +60,6 @@ uses
   ZPlainPostgreSqlDriver, ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility;
 
 type
-
-  {** implents a optimal Converter function for Date, Time, DateTime conversion }
-  TPGDateTimeConverter = function (Value, Format: PAnsiChar;
-    Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-
   {** Implements PostgreSQL ResultSet. }
   TZPostgreSQLResultSet = class(TZAbstractRawStringResultSet)
   private
@@ -73,10 +68,8 @@ type
     FPlainDriver: IZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
     FUndefinedVarcharAsStringLength: Integer;
-    FDateTimeConvFuncArray: Array of TPGDateTimeConverter;
   protected
     function SupportsMilliSeconds: Boolean; override;
-    procedure SetDateTimeConverters; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
@@ -299,25 +292,6 @@ end;
 function TZPostgreSQLResultSet.SupportsMilliSeconds: Boolean;
 begin
   Result := True;
-end;
-
-procedure TZPostgreSQLResultSet.SetDateTimeConverters;
-var I, H: Integer;
-begin
-  SetLength(FDateTimeConvAlignArray, ColumnsInfo.Count);
-  SetLength(FDateTimeConvFuncArray, 0);
-  for i := 0 to ColumnsInfo.Count -1 do
-    if TZColumnInfo(ColumnsInfo[i]).ColumnType in [stDate, stTime, stTimeStamp] then
-    begin
-      H := Length(FDateTimeConvFuncArray);
-      SetLength(FDateTimeConvFuncArray, H+1);
-      FDateTimeConvAlignArray[i] := H;
-      case TZColumnInfo(ColumnsInfo[i]).ColumnType of
-        stDate: FDateTimeConvFuncArray[H] := @ZDbcPostgreSqlUtils.ZPGTestDateConv;
-        stTime: FDateTimeConvFuncArray[H] := @ZDbcPostgreSqlUtils.ZPGTestTimeConv;
-        stTimeStamp: FDateTimeConvFuncArray[H] := @ZDbcPostgreSqlUtils.ZPGTestTimeStampConv;
-      end;
-    end;
 end;
 
 {**
@@ -564,9 +538,9 @@ begin
   ColumnIndex := ColumnIndex -1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
+  //if LastWasNull then
+    //Result := 0
+  //else
     Result := FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]
       (FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), PAnsiChar(FDateFormat),
        FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex), FDateFormatLen,
@@ -590,9 +564,9 @@ begin
   ColumnIndex := ColumnIndex -1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
+  //if LastWasNull then
+    //Result := 0
+  //else
     Result := FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]
       (FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), PAnsiChar(FTimeFormat),
        FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex), FTimeFormatLen,
@@ -617,9 +591,9 @@ begin
   ColumnIndex := ColumnIndex -1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
+//  if LastWasNull then
+  //  Result := 0
+  //else
     Result := FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]
       (FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), PAnsiChar(FDateTimeFormat),
        FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex), FDateTimeFormatLen,

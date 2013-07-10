@@ -1982,8 +1982,8 @@ begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   sHour := Concat0(IntToRaw(AHour), 2);
-  sMin := Concat0(IntToRaw(AMinute), 1);
-  sSec := Concat0(IntToRaw(ASecond), 1);
+  sMin := Concat0(IntToRaw(AMinute), 2);
+  sSec := Concat0(IntToRaw(ASecond), 2);
   sMSec := Concat0(IntToRaw(AMilliSecond), 3);
   SetLength(Result, FromatLen);
   HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
