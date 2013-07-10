@@ -337,6 +337,37 @@ function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 
 {**
+  Converts DateTime value to a rawbyteString
+  @param Value a TDateTime value.
+  @param DateFormat the result format.
+  @param DateFromatLen the length of the format pattern
+  @return a formated RawByteString with DateFormat pattern.
+}
+function DateTimeToRawSQLDate(const Value: TDateTime;
+  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+
+{**
+  Converts DateTime value into a RawByteString with format pattern
+  @param Value a TDateTime value.
+  @param TimeFormat the result format.
+  @return a formated RawByteString with Time-Format pattern.
+}
+function DateTimeToRawSQLTime(const Value: TDateTime;
+  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+
+{**
+  Converts DateTime value to a RawByteString
+  @param Value a TDateTime value.
+  @param TimeStampFormat the result format.
+  @return a formated RawByteString in TimeStamp-Format pattern.
+}
+function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
+  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+
+{**
   Converts Timestamp String to TDateTime
   @param Value a timestamp string.
   @return a decoded TDateTime value.
@@ -486,7 +517,7 @@ function ValRawInt(const s: RawByteString; var code: Integer): Integer;
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} StrUtils, SysConst,
-  ZMatchPattern, Math;
+  ZMatchPattern, Math, DateUtils;
 
 
 {**
@@ -1582,7 +1613,6 @@ var
     end
     else
       Failed := (Hour or Minute or Sec or MSec) = 0;
-        //and ((Year or Month or Day) <> 0) then Failed := True;
     if ( not Failed ) and ( ( CodeH or CodeN or CodeS or CodeMS) = 0) then
       try
         if Result >= 0 then
@@ -1663,7 +1693,6 @@ var
             end;
             Inc(TimeStampFormat);
             if (i+1) = ValLen then Break;
-
           end;
           Year := RawToIntDef(rYear, 0);
           Month := RawToIntDef(rMonth, 0);
@@ -1879,6 +1908,183 @@ begin
     if Failed and ( FormatLen = 0) then
       TryExtractTimeStampFromVaryingSize;
   end;
+end;
+
+function Concat0(const Value: RawByteString; Const MaxLen: Integer): RawByteString;
+var I: Integer;
+begin
+  Result := Value;
+  for i := Length(Value) to MaxLen-1 do
+    Result := '0'+Result;
+end;
+{**
+  Converts DateTime value to a rawbyteString
+  @param Value a TDateTime value.
+  @param DateFormat the result format.
+  @return a formated RawByteString with DateFormat pattern.
+}
+function DateTimeToRawSQLDate(const Value: TDateTime;
+  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+var
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  I: Cardinal;
+  sYear, sMonth, sDay: RawByteString;
+  YLen, MLen, DLen: Integer;
+begin
+  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  Result := '';
+  sYear := Concat0(IntToRaw(AYear), 4);
+  sMonth := Concat0(IntToRaw(AMonth), 2);
+  sDay := Concat0(IntToRaw(ADay), 2);
+  SetLength(Result, DateFromatLen);
+  YLen := 4; MLen := 2; DLen := 2;
+  for i := DateFromatLen-1 downto 0 do
+    case (DateFormat+i)^ of
+      'Y', 'y':
+        begin
+          (PAnsiChar(Result)+i)^ := sYear[YLen];
+          Dec(YLen);
+        end;
+      'M', 'm':
+        begin
+          (PAnsiChar(Result)+i)^ := sMonth[MLen];
+          Dec(MLen);
+        end;
+      'D', 'd':
+        begin
+          (PAnsiChar(Result)+i)^ := sDay[DLen];
+          Dec(DLen);
+        end;
+      else
+        (PAnsiChar(Result)+i)^ := (DateFormat+i)^;
+    end;
+  if Quoted then Result := #39+Result+#39;
+  Result := Result + Suffix;
+end;
+
+{**
+  Converts DateTime value into a RawByteString with format pattern
+  @param Value a TDateTime value.
+  @param TimeFormat the result format.
+  @return a formated RawByteString with Time-Format pattern.
+}
+function DateTimeToRawSQLTime(const Value: TDateTime;
+  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+var
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  I: Cardinal;
+  sHour, sMin, sSec, sMSec: RawByteString;
+  HLen, NLen, SLen, ZLen: Integer;
+begin
+  Result := '';
+  {need fixed size to read from back to front}
+  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  sHour := Concat0(IntToRaw(AHour), 2);
+  sMin := Concat0(IntToRaw(AMinute), 1);
+  sSec := Concat0(IntToRaw(ASecond), 1);
+  sMSec := Concat0(IntToRaw(AMilliSecond), 3);
+  SetLength(Result, FromatLen);
+  HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
+  for i := FromatLen-1 downto 0 do
+    case (TimeFormat+i)^ of
+      'H', 'h':
+        begin
+          (PAnsiChar(Result)+i)^ := sHour[HLen];
+          Dec(HLen);
+        end;
+      'N', 'n':
+        begin
+          (PAnsiChar(Result)+i)^ := sMin[NLen];
+          Dec(NLen);
+        end;
+      'S', 's':
+        begin
+          (PAnsiChar(Result)+i)^ := sSec[SLen];
+          Dec(SLen);
+        end;
+      'Z', 'z':
+        begin
+          (PAnsiChar(Result)+i)^ := sMSec[ZLen];
+          Dec(ZLen);
+        end;
+      else
+        (PAnsiChar(Result)+i)^ := (TimeFormat+i)^;
+    end;
+  if Quoted then Result := #39+Result+#39;
+  Result := Result + Suffix;
+end;
+
+{**
+  Converts DateTime value to a RawByteString
+  @param Value a TDateTime value.
+  @param TimeStampFormat the result format.
+  @return a formated RawByteString in TimeStamp-Format pattern.
+}
+function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
+  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+var
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  I: Cardinal;
+  sYear, sMonth, sDay, sHour, sMin, sSec, sMSec: RawByteString;
+  YLen, MLen, DLen, HLen, NLen, SLen, ZLen: Integer;
+begin
+  Result := '';
+  {need fixed size to read from back to front}
+  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  sYear := Concat0(IntToRaw(AYear), 4);
+  sMonth := Concat0(IntToRaw(AMonth), 2);
+  sDay := Concat0(IntToRaw(ADay), 2);
+  sHour := Concat0(IntToRaw(AHour), 2);
+  sMin := Concat0(IntToRaw(AMinute), 2);
+  sSec := Concat0(IntToRaw(ASecond), 2);
+  sMSec := Concat0(IntToRaw(AMilliSecond), 3);
+  SetLength(Result, FromatLen);
+  YLen := 4; MLen := 2; DLen := 2; HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
+  for i := FromatLen-1 downto 0 do
+    case (TimeStampFormat+i)^ of
+      'Y', 'y':
+        begin
+          (PAnsiChar(Result)+i)^ := sYear[YLen];
+          Dec(YLen);
+        end;
+      'M', 'm':
+        begin
+          (PAnsiChar(Result)+i)^ := sMonth[MLen];
+          Dec(MLen);
+        end;
+      'D', 'd':
+        begin
+          (PAnsiChar(Result)+i)^ := sDay[DLen];
+          Dec(DLen);
+        end;
+      'H', 'h':
+        begin
+          (PAnsiChar(Result)+i)^ := sHour[HLen];
+          Dec(HLen);
+        end;
+      'N', 'n':
+        begin
+          (PAnsiChar(Result)+i)^ := sMin[NLen];
+          Dec(NLen);
+        end;
+      'S', 's':
+        begin
+          (PAnsiChar(Result)+i)^ := sSec[SLen];
+          Dec(SLen);
+        end;
+      'Z', 'z':
+        begin
+          (PAnsiChar(Result)+i)^ := sMSec[ZLen];
+          Dec(ZLen);
+        end;
+      else
+        (PAnsiChar(Result)+i)^ := (TimeStampFormat+i)^;
+    end;
+  if Quoted then Result := #39+Result+#39;
+  Result := Result + Suffix;
 end;
 
 {**
