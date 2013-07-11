@@ -134,8 +134,8 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZMatchPattern, ZEncoding,
-  ZDbcLogging;
+  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteResultSetMetadata }
 
@@ -290,6 +290,7 @@ begin
   end;
 
   inherited Open;
+
 end;
 
 {**
@@ -574,23 +575,36 @@ end;
 }
 function TZSQLiteResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  Value: string;
-  TempDate: TDateTime;
+  Buffer: PPAnsiChar;
+  Len: Cardinal;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
-  if IsMatch('????-??-??*', Value) then
-    Result := Trunc(AnsiSQLDateToDateTime(Value))
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (LastRowNo = 0) or (FColumnValues = nil) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+
+  Buffer := FColumnValues;
+  Inc(Buffer, ColumnIndex - 1);
+  LastWasNull := Buffer^ = '';
+
+  if LastwasNull then
+    Result := 0
   else
   begin
-    TempDate := Trunc(SQLStrToFloatDef(Value, 0));
-    Result := Trunc(TimestampStrToDateTime(Value));
-    if ( Result = 0 ) and not ( TempDate = 0 ) then
-      Result := TempDate;
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
+    if (Len = ConSettings^.DateFormatLen) then
+      Result := RawSQLDateToDateTime(Buffer^, PAnsiChar(ConSettings^.DateFormat),
+       Len, ConSettings^.DateFormatLen, Failed)
+    else
+      Result := Trunc(RawSQLTimeStampToDateTime(Buffer^, PAnsiChar(ConSettings^.DateTimeFormat),
+        Len, ConSettings^.DateTimeFormatLen, Failed));
+    LastWasNull := Result = 0;
   end;
-  LastWasNull := Result = 0;
 end;
 
 {**
@@ -604,23 +618,35 @@ end;
 }
 function TZSQLiteResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Value: string;
-  TempTime: TDateTime;
+  Buffer: PPAnsiChar;
+  Len: Cardinal;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
-  if IsMatch('*??:??:??*', Value) then
-    Result := Frac(AnsiSQLDateToDateTime(Value))
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (LastRowNo = 0) or (FColumnValues = nil) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+
+  Buffer := FColumnValues;
+  Inc(Buffer, ColumnIndex - 1);
+  LastWasNull := Buffer^ = '';
+
+  if LastWasNull then
+    Result := 0
   else
   begin
-    TempTime := Frac(SQLStrToFloatDef(Value, 0));
-    Result := Frac(TimestampStrToDateTime(Value));
-    if ( Result = 0 ) and not ( TempTime = 0 ) then
-      Result := TempTime;
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
+    if ( ConSettings^.TimeFormatLen - Len) <= 4 then
+      Result := RawSQLTimeToDateTime(Buffer^, PAnsiChar(ConSettings^.TimeFormat),
+       Len, ConSettings^.TimeFormatLen, Failed)
+    else
+      Result := Frac(RawSQLTimeStampToDateTime(Buffer^, PAnsiChar(ConSettings^.DateTimeFormat),
+        Len, ConSettings^.DateTimeFormatLen, Failed));
   end;
-  LastWasNull := Result = 0;
 end;
 
 {**
@@ -635,23 +661,31 @@ end;
 }
 function TZSQLiteResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Value: string;
-  TempTimeStamp: TDateTime;
+  Buffer: PPAnsiChar;
+  Len: Cardinal;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
+  CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
-  if IsMatch('????-??-??*', Value) then
-    Result := AnsiSQLDateToDateTime(Value)
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (LastRowNo = 0) or (FColumnValues = nil) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+
+  Buffer := FColumnValues;
+  Inc(Buffer, ColumnIndex - 1);
+  LastWasNull := Buffer^ = '';
+
+  if LastWasNull then
+    Result := 0
   else
   begin
-    TempTimeStamp := SQLStrToFloatDef(Value, 0);
-    Result := TimestampStrToDateTime(Value);
-    if ( Result = 0 ) and not ( TempTimeStamp = 0 ) then
-      Result := TempTimeStamp;
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
+    Result := RawSQLTimeStampToDateTime(Buffer^, PAnsiChar(ConSettings^.DateTimeFormat),
+      Len, ConSettings^.DateTimeFormatLen, Failed);
   end;
-  LastWasNull := Result = 0;
 end;
 
 {**

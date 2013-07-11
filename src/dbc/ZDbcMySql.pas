@@ -308,15 +308,21 @@ var
   ClientVersion: Integer;
   SQL: PAnsiChar;
 begin
-   if not Closed then
-      Exit;
+  if not Closed then
+    Exit;
+
+  if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
+    ConSettings^.TimeFormat := 'HH:NN:SS.ZZZZZZ'
+  else
+    ConSettings^.TimeFormat := 'HH:NN:SS';
+  ConSettings^.TimeFormat := ConSettings^.DateFormat+' '+ConSettings^.TimeFormat;
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 
   GetPlainDriver.Init(FHandle);
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
-  sMy_client_Char_Set := String(GetPlainDriver.GetConnectionCharacterSet(FHandle));
+  sMy_client_Char_Set := NotEmptyASCII7ToString(GetPlainDriver.GetConnectionCharacterSet(FHandle));
   ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
   ZEncoding.SetConvertFunctions(ConSettings);
   {EgonHugeist:

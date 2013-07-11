@@ -394,14 +394,14 @@ begin
             Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes), True);
         end;
       stDate:
-        Result := NotEmptyStringToASCII7('''' + FormatDateTime(ConSettings^.DateFormat,
-          ClientVarManager.GetAsDateTime(Value)) + '''');
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateFormat), ConSettings^.DateFormatLen, True);
       stTime:
-        Result := NotEmptyStringToASCII7('''' + FormatDateTime('hh":"mm":"ss":"zzz',
-          ClientVarManager.GetAsDateTime(Value)) + '''');
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, True);
       stTimestamp:
-        Result := NotEmptyStringToASCII7('''' + FormatDateTime(ConSettings^.DateFormat+' hh":"mm":"ss":"zzz',
-          ClientVarManager.GetAsDateTime(Value)) + '''');
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateTimeFormat), ConSettings^.DateTimeFormatLen, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;

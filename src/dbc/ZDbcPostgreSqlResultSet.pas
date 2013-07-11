@@ -61,7 +61,7 @@ uses
 
 type
   {** Implements PostgreSQL ResultSet. }
-  TZPostgreSQLResultSet = class(TZAbstractRawStringResultSet)
+  TZPostgreSQLResultSet = class(TZAbstractResultSet)
   private
     FHandle: PZPostgreSQLConnect;
     FQueryHandle: PZPostgreSQLResult;
@@ -69,7 +69,6 @@ type
     FChunk_Size: Integer;
     FUndefinedVarcharAsStringLength: Integer;
   protected
-    function SupportsMilliSeconds: Boolean; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
     procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
@@ -134,7 +133,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZMatchPattern, ZDbcUtils, ZEncoding, ZDbcPostgreSql,
+  Math, ZMessages, ZDbcUtils, ZEncoding, ZDbcPostgreSql,
   ZDbcPostgreSqlUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLResultSet }
@@ -287,11 +286,6 @@ begin
   end;
 
   inherited Open;
-end;
-
-function TZPostgreSQLResultSet.SupportsMilliSeconds: Boolean;
-begin
-  Result := True;
 end;
 
 {**
@@ -531,6 +525,10 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -538,13 +536,19 @@ begin
   ColumnIndex := ColumnIndex -1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-  //if LastWasNull then
-    //Result := 0
-  //else
-    Result := FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]
-      (FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), PAnsiChar(FDateFormat),
-       FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex), FDateFormatLen,
-        @FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]);
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
+    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
+    if Len = ConSettings^.DateFormatLen then
+      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
+       Len, ConSettings^.DateFormatLen, Failed)
+    else
+      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
+        Len, ConSettings^.DateTimeFormatLen, Failed));
+  end;
 end;
 
 {**
@@ -557,6 +561,10 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -564,13 +572,19 @@ begin
   ColumnIndex := ColumnIndex -1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-  //if LastWasNull then
-    //Result := 0
-  //else
-    Result := FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]
-      (FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), PAnsiChar(FTimeFormat),
-       FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex), FTimeFormatLen,
-        @FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]);
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
+    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
+    if Max(0, ConSettings^.TimeFormatLen - Len) <= 4 then
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
+       Len, ConSettings^.TimeFormatLen, Failed)
+    else
+      Result := Frac(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
+        Len, ConSettings^.DateTimeFormatLen, Failed));
+  end;
 end;
 
 {**
@@ -584,6 +598,7 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+var Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -591,13 +606,13 @@ begin
   ColumnIndex := ColumnIndex -1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-//  if LastWasNull then
-  //  Result := 0
-  //else
-    Result := FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]
-      (FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), PAnsiChar(FDateTimeFormat),
-       FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex), FDateTimeFormatLen,
-        @FDateTimeConvFuncArray[FDateTimeConvAlignArray[ColumnIndex]]);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := RawSQLTimeStampToDateTime(FPlainDriver.GetValue(FQueryHandle,
+      RowNo - 1, ColumnIndex), PAnsiChar(ConSettings^.DateTimeFormat),
+      FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex),
+      ConSettings^.DateTimeFormatLen, Failed);
 end;
 
 function TZPostgreSQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;

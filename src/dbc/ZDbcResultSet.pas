@@ -317,25 +317,6 @@ type
   TDateTimeConverter = function (Value, Format: PAnsiChar;
     Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
 
-  {** Implements a raw string-based ResultSet with spezial Date,Time,DateTime converters}
-  TZAbstractRawStringResultSet = class(TZAbstractResultSet)
-  Protected
-    FDateFormat: RawByteString;
-    FDateFormatLen: Cardinal;
-    FTimeFormat: RawByteString;
-    FTimeFormatLen: Cardinal;
-    FDateTimeFormat: RawByteString;
-    FDateTimeFormatLen: Cardinal;
-    FDateTimeConvAlignArray: TIntegerDynArray;
-    FDateTimeConvFuncArray: Array of TDateTimeConverter;
-    function SupportsMilliSeconds: Boolean; virtual;
-    procedure SetDateTimeConverters;
-    procedure Open; override;
-  public
-    constructor Create(Statement: IZStatement; SQL: string;
-      Metadata: TContainedObject; ConSettings: PZConSettings);
-  end;
-
   {** Implements external or internal blob wrapper object. }
   TZAbstractBlob = class(TInterfacedObject, IZBlob)
   private
@@ -3068,74 +3049,6 @@ end;
 function TZAbstractResultSet.GetConSettings: PZConsettings;
 begin
   Result := ConSettings;
-end;
-
-{ TZAbstractRawStringResultSet }
-
-function TZAbstractRawStringResultSet.SupportsMilliSeconds: Boolean;
-begin
-  Result := False;
-end;
-
-procedure TZAbstractRawStringResultSet.SetDateTimeConverters;
-var I, H: Integer;
-begin
-  SetLength(FDateTimeConvAlignArray, ColumnsInfo.Count);
-  SetLength(FDateTimeConvFuncArray, 0);
-  for i := 0 to ColumnsInfo.Count -1 do
-    if TZColumnInfo(ColumnsInfo[i]).ColumnType in [stDate, stTime, stTimeStamp] then
-    begin
-      H := Length(FDateTimeConvFuncArray);
-      SetLength(FDateTimeConvFuncArray, H+1);
-      FDateTimeConvAlignArray[i] := H;
-      case TZColumnInfo(ColumnsInfo[i]).ColumnType of
-        stDate: FDateTimeConvFuncArray[H] := @ZDbcUtils.ZTestDateConv;
-        stTime: FDateTimeConvFuncArray[H] := @ZDbcUtils.ZTestTimeConv;
-        stTimeStamp: FDateTimeConvFuncArray[H] := @ZDbcUtils.ZTestTimeStampConv;
-      end;
-    end;
-end;
-
-procedure TZAbstractRawStringResultSet.Open;
-begin
-  SetDateTimeConverters;
-  inherited Open;
-end;
-
-{**
-  Creates this object and assignes the main properties.
-  @param Statement an SQL statement object.
-  @param SQL an SQL query string.
-  @param Metadata a resultset metadata object.
-  @param ConSettings the pointer to Connection Settings record
-}
-constructor TZAbstractRawStringResultSet.Create(Statement: IZStatement;
-  SQL: string; Metadata: TContainedObject; ConSettings: PZConSettings);
-begin
-  inherited Create(Statement, SQL, MetaData, ConSettings);
-  if ConSettings^.DateFormat = '' then
-    FDateFormat := 'YYYY-MM-DD'
-  else
-    FDateFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
-  FDateFormatLen := Length(FDateFormat);
-
-  if ConSettings^.TimeFormat = '' then
-    if SupportsMilliSeconds then
-      FTimeFormat := 'HH:NN:SS.ZZZ'
-    else
-      FTimeFormat := 'HH:NN:SS'
-  else
-    FDateFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
-  FTimeFormatLen := Length(FTimeFormat);
-
-  if ConSettings^.DateTimeFormat = '' then
-    if SupportsMilliSeconds then
-      FDateTimeFormat := 'YYYY-MM-DD HH:NN:SS.ZZZ'
-    else
-      FDateTimeFormat := 'YYYY-MM-DD HH:NN:SS'
-  else
-    FDateTimeFormat := PosEmptyStringToASCII7(ConSettings^.DateFormat);
-  FDateTimeFormatLen := Length(FDateTimeFormat);
 end;
 
 { TZAbstractBlob }

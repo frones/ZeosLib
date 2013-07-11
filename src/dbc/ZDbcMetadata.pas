@@ -389,6 +389,7 @@ type
       Concurrency: TZResultSetConcurrency): Boolean; virtual;
     function SupportsBatchUpdates: Boolean; virtual;
     function SupportsNonEscapedSearchStrings: Boolean; virtual;
+    function SupportsMilliSeconds: Boolean; virtual;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; virtual;
@@ -1760,6 +1761,11 @@ end;
 function TZAbstractDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
 begin
   Result := False;
+end;
+
+function TZAbstractDatabaseInfo.SupportsMilliSeconds: Boolean;
+begin
+  Result := True;
 end;
 
 { TZAbstractDatabaseMetadata }

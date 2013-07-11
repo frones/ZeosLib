@@ -1570,7 +1570,7 @@ var
         end
       else
       begin
-        Result := Trunc(ValRawExt(Value, '.', Code));
+        Result := Frac(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
       end;

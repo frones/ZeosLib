@@ -146,6 +146,7 @@ type
 //    function SupportsResultSetConcurrency(_Type: TZResultSetType;
 //      Concurrency: TZResultSetConcurrency): Boolean; override; -> Not implemented
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsMilliSeconds: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -847,6 +848,10 @@ begin
   end;
 end;
 
+function TZMySQLDatabaseInfo.SupportsMilliSeconds: Boolean;
+begin
+  Result := False;
+end;
 {**
   Gets the MySQL version info.
   @param MajorVesion the major version of MySQL server.

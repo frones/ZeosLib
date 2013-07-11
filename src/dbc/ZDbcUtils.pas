@@ -155,13 +155,6 @@ function GetFieldSize(const SQLType: TZSQLType;ConSettings: PZConSettings;
 
 function WideStringStream(const AString: WideString): TStream;
 
-function ZTestDateConv(Value, DateFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-function ZTestTimeConv(Value, TimeFormat: PAnsiChar;
-  Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-function ZTestTimeStampConv(Value, TimeStampFormat: PAnsichar;
-  Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-
 implementation
 
 uses ZMessages, ZSysUtils, ZEncoding, ZMatchPattern;
@@ -520,124 +513,6 @@ begin
   Result.Write(PWideChar(AString)^, Length(AString)*2);
   Result.Position := 0;
 end;
-
-function ZDateFromRawDateToDateTime(Value, DateFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-var
-  Failed: Boolean;
-begin
-  Result := ZSysUtils.RawSQLDateToDateTime(Value, DateFormat, ValLen, FormatLen, Failed);
-  if Failed then
-    Result := ZTestDateConv(Value, DateFormat, ValLen, FormatLen, OptConFunc);
-end;
-
-function ZDateFromRawTimeStampToDateTimeConv(Value, DateFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-begin
-  Result := Trunc(TimestampStrToDateTime(PosEmptyASCII7TOString(Value, ValLen)))
-end;
-
-function ZTimeFromRawTimeToDateTimeDate(Value, TimeFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-var Failed: Boolean;
-begin
-  Result := RawSQLTimeToDateTime(Value, TimeFormat, ValLen, FormatLen, Failed);
-  if Failed then
-    Result := ZTestTimeConv(Value, TimeFormat, ValLen, FormatLen, OptConFunc);
-end;
-
-function ZTimeFromRawTimestampToDateTimeConv(Value, DateFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-begin
-  Result := Trunc(TimestampStrToDateTime(PosEmptyASCII7TOString(Value, ValLen)))
-end;
-
-function ZTimeStampFromRawTimeStampToDateTimeConvWithFormatOrFixedWidth(
-  Value, TimeStampFormat: PAnsiChar; const ValLen, FormatLen: Cardinal;
-  var OptConFunc: Pointer): TDateTime;
-var Failed: Boolean;
-begin
-  Result := RawSQLTimeStampToDateTime(Value, TimeStampFormat, ValLen, FormatLen, Failed);
-  if Failed then
-    Result := ZTestTimeStampConv(Value, TimeStampFormat, ValLen, FormatLen, OptConFunc);
-end;
-
-function ZTimeStampFromRawTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-begin
-  Result := TimestampStrToDateTime(PosEmptyASCII7TOString(Value))
-end;
-
-function ZTestDateConv(Value, DateFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-var
-  Tmp: string;
-  Failed: Boolean;
-begin
-  if Value = '' then
-    Result := 0
-  else
-  begin
-    Tmp := PosEmptyASCII7ToString(Value);
-    if IsMatch('????-??-??*', Tmp) then
-    begin
-      Result := RawSQLDateToDateTime(Value, DateFormat, ValLen, FormatLen, Failed);
-      if not Failed then
-        OptConFunc := @ZDateFromRawDateToDateTime;
-    end
-    else
-    begin
-      Result := Trunc(TimestampStrToDateTime(PosEmptyASCII7TOString(Value, ValLen)));
-      OptConFunc := @ZTimeFromRawTimestampToDateTimeConv;
-    end;
-  end;
-end;
-
-function ZTestTimeConv(Value, TimeFormat: PAnsiChar;
-  Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-var
-  Tmp: string;
-  Failed: Boolean;
-begin
-  if ValLen = 0 then
-    Result := 0
-  else
-  begin
-    Tmp := PosEmptyASCII7ToString(Value, ValLen);
-    if IsMatch('*??:??:??*', Tmp) then
-    begin
-      Result := RawSQLTimeToDateTime(Value, TimeFormat, ValLen, FormatLen, Failed);
-      if not Failed then
-        OptConFunc := @ZTimeFromRawTimeToDateTimeDate;
-      end
-      else
-      begin
-        Result := Trunc(TimestampStrToDateTime(PosEmptyASCII7TOString(Value, ValLen)));
-        OptConFunc := @ZTimeFromRawTimestampToDateTimeConv;
-      end;
-  end;
-end;
-
-function ZTestTimeStampConv(Value, TimeStampFormat: PAnsichar;
-  Const ValLen, FormatLen: Cardinal; var OptConFunc: Pointer): TDateTime;
-var
-  Tmp: string;
-  Failed: Boolean;
-begin
-  Tmp := PosEmptyASCII7ToString(Value);
-  if IsMatch('????-??-??*', Tmp) then
-  begin
-    Result := RawSQLTimeStampToDateTime(Value, TimeStampFormat, ValLen, FormatLen, Failed);
-    if not Failed then
-      OptConFunc := @ZTimeStampFromRawTimeStampToDateTimeConvWithFormatOrFixedWidth;
-  end
-  else
-  begin
-    Result := TimestampStrToDateTime(Tmp);
-    OptConFunc := @ZTimeStampFromRawTimeStampToDateTime;
-  end;
-end;
-
 
 end.
 

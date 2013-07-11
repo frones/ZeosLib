@@ -182,7 +182,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZSysUtils, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding;
+  ZSysUtils, ZMessages, ZDbcMySqlUtils, ZDbcMysql, ZEncoding;
 
 { TZMySQLResultSetMetadata }
 
@@ -280,6 +280,7 @@ begin
   end;
 
   inherited Open;
+
 end;
 
 {**
@@ -565,25 +566,37 @@ end;
 }
 function TZMySQLResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  Value: string;
+  LengthPointer: PULong;
+  Len: ULong;
+  Buffer: PAnsiChar;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
-
-  LastWasNull := (LastWasNull or (Copy(Value, 1, 10)='0000-00-00'));
-  if LastWasNull then
-  begin
-    Result := 0;
-    Exit;
-  end;
-
-  if IsMatch('????-??-??*', Value) then
-    Result := Trunc(AnsiSQLDateToDateTime(Value))
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
   else
-    Result := Trunc(TimestampStrToDateTime(Value));
-  LastWasNull := Result = 0;
+    Len := 0;
+  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Buffer = nil;
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    if Len = ConSettings^.DateFormatLen then
+    begin
+      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat), 
+        Len, ConSettings^.DateFormatLen, Failed);
+    end
+    else
+      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, 
+        PAnsiChar(ConSettings^.DateTimeFormat), Len, 
+          ConSettings^.DateTimeFormatLen, Failed));
+    LastWasNull := Result = 0;
+  end;
 end;
 
 {**
@@ -597,24 +610,38 @@ end;
 }
 function TZMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Value: string;
+  LengthPointer: PULong;
+  Len: ULong;
+  Buffer: PAnsiChar;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Value := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
-
-  LastWasNull := (LastWasNull or (Copy(Value, 1, 8)='00:00:00'));
-  if LastWasNull then
-  begin
-    Result := 0;
-    Exit;
-  end;
-
-  if IsMatch('*??:??:??*', Value) then
-    Result := Frac(AnsiSQLDateToDateTime(Value))
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
   else
-    Result := Frac(TimestampStrToDateTime(Value));
+    Len := 0;
+  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Buffer = nil;
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    if (Buffer+2)^ = ':' then //possible date if Len = 10 then
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat), 
+        Len, ConSettings^.TimeFormatLen, Failed)
+    else
+      if ConSettings^.DateFormatLen = Len then
+        Result := 0
+      else
+        Result := Frac(RawSQLTimeStampToDateTime(Buffer, 
+          PAnsiChar(ConSettings^.DateTimeFormat), Len,
+          ConSettings^.DateTimeFormatLen, Failed));
+    LastWasNull := Result = 0;
+  end;
 end;
 
 {**
@@ -629,23 +656,36 @@ end;
 }
 function TZMySQLResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Temp: string;
+  LengthPointer: PULong;
+  Len: ULong;
+  Buffer: PAnsiChar;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Temp := PosEmptyASCII7ToString(InternalGetString(ColumnIndex));
-
-  if LastWasNull then
-  begin
-    Result := 0;
-    Exit;
-  end;
-
-  if IsMatch('????-??-??*', Temp) or IsMatch('??:??:??*', Temp) then
-    Result := AnsiSQLDateToDateTime(Temp)
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
   else
-    Result := TimestampStrToDateTime(Temp);
+    Len := 0;
+  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Buffer = nil;
+  if LastWasNull then
+    Result := 0
+  else
+    if (Buffer+2)^ = ':' then
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat), 
+        Len, ConSettings^.TimeFormatLen, Failed)
+    else
+      if (ConSettings^.DateTimeFormatLen - Len) <= 4 then
+          Result := RawSQLTimeStampToDateTime(Buffer, 
+            PAnsiChar(ConSettings^.DateTimeFormat), Len,
+            ConSettings^.DateTimeFormatLen, Failed)
+      else
+        Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat), 
+          Len, ConSettings^.TimeFormatLen, Failed);
   LastWasNull := Result = 0;
 end;
 

@@ -161,7 +161,6 @@ type
     function getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
   protected
     function GetStmtHandle : PZMySqlPrepStmt;
-    //procedure PrepareInParameters; override; //not supported
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
   public
@@ -502,7 +501,6 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -532,26 +530,14 @@ begin
       stString, stUnicodeString: 
         Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-        begin
-          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d',
-            [AYear, AMonth, ADay]) + '''');
-        end;
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateFormat), ConSettings^.DateFormatLen, True);
       stTime:
-        begin
-          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := RawByteString('''' + Format('%0.2d:%0.2d:%0.2d',
-            [AHour, AMinute, ASecond]) + '''');
-        end;
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, True);
       stTimestamp:
-        begin
-          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
-            [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''');
-        end;
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateTimeFormat), ConSettings^.DateTimeFormatLen, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1050,7 +1036,6 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -1081,26 +1066,14 @@ begin
       stString, stUnicodeString:
         Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-        begin
-          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := '''' + NotEmptyStringToASCII7(Format('%0.4d-%0.2d-%0.2d',
-            [AYear, AMonth, ADay])) + '''';
-        end;
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateFormat), ConSettings^.DateFormatLen, True);
       stTime:
-        begin
-          DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := '''' + NotEmptyStringToASCII7(Format('%0.2d:%0.2d:%0.2d',
-            [AHour, AMinute, ASecond])) + '''';
-        end;
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, True);
       stTimestamp:
-      begin
-        DecodeDateTime(ClientVarManager.GetAsDateTime(Value),
-          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + NotEmptyStringToASCII7(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
-          [AYear, AMonth, ADay, AHour, AMinute, ASecond])) + '''';
-      end;
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateTimeFormat), ConSettings^.DateTimeFormatLen, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;

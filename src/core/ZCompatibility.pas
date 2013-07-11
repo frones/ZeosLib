@@ -234,9 +234,12 @@ type
     CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    DateFormat: String;
-    TimeFormat: String;
-    DateTimeFormat: String;
+    DateFormat: RawByteString;
+    DateFormatLen: Cardinal;
+    TimeFormat: RawByteString;
+    TimeFormatLen: Cardinal;
+    DateTimeFormat: RawByteString;
+    DateTimeFormatLen: Cardinal;
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;

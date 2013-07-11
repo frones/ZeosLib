@@ -713,15 +713,31 @@ begin
 
   SetConSettingsFromInfo(Info);
   CheckCharEncoding(FClientCodePage, True);
-  ConSettings^.DateFormat := UpperCase(Info.Values['dateformat']);
-  ConSettings^.TimeFormat := UpperCase(Info.Values['timeformat']);
-  ConSettings^.DateTimeFormat := UpperCase(Info.Values['datetimeformat']);
-
   FAutoCommit := True;
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   InternalCreate;
+
+  if Info.Values['dateformat'] = '' then
+    ConSettings^.DateFormat := 'YYYY-MM-DD'
+  else
+    ConSettings^.DateFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['dateformat']));
+  if Info.Values['timeformat'] = '' then
+    if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
+      ConSettings^.TimeFormat := 'HH:NN:SS.ZZZ'
+    else
+      ConSettings^.TimeFormat := 'HH:NN:SS'
+  else
+    ConSettings^.TimeFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['timeformat']));
+  if Info.Values['datetimeformat'] = '' then
+    ConSettings^.DateTimeFormat := ConSettings^.DateFormat+' '+ConSettings^.TimeFormat
+  else
+    ConSettings^.DateTimeFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['datetimeformat']));
+  ConSettings^.DateFormatLen :=  Length(ConSettings^.DateFormat);
+  ConSettings^.TimeFormatLen :=  Length(ConSettings^.TimeFormat);
+  ConSettings^.DateTimeFormatLen := Length(ConSettings^.DateTimeFormat);
+
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;
   {$ENDIF}

@@ -636,16 +636,19 @@ begin
   Stmt := CreateRegularStatement(Self.Info);
   RS := Stmt.ExecuteQuery('SELECT dateformat FROM sys.syslanguages WHERE name = @@LANGUAGE');
   if RS.Next then
-    ConSettings.DateFormat := RS.GetString(1);
+    ConSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(1));
   RS := nil;
   Stmt.close;
   Stmt := nil;
-  if ConSettings.DateFormat = 'dmy' then
-    ConSettings.DateFormat := 'dd/mm/yyyy'
-  else if ConSettings.DateFormat = 'mdy' then
-    ConSettings.DateFormat := 'mm/dd/yyyy'
+  if ConSettings^.DateFormat = 'dmy' then
+    ConSettings^.DateFormat := 'dd/mm/yyyy'
+  else if ConSettings^.DateFormat = 'mdy' then
+    ConSettings^.DateFormat := 'mm/dd/yyyy'
   else
-    ConSettings.DateFormat := 'yyyy/mm/dd'
+    ConSettings^.DateFormat := 'yyyy/mm/dd';
+  ConSettings^.DateFormatLen := 10;
+  ConSettings^.DateTimeFormat := ConSettings^.DateFormat+' hh:nn:ss:zzz';
+  ConSettings^.DateTimeFormatLen := Length(ConSettings^.DateTimeFormat);
 end;
 
 function TZDBLibConnection.DetermineMSServerCollation: String;
@@ -655,7 +658,8 @@ var
 begin
   Stmt := CreateRegularStatement(Self.Info);
   try
-    RS := Stmt.ExecuteQuery('SELECT DATABASEPROPERTYEX('+AnsiQuotedStr(DataBase, #39)+', ''Collation'') as DatabaseCollation');
+    RS := Stmt.ExecuteQuery('SELECT DATABASEPROPERTYEX('+
+      AnsiQuotedStr(DataBase, #39)+', ''Collation'') as DatabaseCollation');
     if RS.Next then
       Result := RS.GetString(1)
     else

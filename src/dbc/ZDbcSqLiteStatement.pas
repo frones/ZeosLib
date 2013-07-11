@@ -369,16 +369,17 @@ begin
           Result := EncodeString(@TempBytes, Length(TempBytes));
         end;
       stString, stUnicodeString:
-        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
+        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}
+          AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stDate:
-        Result := '''' + NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd',
-          ClientVarManager.GetAsDateTime(Value))) + '''';
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateFormat), ConSettings^.DateFormatLen, True);
       stTime:
-        Result := '''' + NotEmptyStringToASCII7(FormatDateTime('hh:mm:ss',
-          ClientVarManager.GetAsDateTime(Value))) + '''';
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, True);
       stTimestamp:
-        Result := '''' + NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          ClientVarManager.GetAsDateTime(Value))) + '''';
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          PAnsiChar(ConSettings^.DateTimeFormat), ConSettings^.DateTimeFormatLen, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -523,31 +524,22 @@ begin
               -1, @BindingDestructor);
         stDate:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(StringToASCII7(FormatDateTime('yyyy-mm-dd',
-             {$ELSE}
-            StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd',
-            {$ENDIF}
-            ClientVarManager.GetAsDateTime(Value))))),
-                -1, @BindingDestructor);
+          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
+            DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+            PAnsiChar(ConSettings^.DateFormat), ConSettings^.DateFormatLen, False))),
+              -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(NotEmptyStringToASCII7(RawByteString(FormatDateTime('hh:mm:ss',
-            {$ELSE}
-            StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('hh:mm:ss',
-            {$ENDIF}
-            ClientVarManager.GetAsDateTime(Value))))),
+          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
+            DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+              PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, False))),
                 -1, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-            {$ELSE}
-            StrNew(PAnsichar(NotEmptyStringToASCII7(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-            {$ENDIF}
-            ClientVarManager.GetAsDateTime(Value))))),
-                -1, @BindingDestructor);
+          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
+            DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+              PAnsiChar(ConSettings^.DateTimeFormat), ConSettings^.DateTimeFormatLen, False))),
+              -1, @BindingDestructor);
         { works equal but selects from data which was written in string format
           won't match! e.G. TestQuery etc. On the other hand-> i've prepared
           this case on the resultsets too. JULIAN_DAY_PRECISION?}

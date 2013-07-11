@@ -513,7 +513,7 @@ end;
 procedure TZPostgreSQLConnection.Open;
 
 var
-  SCS, LogMessage, TempClientCodePage: string;
+  SCS, LogMessage, Temp: string;
 begin
   if not Closed then
     Exit;
@@ -536,10 +536,10 @@ begin
     GetPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
     { Gets the current codepage }
-    TempClientCodePage := GetPlainDriver.ValidateCharEncoding(GetPlainDriver.GetClientEncoding(FHandle)).Name;
+    Temp := GetPlainDriver.ValidateCharEncoding(GetPlainDriver.GetClientEncoding(FHandle)).Name;
 
     { Sets a client codepage if necessary }
-    if ( FClientCodePage <> '' ) and (TempClientCodePage <> FClientCodePage) then
+    if ( FClientCodePage <> '' ) and (Temp <> FClientCodePage) then
       SetServerSetting('CLIENT_ENCODING', FClientCodePage);
 
     { Turn on transaction mode }
@@ -550,7 +550,7 @@ begin
 
     { Gets the current codepage if it wasn't set..}
     if ( FClientCodePage = '') then
-      CheckCharEncoding(TempClientCodePage)
+      CheckCharEncoding(Temp)
     else
     begin
       CheckCharEncoding(FClientCodePage);
@@ -567,6 +567,24 @@ begin
     //if not FOidAsBlob then
       //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
+    {Temp := UpperCase(GetServerSetting('''DateStyle'''));
+    if Pos('YMD', Temp) > 0 then
+    begin
+      ConSettings^.DateFormat := 'YYYY-MM-DD';
+      ConSettings^.DateTimeFormat := 'YYYY-MM-DD HH:NN:SS.ZZZ';
+    end
+    else
+      if Pos('DMY', Temp) > 0 then
+      begin
+        ConSettings^.DateFormat := 'DD-MM-YYYY';
+        ConSettings^.DateTimeFormat := 'DD-MM-YYYY HH:NN:SS.ZZZ';
+      end
+      else
+      begin
+        ConSettings^.DateFormat := 'MM-DD-YYYY';
+        ConSettings^.DateTimeFormat := 'MM-DD-YYYY HH:NN:SS.ZZZ';
+      end}
+
 
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
