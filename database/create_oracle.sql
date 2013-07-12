@@ -10,6 +10,7 @@ b_long               LONG,
 b_nclob              NCLOB,
 b_clob               CLOB,
 b_blob               BLOB,
+b_bfile              BFILE,
 primary key (b_id)
 );
 

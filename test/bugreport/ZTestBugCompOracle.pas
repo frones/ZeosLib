@@ -85,7 +85,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate;
+  ZTestCase, ZTestConsts, ZSqlUpdate, ZSysUtils;
 
 { ZTestCompOracleBugReport }
 
@@ -147,27 +147,87 @@ begin
 end;
 
 procedure ZTestCompOracleBugReport.TestNCLOBValues;
+const
+  row_id = 1000;
+  testString = 'όδόδόδό';
 var
   Query: TZQuery;
+  BinFileStream: TFileStream;
+  BinaryStream: TStream;
+  Dir: String;
+
+  function GetBFILEDir: String;
+  var I: Integer;
+  begin
+    Result := '';
+    for i := 0 to high(Properties) do
+      if StartsWith(Properties[i], 'BFILE_DIR') then
+        Result := Copy(Properties[i], Pos('=', Properties[i])+1, Length(Properties[i]));
+  end;
+
 begin
   if SkipForReason(srClosedBug) then Exit;
 
+  Dir := '';
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'select * from blob_values'; //NCLOB is inlcuded
+    BinFileStream := TFileStream.Create('..\..\..\database\images\horse.jpg', fmOpenRead);
+    BinaryStream := TMemoryStream.Create;
+    Query.SQL.Text := 'select * from blob_values'; //NCLOB and BFILE is inlcuded
     Query.Open;
-    CheckEquals(5, Query.Fields.Count);
+    CheckEquals(6, Query.Fields.Count);
+    CheckEquals('', Query.Fields[2].AsString);
     CheckMemoFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
     CheckMemoFieldType(Query.Fields[3].DataType, Connection.DbcConnection.GetConSettings);
     Query.Next;
     CheckEquals('Test string', Query.Fields[2].AsString); //read ORA NCLOB
+    Query.Next;
+    Query.Insert;
+    Query.FieldByName('b_id').AsInteger := row_id;
+    Query.FieldByName('b_long').AsString := testString;
+    Query.FieldByName('b_nclob').AsString := testString+testString;
+    Query.FieldByName('b_clob').AsString := testString+testString+testString;
+    (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);
+    Query.Post;
+    Dir := GetBFILEDir;
+    if not ( Dir = '') then
+    begin
+      Query.SQL.Text := 'CREATE OR REPLACE DIRECTORY IMG_DIR AS '''+Dir+'''';
+      Query.ExecSQL;
+      Query.SQL.Text := 'update blob_values set b_bfile = BFILENAME(''IMG_DIR'', ''horse.jpg'') where b_id = '+IntToStr(row_id);
+      Query.ExecSQL;
+      Query.SQL.Text := 'select * from blob_values where b_id = '+IntToStr(row_id);
+      Query.Open;
+      CheckEquals(6, Query.Fields.Count);
+      CheckEquals(teststring, Query.FieldByName('b_long').AsString, 'value of b_long field');
+      CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
+      CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, 'value of b_clob field');
+
+      (Query.FieldByName('b_blob') as TBlobField).SaveToStream(BinaryStream);
+      CheckEquals(BinFileStream, BinaryStream, 'b_blob');
+      BinaryStream.Position := 0;
+      (Query.FieldByName('b_bfile') as TBlobField).SaveToStream(BinaryStream);
+      CheckEquals(BinFileStream, BinaryStream, 'b_bfile');
+    end;
     Query.Close;
   finally
+    Query.SQL.Text := 'delete from blob_values where b_id ='+IntToStr(row_id);
+    Query.ExecSQL;
+    if not ( Dir = '') then
+    begin
+      Query.SQL.Text := 'DROP DIRECTORY IMG_DIR';
+      try
+        Query.ExecSQL;
+      except
+      end;
+    end;
     Query.Free;
+    BinFileStream.Free;
+    BinaryStream.Free;
   end;
 end;
 
 
 initialization
-  RegisterTest('bugreport',ZTestCompOracleBugReport.Suite);
+  RegisterTest('bugreport', ZTestCompOracleBugReport.Suite);
 end.
