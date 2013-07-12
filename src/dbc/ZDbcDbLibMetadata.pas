@@ -218,7 +218,7 @@ type
   protected
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
-    function DeComposeObjectString(const S: String): String;
+    function DecomposeObjectString(const S: String): String; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
 
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
@@ -1215,7 +1215,7 @@ end;
   @param NullText the "NULL"-Text
   @return 'null' if S is '' or S if s is already Quoted or AnsiQuotedStr(S, #39)
 }
-function TZDbLibBaseDatabaseMetadata.DeComposeObjectString(const S: String): String;
+function TZDbLibBaseDatabaseMetadata.DecomposeObjectString(const S: String): String;
 begin
   if S = '' then
     Result := 'null'

@@ -1509,7 +1509,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  SQL, where: string;
+  SQL: string;
   LProcedureNamePattern, LSchemaNamePattern: string;
   sName:string;
 begin
