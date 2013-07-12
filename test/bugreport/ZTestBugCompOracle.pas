@@ -184,7 +184,7 @@ begin
     Query.Next;
     Query.Insert;
     Query.FieldByName('b_id').AsInteger := row_id;
-    Query.FieldByName('b_long').AsString := testString;
+    Query.FieldByName('b_long').AsString := 'aaa';
     Query.FieldByName('b_nclob').AsString := testString+testString;
     Query.FieldByName('b_clob').AsString := testString+testString+testString;
     (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);
@@ -199,7 +199,7 @@ begin
       Query.SQL.Text := 'select * from blob_values where b_id = '+IntToStr(row_id);
       Query.Open;
       CheckEquals(6, Query.Fields.Count);
-      CheckEquals(teststring, Query.FieldByName('b_long').AsString, 'value of b_long field');
+      CheckEquals('aaa', Query.FieldByName('b_long').AsString, 'value of b_long field');
       CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
       CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, 'value of b_clob field');
 

@@ -798,13 +798,8 @@ begin
       begin
         Stream := nil;
         try
-            if CurrentVar.ColType = stUnicodeStream then
-              Stream := ZEncoding.GetValidatedUnicodeStream(GetAsStringValue(ColumnIndex, CurrentVar), ConSettings, True)
-            else
-              Stream := TStringStream.Create(GetValidatedAnsiString(GetAsStringValue(ColumnIndex, CurrentVar), ConSettings, True));
-
-          //Stream := TStringStream.Create(
-            //GetAsStringValue(ColumnIndex, CurrentVar));
+          Stream := TStringStream.Create(
+            GetAsStringValue(ColumnIndex, CurrentVar));
           Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
         finally
           if Assigned(Stream) then
