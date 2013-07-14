@@ -2037,11 +2037,12 @@ begin
           DestResultSet.UpdateDouble(I, SrcResultSet.GetDouble(I));
         stBigDecimal:
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
-        stString:
-          DestResultSet.UpdateString(I, SrcResultSet.GetString(I));
-        stUnicodeString:
-          DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
-        stBytes:
+        stString, stUnicodeString:
+          if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+            DestResultSet.UpdateRawByteString(I, SrcResultSet.GetRawByteString(I))
+          else
+            DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
+        stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:
           DestResultSet.UpdateDate(I, SrcResultSet.GetDate(I));
@@ -2050,8 +2051,7 @@ begin
         stTimestamp:
           DestResultSet.UpdateTimestamp(I, SrcResultSet.GetTimestamp(I));
         stAsciiStream,
-        stUnicodeStream,
-        stBinaryStream:
+        stUnicodeStream:
           DestResultSet.UpdateString(I, SrcResultSet.GetString(I));
       end;
       if SrcResultSet.WasNull then
