@@ -243,6 +243,13 @@
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
   {$DEFINE WITH_SYSUITLS_PREFIX} 	//Need SysUtils. unit declaration for some functions like StrNew,StrAlloc
   {$DEFINE WITH_BUFFERS_IS_TRECBUF}
+  {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings
+  {$DEFINE WITH_TOBJECTLIST_INLINE} //TObjectList.Remove, add ... are inlined 	need System.Types
+  {$DEFINE WITH_ANSISTRCOMP_DEPRECATED} //AnsiStrComp is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRDISPOSE_DEPRECATED} //StrDispose is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRNEW_DEPRECATED} //StrNew is deprecated moved to AnsiStrings
+  {$DEFINE WITH_STRCOPY_DEPRECATED} //StrCopy is deprecated moved to AnsiStrings
 {$ENDIF}
 
 

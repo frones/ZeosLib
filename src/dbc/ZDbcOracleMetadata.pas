@@ -1274,14 +1274,14 @@ var
   IZStmt: IZStatement;
   TempSet: IZResultSet;
   Names, Procs: TStrings;
-  PackageName, ProcName, TempProcedureNamePattern: String;
+  PackageName, ProcName, TempProcedureNamePattern, TmpSchemaPattern: String;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
   var
     N: Integer;
     NewName: String;
   begin
-    if PackageName = '' then
+    if ( PackageName = '' ) or ( not ( PackageName = ProcedureNamePattern ) ) then
       NewName := AName
     else
       NewName := ProcName+'.'+AName;
@@ -1348,6 +1348,8 @@ var
   end;
 
   function GetColumnSQL(PosChar: String; Package: String = ''): String;
+  var
+    OwnerCondition, PackageNameCondition, PackageAsProcCondition, PackageProcNameCondition: string;
 
     procedure SplitPackageAndProc(Value: String);
     var
@@ -1358,26 +1360,31 @@ var
       iPos := Pos('.', Value);
         if (iPos > 0) then
         begin
-          PackageName := '= '+#39+Copy(Value, 1, iPos-1)+#39;
-          ProcName := Copy(Value, iPos+1,Length(Value)-iPos);
+          PackageNameCondition := ConstructNameCondition(Copy(Value, 1, iPos-1),'package_name');
+          PackageProcNameCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'object_name');
+          PackageAsProcCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'package_name');
+          PackageName := '= '+#39+FIC.ExtractQuote(Copy(Value, 1, iPos-1))+#39;
+          ProcName := FIC.ExtractQuote(Copy(Value, iPos+1,Length(Value)-iPos));
         end
         else
         begin
+          PackageNameCondition := 'package_name IS NULL';
+          PackageProcNameCondition := ConstructNameCondition(Value,'object_name');
+          PackageAsProcCondition := ConstructNameCondition(Value,'package_name');
           PackageName := 'IS NULL';
-          ProcName := Value;
+          ProcName := FIC.ExtractQuote(Value);
         end;
     end;
   begin
-    SplitPackageAndProc(GetIdentifierConvertor.ExtractQuote(TempProcedureNamePattern));
-    Result := 'select * from user_arguments where (package_name '+PackageName+
-      ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
-      ' OR package_name like '''+ ToLikeString(ProcName)+''' )'+
-        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';
-{ TODO : rewrite similar to following code:
-     Result := 'select * from user_arguments where ('+ConstructNameCondition(PackageName,'package_name') +
-      ' AND'+ ConstructNameCondition(ProcName,'object_name') +
-      ' OR '+ ConstructNameCondition(ProcName,'package_name')+')'+
-        'AND POSITION '+PosChar+' 0 ORDER BY POSITION';}
+    OwnerCondition := ConstructNameCondition(TmpSchemaPattern,'OWNER');
+    SplitPackageAndProc(TempProcedureNamePattern);
+    Result := 'select * from all_arguments where ('+PackageNameCondition+
+      ' AND '+PackageProcNameCondition+
+      ' OR '+ PackageAsProcCondition+')'+
+        'AND POSITION '+PosChar+' 0';
+    If OwnerCondition <> '' then
+      Result := Result + ' AND ' + OwnerCondition;
+    Result := Result + ' ORDER BY POSITION';
   end;
 
   procedure AddColumns(WasNext: Boolean; WasFunc: Boolean);
@@ -1415,95 +1422,132 @@ var
     TempSet.Close;
     for i := 0 to Procs.Count -1 do
     begin
-      TempProcedureNamePattern := '"'+ProcedureNamePattern+'.'+Procs[i]+'"';
+      TempProcedureNamePattern := ProcedureNamePattern+'.'+FIC.Quote(Procs[i]);
       TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
       AddColumns(False, False);
     end;
   end;
 
+  function CheckSchema: Boolean;
+  begin
+    if TmpSchemaPattern = '' then
+      Result := False
+    else
+      with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_USERS WHERE '+ConstructNameCondition(TmpSchemaPattern,'username')) do
+      begin
+        Next;
+        Result := GetInt(1) > 0;
+        Close;
+      end;
+  end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-  TempProcedureNamePattern := ProcedureNamePattern;
+  {improve SplitQualifiedObjectName: Oracle does'nt support catalogs}
+  if Catalog = '' then
+    TmpSchemaPattern := SchemaPattern
+  else
+    TmpSchemaPattern := Catalog;
 
-  Names := TStringList.Create;
-  Procs := TStringList.Create;
-
-  IZStmt := GetConnection.CreateStatement;
-  TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
-
-  with TempSet  do
-  begin
-    ColumnIndexes[1] := FindColumn('object_name');
-    ColumnIndexes[2] := FindColumn('argument_name');
-    ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
-    ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
-    ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
-    ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
-    ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
-    ColumnIndexes[8] := FindColumn('package_name');
-    ColumnIndexes[9] := FindColumn('object_name');
-  end;
-    if ( PackageName <> 'IS NULL' ) and ( ProcName <> '' ) then
-      AddColumns(False, False)
+    if ( TmpSchemaPattern = '' ) then
+      TempProcedureNamePattern := ProcedureNamePattern //just a procedurename or package or both
     else
-      if TempSet.Next then
-        if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
-        {Package without proc found}
-          GetMoreProcedures
-        else
-          AddColumns(True, False)
+      if CheckSchema then
+        TempProcedureNamePattern := ProcedureNamePattern //Schema exists not a package
       else
-      begin
-        TempSet.Close;
-        TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ParameterValues have allways Position > 0
+        begin
+          TempProcedureNamePattern := TmpSchemaPattern+'.'+ProcedureNamePattern; //no Schema so it's a PackageName
+          TmpSchemaPattern := '';
+        end;
+  if TempProcedureNamePattern <> '' then
+  begin
+    Names := TStringList.Create;
+    Procs := TStringList.Create;
+
+    IZStmt := GetConnection.CreateStatement;
+    TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
+
+    with TempSet  do
+    begin
+      ColumnIndexes[1] := FindColumn('object_name');
+      ColumnIndexes[2] := FindColumn('argument_name');
+      ColumnIndexes[3] := FindColumn('IN_OUT'); //'RDB$PARAMETER_TYPE');
+      ColumnIndexes[4] := FindColumn('DATA_TYPE');//'RDB$FIELD_TYPE');
+      ColumnIndexes[5] := FindColumn('TYPE_SUBNAME');//RDB$FIELD_SUB_TYPE');
+      ColumnIndexes[6] := FindColumn('DATA_PRECISION');//RDB$FIELD_PRECISION');
+      ColumnIndexes[7] := FindColumn('DATA_SCALE');//RDB$FIELD_SCALE');
+      ColumnIndexes[8] := FindColumn('package_name');
+      ColumnIndexes[9] := FindColumn('object_name');
+    end;
+      if ( PackageName <> 'IS NULL' ) and ( ProcName <> '' ) then
+        AddColumns(False, False)
+      else
         if TempSet.Next then
           if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
           {Package without proc found}
             GetMoreProcedures
           else
-            AddColumns(True, True)
-      end;
-  TempSet := nil;
-  IZStmt.Close;
-  FreeAndNil(Names);
-  FreeAndNil(Procs);
+            AddColumns(True, False)
+        else
+        begin
+          TempSet.Close;
+          TempSet := IZStmt.ExecuteQuery(GetColumnSQL('=')); //ParameterValues have allways Position > 0
+          if TempSet.Next then
+            if ( TempSet.GetString(ColumnIndexes[8]) = ProcName ) then
+            {Package without proc found}
+              GetMoreProcedures
+            else
+              AddColumns(True, True)
+        end;
+    TempSet := nil;
+    IZStmt.Close;
+    FreeAndNil(Names);
+    FreeAndNil(Procs);
+  end;
 end;
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-  var
-    SQL: string;
-    LProcedureNamePattern: string;
-    sName:string;
-  begin
-      Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
+var
+  SQL, where: string;
+  LProcedureNamePattern, LSchemaNamePattern: string;
+  sName:string;
+begin
+  Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
-  LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,objet_name||''.''||procedure_name)');
-  SQL := 'select Object_Name, procedure_name from user_procedures';
-
+  LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,object_name||''.''||procedure_name)');
+  LSchemaNamePattern := ConstructNameCondition(SchemaPattern,'owner');
+  SQL := 'select NULL AS PROCEDURE_CAT, OWNER AS PROCEDURE_SCHEM, '+
+    'OBJECT_NAME, PROCEDURE_NAME AS PROCEDURE_NAME, '+
+    'OVERLOAD AS PROCEDURE_OVERLOAD, OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
+    'ALL_PROCEDURES WHERE 1=1';
   if LProcedureNamePattern <> '' then
-    SQL := SQL + ' WHERE ' + LProcedureNamePattern;
+    SQL := SQL + ' AND ' + LProcedureNamePattern;
+  if LSchemaNamePattern <> '' then
+    SQL := SQL + ' AND ' + LSchemaNamePattern;
+  SQL := SQL + ' ORDER BY decode(owner,user,0,1),owner,object_name,procedure_name,overload';
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
     while Next do
     begin
-      sName := GetIdentifierConvertor.Quote(GetString(1));
-      if GetString(2) <> '' then
-        sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(2));
+      sName := GetIdentifierConvertor.Quote(GetString(3));
+      if GetString(4) <> '' then
+        sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(4));
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
-      Result.UpdateNull(2);
-      Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
-      Result.UpdateNull(4);
+      Result.UpdateString(2, GetString(2));
+      Result.UpdateString(3, sName); //PROCEDURE_NAME
+      Result.UpdateString(4, GetString(5)); //PROCEDURE_OVERLOAD
       Result.UpdateNull(5);
       Result.UpdateNull(6);
       Result.UpdateNull(7);
-      //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
-//        if IsNull(2) then //RDB$PROCEDURE_OUTPUTS
-      Result.UpdateInt(8, Ord(prtNoResult));
-//       else Result.UpdateInt(8, Ord(prtReturnsResult));
+      if GetString(6) = 'FUNCTION' then
+          Result.UpdateInt(8, Ord(prtReturnsResult))
+        else if GetString(6) = 'PROCDEURE' then
+          Result.UpdateInt(8, Ord(prtNoResult))
+        else
+          Result.UpdateInt(8, Ord(prtUnknown)); //Package
       Result.InsertRow;
     end;
     Close;

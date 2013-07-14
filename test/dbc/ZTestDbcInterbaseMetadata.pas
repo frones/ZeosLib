@@ -408,9 +408,9 @@ begin
   CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
   CheckEquals(2, Resultset.FindColumn('PROCEDURE_SCHEM'));
   CheckEquals(3, Resultset.FindColumn('PROCEDURE_NAME'));
-  CheckEquals(4, Resultset.FindColumn('RESERVED1'));
-  CheckEquals(5, Resultset.FindColumn('RESERVED2'));
-  CheckEquals(6, Resultset.FindColumn('RESERVED3'));
+  CheckEquals(4, Resultset.FindColumn('PROCEDURE_OVERLOAD'));
+  CheckEquals(5, Resultset.FindColumn('RESERVED1'));
+  CheckEquals(6, Resultset.FindColumn('RESERVED2'));
   CheckEquals(7, Resultset.FindColumn('REMARKS'));
   CheckEquals(8, Resultset.FindColumn('PROCEDURE_TYPE'));
   ResultSet.Close;

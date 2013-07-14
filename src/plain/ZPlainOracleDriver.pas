@@ -333,6 +333,10 @@ type
       locp: POCILobLocator; var is_temporary: LongBool): sword;
     function LobFreeTemporary(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator): sword;
+    function LobCharSetForm ( envhp: POCIEnv; errhp: POCIError;
+        const locp: POCILobLocator; csfrm: pub1): sword;
+    function LobCharSetId ( envhp: POCIEnv; errhp: POCIError;
+        const locp: POCILobLocator; csid: pub2): sword;
 
     function StmtGetPieceInfo(stmtp: POCIStmt; errhp: POCIError;
       var hndlpp: Pointer; var typep: ub4; var in_outp: ub1; var iterp: ub4;
@@ -861,6 +865,10 @@ type
       locp: POCILobLocator; var is_temporary: LongBool): sword;
     function LobFreeTemporary(svchp: POCISvcCtx; errhp: POCIError;
       locp: POCILobLocator): sword;
+    function LobCharSetForm ( envhp: POCIEnv; errhp: POCIError;
+        const locp: POCILobLocator; csfrm: pub1): sword;
+    function LobCharSetId ( envhp: POCIEnv; errhp: POCIError;
+        const locp: POCILobLocator; csid: pub2): sword;
 
     function StmtGetPieceInfo(stmtp: POCIStmt; errhp: POCIError;
       var hndlpp: Pointer; var typep: ub4; var in_outp: ub1; var iterp: ub4;
@@ -1532,6 +1540,8 @@ begin
     { For Oracle >= 8.1 }
     @OracleAPI.OCILobCreateTemporary          := GetAddress('OCILobCreateTemporary');
     @OracleAPI.OCILobFreeTemporary            := GetAddress('OCILobFreeTemporary');
+    @OracleAPI.OCILobCharSetForm              := GetAddress('OCILobCharSetForm');
+    @OracleAPI.OCILobCharSetId                := GetAddress('OCILobCharSetId');
     @OracleAPI.OCILobClose                    := GetAddress('OCILobClose');
     @OracleAPI.OCILobIsOpen                   := GetAddress('OCILobIsOpen');
     @OracleAPI.OCILobIsTemporary              := GetAddress('OCILobIsTemporary');
@@ -2219,6 +2229,18 @@ function TZOracle9iPlainDriver.LobFreeTemporary(svchp: POCISvcCtx;
   errhp: POCIError; locp: POCILobLocator): sword;
 begin
   Result := OracleAPI.OCILobFreeTemporary(svchp, errhp, locp);
+end;
+
+function TZOracle9iPlainDriver.LobCharSetForm ( envhp: POCIEnv; errhp: POCIError;
+    const locp: POCILobLocator; csfrm: pub1): sword;
+begin
+  Result := OracleAPI.OCILobCharSetForm(envhp, errhp, locp, csfrm);
+end;
+
+function TZOracle9iPlainDriver.LobCharSetId ( envhp: POCIEnv; errhp: POCIError;
+    const locp: POCILobLocator; csid: pub2): sword;
+begin
+  Result := OracleAPI.OCILobCharSetId (envhp, errhp, locp, csid);
 end;
 
 function TZOracle9iPlainDriver.LobIsTemporary(svchp: POCISvcCtx;

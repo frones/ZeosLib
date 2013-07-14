@@ -344,7 +344,8 @@ type
 
 implementation
 
-uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding;
+uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding
+  {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}, AnsiStrings{$ENDIF};
 
 { TZAbstractResultSet }
 
@@ -3032,7 +3033,7 @@ begin
     begin
       SetLength(Bytes, FBlobSize +2);
       System.move(FBlobData^, Pointer(Bytes)^, FBlobSize);
-      if ( not ( StrLen(PAnsiChar(Bytes)) = Cardinal(FBlobSize) ) ) and
+      if ( not ( {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(Bytes)) = Cardinal(FBlobSize) ) ) and
          ( {$IFDEF DELPHI14_UP}StrLen{$ELSE}System.Length{$ENDIF}(PWideChar(Bytes)) = Cardinal(FBlobSize) div 2 ) then
       begin
         SetLength(Result, FBlobSize div 2);
@@ -3107,7 +3108,7 @@ begin
   Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
-    if ( not ( StrLen(PAnsiChar(FBlobData)) = Cardinal(FBlobSize) ) ) and
+    if ( not ( {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(FBlobData)) = Cardinal(FBlobSize) ) ) and
        ( {$IFDEF DELPHI14_UP}StrLen{$ELSE}System.Length{$ENDIF}(PWideChar(FBlobData)) = Cardinal(FBlobSize) div 2 ) then
     begin
       Result.Size := FBlobSize;
