@@ -640,12 +640,16 @@ begin
   else
   begin
     Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
-    if ( ConSettings^.TimeFormatLen - Len) <= 4 then
+    if ((Buffer^)+2)^ = ':' then //possible date if Len = 10 then
       Result := RawSQLTimeToDateTime(Buffer^, PAnsiChar(ConSettings^.TimeFormat),
-       Len, ConSettings^.TimeFormatLen, Failed)
+        Len, ConSettings^.TimeFormatLen, Failed)
     else
-      Result := Frac(RawSQLTimeStampToDateTime(Buffer^, PAnsiChar(ConSettings^.DateTimeFormat),
-        Len, ConSettings^.DateTimeFormatLen, Failed));
+      if ConSettings^.DateFormatLen = Len then
+        Result := 0
+      else
+        Result := Frac(RawSQLTimeStampToDateTime(Buffer^,
+          PAnsiChar(ConSettings^.DateTimeFormat), Len,
+          ConSettings^.DateTimeFormatLen, Failed));
   end;
 end;
 

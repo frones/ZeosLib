@@ -87,16 +87,13 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 }
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
-
-{$IFDEF UNICODE}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChars
   @param P2 seconds PWideChars
   @return <code>True</code> if the memory at P1 and P2 are equal
 }
-function MemLCompUnicode(P1, P2: PChar; Len: Integer): Boolean;
-{$ENDIF}
+function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
 
 {**
   Compares two PAnsiChars without stopping at #0
@@ -108,30 +105,63 @@ function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 
 {**
   Checks is the string starts with substring.
-  @param Str a string to be checked.
-  @param SubStr a string to test at the start of the Str.
+  @param Str a WideString/UnicodeString to be checked.
+  @param SubStr a WideString/UnicodeString to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: string): Boolean; {$IFDEF UNICODE} overload;
-function StartsWith(const Str, SubStr: RawByteString): Boolean; overload; {$ENDIF}
-{**
-  Checks is the string ends with substring.
-  @param Str a string to be checked.
-  @param SubStr a string to test at the end of the Str.
-  @return <code>True</code> if Str ended with SubStr;
-}
-function EndsWith(const Str, SubStr: string): Boolean;
+function StartsWith(const Str, SubStr: ZWidestring): Boolean; overload;
 
 {**
-  Converts SQL string into float value.
-  @param Str an SQL string with comma delimiter.
+  Checks is the string starts with substring.
+  @param Str a AnsiString/RawByteString to be checked.
+  @param SubStr a AnsiString/RawByteString to test at the start of the Str.
+  @return <code>True</code> if Str started with SubStr;
+}
+
+function StartsWith(const Str, SubStr: RawByteString): Boolean; overload;
+
+{**
+  Checks is the string ends with substring.
+  @param Str a AnsiString/RawByteString to be checked.
+  @param SubStr a AnsiString/RawByteString to test at the end of the Str.
+  @return <code>True</code> if Str ended with SubStr;
+}
+function EndsWith(const Str, SubStr: RawByteString): Boolean; overload;
+
+{**
+  Checks is the string ends with substring.
+  @param Str a WideString/UnicodeString to be checked.
+  @param SubStr a WideString/UnicodeString to test at the end of the Str.
+  @return <code>True</code> if Str ended with SubStr;
+}
+function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
+
+{**
+  Converts SQL AnsiString/RawByteString into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-{$IFDEF WITH_RAWBYTESTRING}
-function SQLStrToFloatDef(Str: RawByteString; Def: Extended): Extended; overload;
-{$ENDIF}
-function SQLStrToFloatDef(Str: String; Def: Extended): Extended; overload;
+function SQLStrToFloatDef(const Str: RawByteString; const Def: Extended): Extended; overload;
+
+{**
+  Converts SQL AnsiString/RawByteString into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
+  @param Def a default value if the string can not be converted.
+  @return a converted value or Def if conversion was failt.
+}
+function SQLStrToFloatDef(Buffer: PAnsiChar; const Len: Cardinal; const Def: Extended): Extended; overload;
+
+{**
+  Converts SQL WideString/Unicodestring into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL WideString/Unicodestring with comma or dot delimiter.
+  @param Def a default value if the string can not be converted.
+  @return a converted value or Def if conversion was failt.
+}
+function SQLStrToFloatDef(const Str: ZWideString; const Def: Extended): Extended; overload;
 
 {**
   Converts SQL string into float value.
@@ -147,6 +177,13 @@ function SQLStrToFloat(const Str: AnsiString): Extended;
   @return a string retrived from the buffer.
 }
 function BufferToStr(Buffer: PWideChar; Length: LongInt): string; overload;
+
+{**
+  Converts a character buffer into pascal string.
+  @param Buffer a character buffer pointer.
+  @param Length a buffer length.
+  @return a string retrived from the buffer.
+}
 function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
 
 {**
@@ -154,14 +191,14 @@ function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
   @param Str a RawByteString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: RawByteString): Boolean; overload;
+function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a string into boolean value.
   @param Str a ZWideString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: ZWideString): Boolean; overload;
+function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
 
 {**
   Converts a boolean into string value.
@@ -348,6 +385,17 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
+  Converts DateTime value to a WideString/UnicodeString
+  @param Value a TDateTime value.
+  @param DateFormat the result format.
+  @param DateFromatLen the length of the format pattern
+  @return a formated RawByteString with DateFormat pattern.
+}
+function DateTimeToUnicodeSQLDate(const Value: TDateTime;
+  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+
+{**
   Converts DateTime value into a RawByteString with format pattern
   @param Value a TDateTime value.
   @param TimeFormat the result format.
@@ -358,6 +406,16 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
+  Converts DateTime value into a WideString/UnicodeString with format pattern
+  @param Value a TDateTime value.
+  @param TimeFormat the result format.
+  @return a formated WideString/UnicodeString with Time-Format pattern.
+}
+function DateTimeToUnicodeSQLTime(const Value: TDateTime;
+  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+
+{**
   Converts DateTime value to a RawByteString
   @param Value a TDateTime value.
   @param TimeStampFormat the result format.
@@ -366,6 +424,16 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
+
+{**
+  Converts DateTime value to a WideString/UnicodeString
+  @param Value a TDateTime value.
+  @param TimeStampFormat the result format.
+  @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
+}
+function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
+  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
   Converts Timestamp String to TDateTime
@@ -561,8 +629,6 @@ begin
   end;
 end;
 
-
-{$IFDEF UNICODE}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChar
@@ -579,7 +645,6 @@ begin
   end;
   Result := Len = 0;
 end;
-{$ENDIF}
 
 {**
   Compares two PAnsiChars without stopping at #0
@@ -600,30 +665,11 @@ end;
 
 {**
   Checks is the string starts with substring.
-  @param Str a string to be checked.
-  @param SubStr a string to test at the start of the Str.
+  @param Str a AnsiString/RaweByteString to be checked.
+  @param SubStr a AnsiString/RaweByteString to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: string): Boolean;
-var
-  LenSubStr: Integer;
-begin
-  LenSubStr := Length(SubStr);
-  if SubStr = '' then
-    Result := True
-   else if LenSubStr <= Length(Str) then
-    //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
-   {$IFDEF UNICODE}
-   Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
-   {$ELSE}
-   Result := MemLCompAnsi(PChar(Str), PChar(SubStr), LenSubStr)
-   {$ENDIF}
-  else
-    Result := False;
-end;
-
-{$IFDEF UNICODE}
-function StartsWith(const Str, SubStr: RawByteString): Boolean; overload;
+function StartsWith(const Str, SubStr: RawByteString): Boolean;
 var
   LenSubStr: Integer;
 begin
@@ -636,15 +682,34 @@ begin
     else
       Result := False;
 end;
-{$ENDIF}
+
+{**
+  Checks is the string starts with substring.
+  @param Str a WideString/UnicodeString to be checked.
+  @param SubStr a WideString/UnicodeString to test at the start of the Str.
+  @return <code>True</code> if Str started with SubStr;
+}
+function StartsWith(const Str, SubStr: ZWideString): Boolean;
+var
+  LenSubStr: Integer;
+begin
+  LenSubStr := Length(SubStr);
+  if SubStr = '' then
+    Result := True
+  else
+    if LenSubStr <= Length(Str) then
+      Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
+    else
+      Result := False;
+end;
 
 {**
   Checks is the string ends with substring.
-  @param Str a string to be checked.
-  @param SubStr a string to test at the end of the Str.
+  @param Str a WideString/UnicodeString to be checked.
+  @param SubStr a WideString/UnicodeString to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(const Str, SubStr: string): Boolean;
+function EndsWith(const Str, SubStr: ZWideString): Boolean;
 var
   LenSubStr: Integer;
   LenStr: Integer;
@@ -656,20 +721,39 @@ begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
-      //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
-    {$IFDEF UNICODE}
-      Result := MemLCompUnicode(PChar(Pointer(Str)) + LenStr - LenSubStr,
+      Result := MemLCompUnicode(PWideChar(Pointer(Str)) + LenStr - LenSubStr,
          Pointer(SubStr), LenSubStr)
-    {$ELSE}
-      Result := MemLCompAnsi(PChar(Pointer(Str)) + LenStr - LenSubStr,
-         Pointer(SubStr), LenSubStr)
-    {$ENDIF}
     else
       Result := False;
   end;
 end;
 
-function ConvertMoneyToFloat(MoneyString: String): String;
+{**
+  Checks is the string ends with substring.
+  @param Str a AnsiString/RawbyteString to be checked.
+  @param SubStr a AnsiString/RawbyteString to test at the end of the Str.
+  @return <code>True</code> if Str ended with SubStr;
+}
+function EndsWith(const Str, SubStr: RawByteString): Boolean;
+var
+  LenSubStr: Integer;
+  LenStr: Integer;
+begin
+  if SubStr = '' then
+    Result := False // act like Delphi's AnsiEndsStr()
+  else
+  begin
+    LenSubStr := Length(SubStr);
+    LenStr := Length(Str);
+    if LenSubStr <= LenStr then
+      Result := MemLCompAnsi(PAnsiChar(Pointer(Str)) + LenStr - LenSubStr,
+         Pointer(SubStr), LenSubStr)
+    else
+      Result := False;
+  end;
+end;
+
+function ConvertMoneyToFloat(MoneyString: ZWideString): ZWideString; overload;
 var
   I: Integer;
 begin
@@ -701,39 +785,112 @@ begin
         end;
   end;
 end;
+
 {**
-  Converts SQL string into float value.
-  @param Str an SQL string with comma delimiter.
+  Converts SQL AnsiString/RawByteString into float value.
+  Possible is Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-{$IFDEF WITH_RAWBYTESTRING}
-function SQLStrToFloatDef(Str: RawByteString; Def: Extended): Extended;
-var
-  OldDecimalSeparator: Char;
-  OldThousandSeparator: Char;
-  AString: String;
+function SQLStrToFloatDef(const Str: RawByteString; const Def: Extended): Extended;
 begin
-  if Str = '' then
-    Result := Def
-  else
+  Result := Def;
+  if not (Str = '') then
+    Result := SQLStrToFloatDef(PAnsiChar(Str), Length(Str), Def);
+end;
+
+{**
+  Converts SQL AnsiString/RawByteString into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
+  @param Def a default value if the string can not be converted.
+  @return a converted value or Def if conversion was failt.
+}
+function SQLStrToFloatDef(Buffer: PAnsiChar; const Len: Cardinal;
+  const Def: Extended): Extended;
+var
+  I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
+  Value: TByteDynArray;
+begin
+  Result := Def;
+  if not (Len = 0) then
   begin
-    OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-    OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-    if not CharInSet(Char(NotEmptyASCII7ToString(Str)[1]), ['0'..'9', '-']) then
-      AString := ConvertMoneyToFloat(NotEmptyASCII7ToString(Str))
-    else
-      AString := NotEmptyASCII7ToString(Str);
-    Result := StrToFloatDef(AString, Def);
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+    Result := ValRawExt(Buffer, '.', InvalidPos);
+    if InvalidPos <> 0 then //posible MoneyType
+      if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
+        Result := RawToFloatDef(Buffer, ',', Def)
+      else
+      begin
+        Result := Def;
+        SetLength(Value, Len+1);
+        DotPos := 0; CommaPos := 0; ValidCount := 0; InvalidPos := 0;
+        FillChar(Pointer(Value)^, Len+1, 0);
+        for i := 0 to Len-1 do
+          case (Buffer+i)^ of
+            '0'..'9':
+              begin
+                Value[ValidCount] := Ord((Buffer+i)^);
+                Inc(ValidCount);
+              end;
+            ',':
+              if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
+              begin
+                CommaPos := I;
+                if DotPos = 0 then
+                  Inc(ValidCount)
+                else //align result four Byte block and overwrite last ThousandSeparator
+                  PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^;
+                Value[ValidCount-1] := Ord('.');
+              end
+              else
+                Exit;
+            '-', '+':
+              begin
+                Value[ValidCount] := Ord((Buffer+i)^);
+                Inc(ValidCount);
+              end;
+            '.':
+              begin
+                if DotPos > 0 then //previously init so commapos can't be an issue here
+                begin
+                  if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
+                  begin
+                    PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^;
+                    Value[ValidCount-1] := Ord('.');
+                    Inc(InvalidPos);
+                  end
+                  else
+                    Exit;
+                end
+                else
+                  if I < CommaPos then
+                    Exit
+                  else
+                  begin
+                    Value[ValidCount] := Ord('.');
+                    Inc(ValidCount);
+                  end;
+                DotPos := ValidCount;
+              end;
+            else
+              if ValidCount > 0 then
+                Exit
+              else
+                InvalidPos := i;
+          end;
+        Result := RawToFloatDef(PAnsiChar(Value), '.', Def);
+      end;
   end;
 end;
-{$ENDIF}
 
-function SQLStrToFloatDef(Str: String; Def: Extended): Extended;
+{**
+  Converts SQL WideString/UnicodeString into float value.
+  @param Str an SQL WideString/UnicodeString with comma delimiter.
+  @param Def a default value if the string can not be converted.
+  @return a converted value or Def if conversion was failt.
+}
+function SQLStrToFloatDef(const Str: ZWideString; const Def: Extended): Extended;
 var
   OldDecimalSeparator: Char;
   OldThousandSeparator: Char;
@@ -747,11 +904,11 @@ begin
     OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-    if not CharInSet(Char(Str[1]), ['0'..'9', '-']) then
+    if not CharInSet(Str[1], ['0'..'9', '-']) then
       AString := ConvertMoneyToFloat(Str)
     else
       AString := Str;
-    Result := StrToFloatDef(AString, Def);
+    Result := StrToFloatDef({$IFNDEF UNICODE}String{$ENDIF}(AString), Def);
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
     {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
   end;
@@ -802,11 +959,14 @@ end;
   @param Str a RawByteString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: RawByteString): Boolean;
+function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean;
 begin
   Str := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(Str);
-  Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
-    or (RawToIntDef(Str, 0) <> 0);
+  if CheckInt then
+    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
+      or (RawToIntDef(Str, 0) <> 0)
+  else
+    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE');
 end;
 
 {**
@@ -814,12 +974,14 @@ end;
   @param Str a ZWideString value.
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
-function StrToBoolEx(Str: ZWideString): Boolean;
-var tmp: String;
+function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean;
 begin
-  tmp := UpperCase({$IFNDEF UNICODE}String{$ENDIF}(Str));
-  Result := (tmp = 'Y') or (tmp = 'YES') or (tmp = 'T') or (tmp = 'TRUE')
-    or (StrToIntDef(tmp, 0) <> 0);
+  Str := {$IFDEF UNICODE}UpperCase{$ELSE}WideUpperCase{$ENDIF}(Str);
+  if CheckInt then
+    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
+      or (UnicodeToIntDef(Str, 0) <> 0)
+  else
+    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE');
 end;
 
 {**
@@ -1122,11 +1284,16 @@ var
   L: Integer;
   RBS: RawByteString;
 begin
-  RBS := RawByteString(Value);
-  L := Length(RBS);
-  SetLength(Result, L);
-  if Value <> '' then
-    Move(RBS[1], Result[0], L)
+  L := Length(Value);
+  if L = 0 then
+    Result := nil
+  else
+  begin
+    RBS := NotEmptyUnicodeStringToASCII7(Value);
+    SetLength(Result, L);
+    if Value <> '' then
+      Move(RBS[1], Result[0], L)
+  end;
 end;
 {**
   Converts a String into an array of bytes.
@@ -1135,12 +1302,20 @@ end;
 }
 {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
 function StrToBytes(const Value: UnicodeString): TByteDynArray;
-var L: Integer;
+var
+  L: Integer;
+  RBS: RawByteString;
 begin
-  L := Length(Value) * SizeOf(Char);
-  SetLength(Result, L);
-  if Value <> '' then
-    Move(Value[1], Result[0], L)
+  L := Length(Value);
+  if L = 0 then
+    Result := nil
+  else
+  begin
+    RBS := NotEmptyUnicodeStringToASCII7(Value);
+    SetLength(Result, L);
+    if Value <> '' then
+      Move(RBS[1], Result[0], L)
+  end;
 end;
 {$ENDIF}
 {**
@@ -1910,13 +2085,22 @@ begin
   end;
 end;
 
-function Concat0(const Value: RawByteString; Const MaxLen: Integer): RawByteString;
+function Concat0(const Value: RawByteString; Const MaxLen: Integer): RawByteString; overload;
 var I: Integer;
 begin
   Result := Value;
   for i := Length(Value) to MaxLen-1 do
     Result := '0'+Result;
 end;
+
+function Concat0(const Value: ZWideString; Const MaxLen: Integer): ZWideString; overload;
+var I: Integer;
+begin
+  Result := Value;
+  for i := Length(Value) to MaxLen-1 do
+    Result := '0'+Result;
+end;
+
 {**
   Converts DateTime value to a rawbyteString
   @param Value a TDateTime value.
@@ -1958,6 +2142,52 @@ begin
         end;
       else
         (PAnsiChar(Result)+i)^ := (DateFormat+i)^;
+    end;
+  if Quoted then Result := #39+Result+#39;
+  Result := Result + Suffix;
+end;
+
+{**
+  Converts DateTime value to a rawbyteString
+  @param Value a TDateTime value.
+  @param DateFormat the result format.
+  @return a formated RawByteString with DateFormat pattern.
+}
+function DateTimeToUnicodeSQLDate(const Value: TDateTime;
+  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+var
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  I: Cardinal;
+  sYear, sMonth, sDay: ZWideString;
+  YLen, MLen, DLen: Integer;
+begin
+  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  Result := '';
+  sYear := Concat0(IntToUnicode(AYear), 4);
+  sMonth := Concat0(IntToUnicode(AMonth), 2);
+  sDay := Concat0(IntToUnicode(ADay), 2);
+  SetLength(Result, DateFromatLen);
+  YLen := 4; MLen := 2; DLen := 2;
+  for i := DateFromatLen-1 downto 0 do
+    case (DateFormat+i)^ of
+      'Y', 'y':
+        begin
+          (PWideChar(Result)+i)^ := sYear[YLen];
+          Dec(YLen);
+        end;
+      'M', 'm':
+        begin
+          (PWideChar(Result)+i)^ := sMonth[MLen];
+          Dec(MLen);
+        end;
+      'D', 'd':
+        begin
+          (PWideChar(Result)+i)^ := sDay[DLen];
+          Dec(DLen);
+        end;
+      else
+        (PWideChar(Result)+i)^ := WideChar((DateFormat+i)^);
     end;
   if Quoted then Result := #39+Result+#39;
   Result := Result + Suffix;
@@ -2015,6 +2245,60 @@ begin
   if Quoted then Result := #39+Result+#39;
   Result := Result + Suffix;
 end;
+
+{**
+  Converts DateTime value into a WideString/UnicodeString with format pattern
+  @param Value a TDateTime value.
+  @param TimeFormat the result format.
+  @return a formated WideString/UnicodeString with Time-Format pattern.
+}
+function DateTimeToUnicodeSQLTime(const Value: TDateTime;
+  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+var
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  I: Cardinal;
+  sHour, sMin, sSec, sMSec: ZWideString;
+  HLen, NLen, SLen, ZLen: Integer;
+begin
+  Result := '';
+  {need fixed size to read from back to front}
+  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  sHour := Concat0(IntToUnicode(AHour), 2);
+  sMin := Concat0(IntToUnicode(AMinute), 2);
+  sSec := Concat0(IntToUnicode(ASecond), 2);
+  sMSec := Concat0(IntToUnicode(AMilliSecond), 3);
+  SetLength(Result, FromatLen);
+  HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
+  for i := FromatLen-1 downto 0 do
+    case (TimeFormat+i)^ of
+      'H', 'h':
+        begin
+          (PWideChar(Result)+i)^ := sHour[HLen];
+          Dec(HLen);
+        end;
+      'N', 'n':
+        begin
+          (PWideChar(Result)+i)^ := sMin[NLen];
+          Dec(NLen);
+        end;
+      'S', 's':
+        begin
+          (PWideChar(Result)+i)^ := sSec[SLen];
+          Dec(SLen);
+        end;
+      'Z', 'z':
+        begin
+          (PWideChar(Result)+i)^ := sMSec[ZLen];
+          Dec(ZLen);
+        end;
+      else
+        (PWideChar(Result)+i)^ := WideChar((TimeFormat+i)^);
+    end;
+  if Quoted then Result := #39+Result+#39;
+  Result := Result + Suffix;
+end;
+
 
 {**
   Converts DateTime value to a RawByteString
@@ -2086,6 +2370,78 @@ begin
   if Quoted then Result := #39+Result+#39;
   Result := Result + Suffix;
 end;
+
+{**
+  Converts DateTime value to a WideString/UnicodeString
+  @param Value a TDateTime value.
+  @param TimeStampFormat the result format.
+  @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
+}
+function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
+  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+var
+  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
+  I: Cardinal;
+  sYear, sMonth, sDay, sHour, sMin, sSec, sMSec: ZWideString;
+  YLen, MLen, DLen, HLen, NLen, SLen, ZLen: Integer;
+begin
+  Result := '';
+  {need fixed size to read from back to front}
+  DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
+  sYear := Concat0(IntToUnicode(AYear), 4);
+  sMonth := Concat0(IntToUnicode(AMonth), 2);
+  sDay := Concat0(IntToUnicode(ADay), 2);
+  sHour := Concat0(IntToUnicode(AHour), 2);
+  sMin := Concat0(IntToUnicode(AMinute), 2);
+  sSec := Concat0(IntToUnicode(ASecond), 2);
+  sMSec := Concat0(IntToUnicode(AMilliSecond), 3);
+  SetLength(Result, FromatLen);
+  YLen := 4; MLen := 2; DLen := 2; HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
+  for i := FromatLen-1 downto 0 do
+    case (TimeStampFormat+i)^ of
+      'Y', 'y':
+        begin
+          (PWideChar(Result)+i)^ := sYear[YLen];
+          Dec(YLen);
+        end;
+      'M', 'm':
+        begin
+          (PWideChar(Result)+i)^ := sMonth[MLen];
+          Dec(MLen);
+        end;
+      'D', 'd':
+        begin
+          (PWideChar(Result)+i)^ := sDay[DLen];
+          Dec(DLen);
+        end;
+      'H', 'h':
+        begin
+          (PWideChar(Result)+i)^ := sHour[HLen];
+          Dec(HLen);
+        end;
+      'N', 'n':
+        begin
+          (PWideChar(Result)+i)^ := sMin[NLen];
+          Dec(NLen);
+        end;
+      'S', 's':
+        begin
+          (PWideChar(Result)+i)^ := sSec[SLen];
+          Dec(SLen);
+        end;
+      'Z', 'z':
+        begin
+          (PWideChar(Result)+i)^ := sMSec[ZLen];
+          Dec(ZLen);
+        end;
+      else
+        (PWideChar(Result)+i)^ := WideChar((TimeStampFormat+i)^);
+    end;
+  if Quoted then Result := #39+Result+#39;
+  Result := Result + Suffix;
+end;
+
 
 {**
   Converts Timestamp String to TDateTime

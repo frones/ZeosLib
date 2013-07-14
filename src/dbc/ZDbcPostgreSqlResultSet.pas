@@ -455,11 +455,24 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetFloat(ColumnIndex: Integer): Single;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  ColumnIndex := ColumnIndex -1;
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
+    ColumnIndex) <> 0;
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
+    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+  end;
 end;
 
 {**
@@ -472,11 +485,24 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  ColumnIndex := ColumnIndex -1;
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
+    ColumnIndex) <> 0;
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
+    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+  end;
 end;
 
 {**
@@ -490,11 +516,24 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  ColumnIndex := ColumnIndex -1;
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
+    ColumnIndex) <> 0;
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
+    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+  end;
 end;
 
 {**
@@ -578,7 +617,7 @@ begin
   begin
     Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
     Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    if Max(0, ConSettings^.TimeFormatLen - Len) <= 4 then
+    if not (Len > ConSettings^.TimeFormatLen) and ( ( ConSettings^.TimeFormatLen - Len) <= 4 )then
       Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
        Len, ConSettings^.TimeFormatLen, Failed)
     else

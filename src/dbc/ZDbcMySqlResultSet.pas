@@ -495,11 +495,26 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
+var
+  LengthPointer: PULong;
+  Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
+  else
+    Len := 0;
+  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Buffer = nil;
+  if LastWasNull then
+    Result := 0
+  else
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
 end;
 
 {**
@@ -512,11 +527,26 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetDouble(ColumnIndex: Integer): Double;
+var
+  LengthPointer: PULong;
+  Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
+  else
+    Len := 0;
+  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Buffer = nil;
+  if LastWasNull then
+    Result := 0
+  else
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
 end;
 
 {**
@@ -530,11 +560,26 @@ end;
     value returned is <code>null</code>
 }
 function TZMySQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+var
+  LengthPointer: PULong;
+  Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
+  else
+    Len := 0;
+  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Buffer = nil;
+  if LastWasNull then
+    Result := 0
+  else
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
 end;
 
 {**

@@ -1149,10 +1149,9 @@ begin
         else
           Result := AnsiString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
-      stDate: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull)));
-      stTime: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull)));
-      stTimestamp: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          GetTimestamp(ColumnIndex, IsNull)));
+      stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
+      stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
+      stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
       stUnicodeStream:
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1203,6 +1202,7 @@ begin
       stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
       stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
       stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
+      stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := ConSettings^.ConvFuncs.ZRawToUTF8(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP)
@@ -1224,10 +1224,9 @@ begin
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
             Result := TempBlob.GetString;
         end;
-      stDate: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull)));
-      stTime: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull)));
-      stTimestamp: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          GetTimestamp(ColumnIndex, IsNull)));
+      stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
+      stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
+      stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
       else
         Result := ConSettings^.ConvFuncs.ZStringToUTF8(GetString(ColumnIndex, IsNull), ConSettings^.CTRL_CP);
     end;
@@ -1272,10 +1271,9 @@ begin
         else
           Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP);
       stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
-      stDate: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull)));
-      stTime: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull)));
-      stTimestamp: Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          GetTimestamp(ColumnIndex, IsNull)));
+      stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
+      stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
+      stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1327,10 +1325,9 @@ begin
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
             Result := TempBlob.GetUnicodeString;
         end;
-      stDate: Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUniCodeString{$ENDIF}(FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull)));
-      stTime: Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUniCodeString{$ENDIF}(FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull)));
-      stTimestamp: Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUniCodeString{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-          GetTimestamp(ColumnIndex, IsNull)));
+      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
+      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
+      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
       else
         Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
     end;
@@ -1350,8 +1347,6 @@ end;
     value returned is <code>false</code>
 }
 function TZRowAccessor.GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
-var
-  TempStr: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -1370,11 +1365,10 @@ begin
       stDouble: Result := GetDouble(ColumnIndex, IsNull) <> 0;
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull) <> 0;
       stString, stUnicodeString:
-        begin
-          TempStr := UpperCase(GetString(ColumnIndex, IsNull));
-          Result := (TempStr = 'T') or (TempStr = 'Y') or (TempStr = 'TRUE')
-            or (TempStr = 'YES');
-        end;
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := StrToBoolEx(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, False)
+        else
+          Result := StrToBoolEx(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, False);
     end;
     IsNull := False;
   end
@@ -1412,7 +1406,11 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
-      stString, stUnicodeString: Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -1450,7 +1448,11 @@ begin
       stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
-      stString, stUnicodeString: Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -1490,7 +1492,10 @@ begin
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
-        Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -1530,7 +1535,10 @@ begin
       stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
-        Result := RawToIntDef(GetRawByteString(ColumnIndex, IsNull), 0);
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -1570,7 +1578,10 @@ begin
       stDouble: Result := GetDouble(ColumnIndex, IsNull);
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
       stString, stUnicodeString:
-        Result := SQLStrToFloatDef(AnsiString(GetString(ColumnIndex, IsNull)), 0);
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -1610,7 +1621,10 @@ begin
         Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
       stString, stUnicodeString:
-        Result := SQLStrToFloatDef(AnsiString(GetString(ColumnIndex, IsNull)), 0);
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -1651,7 +1665,10 @@ begin
       stBigDecimal:
         Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
-        Result := SQLStrToFloatDef(AnsiString(GetString(ColumnIndex, IsNull)), 0);
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
+        else
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
     end;
     IsNull := False;
   end
@@ -2023,14 +2040,19 @@ begin
       stString:
         begin
           Result.VType := vtString;
-          Result.VString := PChar(ValuePtr);
+          Result.VString := GetString(ColumnIndex, IsNull);
         end;
       stUnicodeString:
         begin
           Result.VType := vtUnicodeString;
           Result.VUnicodeString := PWideChar(ValuePtr);
         end;
-      stBytes, stAsciiStream, stBinaryStream:
+      stBytes, stBinaryStream:
+        begin
+          Result.VType := vtBytes;
+          Result.VBytes := GetBytes(ColumnIndex, IsNull);
+        end;
+      stAsciiStream:
         begin
           Result.VType := vtString;
           Result.VString := GetString(ColumnIndex, IsNull);

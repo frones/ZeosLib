@@ -221,21 +221,28 @@ end;
 }
 procedure TZTestSysUtilsCase.TestSqlStrToFloatDef;
 begin
-{$IFNDEF FPC}
-  CheckEquals(11.11, SqlStrToFloatDef('12,75', 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef('12.75', 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef('12.75e-2', 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef('12.75float', 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef('', 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef('111,125.33', 11.11));
-{$ELSE}
-  CheckEquals(11.11, SqlStrToFloatDef(String('12,75'), 11.11));
-  CheckEquals(12.75, SqlStrToFloatDef(String('12.75'), 11.11));
-  CheckEquals(0.1275, SqlStrToFloatDef(String('12.75e-2'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(String('12.75float'), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(String(''), 11.11));
-  CheckEquals(11.11, SqlStrToFloatDef(String('111,125.33'), 11.11));
-{$ENDIF}
+  CheckEquals(12.75, SqlStrToFloatDef(RawByteString('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(RawByteString('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef(RawByteString('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(RawByteString('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(RawByteString('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(RawByteString('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(RawByteString('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(RawByteString('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef(RawByteString('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef(RawByteString('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('€643,11'), 11.11))
 end;
 
 {**
