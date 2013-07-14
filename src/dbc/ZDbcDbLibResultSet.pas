@@ -116,7 +116,8 @@ type
 implementation
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_INLINE}, System.Types{$ENDIF};
 
 { TZDBLibResultSet }
 

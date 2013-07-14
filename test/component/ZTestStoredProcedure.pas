@@ -136,13 +136,16 @@ type
     procedure myfuncInOutReturn(prefix:string ='');
     procedure simple_func(prefix:string ='');
     procedure simplefunc(prefix:string ='');
+    procedure MYPACKAGE(prefix:string ='');
   published
     procedure Test_abtest;
     procedure Test_myfuncInOutReturn;
     procedure Test_simple_func;
     procedure Test_simplefunc;
     procedure Test_packaged;
+    procedure Test_Owner_packaged;
     procedure Test_MYPACKAGE;
+    procedure Test_Owner_MYPACKAGE;
     procedure Test_IS_ACCOUNT_SERVE;
   end;
 
@@ -1293,37 +1296,9 @@ begin
   CheckEquals(1, StoredProc.Params.Count);
 end;
 
-procedure TZTestOracleStoredProcedure.Test_abtest;
+procedure TZTestOracleStoredProcedure.MYPACKAGE(prefix: string);
 begin
-  abtest();
-end;
-
-procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
-begin
-  myfuncInOutReturn();
-end;
-
-procedure TZTestOracleStoredProcedure.Test_simple_func;
-begin
-  simple_func();
-end;
-
-procedure TZTestOracleStoredProcedure.Test_simplefunc;
-begin
-  simplefunc();
-end;
-
-procedure TZTestOracleStoredProcedure.Test_packaged;
-begin
-  abtest('MYPACKAGE.');
-  myfuncInOutReturn('MYPACKAGE.');
-  simple_func('MYPACKAGE.');
-  simplefunc('MYPACKAGE.');
-end;
-
-procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
-begin
-  StoredProc.StoredProcName := 'MYPACKAGE';
+  StoredProc.StoredProcName := prefix+'MYPACKAGE';
   CheckEquals(9, StoredProc.Params.Count);
 
   CheckEquals('ABTEST.P1', StoredProc.Params[0].Name);
@@ -1392,6 +1367,52 @@ begin
   CheckEquals('returned string', StoredProc.FieldByName('myfuncInOutReturn.ReturnValue').AsString);
   CheckEquals(1111, StoredProc.FieldByName('SIMPLE_FUNC.ReturnValue').AsInteger);
   CheckEquals(2222, StoredProc.FieldByName('SIMPLEFUNC.ReturnValue').AsInteger);
+end;
+
+procedure TZTestOracleStoredProcedure.Test_abtest;
+begin
+  abtest();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_myfuncInOutReturn;
+begin
+  myfuncInOutReturn();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simple_func;
+begin
+  simple_func();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_simplefunc;
+begin
+  simplefunc();
+end;
+
+procedure TZTestOracleStoredProcedure.Test_packaged;
+begin
+  abtest('MYPACKAGE.');
+  myfuncInOutReturn('MYPACKAGE.');
+  simple_func('MYPACKAGE.');
+  simplefunc('MYPACKAGE.');
+end;
+
+procedure TZTestOracleStoredProcedure.Test_Owner_packaged;
+begin
+  abtest(Connection.user+'.MYPACKAGE.');
+  myfuncInOutReturn(Connection.user+'.MYPACKAGE.');
+  simple_func(Connection.user+'.MYPACKAGE.');
+  simplefunc(Connection.user+'.MYPACKAGE.');
+end;
+
+procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
+begin
+  MYPACKAGE;
+end;
+
+procedure TZTestOracleStoredProcedure.Test_Owner_MYPACKAGE;
+begin
+  MYPACKAGE(Connection.user+'.');
 end;
 
 procedure TZTestOracleStoredProcedure.Test_IS_ACCOUNT_SERVE;

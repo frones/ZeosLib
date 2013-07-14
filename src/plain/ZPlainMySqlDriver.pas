@@ -438,7 +438,8 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader, ZEncoding;
+uses SysUtils, ZPlainLoader, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
 function TZMySQLBaseDriver.GetUnicodeCodePageName: String;
@@ -622,12 +623,12 @@ begin
        TmpList.Add('--datadir='+EMBEDDED_DEFAULT_DATA_DIR);
 
     for i := 0 to ServerArgsLen - 1 do
-      StrDispose(ServerArgs[i]);
+      {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
     ServerArgsLen := TmpList.Count;
     SetLength(ServerArgs, ServerArgsLen);
     for i := 0 to ServerArgsLen - 1 do
       {$IFDEF UNICODE}
-      ServerArgs[i] := StrNew(PAnsiChar(UTF8String(TmpList[i])));
+      ServerArgs[i] := {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(UTF8String(TmpList[i])));
       {$ELSE}
       ServerArgs[i] := StrNew(PAnsiChar(TmpList[i]));
       {$ENDIF}
@@ -660,8 +661,8 @@ var
   i : integer;
 begin
   for i := 0 to ServerArgsLen - 1 do
-    StrDispose(ServerArgs[i]);
-    
+    {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
+
   if (FLoader.Loaded) and (@MYSQL_API.mysql_server_end <> nil) then
     MYSQL_API.mysql_server_end;
 

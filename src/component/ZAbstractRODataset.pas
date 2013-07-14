@@ -486,7 +486,8 @@ implementation
 uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
+  {$IFDEF WITh_UNITANSISRINGS}, AnsiStrings{$ENDIF};
 
 {$IFNDEF UNICODE}
 procedure RowAccessorStringFieldSetterFromRawAutoEncode(RowAccessor: TZRowAccessor;

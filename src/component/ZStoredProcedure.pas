@@ -119,8 +119,7 @@ implementation
 uses
   ZAbstractRODataset, ZMessages, ZDatasetUtils
   {$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF}
-  {$IFDEF WITH_INLINE_ANSICOMPARETEXT}, Windows{$ENDIF}
-  ;
+  {$IFDEF WITH_INLINE_ANSICOMPARETEXT}, Windows{$ENDIF};
 
 { TZStoredProc }
 
@@ -322,7 +321,10 @@ begin
       CheckConnected;
       Connection.ShowSQLHourGlass;
       try
-        SplitQualifiedObjectName(Value, Catalog, Schema, ObjectName);
+        SplitQualifiedObjectName(Value,
+          Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsCatalogsInProcedureCalls,
+          Connection.DbcConnection.GetMetadata.GetDatabaseInfo.SupportsSchemasInProcedureCalls,
+          Catalog, Schema, ObjectName);
         ObjectName := Connection.DbcConnection.GetMetadata.AddEscapeCharToWildcards(ObjectName);
         FMetaResultSet := Connection.DbcConnection.GetMetadata.GetProcedureColumns(Catalog, Schema, ObjectName, '');
         OldParams := TParams.Create;

@@ -229,9 +229,9 @@ type
 implementation
 
 uses
-  Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding, ZDbcResultSet,
-  Math;
+  Types, Math, DateUtils, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
+  ZDbcResultSetMetadata, ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZEncoding,
+  ZDbcResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLStatement }
 
@@ -702,7 +702,7 @@ begin
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, StrLen(PAnsiChar(InParamValues[I].VRawByteString))),false);
+        FParamBindBuffer.AddColumn(MyType,Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(InParamValues[I].VRawByteString))),false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
@@ -724,11 +724,11 @@ begin
             FIELD_TYPE_BLOB:
               begin
                 if TempBlob.Length<=ChunkSize then
-                  StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+                  {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
                 TempBlob := nil;
               end;
             else
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(InParamValues[I].VRawByteString));
+              {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(InParamValues[I].VRawByteString));
           end;
         FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
         FIELD_TYPE_DATETIME:

@@ -421,7 +421,7 @@ var
   ErrorMessage: string;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(String(StrPas(PlainDriver.GetLastError(Handle))));
+  ErrorMessage := Trim(String(PlainDriver.GetLastError(Handle)));
   ErrorCode := PlainDriver.GetLastErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin

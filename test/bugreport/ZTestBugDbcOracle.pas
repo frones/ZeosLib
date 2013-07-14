@@ -67,6 +67,7 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure TestNum1;
+    procedure TestBlobValues;
   end;
 
 implementation
@@ -77,7 +78,7 @@ uses ZTestCase, ZTestConsts;
 
 function TZTestDbcOracleBugReport.GetSupportedProtocols: string;
 begin
-  Result := 'oracle-9i';
+  Result := 'oracle,oracle-9i';
 end;
 
 {**
@@ -105,6 +106,18 @@ begin
     CheckEquals(True, Next, 'ResultSet.Next');
     CheckEquals(1, GetInt(1), 'id value');
     CheckEquals(54321.0123456789, GetDouble(2), 1E-11, 'Num value');
+    Close;
+  end;
+end;
+
+procedure TZTestDbcOracleBugReport.TestBlobValues;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  with Connection.CreateStatement.ExecuteQuery('select * from blob_values') do
+  begin
+    CheckEquals(5, GetMetadata.GetColumnCount);
+    Check(next);
     Close;
   end;
 end;

@@ -4247,7 +4247,7 @@ begin
     Result := Pattern
   else
   begin
-    EscapeChar:=GetDatabaseInfo.GetSearchStringEscape;
+    EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
     if WildcardsArray<>nil then
     begin
       Result:=StringReplace(Pattern,EscapeChar,EscapeChar+EscapeChar,[rfReplaceAll]);
@@ -4886,9 +4886,9 @@ const
     (Name: 'PROCEDURE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_NAME'; SQLType: stString; Length: 255),
+    (Name: 'PROCEDURE_OVERLOAD'; SQLType: stString; Length: 255),
     (Name: 'RESERVED1'; SQLType: stString; Length: 255),
     (Name: 'RESERVED2'; SQLType: stString; Length: 255),
-    (Name: 'RESERVED3'; SQLType: stString; Length: 255),
     (Name: 'REMARKS'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_TYPE'; SQLType: stShort; Length: 0)
   );

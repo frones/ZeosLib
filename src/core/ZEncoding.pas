@@ -408,7 +408,7 @@ function GetValidatedUnicodeStream(const Ansi: RawByteString;
 implementation
 
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
-  ZSysUtils;
+  ZSysUtils{$IFDEF WITH_STRLEN_DEPRECATED}, AnsiStrings{$ENDIF};
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -1017,7 +1017,7 @@ begin
       I know this can lead to pain with two byte ansi chars, but what else can i do?
     step two: detect the encoding }
 
-  if ( StrLen(PAnsiChar(Bytes)) < Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
+  if ( {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(Bytes)) < Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
     result := ceUTF16
   else
     if ConSettings.AutoEncode then

@@ -116,7 +116,8 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
+  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types{$ENDIF};
 
 {**
   Creates this object and assignes the main properties.

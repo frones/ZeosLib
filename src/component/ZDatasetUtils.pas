@@ -264,7 +264,15 @@ function DefineFieldIndices(const FieldsLookupTable: TIntegerDynArray;
   and objectname.
 }
 procedure SplitQualifiedObjectName(QualifiedName: string;
-  var Catalog, Schema, ObjectName: string);
+  var Catalog, Schema, ObjectName: string); overload;
+
+{**
+  Splits up a qualified object name into pieces. Catalog, schema
+  and objectname.
+}
+procedure SplitQualifiedObjectName(QualifiedName: string;
+  const SupportsCatalogs, SupportsSchemas: Boolean;
+  var Catalog, Schema, ObjectName: string); overload;
 
 {**
   Assigns a Statement value from a TParam
@@ -1552,6 +1560,114 @@ begin
     end;
   finally
     SL.Free;
+  end;
+end;
+
+{**
+  Splits up a qualified object name into pieces. Catalog, schema
+  and objectname.
+}
+procedure SplitQualifiedObjectName(QualifiedName: string;
+  const SupportsCatalogs, SupportsSchemas: Boolean;
+  var Catalog, Schema, ObjectName: string);
+var
+  SL: TStringList;
+  I: Integer;
+begin
+  if SupportsCatalogs and SupportsSchemas then
+    SplitQualifiedObjectName(QualifiedName, Catalog, Schema, ObjectName)
+  else
+  begin
+    SL := TStringList.Create;
+    try
+      Catalog := '';
+      Schema := '';
+      ObjectName := QualifiedName;
+      ExtractStrings(['.'], [' '], PChar(QualifiedName), SL);
+      case SL.Count of
+        0, 1: ;
+        2:
+          begin
+            if SupportsCatalogs then
+            begin
+              Catalog := SL.Strings[0];
+              if SupportsSchemas then
+                Schema := SL.Strings[1]
+              else
+                ObjectName := SL.Strings[1];
+            end
+            else
+              if SupportsSchemas then
+              begin
+                Schema := SL.Strings[0];
+                ObjectName := SL.Strings[1];
+              end
+              else
+                ObjectName := SL.Strings[0]+'.'+SL.Strings[1];
+          end;
+        3:
+          if SupportsCatalogs then
+          begin
+            Catalog := SL.Strings[0];
+            if SupportsSchemas then
+            begin
+              Schema := SL.Strings[1];
+              ObjectName := SL.Strings[2]
+            end
+            else
+              ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
+          end
+          else
+            if SupportsSchemas then
+            begin
+              Schema := SL.Strings[0];
+              ObjectName := SL.Strings[1]+'.'+SL.Strings[2];
+            end
+            else
+              ObjectName := SL.Strings[0]+'.'+SL.Strings[1]+'.'+SL.Strings[2];
+        else
+          if SupportsCatalogs then
+          begin
+            Catalog := SL.Strings[0];
+            if SupportsSchemas then
+            begin
+              Schema := SL.Strings[1];
+              for i := 2 to SL.Count-1 do
+                if i = 2 then
+                  ObjectName := SL.Strings[i]
+                else
+                  ObjectName := ObjectName+'.'+SL.Strings[i];
+            end
+            else
+            begin
+              ObjectName := '';
+              for i := 2 to SL.Count-1 do
+                if I = 2 then
+                  ObjectName := SL.Strings[i]
+                else
+                  ObjectName := ObjectName+'.'+SL.Strings[i];
+            end;
+          end
+          else
+            if SupportsSchemas then
+            begin
+              Schema := SL.Strings[0];
+              for i := 1 to SL.Count-1 do
+                if i = 1 then
+                  ObjectName := SL.Strings[i]
+                else
+                  ObjectName := ObjectName+'.'+SL.Strings[i];
+            end
+            else
+              for i := 0 to SL.Count-1 do
+                if I = 0 then
+                  ObjectName := SL.Strings[i]
+                else
+                  ObjectName := ObjectName+'.'+SL.Strings[i];
+        end;
+    finally
+      SL.Free;
+    end;
   end;
 end;
 
