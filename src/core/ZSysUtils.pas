@@ -515,20 +515,6 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
-{**
-  Arranges thousand and decimal separator to a System-defaults
-  @param the value which has to be converted and arranged
-  @return a valid floating value
-}
-function ZStrToFloat(Value: PAnsiChar): Extended; overload;
-
-{**
-  Arranges thousand and decimal separator to a System-defaults
-  @param the value which has to be converted and arranged
-  @return a valid floating value
-}
-function ZStrToFloat(Value: RawByteString): Extended; overload;
-
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String); overload;
@@ -577,10 +563,14 @@ function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
 
 { Float convertion in Raw and Unicode Format}
-function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended;
+function RawToFloat(const s: RawByteString): Extended; overload;
+function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended; overload;
 function RawToFloatDef(const s: RawByteString; const DecimalSep: AnsiChar; const Default: Extended): Extended;
 function ValRawExt(const s: RawByteString; const DecimalSep: AnsiChar; var code: Integer): Extended;
 function ValRawInt(const s: RawByteString; var code: Integer): Integer;
+
+function FloatToRaw(const Value: Extended): RawByteString;
+function FloatToSqlRaw(const Value: Extended): RawByteString;
 
 implementation
 
@@ -1260,6 +1250,7 @@ begin
   if Value <> '' then
     Move(Value[1], Result[0], L)
 end;
+
 {**
   Converts a RawByteString into an array of bytes.
   @param Value a RawByteString to be converted.
@@ -2776,60 +2767,6 @@ var
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
  Result := IntToString(MajorVersion)+'.'+IntToString(MinorVersion)+'.'+IntToString(SubVersion);
-end;
-
-{**
-  Arranges thousand and decimal separator to a System-defaults
-  @param the value which has to be converted and arranged
-  @return a valid floating value
-}
-function ZStrToFloat(Value: PAnsiChar): Extended;
-var
-  OldDecimalSeparator, OldThousandSeparator: Char;
-begin
-  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
-
-  if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
-    if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
-      //No DecimalSeparator and no ThousandSeparator
-      Result := StrToFloat(NotEmptyASCII7ToString(Value))
-    else
-    begin
-      //wrong DecimalSepartor
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
-      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
-      Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value));
-    end
-  else
-    if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
-      //default DecimalSepartor
-      Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value))
-    else
-      if {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen({$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
-          {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen({$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
-          //default DecimalSepartor and ThousandSeparator
-        Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value))
-      else
-      begin
-        //wrong DecimalSepartor and ThousandSeparator
-        {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldThousandSeparator;
-        {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldDecimalSeparator;
-        Result := StrToFloat({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value));
-      end;
-
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
-end;
-
-{**
-  Arranges thousand and decimal separator to a System-defaults
-  @param the value which has to be converted and arranged
-  @return a valid floating value
-}
-function ZStrToFloat(Value: RawByteString): Extended;
-begin
-  Result := ZStrToFloat(PAnsiChar(Value));
 end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
@@ -4745,6 +4682,15 @@ begin
   if E <> 0 then Result := Default;
 end;
 
+function RawToFloat(const s: RawByteString): Extended;
+var
+  E: Integer;
+begin
+  Result :=  ValRawExt(s, AnsiChar({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
+  if E <> 0 then
+    raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
+end;
+
 function RawToFloat(const s: RawByteString; const DecimalSep: AnsiChar): Extended;
 var
   E: Integer;
@@ -4853,5 +4799,32 @@ begin
   {$IFEND}
 end;
 
+function FloatToRaw(const Value: Extended): RawByteString;
+{$IFNDEF FPC}
+var
+  Buffer: array[0..63] of AnsiChar;
+{$ENDIF}
+begin
+  {$IFDEF FPC}
+  Result := FloatToStr(Value)
+  {$ELSE}
+  SetString(Result, Buffer, FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
+    ffGeneral, 15, 0));
+  {$ENDIF}
+end;
+
+function FloatToSqlRaw(const Value: Extended): RawByteString;
+var
+  OldDecimalSeparator, OldThousandSeparator: Char;
+begin
+  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
+  Result := FloatToRaw(Value);
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+end;
 
 end.
+

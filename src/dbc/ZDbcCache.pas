@@ -1096,7 +1096,7 @@ begin
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
             Result := ConSettings^.ConvFuncs.ZUnicodeToString(TempBlob.GetUnicodeString, ConSettings^.CTRL_CP);
         end;
-      stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
+      stBytes: Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(BytesToStr(GetBytes(ColumnIndex, IsNull)));
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
       stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss',
@@ -1105,7 +1105,7 @@ begin
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
           if (TempBlob <> nil) and not TempBlob.IsEmpty then
-            Result := String(TempBlob.GetString);
+            Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
         end;
     end;
     IsNull := False;
@@ -1143,6 +1143,9 @@ begin
       stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
       stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
       stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
+      stFloat: Result := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := ConSettings^.ConvFuncs.ZRawToAnsi(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP)
@@ -1202,6 +1205,9 @@ begin
       stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
       stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
       stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
+      stFloat: Result := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
       stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -1265,6 +1271,9 @@ begin
       stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
       stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
       stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
+      stFloat: Result := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^

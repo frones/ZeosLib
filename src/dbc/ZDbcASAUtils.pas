@@ -784,6 +784,7 @@ end;
    @param Value the source value
 }
 procedure TZASASQLDA.UpdateFloat(const Index: Integer; Value: Single);
+var tmp: RawByteString;
 begin
   CheckIndex( Index);
   SetFieldType( Index, DT_FLOAT or 1, SizeOf( Single));
@@ -798,10 +799,10 @@ begin
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
       DT_VARCHAR:
                             begin
-                              PZASASQLSTRING( sqlData).length :=
-                                Length( FloatToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                FloatToStr( Value), sqllen-3);
+                              tmp := FloatToSQLRaw(Value);
+                              PZASASQLSTRING( sqlData).length := Length(tmp);
+                              StrPLCopy(PAnsiChar(PZASASQLSTRING( sqlData).data[0]),
+                                tmp, sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Trunc( Value);
@@ -821,6 +822,7 @@ end;
    @param Value the source value
 }
 procedure TZASASQLDA.UpdateDouble(const Index: Integer; Value: Double);
+var tmp: RawByteString;
 begin
   CheckIndex( Index);
   SetFieldType( Index, DT_DOUBLE or 1, SizeOf( Double));
@@ -835,10 +837,10 @@ begin
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
       DT_VARCHAR:
                             begin
-                              PZASASQLSTRING( sqlData).length :=
-                                Length( FloatToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                FloatToStr( Value), sqllen-3);
+                              tmp := FloatToSQLRaw(Value);
+                              PZASASQLSTRING( sqlData).length := Length(tmp);
+                              StrPLCopy( PAnsiChar(PZASASQLSTRING( sqlData).data[0]),
+                                tmp, sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Trunc( Value);
@@ -858,6 +860,7 @@ end;
    @param Value the source value
 }
 procedure TZASASQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
+var tmp: RawByteString;
 begin
   CheckIndex( Index);
   SetFieldType( Index, DT_DOUBLE or 1, SizeOf( Double));
@@ -872,10 +875,10 @@ begin
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
       DT_VARCHAR:
                             begin
-                              PZASASQLSTRING( sqlData).length :=
-                                Length( FloatToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                FloatToStr( Value), sqllen-3);
+                              tmp := FloatToSQLRaw(Value);
+                              PZASASQLSTRING( sqlData).length := Length(tmp);
+                              StrPLCopy(PAnsiChar(PZASASQLSTRING( sqlData).data[0]),
+                                tmp, sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Trunc( Value);
@@ -1192,8 +1195,6 @@ end;
    @return the field BigDecimal value
 }
 function TZASASQLDA.GetBigDecimal(const Index: Integer): Extended;
-var
-  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1209,16 +1210,7 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-        begin
-          {$IFDEF WITH_RAWBYTESTRING}
-          SetLength(s, PZASASQLSTRING( sqlData).length);
-          Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsichar(s)^, PZASASQLSTRING( sqlData).length);
-          {$ELSE}
-          SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-          {$ENDIF}
-          Result := ZStrToFloat(s);
-        end;
+      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, 0);
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
       DT_BIGINT,
@@ -1351,8 +1343,6 @@ end;
    @return the field Double value
 }
 function TZASASQLDA.GetDouble(const Index: Integer): Double;
-var
-  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1368,16 +1358,7 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-         begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := ZStrToFloat(s);
-         end;
+      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, 0);
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
       DT_BIGINT,
@@ -1395,8 +1376,6 @@ end;
    @return the field Float value
 }
 function TZASASQLDA.GetFloat(const Index: Integer): Single;
-var
-  s: RawByteString;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1412,16 +1391,7 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR:
-         begin
-           {$IFDEF WITH_RAWBYTESTRING}
-           SetLength(s, PZASASQLSTRING( sqlData).length);
-           Move(PAnsiChar(@PZASASQLSTRING(sqlData).data[0])^, PAnsiChar(S)^, PZASASQLSTRING( sqlData).length);
-           {$ELSE}
-           SetString(s, PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length);
-           {$ENDIF}
-           Result := ZStrToFloat(s);
-         end;
+      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, 0);
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
       DT_BIGINT,
@@ -1556,11 +1526,11 @@ begin
       DT_UNSSMALLINT : Result := IntToRaw( PWord(sqldata)^);
       DT_INT         : Result := IntToRaw( PInteger(sqldata)^);
       DT_UNSINT      : Result := IntToRaw( PLongWord(sqldata)^);
-      DT_FLOAT       : Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FloatToStr( PSingle(sqldata)^));
-      DT_DOUBLE      : Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(FloatToStr( PDouble(sqldata)^));
+      DT_FLOAT       : Result := FloatToRaw( PSingle(sqldata)^);
+      DT_DOUBLE      : Result := FloatToRaw( PDouble(sqldata)^);
       DT_VARCHAR     : ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, Result);
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
-      DT_TIMESTAMP_STRUCT : Result := NotEmptyStringToASCII7(DateToStr( GetTimestamp( Index)));
+      DT_TIMESTAMP_STRUCT : Result := DateTimeToRawSQLTimeStamp(GetTimestamp( Index), PAnsiChar(FConSettings^.DateTimeFormat), FConSettings^.DatetimeFormatLen, False);
       DT_TINYINT     : Result := IntToRaw( PByte(sqldata)^);
       DT_BIT         : Result := NotEmptyStringToASCII7(BoolToStr( ( PByte(sqldata)^ = 1), True));
       DT_BIGINT,
