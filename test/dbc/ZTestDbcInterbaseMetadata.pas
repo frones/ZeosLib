@@ -352,9 +352,9 @@ begin
   CheckExportedKey('DEPARTMENT', 'DEP_ID', 'CARGO', 'C_DEP_ID', 1, 1, 1);
   CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
   CheckExportedKey('DEPARTMENT', 'DEP_ID', 'EQUIPMENT2', 'DEP_ID', 1, 1, 1);
-  //CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
-  //CheckExportedKey('DEPARTMENT', 'DEP_ID', 'PEOPLE', 'P_DEP_ID', 1, 1, 1);
-  //CheckEquals(False, ResultSet.Next, 'There should not be more imported key in the department table');
+  CheckEquals(True, ResultSet.Next, 'There should be more imported key in the department table');
+  CheckExportedKey('DEPARTMENT', 'DEP_ID', 'PEOPLE', 'P_DEP_ID', 1, 1, 1);
+  CheckEquals(False, ResultSet.Next, 'There should not be more imported key in the department table');
   ResultSet.Close;
 end;
 

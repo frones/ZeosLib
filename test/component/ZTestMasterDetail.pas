@@ -98,7 +98,7 @@ type
 implementation
 
 uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
-  ZAbstractRODataset, ZCompatibility;
+  ZAbstractRODataset, ZCompatibility, ZSysUtils;
 
 const TestRowID = 1000;
 
@@ -396,7 +396,11 @@ begin
 
   CheckStringFieldType(MasterQuery.FieldByName('dep_name').DataType, Connection.DbcConnection.GetConSettings);
   CheckStringFieldType(MasterQuery.FieldByName('dep_shname').DataType, Connection.DbcConnection.GetConSettings);
-  CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
+    //ASA curiousity: if NCHAR and VARCHAR fields set to UTF8-CodePage we get the LONG_Char types as fieldTypes for !some! fields
+  if StartsWith(Protocol, 'ASA') and ( Connection.DbcConnection.GetConSettings.ClientCodePage^.CP = 65001 ) then
+    CheckMemoFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings)
+  else
+    CheckStringFieldType(MasterQuery.FieldByName('dep_address').DataType, Connection.DbcConnection.GetConSettings);
 
   DetailQuery.SQL.Text := 'SELECT * FROM people';
   DetailQuery.MasterSource := MasterDataSource;

@@ -54,11 +54,8 @@ unit ZTestDbcMetadata;
 interface
 {$I ZDbc.inc}
 uses
-{$IFNDEF VER130BELOW}
-  Types,
-{$ENDIF}
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, ZDbcIntfs, ZSqlTestCase,
-  ZCompatibility;
+  Types, Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+  ZDbcIntfs, ZSqlTestCase, ZCompatibility;
 
 type
   {** Implements a test case for. }
@@ -356,7 +353,11 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
     CheckEquals(Schema, Resultset.GetStringByName('FKTABLE_SCHEM'));
     CheckEquals(FKTable, UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
     CheckEquals(FKColumn, UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
-    CheckEquals(KeySeq, Resultset.GetShortByName('KEY_SEQ'));
+    if StartsWith(Protocol, 'firebird') or
+       StartsWith(Protocol, 'interbase') then
+      CheckEquals(1, Resultset.GetShortByName('KEY_SEQ'))
+    else
+      CheckEquals(KeySeq, Resultset.GetShortByName('KEY_SEQ'));
     {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
     if not (Protocol = 'ado') then
     begin
