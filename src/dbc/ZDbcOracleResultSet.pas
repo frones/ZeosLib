@@ -1230,14 +1230,16 @@ var
   Connection: IZOracleConnection;
   AnsiTemp: ZAnsiString;
   Stream: TStream;
+  csid: ub2;
+  csfrm: ub1;
 
-  procedure DoRead;
+  procedure DoRead(const csid: ub2; const csfrm: ub1);
   begin
     FillChar(Buf^, FChunkSize+1, #0);
     ReadNumChars := 0;
     Status := FPlainDriver.LobRead(Connection.GetContextHandle,
       Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
-      Buf, FChunkSize, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
+      Buf, FChunkSize, nil, nil, Connection.GetClientCodePageInformations^.ID, csfrm);
     if ReadNumChars > 0 then
     begin
       Inc(Offset, ReadNumChars);
@@ -1281,10 +1283,17 @@ begin
             GetMem(Buf, FChunkSize+1);
             AnsiTemp := '';
             Offset := 0;
-            DoRead;
+            csid := Connection.GetClientCodePageInformations^.ID;
+            {CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+              FPlainDriver.LobCharSetId(Connection.GetConnectionHandle,
+                Connection.GetErrorHandle, FLobLocator, @csid), lcOther, 'Determine LOB CSID');} //not necessary -> possible wide return
+            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
+              FPlainDriver.LobCharSetForm(Connection.GetConnectionHandle,
+                Connection.GetErrorHandle, FLobLocator, @csfrm), lcOther, 'Determine LOB SCFORM'); //need to determine proper CharSet-Form
+            DoRead(csid, csfrm);
             if Status = OCI_NEED_DATA then
               while Status = OCI_NEED_DATA do
-                DoRead;
+                DoRead(csid, csfrm);
             CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
               Status, lcOther, 'Read Large Object');
             if FBlobType = stUnicodeStream then

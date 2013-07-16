@@ -76,6 +76,7 @@ type
     procedure TestNum1;
     procedure TestNestedDataSetFields1;
     procedure TestNestedDataSetFields2;
+    procedure TestNCLOBValues;
   end;
 
 implementation
@@ -144,6 +145,28 @@ begin
     Query.Free;
   end;
 end;
+
+procedure ZTestCompOracleBugReport.TestNCLOBValues;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from blob_values'; //NCLOB is inlcuded
+    Query.Open;
+    CheckEquals(5, Query.Fields.Count);
+    CheckMemoFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+    CheckMemoFieldType(Query.Fields[3].DataType, Connection.DbcConnection.GetConSettings);
+    Query.Next;
+    CheckEquals('Test string', Query.Fields[2].AsString); //read ORA NCLOB
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
 
 initialization
   RegisterTest('bugreport',ZTestCompOracleBugReport.Suite);
