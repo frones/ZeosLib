@@ -86,6 +86,7 @@ type
     FTableName: string;
     FCatalogName: string;
     FColumnType: TZSQLType;
+    FInternalColumnType: TZSQLType;
     FReadOnly: Boolean;
     FWritable: Boolean;
     FDefinitelyWritable: Boolean;
@@ -114,6 +115,7 @@ type
     property TableName: string read FTableName write FTableName;
     property CatalogName: string read FCatalogName write FCatalogName;
     property ColumnType: TZSQLType read FColumnType write FColumnType;
+    property InternalColumnType: TZSQLType read FInternalColumnType write FInternalColumnType;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
     property Writable: Boolean read FWritable write FWritable;
     property DefinitelyWritable: Boolean read FDefinitelyWritable
@@ -210,6 +212,7 @@ begin
   FCatalogName := '';
   FDefaultValue := '';
   FColumnType := stUnknown;
+  FInternalColumnType := stUnknown;
   FReadOnly := True;
   FWritable := False;
   FDefinitelyWritable := False;

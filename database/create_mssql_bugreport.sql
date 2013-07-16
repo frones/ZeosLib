@@ -37,4 +37,20 @@ CREATE TABLE Mantis54 (
 )
 go
 
+/*==============================================================*/
+/* Table : national_char_values                                 */
+/*==============================================================*/
+create table national_char_values (
+n_id                 int                  not null,
+s_nchar              nchar(255)           null,
+s_nvarchar           nvarchar(255)        null,
+b_ntext              ntext                null,
+s_char               char(255)            null,
+s_varchar            varchar(255)         null,
+b_text               text                 null,
+primary key  (n_id)
+)
+go
+
+
 
