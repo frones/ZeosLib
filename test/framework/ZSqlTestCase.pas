@@ -1378,6 +1378,7 @@ begin
   begin
     FConnection.Disconnect;
     FConnection.Free;
+    FConnection := nil;
   end;
 end;
 
