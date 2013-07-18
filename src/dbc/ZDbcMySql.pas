@@ -410,10 +410,6 @@ begin
         GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
     end;
 
-    if FClientCodePage = '' then //was set on inherited Create(...)
-      FClientCodePage := sMy_client_Char_Set;
-
-
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
       SQL := PAnsiChar(ZPlainString(Format('SET NAMES %s', [FClientCodePage])));
@@ -451,6 +447,18 @@ begin
   end;
 
   inherited Open;
+
+  if FClientCodePage = '' then //workaround for MySQL 4 down
+  begin
+    with Self.GetMetadata.GetCollationAndCharSet('', FCatalog, '', '') do
+    begin
+      if Next then
+        FClientCodePage := GetString(6);
+      Close;
+    end;
+    ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
+    ZEncoding.SetConvertFunctions(ConSettings);
+  end
 end;
 
 {**
