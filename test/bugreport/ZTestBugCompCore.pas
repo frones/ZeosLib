@@ -115,6 +115,7 @@ type
     procedure Test1045500;
     procedure Test1036916;
     procedure Test1004584;
+    procedure TestUnknowParam;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1715,6 +1716,20 @@ begin
     // Ignore.
   end;
   Connection.Disconnect;
+end;
+
+procedure ZTestCompCoreBugReport.TestUnknowParam;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select :p1 as Param1';
+    Query.Open;
+  finally
+    Query.Free;
+  end;
 end;
 
 const {Test Strings}
