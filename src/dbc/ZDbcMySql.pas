@@ -409,6 +409,8 @@ begin
          ((ClientVersion>=50100) and (ClientVersion<50106)) then
         GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
     end;
+    if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
+      FClientCodePage := sMy_client_Char_Set;
 
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
