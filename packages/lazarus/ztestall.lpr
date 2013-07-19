@@ -18,7 +18,9 @@ uses
   //component
   ZTestComponents,
   //bugreport
-  ZTestBugReports
+  ZTestBugReports,
+  //performance
+  ZTestPerformance
   ;
 
 type

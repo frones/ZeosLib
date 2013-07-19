@@ -53,8 +53,10 @@ unit ZTestDatasetPerformance;
 
 interface
 
-uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZConnection,
-  ZAbstractRODataset, ZDataset, ZDbcIntfs, DB;
+{$I ZPerformance.inc}
+
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
+  ZPerformanceTestCase, ZConnection, ZAbstractRODataset, ZDataset, ZDbcIntfs, DB;
 
 type
 
@@ -337,6 +339,6 @@ begin
 end;
 
 initialization
-  TestFramework.RegisterTest(TZDatasetPerformanceTestCase.Suite);
+  RegisterTest('performance', TZDatasetPerformanceTestCase.Suite);
 end.
 

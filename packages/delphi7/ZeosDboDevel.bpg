@@ -10,7 +10,7 @@ DCC = $(ROOT)\bin\dcc32.exe $**
 BRCC = $(ROOT)\bin\brcc32.exe $**
 #------------------------------------------------------------------------------
 PROJECTS = ZCore.bpl ZParseSql.bpl ZPlain.bpl ZDbc.bpl ZComponent.bpl \
-  ZComponentDesign70.bpl ZTestFramework70.bpl ZTestAll.exe ZTestPerformance.exe
+  ZComponentDesign70.bpl ZTestAll.exe
 #------------------------------------------------------------------------------
 default: $(PROJECTS)
 #------------------------------------------------------------------------------
@@ -34,12 +34,6 @@ ZComponentDesign70.bpl: ZComponentDesign.dpk
   $(DCC)
 
 ZTestAll.exe: ZTestAll.dpr
-  $(DCC)
-
-ZTestPerformance.exe: ZTestPerformance.dpr
-  $(DCC)
-
-ZTestFramework70.bpl: ZTestFramework.dpk
   $(DCC)
 
 
