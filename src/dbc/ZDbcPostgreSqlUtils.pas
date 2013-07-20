@@ -58,7 +58,7 @@ interface
 
 uses
   Classes, SysUtils, ZDbcIntfs, ZPlainPostgreSqlDriver,
-  ZDbcPostgreSql, ZDbcLogging, ZCompatibility;
+  ZDbcPostgreSql, ZDbcLogging, ZCompatibility, ZVariant;
 
 {**
   Indicate what field type is a number (integer, float and etc.)
@@ -132,11 +132,12 @@ function DecodeString(const Value: AnsiString): AnsiString;
   @param ResultHandle the Handle to the Result
 }
 
-procedure CheckPostgreSQLError(Connection: IZConnection;
+function CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult);
+  ResultHandle: PZPostgreSQLResult;
+  const Handle_indeterminate_datatype: Boolean = False): String;
 
 
 {**
@@ -146,9 +147,19 @@ procedure CheckPostgreSQLError(Connection: IZConnection;
 }
 function GetMinorVersion(const Value: string): Word;
 
+{**
+  Prepares an SQL parameter for the query.
+  @param ParameterIndex the first parameter is 1, the second is 2, ...
+  @return a string representation of the parameter.
+}
+function PGPrepareAnsiSQLParam(Value: TZVariant; Connection: IZPostgreSQLConnection;
+  PlainDriver: IZPostgreSQLPlainDriver; const ChunkSize: Cardinal;
+  const InParamType: TZSQLType; const oidasblob: Boolean;
+  ConSettings: PZConSettings): RawByteString;
+
 implementation
 
-uses ZMessages;
+uses ZMessages, ZDbcPostgreSqlResultSet, ZEncoding, ZDbcPostgreSqlStatement;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -635,15 +646,15 @@ end;
   //FirmOS 22.02.06
   @param ResultHandle the Handle to the Result
 }
-procedure CheckPostgreSQLError(Connection: IZConnection;
+function CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult);
+  ResultHandle: PZPostgreSQLResult;
+  const Handle_indeterminate_datatype: Boolean = False): String;
 var
    ErrorMessage: string;
 //FirmOS
-   StatusCode: string;
    ConnectionLost: boolean;
 
    function GetMessage(AMessage: PAnsiChar): String;
@@ -682,9 +693,9 @@ begin
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_LINE)));
      StatusCode := Trim(StrPas(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SOURCE_FUNCTION)));
 }
-     StatusCode := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))
+     Result := GetMessage(PlainDriver.GetResultErrorField(ResultHandle,PG_DIAG_SQLSTATE))
     else
-      StatusCode:='';
+      Result := '';
   end;
 
 
@@ -703,7 +714,8 @@ begin
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 
     if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
-      raise EZSQLException.CreateWithStatus(StatusCode,Format(SSQLError1, [ErrorMessage]));
+      if not ((Result = '42P18') and Handle_indeterminate_datatype ) then
+        raise EZSQLException.CreateWithStatus(Result,Format(SSQLError1, [ErrorMessage]));
   end;
 end;
 
@@ -724,6 +736,104 @@ begin
     else
       Break;
   Result := StrToIntDef(Temp, 0);
+end;
+
+{**
+  Prepares an SQL parameter for the query.
+  @param ParameterIndex the first parameter is 1, the second is 2, ...
+  @return a string representation of the parameter.
+}
+function PGPrepareAnsiSQLParam(Value: TZVariant; Connection: IZPostgreSQLConnection;
+  PlainDriver: IZPostgreSQLPlainDriver; const ChunkSize: Cardinal;
+  const InParamType: TZSQLType; const oidasblob: Boolean;
+  ConSettings: PZConSettings): RawByteString;
+var
+  TempBlob: IZBlob;
+  TempStream: TStream;
+  WriteTempBlob: IZPostgreSQLBlob;
+begin
+  if DefVarManager.IsNull(Value)  then
+    Result := 'NULL'
+  else
+  begin
+    case InParamType of
+      stBoolean:
+        if SoftVarManager.GetAsBoolean(Value) then
+          Result := 'TRUE'
+        else
+          Result := 'FALSE';
+      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+        Result := RawByteString(SoftVarManager.GetAsString(Value));
+      stBytes:
+        Result := Connection.EncodeBinary(SoftVarManager.GetAsBytes(Value));
+      stString:
+        if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
+          Result :=  PlainDriver.EscapeString(Connection.GetConnectionHandle,
+            PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString(Connection.GetConnectionHandle,
+            PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
+      stUnicodeString:
+        if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
+          Result := PlainDriver.EscapeString(Connection.GetConnectionHandle,
+            PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings), ConSettings, True)
+        else
+          Result := ZDbcPostgreSqlUtils.PGEscapeString(Connection.GetConnectionHandle,
+            PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings), ConSettings, True);
+      stDate:
+        Result := RawByteString(Format('''%s''::date',
+          [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
+      stTime:
+        Result := RawByteString(Format('''%s''::time',
+          [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
+      stTimestamp:
+        Result := RawByteString(Format('''%s''::timestamp',
+          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
+            SoftVarManager.GetAsDateTime(Value))]));
+      stAsciiStream, stUnicodeStream, stBinaryStream:
+        begin
+          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            case InParamType of
+              stBinaryStream:
+                if (Connection.IsOidAsBlob) or oidasblob then
+                begin
+                  TempStream := TempBlob.GetStream;
+                  try
+                    WriteTempBlob := TZPostgreSQLBlob.Create(PlainDriver, nil, 0,
+                      Connection.GetConnectionHandle, 0, ChunkSize);
+                    WriteTempBlob.SetStream(TempStream);
+                    WriteTempBlob.WriteBlob;
+                    Result := RawByteString(IntToStr(WriteTempBlob.GetBlobOid));
+                  finally
+                    WriteTempBlob := nil;
+                    TempStream.Free;
+                  end;
+                end
+                else
+                  Result := Connection.EncodeBinary(TempBlob.GetString);
+              stAsciiStream, stUnicodeStream:
+                if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
+                  Result := PlainDriver.EscapeString(
+                    Connection.GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                      ConSettings, True)
+                else
+                  Result := ZDbcPostgreSqlUtils.PGEscapeString(
+                    Connection.GetConnectionHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, TempBlob.WasDecoded, ConSettings),
+                      ConSettings, True);
+            end; {case..}
+          end
+          else
+            Result := 'NULL';
+          TempBlob := nil;
+        end; {if not TempBlob.IsEmpty then}
+    end;
+  end;
 end;
 
 end.
