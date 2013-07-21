@@ -154,7 +154,7 @@ function GetMinorVersion(const Value: string): Word;
 }
 function PGPrepareAnsiSQLParam(Value: TZVariant; Connection: IZPostgreSQLConnection;
   PlainDriver: IZPostgreSQLPlainDriver; const ChunkSize: Cardinal;
-  const InParamType: TZSQLType; const oidasblob: Boolean;
+  const InParamType: TZSQLType; const oidasblob, DateTimePrefix, QuotedNumbers: Boolean;
   ConSettings: PZConSettings): RawByteString;
 
 implementation
@@ -745,7 +745,7 @@ end;
 }
 function PGPrepareAnsiSQLParam(Value: TZVariant; Connection: IZPostgreSQLConnection;
   PlainDriver: IZPostgreSQLPlainDriver; const ChunkSize: Cardinal;
-  const InParamType: TZSQLType; const oidasblob: Boolean;
+  const InParamType: TZSQLType; const oidasblob, DateTimePrefix, QuotedNumbers: Boolean;
   ConSettings: PZConSettings): RawByteString;
 var
   TempBlob: IZBlob;
@@ -763,7 +763,10 @@ begin
         else
           Result := 'FALSE';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        begin
+          Result := RawByteString(SoftVarManager.GetAsString(Value));
+          if QuotedNumbers then Result := #39+Result+#39;
+        end;
       stBytes:
         Result := Connection.EncodeBinary(SoftVarManager.GetAsBytes(Value));
       stString:
@@ -781,15 +784,23 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString(Connection.GetConnectionHandle,
             PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings), ConSettings, True);
       stDate:
-        Result := RawByteString(Format('''%s''::date',
-          [FormatDateTime('yyyy-mm-dd', SoftVarManager.GetAsDateTime(Value))]));
+        begin
+          Result := RawByteString(#39+FormatDateTime('yyyy-mm-dd',
+            SoftVarManager.GetAsDateTime(Value))+#39);
+          if DateTimePrefix then Result := Result + '::date';
+        end;
       stTime:
-        Result := RawByteString(Format('''%s''::time',
-          [FormatDateTime('hh":"mm":"ss"."zzz', SoftVarManager.GetAsDateTime(Value))]));
+        begin
+          Result := RawByteString(#39+FormatDateTime('hh":"mm":"ss"."zzz',
+            SoftVarManager.GetAsDateTime(Value))+#39);
+          if DateTimePrefix then Result := Result + '::time';
+        end;
       stTimestamp:
-        Result := RawByteString(Format('''%s''::timestamp',
-          [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
-            SoftVarManager.GetAsDateTime(Value))]));
+        begin
+          Result := RawByteString(#39+FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz',
+              SoftVarManager.GetAsDateTime(Value))+#39);
+        if DateTimePrefix then Result := Result + '::timestamp';
+        end;
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
