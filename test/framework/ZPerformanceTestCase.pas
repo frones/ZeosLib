@@ -354,7 +354,6 @@ var
 begin
   Query := CreateQuery;
   try
-    Query.Connection := Connection;
     Query.SQL.Text := Format('DELETE FROM %s', [TableName]);
     Query.ExecSQL;
   finally
@@ -385,7 +384,6 @@ begin
   try
     Query.ReadOnly := True;
 
-    Query1.Connection := Connection;
     Query1.ReadOnly := True;
 
     Query1.SQL.Text := Format('SELECT COUNT(*) FROM %s', [TableName]);

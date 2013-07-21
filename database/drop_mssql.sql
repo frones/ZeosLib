@@ -40,6 +40,9 @@ go*/
 drop table case_sensitive
 go
 
+drop table [spaced names]
+go
+
 drop table high_load
 go
 

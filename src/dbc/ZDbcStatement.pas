@@ -365,10 +365,9 @@ type
     FExecStatement: IZStatement;
     FCachedQuery: TStrings;
     FLastStatement: IZStatement;
-
     procedure SetLastStatement(LastStatement: IZStatement);
-
   protected
+    FNeedNCharDetection: Boolean;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
     property CachedQuery: TStrings read FCachedQuery write FCachedQuery;
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
@@ -2742,12 +2741,22 @@ begin
         begin
           if Tokens[I] = '?' then
           begin
-            FCachedQuery.Add(Temp);
+            if FNeedNCharDetection and not (Temp = '') then
+                FCachedQuery.Add(Temp)
+            else
+              FCachedQuery.Add(Temp);
             FCachedQuery.AddObject('?', Self);
             Temp := '';
           end
           else
-            Temp := Temp + Tokens[I];
+            if FNeedNCharDetection and (Tokens[I] = 'N') and (Tokens.Count > i) and (Tokens[i+1] = '?') then
+            begin
+              FCachedQuery.Add(Temp);
+              FCachedQuery.Add(Tokens[i]);
+              Temp := '';
+            end
+            else
+              Temp := Temp + Tokens[I];
         end;
         if Temp <> '' then
           FCachedQuery.Add(Temp);

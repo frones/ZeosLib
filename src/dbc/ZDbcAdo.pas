@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainDriver,
-  ZPlainAdoDriver, ZPlainAdo, ZURL;
+  ZPlainAdoDriver, ZPlainAdo, ZURL, ZTokenizer;
 
 type
   {** Implements Ado Database Driver. }
@@ -68,6 +68,7 @@ type
     function Connect(const Url: TZURL): IZConnection; override;
     function GetMajorVersion: Integer; override;
     function GetMinorVersion: Integer; override;
+    function GetTokenizer: IZTokenizer; override;
   end;
   {$WARNINGS ON}
 
@@ -127,7 +128,7 @@ implementation
 
 uses
   Variants,
-  SysUtils, ActiveX, ZDbcUtils, ZDbcLogging,
+  SysUtils, ActiveX, ZDbcUtils, ZDbcLogging, ZAdoToken,
   ZDbcAdoStatement, ZDbcAdoMetaData;
 
 const                                                //adXactUnspecified
@@ -170,6 +171,13 @@ end;
 function TZAdoDriver.GetMinorVersion: Integer;
 begin
   Result := 0;
+end;
+
+function TZAdoDriver.GetTokenizer: IZTokenizer;
+begin
+  if Tokenizer = nil then
+    Tokenizer := TZAdoSQLTokenizer.Create;
+  Result := Tokenizer;
 end;
 
 { TZAdoConnection }

@@ -32,6 +32,10 @@ requires
 
 contains
 
+{$IFDEF ENABLE_ADO}
+  ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_INTERBASE}
   ZInterbaseAnalyser in '..\..\src\parsesql\ZInterbaseAnalyser.pas',
   ZInterbaseToken in '..\..\src\parsesql\ZInterbaseToken.pas',

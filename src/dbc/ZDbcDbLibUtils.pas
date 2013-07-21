@@ -108,7 +108,8 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings): RawByteString;
+  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
+  const NChar: Boolean = False): RawByteString;
 
 implementation
 
@@ -364,7 +365,8 @@ end;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
-  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings): RawByteString;
+  ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
+  const NChar: Boolean = False): RawByteString;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
@@ -384,7 +386,10 @@ begin
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stString, stUnicodeString:
-        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
+        if NChar then
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8)), #39)
+        else
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stBytes:
         begin
           TempBytes := ClientVarManager.GetAsBytes(Value);
@@ -410,19 +415,19 @@ begin
             if ParamType = stBinaryStream then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
-              if ParamType = stUnicodeStream then
+              if NChar then
               {$IFDEF WITH_UNITANSISTRINGS}
-                Result := 'N'+AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
               else
                 Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
               {$ELSE}
-                Result := 'N'+AnsiQuotedStr(StringReplace(
+                Result := AnsiQuotedStr(StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
               else
                 Result := AnsiQuotedStr(StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,

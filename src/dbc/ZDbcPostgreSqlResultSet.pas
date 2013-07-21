@@ -772,7 +772,7 @@ begin
        Row := 0;
   end;
 
-  if ResultSetType <> rtForwardOnly then
+  if (ResultSetType <> rtForwardOnly) or ((Row >= RowNo) and (Row <= LastRowNo)) then
   begin
     if (Row >= 0) and (Row <= LastRowNo + 1) then
     begin

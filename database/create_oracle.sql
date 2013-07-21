@@ -10,6 +10,7 @@ b_long               LONG,
 b_nclob              NCLOB,
 b_clob               CLOB,
 b_blob               BLOB,
+b_bfile              BFILE,
 primary key (b_id)
 );
 
@@ -147,6 +148,17 @@ cs_id                 INTEGER                        not null,
 "Cs_Data1"            INTEGER,
 "cs_data1"            INTEGER,
 "cs data1"            INTEGER,
+primary key (cs_id)
+);
+
+/*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table "Spaced Names" (
+cs_id                 INTEGER                        not null,
+"Cs Data1"            INTEGER,
+"cs data1"            INTEGER,
+"cS data1"            INTEGER,
 primary key (cs_id)
 );
 

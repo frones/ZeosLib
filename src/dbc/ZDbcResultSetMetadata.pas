@@ -188,7 +188,7 @@ type
 
 implementation
 
-uses ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils;
+uses ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
 
 { TZColumnInfo }
 
@@ -216,6 +216,7 @@ begin
   FReadOnly := True;
   FWritable := False;
   FDefinitelyWritable := False;
+  FColumnCodePage := zCP_NONE;
 end;
 
 {**

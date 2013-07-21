@@ -403,7 +403,6 @@ begin
       Result := '';
       N := 0;
       for I := 0 to Tokens.Count - 1 do
-      begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
@@ -411,7 +410,6 @@ begin
         end else
           Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[I],
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-      end;
     finally
       Tokens.Free;
     end;

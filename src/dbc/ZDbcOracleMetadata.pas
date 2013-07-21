@@ -1509,7 +1509,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 var
-  SQL, where: string;
+  SQL: string;
   LProcedureNamePattern, LSchemaNamePattern: string;
   sName:string;
 begin
@@ -1738,9 +1738,9 @@ begin
       Result.UpdateBoolean(20, //CASE_SENSITIVE
         GetIdentifierConvertor.IsCaseSensitive(GetString(4)));
       Result.UpdateBoolean(21, True);  //SEARCHABLE
-      Result.UpdateBoolean(22, True);  //WRITABLE
+      Result.UpdateBoolean(22, not (GetString(6) = 'BFILE'));  //WRITABLE
       Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
-      Result.UpdateBoolean(24, False); //READONLY
+      Result.UpdateBoolean(24, (GetString(6) = 'BFILE')); //READONLY
 
       Result.InsertRow;
     end;

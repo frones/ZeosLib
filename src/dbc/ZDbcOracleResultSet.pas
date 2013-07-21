@@ -1381,9 +1381,6 @@ begin
             AnsiTemp := '';
             Offset := 0;
             csid := Connection.GetClientCodePageInformations^.ID;
-            {CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-              FPlainDriver.LobCharSetId(Connection.GetConnectionHandle,
-                Connection.GetErrorHandle, FLobLocator, @csid), lcOther, 'Determine LOB CSID');} //not necessary -> possible wide return
             CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
               FPlainDriver.LobCharSetForm(Connection.GetConnectionHandle,
                 Connection.GetErrorHandle, FLobLocator, @csfrm), lcOther, 'Determine LOB SCFORM'); //need to determine proper CharSet-Form
