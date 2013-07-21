@@ -250,7 +250,7 @@ type
 
 implementation
 
-uses ZSqlTestCase, ZMySqlToken;
+uses ZSqlTestCase, ZMySqlToken, ZDbcIntfs;
 
 {$IFDEF ENABLE_MYSQL}
  { TZPlainMySQLPerformanceTestCase }
@@ -701,23 +701,24 @@ end;
    Create objects and allocate memory for variables
 }
 procedure TZPlainPostgreSQLPerformanceTestCase.SetUp;
-{ TODO
 var
-  FPostgreSQL65PlainDriver: IZPostgreSQLPlainDriver;
-  FPostgreSQL72PlainDriver: IZPostgreSQLPlainDriver;
- }
+  FPostgreSQL7PlainDriver: IZPostgreSQLPlainDriver;
+  FPostgreSQL8PlainDriver: IZPostgreSQLPlainDriver;
+  FPostgreSQL9PlainDriver: IZPostgreSQLPlainDriver;
 begin
-{ TODO
-  FPostgreSQL65PlainDriver := TZPostgreSQL65PlainDriver.Create;
-  FPostgreSQL72PlainDriver := TZPostgreSQL72PlainDriver.Create;
+  FPostgreSQL7PlainDriver := TZPostgreSQL7PlainDriver.Create;
+  FPostgreSQL8PlainDriver := TZPostgreSQL8PlainDriver.Create;
+  FPostgreSQL9PlainDriver := TZPostgreSQL9PlainDriver.Create;
 
-  if Protocol = FPostgreSQL65PlainDriver.GetProtocol then
-    PlainDriver := FPostgreSQL65PlainDriver
-  else if Protocol = FPostgreSQL72PlainDriver.GetProtocol then
-    PlainDriver := FPostgreSQL72PlainDriver
-  else PlainDriver := FPostgreSQL72PlainDriver;
-  PlainDriver.Initialize;
- }
+  if Protocol = FPostgreSQL7PlainDriver.GetProtocol then
+    PlainDriver := FPostgreSQL7PlainDriver
+  else if Protocol = FPostgreSQL8PlainDriver.GetProtocol then
+    PlainDriver := FPostgreSQL8PlainDriver
+  else if Protocol = FPostgreSQL9PlainDriver.GetProtocol then
+    PlainDriver := FPostgreSQL9PlainDriver
+  else PlainDriver := FPostgreSQL7PlainDriver;
+  if Assigned(PlainDriver) then
+    PlainDriver.Initialize;
 end;
 
 {**
@@ -989,34 +990,42 @@ var
   FFirebird15PlainDriver: IZInterbasePlainDriver;
   FFirebird20PlainDriver: IZInterbasePlainDriver;
   FFirebird21PlainDriver: IZInterbasePlainDriver;
+  FFirebird25PlainDriver: IZInterbasePlainDriver;
   FFirebirdd15PlainDriver: IZInterbasePlainDriver;
   FFirebirdd20PlainDriver: IZInterbasePlainDriver;
   FFirebirdd21PlainDriver: IZInterbasePlainDriver;
+  FFirebirdd25PlainDriver: IZInterbasePlainDriver;
 begin
   FDialect := 3;
   FFirebird10PlainDriver := TZFirebird10PlainDriver.Create;
   FFirebird15PlainDriver := TZFirebird15PlainDriver.Create;
-  FFirebird20PlainDriver := TZFirebird20PlainDriver.Create; 
-  FFirebird21PlainDriver := TZFirebird21PlainDriver.Create; 
-  FFirebirdd15PlainDriver := TZFirebird15PlainDriver.Create; 
+  FFirebird20PlainDriver := TZFirebird20PlainDriver.Create;
+  FFirebird21PlainDriver := TZFirebird21PlainDriver.Create;
+  FFirebird25PlainDriver := TZFirebird25PlainDriver.Create;
+  FFirebirdd15PlainDriver := TZFirebird15PlainDriver.Create;
   FFirebirdd20PlainDriver := TZFirebirdd20PlainDriver.Create;
   FFirebirdd21PlainDriver := TZFirebirdd21PlainDriver.Create;
+  FFirebirdd25PlainDriver := TZFirebirdd25PlainDriver.Create;
 
   if Protocol = FFirebird10PlainDriver.GetProtocol then
-    PlainDriver := FFirebird10PlainDriver 
-  else if Protocol = FFirebird15PlainDriver.GetProtocol then 
-    PlainDriver := FFirebird15PlainDriver 
+    PlainDriver := FFirebird10PlainDriver
+  else if Protocol = FFirebird15PlainDriver.GetProtocol then
+    PlainDriver := FFirebird15PlainDriver
   else if Protocol = FFirebird20PlainDriver.GetProtocol then
-    PlainDriver := FFirebird20PlainDriver 
-  else if Protocol = FFirebird21PlainDriver.GetProtocol then 
-    PlainDriver := FFirebird21PlainDriver 
-  else if Protocol = FFirebirdd15PlainDriver.GetProtocol then 
+    PlainDriver := FFirebird20PlainDriver
+  else if Protocol = FFirebird21PlainDriver.GetProtocol then
+    PlainDriver := FFirebird21PlainDriver
+  else if Protocol = FFirebird25PlainDriver.GetProtocol then
+    PlainDriver := FFirebird25PlainDriver
+  else if Protocol = FFirebirdd15PlainDriver.GetProtocol then
     PlainDriver := FFirebirdd15PlainDriver
   else if Protocol = FFirebirdd21PlainDriver.GetProtocol then
     PlainDriver := FFirebird21PlainDriver
+  else if Protocol = FFirebirdd25PlainDriver.GetProtocol then
+    PlainDriver := FFirebirdd25PlainDriver
   else PlainDriver := FFirebird10PlainDriver;
-
-  PlainDriver.Initialize;
+  if Assigned(PlainDriver) then
+    PlainDriver.Initialize;
 end;
 
 procedure TZPlainInterbase6SQLPerformanceTestCase.SetUpTestConnect;

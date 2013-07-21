@@ -130,6 +130,7 @@ type
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
     function EscapeString(const S: string): string; virtual;
+    function DecomposeObjectString(const S: String): String; virtual;
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
 
@@ -1862,6 +1863,14 @@ end;
 function TZAbstractDatabaseMetadata.EscapeString(const S: string): string;
 begin
   Result := '''' + S + '''';
+end;
+
+function TZAbstractDatabaseMetadata.DecomposeObjectString(const S: String): String;
+begin
+  if FIC.IsQuoted(s) then
+    Result := FIC.ExtractQuote(s)
+  else
+    Result := s;
 end;
 
 {**  Destroys this object and cleanups the memory.}

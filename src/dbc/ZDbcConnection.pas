@@ -453,7 +453,7 @@ function TZAbstractDriver.GetPlainDriver(const Url: TZURL;
   const InitDriver: Boolean): IZPlainDriver;
 begin
   Result := GetPlainDriverFromCache(Url.Protocol, Url.LibLocation);
-  if InitDriver then
+  if Assigned(Result) and InitDriver then
     Result.Initialize(Url.LibLocation);
 end;
 

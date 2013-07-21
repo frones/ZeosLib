@@ -1387,8 +1387,8 @@ var
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
   Curr: Currency;
-  L: Cardinal;
   {$IFNDEF UNICODE}
+  L: Cardinal;
   Temp: String;
   {$ENDIF}
 begin

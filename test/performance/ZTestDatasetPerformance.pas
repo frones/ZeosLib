@@ -61,11 +61,9 @@ type
   {** Implements a performance test case for ZeosDBO TDataset API. }
   TZDatasetPerformanceTestCase = class (TZPerformanceSQLTestCase)
   private
-    FConnection: TZConnection;
     FQuery: TZQuery;
   protected
     property Query: TZQuery read FQuery write FQuery;
-    property Connection: TZConnection read FConnection write FConnection;
 
     function GetImplementedAPI: string; override;
     procedure SetUp; override;
@@ -115,13 +113,10 @@ procedure TZDatasetPerformanceTestCase.SetUp;
 var
   TempQuery: TZQuery;
 begin
-  Connection := CreateDatasetConnection;
-  Connection.TransactIsolationLevel := tiReadCommitted;
-  Connection.AutoCommit := True;
+  inherited SetUp;
 
   TempQuery := TZQuery.Create(nil);
   TempQuery.Connection := Connection;
-  // TempQuery.RequestLive := True;
   Query := TempQuery;
 end;
 
@@ -130,17 +125,12 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.TearDown;
 begin
-  if Query <> nil then
+  if Assigned(Query) then
   begin
     Query.Free;
     Query := nil;
   end;
-
-  if Connection <> nil then
-  begin
-    Connection.Free;
-    Connection := nil;
-  end;
+  inherited TearDown;
 end;
 
 {**

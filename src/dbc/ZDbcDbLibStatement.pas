@@ -89,7 +89,9 @@ type
     FPlainDriver: IZDBLibPlainDriver;
   protected
     function GetEscapeString(Value: string): string;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
+    function PrepareAnsiSQLQuery: RawByteString; override;
+    function PrepareAnsiSQLParam(ParamIndex: Integer;
+      const NChar: Boolean): RawByteString; reintroduce;
     function CreateExecStatement: IZStatement; override;
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
@@ -419,6 +421,7 @@ begin
   inherited Create(Connection, SQL, Info);
   FPlainDriver := (Connection as IZDBLibConnection).GetPlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FNeedNCharDetection := True;
 end;
 
 {**
@@ -431,19 +434,45 @@ begin
   Result := AnsiQuotedStr(Value, '''');
 end;
 
+function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLQuery: RawByteString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+  Tokens: TStrings;
+begin
+  ParamIndex := 0;
+  Result := '';
+  Tokens := TokenizeSQLQuery;
+
+  for I := 0 to Tokens.Count - 1 do
+  begin
+    if Tokens[I] = '?' then
+    begin
+      Result := Result + PrepareAnsiSQLParam(ParamIndex, ((i > 0) and (Tokens[i-1] = 'N')));
+      Inc(ParamIndex);
+    end
+    else
+      Result := Result + ZPlainString(Tokens[I]);
+  end;
+  {$IFNDEF UNICODE}
+  if GetConnection.AutoEncodeStrings then
+     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
+end;
 {**
   Prepares an SQL parameter for the query.
   @param ParameterIndex the first parameter is 1, the second is 2, ...
   @return a string representation of the parameter.
 }
-function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
+function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLParam(ParamIndex: Integer;
+  const NChar: Boolean): RawByteString;
 begin
   if InParamCount <= ParamIndex then
     Result := 'NULL'
   else
   begin
     Result := PrepareSQLParameter(InParamValues[ParamIndex],
-      InParamTypes[ParamIndex], ConSettings, FPlainDriver);
+      InParamTypes[ParamIndex], ConSettings, FPlainDriver, NChar);
   end;
 end;
 

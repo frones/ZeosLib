@@ -225,8 +225,20 @@ cs_id                 INTEGER           not null,
 [cs data1]            INTEGER		null,
 primary key (cs_id)
 )
+go*/
+
+/*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table [spaced names] (
+cs_id                 INTEGER           not null,
+"Cs Data1"            INTEGER		null,
+"cs data2"            INTEGER		null,
+"Cs data3"            INTEGER		null,
+primary key (cs_id)
+)
 go
-*/
+
 /*==============================================================*/
 /* Table : case_sensitive                                       */
 /*==============================================================*/

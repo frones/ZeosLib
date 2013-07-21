@@ -108,7 +108,8 @@ function ConvertDBLibNullability(DBLibNullability: Byte): TZColumnNullableType;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
-  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): RawByteString;
+  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver;
+  const NChar: Boolean = False): RawByteString;
 
 implementation
 
@@ -364,7 +365,8 @@ end;
   @return a string representation of the parameter.
 }
 function PrepareSQLParameter(Value: TZVariant; ParamType: TZSQLType;
-  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver): RawByteString;
+  ConSettings: PZConSettings; PlainDriver: IZDBLibPlainDriver;
+    const NChar: Boolean = False): RawByteString;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
@@ -384,10 +386,13 @@ begin
       stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
         Result := RawByteString(SoftVarManager.GetAsString(Value));
       stString:
-        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
+        if NChar then
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings, zCP_UTF8), '''')
+        else
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), '''');
       stUnicodeString:
-        if ConSettings.ClientCodePage.Encoding = ceUTF8 then
-          Result := 'N'+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
+        if NChar then
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(UTF8Encode(SoftVarManager.GetAsUnicodeString(Value)),'''')
         else
           Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Value), ConSettings),'''');
       stBytes:
@@ -415,19 +420,19 @@ begin
             if ParamType = stBinaryStream then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
-              if ParamType = stUnicodeStream then
+              if NChar then
               {$IFDEF WITH_UNITANSISTRINGS}
-                Result := 'N'+AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
               else
                 Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
               {$ELSE}
-                Result := 'N'+AnsiQuotedStr(StringReplace(
+                Result := AnsiQuotedStr(StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
               else
                 Result := AnsiQuotedStr(StringReplace(
                   GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,

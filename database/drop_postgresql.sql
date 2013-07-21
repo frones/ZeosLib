@@ -17,6 +17,7 @@ drop table equipment;
 drop table department;
 
 drop table "Case_Sensitive";
+drop table "Spaced Names";
 drop table case_sensitive;
 drop table high_load;
 
