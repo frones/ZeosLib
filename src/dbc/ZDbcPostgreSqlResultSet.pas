@@ -269,7 +269,7 @@ begin
             if FUndefinedVarcharAsStringLength > 0 then
               Precision := GetFieldSize(ColumnType, ConSettings,
                 FUndefinedVarcharAsStringLength,
-                ConSettings.ClientCodePage^.CharWidth, nil, True)
+                ConSettings.ClientCodePage^.CharWidth, nil, False)
             else
               DefinePostgreSQLToSQLType(ColumnInfo, 25) //assume text instead!
           else
