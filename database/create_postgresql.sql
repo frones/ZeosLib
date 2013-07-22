@@ -158,6 +158,17 @@ primary key (cs_id)
 );
 
 /*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table "Spaced Names" (
+cs_id                 INTEGER                        not null,
+"Cs Data1"            INTEGER,
+"cs data1"            INTEGER,
+"cS data1"            INTEGER,
+primary key (cs_id)
+);
+
+/*==============================================================*/
 /* Table : case_sensitive                                       */
 /*==============================================================*/
 create table case_sensitive (
