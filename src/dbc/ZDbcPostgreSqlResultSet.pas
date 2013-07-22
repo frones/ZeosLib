@@ -221,6 +221,7 @@ procedure TZPostgreSQLResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
+  FieldMode, FieldSize, FieldType: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -253,16 +254,21 @@ begin
       Signed := False;
       Nullable := ntNullable;
 
-      DefinePostgreSQLToSQLType(I, ColumnInfo,
-        FPlainDriver.GetFieldType(FQueryHandle, I));
+      FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
+      DefinePostgreSQLToSQLType(I, ColumnInfo, FieldType);
 
       if Precision = 0 then
       begin
-        Precision := Max(Max(FPlainDriver.GetFieldMode(FQueryHandle, I) - 4,
-          FPlainDriver.GetFieldSize(FQueryHandle, I)), 0);
+        FieldMode := FPlainDriver.GetFieldMode(FQueryHandle, I);
+        FieldSize := FPlainDriver.GetFieldSize(FQueryHandle, I);
+        Precision := Max(Max(FieldMode - 4, FieldSize), 0);
 
         if ColumnType in [stString, stUnicodeString] then
-          if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
+          if ( FieldMode = -1 ) and ( FieldSize = -1 ) and ( FieldType = 1043) then
+              Precision := GetFieldSize(ColumnType, ConSettings,
+                255, ConSettings.ClientCodePage^.CharWidth, nil, False)
+          else
+            if ( (ColumnLabel = 'expr') or ( Precision = 0 ) ) then
             Precision := GetFieldSize(ColumnType, ConSettings, 255,
               ConSettings.ClientCodePage^.CharWidth, nil, True)
           else
