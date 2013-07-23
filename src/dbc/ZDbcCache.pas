@@ -755,7 +755,17 @@ begin
         Result := WideCompareStr(PWideChar(ValuePtr1^), PWideChar(ValuePtr2^));
       {$ELSE}
       stString:
+        {$IFDEF MSWINDOWS} //Windows can handle nil pointers Linux not FPC-Bug?
         Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^));
+        {$ELSE}
+        if Assigned(PPAnsichar(ValuePtr1)^) and Assigned(PPAnsiChar(ValuePtr2)^) then
+          Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^))
+        else
+          if not Assigned(PPAnsichar(ValuePtr1)^) and not Assigned(PPAnsiChar(ValuePtr2)^) then
+            Result := 0
+          else
+            Result := -1;
+        {$ENDIF}
       stUnicodeString:
         Result := WideCompareStr(PWideChar(ValuePtr1^), PWideChar(ValuePtr2^));
       {$ENDIF}
