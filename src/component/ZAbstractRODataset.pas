@@ -481,7 +481,7 @@ uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
-  {$IFDEF WITh_UNITANSISRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { EZDatabaseError }
 
