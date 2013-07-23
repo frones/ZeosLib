@@ -1129,7 +1129,6 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode;
   DoCheck: Boolean): TGetResult;
 {$ELSE}
@@ -1192,7 +1191,7 @@ begin
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
     FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-    GetCalcFields(Buffer);
+    GetCalcFields({$IFDEF WITH_GETCALCFIELDS_PBYTE}pByte{$ENDIF}(Buffer));
   end;
 
   if (Result = grError) and DoCheck then
@@ -2688,7 +2687,7 @@ begin
         RowAccessor.RowBuffer^.Index := RowNo;
         FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
 {$IFDEF WITH_TRECORDBUFFER}
-        GetCalcFields(TRecordBuffer(SearchRowBuffer));
+        GetCalcFields({$IFDEF WITH_GETCALCFIELDS_PBYTE}pByte{$ELSE}TRecordBuffer{$ENDIF}(SearchRowBuffer));
 {$ELSE}
         GetCalcFields(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -2815,7 +2814,7 @@ begin
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
 {$IFDEF WITH_TRECORDBUFFER}
-    GetCalcFields(TRecordBuffer(SearchRowBuffer));
+    GetCalcFields({$IFDEF WITH_GETCALCFIELDS_PBYTE}pByte{$ELSE}TRecordBuffer{$ENDIF}(SearchRowBuffer));
 {$ELSE}
     GetCalcFields(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -3104,7 +3103,7 @@ begin
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
 {$IFDEF WITH_TRECORDBUFFER}
-  GetCalcFields(TRecordBuffer(FSortRowBuffer1));
+  GetCalcFields({$IFDEF WITH_GETCALCFIELDS_PBYTE}pByte{$ELSE}TRecordBuffer{$ENDIF}(FSortRowBuffer1));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer1));
 {$ENDIF}
@@ -3117,7 +3116,7 @@ begin
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
 {$IFDEF WITH_TRECORDBUFFER}
-  GetCalcFields(TRecordBuffer(FSortRowBuffer2));
+  GetCalcFields({$IFDEF WITH_GETCALCFIELDS_PBYTE}pByte{$ELSE}TRecordBuffer{$ENDIF}(FSortRowBuffer2));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer2));
 {$ENDIF}
