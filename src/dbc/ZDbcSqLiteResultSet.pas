@@ -245,7 +245,7 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnLabel := ZDbcString(StrPas(FieldName^));
+      ColumnLabel := ZDbcString(FieldName^);
       Inc(FieldName);
       TableName := '';
       ReadOnly := False;

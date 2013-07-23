@@ -258,7 +258,7 @@ var
   ErrorCode: Integer;
 begin
   {$IFDEF UNICODE}
-  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
+  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
   ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
   {$ENDIF}
@@ -276,7 +276,7 @@ var
   ErrorCode: Integer;
 begin
   {$IFDEF UNICODE}
-  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), StrLen(PAnsiChar(UTF8String(Key))));
+  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
   ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
   {$ENDIF}
@@ -317,7 +317,7 @@ begin
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
     {$IFDEF UNICODE}
-    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), StrLen(PAnsiChar(UTF8String(Password))));
+    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(UTF8String(Password))));
     {$ELSE}
     ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
     {$ENDIF}

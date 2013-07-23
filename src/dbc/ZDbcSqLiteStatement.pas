@@ -406,11 +406,7 @@ end;
 
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
 begin
-  {$IFDEF DELPHI18_UP}
-  SysUtils.StrDispose(Value);
-  {$ELSE}
-  StrDispose(Value);
-  {$ENDIF}
+  {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(Value);
 end;
 
 { TZSQLiteCAPIPreparedStatement }
@@ -491,18 +487,10 @@ begin
         stBoolean:
           if SoftVarManager.GetAsBoolean(Value) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-              SysUtils.StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
-            {$ELSE}
-              StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
-            {$ENDIF}
+            StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-              SysUtils.StrNew(PAnsichar('N')), 1, @BindingDestructor);
-            {$ELSE}
-              StrNew(PAnsichar('N')), 1, @BindingDestructor);
-            {$ENDIF}
+              {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar('N')), 1, @BindingDestructor);
         stByte, stShort, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             SoftVarManager.GetAsInteger(Value));
@@ -521,46 +509,25 @@ begin
           end;
         stString:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
-            {$ELSE}
-            StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
-            {$ENDIF}
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
               -1, @BindingDestructor);
         stUnicodeString:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
-            {$ELSE}
-            StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
-            {$ENDIF}
-
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
                -1, @BindingDestructor);
         stDate:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
-             {$ELSE}
-            StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
-            {$ENDIF}
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
             SoftVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
-            {$ELSE}
-            StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
-            {$ENDIF}
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
             SoftVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF DELPHI18_UP}
-            SysUtils.StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-            {$ELSE}
-            StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
-            {$ENDIF}
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             SoftVarManager.GetAsDateTime(Value))))),
                 -1, @BindingDestructor);
         { works equal but selects from data which was written in string format
@@ -585,11 +552,7 @@ begin
                 TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                   TempBlob.Length, TempBlob.WasDecoded, ConSettings);
                 FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-                  {$IFDEF DELPHI18_UP}
-                  SysUtils.StrNew(PAnsiChar(TempAnsi)),
-                  {$ELSE}
-                  StrNew(PAnsiChar(TempAnsi)),
-                  {$ENDIF}
+                  {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(TempAnsi)),
                   Length(TempAnsi), @BindingDestructor);
               end
             else

@@ -155,7 +155,8 @@ var
 implementation
 
 uses ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
-  ZInterbaseToken, ZInterbaseAnalyser;
+  ZInterbaseToken, ZInterbaseAnalyser
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }
 
@@ -460,9 +461,9 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      StrPCopy(DBName, ZPlainString(HostName + '/' + IntToStr(Port) + ':' + Database))
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + '/' + IntToStr(Port) + ':' + Database))
     else
-      StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end
   else
     StrPCopy(DBName, AnsiString(Database));
@@ -479,7 +480,8 @@ begin
 
     { Connect to Interbase6 database. }
     FHandle := 0;
-    GetPlainDriver.isc_attach_database(@FStatusVector, StrLen(DBName), DBName,
+    GetPlainDriver.isc_attach_database(@FStatusVector,
+      {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(DBName), DBName,
         @FHandle, FDPBLength, DPB);
 
     { Check connection error }
@@ -547,7 +549,7 @@ begin
     if FClientCodePage = sCS_NONE then
       ConSettings.AutoEncode := True; //Must be set!
   finally
-    StrDispose(DPB);
+    {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(DPB);
   end;
 end;
 
@@ -717,7 +719,7 @@ begin
       'TRANSACTION STARTED.');
   finally
     FreeAndNil(Params);
-    StrDispose(PTEB.tpb_address);
+    {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(PTEB.tpb_address);
     FreeMem(PTEB);
   end
 end;
