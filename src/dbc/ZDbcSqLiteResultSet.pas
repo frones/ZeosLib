@@ -56,9 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types, Contnrs{$ENDIF},
   Classes, SysUtils, ZSysUtils, ZDbcIntfs,
-  Contnrs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
+  ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
 type
