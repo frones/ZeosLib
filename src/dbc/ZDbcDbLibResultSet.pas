@@ -59,7 +59,7 @@ uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.{$ENDIF}Types, Classes, SysUtils,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types{$ELSE}Types{$ENDIF}, Classes, SysUtils,
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
   ZPlainDbLibConstants, ZPlainDBLibDriver;
