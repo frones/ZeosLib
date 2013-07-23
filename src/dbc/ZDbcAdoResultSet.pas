@@ -59,7 +59,8 @@ uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
-  Types, Classes, SysUtils, ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.{$ENDIF}Types, Classes, SysUtils,
+  ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet,
   ZDbcResultsetMetadata, ZCompatibility, ZDbcAdo, ZPlainAdoDriver, ZPlainAdo;
 
@@ -116,8 +117,7 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types{$ENDIF};
+  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
 
 {**
   Creates this object and assignes the main properties.
