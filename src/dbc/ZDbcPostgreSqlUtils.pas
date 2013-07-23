@@ -660,15 +660,15 @@ var
    function GetMessage(AMessage: PAnsiChar): String;
    begin
     if Assigned(Connection) then
-      Result := Trim(PlainDriver.ZDbcString(StrPas(AMessage), Connection.GetConSettings))
+      Result := Trim(PlainDriver.ZDbcString(AMessage, Connection.GetConSettings))
     else
       {$IFDEF UNICODE}
-      Result := Trim(UTF8ToString(StrPas(AMessage)));
+      Result := Trim(UTF8ToString(AMessage));
       {$ELSE}
         {$IFDEF DELPHI}
-        Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
+        Result := Trim(Utf8ToAnsi(AMessage));
         {$ELSE}
-        Result := Trim(StrPas(AMessage));
+        Result := Trim(AMessage);
         {$ENDIF}
      {$ENDIF}
    end;
