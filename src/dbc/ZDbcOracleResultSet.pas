@@ -56,7 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZDbcOracle,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcOracle,
   ZDbcResultSet, ZPlainOracleDriver, ZDbcResultSetMetadata, ZDbcLogging,
   ZCompatibility, ZDbcOracleUtils, ZPlainOracleConstants;
 

@@ -129,7 +129,7 @@ implementation
 
 uses
   ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
-  ZSybaseAnalyser, ZDbcLogging;
+  ZSybaseAnalyser, ZDbcLogging{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZASADriver }
 
@@ -509,7 +509,7 @@ begin
     Sz := SizeOf( TASASQLDA) - 32767 * SizeOf( TZASASQLVAR);
     SQLDA := AllocMem( Sz);
     try
-      StrPLCopy( SQLDA.sqldaid, 'SQLDA   ', 8);
+      {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( SQLDA.sqldaid, 'SQLDA   ', 8);
       SQLDA.sqldabc := Sz;
       SQLDA.sqln := 1;
       SQLDA.sqld := 1;
