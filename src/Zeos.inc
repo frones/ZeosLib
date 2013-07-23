@@ -248,11 +248,12 @@
   {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings
   {$DEFINE WITH_TOBJECTLIST_INLINE} //TObjectList.Remove, add ... are inlined 	need System.Types
   {$DEFINE WITH_ANSISTRCOMP_DEPRECATED} //AnsiStrComp is deprecated moved to AnsiStrings
+  {$DEFINE WITH_ANSISTRLCOMP_DEPRECATED} //AnsiStrLComp is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRDISPOSE_DEPRECATED} //StrDispose is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRNEW_DEPRECATED} //StrNew is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRCOPY_DEPRECATED} //StrCopy is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLCOPY_DEPRECATED} //StrLCopy is deprecated moved to AnsiStrings
-  {$DEFINE WITH_GETCALCFIELDS_PBYTE} //GetCalcFields expected no TRecordBuffer use pByte instead
+  {$DEFINE WITH_GETCALCFIELDS_TRECBUF} //GetCalcFields expected no TRecordBuffer use NativeInt instead
 {$ENDIF}
 
 
