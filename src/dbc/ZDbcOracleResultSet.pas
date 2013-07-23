@@ -277,7 +277,7 @@ begin
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
-        Result := StrPas(PAnsiChar(SQLVarHolder.Data));
+        Result := PAnsiChar(SQLVarHolder.Data);
       SQLT_LVB, SQLT_LVC:
         begin
           Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),

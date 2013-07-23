@@ -137,7 +137,8 @@ implementation
 
 uses
   ZSysUtils, ZDbcUtils, ZDbcSqLiteStatement, ZSqLiteToken,
-  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser;
+  ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteDriver }
 
