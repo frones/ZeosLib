@@ -153,7 +153,7 @@ type
     FLinkedFields: string; {renamed by bangfauzan}
     FIndexFieldNames : String; {bangfauzan addition}
 
-    FIndexFields: TList;
+    FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
 
     FSortType : TSortType; {bangfauzan addition}
 
@@ -249,7 +249,7 @@ type
 
     property DataLink: TDataLink read FDataLink;
     property MasterLink: TMasterDataLink read FMasterLink;
-    property IndexFields: TList read FIndexFields;
+    property IndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF} read FIndexFields;
 
     { External protected properties. }
     property RequestLive: Boolean read FRequestLive write FRequestLive
@@ -573,7 +573,9 @@ begin
   FMasterLink := TMasterDataLink.Create(Self);
   FMasterLink.OnMasterChange := MasterChanged;
   FMasterLink.OnMasterDisable := MasterDisabled;
+  {$IFNDEF WITH_GENERIC_TLISTTFIELD}
   FIndexFields := TList.Create;
+  {$ENDIF}
 end;
 
 {**
@@ -598,7 +600,9 @@ begin
 
   FreeAndNil(FDataLink);
   FreeAndNil(FMasterLink);
+  {$IFNDEF WITH_GENERIC_TLISTTFIELD}
   FreeAndNil(FIndexFields);
+  {$ENDIF}
 
   inherited Destroy;
 end;
@@ -961,7 +965,11 @@ begin
   begin
     for I := 0 to MasterLink.Fields.Count - 1 do
     begin
+      {$IFDEF WITH_GENERIC_TLISTTFIELD}
+      if I <= High(IndexFields) then
+      {$ELSE}
       if I < IndexFields.Count then
+      {$ENDIF}
       begin
         Result := CompareKeyFields(TField(IndexFields[I]), ResultSet,
           TField(MasterLink.Fields[I]));
@@ -1784,7 +1792,9 @@ begin
     FieldsLookupTable := CreateFieldsLookupTable(Fields);
     InitFilterFields := False;
 
+    {$IFNDEF WITH_GENERIC_TLISTTFIELD}
     IndexFields.Clear;
+    {$ENDIF}
     GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
 
     { Performs sorting. }
@@ -2062,7 +2072,11 @@ begin
   begin
     for I := 0 to MasterLink.Fields.Count - 1 do
     begin
+      {$IFDEF WITH_GENERIC_TLISTTFIELD}
+      if I <= High(IndexFields) then
+      {$ELSE}
       if I < IndexFields.Count then
+      {$ENDIF}
       begin
         MasterField := TField(MasterLink.Fields[I]);
         DetailField := TField(IndexFields[I]);
@@ -2121,7 +2135,9 @@ begin
   if FLinkedFields <> Value then {renamed by bangfauzan}
   begin
     FLinkedFields := Value; {renamed by bangfauzan}
+    {$IFNDEF WITH_GENERIC_TLISTTFIELD}
     IndexFields.Clear;
+    {$ENDIF}
     if State <> dsInactive then
     begin
       GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}

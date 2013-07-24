@@ -234,16 +234,12 @@
   {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
+  {$DEFINE WITH_GENERIC_TLISTTFIELD} //GetFieldList() uses the generic TList<TField>
 {$ENDIF}
 
 {$IFDEF DELPHI18_UP}
-  {$UNDEF WIDE_DATASET}                // TWideDataset and TDataSet are merged together: https://forums.embarcadero.com/thread.jspa?messageID=499588
-  {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
-  {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
-  {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
-  {$DEFINE WITH_SYSUITLS_PREFIX} 	//Need SysUtils. unit declaration for some functions like StrNew,StrAlloc
-  {$DEFINE WITH_BUFFERS_IS_TRECBUF}
+  {$DEFINE WITH_BUFFERS_IS_TRECBUF} //Buffers[index] is TRecBuf type NativeInt
   {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings
   {$DEFINE WITH_TOBJECTLIST_INLINE} //TObjectList.Remove, add ... are inlined 	need System.Types
@@ -257,7 +253,7 @@
   {$DEFINE WITH_STRLCOPY_DEPRECATED} //StrLCopy is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLICOPY_DEPRECATED} //StrLICopy is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLICOMP_DEPRECATED} //StrLIComp is deprecated moved to AnsiStrings
-  {$DEFINE WITH_GETCALCFIELDS_TRECBUF} //GetCalcFields expected no TRecordBuffer use NativeInt instead
+  {$DEFINE WITH_GETCALCFIELDS_TRECBUF} //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
 {$ENDIF}
 
 
