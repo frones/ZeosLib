@@ -296,6 +296,19 @@ END MYPACKAGE; ^
 
 SET TERM ; ^
 
+CREATE TYPE address_t AS OBJECT (
+   street  VARCHAR2(30),
+   city    VARCHAR2(20),
+   state   CHAR(2),
+   zip     CHAR(5) );
+
+CREATE TYPE address_tab IS TABLE OF address_t;
+
+CREATE TABLE customers (
+   custid  NUMBER,
+   address address_tab )
+NESTED TABLE address STORE AS customer_addresses;
+
 /*==============================================================*/
 /* Grant privileges to columns                                  */
 /*==============================================================*/

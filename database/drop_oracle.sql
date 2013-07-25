@@ -25,6 +25,13 @@ BEGIN
 
   FOR rec in (select OBJECT_NAME 
                 from user_objects
+               where object_type = 'TYPE'
+                 and upper(OBJECT_NAME) in ('ADDRESS_TAB', 'ADDRESS_T')) LOOP
+    execute immediate('DROP TYPE '||rec.object_name);
+  END LOOP;
+
+  FOR rec in (select OBJECT_NAME 
+                from user_objects
                where object_type = 'VIEW'
                  and upper(OBJECT_NAME) in ('DEP_VIEW')) LOOP
     execute immediate('DROP VIEW "'||rec.object_name||'"');
