@@ -95,6 +95,7 @@ type
     procedure TestMantis240;
     procedure TestMantis229;
     procedure TestLobTypeCast;
+    procedure TestUnknowParam;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -864,6 +865,25 @@ begin
 
   TestMantis229_AsMemo;
   TestMantis229_AsString;
+end;
+
+{After introducing the Postgre real prepared statement we had a behaior change
+ for indeterminable parameters types. handle_indeterminate_datatype should fix it}
+procedure TZTestCompPostgreSQLBugReport.TestUnknowParam;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Query.Properties.Values['handle_indeterminate_datatype'] := 'true';
+  Connection.Connect;
+  try
+    Query.SQL.Text := 'select :p1 as Param1, :p2 as param2';
+    Query.Open;
+    Query.Close;
+  finally
+    Query.Free;
+  end;
 end;
 
 //since Pointer referencing by RowAccessor we've a pointer and GetBlob

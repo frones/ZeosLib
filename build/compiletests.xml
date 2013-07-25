@@ -185,9 +185,6 @@
     <property name="build.dir" value="${package.dir}/build"/>
 
     <antcall target="delphi_compile_project" inheritAll="true">
-      <param name="project.name" value="ZTestFramework.dpk"/>
-    </antcall>
-    <antcall target="delphi_compile_project" inheritAll="true">
       <param name="project.name" value="ZTestAll.dpr"/>
     </antcall>
 
@@ -261,7 +258,7 @@
 
     <antcall target="fpc_compile_project" inheritAll="true">
       <param name="project.name" value="testall"/>
-      <param name="extra_unit_path" value=" -Fu../../test/core/ -Fu../../test/plain/ -Fu../../test/parsesql/ -Fu../../test/dbc/ -Fu../../test/component/ -Fu../../test/bugreport/"/>
+      <param name="extra_unit_path" value=" -Fu../../test/core/ -Fu../../test/plain/ -Fu../../test/parsesql/ -Fu../../test/dbc/ -Fu../../test/component/ -Fu../../test/bugreport/ -Fu../../test/performance/"/>
     </antcall>
 </target>
 
@@ -274,7 +271,7 @@
       <arg value="-B"/>
       <arg value="-N${build.dir}"/>
       <arg value="-E${build.dir}"/>
-      <arg value="-U${build.dir};${bpl.dir};../../test/core/;../../test/plain/;../../test/parsesql/;../../test/dbc/;../../test/component/;../../test/bugreport/;../../test/external/;"/>
+      <arg value="-U${build.dir};${bpl.dir};../../test/external/;../../test/framework/;../../test/core/;../../test/plain/;../../test/parsesql/;../../test/dbc/;../../test/component/;../../test/bugreport/;../../test/performance/;"/>
       <arg value="-LE${bpl.dir}"/>
       <arg value="-LN${bpl.dir}"/>
       <arg value="${project.name}"/>

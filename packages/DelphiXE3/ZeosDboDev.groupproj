@@ -21,13 +21,7 @@
 			<Projects Include="ZComponentDesign.dproj">
 				<Dependencies/>
 			</Projects>
-			<Projects Include="ZTestFramework.dproj">
-				<Dependencies/>
-			</Projects>
 			<Projects Include="ZTestAll.dproj">
-				<Dependencies>ZTestFramework.dproj</Dependencies>
-			</Projects>
-			<Projects Include="ZTestPerformance.dproj">
 				<Dependencies/>
 			</Projects>
 		</ItemGroup>
@@ -94,41 +88,23 @@
 		<Target Name="ZComponentDesign:Make">
 			<MSBuild Projects="ZComponentDesign.dproj" Targets="Make"/>
 		</Target>
-		<Target Name="ZTestFramework">
-			<MSBuild Projects="ZTestFramework.dproj"/>
-		</Target>
-		<Target Name="ZTestFramework:Clean">
-			<MSBuild Projects="ZTestFramework.dproj" Targets="Clean"/>
-		</Target>
-		<Target Name="ZTestFramework:Make">
-			<MSBuild Projects="ZTestFramework.dproj" Targets="Make"/>
-		</Target>
-		<Target Name="ZTestAll" DependsOnTargets="ZTestFramework">
+		<Target Name="ZTestAll">
 			<MSBuild Projects="ZTestAll.dproj"/>
 		</Target>
-		<Target Name="ZTestAll:Clean" DependsOnTargets="ZTestFramework:Clean">
+		<Target Name="ZTestAll:Clean">
 			<MSBuild Projects="ZTestAll.dproj" Targets="Clean"/>
 		</Target>
-		<Target Name="ZTestAll:Make" DependsOnTargets="ZTestFramework:Make">
+		<Target Name="ZTestAll:Make">
 			<MSBuild Projects="ZTestAll.dproj" Targets="Make"/>
 		</Target>
-		<Target Name="ZTestPerformance">
-			<MSBuild Projects="ZTestPerformance.dproj"/>
-		</Target>
-		<Target Name="ZTestPerformance:Clean">
-			<MSBuild Projects="ZTestPerformance.dproj" Targets="Clean"/>
-		</Target>
-		<Target Name="ZTestPerformance:Make">
-			<MSBuild Projects="ZTestPerformance.dproj" Targets="Make"/>
-		</Target>
 		<Target Name="Build">
-			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestFramework;ZTestAll;ZTestPerformance"/>
+			<CallTarget Targets="ZCore;ZParseSql;ZPlain;ZDbc;ZComponent;ZComponentDesign;ZTestAll"/>
 		</Target>
 		<Target Name="Clean">
-			<CallTarget Targets="ZCore:Clean;ZParseSql:Clean;ZPlain:Clean;ZDbc:Clean;ZComponent:Clean;ZComponentDesign:Clean;ZTestFramework:Clean;ZTestAll:Clean;ZTestPerformance:Clean"/>
+			<CallTarget Targets="ZCore:Clean;ZParseSql:Clean;ZPlain:Clean;ZDbc:Clean;ZComponent:Clean;ZComponentDesign:Clean;ZTestAll:Clean"/>
 		</Target>
 		<Target Name="Make">
-			<CallTarget Targets="ZCore:Make;ZParseSql:Make;ZPlain:Make;ZDbc:Make;ZComponent:Make;ZComponentDesign:Make;ZTestFramework:Make;ZTestAll:Make;ZTestPerformance:Make"/>
+			<CallTarget Targets="ZCore:Make;ZParseSql:Make;ZPlain:Make;ZDbc:Make;ZComponent:Make;ZComponentDesign:Make;ZTestAll:Make"/>
 		</Target>
 		<Import Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')" Project="$(BDS)\Bin\CodeGear.Group.Targets"/>
 	</Project>

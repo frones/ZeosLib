@@ -53,17 +53,19 @@ unit ZTestDbcPerformance;
 
 interface
 
-uses TestFramework, SysUtils, Classes, ZPerformanceTestCase, ZDbcIntfs,
-  ZCompatibility
+{$I ZPerformance.inc}
+
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
+  ZPerformanceTestCase, ZDbcIntfs, ZCompatibility
   {$IFDEF ENABLE_MYSQL}
-    ZDbcMySql, ZPlainMySqlDriver,
+    ,ZDbcMySql, ZPlainMySqlDriver
   {$ENDIF}
   ;
 
 type
 
   {** Implements a performance test case for Native DBC API. }
-  TZNativeDbcPerformanceTestCase = class (TZPerformanceSQLTestCase)
+  TZNativeDbcPerformanceTestCase = class(TZPerformanceSQLTestCase)
   protected
     FConnection: IZConnection;
   protected
@@ -161,6 +163,7 @@ end;
 }
 procedure TZNativeDbcPerformanceTestCase.RunTestConnect;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   Connection := CreateDbcConnection;
 end;
 
@@ -172,6 +175,8 @@ var
   I: Integer;
   Statement: IZPreparedStatement;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   Statement := Connection.PrepareStatement(
     'INSERT INTO high_load VALUES (?,?,?)');
   for I := 1 to GetRecordCount do
@@ -188,6 +193,8 @@ end;
 }
 procedure TZNativeDbcPerformanceTestCase.RunTestOpen;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   CreateResultSet('SELECT * FROM high_load');
 end;
 
@@ -198,6 +205,8 @@ procedure TZNativeDbcPerformanceTestCase.RunTestFetch;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   ResultSet := CreateResultSet('SELECT * FROM high_load');
   while ResultSet.Next do
   begin
@@ -218,6 +227,8 @@ var
   I: Integer;
   Statement: IZPreparedStatement;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   Statement := Connection.PrepareStatement('UPDATE high_load SET '
     + ' data1=?, data2=?  WHERE hl_id=?');
   for I := 1 to GetRecordCount do
@@ -237,6 +248,8 @@ var
   I: Integer;
   Statement: IZPreparedStatement;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   Statement := Connection.PrepareStatement(
     'DELETE from high_load WHERE hl_id=?');
   for I := 1 to GetRecordCount do
@@ -254,6 +267,8 @@ var
   I: Integer;
   Statement: IZStatement;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   Statement := Connection.CreateStatement;
   for I := 1 to GetRecordCount do
   begin
@@ -299,6 +314,8 @@ var
   I: Integer;
   ResultSet: IZResultSet;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   ResultSet := CreateResultSet('SELECT * from high_load');
   for I := 1 to GetRecordCount do
   begin
@@ -317,6 +334,8 @@ procedure TZCachedDbcPerformanceTestCase.RunTestUpdate;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   ResultSet := CreateResultSet('SELECT * from high_load');
   while ResultSet.Next do
   begin
@@ -333,13 +352,15 @@ procedure TZCachedDbcPerformanceTestCase.RunTestDelete;
 var
   ResultSet: IZResultSet;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
   ResultSet := CreateResultSet('SELECT * from high_load');
   while ResultSet.Next do
     ResultSet.DeleteRow;
 end;
 
 initialization
-  TestFramework.RegisterTest(TZNativeDbcPerformanceTestCase.Suite);
-  TestFramework.RegisterTest(TZCachedDbcPerformanceTestCase.Suite);
+  RegisterTest('performance', TZNativeDbcPerformanceTestCase.Suite);
+  RegisterTest('performance', TZCachedDbcPerformanceTestCase.Suite);
 end.
 

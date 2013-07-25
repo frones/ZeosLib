@@ -409,10 +409,8 @@ begin
          ((ClientVersion>=50100) and (ClientVersion<50106)) then
         GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
     end;
-
-    if FClientCodePage = '' then //was set on inherited Create(...)
+    if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
       FClientCodePage := sMy_client_Char_Set;
-
 
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
@@ -422,17 +420,6 @@ begin
       DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
     end;
     Self.CheckCharEncoding(FClientCodePage);
-    {EgonHugeist:
-      CheckCharEncoding(FClientCharacterSet);
-      This has to be done before any Query was send to Driver.
-      This procedure sets also the internal TZCharEncoding to ZCompatibility-Objects...
-      Now use the new Functions to get encoded Strings:
-        function ZString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-        function ZPlainString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
-      These functions do auto arrange the in/out-coming AnsiStrings in
-      dependency of the used CharacterSet and Compiler
-      they defend the StringDataLoss}
-    { Sets a client codepage. }
 
     { Sets transaction isolation level. }
     OldLevel := TransactIsolationLevel;
@@ -451,6 +438,18 @@ begin
   end;
 
   inherited Open;
+
+  if FClientCodePage = '' then //workaround for MySQL 4 down
+  begin
+    with CreateStatement.ExecuteQuery('SHOW CHARACTER SET FOR '+Database) do
+    begin
+      if Next then
+        FClientCodePage := GetString(6);
+      Close;
+    end;
+    ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
+    ZEncoding.SetConvertFunctions(ConSettings);
+  end
 end;
 
 {**

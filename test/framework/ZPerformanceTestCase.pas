@@ -72,6 +72,7 @@ type
     FRecordCount: Integer;
     FRepeatCount: Cardinal;
     FSkipFlag: Boolean;
+    FSkipPerformance: Boolean;
 
     procedure RunSelectedTest(TestName: string; SetUpMethod: TZTestMethod;
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
@@ -79,6 +80,7 @@ type
   protected
     procedure LoadConfiguration; override;
     function GetImplementedAPI: string; virtual; abstract;
+    function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
     procedure Print(_Message: string); override;
     procedure PrintLn(_Message: string); override;
@@ -166,12 +168,14 @@ type
   {** Defines a container for performance test results. }
   TZPerformanceResultItem = class
   private
+    FProtocol: String;
+    FProperties: String;
     FAPIName: string;
     FTestName: string;
     FTryIndex: Integer;
     FMetric: Double;
   public
-    constructor Create(APIName: string; TestName: string; TryIndex: Integer;
+    constructor Create(APIName, TestName, Protocol, Properties: string; TryIndex: Integer;
       Metric: Double);
     procedure Normalize(BaseMetric: Double);
 
@@ -179,6 +183,8 @@ type
     property TestName: string read FTestName write FTestName;
     property TryIndex: Integer read FTryIndex write FTryIndex;
     property Metric: Double read FMetric write FMetric;
+    property Protocol: String read FProtocol write FProtocol;
+    property Properties: String read FProperties write FProperties;
   end;
 
   {** Implements a performance result processor. }
@@ -187,17 +193,21 @@ type
     FResults: TObjectList;
     FSelectedAPIs: TStrings;
     FSelectedTests: TStrings;
+    FProtocols: TStrings;
     FRecordCount: Cardinal;
     FRepeatCount: Cardinal;
     FBaseAPIName: string;
     FDetails: Boolean;
     FOutputType: string;
+    FSkipPerformance: Boolean;
   protected
     property Results: TObjectList read FResults write FResults;
 
     procedure LoadConfiguration;
-    function FindResultItem(APIName: string; TestName: string;
-      TryIndex: Integer): TZPerformanceResultItem;
+    function FindResultItem(APIName, TestName: string;
+      TryIndex: Integer): TZPerformanceResultItem; overload;
+    function FindResultItem(APIName, TestName, Protocol, Properties: string;
+      TryIndex: Integer): TZPerformanceResultItem; overload;
     procedure CalculateAverages;
     procedure NormalizeResults;
 
@@ -208,7 +218,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure RegisterResult(APIName: string; TestName: string;
+    procedure RegisterResult(APIName, TestName, Protocol, Properties: String;
       TryIndex: Integer; Metric: Double);
     procedure ProcessResults;
     procedure PrintResults;
@@ -216,6 +226,7 @@ type
 
     property SelectedAPIs: TStrings read FSelectedAPIs;
     property SelectedTests: TStrings read FSelectedTests;
+    property SelectedProtocols: TStrings read FProtocols;
     property RepeatCount: Cardinal read FRepeatCount write FRepeatCount;
     property RecordCount: Cardinal read FRecordCount write FRecordCount;
     property BaseAPIName: string read FBaseAPIName write FBaseAPIName;
@@ -228,8 +239,19 @@ var
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts;
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, Types;
 
+function ConcatProperties(Properties: TStringDynArray): String;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 0 to high(Properties) do
+    if I = 0 then
+      Result := Properties[0]
+    else
+      Result := Result + ',' +Properties[i];
+end;
 { TZPerformanceSQLTestCase }
 
 {**
@@ -276,6 +298,12 @@ begin
   { Reads other configuration parameters. }
   FRecordCount := StrToIntDef(ReadGroupProperty('records', ''), 1000);
   FRepeatCount := StrToIntDef(ReadGroupProperty('repeat', ''), 1);
+  FSkipPerformance := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_KEY, TRUE_VALUE));
+end;
+
+function TZPerformanceSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
+begin
+  Result := (FSkipPerformance and (srNoPerformance in Reasons));
 end;
 
 {**
@@ -354,6 +382,7 @@ var
 begin
   Query := CreateQuery;
   try
+    Query.Connection := Connection;
     Query.SQL.Text := Format('DELETE FROM %s', [TableName]);
     Query.ExecSQL;
   finally
@@ -384,6 +413,7 @@ begin
   try
     Query.ReadOnly := True;
 
+    Query1.Connection := Connection;
     Query1.ReadOnly := True;
 
     Query1.SQL.Text := Format('SELECT COUNT(*) FROM %s', [TableName]);
@@ -509,7 +539,7 @@ begin
     if not FSkipFlag then
     begin
       PerformanceResultProcessor.RegisterResult(
-        GetImplementedAPI, TestName, I, StopTicks - StartTicks);
+        GetImplementedAPI, TestName, Self.Protocol, ConcatProperties(Properties), I, StopTicks - StartTicks);
     end else
       Exit;
   end;
@@ -825,6 +855,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestConnect;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('connect', SetUpTestConnect, RunTestConnect, TearDownTestConnect);
 end;
 
@@ -833,6 +864,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestDelete;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('delete', SetUpTestDelete, RunTestDelete, TearDownTestDelete);
 end;
 
@@ -841,6 +873,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestFetch;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('fetch', SetUpTestFetch, RunTestFetch, TearDownTestFetch);
 end;
 
@@ -849,6 +882,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestFilter;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('filter', SetUpTestFilter, RunTestFilter, TearDownTestFilter);
 end;
 
@@ -857,6 +891,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestInsert;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('insert', SetUpTestInsert, RunTestInsert, TearDownTestInsert);
 end;
 
@@ -865,6 +900,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestOpen;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('open', SetUpTestOpen, RunTestOpen, TearDownTestOpen);
 end;
 
@@ -873,6 +909,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestSort;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('sort', SetUpTestSort, RunTestSort, TearDownTestSort);
 end;
 
@@ -881,6 +918,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestUpdate;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('update', SetUpTestUpdate, RunTestUpdate, TearDownTestUpdate);
 end;
 
@@ -889,6 +927,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestDirectUpdate;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('direct-update', SetUpTestDirectUpdate,
     RunTestDirectUpdate, TearDownTestDirectUpdate);
 end;
@@ -898,6 +937,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestLocate;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('locate', SetUpTestLocate, RunTestLocate, TearDownTestLocate);
 end;
 
@@ -906,6 +946,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TestLookup;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
   RunSelectedTest('lookup', SetUpTestLookup, RunTestLookup, TearDownTestLookup);
 end;
 
@@ -918,15 +959,18 @@ end;
   @param TryIndex an index of try. 0 is used for average.
   @param Metric a time metric (absolute or relative).
 }
-constructor TZPerformanceResultItem.Create(APIName, TestName: string;
+constructor TZPerformanceResultItem.Create(APIName, TestName, Protocol, Properties: string;
   TryIndex: Integer; Metric: Double);
 begin
   FAPIName := APIName;
   FTestName := TestName;
   FTryIndex := TryIndex;
+  FProtocol := Protocol;
+  FProperties := Properties;
   if Metric = 0 then
     Metric := 0.1;
   FMetric := Metric;
+
 end;
 
 {**
@@ -950,16 +994,21 @@ begin
   FResults := TObjectList.Create;
   FSelectedAPIs := TStringList.Create;
   FSelectedTests := TStringList.Create;
+  FProtocols := TStringList.Create;
 end;
 
 {**
   Destroys this object and cleanups the memory.
 }
 destructor TZPerformanceResultProcessor.Destroy;
+var I: Integer;
 begin
   FResults.Free;
   FSelectedAPIs.Free;
   FSelectedTests.Free;
+  for i := 0 to FProtocols.Count -1 do
+    TStringList(FProtocols.Objects[i]).Free;
+  FProtocols.Free;
   inherited Destroy;
 end;
 
@@ -989,6 +1038,7 @@ begin
     TestGroup, 'printdetails', FALSE_VALUE));
   FBaseAPIName := TestConfig.ReadProperty(TestGroup, 'baseapi', '');
   FOutputType := TestConfig.ReadProperty(TestGroup, 'output', 'plain');
+  FSkipPerformance := StrToBoolEx(TestConfig.ReadProperty(TestGroup, SKIP_PERFORMANCE_KEY, TRUE_VALUE));
 end;
 
 {**
@@ -1017,37 +1067,73 @@ begin
   end;
 end;
 
+function TZPerformanceResultProcessor.FindResultItem(APIName,
+  TestName, Protocol, Properties: string; TryIndex: Integer): TZPerformanceResultItem;
+var
+  I: Integer;
+  Current: TZPerformanceResultItem;
+begin
+  Result := nil;
+  for I := 0 to Results.Count - 1 do
+  begin
+    Current := TZPerformanceResultItem(Results[I]);
+    if (Current.APIName = APIName) and (Current.TestName = TestName)
+      and (Current.Protocol = Protocol) and (Current.Properties = Properties)
+      and (Current.TryIndex = TryIndex) then
+    begin
+      Result := Current;
+      Break;
+    end;
+  end;
+end;
+
 {**
   Calculates average time metrics for test results.
 }
 procedure TZPerformanceResultProcessor.CalculateAverages;
 var
-  I, J, K: Integer;
+  I, J, M, N, K: Integer;
   Count: Integer;
-  AverageMetric: Double;
+  AverageMetric, AverageMetricToal, AverageMetricProtcol: Double;
   Current: TZPerformanceResultItem;
 begin
+  AverageMetricToal := 0;
   for I := 0 to SelectedAPIs.Count - 1 do
   begin
+    Count := 0;
     for J := 0 to SelectedTests.Count - 1 do
     begin
-      Count := 0;
       AverageMetric := 0;
       for K := 1 to RepeatCount do
       begin
-        Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], K);
-        if Current <> nil then
+        for M := 0 to FProtocols.Count-1 do
         begin
-          Inc(Count);
-          AverageMetric := AverageMetric + Current.Metric;
+          AverageMetricProtcol := 0;
+          for N := 0 to TStringList(FProtocols.Objects[M]).Count -1 do
+          begin
+            Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[M], TStringList(FProtocols.Objects[M])[N], K);
+            if Current <> nil then
+            begin
+              Inc(Count);
+              AverageMetricToal := AverageMetricToal + Current.Metric;
+              AverageMetricProtcol := AverageMetricProtcol + Current.Metric;
+              AverageMetric := AverageMetric + Current.Metric;
+              RegisterResult(Current.APIName, Current.TestName, Current.Protocol, Current.Properties, K, Current.Metric);
+            end;
+          end;
+          if TStringList(FProtocols.Objects[M]).Count > 0 then
+            AverageMetricProtcol := AverageMetricProtcol / TStringList(FProtocols.Objects[M]).Count
+          else AverageMetricProtcol := -1;
+          RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'All properties', 0, AverageMetricProtcol);
         end;
+        if Count > 0 then
+          AverageMetric := AverageMetric / Count
+        else AverageMetric := -1;
+        RegisterResult(SelectedAPIs[I], SelectedTests[J], 'All protocols of '+SelectedTests[J], 'All properties', 0, AverageMetric);
       end;
-      if Count > 0 then
-        AverageMetric := AverageMetric / Count
-      else AverageMetric := -1;
-      RegisterResult(SelectedAPIs[I], SelectedTests[J], 0, AverageMetric);
     end;
   end;
+  RegisterResult('All Apis', 'All tests', 'All protocols', 'All properties', 0, AverageMetricToal);
 end;
 
 {**
@@ -1220,7 +1306,7 @@ end;
 }
 procedure TZPerformanceResultProcessor.PrintPlainResults;
 var
-  I, J, K: Integer;
+  I, J, N, M, K: Integer;
   Current: TZPerformanceResultItem;
   Units: string;
 begin
@@ -1235,25 +1321,41 @@ begin
       WriteLn(Format('Running API: %s, Test: %s, Records: %d',
         [UpperCase(SelectedAPIs[I]), UpperCase(SelectedTests[J]), RecordCount]));
 
-      if Details then
+      for N := 0 to FProtocols.Count -1 do
       begin
-        for K := 1 to RepeatCount do
-        begin
-          Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], K);
-          if (Current <> nil) and (Current.Metric >= 0) then
-            WriteLn(Format('  Try %d - %.2f %s', [K, Current.Metric, Units]))
-          else WriteLn(Format('  Try %d - absent', [K]));
-        end;
+        WriteLn('');
+        WriteLn(' Used protocol: '+FProtocols[n]);
+        WriteLn('');
+        Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], Fprotocols[n], 'All properties', 0);
+        if (Current <> nil) and (Current.Metric >= 0) then
+          WriteLn(Format('Try total %d - %.2f %s(%s)', [TStringList(FProtocols.Objects[N]).Count-1, Current.Metric, Units, 'All properties']))
+        else
+          WriteLn(Format('Try total %d - absent', [0]));
+        if Details then
+          for K := 1 to RepeatCount do
+          begin
+            for M := 0 to TStringList(FProtocols.Objects[N]).Count -2 do
+            begin
+              Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], Fprotocols[n], TStringList(FProtocols.Objects[N])[M], K);
+              if (Current <> nil) and (Current.Metric >= 0) then
+                WriteLn(Format('Try %d - %.2f %s(%s)', [K, Current.Metric, Units, TStringList(FProtocols.Objects[N])[M]]))
+              else
+                WriteLn(Format('Try %d - absent', [K]));
+            end;
+          end;
       end;
-
-      Current := FindResultItem(SelectedAPIs[I], SelectedTests[J], 0);
+      Current := FindResultItem(SelectedAPIs[I], SelectedTests[J], 'All protocols of '+SelectedTests[J], 'All properties', 0);
       if (Current <> nil) and (Current.Metric >= 0) then
         WriteLn(Format('  Average - %.2f %s', [Current.Metric, Units]))
       else WriteLn('  Average - absent');
-
       WriteLn('');
     end;
   end;
+  Current := FindResultItem('All Apis', 'All tests', 'All protocols', 'All properties', 0);
+  if (Current <> nil) and (Current.Metric >= 0) then
+    WriteLn(Format('  Average - %.2f %s', [Current.Metric, Units]))
+  else WriteLn('  Average - absent');
+  WriteLn('');
 end;
 
 {**
@@ -1263,11 +1365,17 @@ end;
   @param TryIndex an index of try.
   @param Metric a time metric.
 }
-procedure TZPerformanceResultProcessor.RegisterResult(APIName,
-  TestName: string; TryIndex: Integer; Metric: Double);
+procedure TZPerformanceResultProcessor.RegisterResult(APIName, TestName, Protocol, Properties: String;
+   TryIndex: Integer; Metric: Double);
+var iProt: Integer;
 begin
   Results.Add(TZPerformanceResultItem.Create(APIName, TestName,
-    TryIndex, Metric));
+    Protocol, Properties, TryIndex, Metric));
+  iProt := FProtocols.IndexOf(Protocol);
+  if iProt = -1 then
+    iProt := FProtocols.AddObject(Protocol, TStringList.Create);
+  if TStringList(FProtocols.Objects[iProt]).IndexOf(Properties) = -1 then
+    TStringList(FProtocols.Objects[iProt]).Add(Properties);
 end;
 
 {**
@@ -1277,6 +1385,8 @@ procedure TZPerformanceResultProcessor.PrintResults;
 var
   Output: string;
 begin
+  if FSkipPerformance then Exit;
+
   Output := UpperCase(OutputType);
   if Output = 'CSV' then
     PrintCSVResults
@@ -1290,6 +1400,8 @@ end;
 }
 procedure TZPerformanceResultProcessor.ProcessResults;
 begin
+  if FSkipPerformance then Exit;
+
   CalculateAverages;
   if BaseAPIName <> '' then
     NormalizeResults;
