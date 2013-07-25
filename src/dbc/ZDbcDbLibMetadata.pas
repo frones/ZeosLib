@@ -1854,8 +1854,7 @@ begin
           GetStringByName('TABLE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        Result.UpdateNullByName('DATA_TYPE');
-  //The value in the resultset will be used
+        //The value in the resultset will be used
         SQLType := ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType);
         if SQLType = stUnknown then
           Result.UpdateNullByName('DATA_TYPE')
