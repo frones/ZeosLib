@@ -76,6 +76,7 @@ type
     procedure Test833489;
     procedure Test907497;
     procedure Mantis54;
+    procedure Mantis164;
   end;
 
 implementation
@@ -236,6 +237,31 @@ begin
     CheckEquals(ord(ftInteger), ord(Query.Fields[0].DataType));
     CheckEquals(ord(ftLargeInt), ord(Query.Fields[1].DataType), 'Int64/LongInt expected');
     CheckEquals(ord(ftFloat), ord(Query.Fields[2].DataType));
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.Mantis164;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from mantis164';
+    Query.Open;
+    CheckEquals(9, Query.Fields.Count);
+    CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+    CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
+    CheckEquals(ord(ftDateTime), ord(Query.Fields[2].DataType));
+    CheckEquals(ord(ftBytes), ord(Query.Fields[3].DataType), 'uniqueidentifier (GUID)');
+    CheckEquals(ord(ftBytes), ord(Query.Fields[4].DataType), 'uniqueidentifier (GUID)');
+    CheckEquals(ord(ftBoolean), ord(Query.Fields[5].DataType));
+    CheckEquals(ord(ftBytes), ord(Query.Fields[6].DataType), 'binary(16)');
+    CheckEquals(ord(ftBytes), ord(Query.Fields[7].DataType), 'varbinary(16)');
+    CheckEquals(ord(ftBlob), ord(Query.Fields[8].DataType));
   finally
     Query.Free;
   end;
