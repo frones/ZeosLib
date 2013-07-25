@@ -136,8 +136,7 @@ function CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult;
-  const Handle_indeterminate_datatype: Boolean = False): String;
+  ResultHandle: PZPostgreSQLResult): String;
 
 
 {**
@@ -650,8 +649,7 @@ function CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult;
-  const Handle_indeterminate_datatype: Boolean = False): String;
+  ResultHandle: PZPostgreSQLResult): String;
 var
    ErrorMessage: string;
 //FirmOS
@@ -714,7 +712,7 @@ begin
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 
     if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
-      if not ((Result = '42P18') and Handle_indeterminate_datatype ) then
+      if not (Result = '42P18') then
         raise EZSQLException.CreateWithStatus(Result,Format(SSQLError1, [ErrorMessage]));
   end;
 end;
