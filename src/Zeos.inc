@@ -234,7 +234,7 @@
   {$DEFINE WITH_TVALUEBUFFER}          // SetFieldData/GetFieldData and Parameters using TValueBuffer instead of Pointer
   {$DEFINE WITH_BOOKMARKDATA_TBOOKMARK}
   {$UNDEF WITH_WIDESTRINGS_GETFIELDNAMES} //GetFieldNames with TWideStrings has been removed
-  {$DEFINE WITH_GENERIC_TLISTTFIELD} //GetFieldList() uses the generic TList<TField>
+  {fix it! $DEFINE WITH_GENERIC_TLISTTFIELD} //GetFieldList() uses the generic TList<TField>
 {$ENDIF}
 
 {$IFDEF DELPHI18_UP}
