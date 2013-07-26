@@ -420,10 +420,7 @@ begin
   end;
 {$ELSE}
   {$IFDEF WITH_REPORTMEMORYLEAKSONSHUTDOWN}
-  if FEnableMemCheck then
-    ReportMemoryLeaksOnShutdown := DebugHook <> 0
-  else
-    ReportMemoryLeaksOnShutdown := False;
+  ReportMemoryLeaksOnShutdown := FEnableMemCheck;
   {$ENDIF}
 {$ENDIF}
 end;
