@@ -2614,9 +2614,9 @@ begin
       LCatalog := Catalog;
   If Catalog = '' then
     If SchemaPattern <> '' then
-    SchemaCondition := ConstructNameCondition(SchemaPattern,'TABLE_SCHEMA')
+      SchemaCondition := ConstructNameCondition(SchemaPattern,'TABLE_SCHEMA')
     else
-    SchemaCondition := ConstructNameCondition(FDatabase,'TABLE_SCHEMA')
+      SchemaCondition := ConstructNameCondition(FDatabase,'TABLE_SCHEMA')
   else
     SchemaCondition := ConstructNameCondition(Catalog,'TABLE_SCHEMA');
   TableNameCondition := ConstructNameCondition(TableNamePattern,'TABLE_NAME');
@@ -2686,11 +2686,12 @@ begin
     end
     else
     begin
+      SchemaCondition := ConstructNameCondition(LCatalog, 'and SCHEMA_NAME');
       SQL := 'SELECT S.DEFAULT_COLLATION_NAME, S.DEFAULT_CHARACTER_SET_NAME, '+
         'CS.MAXLEN FROM INFORMATION_SCHEMA.SCHEMATA S '+
         'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
         'ON CS.DEFAULT_COLLATE_NAME = S.DEFAULT_COLLATION_NAME '+
-        'WHERE 1=1'+ SchemaCondition;
+        'WHERE 1=1 '+ SchemaCondition;
       with GetConnection.CreateStatement.ExecuteQuery(SQL) do
       begin
         if Next then
@@ -2710,8 +2711,6 @@ begin
       end;
     end;
   end;
-  //else
-    //raise Exception.Create('Error: No Patterns defined!');
 end;
 
 {**
