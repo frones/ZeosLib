@@ -187,7 +187,7 @@ type
 
 implementation
 
-uses ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils;
+uses ZVariant, ZDbcUtils, ZDbcMetadata;
 
 { TZColumnInfo }
 

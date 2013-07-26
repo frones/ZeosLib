@@ -97,8 +97,6 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
-
 { TZInterbaseTestDbcMetadata }
 
 {**

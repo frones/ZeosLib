@@ -56,8 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility, ZDbcMySql,
-  ZDbcMySqlResultSet, ZSqlTestCase;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDbcIntfs, ZCompatibility, ZDbcMySql, ZSqlTestCase;
 
 type
   {** Implements a DBC bug report test case for MySql. }

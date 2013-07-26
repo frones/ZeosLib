@@ -72,7 +72,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts;
+uses ZTestCase;
 
 { TZTestDbcOracleBugReport }
 

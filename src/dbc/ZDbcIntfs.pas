@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, DB, SysUtils,
-  ZClasses, ZCollections, ZSysUtils, ZCompatibility, ZTokenizer, ZSelectSchema,
+  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
 const

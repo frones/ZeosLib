@@ -59,7 +59,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection,
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset,
   ZDbcIntfs, ZSqlTestCase,ZCompatibility;
 
 type
@@ -280,7 +280,7 @@ begin
     CheckEquals(38, Length(sGUID1));
     Query.Fields[4].GetData(@GUID2);
     sGUID2 := GUIDtoString(GUID2);
-    CheckEquals(38, Length(sGUID1));
+    CheckEquals(38, Length(sGUID2));
     Query.Delete;
     Query.Close;
   finally

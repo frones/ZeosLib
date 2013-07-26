@@ -58,7 +58,7 @@ interface
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
   ZPerformanceTestCase, ZDbcIntfs, ZCompatibility
   {$IFDEF ENABLE_MYSQL}
-    ,ZDbcMySql, ZPlainMySqlDriver
+    ,ZDbcMySql
   {$ENDIF}
   ;
 

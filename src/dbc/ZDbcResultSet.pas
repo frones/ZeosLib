@@ -67,6 +67,9 @@ uses
 {$ENDIF}
   ZCompatibility, ZVariant;
 
+{$IFDEF FPC}
+  {$HINTS OFF} //suppress not used params
+{$ENDIF}
 type
   {** Implements Abstract ResultSet. }
   TZAbstractResultSet = class(TZCodePagedObject, IZResultSet)
