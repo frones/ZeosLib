@@ -57,7 +57,7 @@ CREATE TABLE Mantis164 (
   [CardTypeID] smallint NOT NULL,
   [PublishDate] datetime NOT NULL,
   [UserID] uniqueidentifier NOT NULL DEFAULT NEWID(),
-  [AccountsID] uniqueidentifier NULL DEFAULT NEWSEQUENTIALID(),
+  [AccountsID] uniqueidentifier NULL DEFAULT NEWID(),
   [Deposited] bit NOT NULL,
   [bBinary] binary(16) null,
   [bVarBinary] varbinary(16) null,

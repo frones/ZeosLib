@@ -81,7 +81,7 @@ type
 
 implementation
 
-uses ZStoredProcedure, ZTestCase;
+uses ZStoredProcedure, ZTestCase, SysUtils;
 
 { TZTestCompMSSqlBugReport }
 
@@ -245,12 +245,14 @@ end;
 procedure TZTestCompMSSqlBugReport.Mantis164;
 var
   Query: TZQuery;
+  GUID1, GUID2: TGUID;
+  sGUID1, sGUID2: String;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
   try
-    Query.SQL.Text := 'select * from mantis164';
+    Query.SQL.Text := 'select * from Mantis164';
     Query.Open;
     CheckEquals(9, Query.Fields.Count);
     CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
@@ -262,7 +264,28 @@ begin
     CheckEquals(ord(ftBytes), ord(Query.Fields[6].DataType), 'binary(16)');
     CheckEquals(ord(ftBytes), ord(Query.Fields[7].DataType), 'varbinary(16)');
     CheckEquals(ord(ftBlob), ord(Query.Fields[8].DataType));
+    Query.Insert;
+    Query.Fields[0].AsString := 'abc';
+    Query.Fields[1].AsInteger := 1;
+    Query.Fields[2].AsDateTime := Now;
+    Query.Fields[5].AsBoolean := True;
+    Query.Post;
+    Query.Close;
+    Query.Open;
+    CheckEquals('abc', Query.Fields[0].AsString);
+    CheckEquals(1, Query.Fields[1].AsInteger);
+    CheckEquals(True, Query.Fields[5].AsBoolean);
+    Query.Fields[3].GetData(@GUID1);
+    sGUID1 := GUIDtoString(GUID1);
+    CheckEquals(38, Length(sGUID1));
+    Query.Fields[4].GetData(@GUID2);
+    sGUID2 := GUIDtoString(GUID2);
+    CheckEquals(38, Length(sGUID1));
+    Query.Delete;
+    Query.Close;
   finally
+    Query.SQL.Text := 'delete from Mantis164 where CardTypeID=1';
+    Query.ExecSQL;
     Query.Free;
   end;
 end;
