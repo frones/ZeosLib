@@ -376,6 +376,10 @@ begin
       Result := stBinaryStream;
     ftWideString:
       Result := stUnicodeString;
+    {$IFDEF WITH_FTGUID}
+    ftGuid:
+      Result := stBytes;
+    {$ENDIF}
     {$IFDEF WITH_WIDEMEMO}
     ftWideMemo:
       Result := stUnicodeStream;
@@ -470,7 +474,7 @@ begin
         RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
-      ftBytes:
+      ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
         RowAccessor.SetDate(FieldIndex, ResultSet.GetDate(ColumnIndex));
@@ -544,7 +548,7 @@ begin
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
-      ftBytes:
+      ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
         ResultSet.UpdateDate(ColumnIndex, RowAccessor.GetDate(FieldIndex, WasNull));
@@ -1718,7 +1722,7 @@ begin
       ftWideString:
         Statement.SetUnicodeString(Index, Param.AsWideString);
       {$ENDIF}
-      ftBytes, ftVarBytes:
+      ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         begin
           {$IFDEF WITH_ASBYTES}
           Bts := Param.AsBytes;
