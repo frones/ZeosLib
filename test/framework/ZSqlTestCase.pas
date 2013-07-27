@@ -110,6 +110,8 @@ type
     FExtended_Codepages: Boolean;
     FExtended_AutoEncoding: Boolean;
     FSkip_RealPrepared: Boolean;
+    FSkip_Performance: Boolean;
+    FTestMode: Byte;
     procedure SetConfigUses(AValue: TZConfigUses);
   public
     constructor Create; overload;
@@ -377,6 +379,9 @@ begin
     EXTENDED_AUTOENCODING_KEY, FALSE_VALUE));
   FSkip_RealPrepared := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     SKIP_REAL_PREPARED_KEY, FALSE_VALUE));
+  FSkip_Performance := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
+    SKIP_PERFORMANCE_KEY, TRUE_VALUE));
+  FTestMode := 0;
 end;
 
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);
@@ -550,7 +555,6 @@ begin
   end;
 
   if Not Skip_RealPrepared then
-  begin
     if ProtocolInProtocols(self.Protocol,pl_realpreparable) then
     begin
       //writeln('create preferprepared');
@@ -559,11 +563,8 @@ begin
       ConnectionsList.Add(TempConfig);
       TempConfig.ConfigUses:=[cuRealPrepared];
       if ExtendedTest then
-      begin
         create_charsets_encodings(TempConfig);
-      end;
     end;
-  end;
 
 end;
 

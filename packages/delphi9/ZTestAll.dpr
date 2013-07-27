@@ -51,6 +51,8 @@
 
 program ZTestAll;
 
+{$APPTYPE CONSOLE}
+
 uses
   Types,
   SysUtils,
@@ -63,7 +65,8 @@ uses
   ZTestParseSql in '..\..\test\parsesql\ZTestParseSql.pas',
   ZTestDbc in '..\..\test\dbc\ZTestDbc.pas',
   ZTestComponents in '..\..\test\component\ZTestComponents.pas',
-  ZTestBugreports in '..\..\test\bugreport\ZTestBugreports.pas';
+  ZTestBugreports in '..\..\test\bugreport\ZTestBugreports.pas',
+  ZTestPerformance in '..\..\test\performance\ZTestPerformance.pas';
 
 begin
   TestGroup := COMMON_GROUP;

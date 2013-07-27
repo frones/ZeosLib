@@ -70,7 +70,7 @@ type
 
   TDatePart = (dpYear, dpMonth, dpDay, dpHour, dpMin, dpSec, dpMSec);
   TDateParts = set of TDatePart;
-  ZSkipReason = (srClosedBug,srNonZeos
+  ZSkipReason = (srClosedBug,srNonZeos,srNoPerformance
                  //database dependent
                  ,srMysqlRealPreparedConnection
                 );
@@ -277,7 +277,7 @@ end;
 
 function TZAbstractTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
 begin
-  Check(True);
+  Check(True); //avoids a Emty test fail
   Result := (FSkipClosed and (srClosedBug in Reasons)) or
             (FSkipNonZeos and (srNonZeos in Reasons));
 end;
