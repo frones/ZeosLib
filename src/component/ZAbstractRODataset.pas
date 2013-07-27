@@ -1325,7 +1325,7 @@ begin
             {$ENDIF}
             Result := not Result;
           end;
-        ftString:
+        ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}:
           begin
             {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
@@ -1431,7 +1431,7 @@ begin
           {$ELSE}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
-        ftString: { Processes string fields. }
+        ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}: { Processes string fields. }
           {$IFDEF UNICODE}
           RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
           {$ELSE}
@@ -1615,7 +1615,12 @@ begin
         if FieldType in [ftBytes, ftString, ftWidestring] then
           Size := GetPrecision(I)
         else
-          Size := 0;
+          {$IFDEF WITH_FTGUID}
+          if FieldType = ftGUID then
+            Size := 38
+          else
+          {$ENDIF}
+            Size := 0;
 
         J := 0;
         FieldName := GetColumnLabel(I);
@@ -1765,12 +1770,17 @@ begin
     begin
       CreateFields;
       for i := 0 to Fields.Count -1 do
-        if Fields[i].DataType in [ftString, ftWideString] then
-          if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
-          begin
-            {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
-            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
-          end;
+        if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
+          {$IFDEF WITH_FTGUID}
+          if Fields[i].DataType = ftGUID then
+            Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
+          else
+          {$ENDIF}
+            if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+            begin
+              {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
+              Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+            end;
     end;
     BindFields(True);
 

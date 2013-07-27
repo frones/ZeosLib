@@ -1873,7 +1873,7 @@ begin
         stString: RowAccessor.SetString(I, ResultSet.GetString(I));
         stUnicodeString: RowAccessor.SetUnicodeString(I,
                   ResultSet.GetUnicodeString(I));
-        stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
+        stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));
         stTimestamp: RowAccessor.SetTimestamp(I, ResultSet.GetTimestamp(I));

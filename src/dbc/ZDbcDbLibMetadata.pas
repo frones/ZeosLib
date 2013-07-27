@@ -1860,6 +1860,8 @@ begin
           Result.UpdateNullByName('DATA_TYPE')
         else
           Result.UpdateShortByName('DATA_TYPE', Ord(SQLType));
+        if ( SQLType = stBytes) and (UpperCase(GetStringByName('TYPE_NAME')) = 'UNIQUEIDENTIFIER') then
+          Result.UpdateShortByName('DATA_TYPE', Ord(stGUID));
         Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE', GetIntByName('LENGTH'));
         Result.UpdateIntByName('BUFFER_LENGTH', GetIntByName('LENGTH'));

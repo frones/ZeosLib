@@ -315,8 +315,12 @@ begin
       Result := ftFloat;
     stString:
       Result := ftString;
-    stBytes:
+    stBytes{$IFNDEF WITH_FTGUID}, stGUID{$ENDIF}:
       Result := ftBytes;
+    {$IFDEF WITH_FTGUID}
+    stGUID:
+      Result := ftGUID;
+    {$ENDIF}
     stDate:
       Result := ftDate;
     stTime:
@@ -378,7 +382,7 @@ begin
       Result := stUnicodeString;
     {$IFDEF WITH_FTGUID}
     ftGuid:
-      Result := stBytes;
+      Result := stGUID;
     {$ENDIF}
     {$IFDEF WITH_WIDEMEMO}
     ftWideMemo:

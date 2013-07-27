@@ -81,7 +81,7 @@ type
 
 implementation
 
-uses ZStoredProcedure, ZTestCase, SysUtils;
+uses SysUtils, Types, ZStoredProcedure, ZTestCase, ZSysUtils;
 
 { TZTestCompMSSqlBugReport }
 
@@ -243,10 +243,13 @@ begin
 end;
 
 procedure TZTestCompMSSqlBugReport.Mantis164;
+const
+  sGUID1 = '{546ED716-BB88-468C-8CCE-D7111CF5E1EF}';
+  sGUID2 = '{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}';
 var
   Query: TZQuery;
   GUID1, GUID2: TGUID;
-  sGUID1, sGUID2: String;
+  Bts1, Bts2: TByteDynArray;
 begin
   if SkipForReason(srClosedBug) then Exit;
 
@@ -258,8 +261,13 @@ begin
     CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
     CheckEquals(ord(ftSmallInt), ord(Query.Fields[1].DataType));
     CheckEquals(ord(ftDateTime), ord(Query.Fields[2].DataType));
+    {$IFDEF WITH_FTGUID}
+    CheckEquals(ord(ftGUID), ord(Query.Fields[3].DataType), 'uniqueidentifier (GUID)');
+    CheckEquals(ord(ftGUID), ord(Query.Fields[4].DataType), 'uniqueidentifier (GUID)');
+    {$ELSE}
     CheckEquals(ord(ftBytes), ord(Query.Fields[3].DataType), 'uniqueidentifier (GUID)');
     CheckEquals(ord(ftBytes), ord(Query.Fields[4].DataType), 'uniqueidentifier (GUID)');
+    {$ENDIF}
     CheckEquals(ord(ftBoolean), ord(Query.Fields[5].DataType));
     CheckEquals(ord(ftBytes), ord(Query.Fields[6].DataType), 'binary(16)');
     CheckEquals(ord(ftBytes), ord(Query.Fields[7].DataType), 'varbinary(16)');
@@ -268,6 +276,22 @@ begin
     Query.Fields[0].AsString := 'abc';
     Query.Fields[1].AsInteger := 1;
     Query.Fields[2].AsDateTime := Now;
+    GUID1 := StringToGUID(sGUID1);
+    GUID2 := StringToGUID(sGUID2);
+    System.SetLength(Bts1, 16);
+    System.SetLength(Bts2, 16);
+    System.Move(Pointer(@GUID1)^, Pointer(Bts1)^, 16);
+    System.Move(Pointer(@GUID2)^, Pointer(Bts2)^, 16);
+    Query.Fields[6].Value := Bts1;
+    Query.Fields[7].Value := Bts2;
+
+    {$IFDEF WITH_FTGUID}
+    Query.Fields[3].AsString := sGUID1;
+    Query.Fields[4].AsString := sGUID2;
+    {$ELSE}
+    Query.Fields[3].Value := Bts1;
+    Query.Fields[4].Value := Bts2;
+    {$ENDIF}
     Query.Fields[5].AsBoolean := True;
     Query.Post;
     Query.Close;
@@ -275,12 +299,15 @@ begin
     CheckEquals('abc', Query.Fields[0].AsString);
     CheckEquals(1, Query.Fields[1].AsInteger);
     CheckEquals(True, Query.Fields[5].AsBoolean);
+    {$IFDEF WITH_FTGUID}
+    CheckEquals(sGUID1, Query.Fields[3].AsString);
+    CheckEquals(sGUID2, Query.Fields[4].AsString);
+    {$ELSE}
     Query.Fields[3].GetData(@GUID1);
-    sGUID1 := GUIDtoString(GUID1);
-    CheckEquals(38, Length(sGUID1));
     Query.Fields[4].GetData(@GUID2);
-    sGUID2 := GUIDtoString(GUID2);
-    CheckEquals(38, Length(sGUID2));
+    CheckEquals(sGUID1, GUIDToString(GUID1));
+    CheckEquals(sGUID2, GUIDToString(GUID2));
+    {$ENDIF}
     Query.Delete;
     Query.Close;
   finally
