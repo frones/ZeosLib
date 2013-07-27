@@ -762,7 +762,17 @@ begin
         Result := CompareFloat(PDateTime(ValuePtr1)^, PDateTime(ValuePtr2)^);
       stUnicodeString, stString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          {$IFDEF MSWINDOWS} //Windows can handle nil pointers Linux not FPC-Bug?
           Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^))
+          {$ELSE}
+          if Assigned(PPAnsichar(ValuePtr1)^) and Assigned(PPAnsiChar(ValuePtr2)^) then
+            Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^))
+          else
+            if not Assigned(PPAnsichar(ValuePtr1)^) and not Assigned(PPAnsiChar(ValuePtr2)^) then
+              Result := 0
+            else
+              Result := -1
+          {$ENDIF}
         else
           Result := WideCompareStr(PWideChar(ValuePtr1^), PWideChar(ValuePtr2^));
       stBytes:

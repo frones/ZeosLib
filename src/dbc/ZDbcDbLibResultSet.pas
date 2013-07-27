@@ -59,9 +59,11 @@ uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
-  Types, Classes, SysUtils, ZDbcIntfs, ZDbcResultSet,
-  ZCompatibility, ZDbcResultsetMetadata, ZDbcGenericResolver, ZDbcCachedResultSet,
-  ZDbcCache, ZDbcDBLib, ZPlainDbLibConstants, ZPlainDBLibDriver;
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  Classes, SysUtils,
+  ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
+  ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
+  ZPlainDbLibConstants, ZPlainDBLibDriver;
 
 type
   {** Implements DBLib ResultSet. }
@@ -121,7 +123,6 @@ implementation
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding, ZSysUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-  {$IFDEF WITH_TOBJECTLIST_INLINE}, System.Types{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils {$ENDIF}
 ;
 

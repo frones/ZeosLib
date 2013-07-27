@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
-  Contnrs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types, Contnrs{$ENDIF},
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs,
+  ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
 type
@@ -244,7 +245,7 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(StrPas(FieldName^),
+      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FieldName^,
         ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       Inc(FieldName);
       TableName := '';

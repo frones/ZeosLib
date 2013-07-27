@@ -272,7 +272,7 @@ begin
           begin
             TempBlob := FCallableStatement.GetValue(I +1).VInterface as IZBlob;
             if not TempBlob.IsEmpty then
-              Param.SetBlobData(TempBlob.GetBuffer, TempBlob.Length);
+              Param.SetBlobData({$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}(TempBlob.GetBuffer), TempBlob.Length);
             TempBlob := nil;
           end
         else

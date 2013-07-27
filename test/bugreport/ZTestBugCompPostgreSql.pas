@@ -875,7 +875,6 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
-  Query.Properties.Values['handle_indeterminate_datatype'] := 'true';
   Connection.Connect;
   try
     Query.SQL.Text := 'select :p1 as Param1, :p2 as param2';

@@ -275,7 +275,8 @@ function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnecti
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcGenericResolver, ZDbcUtils, ZEncoding;
+  ZDbcGenericResolver, ZDbcUtils, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Calculates size of SQLVars record.
@@ -494,7 +495,7 @@ begin
         SQLT_FLT:
           PDouble(CurrentVar.Data)^ := DefVarManager.GetAsFloat(Values[I]);
         SQLT_STR:
-          StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(ClientVarManager.GetAsRawByteString(Values[I])), 1024);
+          {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(ClientVarManager.GetAsRawByteString(Values[I])), 1024);
         SQLT_TIMESTAMP:
           begin
             TempDate := DefVarManager.GetAsDateTime(Values[I]);
@@ -652,7 +653,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + String(StrPas(ErrorBuffer));
+        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + String(ErrorBuffer);
       end;
     OCI_NEED_DATA:
       ErrorMessage := 'OCI_NEED_DATA';
@@ -662,7 +663,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_ERROR: ' + String(StrPas(ErrorBuffer));
+        ErrorMessage := 'OCI_ERROR: ' + String(ErrorBuffer);
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';
@@ -900,7 +901,7 @@ var
       lcOther, 'OCIAttrGet(OCI_ATTR_SCHEMA_NAME) of OCI_DTYPE_PARAM');
 
     SetLength(temp, len+1);
-    temp := StrPLCopy(PAnsiChar(temp), name, len);
+    temp := {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(temp), name, len);
     Obj.type_schema := ConSettings^.ConvFuncs.ZRawToString(temp,
       ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
@@ -911,7 +912,7 @@ var
       lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM');
 
     SetLength(temp, len+1);
-    temp := StrPLCopy(PAnsiChar(temp), name, len);
+    temp := {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(temp), name, len);
     Obj.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
       ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
@@ -976,7 +977,7 @@ var
           lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM(Element)');
 
         SetLength(temp, len+1);
-        temp := StrPLCopy(PAnsiChar(temp), name, len);
+        temp := {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(temp), name, len);
         Fld.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 

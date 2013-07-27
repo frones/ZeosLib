@@ -56,7 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, Types, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  Classes, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
   ZPlainFirebirdInterbaseConstants,
   ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
 

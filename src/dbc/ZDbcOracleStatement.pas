@@ -163,7 +163,8 @@ type
 implementation
 
 uses
-  ZTokenizer, ZDbcOracle, ZDbcOracleResultSet;
+  ZTokenizer, ZDbcOracle, ZDbcOracleResultSet
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZOracleStatement }
 
@@ -883,7 +884,7 @@ var
         begin
           GetMem(ps,1025);
           try
-            StrLCopy( ps, (CurrentVar.Data), 1024);
+            {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( ps, (CurrentVar.Data), 1024);
             DefVarManager.SetAsString( OutParamValues[Index],
               ConSettings^.ConvFuncs.ZRawToString(ps,
               ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));

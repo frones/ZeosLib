@@ -136,8 +136,7 @@ function CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult;
-  const Handle_indeterminate_datatype: Boolean = False): String;
+  ResultHandle: PZPostgreSQLResult): String;
 
 
 {**
@@ -651,8 +650,7 @@ function CheckPostgreSQLError(Connection: IZConnection;
   PlainDriver: IZPostgreSQLPlainDriver;
   Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
   const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult;
-  const Handle_indeterminate_datatype: Boolean = False): String;
+  ResultHandle: PZPostgreSQLResult): String;
 var
    ErrorMessage: string;
 //FirmOS
@@ -665,12 +663,12 @@ var
         Connection.GetConSettings^.ClientCodePage^.CP, Connection.GetConSettings^.CTRL_CP))
     else
       {$IFDEF UNICODE}
-      Result := Trim(UTF8ToString(StrPas(AMessage)));
+      Result := Trim(UTF8ToString(AMessage));
       {$ELSE}
         {$IFDEF DELPHI}
-        Result := Trim(Utf8ToAnsi(StrPas(AMessage)));
+        Result := Trim(Utf8ToAnsi(AMessage));
         {$ELSE}
-        Result := Trim(StrPas(AMessage));
+        Result := Trim(AMessage);
         {$ENDIF}
      {$ENDIF}
    end;
@@ -716,7 +714,7 @@ begin
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 
     if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
-      if not ((Result = '42P18') and Handle_indeterminate_datatype ) then
+      if not (Result = '42P18') then
         raise EZSQLException.CreateWithStatus(Result,Format(SSQLError1, [ErrorMessage]));
   end;
 end;
