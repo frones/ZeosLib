@@ -1296,17 +1296,12 @@ begin
         ftDate, ftTime, ftDateTime:
           begin
             if Field.DataType <> ftTime then
-            begin
               DateTimeToNative(Field.DataType,
-                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer);
-              Result := not Result;
-            end
+                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer)
             else
-            begin
               DateTimeToNative(Field.DataType,
                 RowAccessor.GetTime(ColumnIndex, Result), Buffer);
-              Result := not Result;
-            end;
+            Result := not Result;
           end;
         { Processes binary array fields. }
         ftBytes:
@@ -1429,7 +1424,7 @@ begin
         ftTime: { Processes Time fields. }
           RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
         ftBytes: { Processes binary array fields. }
-          RowAccessor.SetBytes(ColumnIndex, VarToBytes(PVariant(Buffer)^));
+          RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
         ftWideString: { Processes widestring fields. }
           {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
