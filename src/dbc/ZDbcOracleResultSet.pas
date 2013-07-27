@@ -56,7 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZDbcOracle,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcOracle,
   ZDbcResultSet, ZPlainOracleDriver, ZDbcResultSetMetadata, ZDbcLogging,
   ZCompatibility, ZDbcOracleUtils, ZPlainOracleConstants;
 
@@ -276,7 +277,7 @@ begin
           {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
         end;
       SQLT_STR:
-        Result := StrPas(PAnsiChar(SQLVarHolder.Data));
+        Result := PAnsiChar(SQLVarHolder.Data);
       SQLT_LVB, SQLT_LVC:
         begin
           Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),

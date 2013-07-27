@@ -897,19 +897,19 @@ begin
     FTypeList := TStringList.Create;
     for I := 0 to GetPlainDriver.GetRowCount(QueryHandle)-1 do
     begin
-      TypeCode := StrToIntDef(String(StrPas(
-        GetPlainDriver.GetValue(QueryHandle, I, 0))), 0);
-      isEnum := LowerCase(String(StrPas(GetPlainDriver.GetValue(QueryHandle, I, 3)))) = 'e';
-      if isEnum then 
-        TypeName := 'enum' 
-      else 
-        TypeName := String(StrPas(GetPlainDriver.GetValue(QueryHandle, I, 1)));
+      TypeCode := StrToIntDef(String(
+        GetPlainDriver.GetValue(QueryHandle, I, 0)), 0);
+      isEnum := LowerCase(String(GetPlainDriver.GetValue(QueryHandle, I, 3))) = 'e';
+      if isEnum then
+        TypeName := 'enum'
+      else
+        TypeName := String(GetPlainDriver.GetValue(QueryHandle, I, 1));
 
       if LastVersion then
         BaseTypeCode := 0
       else
-        BaseTypeCode := StrToIntDef(String(StrPas(
-          GetPlainDriver.GetValue(QueryHandle, I, 2))), 0);
+        BaseTypeCode := StrToIntDef(String(
+          GetPlainDriver.GetValue(QueryHandle, I, 2)), 0);
 
       if BaseTypeCode <> 0 then
       begin
@@ -1126,7 +1126,7 @@ begin
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
-  Result := String(StrPas(GetPlainDriver.GetValue(QueryHandle, 0, 0)));
+  Result := String(GetPlainDriver.GetValue(QueryHandle, 0, 0));
   GetPlainDriver.Clear(QueryHandle);
 end;
 

@@ -119,6 +119,10 @@ type
 
 implementation
 
+{$IFDEF WITH_UNITANSISTRINGS}
+uses AnsiStrings;
+{$ENDIF}
+
 { TZPgEventAlerter }
 
 constructor TZPgEventAlerter.Create(AOwner: TComponent);
@@ -259,7 +263,7 @@ begin
     Exit;
     for I := 0 to FChildEvents.Count-1 do
   begin
-    StrPCopy(Tmp, 'listen ' + AnsiString(FChildEvents.Strings[I]));
+    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Tmp, 'listen ' + AnsiString(FChildEvents.Strings[I]));
     Res := PlainDRV.ExecuteQuery(Handle, Tmp);
     if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then
@@ -293,7 +297,7 @@ begin
     Exit;
   for I := 0 to FChildEvents.Count-1 do
   begin
-    StrPCopy(Tmp, 'unlisten ' + AnsiString(FChildEvents.Strings[i]));
+    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(Tmp, 'unlisten ' + AnsiString(FChildEvents.Strings[i]));
     Res := PlainDRV.ExecuteQuery(Handle, Tmp);
     if (PlainDRV.GetResultStatus(Res) <> TZPostgreSQLExecStatusType(
       PGRES_COMMAND_OK)) then

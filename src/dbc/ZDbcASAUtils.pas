@@ -265,7 +265,8 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses Variants, ZMessages, ZDbcCachedResultSet, Math, ZEncoding;
+uses Variants, ZMessages, ZDbcCachedResultSet, Math, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZASASQLDA }
 
@@ -525,7 +526,7 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      if StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FPlainDriver.ZPlainString(Name, FConSettings)), Length(name)) = 0 then
+      if {$IFDEF WITH_STRLICOMP_DEPRECATED}AnsiStrings.{$ENDIF}StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FPlainDriver.ZPlainString(Name, FConSettings)), Length(name)) = 0 then
             Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
@@ -615,8 +616,8 @@ begin
       DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length := 1;
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( ord( Value)), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(IntToStr(ord(Value))), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := ord(Value);
@@ -652,8 +653,8 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(IntToStr(Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -689,8 +690,8 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(IntToStr(Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -725,9 +726,9 @@ begin
       DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length :=
-                                Length( IntToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                                Length( IntToStr(Value));
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(IntToStr( Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -763,8 +764,8 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( IntToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                IntToStr( Value), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(IntToStr(Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Value;
@@ -800,8 +801,8 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( FloatToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                FloatToStr( Value), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(FloatToStr(Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Trunc( Value);
@@ -837,8 +838,8 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( FloatToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                FloatToStr( Value), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(FloatToStr( Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Trunc( Value);
@@ -874,8 +875,8 @@ begin
                             begin
                               PZASASQLSTRING( sqlData).length :=
                                 Length( FloatToStr( Value));
-                              StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                FloatToStr( Value), sqllen-3);
+                              {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+                                AnsiString(FloatToStr( Value)), sqllen-3);
                             end;
       DT_TINYINT,
       DT_BIT              : PByte(sqldata)^ := Trunc( Value);
@@ -912,12 +913,12 @@ begin
          DT_VARCHAR:
                             begin
                               PZASASQLSTRING( sqlData).length := BlobSize;
-                              StrLCopy( @PZASASQLSTRING( sqlData).data[0],
+                              {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( @PZASASQLSTRING( sqlData).data[0],
                                 Value, BlobSize);
                             end;
          DT_LONGVARCHAR:
                             begin
-                              StrLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
+                              {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
                                 BlobSize);
                               PZASABlobStruct( sqlData).stored_len := BlobSize;
                               PZASABlobStruct( sqlData).untrunc_len := BlobSize;
@@ -951,12 +952,12 @@ begin
       DT_VARCHAR:
         begin
           PZASASQLSTRING( sqlData).length := BlobSize;
-          StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
+          {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASASQLSTRING( sqlData).data[0],
             Value, BlobSize);
         end;
       DT_LONGVARCHAR:
         begin
-          StrPLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
+          {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
             BlobSize);
           PZASABlobStruct( sqlData).stored_len := BlobSize;
           PZASABlobStruct( sqlData).untrunc_len := BlobSize;
@@ -1549,7 +1550,7 @@ begin
          DT_VARCHAR:
             begin
               GetMem( Result, PZASASQLSTRING( sqlData).length + 1);
-              StrLCopy( Result, @PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
+              {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( Result, @PZASASQLSTRING( sqlData).data[0], PZASASQLSTRING( sqlData).length);
             end;
     else
       Result := PAnsiChar(GetString(Index));

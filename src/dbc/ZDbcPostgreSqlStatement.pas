@@ -154,9 +154,7 @@ type
     FPQparamLengths: TPQparamLengths;
     FPQparamFormats: TPQparamFormats;
     Findeterminate_datatype: Boolean;
-    FHandle_indeterminate_datatype: Boolean;
     Foidasblob: Boolean;
-    Fdeterminate_datatype_failed: Boolean;
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
     function ExectuteInternal(const SQL: RawByteString; const LogSQL: String;
       const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
@@ -234,10 +232,8 @@ begin
   ResultSetType := rtScrollInsensitive;
 
   { Processes connection properties. }
-  if Self.Info.Values['oidasblob'] <> '' then
-    FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
-  else
-    FOidAsBlob := (Connection as IZPostgreSQLConnection).IsOidAsBlob;
+  FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
+    or (Connection as IZPostgreSQLConnection).IsOidAsBlob;
 end;
 
 {**
@@ -336,7 +332,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := StrToIntDef(String(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -772,15 +768,15 @@ begin
     PGRES_COMMAND_OK:
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := StrToIntDef(String(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
     else
       begin
         Result := False;
-        LastUpdateCount := StrToIntDef(String(StrPas(
-          FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+        LastUpdateCount := StrToIntDef(String(
+          FPlainDriver.GetCommandTuples(QueryHandle)), 0);
         FPlainDriver.Clear(QueryHandle);
       end;
   end;
@@ -870,10 +866,9 @@ begin
       begin
         Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(RawByteString(FPlanName)),
           PAnsiChar(SQL), InParamCount, nil);
-        Fdeterminate_datatype_failed := (CheckPostgreSQLError(Connection, FPlainDriver,
+        Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
           FPostgreSQLConnection.GetConnectionHandle, LoggingCategory, LogSQL,
-            Result, FHandle_indeterminate_datatype) = '42P18');
-        Findeterminate_datatype := FHandle_indeterminate_datatype and Fdeterminate_datatype_failed;
+            Result) = '42P18');
         DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
         if not Findeterminate_datatype then
           FPostgreSQLConnection.RegisterPreparedStmtName(FPlanName);
@@ -1080,7 +1075,6 @@ constructor TZPostgreSQLCAPIPreparedStatement.Create(PlainDriver: IZPostgreSQLPl
   Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
-  FHandle_indeterminate_datatype := StrToBoolEx(Self.Info.Values['handle_indeterminate_datatype']);
   Foidasblob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
   FPostgreSQLConnection := Connection;
@@ -1138,7 +1132,7 @@ begin
   if Prepared and Assigned(FPostgreSQLConnection) then
   begin
     inherited Unprepare;
-    if (not Fdeterminate_datatype_failed)  then
+    if (not Findeterminate_datatype)  then
     begin
       TempSQL := 'DEALLOCATE "'+FPlanName+'";';
       QueryHandle := ExectuteInternal(RawByteString(TempSQL), TempSQL, lcUnprepStmt);
@@ -1188,7 +1182,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(FPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := StrToIntDef(String(FPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FPlainDriver.Clear(QueryHandle);
   end;
 
@@ -1457,7 +1451,7 @@ begin
 
   if QueryHandle <> nil then
   begin
-    Result := StrToIntDef(String(StrPas(GetPlainDriver.GetCommandTuples(QueryHandle))), 0);
+    Result := StrToIntDef(String(GetPlainDriver.GetCommandTuples(QueryHandle)), 0);
     FetchOutParams(CreateResultSet(SSQL, QueryHandle));
   end;
 

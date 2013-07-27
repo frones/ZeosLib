@@ -747,7 +747,7 @@ begin
   String typed needs to be reviewed for a more optimal way.
   Simple ByteCompare instead of functions which are codepage dependent should be faster, thought. }
     vtString:
-      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PChar(Value1.VString), PChar(GetAsString(Value2)));
+      Result := AnsiStrComp(PChar(Value1.VString), PChar(GetAsString(Value2)));
     vtAnsiString:
       Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PAnsiChar(Value1.VAnsiString), PAnsiChar(GetAsAnsiString(Value2)));
     vtUTF8String:
