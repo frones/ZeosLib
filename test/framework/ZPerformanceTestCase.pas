@@ -1064,6 +1064,12 @@ end;
 destructor TZPerformanceResultProcessor.Destroy;
 var I: Integer;
 begin
+  if not FSkipPerformance then
+  begin
+    ProcessResults;
+    PrintResults;
+  end;
+
   FResults.Free;
   FSelectedAPIs.Free;
   FSelectedTests.Free;
@@ -1154,47 +1160,70 @@ end;
 procedure TZPerformanceResultProcessor.CalculateAverages;
 var
   I, J, M, N, K: Integer;
-  Count: Integer;
-  AverageMetric, AverageMetricToal, AverageMetricProtcol: Double;
+  CountTotal, CountProperties, CountProtocol, CountTests: Integer;
+  AverageMetricTests, AverageMetricToal, AverageMetricProtocol, AverageMetricRepeat, AverageMetricProperties: Double;
   Current: TZPerformanceResultItem;
 begin
   AverageMetricToal := 0;
+  CountTotal := 0;
   for I := 0 to SelectedAPIs.Count - 1 do
   begin
-    Count := 0;
+    AverageMetricTests := 0;
+    CountTests := 0;
     for J := 0 to SelectedTests.Count - 1 do
     begin
-      AverageMetric := 0;
-      for K := 1 to RepeatCount do
+      AverageMetricProtocol := 0;
+      CountProtocol := 0;
+      for M := 0 to FProtocols.Count-1 do
       begin
-        for M := 0 to FProtocols.Count-1 do
+        AverageMetricProperties := 0;
+        CountProperties := 0;
+        for N := 0 to TStringList(FProtocols.Objects[M]).Count -1 do
         begin
-          AverageMetricProtcol := 0;
-          for N := 0 to TStringList(FProtocols.Objects[M]).Count -1 do
+          AverageMetricRepeat := 0;
+          for K := 1 to RepeatCount do
           begin
             Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[M], TStringList(FProtocols.Objects[M])[N], K);
             if Current <> nil then
             begin
-              Inc(Count);
+              Inc(CountProperties);
+              Inc(CountProtocol);
+              Inc(CountTests);
+              Inc(CountTotal);
+              AverageMetricProperties := AverageMetricProperties + Current.Metric;
+              AverageMetricProtocol := AverageMetricProtocol + Current.Metric;
+              AverageMetricTests := AverageMetricTests + Current.Metric;
+              AverageMetricRepeat := AverageMetricRepeat + Current.Metric;
               AverageMetricToal := AverageMetricToal + Current.Metric;
-              AverageMetricProtcol := AverageMetricProtcol + Current.Metric;
-              AverageMetric := AverageMetric + Current.Metric;
-              RegisterResult(Current.APIName, Current.TestName, Current.Protocol, Current.Properties, K, Current.Metric);
             end;
           end;
-          if TStringList(FProtocols.Objects[M]).Count > 0 then
-            AverageMetricProtcol := AverageMetricProtcol / TStringList(FProtocols.Objects[M]).Count
-          else AverageMetricProtcol := -1;
-          RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'All properties', 0, AverageMetricProtcol);
-        end;
-        if Count > 0 then
-          AverageMetric := AverageMetric / Count
-        else AverageMetric := -1;
-        RegisterResult(SelectedAPIs[I], SelectedTests[J], 'All protocols of '+SelectedTests[J], 'All properties', 0, AverageMetric);
-      end;
-    end;
+          if RepeatCount > 0 then
+            AverageMetricRepeat := AverageMetricRepeat / RepeatCount
+          else AverageMetricRepeat := -1;
+          RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], TStringList(FProtocols.Objects[M])[N], 0, AverageMetricRepeat);
+        end; {for N := 0 to TStringList(FProtocols.Objects[M]).Count -1 do}
+        if ( CountProperties > 0 ) then
+          AverageMetricProperties := AverageMetricProperties / CountProperties
+        else AverageMetricProperties := -1;
+        RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'all properties', 0, AverageMetricProperties);
+      end; {for M := 0 to FProtocols.Count-1 do}
+      if ( CountProtocol > 0 ) then
+        AverageMetricProtocol := AverageMetricProtocol / CountProtocol
+      else
+        AverageMetricProtocol := -1;
+      RegisterResult(SelectedAPIs[I], SelectedTests[J], 'all protocols', 'all properties', 0, AverageMetricProtocol);
+    end; { for J := 0 to SelectedTests.Count - 1 do }
+    if CountTests > 0 then
+      AverageMetricTests := AverageMetricTests / CountTests
+    else
+      AverageMetricTests := -1;
+    RegisterResult(SelectedAPIs[I], 'all tests', 'all protocols', 'all properties', 0, AverageMetricTests);
   end;
-  RegisterResult('All Apis', 'All tests', 'All protocols', 'All properties', 0, AverageMetricToal);
+  if CountTotal > 0 then
+    AverageMetricToal := AverageMetricToal / CountTotal
+  else
+    AverageMetricToal := -1;
+  RegisterResult('all apis', 'all tests', 'all protocols', 'all properties', 0, AverageMetricToal);
 end;
 
 {**
@@ -1207,7 +1236,7 @@ var
   Current: TZPerformanceResultItem;
 begin
   if BaseAPIName = '' then Exit;
-  
+
   for I := 0 to SelectedTests.Count - 1 do
   begin
     Current := FindResultItem(BaseAPIName, SelectedTests[I], 0);
@@ -1362,7 +1391,7 @@ end;
 }
 procedure TZPerformanceResultProcessor.PrintPlainResults;
 var
-  I, J, N, M, K: Integer;
+  I, J, N, M: Integer;
   Current: TZPerformanceResultItem;
   Units: string;
 begin
@@ -1374,42 +1403,42 @@ begin
   begin
     for J := 0 to SelectedTests.Count - 1 do
     begin
-      WriteLn(Format('Running API: %s, Test: %s, Records: %d',
-        [UpperCase(SelectedAPIs[I]), UpperCase(SelectedTests[J]), RecordCount]));
+      WriteLn(Format('Running API: %s, Test: %s, Records: %d, Repeat: %d',
+        [UpperCase(SelectedAPIs[I]), UpperCase(SelectedTests[J]), RecordCount, RepeatCount]));
 
       for N := 0 to FProtocols.Count -1 do
       begin
         WriteLn('');
         WriteLn(' Used protocol: '+FProtocols[n]);
-        WriteLn('');
-        Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], Fprotocols[n], 'All properties', 0);
+        Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[n], 'all properties', 0);
         if (Current <> nil) and (Current.Metric >= 0) then
-          WriteLn(Format('Try total %d - %.2f %s(%s)', [TStringList(FProtocols.Objects[N]).Count-1, Current.Metric, Units, 'All properties']))
-        else
-          WriteLn(Format('Try total %d - absent', [0]));
+          WriteLn(Format('  Average - %.2f %s(%s)', [Current.Metric, Units, 'all properties']))
+        else WriteLn('  Average - absent');
+
         if Details then
-          for K := 1 to RepeatCount do
+          for M := 0 to TStringList(FProtocols.Objects[N]).Count -1 do
           begin
-            for M := 0 to TStringList(FProtocols.Objects[N]).Count -2 do
-            begin
-              Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], Fprotocols[n], TStringList(FProtocols.Objects[N])[M], K);
-              if (Current <> nil) and (Current.Metric >= 0) then
-                WriteLn(Format('Try %d - %.2f %s(%s)', [K, Current.Metric, Units, TStringList(FProtocols.Objects[N])[M]]))
-              else
-                WriteLn(Format('Try %d - absent', [K]));
-            end;
+            Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[n], TStringList(FProtocols.Objects[N])[M], 0);
+            if (Current <> nil) and (Current.Metric >= 0) then
+              WriteLn(Format('  Average - %.2f %s(%s)', [Current.Metric, Units, TStringList(FProtocols.Objects[N])[M]]))
+            else WriteLn('  Average - absent');
           end;
       end;
-      Current := FindResultItem(SelectedAPIs[I], SelectedTests[J], 'All protocols of '+SelectedTests[J], 'All properties', 0);
+      Current := FindResultItem(SelectedAPIs[I], SelectedTests[J], 'all protocols', 'all properties', 0);
       if (Current <> nil) and (Current.Metric >= 0) then
-        WriteLn(Format('  Average - %.2f %s', [Current.Metric, Units]))
+        WriteLn(Format('  Average - %.2f %s all protocols+propeties', [Current.Metric, Units]))
       else WriteLn('  Average - absent');
       WriteLn('');
     end;
+    Current := FindResultItem(SelectedAPIs[i], 'all tests', 'all protocols', 'all properties', 0);
+    if (Current <> nil) and (Current.Metric >= 0) then
+      WriteLn(Format('  Average - %.2f %s all test+protocols+properties', [Current.Metric, Units]))
+    else WriteLn('  Average - absent');
+    WriteLn('');
   end;
-  Current := FindResultItem('All Apis', 'All tests', 'All protocols', 'All properties', 0);
+  Current := FindResultItem('all apis', 'all tests', 'all protocols', 'all properties', 0);
   if (Current <> nil) and (Current.Metric >= 0) then
-    WriteLn(Format('  Average - %.2f %s', [Current.Metric, Units]))
+    WriteLn(Format('  Average - %.2f %s total', [Current.Metric, Units]))
   else WriteLn('  Average - absent');
   WriteLn('');
 end;
@@ -1427,11 +1456,15 @@ var iProt: Integer;
 begin
   Results.Add(TZPerformanceResultItem.Create(APIName, TestName,
     Protocol, Properties, TryIndex, Metric));
-  iProt := FProtocols.IndexOf(Protocol);
-  if iProt = -1 then
-    iProt := FProtocols.AddObject(Protocol, TStringList.Create);
-  if TStringList(FProtocols.Objects[iProt]).IndexOf(Properties) = -1 then
-    TStringList(FProtocols.Objects[iProt]).Add(Properties);
+  if not (( APIName = 'all apis' ) or ( TestName = 'all tests' ) or
+    ( Protocol = 'all protocols' ) or ( Properties = 'all properties' )) then
+  begin
+    iProt := FProtocols.IndexOf(Protocol);
+    if iProt = -1 then
+      iProt := FProtocols.AddObject(Protocol, TStringList.Create);
+    if TStringList(FProtocols.Objects[iProt]).IndexOf(Properties) = -1 then
+      TStringList(FProtocols.Objects[iProt]).Add(Properties);
+  end;
 end;
 
 {**
