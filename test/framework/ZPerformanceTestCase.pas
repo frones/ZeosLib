@@ -57,7 +57,8 @@ interface
 
 {$I ZTestFramework.inc}
 
-uses Classes, Contnrs, DB, ZCompatibility, ZTestCase, ZDataset, ZSqlTestCase;
+uses Classes, Contnrs, Types, DB,
+  ZCompatibility, ZTestCase, ZDataset, ZSqlTestCase;
 
 type
   {** A method for test set up, run or tear down. }
@@ -90,6 +91,7 @@ type
 
     { Random values generators. }
     function RandomStr(Length: Integer): string;
+    function RandomBts(Length: Integer): TByteDynArray;
     function RandomInt(MinValue, MaxValue: Integer): Integer;
     function RandomFloat(MinValue, MaxValue: Double): Double;
 
@@ -238,7 +240,7 @@ var
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, Types;
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDbcIntfs;
 
 function ConcatProperties(Properties: TStringDynArray): String;
 var
@@ -372,6 +374,35 @@ begin
 end;
 
 {**
+  Generates a random binary value with the specified length.
+  @param Length a ByteArray length (default is 32).
+  @return a random generated value.
+}
+function TZPerformanceSQLTestCase.RandomBts(Length: Integer): TByteDynArray;
+var
+  I: Integer;
+  C1, C2: Char;
+  S: String;
+begin
+  S := '';
+  if Length <= 0 then
+    Length := 32;
+  SetLength(Result, Length);
+  for I := 1 to Length do
+  begin
+    C1 := Chr(Random(9)+Ord('0')); //0..9
+    C2 := Chr(Random(5)+Ord('a')); //a..f
+    case Random(3) of
+      0: S := S + C1+C1;
+      1: S := S + C1+C2;
+      2: S := S + C2+C2;
+      3: S := S + C2+C1;
+    end;
+  end;
+  HexToBin(PChar(S), Pointer(Result), Length);
+end;
+
+{**
   Removes all existed rows in the specified table.
   @param TableName a name of the table.
 }
@@ -405,15 +436,19 @@ var
   I, Index, Count: Integer;
   Query, Query1: TZQuery;
   CurrentCount: Integer;
-  QuerySQL, Fields, Values: string;
+  TransactIsolationLevel: TZTransactIsolationLevel;
+  AutoCommit: Boolean;
 begin
+  TransactIsolationLevel := Connection.TransactIsolationLevel;
+  AutoCommit := Connection.AutoCommit;
+  Connection.AutoCommit := False;
+  Connection.TransactIsolationLevel := tiReadUncommitted; //to speed up SQLite insertiation which is terrible slow in tiNone+AutoCommit mode
   Query := CreateQuery;
   Query1 := CreateQuery;
   try
     Query.ReadOnly := True;
 
     Query1.Connection := Connection;
-    Query1.ReadOnly := True;
 
     Query1.SQL.Text := Format('SELECT COUNT(*) FROM %s', [TableName]);
     Query1.Open;
@@ -429,13 +464,12 @@ begin
 
     if CurrentCount > RecordCount then
     begin
-      QuerySQL := 'DELETE FROM %s WHERE %s=%d';
       Count := CurrentCount - RecordCount;
       Query.Last;
       while not Query.Bof and (Count > 0) do
       begin
         Index := Query.FieldByName(PrimaryKey).AsInteger;
-        Query1.SQL.Text := Format(QuerySQL, [TableName, PrimaryKey, Index]);
+        Query1.SQL.Text := Format('DELETE FROM %s WHERE %s=%d', [TableName, PrimaryKey, Index]);
         Query1.ExecSQL;
         Dec(Count);
         Query.Prior;
@@ -443,10 +477,11 @@ begin
     end
     else
     begin
-      QuerySQL := 'INSERT INTO %s (%s) VALUES (%s)';
       Count := RecordCount - CurrentCount;
       Query.First;
       Index := 0;
+      Query1.SQL.Text := Format('SELECT * FROM %s', [TableName]);;
+      Query1.Open;
       while Count > 0 do
       begin
         Inc(Index);
@@ -458,40 +493,54 @@ begin
           Continue;
         end;
 
-        Fields := '';
-        Values := '';
+        Query1.Insert;
         for I := 0 to Query.FieldCount - 1 do
         begin
-          if Fields <> '' then
-          begin
-            Fields := Fields + ',';
-            Values := Values + ',';
-          end;
-
-          Fields := Fields + Query.Fields[I].FieldName;
-
-          if UpperCase(PrimaryKey) = UpperCase(Query.Fields[I].FieldName) then
-            Values := Values + IntToStr(Index)
-          else if UpperCase(ForeignKey) = UpperCase(Query.Fields[I].FieldName) then
-            Values := Values + IntToStr(RandomInt(1, ForeignKeyRange))
-          else begin
-            if Query.Fields[I].DataType in [ftSmallint, ftInteger, ftLargeint] then
-              Values := Values + IntToStr(RandomInt(-100, 100))
-            else if Query.Fields[I].DataType in [ftString, ftMemo, ftBlob] then
-              Values := Values + '''' + RandomStr(10) + ''''
-            else
-              Values := Values + FloatToSqlStr(RandomFloat(-100, 100));
+          case Query1.Fields[i].DataType of
+            ftString, ftFixedChar:
+              Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].Size);
+            ftMemo, ftFmtMemo:
+              Query1.Fields[i].AsString := RandomStr(RecordCount*100);
+            {$IFDEF WITH_WIDEFIELDS}
+            ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
+              Query1.Fields[i].AsWideString := WideString(RandomStr(Query1.Fields[i].Size));
+            ftWideMemo:
+              Query1.Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
+            {$ENDIF}
+            ftSmallint, ftInteger, ftWord, ftLargeint:
+              if UpperCase(PrimaryKey) = UpperCase(Query.Fields[I].FieldName) then
+                Query1.Fields[i].AsInteger := Index
+              else if UpperCase(ForeignKey) = UpperCase(Query.Fields[I].FieldName) then
+                Query1.Fields[i].AsInteger := RandomInt(1, ForeignKeyRange)
+              else
+                Query1.Fields[i].AsInteger := RandomInt(-100, 100);
+            ftBoolean:
+              Query1.Fields[i].AsBoolean := Random(1) = 0;
+            ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
+              Query1.Fields[i].AsFloat := RandomFloat(-100, 100);
+            ftDate, ftTime, ftDateTime, ftTimeStamp:
+              Query1.Fields[i].AsFloat := now;
+            ftVarBytes, ftBytes:
+              Query1.Fields[i].Value := RandomBts(Query1.Fields[i].Size);
+            ftBlob:
+              Query1.Fields[i].Value := RandomBts(RecordCount*100);
+            {ftAutoInc, ftGraphic,
+            ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,
+            ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
+            ftVariant, ftInterface, ftIDispatch, ftGuid, );}
           end;
         end;
-        Query1.SQL.Text := Format(QuerySQL, [TableName, Fields, Values]);
-        Query1.ExecSQL;
-
+        Query1.Post;
         Dec(Count);
       end;
     end;
-
+    Connection.Commit;
     Query.Close;
+    Query1.Close;
   finally
+    Connection.TransactIsolationLevel := TransactIsolationLevel;
+    Connection.AutoCommit := AutoCommit;
+    Connection.Disconnect;
     Query.Free;
     Query1.Free;
   end;
