@@ -58,7 +58,7 @@ interface
 {$I ZTestFramework.inc}
 
 uses Classes, Contnrs, Types, DB,
-  ZCompatibility, ZTestCase, ZDataset, ZSqlTestCase;
+  ZCompatibility, ZTestCase, ZDataset, ZSqlTestCase, ZConnection, ZDbcIntfs;
 
 type
   {** A method for test set up, run or tear down. }
@@ -73,6 +73,7 @@ type
     FRepeatCount: Cardinal;
     FSkipFlag: Boolean;
     FSkipPerformance: Boolean;
+    FSkipPerformanceTransactionMode: Boolean;
 
     procedure RunSelectedTest(TestName: string; SetUpMethod: TZTestMethod;
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
@@ -148,7 +149,10 @@ type
     procedure RunTestLookup; virtual;
     procedure TearDownTestLookup; virtual;
 
+    property SkipPerformanceTransactionMode: Boolean read FSkipPerformanceTransactionMode;
   public
+    function CreateDatasetConnection: TZConnection; override;
+    function CreateDbcConnection: IZConnection; override;
     destructor Destroy; override;
 
   published
@@ -240,7 +244,7 @@ var
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDbcIntfs;
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts;
 
 function ConcatProperties(Properties: TStringDynArray): String;
 var
@@ -300,6 +304,7 @@ begin
   FRecordCount := StrToIntDef(ReadGroupProperty('records', ''), 1000);
   FRepeatCount := StrToIntDef(ReadGroupProperty('repeat', ''), 1);
   FSkipPerformance := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_KEY, TRUE_VALUE));
+  FSkipPerformanceTransactionMode := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_TRANS_KEY, FALSE_VALUE));
 end;
 
 function TZPerformanceSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
@@ -402,6 +407,7 @@ begin
     Query.Connection := Connection;
     Query.SQL.Text := Format('DELETE FROM %s', [TableName]);
     Query.ExecSQL;
+    if not SkipPerformanceTransactionMode then Connection.Commit;
   finally
     Query.Free;
   end;
@@ -572,10 +578,10 @@ begin
 
     { Registers a performance test result. }
     if not FSkipFlag then
-    begin
       PerformanceResultProcessor.RegisterResult(
-        GetImplementedAPI, TestName, Self.Protocol, ConcatProperties(Properties), I, StopTicks - StartTicks);
-    end else
+        GetImplementedAPI, TestName, Self.Protocol, ConcatProperties(Properties),
+        I, StopTicks - StartTicks)
+    else
       Exit;
   end;
 end;
@@ -883,6 +889,26 @@ end;
 procedure TZPerformanceSQLTestCase.TearDownTestLookup;
 begin
   DefaultTearDownTest;
+end;
+
+function TZPerformanceSQLTestCase.CreateDatasetConnection: TZConnection;
+begin
+  Result := inherited CreateDatasetConnection;
+  if not FSkipPerformanceTransactionMode then
+  begin
+    Result.AutoCommit := False;
+    Result.TransactIsolationLevel := tiReadCommitted;
+  end;
+end;
+
+function TZPerformanceSQLTestCase.CreateDbcConnection: IZConnection;
+begin
+  Result := inherited CreateDbcConnection;
+  if not FSkipPerformanceTransactionMode then
+  begin
+    Result.SetAutoCommit(False);
+    Result.SetTransactionIsolation(tiReadCommitted);
+  end;
 end;
 
 {**

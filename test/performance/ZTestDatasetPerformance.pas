@@ -127,6 +127,8 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.TearDown;
 begin
+  if (not SkipPerformanceTransactionMode) and
+    Query.Connection.Connected then Query.Connection.Commit;
   if Assigned(Query) then
   begin
     Query.Free;
@@ -165,6 +167,8 @@ end;
 procedure TZDatasetPerformanceTestCase.RunTestConnect;
 begin
   Connection.Connect;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -176,6 +180,7 @@ begin
   Query.SQL.Text := 'SELECT * FROM high_load';
   // Query.RequestLive := True;
   Query.Open;
+
 end;
 
 {**
@@ -186,7 +191,6 @@ var
   I: Integer;
 begin
   for I := 1 to GetRecordCount do
-  begin
     with Query do
     begin
       Append;
@@ -195,7 +199,8 @@ begin
       Fields[2].AsString := RandomStr(10);
       Post;
     end;
-  end;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -205,6 +210,8 @@ procedure TZDatasetPerformanceTestCase.RunTestOpen;
 begin
   Query.SQL.Text := 'SELECT * FROM high_load';
   Query.Open;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -224,7 +231,6 @@ end;
 procedure TZDatasetPerformanceTestCase.RunTestFetch;
 begin
   while not Query.EOF do
-  begin
     with Query do
     begin
       Fields[0].AsInteger;
@@ -232,7 +238,8 @@ begin
       Fields[2].AsString;
       Next;
     end;
-  end;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -251,7 +258,6 @@ end;
 procedure TZDatasetPerformanceTestCase.RunTestUpdate;
 begin
   while not Query.EOF do
-  begin
     with Query do
     begin
       Edit;
@@ -260,7 +266,6 @@ begin
       Post;
       Next;
     end;
-  end;
 end;
 
 {**
@@ -280,6 +285,8 @@ procedure TZDatasetPerformanceTestCase.RunTestDelete;
 begin
   while not Query.EOF do
     Query.Delete;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -308,6 +315,8 @@ begin
   Query.Open;
   Query.Last;
   Query.First;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -316,6 +325,8 @@ end;
 procedure TZDatasetPerformanceTestCase.RunTestLocate;
 begin
   Query.Locate('data2','AAAAAAAAAA',[]);
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -336,6 +347,8 @@ end;
 procedure TZDatasetPerformanceTestCase.RunTestLookup;
 begin
   Query.Lookup('data2','AAAAAAAAAA','hl_id');
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 initialization

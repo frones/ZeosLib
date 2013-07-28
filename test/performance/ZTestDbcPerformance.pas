@@ -165,6 +165,7 @@ procedure TZNativeDbcPerformanceTestCase.RunTestConnect;
 begin
   if SkipForReason(srNoPerformance) then Exit;
   Connection := CreateDbcConnection;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -186,6 +187,7 @@ begin
     Statement.SetString(3, RandomStr(10));
     Statement.ExecuteUpdatePrepared;
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -196,6 +198,7 @@ begin
   if SkipForReason(srNoPerformance) then Exit;
 
   CreateResultSet('SELECT * FROM high_load');
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -217,6 +220,7 @@ begin
     ResultSet.GetFloat(2);
     ResultSet.GetString(3);
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -238,6 +242,7 @@ begin
     Statement.SetInt(3, I);
     Statement.ExecuteUpdatePrepared;
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -257,6 +262,7 @@ begin
     Statement.SetInt(1, I);
     Statement.ExecutePrepared;
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -276,6 +282,7 @@ begin
       + ' WHERE hl_id = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
       RandomStr(10), I]));
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 { TZCachedDbcPerformanceTestCase }
@@ -325,6 +332,7 @@ begin
     ResultSet.UpdateString(3, RandomStr(10));
     ResultSet.InsertRow;
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -343,6 +351,7 @@ begin
     ResultSet.UpdateString(3, RandomStr(10));
     ResultSet.UpdateRow;
   end;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 {**
@@ -357,6 +366,7 @@ begin
   ResultSet := CreateResultSet('SELECT * from high_load');
   while ResultSet.Next do
     ResultSet.DeleteRow;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 initialization

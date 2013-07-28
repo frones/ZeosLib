@@ -211,8 +211,8 @@ type
     procedure LogEvent(Event: TZLoggingEvent);
 
     { Different convenience methods. }
-    function CreateDbcConnection: IZConnection;
-    function CreateDatasetConnection: TZConnection;
+    function CreateDbcConnection: IZConnection; virtual;
+    function CreateDatasetConnection: TZConnection; virtual;
     procedure PrintResultSet(ResultSet: IZResultSet;
       ShowTypes: Boolean; Note: string = '');
 
