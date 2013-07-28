@@ -381,25 +381,12 @@ end;
 function TZPerformanceSQLTestCase.RandomBts(Length: Integer): TByteDynArray;
 var
   I: Integer;
-  C1, C2: Char;
-  S: String;
 begin
-  S := '';
   if Length <= 0 then
     Length := 32;
   SetLength(Result, Length);
   for I := 1 to Length do
-  begin
-    C1 := Chr(Random(9)+Ord('0')); //0..9
-    C2 := Chr(Random(5)+Ord('a')); //a..f
-    case Random(3) of
-      0: S := S + C1+C1;
-      1: S := S + C1+C2;
-      2: S := S + C2+C2;
-      3: S := S + C2+C1;
-    end;
-  end;
-  HexToBin(PChar(S), Pointer(Result), Length);
+    Result[i-1] := Ord(Random(245));
 end;
 
 {**
