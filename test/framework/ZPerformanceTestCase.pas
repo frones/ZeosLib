@@ -386,7 +386,7 @@ begin
     Length := 32;
   SetLength(Result, Length);
   for I := 1 to Length do
-    Result[i-1] := Ord(Random(245));
+    Result[i-1] := Ord(Random(255));
 end;
 
 {**
