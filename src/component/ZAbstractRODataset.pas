@@ -1140,7 +1140,7 @@ begin
   // we always use same TDataSet-level buffer, because we can see only one row
   {$IFNDEF WITH_FUNIDIRECTIONAL}
   if IsUniDirectional then
-    Buffer := Buffers[0];
+    Buffer := {$IFDEF WITH_BUFFERS_IS_TRECBUF}Pointer{$ENDIF}(Buffers[0]);
   {$ENDIF}
 
   Result := grOK;
