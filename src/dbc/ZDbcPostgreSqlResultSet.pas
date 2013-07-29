@@ -134,7 +134,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZEncoding, ZDbcPostgreSql,
+  Math, ZMessages, ZMatchPattern, ZDbcPostgreSql, ZDbcUtils, ZEncoding,
   ZDbcPostgreSqlUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLResultSet }
@@ -241,8 +241,8 @@ begin
     begin
       ColumnName := '';
       TableName := '';
+      ColumnLabel := ZDbcString(FPlainDriver.GetFieldName(FQueryHandle, I));
 
-      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldName(FQueryHandle, I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;
@@ -253,10 +253,6 @@ begin
 
       FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
-      if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-        ColumnCodePage := ConSettings^.ClientCodePage^.CP
-      else
-        ColumnCodePage := High(Word);
 
       if Precision = 0 then
       begin
@@ -282,6 +278,7 @@ begin
                 ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize);
       end;
     end;
+
     ColumnsInfo.Add(ColumnInfo);
   end;
 
@@ -347,7 +344,6 @@ begin
   ColumnIndex := ColumnIndex - 1;
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
     ColumnIndex) <> 0;
-  Result := '';
   {$IFDEF WITH_RAWBYTESTRING}
   Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
   SetLength(Result, Len);
@@ -370,11 +366,15 @@ end;
     value returned is <code>false</code>
 }
 function TZPostgreSQLResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
+var
+  Temp: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Result := StrToBoolEx(InternalGetString(ColumnIndex));
+  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
+  Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
+    (Temp = 'TRUE') or (StrToIntDef(String(Temp), 0) <> 0);
 end;
 
 {**
@@ -391,7 +391,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  Result := Byte(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -408,7 +408,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  Result := SmallInt(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
 end;
 
 {**
@@ -425,7 +425,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := RawToIntDef(InternalGetString(ColumnIndex), 0);
+  Result := StrToIntDef(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -442,7 +442,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := RawToInt64Def(InternalGetString(ColumnIndex), 0);
+  Result := StrToInt64Def(String(InternalGetString(ColumnIndex)), 0);
 end;
 
 {**
@@ -455,24 +455,11 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetFloat(ColumnIndex: Integer): Single;
-var
-  Len: Cardinal;
-  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  ColumnIndex := ColumnIndex -1;
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
-    ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-  begin
-    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
-  end;
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -485,24 +472,11 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
-var
-  Len: Cardinal;
-  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  ColumnIndex := ColumnIndex -1;
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
-    ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-  begin
-    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
-  end;
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -516,24 +490,11 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-var
-  Len: Cardinal;
-  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  ColumnIndex := ColumnIndex -1;
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
-    ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-  begin
-    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
-  end;
+  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
 end;
 
 {**
@@ -565,29 +526,16 @@ end;
 }
 function TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
-  Buffer: PAnsiChar;
-  Failed: Boolean;
+  Value: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  ColumnIndex := ColumnIndex -1;
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
-    ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
+  Value := String(InternalGetString(ColumnIndex));
+  if IsMatch('????-??-??*', Value) then
+    Result := Trunc(AnsiSQLDateToDateTime(Value))
   else
-  begin
-    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    if Len = ConSettings^.DateFormatLen then
-      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
-       Len, ConSettings^.DateFormatLen, Failed)
-    else
-      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
-        Len, ConSettings^.DateTimeFormatLen, Failed));
-  end;
+    Result := Trunc(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -601,29 +549,16 @@ end;
 }
 function TZPostgreSQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
-  Buffer: PAnsiChar;
-  Failed: Boolean;
+  Value: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  ColumnIndex := ColumnIndex -1;
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
-    ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
+  Value := String(InternalGetString(ColumnIndex));
+  if IsMatch('*??:??:??*', Value) then
+    Result := Frac(AnsiSQLDateToDateTime(Value))
   else
-  begin
-    Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    if not (Len > ConSettings^.TimeFormatLen) and ( ( ConSettings^.TimeFormatLen - Len) <= 4 )then
-      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
-       Len, ConSettings^.TimeFormatLen, Failed)
-    else
-      Result := Frac(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
-        Len, ConSettings^.DateTimeFormatLen, Failed));
-  end;
+    Result := Frac(TimestampStrToDateTime(Value));
 end;
 
 {**
@@ -637,21 +572,17 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
-var Failed: Boolean;
+var
+  Value: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  ColumnIndex := ColumnIndex -1;
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1,
-    ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
+  Value := String(InternalGetString(ColumnIndex));
+  if IsMatch('????-??-??*', Value) then
+    Result := AnsiSQLDateToDateTime(Value)
   else
-    Result := RawSQLTimeStampToDateTime(FPlainDriver.GetValue(FQueryHandle,
-      RowNo - 1, ColumnIndex), PAnsiChar(ConSettings^.DateTimeFormat),
-      FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex),
-      ConSettings^.DateTimeFormatLen, Failed);
+    Result := TimestampStrToDateTime(Value);
 end;
 
 function TZPostgreSQLResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
@@ -690,7 +621,7 @@ begin
     and (Connection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
     if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
-      BlobOid := RawToIntDef(InternalGetString(ColumnIndex), 0)
+      BlobOid := StrToIntDef(String(InternalGetString(ColumnIndex)), 0)
     else
       BlobOid := 0;
 
@@ -710,7 +641,7 @@ begin
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
           else
             begin
-              WS := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+              WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));
               Stream := WideStringStream(Ws);
             end;
         end;
@@ -772,7 +703,7 @@ begin
        Row := 0;
   end;
 
-  if (ResultSetType <> rtForwardOnly) or ((Row >= RowNo) and (Row <= LastRowNo)) then
+  if (ResultSetType <> rtForwardOnly) or (Row >= RowNo){ and (Row <= LastRowNo +1)) }then
   begin
     if (Row >= 0) and (Row <= LastRowNo + 1) then
     begin
