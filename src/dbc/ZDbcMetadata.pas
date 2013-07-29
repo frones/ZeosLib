@@ -121,6 +121,7 @@ type
     function GetInfo: TStrings;
     function GetURLString: String;
   protected
+    FIC: IZIdentifierConvertor;
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
@@ -1742,6 +1743,7 @@ constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractConnection;
   const Url: TZURL);
 begin
   inherited Create(Connection as IZConnection);
+  FIC := Self.GetIdentifierConvertor;
   FConnection := Pointer(Connection as IZConnection);
   FUrl := Url;
   FCachedResultSets := TZHashMap.Create;
@@ -1764,6 +1766,7 @@ end;
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
+  FIC := nil;
   FUrl := nil;
   FCachedResultSets.Clear;
   FCachedResultSets := nil;
