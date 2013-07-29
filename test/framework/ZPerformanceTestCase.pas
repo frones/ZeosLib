@@ -173,15 +173,15 @@ type
   {** Defines a container for performance test results. }
   TZPerformanceResultItem = class
   private
+    FConnectionName: String;
     FProtocol: String;
-    FProperties: String;
     FAPIName: string;
     FTestName: string;
     FTryIndex: Integer;
     FMetric: Double;
   public
-    constructor Create(APIName, TestName, Protocol, Properties: string; TryIndex: Integer;
-      Metric: Double);
+    constructor Create(const APIName, TestName, Protocol, ConnectionName: string;
+      const TryIndex: Integer; const Metric: Double);
     procedure Normalize(BaseMetric: Double);
 
     property APIName: string read FAPIName write FAPIName;
@@ -189,7 +189,7 @@ type
     property TryIndex: Integer read FTryIndex write FTryIndex;
     property Metric: Double read FMetric write FMetric;
     property Protocol: String read FProtocol write FProtocol;
-    property Properties: String read FProperties write FProperties;
+    property ConnectionName: String read FConnectionName write FConnectionName;
   end;
 
   {** Implements a performance result processor. }
@@ -211,8 +211,8 @@ type
     procedure LoadConfiguration;
     function FindResultItem(APIName, TestName: string;
       TryIndex: Integer): TZPerformanceResultItem; overload;
-    function FindResultItem(APIName, TestName, Protocol, Properties: string;
-      TryIndex: Integer): TZPerformanceResultItem; overload;
+    function FindResultItem(const APIName, TestName, Protocol, ConnectionName: string;
+      const TryIndex: Integer): TZPerformanceResultItem; overload;
     procedure CalculateAverages;
     procedure NormalizeResults;
 
@@ -223,8 +223,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure RegisterResult(APIName, TestName, Protocol, Properties: String;
-      TryIndex: Integer; Metric: Double);
+    procedure RegisterResult(const APIName, TestName, Protocol, Properties: String;
+      const TryIndex: Integer; const Metric: Double);
     procedure ProcessResults;
     procedure PrintResults;
     procedure ClearResults;
@@ -246,17 +246,6 @@ implementation
 
 uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts;
 
-function ConcatProperties(Properties: TStringDynArray): String;
-var
-  I: Integer;
-begin
-  Result := '';
-  for I := 0 to high(Properties) do
-    if I = 0 then
-      Result := Properties[0]
-    else
-      Result := Result + ',' +Properties[i];
-end;
 { TZPerformanceSQLTestCase }
 
 {**
@@ -435,7 +424,7 @@ begin
   TransactIsolationLevel := Connection.TransactIsolationLevel;
   AutoCommit := Connection.AutoCommit;
   Connection.AutoCommit := False;
-  Connection.TransactIsolationLevel := tiReadUncommitted; //to speed up SQLite insertiation which is terrible slow in tiNone+AutoCommit mode
+  Connection.TransactIsolationLevel := tiReadCommitted;
   Query := CreateQuery;
   Query1 := CreateQuery;
   try
@@ -491,12 +480,12 @@ begin
         begin
           case Query1.Fields[i].DataType of
             ftString, ftFixedChar:
-              Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].Size);
+              Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].DisplayWidth);
             ftMemo, ftFmtMemo:
               Query1.Fields[i].AsString := RandomStr(RecordCount*100);
             {$IFDEF WITH_WIDEFIELDS}
             ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
-              Query1.Fields[i].AsWideString := WideString(RandomStr(Query1.Fields[i].Size));
+              Query1.Fields[i].AsWideString := WideString(RandomStr(Query1.Fields[i].DisplayWidth));
             ftWideMemo:
               Query1.Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
             {$ENDIF}
@@ -578,9 +567,8 @@ begin
 
     { Registers a performance test result. }
     if not FSkipFlag then
-      PerformanceResultProcessor.RegisterResult(
-        GetImplementedAPI, TestName, Self.Protocol, ConcatProperties(Properties),
-        I, StopTicks - StartTicks)
+      PerformanceResultProcessor.RegisterResult( GetImplementedAPI, TestName,
+        Protocol, ConnectionName, I, StopTicks - StartTicks)
     else
       Exit;
   end;
@@ -1020,18 +1008,19 @@ end;
   @param TryIndex an index of try. 0 is used for average.
   @param Metric a time metric (absolute or relative).
 }
-constructor TZPerformanceResultItem.Create(APIName, TestName, Protocol, Properties: string;
-  TryIndex: Integer; Metric: Double);
+constructor TZPerformanceResultItem.Create(const APIName, TestName,
+  Protocol, ConnectionName: string;
+  const TryIndex: Integer; const Metric: Double);
 begin
   FAPIName := APIName;
   FTestName := TestName;
   FTryIndex := TryIndex;
   FProtocol := Protocol;
-  FProperties := Properties;
+  FConnectionName := ConnectionName;
   if Metric = 0 then
-    Metric := 0.1;
-  FMetric := Metric;
-
+    FMetric := 0.1
+  else
+    FMetric := Metric;
 end;
 
 {**
@@ -1134,8 +1123,9 @@ begin
   end;
 end;
 
-function TZPerformanceResultProcessor.FindResultItem(APIName,
-  TestName, Protocol, Properties: string; TryIndex: Integer): TZPerformanceResultItem;
+function TZPerformanceResultProcessor.FindResultItem(const APIName,
+  TestName, Protocol, ConnectionName: string;
+  const TryIndex: Integer): TZPerformanceResultItem;
 var
   I: Integer;
   Current: TZPerformanceResultItem;
@@ -1145,7 +1135,7 @@ begin
   begin
     Current := TZPerformanceResultItem(Results[I]);
     if (Current.APIName = APIName) and (Current.TestName = TestName)
-      and (Current.Protocol = Protocol) and (Current.Properties = Properties)
+      and (Current.Protocol = Protocol) and (Current.ConnectionName = ConnectionName)
       and (Current.TryIndex = TryIndex) then
     begin
       Result := Current;
@@ -1160,8 +1150,8 @@ end;
 procedure TZPerformanceResultProcessor.CalculateAverages;
 var
   I, J, M, N, K: Integer;
-  CountTotal, CountProperties, CountProtocol, CountTests: Integer;
-  AverageMetricTests, AverageMetricToal, AverageMetricProtocol, AverageMetricRepeat, AverageMetricProperties: Double;
+  CountTotal, CountConnectionName, CountProtocol, CountTests: Integer;
+  AverageMetricTests, AverageMetricToal, AverageMetricProtocol, AverageMetricRepeat, AverageMetricConnectionName: Double;
   Current: TZPerformanceResultItem;
 begin
   AverageMetricToal := 0;
@@ -1176,8 +1166,8 @@ begin
       CountProtocol := 0;
       for M := 0 to FProtocols.Count-1 do
       begin
-        AverageMetricProperties := 0;
-        CountProperties := 0;
+        AverageMetricConnectionName := 0;
+        CountConnectionName := 0;
         for N := 0 to TStringList(FProtocols.Objects[M]).Count -1 do
         begin
           AverageMetricRepeat := 0;
@@ -1186,11 +1176,11 @@ begin
             Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[M], TStringList(FProtocols.Objects[M])[N], K);
             if Current <> nil then
             begin
-              Inc(CountProperties);
+              Inc(CountConnectionName);
               Inc(CountProtocol);
               Inc(CountTests);
               Inc(CountTotal);
-              AverageMetricProperties := AverageMetricProperties + Current.Metric;
+              AverageMetricConnectionName := AverageMetricConnectionName + Current.Metric;
               AverageMetricProtocol := AverageMetricProtocol + Current.Metric;
               AverageMetricTests := AverageMetricTests + Current.Metric;
               AverageMetricRepeat := AverageMetricRepeat + Current.Metric;
@@ -1202,10 +1192,10 @@ begin
           else AverageMetricRepeat := -1;
           RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], TStringList(FProtocols.Objects[M])[N], 0, AverageMetricRepeat);
         end; {for N := 0 to TStringList(FProtocols.Objects[M]).Count -1 do}
-        if ( CountProperties > 0 ) then
-          AverageMetricProperties := AverageMetricProperties / CountProperties
-        else AverageMetricProperties := -1;
-        RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'all properties', 0, AverageMetricProperties);
+        if ( CountConnectionName > 0 ) then
+          AverageMetricConnectionName := AverageMetricConnectionName / CountConnectionName
+        else AverageMetricConnectionName := -1;
+        RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'all properties', 0, AverageMetricConnectionName);
       end; {for M := 0 to FProtocols.Count-1 do}
       if ( CountProtocol > 0 ) then
         AverageMetricProtocol := AverageMetricProtocol / CountProtocol
@@ -1432,14 +1422,14 @@ begin
     end;
     Current := FindResultItem(SelectedAPIs[i], 'all tests', 'all protocols', 'all properties', 0);
     if (Current <> nil) and (Current.Metric >= 0) then
-      WriteLn(Format('  Average - %.2f %s all test+protocols+properties', [Current.Metric, Units]))
-    else WriteLn('  Average - absent');
+      WriteLn(Format('Average - %.2f %s all test+protocols+properties', [Current.Metric, Units]))
+    else WriteLn('Average - absent');
     WriteLn('');
   end;
   Current := FindResultItem('all apis', 'all tests', 'all protocols', 'all properties', 0);
   if (Current <> nil) and (Current.Metric >= 0) then
-    WriteLn(Format('  Average - %.2f %s total', [Current.Metric, Units]))
-  else WriteLn('  Average - absent');
+    WriteLn(Format('Average - %.2f %s total', [Current.Metric, Units]))
+  else WriteLn('Average - absent');
   WriteLn('');
 end;
 
@@ -1450,12 +1440,12 @@ end;
   @param TryIndex an index of try.
   @param Metric a time metric.
 }
-procedure TZPerformanceResultProcessor.RegisterResult(APIName, TestName, Protocol, Properties: String;
-   TryIndex: Integer; Metric: Double);
+procedure TZPerformanceResultProcessor.RegisterResult(const APIName, TestName,
+  Protocol, Properties: String; const TryIndex: Integer; const Metric: Double);
 var iProt: Integer;
 begin
-  Results.Add(TZPerformanceResultItem.Create(APIName, TestName,
-    Protocol, Properties, TryIndex, Metric));
+  Results.Add(TZPerformanceResultItem.Create(APIName, TestName, Protocol,
+    Properties, TryIndex, Metric));
   if not (( APIName = 'all apis' ) or ( TestName = 'all tests' ) or
     ( Protocol = 'all protocols' ) or ( Properties = 'all properties' )) then
   begin
