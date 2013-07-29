@@ -558,7 +558,8 @@ type
 
     function EncodeBYTEA(const Value: ZAnsiString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): ZAnsiString;
-    function DecodeBYTEA(const value: ZAnsiString; Handle: PZPostgreSQLConnect): ZAnsiString;
+    function DecodeBYTEA(const value: ZAnsiString; const Is_bytea_output_hex: Boolean;
+      Handle: PZPostgreSQLConnect): ZAnsiString;
     function SupportsEncodeBYTEA: Boolean;
     function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
     function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
@@ -698,7 +699,7 @@ type
 
     function EncodeBYTEA(const Value: ZAnsiString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): ZAnsiString;
-    function DecodeBYTEA(const value: ZAnsiString;
+    function DecodeBYTEA(const value: ZAnsiString; const Is_bytea_output_hex: Boolean;
       Handle: PZPostgreSQLConnect): ZAnsiString;
 
     function SupportsEncodeBYTEA: Boolean;
@@ -1090,13 +1091,13 @@ begin
 end;
 
 function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: ZAnsiString;
-  Handle: PZPostgreSQLConnect): ZAnsiString;
+  const Is_bytea_output_hex: Boolean; Handle: PZPostgreSQLConnect): ZAnsiString;
 var
   decoded: PAnsiChar;
   Ansi: AnsiString;
   len: Longword;
 begin
-  if ( POSTGRESQL_API.PQserverVersion(Handle) div 10000 >= 9 ) then
+  if ( Is_bytea_output_hex ) then
   begin
     Len := (Length(value)-{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)) div 2; //GetLength of binary result
     Ansi := AnsiString(Copy(value, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)+1, Length(value))); //remove the first 'x'sign-byte
