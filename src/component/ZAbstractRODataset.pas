@@ -1381,6 +1381,10 @@ var
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
   Curr: Currency;
+  {$IFNDEF UNICODE}
+  L: Cardinal;
+  Temp: String;
+  {$ENDIF}
 begin
   WasNull := False;
   if not Active then

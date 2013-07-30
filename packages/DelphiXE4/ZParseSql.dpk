@@ -33,6 +33,7 @@ requires
   ZCore;
 
 contains
+  ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
   ZInterbaseAnalyser in '..\..\src\parsesql\ZInterbaseAnalyser.pas',
   ZInterbaseToken in '..\..\src\parsesql\ZInterbaseToken.pas',
   ZMySqlAnalyser in '..\..\src\parsesql\ZMySqlAnalyser.pas',

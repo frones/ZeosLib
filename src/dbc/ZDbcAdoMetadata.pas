@@ -216,6 +216,7 @@ type
     function BuildRestrictions(SchemaId: Integer; const Args: array of const): Variant;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
+    function DecomposeObjectString(const S: String): String; override;
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -1259,6 +1260,16 @@ begin
   Result := TZAdoDatabaseInfo.Create(Self);
 end;
 
+function TZAdoDatabaseMetadata.DecomposeObjectString(const S: String): String;
+begin
+  if S = '' then
+    Result := S
+  else
+    if FIC.IsQuoted(S) then
+       Result := FIC.ExtractQuote(S)
+    else
+      Result := s;
+end;
 {**
   Gets a description of the stored procedures available in a
   catalog.
@@ -1683,7 +1694,8 @@ begin
       TableNamePattern, ColumnNamePattern);
 
     AdoRecordSet := AdoOpenSchema(adSchemaColumns,
-      [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+      [DecomposeObjectString(Catalog), DecomposeObjectString(SchemaPattern),
+      DecomposeObjectString(TableNamePattern), DecomposeObjectString(ColumnNamePattern)]);
     if Assigned(AdoRecordSet) then
     begin
       AdoRecordSet.Sort := 'ORDINAL_POSITION';
