@@ -1399,10 +1399,10 @@ end;
 
 procedure TZTestOracleStoredProcedure.Test_Owner_packaged;
 begin
-  abtest('ZEOSLIB.MYPACKAGE.');
-  myfuncInOutReturn('ZEOSLIB.MYPACKAGE.');
-  simple_func('ZEOSLIB.MYPACKAGE.');
-  simplefunc('ZEOSLIB.MYPACKAGE.');
+  abtest(Connection.user+'.MYPACKAGE.');
+  myfuncInOutReturn(Connection.user+'.MYPACKAGE.');
+  simple_func(Connection.user+'.MYPACKAGE.');
+  simplefunc(Connection.user+'.MYPACKAGE.');
 end;
 
 procedure TZTestOracleStoredProcedure.Test_MYPACKAGE;
@@ -1412,7 +1412,7 @@ end;
 
 procedure TZTestOracleStoredProcedure.Test_Owner_MYPACKAGE;
 begin
-  MYPACKAGE('ZEOSLIB.');
+  MYPACKAGE(Connection.user+'.');
 end;
 
 procedure TZTestOracleStoredProcedure.Test_IS_ACCOUNT_SERVE;
