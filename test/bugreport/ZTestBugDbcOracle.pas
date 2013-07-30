@@ -116,7 +116,7 @@ begin
 
   with Connection.CreateStatement.ExecuteQuery('select * from blob_values') do
   begin
-    CheckEquals(5, GetMetadata.GetColumnCount);
+    CheckEquals(6, GetMetadata.GetColumnCount);
     Check(next);
     Close;
   end;
