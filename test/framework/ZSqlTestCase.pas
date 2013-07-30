@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB,
-  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataSet,
+  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataset,
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
