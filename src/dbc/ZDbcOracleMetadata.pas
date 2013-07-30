@@ -1278,14 +1278,14 @@ var
   IZStmt: IZStatement;
   TempSet: IZResultSet;
   Names, Procs: TStrings;
-  PackageName, ProcName, TempProcedureNamePattern: String;
+  PackageName, ProcName, TempProcedureNamePattern, TmpSchemaPattern: String;
 
   function GetNextName(const AName: String; NameEmpty: Boolean = False): String;
   var
     N: Integer;
     NewName: String;
   begin
-    if PackageName = '' then
+    if ( PackageName = '' ) or ( not ( PackageName = ProcedureNamePattern ) ) then
       NewName := AName
     else
       NewName := ProcName+'.'+AName;
@@ -1362,17 +1362,17 @@ var
       iPos := Pos('.', Value);
         if (iPos > 0) then
         begin
-          PackageName := '= '+#39+Copy(Value, 1, iPos-1)+#39;
-          ProcName := Copy(Value, iPos+1,Length(Value)-iPos);
+          PackageName := '= '+#39+FIC.ExtractQuote(Copy(Value, 1, iPos-1))+#39;
+          ProcName := FIC.ExtractQuote(Copy(Value, iPos+1,Length(Value)-iPos));
         end
         else
         begin
           PackageName := 'IS NULL';
-          ProcName := Value;
+          ProcName := FIC.ExtractQuote(Value);
         end;
     end;
   begin
-    SplitPackageAndProc(GetIdentifierConvertor.ExtractQuote(TempProcedureNamePattern));
+    SplitPackageAndProc(TempProcedureNamePattern);
     Result := 'select * from user_arguments where (package_name '+PackageName+
       ' AND object_name like '''+ ToLikeString(ProcName)+''' '+
       ' OR package_name like '''+ ToLikeString(ProcName)+''' )'+
@@ -1410,15 +1410,36 @@ var
     TempSet.Close;
     for i := 0 to Procs.Count -1 do
     begin
-      TempProcedureNamePattern := '"'+ProcedureNamePattern+'.'+Procs[i]+'"';
+      TempProcedureNamePattern := ProcedureNamePattern+'.'+FIC.Quote(Procs[i]);
       TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
       AddColumns(False, False);
+    end;
+  end;
+  function CheckSchema: Boolean;
+  begin
+    with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_OBJECTS WHERE OWNER = '#39+TmpSchemaPattern+#39) do
+    begin
+      Next;
+      Result := GetInt(1) > 0;
+      Close;
     end;
   end;
 begin
   Result:=inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-  TempProcedureNamePattern := ProcedureNamePattern;
+  {improve SplitQualifiedObjectName: Oracle does'nt support catalogs}
+  if Catalog = '' then
+    TmpSchemaPattern := SchemaPattern
+  else
+    TmpSchemaPattern := Catalog;
+
+    if ( TmpSchemaPattern = '' ) then
+      TempProcedureNamePattern := ProcedureNamePattern //just a procedurename or package or both
+    else
+      if CheckSchema then
+        TempProcedureNamePattern := ProcedureNamePattern //Schema exists not a package
+      else
+        TempProcedureNamePattern := TmpSchemaPattern+'.'+ProcedureNamePattern; //no Schema so it's a PackageName
 
   Names := TStringList.Create;
   Procs := TStringList.Create;
@@ -1466,16 +1487,18 @@ end;
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
-  var
-    SQL: string;
-    LProcedureNamePattern: string;
-    sName:string;
-  begin
-      Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
+var
+  SQL: string;
+  LProcedureNamePattern: string;
+  sName:string;
+begin
+  Result:=inherited UncachedGetProcedures(Catalog, SchemaPattern, ProcedureNamePattern);
 
-  LProcedureNamePattern := '';//ConstructNameCondition(ProcedureNamePattern,      'RDB$PROCEDURE_NAME');
-  SQL := 'select Object_Name, procedure_name from user_procedures';
-
+  LProcedureNamePattern := ConstructNameCondition(ProcedureNamePattern,'decode(procedure_name,null,object_name,object_name||''.''||procedure_name)');
+  SQL := 'select NULL AS PROCEDURE_CAT, AO.OWNER AS PROCEDURE_SCHEM, '+
+    'UP.OBJECT_NAME, UP.PROCEDURE_NAME AS PROCEDURE_NAME, '+
+    'UP.OVERLOAD AS PROCEDURE_OVERLOAD, UP.OBJECT_TYPE AS PROCEDURE_TYPE FROM '+
+    'USER_PROCEDURES UP LEFT JOIN ALL_OBJECTS AO ON UP.OBJECT_ID=AO.OBJECT_ID';
   if LProcedureNamePattern <> '' then
     SQL := SQL + ' WHERE ' + LProcedureNamePattern;
 
@@ -1483,21 +1506,23 @@ function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   begin
     while Next do
     begin
-      sName := GetIdentifierConvertor.Quote(GetString(1));
-      if GetString(2) <> '' then
-        sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(2));
+      sName := GetIdentifierConvertor.Quote(GetString(3));
+      if GetString(4) <> '' then
+        sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(4));
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
-      Result.UpdateNull(2);
-      Result.UpdateString(3, sName); //RDB$PROCEDURE_NAME
-      Result.UpdateNull(4);
+      Result.UpdateString(2, GetString(2));
+      Result.UpdateString(3, sName); //PROCEDURE_NAME
+      Result.UpdateString(4, GetString(5)); //PROCGEDURE_OVERLOAD
       Result.UpdateNull(5);
       Result.UpdateNull(6);
       Result.UpdateNull(7);
-      //Result.UpdateString(7, GetString(3)); //RDB$DESCRIPTION
-//        if IsNull(2) then //RDB$PROCEDURE_OUTPUTS
-      Result.UpdateInt(8, Ord(prtNoResult));
-//       else Result.UpdateInt(8, Ord(prtReturnsResult));
+      if GetString(6) = 'FUNCTION' then
+          Result.UpdateInt(8, Ord(prtReturnsResult))
+        else if GetString(6) = 'PROCDEURE' then
+          Result.UpdateInt(8, Ord(prtNoResult))
+        else
+          Result.UpdateInt(8, Ord(prtUnknown)); //Package
       Result.InsertRow;
     end;
     Close;

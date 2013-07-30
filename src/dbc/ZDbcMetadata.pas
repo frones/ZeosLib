@@ -111,6 +111,9 @@ type
   end;
 
   {** Implements Abstract Database Metadata. }
+
+  { TZAbstractDatabaseMetadata }
+
   TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
     FConnection: Pointer;
@@ -120,10 +123,14 @@ type
     FConSettings: PZConSettings;
     function GetInfo: TStrings;
     function GetURLString: String;
+    function StripEscape(const Pattern: string): string;
+    function HasNoWildcards(const Pattern: string): boolean;
   protected
     FIC: IZIdentifierConvertor;
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
+    function EscapeString(const S: string): string; virtual;
+    function DecomposeObjectString(const S: String): String; virtual;
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
     function GetStatement: IZSTatement; // technobot 2008-06-28 - moved from descendants
 
@@ -135,12 +142,11 @@ type
     function CopyToVirtualResultSet(SrcResultSet: IZResultSet;
       DestResultSet: IZVirtualResultSet): IZVirtualResultSet;
     function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
-    //Added by Cipto
+    function ConstructNameCondition(Pattern: string; Column: string): string; virtual;
     function AddEscapeCharToWildcards(const Pattern:string): string;
     function GetWildcardsSet:TZWildcardsSet;
     procedure FillWildcards; virtual;
-    //End Added by Cipto
-
+    function NormalizePatternCase(Pattern:String): string;
     property Url: string read GetURLString;
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
@@ -492,7 +498,7 @@ var
 
 implementation
 
-uses ZVariant, ZCollections;
+uses ZVariant, ZCollections, ZMessages;
 
 { TZAbstractDatabaseInfo }
 
@@ -1763,6 +1769,85 @@ begin
   Result := FURL.URL;
 end;
 
+{**
+   Remove escapes from pattren string
+   @param Pattern a sql pattern
+   @return string without escapes
+}
+function TZAbstractDatabaseMetadata.StripEscape(const Pattern: string): string;
+var
+  I: Integer;
+  PreviousChar: Char;
+  EscapeChar: string;
+begin
+  PreviousChar := #0;
+  Result := '';
+  EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
+  for I := 1 to Length(Pattern) do
+  begin
+    if (Pattern[i] <> EscapeChar) then
+    begin
+      Result := Result + Pattern[I];
+      PreviousChar := Pattern[I];
+    end
+    else
+    begin
+      if (PreviousChar = EscapeChar) then
+      begin
+        Result := Result + Pattern[I];
+        PreviousChar := #0;
+      end
+      else
+        PreviousChar := Pattern[i];
+    end;
+  end;
+end;
+
+{**
+   Check if pattern does not contain wildcards
+   @param Pattern a sql pattern
+   @return if pattern contain wildcards return true otherwise false
+}
+function TZAbstractDatabaseMetadata.HasNoWildcards(const Pattern: string
+  ): boolean;
+var
+  I: Integer;
+  PreviousCharWasEscape: Boolean;
+  EscapeChar,PreviousChar: Char;
+  WildcardsSet: TZWildcardsSet;
+begin
+  Result := False;
+  PreviousChar := #0;
+  PreviousCharWasEscape := False;
+  EscapeChar := Char(GetDatabaseInfo.GetSearchStringEscape[1]);
+  WildcardsSet := GetWildcardsSet;
+  for I := 1 to Length(Pattern) do
+  begin
+    if (not PreviousCharWasEscape) and CharInset(Pattern[I], WildcardsSet) then
+     Exit;
+
+    PreviousCharWasEscape := (Pattern[I] = EscapeChar) and (PreviousChar <> EscapeChar);
+    if (PreviousCharWasEscape) and (Pattern[I] = EscapeChar) then
+      PreviousChar := #0
+    else
+      PreviousChar := Pattern[I];
+  end;
+  Result := True;
+end;
+
+function TZAbstractDatabaseMetadata.EscapeString(const S: string): string;
+begin
+  Result := '''' + S + '''';
+end;
+
+function TZAbstractDatabaseMetadata.DecomposeObjectString(const S: String): String;
+begin
+  if FIC.IsQuoted(s) then
+    Result := FIC.ExtractQuote(s)
+  else
+    Result := s;
+end;
+
 {**  Destroys this object and cleanups the memory.}
 destructor TZAbstractDatabaseMetadata.Destroy;
 begin
@@ -1999,6 +2084,38 @@ begin
 end;
 
 {**
+   Takes a name patternand column name and retuen an appropriate SQL clause
+    @param Pattern a sql pattren
+    @parma Column a sql column name
+    @return processed string for query
+}
+function TZAbstractDatabaseMetadata.ConstructNameCondition(Pattern: string;
+  Column: string): string;
+const
+  Spaces = '';
+var
+  WorkPattern: string;
+begin
+  Result := '';
+  if (Length(Pattern) > 2 * 31) then
+    raise EZSQLException.Create(SPattern2Long);
+
+  if (Pattern = '%') or (Pattern = '') then
+     Exit;
+  WorkPattern:=NormalizePatternCase(Pattern);
+  if HasNoWildcards(WorkPattern) then
+  begin
+    WorkPattern := StripEscape(WorkPattern);
+    Result := Format('%s = %s', [Column, EscapeString(WorkPattern)]);
+  end
+  else
+  begin
+    Result := Format('%s like %s',
+      [Column, EscapeString(WorkPattern+'%')]);
+  end;
+end;
+
+{**
   What's the url for this database?
   @return the url or null if it cannot be generated
 }
@@ -2014,9 +2131,6 @@ end;
 function TZAbstractDatabaseMetadata.GetUserName: string;
 begin
   Result := FURL.UserName;
-  {Result := FInfo.Values['UID'];
-  if Result = '' then
-    Result := FInfo.Values['username'];}
 end;
 
 {**
@@ -4111,7 +4225,7 @@ begin
     Result := Pattern
   else
   begin
-    EscapeChar:=GetDatabaseInfo.GetSearchStringEscape;
+    EscapeChar := GetDatabaseInfo.GetSearchStringEscape;
     if WildcardsArray<>nil then
     begin
       Result:=StringReplace(Pattern,EscapeChar,EscapeChar+EscapeChar,[rfReplaceAll]);
@@ -4134,6 +4248,18 @@ begin
   except
     WildcardsArray:=nil;
   end;
+end;
+
+function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
+begin
+  if not GetIdentifierConvertor.IsQuoted(Pattern) then
+    if FDatabaseInfo.StoresUpperCaseIdentifiers then
+      Result := UpperCase(Pattern)
+    else if FDatabaseInfo.StoresLowerCaseIdentifiers then
+      Result := LowerCase(Pattern)
+    else Result := Pattern
+  else
+    Result := GetIdentifierConvertor.ExtractQuote(Pattern);
 end;
 
 {**
@@ -4738,9 +4864,9 @@ const
     (Name: 'PROCEDURE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_NAME'; SQLType: stString; Length: 255),
+    (Name: 'PROCEDURE_OVERLOAD'; SQLType: stString; Length: 255),
     (Name: 'RESERVED1'; SQLType: stString; Length: 255),
     (Name: 'RESERVED2'; SQLType: stString; Length: 255),
-    (Name: 'RESERVED3'; SQLType: stString; Length: 255),
     (Name: 'REMARKS'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_TYPE'; SQLType: stShort; Length: 0)
   );
