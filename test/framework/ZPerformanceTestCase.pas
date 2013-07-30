@@ -64,9 +64,17 @@ type
   {** A method for test set up, run or tear down. }
   TZTestMethod = procedure of object;
 
+  TDataSetTypesDynArray = array of TFieldType;
+  TResultSetTypesDynArray = array of TZSQLType;
+
   {** Implements a abstract performance test case. }
   TZPerformanceSQLTestCase = class (TZAbstractCompSQLTestCase)
   private
+    FDataSetTypes: TDataSetTypesDynArray;
+    FResultSetTypes: TResultSetTypesDynArray;
+    FFieldSizes: TIntegerDynArray;
+    FFieldNames: TStringDynArray;
+    FFieldPropertiesDetermined: Boolean;
     FSelectedAPIs: TStrings;
     FSelectedTests: TStrings;
     FRecordCount: Integer;
@@ -74,12 +82,15 @@ type
     FSkipFlag: Boolean;
     FSkipPerformance: Boolean;
     FSkipPerformanceTransactionMode: Boolean;
+    FPerformanceTable: String;
+    FPerformancePrimaryKey: String;
 
     procedure RunSelectedTest(TestName: string; SetUpMethod: TZTestMethod;
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
-
   protected
+    procedure DetermineFieldsProperties;
     procedure LoadConfiguration; override;
+    procedure SetUp; override;
     function GetImplementedAPI: string; virtual; abstract;
     function SkipForReason(Reasons: ZSkipReasons): Boolean; override;
 
@@ -150,9 +161,18 @@ type
     procedure TearDownTestLookup; virtual;
 
     property SkipPerformanceTransactionMode: Boolean read FSkipPerformanceTransactionMode;
+    property FieldPropertiesDetermined: Boolean read FFieldPropertiesDetermined;
+    property DataSetTypes: TDataSetTypesDynArray read FDataSetTypes;
+    property ResultSetTypes: TResultSetTypesDynArray read FResultSetTypes;
+    property FieldSizes: TIntegerDynArray read FFieldSizes;
+    property FieldNames: TStringDynArray read FFieldNames;
+    property PerformanceTable: String read FPerformanceTable;
+    property PerformancePrimaryKey: String read FPerformancePrimaryKey;
   public
     function CreateDatasetConnection: TZConnection; override;
     function CreateDbcConnection: IZConnection; override;
+
+    constructor Create(MethodName: string); override;
     destructor Destroy; override;
 
   published
@@ -244,10 +264,15 @@ var
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts;
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils;
 
 { TZPerformanceSQLTestCase }
 
+constructor TZPerformanceSQLTestCase.Create(MethodName: string);
+begin
+  inherited Create(MethodName);
+  FFieldPropertiesDetermined := False;
+end;
 {**
   Destroys this object and clean ups the memory.
 }
@@ -294,6 +319,15 @@ begin
   FRepeatCount := StrToIntDef(ReadGroupProperty('repeat', ''), 1);
   FSkipPerformance := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_KEY, TRUE_VALUE));
   FSkipPerformanceTransactionMode := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_TRANS_KEY, FALSE_VALUE));
+  FPerformanceTable := ReadInheritProperty(PERFORMANCE_TABLE_NAME_KEY, PERFORMANCE_TABLE_NAME);
+  FPerformancePrimaryKey := ReadInheritProperty(PERFORMANCE_PRIMARYKEY_KEY, PERFORMANCE_PRIMARY_KEY);
+end;
+
+procedure TZPerformanceSQLTestCase.SetUp;
+begin
+  inherited SetUp;
+  if not FieldPropertiesDetermined then
+     DetermineFieldsProperties;
 end;
 
 function TZPerformanceSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
@@ -476,9 +510,9 @@ begin
         end;
 
         Query1.Insert;
-        for I := 0 to Query.FieldCount - 1 do
+        for I := 0 to High(DataSetTypes) do
         begin
-          case Query1.Fields[i].DataType of
+          case DataSetTypes[i] of
             ftString, ftFixedChar:
               Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].DisplayWidth);
             ftMemo, ftFmtMemo:
@@ -572,6 +606,30 @@ begin
     else
       Exit;
   end;
+end;
+
+procedure TZPerformanceSQLTestCase.DetermineFieldsProperties;
+var
+  Query: TZQuery;
+  I: Integer;
+begin
+  Query := CreateQuery;
+  Query.SQL.Text := 'select * from '+PerformanceTable;
+  Query.Open;
+  SetLength(FDataSetTypes, Query.Fields.Count);
+  SetLength(FResultSetTypes, Query.Fields.Count);
+  SetLength(FFieldSizes, Query.Fields.Count);
+  SetLength(FFieldNames, Query.Fields.Count);
+  for i := 0 to Query.Fields.Count -1 do
+  begin
+    FDataSetTypes[i] := Query.Fields[i].DataType;
+    FResultSetTypes[i] := ConvertDatasetToDbcType(FDataSetTypes[i]);
+    FFieldSizes[i] := Query.Fields[i].DisplayWidth;
+    FFieldNames[i] := Query.Fields[i].FieldName;
+  end;
+  Query.Close;
+  Query.Free;
+  FFieldPropertiesDetermined := True;
 end;
 
 {**

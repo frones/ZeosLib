@@ -112,14 +112,9 @@ end;
    Create objects and allocate memory for variables
 }
 procedure TZDatasetPerformanceTestCase.SetUp;
-var
-  TempQuery: TZQuery;
 begin
   inherited SetUp;
-
-  TempQuery := TZQuery.Create(nil);
-  TempQuery.Connection := Connection;
-  Query := TempQuery;
+  Query := CreateQuery;
 end;
 
 {**
@@ -177,7 +172,7 @@ end;
 procedure TZDatasetPerformanceTestCase.SetUpTestInsert;
 begin
   inherited SetUpTestInsert;
-  Query.SQL.Text := 'SELECT * FROM high_load';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable;
   // Query.RequestLive := True;
   Query.Open;
 
@@ -208,7 +203,7 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.RunTestOpen;
 begin
-  Query.SQL.Text := 'SELECT * FROM high_load';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable;
   Query.Open;
   if not SkipPerformanceTransactionMode then
     Query.Connection.Commit;
@@ -220,7 +215,7 @@ end;
 procedure TZDatasetPerformanceTestCase.SetUpTestFetch;
 begin
   inherited SetUpTestFetch;
-  Query.SQL.Text := 'SELECT * FROM high_load';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable;
   Query.ReadOnly := True;
   Query.Open;
 end;
@@ -248,8 +243,10 @@ end;
 procedure TZDatasetPerformanceTestCase.SetUpTestUpdate;
 begin
   inherited SetUpTestUpdate;
-  Query.SQL.Text := 'SELECT * FROM high_load';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable;
   Query.Open;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -266,6 +263,8 @@ begin
       Post;
       Next;
     end;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -274,8 +273,10 @@ end;
 procedure TZDatasetPerformanceTestCase.SetUpTestDelete;
 begin
   inherited SetUpTestDelete;
-  Query.SQL.Text := 'SELECT * FROM high_load';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable;
   Query.Open;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -298,11 +299,13 @@ var
 begin
   for I := 1 to GetRecordCount do
   begin
-    Query.SQL.Text := Format('UPDATE high_load SET data1=%s, data2=''%s'''
-      + ' WHERE hl_id = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
+    Query.SQL.Text := Format('UPDATE '+PerformanceTable+' SET data1=%s, data2=''%s'''
+      + ' WHERE '+PerformancePrimaryKey+' = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
       RandomStr(10), I]);
     Query.ExecSQL;
   end;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -311,7 +314,7 @@ end;
 procedure TZDatasetPerformanceTestCase.SetUpTestLocate;
 begin
   inherited SetUpTestLocate;
-  Query.SQL.Text := 'SELECT * FROM high_load ORDER BY hl_id';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable+' ORDER BY '+PerformancePrimaryKey;
   Query.Open;
   Query.Last;
   Query.First;
@@ -335,10 +338,12 @@ end;
 procedure TZDatasetPerformanceTestCase.SetUpTestLookup;
 begin
   inherited SetUpTestLookup;
-  Query.SQL.Text := 'SELECT * FROM high_load ORDER BY hl_id';
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable+' ORDER BY '+PerformancePrimaryKey;
   Query.Open;
   Query.Last;
   Query.First;
+  if not SkipPerformanceTransactionMode then
+    Query.Connection.Commit;
 end;
 
 {**
@@ -346,7 +351,7 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.RunTestLookup;
 begin
-  Query.Lookup('data2','AAAAAAAAAA','hl_id');
+  Query.Lookup('data2','AAAAAAAAAA',PerformancePrimaryKey);
   if not SkipPerformanceTransactionMode then
     Query.Connection.Commit;
 end;

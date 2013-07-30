@@ -112,6 +112,8 @@ const
   SKIP_REAL_PREPARED_KEY       = 'skip.real_prepared';
   SKIP_PERFORMANCE_KEY         = 'skip.performance';
   SKIP_PERFORMANCE_TRANS_KEY   = 'skip.performance.transaction.mode';
+  PERFORMANCE_TABLE_NAME_KEY   = 'performance.table.name';
+  PERFORMANCE_PRIMARYKEY_KEY   = 'performance.primary.key.name';
   ACTIVE_CONNECTIONS_KEY       = 'connections';
   EXTENDED_TEST_KEY            = 'extended.test';
   EXTENDED_CGET_ACP_KEY        = 'extended.cget_acp';

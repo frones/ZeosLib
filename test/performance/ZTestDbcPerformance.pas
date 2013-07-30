@@ -101,7 +101,7 @@ type
 
 implementation
 
-uses ZTestCase, ZSysUtils;
+uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, Types;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -173,18 +173,55 @@ end;
 }
 procedure TZNativeDbcPerformanceTestCase.RunTestInsert;
 var
-  I: Integer;
+  I,N: Integer;
   Statement: IZPreparedStatement;
+  SQL: String;
+  Ansi: RawByteString;
+  Uni: ZWideString;
+  Bts: TByteDynArray;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  Statement := Connection.PrepareStatement(
-    'INSERT INTO high_load VALUES (?,?,?)');
+  SQL := 'INSERT INTO '+PerformanceTable+' VALUES (';
+  for i := 0 to high(Self.ResultSetTypes) do
+    if i = 0 then SQL := SQL+'?'
+    else SQL := SQL+',?';
+  SQL := SQL+')';
+  Statement := Connection.PrepareStatement( SQL);
   for I := 1 to GetRecordCount do
   begin
-    Statement.SetInt(1, I);
-    Statement.SetFloat(2, RandomFloat(-100, 100));
-    Statement.SetString(3, RandomStr(10));
+    for N := 1 to high(ResultSetTypes)+1 do
+      case ResultSetTypes[N-1] of
+        stBoolean: Statement.SetBoolean(N, Random(1) = 1);
+        stByte:    Statement.SetByte(N, Ord(Random(255)));
+        stShort,
+        stInteger,
+        stLong:    Statement.SetInt(N, I);
+        stFloat,
+        stDouble,
+        stBigDecimal: Statement.SetFloat(N, RandomFloat(-100, 100));
+        stString: Statement.SetString(N, RandomStr(FieldSizes[N-1]));
+        stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+        stDate:    Statement.SetDate(N, Now);
+        stTime:    Statement.SetTime(N, Now);
+        stTimestamp: Statement.SetTimestamp(N, now);
+        stBytes, stGUID: Statement.SetBytes(N, RandomBts(16));
+        stAsciiStream:
+          begin
+            Ansi := RawByteString(RandomStr(GetRecordCount*100));
+            Statement.SetBlob(N, stAsciiStream, TZAbstractBlob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, Connection, False));
+          end;
+        stUnicodeStream:
+          begin
+            Uni := ZWideString(RandomStr(GetRecordCount*100));
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(PWideChar(Uni), GetRecordCount*100*2, Connection, True));
+          end;
+        stBinaryStream:
+          begin
+            Bts := RandomBts(GetRecordCount*100);
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+          end;
+      end;
     Statement.ExecuteUpdatePrepared;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -197,7 +234,7 @@ procedure TZNativeDbcPerformanceTestCase.RunTestOpen;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  CreateResultSet('SELECT * FROM high_load');
+  CreateResultSet('SELECT * FROM '+PerformanceTable);
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
@@ -210,7 +247,7 @@ var
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  ResultSet := CreateResultSet('SELECT * FROM high_load');
+  ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
   while ResultSet.Next do
   begin
 //    ResultSet.GetPChar(1);
@@ -228,18 +265,58 @@ end;
 }
 procedure TZNativeDbcPerformanceTestCase.RunTestUpdate;
 var
-  I: Integer;
+  I, N: Integer;
+  SQL: String;
   Statement: IZPreparedStatement;
+  Ansi: RawByteString;
+  Uni: ZWideString;
+  Bts: TByteDynArray;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  Statement := Connection.PrepareStatement('UPDATE high_load SET '
-    + ' data1=?, data2=?  WHERE hl_id=?');
+  SQL := 'UPDATE '+PerformanceTable+' SET';
+  for i := 1 to high(FieldNames) do
+    if I = 1 then
+      SQL := SQL + ' '+FieldNames[I]+'=?'
+    else
+      SQL := SQL + ', '+FieldNames[I]+'=?';
+  SQL := SQL + ' WHERE '+PerformancePrimaryKey+'=?';
+  Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
-    Statement.SetFloat(1, RandomFloat(-100, 100));
-    Statement.SetString(2, RandomStr(10));
-    Statement.SetInt(3, I);
+    for N := 1 to high(ResultSetTypes) do
+      case ResultSetTypes[N] of
+        stBoolean: Statement.SetBoolean(N, Random(1) = 1);
+        stByte:    Statement.SetByte(N, Ord(Random(255)));
+        stShort,
+        stInteger,
+        stLong:    Statement.SetInt(N, I);
+        stFloat,
+        stDouble,
+        stBigDecimal: Statement.SetFloat(N, RandomFloat(-100, 100));
+        stString: Statement.SetString(N, RandomStr(FieldSizes[N]));
+        stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(FieldSizes[N])));
+        stDate:    Statement.SetDate(N, Now);
+        stTime:    Statement.SetTime(N, Now);
+        stTimestamp: Statement.SetTimestamp(N, now);
+        stBytes, stGUID: Statement.SetBytes(N, RandomBts(16));
+        stAsciiStream:
+          begin
+            Ansi := RawByteString(RandomStr(GetRecordCount*100));
+            Statement.SetBlob(N, stAsciiStream, TZAbstractBlob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, Connection, False));
+          end;
+        stUnicodeStream:
+          begin
+            Uni := ZWideString(RandomStr(GetRecordCount*100));
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(PWideChar(Uni), GetRecordCount*100*2, Connection, True));
+          end;
+        stBinaryStream:
+          begin
+            Bts := RandomBts(GetRecordCount*100);
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+          end;
+      end;
+    Statement.SetInt(High(ResultSetTypes)+1, I);
     Statement.ExecuteUpdatePrepared;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -256,7 +333,7 @@ begin
   if SkipForReason(srNoPerformance) then Exit;
 
   Statement := Connection.PrepareStatement(
-    'DELETE from high_load WHERE hl_id=?');
+    'DELETE from '+PerformanceTable+' WHERE '+PerformancePrimaryKey+'=?');
   for I := 1 to GetRecordCount do
   begin
     Statement.SetInt(1, I);
@@ -278,8 +355,8 @@ begin
   Statement := Connection.CreateStatement;
   for I := 1 to GetRecordCount do
   begin
-    Statement.ExecuteUpdate(Format('UPDATE high_load SET data1=%s, data2=''%s'''
-      + ' WHERE hl_id = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
+    Statement.ExecuteUpdate(Format('UPDATE '+PerformanceTable+' SET data1=%s, data2=''%s'''
+      + ' WHERE '+PerformancePrimaryKey+' = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
       RandomStr(10), I]));
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -323,7 +400,7 @@ var
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  ResultSet := CreateResultSet('SELECT * from high_load');
+  ResultSet := CreateResultSet('SELECT * '+PerformanceTable);
   for I := 1 to GetRecordCount do
   begin
     ResultSet.MoveToInsertRow;
@@ -344,7 +421,7 @@ var
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  ResultSet := CreateResultSet('SELECT * from high_load');
+  ResultSet := CreateResultSet('SELECT * from '+PerformanceTable);
   while ResultSet.Next do
   begin
     ResultSet.UpdateFloat(2, RandomFloat(-100, 100));
@@ -363,7 +440,7 @@ var
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  ResultSet := CreateResultSet('SELECT * from high_load');
+  ResultSet := CreateResultSet('SELECT * from '+PerformanceTable);
   while ResultSet.Next do
     ResultSet.DeleteRow;
   if not SkipPerformanceTransactionMode then Connection.Commit;
