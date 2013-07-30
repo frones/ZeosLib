@@ -68,7 +68,9 @@ type
   TZNativeDbcPerformanceTestCase = class(TZPerformanceSQLTestCase)
   protected
     FConnection: IZConnection;
+    FSQL: String;
   protected
+    property SQL: String read FSQL;
     property Connection: IZConnection read FConnection write FConnection;
 
     function GetImplementedAPI: string; override;
@@ -80,9 +82,11 @@ type
 
     procedure SetUpTestConnect; override;
     procedure RunTestConnect; override;
+    procedure SetUpTestInsert; override;
     procedure RunTestInsert; override;
     procedure RunTestOpen; override;
     procedure RunTestFetch; override;
+    procedure SetUpTestUpdate; override;
     procedure RunTestUpdate; override;
     procedure RunTestDelete; override;
     procedure RunTestDirectUpdate; override;
@@ -90,18 +94,24 @@ type
 
   {** Implements a performance test case for Native DBC API. }
   TZCachedDbcPerformanceTestCase = class (TZNativeDbcPerformanceTestCase)
+  private
+    FAsciiStream, FUnicodeStream, FBinaryStream: TStream;
   protected
     function GetImplementedAPI: string; override;
     function CreateResultSet(Query: string): IZResultSet; override;
 
+    procedure SetUpTestInsert; override;
     procedure RunTestInsert; override;
+    procedure TearDownTestInsert; override;
+    procedure SetUpTestUpdate; override;
     procedure RunTestUpdate; override;
+    procedure TearDownTestUpdate; override;
     procedure RunTestDelete; override;
   end;
 
 implementation
 
-uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, Types;
+uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, ZDbcUtils, Types;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -168,6 +178,17 @@ begin
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
+procedure TZNativeDbcPerformanceTestCase.SetUpTestInsert;
+var I: Integer;
+begin
+  inherited;
+  FSQL := 'INSERT INTO '+PerformanceTable+' VALUES (';
+  for i := 0 to high(ResultSetTypes) do
+    if i = 0 then FSQL := FSQL+'?'
+    else FSQL := FSQL+',?';
+  FSQL := FSQL+')';
+end;
+
 {**
   Performs an insert test.
 }
@@ -175,19 +196,13 @@ procedure TZNativeDbcPerformanceTestCase.RunTestInsert;
 var
   I,N: Integer;
   Statement: IZPreparedStatement;
-  SQL: String;
   Ansi: RawByteString;
   Uni: ZWideString;
   Bts: TByteDynArray;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  SQL := 'INSERT INTO '+PerformanceTable+' VALUES (';
-  for i := 0 to high(Self.ResultSetTypes) do
-    if i = 0 then SQL := SQL+'?'
-    else SQL := SQL+',?';
-  SQL := SQL+')';
-  Statement := Connection.PrepareStatement( SQL);
+  Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
     for N := 1 to high(ResultSetTypes)+1 do
@@ -244,20 +259,44 @@ end;
 procedure TZNativeDbcPerformanceTestCase.RunTestFetch;
 var
   ResultSet: IZResultSet;
+  I: Integer;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
   ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
   while ResultSet.Next do
-  begin
-//    ResultSet.GetPChar(1);
-//    ResultSet.GetPChar(2);
-//    ResultSet.GetPChar(3);
-    ResultSet.GetInt(1);
-    ResultSet.GetFloat(2);
-    ResultSet.GetString(3);
-  end;
+    for i := 1 to high(ResultSetTypes)+1 do
+      case ResultSetTypes[i-1] of
+        stBoolean: ResultSet.GetBoolean(I);
+        stByte:    ResultSet.GetByte(I);
+        stShort,
+        stInteger,
+        stLong:    ResultSet.GetInt(I);
+        stFloat,
+        stDouble,
+        stBigDecimal: ResultSet.GetFloat(I);
+        stString: ResultSet.GetString(I);
+        stUnicodeString: ResultSet.GetUnicodeString(I);
+        stDate:    ResultSet.GetDate(I);
+        stTime:    ResultSet.GetTime(I);
+        stTimestamp: ResultSet.GetTimestamp(I);
+        stBytes, stGUID: ResultSet.GetBytes(I);
+        stAsciiStream, stUnicodeStream, stBinaryStream: ResultSet.GetBlob(I);
+      end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
+end;
+
+procedure TZNativeDbcPerformanceTestCase.SetUpTestUpdate;
+var I: Integer;
+begin
+  inherited;
+  FSQL := 'UPDATE '+PerformanceTable+' SET';
+  for i := 1 to high(FieldNames) do
+    if I = 1 then
+      FSQL := FSQL + ' '+FieldNames[I]+'=?'
+    else
+      FSQL := FSQL + ', '+FieldNames[I]+'=?';
+  FSQL := FSQL + ' WHERE '+PerformancePrimaryKey+'=?';
 end;
 
 {**
@@ -266,7 +305,6 @@ end;
 procedure TZNativeDbcPerformanceTestCase.RunTestUpdate;
 var
   I, N: Integer;
-  SQL: String;
   Statement: IZPreparedStatement;
   Ansi: RawByteString;
   Uni: ZWideString;
@@ -274,13 +312,6 @@ var
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  SQL := 'UPDATE '+PerformanceTable+' SET';
-  for i := 1 to high(FieldNames) do
-    if I = 1 then
-      SQL := SQL + ' '+FieldNames[I]+'=?'
-    else
-      SQL := SQL + ', '+FieldNames[I]+'=?';
-  SQL := SQL + ' WHERE '+PerformancePrimaryKey+'=?';
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
@@ -333,7 +364,7 @@ begin
   if SkipForReason(srNoPerformance) then Exit;
 
   Statement := Connection.PrepareStatement(
-    'DELETE from '+PerformanceTable+' WHERE '+PerformancePrimaryKey+'=?');
+    'DELETE FROM '+PerformanceTable+' WHERE '+PerformancePrimaryKey+'=?');
   for I := 1 to GetRecordCount do
   begin
     Statement.SetInt(1, I);
@@ -355,8 +386,8 @@ begin
   Statement := Connection.CreateStatement;
   for I := 1 to GetRecordCount do
   begin
-    Statement.ExecuteUpdate(Format('UPDATE '+PerformanceTable+' SET data1=%s, data2=''%s'''
-      + ' WHERE '+PerformancePrimaryKey+' = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
+    Statement.ExecuteUpdate(Format('UPDATE high_load SET data1=%s, data2=''%s'''
+      + ' WHERE hl_id = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
       RandomStr(10), I]));
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -393,23 +424,74 @@ end;
 {**
   Performs an insert test.
 }
+procedure TZCachedDbcPerformanceTestCase.SetUpTestInsert;
+var
+  Bts: TByteDynArray;
+begin
+  inherited;
+  FAsciiStream := TStringStream.Create(RawByteString(RandomStr(GetRecordCount*100)));
+  FUnicodeStream := WideStringStream(ZWideString(RandomStr(GetRecordCount*100)));
+  FBinaryStream := TMemoryStream.Create;
+  Bts := RandomBts(GetRecordCount*100);
+  TMemoryStream(FBinaryStream).Write(Bts, GetRecordCount*100);
+  FBinaryStream.Position := 0;
+end;
+
 procedure TZCachedDbcPerformanceTestCase.RunTestInsert;
 var
-  I: Integer;
+  I,N: Integer;
   ResultSet: IZResultSet;
 begin
   if SkipForReason(srNoPerformance) then Exit;
-
-  ResultSet := CreateResultSet('SELECT * '+PerformanceTable);
+  
+  ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
   for I := 1 to GetRecordCount do
   begin
     ResultSet.MoveToInsertRow;
-    ResultSet.UpdateInt(1, I);
-    ResultSet.UpdateFloat(2, RandomFloat(-100, 100));
-    ResultSet.UpdateString(3, RandomStr(10));
+    for N := 1 to high(ResultSetTypes)+1 do
+      case ResultSetTypes[N-1] of
+        stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
+        stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
+        stShort,
+        stInteger,
+        stLong:    ResultSet.UpdateInt(N, I);
+        stFloat,
+        stDouble,
+        stBigDecimal: ResultSet.UpdateFloat(N, RandomFloat(-100, 100));
+        stString: ResultSet.UpdateString(N, RandomStr(FieldSizes[N-1]));
+        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+        stDate:    ResultSet.UpdateDate(N, Now);
+        stTime:    ResultSet.UpdateTime(N, Now);
+        stTimestamp: ResultSet.UpdateTimestamp(N, now);
+        stBytes, stGUID: ResultSet.UpdateBytes(N, RandomBts(16));
+        stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
+        stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
+        stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);
+      end;
     ResultSet.InsertRow;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
+end;
+
+procedure TZCachedDbcPerformanceTestCase.TearDownTestInsert;
+begin
+  FAsciiStream.Free; 
+  FUnicodeStream.Free;
+  FBinaryStream.Free;
+  inherited;
+end;
+
+procedure TZCachedDbcPerformanceTestCase.SetUpTestUpdate;
+var
+  Bts: TByteDynArray;
+begin
+  inherited;
+  FAsciiStream := TStringStream.Create(RawByteString(RandomStr(GetRecordCount*100)));
+  FUnicodeStream := WideStringStream(ZWideString(RandomStr(GetRecordCount*100)));
+  FBinaryStream := TMemoryStream.Create;
+  Bts := RandomBts(GetRecordCount*100);
+  TMemoryStream(FBinaryStream).Write(Bts, GetRecordCount*100);
+  FBinaryStream.Position := 0;
 end;
 
 {**
@@ -417,6 +499,7 @@ end;
 }
 procedure TZCachedDbcPerformanceTestCase.RunTestUpdate;
 var
+  N: Integer;
   ResultSet: IZResultSet;
 begin
   if SkipForReason(srNoPerformance) then Exit;
@@ -424,11 +507,37 @@ begin
   ResultSet := CreateResultSet('SELECT * from '+PerformanceTable);
   while ResultSet.Next do
   begin
-    ResultSet.UpdateFloat(2, RandomFloat(-100, 100));
-    ResultSet.UpdateString(3, RandomStr(10));
+    for N := 2 to high(ResultSetTypes)+1 do
+      case ResultSetTypes[N-1] of
+        stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
+        stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
+        stShort,
+        stInteger,
+        stLong:    ResultSet.UpdateInt(N, ResultSet.GetRow);
+        stFloat,
+        stDouble,
+        stBigDecimal: ResultSet.UpdateFloat(N, RandomFloat(-100, 100));
+        stString: ResultSet.UpdateString(N, RandomStr(FieldSizes[N-1]));
+        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+        stDate:    ResultSet.UpdateDate(N, Now);
+        stTime:    ResultSet.UpdateTime(N, Now);
+        stTimestamp: ResultSet.UpdateTimestamp(N, now);
+        stBytes, stGUID: ResultSet.UpdateBytes(N, RandomBts(16));
+        stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
+        stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
+        stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);
+      end;
     ResultSet.UpdateRow;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
+end;
+
+procedure TZCachedDbcPerformanceTestCase.TearDownTestUpdate;
+begin
+  FAsciiStream.Free; 
+  FUnicodeStream.Free;
+  FBinaryStream.Free;
+  inherited;
 end;
 
 {**
