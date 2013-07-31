@@ -58,7 +58,7 @@ interface
 uses
   Types, Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
   ZDbcIntfs, ZPlainDriver, ZDbcStatement, ZDbcAdo, ZPlainAdoDriver, ZPlainAdo,
-  ZVariant;
+  ZVariant, ActiveX;
 
 type
   {** Implements Generic ADO Statement. }
@@ -86,8 +86,7 @@ type
     procedure SetInParamCount(NewParamCount: Integer); override;
     procedure InternalSetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant; const ParamDirection: ParameterDirectionEnum);
-    procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
-      const Value: TZVariant); override;
+    procedure BindInParameters; override;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -99,15 +98,18 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
+  TDirectionTypes = array of TOleEnum;
   {** Implements Prepared ADO Statement. }
   TZAdoCallableStatement = class(TZAdoPreparedStatement)
   protected
+    FDirectionTypes: TDirectionTypes;
     function GetOutParam(ParameterIndex: Integer): TZVariant; override;
-    procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
-      const Value: TZVariant); override;
+    procedure BindInParameters; override;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection;
       SQL: string; Info: TStrings);
+    function ExecuteQueryPrepared: IZResultSet; override;
+    procedure RegisterParamType(ParameterIndex: Integer; ParamType: Integer); override;
   end;
 
 implementation
@@ -116,9 +118,10 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  OleDB, ActiveX, ComObj,
-  ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
-  ZDbcAdoResultSet, ZDbcAdoUtils;
+  OleDB, ComObj,
+  {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
+  ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
+  ZDbcAdoUtils, ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils;
 
 constructor TZAdoStatement.Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string;
   Info: TStrings);
@@ -345,33 +348,37 @@ begin
   end;
 
   RetValue:= Value;
-  if (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
+  if not (RetValue.VType = vtNull) and (RetValue.VType = vtInterface) and
+    (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
   begin
     B := DefVarManager.GetAsInterface(Value) as IZBlob;
-    case SQLType of
-      stAsciiStream:
-        begin
-          if Assigned(B) then
-            DefVarManager.SetAsString(RetValue, String(B.GetString));
-          SQLType := stString;
-        end;
-      stUnicodeStream:
-        begin
-          if Assigned(B) then
+    if B.IsEmpty then
+      RetValue := NullVariant
+    else
+      case SQLType of
+        stAsciiStream:
           begin
-            if B.Connection = nil then
-              B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Self.GetConnection, B.WasDecoded);
-            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+            if Assigned(B) then
+              DefVarManager.SetAsString(RetValue, {$IFDEF UNICODE}String{$ENDIF}(B.GetString));
+            SQLType := stString;
           end;
-          SQLType := stUnicodeString;
-        end;
-      stBinaryStream:
-        begin
-          if Assigned(B) then
-            DefVarManager.SetAsBytes(RetValue, B.GetBytes);
-          SQLType := stBytes;
-        end;
-    end;
+        stUnicodeStream:
+          begin
+            if Assigned(B) then
+            begin
+              if B.Connection = nil then
+                B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Self.GetConnection, B.WasDecoded);
+              DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+            end;
+            SQLType := stUnicodeString;
+          end;
+        stBinaryStream:
+          begin
+            if Assigned(B) then
+              DefVarManager.SetAsBytes(RetValue, B.GetBytes);
+            SQLType := stBytes;
+          end;
+      end;
   end;
 
   case RetValue.VType of
@@ -415,8 +422,8 @@ begin
 
   if ParameterIndex <= PC then
   begin
-
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
+    P.Direction := ParamDirection; //set ParamDirection! Bidirection is requires for callables f.e.
     if not ( SQLType = stBytes ) then  //Variant varByte is not comparable with OleVariant -> exception
     begin
       if not VarIsNull(V) then
@@ -425,14 +432,13 @@ begin
         P.Size := S;
         // by aperger:
         // to use the new value at the next calling of the statement
-        if {(P.Value = unassigned) or} (P.Value <> V) then
-          P.Value := V;
       end;
+      if {(P.Value = unassigned) or }(P.Value <> V) then
+        P.Value := V;
     end
     else
       P.Value := V;
     FAdoCommand.Prepared:=false;
-    p.Direction := ParamDirection;
   end
   else
   begin
@@ -441,16 +447,24 @@ begin
   end;
 end;
 
-{**
-  Sets a variant value into specified parameter.
-  @param ParameterIndex a index of the parameter.
-  @param SqlType a parameter SQL type.
-  @paran Value a new parameter value.
-}
-procedure TZAdoPreparedStatement.SetInParam(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: TZVariant);
+procedure TZAdoPreparedStatement.BindInParameters;
+var I: Integer;
 begin
-  InternalSetInParam(ParameterIndex, SQLType, Value, adParamInput);
+  if InParamCount = 0 then
+    Exit
+  else
+    for i := 0 to InParamCount-1 do
+      if DefVarManager.IsNull(InParamValues[i]) then
+        if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
+          StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+        begin
+          DefVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+          InternalSetInParam(I+1, InParamTypes[i], InParamValues[i], adParamInput)
+        end
+        else
+          InternalSetInParam(I+1, InParamTypes[i], NullVariant, adParamInput)
+      else
+        InternalSetInParam(I+1, InParamTypes[i], InParamValues[i], adParamInput);
 end;
 
 {**
@@ -498,6 +512,7 @@ begin
   LastResultSet := nil;
   LastUpdateCount := -1;
 
+  BindInParameters;
   try
     if IsSelect(SQL) then
     begin
@@ -526,6 +541,134 @@ constructor TZAdoCallableStatement.Create(PlainDriver: IZPlainDriver;
 begin
   inherited Create(PlainDriver, Connection, SQL, Info);
   FAdoCommand.CommandType := adCmdStoredProc;
+end;
+
+function TZAdoCallableStatement.ExecuteQueryPrepared: IZResultSet;
+var
+  I: Integer;
+  ColumnInfo: TZColumnInfo;
+  ColumnsInfo: TObjectList;
+  RS: TZVirtualResultSet;
+  IndexAlign: TIntegerDynArray;
+  P: Pointer;
+  Stream: TStream;
+begin
+  ExecutePrepared;
+  SetLength(IndexAlign, 0);
+  ColumnsInfo := TObjectList.Create(True);
+  Stream := nil;
+  try
+    for I := 0 to FAdoCommand.Parameters.Count -1 do
+      if FAdoCommand.Parameters.Item[i].Direction in [adParamOutput,
+        adParamInputOutput, adParamReturnValue] then
+    begin
+      SetLength(IndexAlign, Length(IndexAlign)+1);
+      ColumnInfo := TZColumnInfo.Create;
+      with ColumnInfo do
+      begin
+        ColumnLabel := FAdoCommand.Parameters.Item[i].Name;
+        ColumnType := ConvertAdoToSqlType(FAdoCommand.Parameters.Item[I].Type_, ConSettings.CPType);
+        ColumnDisplaySize := FAdoCommand.Parameters.Item[I].Precision;
+        Precision := FAdoCommand.Parameters.Item[I].Precision;
+        IndexAlign[High(IndexAlign)] := I;
+      end;
+      ColumnsInfo.Add(ColumnInfo);
+    end;
+
+    RS := TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings);
+    with RS do
+    begin
+      SetType(rtScrollInsensitive);
+      SetConcurrency(rcReadOnly);
+      RS.MoveToInsertRow;
+      for i := 1 to ColumnsInfo.Count do
+        case TZColumnInfo(ColumnsInfo[i-1]).ColumnType of
+          stBoolean:
+            RS.UpdateBoolean(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stByte, stShort, stInteger, stLong:
+            RS.UpdateInt(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stFloat, stDouble, stBigDecimal:
+            RS.UpdateFloat(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stString:
+            RS.UpdateString(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stAsciiStream:
+            begin
+              Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value));
+              RS.UpdateAsciiStream(I, Stream);
+              Stream.Free;
+            end;
+          stUnicodeString:
+            RS.UpdateUnicodeString(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stUnicodeStream:
+            begin
+              Stream := WideStringStream(WideString(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value));
+              RS.UpdateUnicodeStream(I, Stream);
+              FreeAndNil(Stream);
+            end;
+          stBytes:
+            RS.UpdateBytes(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stDate:
+            RS.UpdateDate(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stTime:
+            RS.UpdateTime(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stTimestamp:
+            RS.UpdateTimestamp(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stBinaryStream:
+            begin
+              if VarIsStr(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value) then
+              begin
+                Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value));
+                RS.UpdateBinaryStream(I, Stream);
+                FreeAndNil(Stream);
+              end
+              else
+                if VarIsArray(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value) then
+                begin
+                  P := VarArrayLock(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+                  try
+                    Stream := TMemoryStream.Create;
+                    Stream.Size := VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value, 1)+1;
+                    System.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
+                    RS.UpdateBinaryStream(I, Stream);
+                    FreeAndNil(Stream);
+                  finally
+                    VarArrayUnLock(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+                  end;
+                end;
+            end
+          else
+            RS.UpdateNull(i);
+        end;
+      RS.InsertRow;
+    end;
+    Result := RS;
+  finally
+    ColumnsInfo.Free;
+    if Assigned(Stream) then Stream.Free;
+
+  end;
+end;
+
+procedure TZAdoCallableStatement.RegisterParamType(ParameterIndex: Integer;
+  ParamType: Integer);
+begin
+  inherited RegisterParamType(ParameterIndex, ParamType);
+  if Length(FDirectionTypes) < ParameterIndex then
+    SetLength(FDirectionTypes, ParameterIndex);
+
+  case Self.FDBParamTypes[ParameterIndex-1] of
+    1: //ptInput
+      FDirectionTypes[ParameterIndex-1] := adParamInput;
+    2: //ptOut
+      FDirectionTypes[ParameterIndex-1] := adParamOutput;
+    3: //ptInputOutput
+      FDirectionTypes[ParameterIndex-1] := adParamInputOutput;
+    4: //ptResult
+      FDirectionTypes[ParameterIndex-1] := adParamReturnValue;
+    else
+      //ptUnknown
+      FDirectionTypes[ParameterIndex-1] := adParamUnknown;
+  end;
 end;
 
 function TZAdoCallableStatement.GetOutParam(ParameterIndex: Integer): TZVariant;
@@ -603,21 +746,27 @@ begin
   LastWasNull := DefVarManager.IsNull(Result);
 end;
 
-procedure TZAdoCallableStatement.SetInParam(ParameterIndex: Integer;
-  SQLType: TZSQLType; const Value: TZVariant);
+procedure TZAdoCallableStatement.BindInParameters;
+var
+  I: Integer;
 begin
-  case Self.FDBParamTypes[ParameterIndex-1] of
-    0: //ptUnknown
-      InternalSetInParam(ParameterIndex, SQLType, Value, adParamUnknown);
-    1: //ptInput
-      InternalSetInParam(ParameterIndex, SQLType, Value, adParamInput);
-    2: //ptOut
-      InternalSetInParam(ParameterIndex, SQLType, Value, adParamOutput);
-    3: //ptInputOutput
-      InternalSetInParam(ParameterIndex, SQLType, Value, adParamInputOutput);
-    4: //ptResult
-      InternalSetInParam(ParameterIndex, SQLType, Value, adParamReturnValue);
-  end;
+  if InParamCount = 0 then
+    Exit
+  else
+    for i := 0 to InParamCount-1 do
+    begin
+      if DefVarManager.IsNull(InParamValues[i]) then
+        if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
+          StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+        begin
+          DefVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+          InternalSetInParam(I+1, InParamTypes[i], InParamValues[i], adParamInput)
+        end
+        else
+          InternalSetInParam(I+1, InParamTypes[i], NullVariant, FDirectionTypes[i])
+      else
+        InternalSetInParam(I+1, InParamTypes[i], InParamValues[i], FDirectionTypes[i]);
+    end;
 end;
 
 end.
