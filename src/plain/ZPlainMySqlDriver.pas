@@ -738,7 +738,10 @@ end;
 }
 function TZMySQLBaseDriver.GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
 begin
-  Result := MYSQL_API.mysql_character_set_name(Handle);
+  if Assigned(MYSQL_API.mysql_character_set_name) then
+    Result := MYSQL_API.mysql_character_set_name(Handle)
+  else
+    Result := '';
 end;
 
 {**
