@@ -75,6 +75,7 @@ type
     function ZDbcString(const Ansi: ZAnsiString; ConSettings: PZConSettings): String;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): ZAnsiString; overload;
     function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): ZAnsiString; overload;
+    function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): ZAnsiString; overload;
     function ZDbcUnicodeString(const AStr: ZAnsiString; const FromCP: Word): ZWideString; overload;
     function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
     ConSettings: PZConSettings; out LogSQL: String): ZAnsiString;

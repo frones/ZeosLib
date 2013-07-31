@@ -84,6 +84,8 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
+    function GetString(ColumnIndex: Integer): String; override;
+    function GetUnicodeString(ColumnIndex: Integer): WideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -116,7 +118,10 @@ type
 implementation
 
 uses ZMessages, ZDbcLogging, ZDbcDBLibUtils, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF WITH_TOBJECTLIST_INLINE}, System.Types{$ENDIF}
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils {$ENDIF}
+;
 
 { TZDBLibResultSet }
 
@@ -248,6 +253,98 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
   Result := FPlainDriver.dbData(FHandle, ColumnIndex) = nil;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZDBLibResultSet.GetString(ColumnIndex: Integer): String;
+var Tmp: ZAnsiString;
+begin
+  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
+    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType = stUnknown then
+    begin
+      Tmp := InternalGetString(ColumnIndex);
+      case DetectUTF8Encoding(Tmp) of
+        etUTF8:
+          begin
+            if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString] then
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stUnicodeString
+            else
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stUnicodeStream;
+            Result := ZDbcString(Tmp, zCP_UTF8)
+          end;
+        etAnsi:
+          begin
+            if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString] then
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stString
+            else
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stAsciiStream;
+            Result := ZDbcString(tmp, ConSettings^.ClientCodePage^.CP)
+          end;
+        else
+          Result := ZDbcString(tmp);
+      end;
+    end
+    else
+      if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType in [stUnicodeString, stUnicodeStream] then
+        Result := ZDbcString(InternalGetString(ColumnIndex), zCP_UTF8)
+      else
+        Result := ZDbcString(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP)
+  else
+    Result := String(InternalGetString(ColumnIndex));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>WideString</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZDBLibResultSet.GetUnicodeString(ColumnIndex: Integer): WideString;
+var Tmp: ZAnsiString;
+begin
+  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
+    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType = stUnknown then
+    begin
+      Tmp := InternalGetString(ColumnIndex);
+      case DetectUTF8Encoding(Tmp) of
+        etUTF8:
+          begin
+            if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString] then
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stUnicodeString
+            else
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stUnicodeStream;
+            Result := ZDbcUnicodeString(Tmp, zCP_UTF8)
+          end;
+        etAnsi:
+          begin
+            if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString] then
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stString
+            else
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType := stAsciiStream;
+            Result := ZDbcUnicodeString(tmp, ConSettings^.ClientCodePage^.CP)
+          end;
+        else
+          Result := ZDbcUnicodeString(tmp);
+      end;
+    end
+    else
+      if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).InternalColumnType in [stUnicodeString, stUnicodeStream] then
+        Result := ZDbcUnicodeString(InternalGetString(ColumnIndex), zCP_UTF8)
+      else
+        Result := ZDbcUnicodeString(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP)
+  else
+    Result := WideString(InternalGetString(ColumnIndex));
 end;
 
 {**

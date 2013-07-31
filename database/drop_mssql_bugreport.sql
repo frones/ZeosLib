@@ -9,3 +9,6 @@ go
 
 DROP TABLE Mantis54
 go
+
+drop table national_char_values
+go

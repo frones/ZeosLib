@@ -403,14 +403,12 @@ begin
       Result := '';
       N := 0;
       for I := 0 to Tokens.Count - 1 do
-      begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
           Result := Result + ':P' + ZAnsiString(IntToStr(N));
         end else
           Result := Result + ZPlainString(Tokens[I]);
-      end;
     finally
       Tokens.Free;
     end;
