@@ -426,19 +426,17 @@ begin
     P.Direction := ParamDirection; //set ParamDirection! Bidirection is requires for callables f.e.
     if not ( SQLType = stBytes ) then  //Variant varByte is not comparable with OleVariant -> exception
     begin
-      if not VarIsNull(V) then
+      if not VarIsNull(V) then //align new size and type
       begin
         P.Type_ := T;
         P.Size := S;
-        // by aperger:
-        // to use the new value at the next calling of the statement
       end;
-      if {(P.Value = unassigned) or }(P.Value <> V) then
+      if VarIsClear(P.Value) or (P.Value <> V) then //Check if Param is cleared, unasigned or different
         P.Value := V;
     end
     else
       P.Value := V;
-    FAdoCommand.Prepared:=false;
+    FAdoCommand.Prepared:=false; //don't know why but we get a loads of Exceptions if this isn't executed
   end
   else
   begin
