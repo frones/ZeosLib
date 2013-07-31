@@ -93,6 +93,9 @@ type
     procedure Test994562;
     procedure Test1043252;
     procedure TestMantis240;
+    procedure TestMantis229;
+    procedure TestLobTypeCast;
+    procedure TestUnknowParam;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -817,6 +820,91 @@ begin
   end;
 end;
 
+{**
+0000229: postgresql varchar is badly interpreted
+  In postgresql, varchar with no precision is equal to text (blob) type.
+  In zeos, varchar is treated as stString with default precision 255.
+  It means when we try to read data that are longer than 255 then they are
+  automatically truncated.
+}
+procedure TZTestCompPostgreSQLBugReport.TestMantis229;
+var
+  Query: TZQuery;
+
+  procedure TestMantis229_AsMemo;
+  begin
+    Query := CreateQuery;
+    try
+      Query.SQL.Text := 'select * from Mantis229';
+      Query.Open;
+      CheckMemoFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+      CheckEquals('Mantis229', Query.Fields[0].AsString);
+    finally
+      Query.Free;
+    end;
+  end;
+
+  procedure TestMantis229_AsString;
+  begin
+    Connection.Properties.Values['Undefined_Varchar_AsString_Length'] := '255';
+    Connection.Connected := False;
+    Query := CreateQuery;
+    try
+      Query.SQL.Text := 'select * from Mantis229';
+      Query.Open;
+      CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+      CheckEquals('Mantis229', Query.Fields[0].AsString);
+    finally
+      Query.Free;
+      Connection.Properties.Values['Undefined_Varchar_AsString_Length'] := '';
+    end;
+  end;
+
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  TestMantis229_AsMemo;
+  TestMantis229_AsString;
+end;
+
+{After introducing the Postgre real prepared statement we had a behaior change
+ for indeterminable parameters types. handle_indeterminate_datatype should fix it}
+procedure TZTestCompPostgreSQLBugReport.TestUnknowParam;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Query.Properties.Values['handle_indeterminate_datatype'] := 'true';
+  Connection.Connect;
+  try
+    Query.SQL.Text := 'select :p1 as Param1, :p2 as param2';
+    Query.Open;
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+//since Pointer referencing by RowAccessor we've a pointer and GetBlob
+//raises an exception if the pointer is a reference to PPAnsiChar or
+//ZPPWideChar. if we execute a cast of a lob field the database meta-informtions
+//assume a IZLob-Pointer. So let's prevent this case and check for
+//stByte, stString, stUnicoeString first. If this type is returned from the
+//ResultSet-Metadata we do NOT overwrite the column-type
+//f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
+procedure TZTestCompPostgreSQLBugReport.TestLobTypeCast;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  Query.SQL.Text := 'select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings';
+  Query.Open;
+  CheckStringFieldType(Query.Fields[0].DataType, Connection.DbcConnection.GetConSettings);
+  CheckStringFieldType(Query.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
+  Query.Close;
+  Query.Free;
+end;
 { TZTestCompPostgreSQLBugReportMBCs }
 function TZTestCompPostgreSQLBugReportMBCs.GetSupportedProtocols: string;
 begin
