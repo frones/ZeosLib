@@ -443,6 +443,7 @@ type
       Concurrency: TZResultSetConcurrency): Boolean;
     function SupportsBatchUpdates: Boolean;
     function SupportsNonEscapedSearchStrings: Boolean;
+    function SupportsUpdateAutoIncrementFields: Boolean;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer;
