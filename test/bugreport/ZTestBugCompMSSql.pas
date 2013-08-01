@@ -294,6 +294,25 @@ begin
     {$ENDIF}
     Query.Fields[5].AsBoolean := True;
     Query.Post;
+
+    Query.Insert;
+    Query.Fields[0].AsString := 'abc';
+    Query.Fields[1].AsInteger := 2;
+    Query.Fields[2].AsDateTime := Now;
+    GUID1 := StringToGUID(sGUID1);
+    GUID2 := StringToGUID(sGUID2);
+    System.SetLength(Bts1, 16);
+    System.Move(Pointer(@GUID1)^, Pointer(Bts1)^, 16);
+    Query.Fields[6].Value := Bts1;
+
+    {$IFDEF WITH_FTGUID}
+    Query.Fields[3].AsString := sGUID1;
+    {$ELSE}
+    Query.Fields[3].Value := Bts1;
+    {$ENDIF}
+    Query.Fields[5].AsBoolean := True;
+    Query.Post;
+
     Query.Close;
     Query.Open;
     CheckEquals('abc', Query.Fields[0].AsString);
@@ -311,7 +330,7 @@ begin
     Query.Delete;
     Query.Close;
   finally
-    Query.SQL.Text := 'delete from Mantis164 where CardTypeID=1';
+    Query.SQL.Text := 'delete from Mantis164';
     Query.ExecSQL;
     Query.Free;
   end;
