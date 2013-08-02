@@ -213,7 +213,6 @@ const
   Row3_Num8 = 23.44444445;
 var
   Table: TZTable;
-  DecimalSep: Char;
 begin
   if SkipForReason(srClosedBug) then Exit;
 

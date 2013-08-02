@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
+  ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
 
 type
 
@@ -83,7 +83,7 @@ const
   Str3 = ZWideString('Одной из наиболее');
   Str4 = ZWideString('тривиальных задач');
   Str5 = ZWideString('решаемых многими');
-  Str6 = ZWideString('коллективами программистов');
+
 procedure ZTestCompDbLibBugReport.Test_NChar_Values;
 var
   Query: TZQuery;

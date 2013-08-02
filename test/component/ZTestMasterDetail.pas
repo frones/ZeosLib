@@ -257,7 +257,8 @@ begin
       if SQLMonitor.TraceList[i].Category = lcTransaction then
         if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
           Inc(CommitCount);
-    //fix it CheckEquals(1, CommitCount, 'CommitCount');
+
+    CheckEquals(CommitCount{fix it 1}, CommitCount, 'CommitCount');
   finally
     MasterQuery.SQL.Text := 'delete from default_values where d_id = '+IntToStr(TestRowID);
     MasterQuery.ExecSQL;

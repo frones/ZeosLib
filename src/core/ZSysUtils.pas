@@ -185,6 +185,7 @@ function BufferToStr(Buffer: PWideChar; Length: LongInt): string; overload;
   @return a string retrived from the buffer.
 }
 function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
 
 {**
   Converts a string into boolean value.
@@ -942,6 +943,12 @@ begin
   Result := '';
   if Assigned(Buffer) then
     SetString(Result, Buffer, Length);
+end;
+
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
+begin
+  SetLength(Result, Length);
+  System.Move(Buffer^, Pointer(Result)^, Length);
 end;
 
 {**

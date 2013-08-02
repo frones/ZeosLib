@@ -671,12 +671,12 @@ begin
   Case GetTestMode of
     0:
   {$ENDIF}
-      if self.GetServerMajorVersion >= 8 then
+      if GetServerMajorVersion >= 8 then
         Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
       else
-        Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
+        Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
   {$IFDEF ZEOS_TEST_ONLY}
-    1: Result := TZPostgreSQLPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
+    1: Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
     2: Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
   end;
   {$ENDIF}

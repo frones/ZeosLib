@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, DB, SysUtils,
-  ZClasses, ZCollections, ZSysUtils, ZCompatibility, ZTokenizer, ZSelectSchema,
+  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
 const
@@ -94,7 +94,7 @@ type
   {** Defines supported SQL types. }
   TZSQLType = (stUnknown, stBoolean, stByte, stShort, stInteger, stLong,
     stFloat, stDouble, stBigDecimal, stString, stUnicodeString, stBytes,
-    stDate, stTime, stTimestamp, stDataSet,
+    stDate, stTime, stTimestamp, stDataSet, stGUID,
     stAsciiStream, stUnicodeStream, stBinaryStream);
 
   {** Defines a transaction isolation level. }

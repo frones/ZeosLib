@@ -266,7 +266,7 @@ begin
     stString, stUnicodeString:
       Result := True;
     stBytes:
-      Result := InitialType in [stString, stUnicodeString, stBytes,
+      Result := InitialType in [stString, stUnicodeString, stBytes, stGUID,
         stAsciiStream, stUnicodeStream, stBinaryStream];
     stTimestamp:
       Result := InitialType in [stString, stUnicodeString, stDate, stTime, stTimestamp];
@@ -309,6 +309,8 @@ begin
       Result := 'UnicodeString';
     stBytes:
       Result := 'Bytes';
+    stGUID:
+      Result := 'GUID';
     stDate:
       Result := 'Date';
     stTime:

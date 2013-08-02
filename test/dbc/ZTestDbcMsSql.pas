@@ -56,8 +56,8 @@ unit ZTestDbcMsSql;
 interface
 {$I ZDbc.inc}
 uses
-  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcDbLib, ZDbcDbLibResultSet,
-  ZSqlTestCase, ZCompatibility, ZDbcDbLibMetadata;
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDbcIntfs, ZDbcDbLib, ZSqlTestCase, ZCompatibility;
 
 type
 
@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
+uses ZTestConsts;
 
 { TZTestDbcMSSqlCase classes }
 

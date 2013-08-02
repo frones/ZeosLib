@@ -12,3 +12,6 @@ go
 
 drop table national_char_values
 go
+
+drop table Mantis164
+go

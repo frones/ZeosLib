@@ -56,7 +56,7 @@ unit ZTestDbcMySqlMetadata;
 interface
 {$I ZDbc.inc}
 
-uses SysUtils, ZDbcIntfs, ZCompatibility, ZSqlTestCase, ZDbcResultSet,
+uses SysUtils, ZDbcIntfs, ZCompatibility, ZSqlTestCase,
  ZDbcMySql,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
 
 type

@@ -323,7 +323,7 @@ begin
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
   sMy_client_Char_Set := NotEmptyASCII7ToString(GetPlainDriver.GetConnectionCharacterSet(FHandle));
-  ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
+  ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
   ZEncoding.SetConvertFunctions(ConSettings);
   {EgonHugeist:
     Now we know in which kind of CharacterSet we have to send the next Connection-Properties
@@ -447,13 +447,13 @@ begin
 
   if FClientCodePage = '' then //workaround for MySQL 4 down
   begin
-    with CreateStatement.ExecuteQuery('SHOW CHARACTER SET FOR '+Database) do
+    with CreateStatement.ExecuteQuery('show variables like "character_set_database"') do
     begin
       if Next then
-        FClientCodePage := GetString(6);
+        FClientCodePage := GetString(2);
       Close;
     end;
-    ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
+    ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
     ZEncoding.SetConvertFunctions(ConSettings);
   end
 end;

@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, Contnrs, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  Types, Classes, SysUtils, Contnrs, ZClasses, ZDbcIntfs, ZDbcResultSet,
   ZDbcCache, ZCompatibility;
 
 type
@@ -2007,7 +2007,7 @@ begin
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
         stString, stUnicodeString: FStringFieldAssignFromResultSet(RowAccessor, ResultSet, i);
-        stBytes: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
+        stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));
         stTimestamp: RowAccessor.SetTimestamp(I, ResultSet.GetTimestamp(I));

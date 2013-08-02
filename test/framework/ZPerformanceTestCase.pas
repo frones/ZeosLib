@@ -57,8 +57,7 @@ interface
 
 {$I ZTestFramework.inc}
 
-uses Classes, ZCompatibility, ZTestCase, ZConnection, ZDataset, ZSqlTestCase,
-  Contnrs, DB;
+uses Classes, Contnrs, DB, ZCompatibility, ZTestCase, ZDataset, ZSqlTestCase;
 
 type
   {** A method for test set up, run or tear down. }
@@ -1175,12 +1174,7 @@ var
   TryIndex: Integer;
   StartTry: Integer;
   Current: TZPerformanceResultItem;
-  Units: string;
 begin
-  if BaseAPIName = '' then
-    Units := 'ms'
-  else Units := '%';
-
   Write('API');
   if Details then
     Write(',TRY');

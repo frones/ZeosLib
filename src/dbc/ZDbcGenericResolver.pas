@@ -603,7 +603,7 @@ begin
         else
           Statement.SetUnicodeString(I + 1,
             RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
-      stBytes:
+      stBytes, stGUID:
         Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stDate:
         Statement.SetDate(I + 1, RowAccessor.GetDate(ColumnIndex, WasNull));
@@ -947,7 +947,7 @@ begin
                 RowAccessor.SetString(Current.ColumnIndex, ResultSet.GetString(I));
               stUnicodeString, stUnicodeStream:
                 RowAccessor.SetUnicodeString(Current.ColumnIndex, ResultSet.GetUnicodeString(I));
-              stBytes:
+              stBytes, stGUID:
                 RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
               stDate:
                 RowAccessor.SetDate(Current.ColumnIndex, ResultSet.GetDate(I));

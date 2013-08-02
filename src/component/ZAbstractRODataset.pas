@@ -527,21 +527,24 @@ end;
 function RowAccessorStringFieldGetterFromUTF8(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
 begin
-  StrPLCopy(Buffer, PAnsiChar(RowAccessor.GetUTF8String(ColumnIndex, Result)),
+  {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(Buffer,
+    PAnsiChar(RowAccessor.GetUTF8String(ColumnIndex, Result)),
     RowAccessor.GetColumnDataSize(ColumnIndex));
 end;
 
 function RowAccessorStringFieldGetterFromAnsi(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
 begin
-  StrPLCopy(Buffer, PAnsiChar(RowAccessor.GetAnsiString(ColumnIndex, Result)),
+  {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(Buffer,
+    PAnsiChar(RowAccessor.GetAnsiString(ColumnIndex, Result)),
     RowAccessor.GetColumnDataSize(ColumnIndex));
 end;
 
 function RowAccessorStringFieldGetterFromRaw(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
 begin
-  StrPLCopy(Buffer, PAnsiChar(RowAccessor.GetRawByteString(ColumnIndex, Result)),
+  {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(Buffer,
+    PAnsiChar(RowAccessor.GetRawByteString(ColumnIndex, Result)),
     RowAccessor.GetColumnDataSize(ColumnIndex));
 end;
 
@@ -1387,17 +1390,12 @@ begin
         ftDate, ftTime, ftDateTime:
           begin
             if Field.DataType <> ftTime then
-            begin
               DateTimeToNative(Field.DataType,
-                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer);
-              Result := not Result;
-            end
+                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer)
             else
-            begin
               DateTimeToNative(Field.DataType,
                 RowAccessor.GetTime(ColumnIndex, Result), Buffer);
-              Result := not Result;
-            end;
+            Result := not Result;
           end;
         { Processes binary array fields. }
         ftBytes:
@@ -1421,6 +1419,14 @@ begin
             {$ENDIF}
             Result := not Result;
           end;
+        {$IFDEF WITH_FTGUID}
+        ftGUID:
+          begin
+            {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(
+              PAnsiChar(Buffer), RowAccessor.GetAnsiString(ColumnIndex, Result), 38);
+            Result := not Result;
+          end;
+        {$ENDIF}
         ftString:
             Result := not FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTDATASETSUPPORT}
@@ -1513,14 +1519,14 @@ begin
         ftTime: { Processes Time fields. }
           RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
         ftBytes: { Processes binary array fields. }
-          RowAccessor.SetBytes(ColumnIndex, VarToBytes(PVariant(Buffer)^));
+          RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
         ftWideString: { Processes widestring fields. }
           {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
           {$ELSE}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
-        ftString: { Processes string fields. }
+        ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}: { Processes string fields. }
           FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
         ftCurrency:
           begin
@@ -1695,7 +1701,12 @@ begin
         if FieldType in [ftBytes, ftString, ftWidestring] then
           Size := GetPrecision(I)
         else
-          Size := 0;
+          {$IFDEF WITH_FTGUID}
+          if FieldType = ftGUID then
+            Size := 38
+          else
+          {$ENDIF}
+            Size := 0;
 
         J := 0;
         FieldName := GetColumnLabel(I);
@@ -1845,12 +1856,17 @@ begin
     begin
       CreateFields;
       for i := 0 to Fields.Count -1 do
-        if Fields[i].DataType in [ftString, ftWideString] then
-          if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
-          begin
-            {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
-            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
-          end;
+        if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
+          {$IFDEF WITH_FTGUID}
+          if Fields[i].DataType = ftGUID then
+            Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
+          else
+          {$ENDIF}
+            if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+            begin
+              {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
+              Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+            end;
     end;
     BindFields(True);
 
@@ -3509,19 +3525,17 @@ end;
 
 procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TFieldDef);
 
-{$IFDEF FPC}
 const
+{$IFDEF FPC}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd
-    , ftString, ftBlob);
-
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp,
+    ftFMTBcd , ftString, ftBlob);
 {$ELSE}
- {$IFDEF VER180}
- const
+  {$IFDEF VER180} //D2006
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
@@ -3530,8 +3544,16 @@ const
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
     ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
  {$ELSE}
+  {$IFDEF VER185} //D2007
+  BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
+    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
+    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
+    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
+    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
+    ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval); // 38..41
+ {$ELSE}
 {$IFDEF VER200}
-const
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
       ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
@@ -3543,7 +3565,6 @@ const
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream);
 {$ELSE}
 {$IFDEF VER210}
-const
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
       ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
@@ -3556,7 +3577,6 @@ const
       ftTimeStampOffset, ftObject, ftSingle);
 {$ELSE}
 {$IFDEF VER220}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,  // 0..6
     ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes, // 7..13
@@ -3568,7 +3588,6 @@ const
     ftTimeStampOffset, ftObject, ftSingle); // 49..51
 {$ELSE}
 {$IFDEF VER230}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
@@ -3580,7 +3599,6 @@ const
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
 {$IFDEF VER240}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
@@ -3592,7 +3610,6 @@ const
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
 {$IFDEF VER250}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
@@ -3603,13 +3620,14 @@ const
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
- const
-  BaseFieldTypes: array[TFieldType] of TFieldType = (
-    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
-    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
-    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);
+  BaseFieldTypes: array[TFieldType] of TFieldType =
+   (ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
+    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo,
+    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString,
+    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
+    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd);
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}
