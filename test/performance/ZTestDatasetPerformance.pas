@@ -56,7 +56,7 @@ interface
 {$I ZPerformance.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
-  ZPerformanceTestCase, ZConnection, ZAbstractRODataset, ZDataset, ZDbcIntfs, DB;
+  ZPerformanceTestCase, ZAbstractRODataset, ZDataset, ZDbcIntfs, DB;
 
 type
 

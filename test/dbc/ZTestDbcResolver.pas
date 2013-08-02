@@ -55,8 +55,8 @@ unit ZTestDbcResolver;
 
 interface
 {$I ZDbc.inc}
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZCollections, ZDbcGenericResolver, ZSqlTestCase;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
+  ZDbcIntfs, ZClasses, ZCompatibility, ZSqlTestCase;
 
 type
 
@@ -74,7 +74,7 @@ implementation
 
 uses ZSysUtils, ZTestConsts
      {$IFDEF ENABLE_POSTGRESQL}, ZDbcPostgreSql{$ENDIF}
-     {$IFDEF ENABLE_MYSQL}, ZDbcMySql, ZDbcMySqlStatement, ZDbcMySqlResultSet{$ENDIF};
+     {$IFDEF ENABLE_MYSQL}, ZDbcMySql{$ENDIF};
 
 { TZTestCachedResolverCase }
 

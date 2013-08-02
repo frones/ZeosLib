@@ -82,7 +82,7 @@ type
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConsts, ZTestCase;
+uses SysUtils, ZTestConsts, ZTestCase;
 
 { TZTestDbcInterbaseCase }
 

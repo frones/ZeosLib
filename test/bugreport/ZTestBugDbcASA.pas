@@ -71,7 +71,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts;
+uses ZTestCase;
 
 { TZTestDbcASABugReport }
 
