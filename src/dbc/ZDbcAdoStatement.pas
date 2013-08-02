@@ -120,6 +120,7 @@ uses
 {$ENDIF}
   OleDB, ComObj,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
+  {$IFNDEF UNICODE}ZEncoding,{$ENDIF}
   ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcAdoUtils, ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils;
 
@@ -358,18 +359,18 @@ begin
       case SQLType of
         stAsciiStream:
           begin
-            if Assigned(B) then
-              DefVarManager.SetAsString(RetValue, {$IFDEF UNICODE}String{$ENDIF}(B.GetString));
+            {$IFDEF UNICODE}
+            DefVarManager.SetAsString(RetValue, String(B.GetString));
+            {$ELSE}
+            DefVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, ConSettings));
+            {$ENDIF}
             SQLType := stString;
           end;
         stUnicodeStream:
           begin
-            if Assigned(B) then
-            begin
-              if B.Connection = nil then
-                B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Self.GetConnection, B.WasDecoded);
-              DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
-            end;
+            if B.Connection = nil then
+              B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Self.GetConnection, B.WasDecoded);
+            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
             SQLType := stUnicodeString;
           end;
         stBinaryStream:
@@ -387,7 +388,7 @@ begin
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
     vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
-    vtString: V := SoftVarManager.GetAsString(RetValue);
+    vtString: V := {$IFNDEF UNICODE}ZPlainString{$ENDIF}(SoftVarManager.GetAsString(RetValue));
     vtUnicodeString: V := WideString(SoftVarManager.GetAsUnicodeString(RetValue));
     vtDateTime: V := SoftVarManager.GetAsDateTime(RetValue);
   end;
@@ -424,25 +425,18 @@ begin
   begin
     P := FAdoCommand.Parameters.Item[ParameterIndex - 1];
     P.Direction := ParamDirection; //set ParamDirection! Bidirection is requires for callables f.e.
-    if not ( SQLType = stBytes ) then  //Variant varByte is not comparable with OleVariant -> exception
+    if not VarIsNull(V) then //align new size and type
     begin
-      if not VarIsNull(V) then //align new size and type
-      begin
-        P.Type_ := T;
-        P.Size := S;
-      end;
-      if VarIsClear(P.Value) or (P.Value <> V) then //Check if Param is cleared, unasigned or different
-        P.Value := V;
-    end
-    else
+      P.Type_ := T;
+      P.Size := S;
+    end;
+    if VarIsClear(P.Value) or (P.Value <> V) then //Check if Param is cleared, unasigned or different
       P.Value := V;
     FAdoCommand.Prepared:=false; //don't know why but we get a loads of Exceptions if this isn't executed
   end
   else
-  begin
     FAdoCommand.Parameters.Append(FAdoCommand.CreateParameter(
       'P' + IntToStr(ParameterIndex), T, ParamDirection, S, V));
-  end;
 end;
 
 procedure TZAdoPreparedStatement.BindInParameters;
