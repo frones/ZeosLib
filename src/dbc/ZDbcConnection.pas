@@ -716,7 +716,8 @@ begin
   FURL.Free;
   FIZPlainDriver := nil;
   FDriver := nil;
-  Dispose(ConSettings);
+  if Assigned(ConSettings) then
+    Dispose(ConSettings);
   inherited Destroy;
 end;
 

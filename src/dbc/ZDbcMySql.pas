@@ -438,13 +438,13 @@ begin
 
   if FClientCodePage = '' then //workaround for MySQL 4 down
   begin
-    with CreateStatement.ExecuteQuery('SHOW CHARACTER SET FOR '+Database) do
+    with CreateStatement.ExecuteQuery('show variables like "character_set_database"') do
     begin
       if Next then
-        FClientCodePage := GetString(6);
+        FClientCodePage := GetString(2);
       Close;
     end;
-    ConSettings.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
+    ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
   end
 end;
 

@@ -246,7 +246,8 @@ function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcGenericResolver, ZDbcUtils, ZEncoding;
+  ZDbcGenericResolver, ZDbcUtils, ZEncoding
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Calculates size of SQLVars record.
@@ -445,16 +446,16 @@ begin
           begin
             case Values[i].VType of
               vtString:
-                StrLCopy(PAnsiChar(CurrentVar.Data),
+                {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
                   PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
               vtUnicodeString:
-                StrLCopy(PAnsiChar(CurrentVar.Data),
+                {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
                   PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
             end;
           end;
         SQLT_VST:
           begin
-            StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
+            {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(UTF8Encode(DefVarManager.GetAsUnicodeString(Values[I]))), 1024);
           end;
         SQLT_TIMESTAMP:
           begin
@@ -613,7 +614,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + String(StrPas(ErrorBuffer));
+        ErrorMessage := 'OCI_SUCCESS_WITH_INFO: ' + String(ErrorBuffer);
       end;
     OCI_NEED_DATA:
       ErrorMessage := 'OCI_NEED_DATA';
@@ -623,7 +624,7 @@ begin
       begin
         PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
           OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_ERROR: ' + String(StrPas(ErrorBuffer));
+        ErrorMessage := 'OCI_ERROR: ' + String(ErrorBuffer);
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';

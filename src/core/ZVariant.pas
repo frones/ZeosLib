@@ -352,7 +352,8 @@ var
 implementation
 
 uses
-  Variants, Math, ZMessages;
+  Variants, Math, ZMessages
+  {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}, AnsiStrings{$ENDIF};
 
 { TZDefaultVariantManager }
 

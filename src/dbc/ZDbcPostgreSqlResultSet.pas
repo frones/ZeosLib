@@ -56,7 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
   ZPlainPostgreSqlDriver, ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility;
 
 type
@@ -239,11 +240,7 @@ begin
     begin
       ColumnName := '';
       TableName := '';
-      {$IFDEF DELPHI18_UP}
-      ColumnLabel := ZDbcString(SysUtils.StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
-      {$ELSE}
-      ColumnLabel := ZDbcString(StrPas(FPlainDriver.GetFieldName(FQueryHandle, I)));
-      {$ENDIF}
+      ColumnLabel := ZDbcString(FPlainDriver.GetFieldName(FQueryHandle, I));
 
       ColumnDisplaySize := 0;
       Scale := 0;

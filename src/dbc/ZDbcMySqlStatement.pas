@@ -230,9 +230,9 @@ type
 implementation
 
 uses
-  Types, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils, ZDbcResultSetMetadata,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, DateUtils, ZEncoding, ZDbcResultSet,
-  Math;
+  Types, Math, DateUtils, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
+  ZDbcResultSetMetadata, ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZEncoding,
+  ZDbcResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLStatement }
 
@@ -690,7 +690,7 @@ begin
     MyType := GetFieldType(InParamValues[I]);
     case MyType of
       FIELD_TYPE_VARCHAR:
-        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1,StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
+        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
       FIELD_TYPE_BLOB:
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
@@ -714,7 +714,7 @@ begin
       FIELD_TYPE_TINY:
         FParamBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
+        FParamBindBuffer.AddColumn(MyType,Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
@@ -733,15 +733,15 @@ begin
               else
                 PAnsiChar(PBuffer)^ := 'N';
             FIELD_TYPE_VARCHAR:
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)));
+              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)));
             FIELD_TYPE_BLOB:
               begin
                 if TempBlob.Length<=ChunkSize then
-                  StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
+                  {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
                 TempBlob := nil;
               end;
             else
-              StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
+              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
           end;
         FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
         FIELD_TYPE_DATETIME:

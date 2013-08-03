@@ -56,9 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZClasses, ZCollections, ZSysUtils, ZCompatibility,
-  ZTokenizer, ZSelectSchema, ZGenericSqlAnalyser, ZDbcLogging, ZVariant,
-  ZPlainDriver, ZURL;
+  Types, Classes, DB, SysUtils,
+  ZClasses, ZCollections, ZCompatibility, ZTokenizer, ZSelectSchema,
+  ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
 const
   { Constants from JDBC DatabaseMetadata }

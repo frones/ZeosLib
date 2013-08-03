@@ -212,8 +212,8 @@ type
     function StripEscape(const Pattern: string): string;
     function HasNoWildcards(const Pattern: string): boolean;
     function GetPrivilege(Privilege: string): string;
-    function ConstructNameCondition(Pattern: string; Column: string): string;
   protected
+    function ConstructNameCondition(Pattern: string; Column: string): string; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;

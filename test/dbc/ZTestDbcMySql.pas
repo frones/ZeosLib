@@ -79,7 +79,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
+uses ZTestConsts;
 
 { TZTestDbcMySqlCase }
 

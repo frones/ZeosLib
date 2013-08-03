@@ -153,7 +153,7 @@ type
     FLinkedFields: string; {renamed by bangfauzan}
     FIndexFieldNames : String; {bangfauzan addition}
 
-    FIndexFields: TList;
+    FIndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF};
 
     FSortType : TSortType; {bangfauzan addition}
 
@@ -249,7 +249,7 @@ type
 
     property DataLink: TDataLink read FDataLink;
     property MasterLink: TMasterDataLink read FMasterLink;
-    property IndexFields: TList read FIndexFields;
+    property IndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF} read FIndexFields;
 
     { External protected properties. }
     property RequestLive: Boolean read FRequestLive write FRequestLive
@@ -310,6 +310,9 @@ type
 {$ELSE}
     function AllocRecordBuffer: PChar; override;
     procedure FreeRecordBuffer(var Buffer: PChar); override;
+{$ENDIF}
+{$IFDEF WITH_FTDATASETSUPPORT}
+    function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; override;
 {$ENDIF}
     procedure CloseBlob(Field: TField); override;
     function CreateStatement(const SQL: string; Properties: TStrings):
@@ -477,7 +480,8 @@ implementation
 uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { EZDatabaseError }
 
@@ -569,7 +573,9 @@ begin
   FMasterLink := TMasterDataLink.Create(Self);
   FMasterLink.OnMasterChange := MasterChanged;
   FMasterLink.OnMasterDisable := MasterDisabled;
+  {$IFNDEF WITH_GENERIC_TLISTTFIELD}
   FIndexFields := TList.Create;
+  {$ENDIF}
 end;
 
 {**
@@ -594,7 +600,9 @@ begin
 
   FreeAndNil(FDataLink);
   FreeAndNil(FMasterLink);
+  {$IFNDEF WITH_GENERIC_TLISTTFIELD}
   FreeAndNil(FIndexFields);
+  {$ENDIF}
 
   inherited Destroy;
 end;
@@ -957,7 +965,11 @@ begin
   begin
     for I := 0 to MasterLink.Fields.Count - 1 do
     begin
+      {$IFDEF WITH_GENERIC_TLISTTFIELD}
+      if I <= High(IndexFields) then
+      {$ELSE}
       if I < IndexFields.Count then
+      {$ENDIF}
       begin
         Result := CompareKeyFields(TField(IndexFields[I]), ResultSet,
           TField(MasterLink.Fields[I]));
@@ -1125,7 +1137,6 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.GetRecord(Buffer: TRecordBuffer; GetMode: TGetMode;
   DoCheck: Boolean): TGetResult;
 {$ELSE}
@@ -1188,7 +1199,7 @@ begin
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
     FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
-    GetCalcFields(Buffer);
+    GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ENDIF}(Buffer));
   end;
 
   if (Result = grError) and DoCheck then
@@ -1285,23 +1296,18 @@ begin
         ftDate, ftTime, ftDateTime:
           begin
             if Field.DataType <> ftTime then
-            begin
               DateTimeToNative(Field.DataType,
-                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer);
-              Result := not Result;
-            end
+                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer)
             else
-            begin
               DateTimeToNative(Field.DataType,
                 RowAccessor.GetTime(ColumnIndex, Result), Buffer);
-              Result := not Result;
-            end;
+            Result := not Result;
           end;
         { Processes binary array fields. }
         ftBytes:
           begin
-            System.Move((PAnsiChar(RowAccessor.GetColumnData(ColumnIndex, Result)) + 2)^, PAnsiChar(Buffer)^,
-              RowAccessor.GetColumnDataSize(ColumnIndex)-2);
+            System.Move(PAnsiChar(RowAccessor.GetBytes(ColumnIndex, Result))^,
+              PAnsiChar(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
             Result := not Result;
           end;
         { Processes blob fields. }
@@ -1319,12 +1325,14 @@ begin
             {$ENDIF}
             Result := not Result;
           end;
-        {$IFDEF DELPHI12_UP}
-        ftString:
+        ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}:
           begin
-            StrCopy(PAnsiChar(Buffer), PAnsiChar(AnsiString(RowAccessor.GetString(ColumnIndex, Result))));
+            {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
             Result := not Result;
           end;
+        {$IFDEF WITH_FTDATASETSUPPORT}
+        ftDataSet:
+          Result := not RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
         {$ENDIF}
         { Processes all other fields. }
         ftCurrency:
@@ -1410,55 +1418,42 @@ begin
 
     if Assigned(Buffer) then
     begin
-      { Processes DateTime fields. }
-      if Field.DataType in [ftDate, ftDateTime] then
-      begin
-        RowAccessor.SetTimestamp(ColumnIndex, NativeToDateTime(Field.DataType,
-        Buffer));
-      end
-      { Processes Time fields. }
-      else if Field.DataType = ftTime then
-      begin
-        RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType,
-        Buffer));
-      end
-      { Processes binary array fields. }
-      else if Field.DataType = ftBytes then
-      begin
-        RowAccessor.SetBytes(ColumnIndex, VarToBytes(PVariant(Buffer)^));
-      end
-      { Processes widestring fields. }
-      else if Field.DataType = ftWideString then
-      begin
-        {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
-        {$ELSE}
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
-        {$ENDIF}
-      end
-  	  else if Field.DataType = ftCurrency then
-      begin
-        {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
-        Curr := PCurrency(Buffer)^;
-        RowAccessor.SetBigDecimal(ColumnIndex, Curr); //cast Currrency to Extented
-      end
-      { Processes all other fields. }
-      else if {$IFNDEF DELPHI12_UP}(Field.FieldKind = fkData) and {$ENDIF}(Field.DataType = ftString) and
-        (Length(PAnsiChar(Buffer)) < RowAccessor.GetColumnDataSize(ColumnIndex)) then
-      begin
-        {$IFDEF DELPHI12_UP}
-        RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(String(PAnsichar(Buffer))));
-        {$ELSE}
-        System.Move(Buffer^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-           Length(PAnsiChar(Buffer)) + 1);
-        {$ENDIF}
-        RowAccessor.SetNotNull(ColumnIndex);
-      end
-      else  //process all others also calculatets
-      begin
-        System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
-        RowAccessor.GetColumnDataSize(ColumnIndex));
-        RowAccessor.SetNotNull(ColumnIndex);
+      case Field.DataType of
+        ftDate, ftDateTime: { Processes Date/DateTime fields. }
+          RowAccessor.SetTimestamp(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
+        ftTime: { Processes Time fields. }
+          RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
+        ftBytes: { Processes binary array fields. }
+          RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
+        ftWideString: { Processes widestring fields. }
+          {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
+          RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+          {$ELSE}
+          RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
+          {$ENDIF}
+        ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}: { Processes string fields. }
+          {$IFDEF UNICODE}
+          RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
+          {$ELSE}
+          begin
+            L := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(Buffer));
+            SetLength(Temp, L);
+            Move(PAnsiChar(Buffer)^, PAnsiChar(Temp)^, L);
+            RowAccessor.SetString(ColumnIndex, Temp);
+          end;
+          {$ENDIF}
+        ftCurrency:
+          begin
+            {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
+            Curr := PCurrency(Buffer)^;
+            RowAccessor.SetBigDecimal(ColumnIndex, Curr); //cast Currrency to Extented
+          end;
+        else  { Processes all other fields. }
+          begin
+            System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
+            RowAccessor.GetColumnDataSize(ColumnIndex));
+            RowAccessor.SetNotNull(ColumnIndex);
+          end;
       end;
     end
     else
@@ -1620,7 +1615,12 @@ begin
         if FieldType in [ftBytes, ftString, ftWidestring] then
           Size := GetPrecision(I)
         else
-          Size := 0;
+          {$IFDEF WITH_FTGUID}
+          if FieldType = ftGUID then
+            Size := 38
+          else
+          {$ENDIF}
+            Size := 0;
 
         J := 0;
         FieldName := GetColumnLabel(I);
@@ -1770,12 +1770,17 @@ begin
     begin
       CreateFields;
       for i := 0 to Fields.Count -1 do
-        if Fields[i].DataType in [ftString, ftWideString] then
-          if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
-          begin
-            {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
-            Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
-          end;
+        if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
+          {$IFDEF WITH_FTGUID}
+          if Fields[i].DataType = ftGUID then
+            Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
+          else
+          {$ENDIF}
+            if not (ResultSet.GetMetadata.GetColumnDisplaySize(I+1) = 0) then
+            begin
+              {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);{$ENDIF}
+              Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I+1);
+            end;
     end;
     BindFields(True);
 
@@ -1792,7 +1797,9 @@ begin
     FieldsLookupTable := CreateFieldsLookupTable(Fields);
     InitFilterFields := False;
 
+    {$IFNDEF WITH_GENERIC_TLISTTFIELD}
     IndexFields.Clear;
+    {$ENDIF}
     GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
 
     { Performs sorting. }
@@ -2070,7 +2077,11 @@ begin
   begin
     for I := 0 to MasterLink.Fields.Count - 1 do
     begin
+      {$IFDEF WITH_GENERIC_TLISTTFIELD}
+      if I <= High(IndexFields) then
+      {$ELSE}
       if I < IndexFields.Count then
+      {$ENDIF}
       begin
         MasterField := TField(MasterLink.Fields[I]);
         DetailField := TField(IndexFields[I]);
@@ -2129,7 +2140,9 @@ begin
   if FLinkedFields <> Value then {renamed by bangfauzan}
   begin
     FLinkedFields := Value; {renamed by bangfauzan}
+    {$IFNDEF WITH_GENERIC_TLISTTFIELD}
     IndexFields.Clear;
+    {$ENDIF}
     if State <> dsInactive then
     begin
       GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
@@ -2695,7 +2708,7 @@ begin
         RowAccessor.RowBuffer^.Index := RowNo;
         FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
 {$IFDEF WITH_TRECORDBUFFER}
-        GetCalcFields(TRecordBuffer(SearchRowBuffer));
+        GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(SearchRowBuffer));
 {$ELSE}
         GetCalcFields(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -2822,7 +2835,7 @@ begin
     RowAccessor.RowBuffer^.Index := RowNo;
     FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
 {$IFDEF WITH_TRECORDBUFFER}
-    GetCalcFields(TRecordBuffer(SearchRowBuffer));
+    GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(SearchRowBuffer));
 {$ELSE}
     GetCalcFields(PChar(SearchRowBuffer));
 {$ENDIF}
@@ -2874,7 +2887,7 @@ function TZAbstractRODataset.Translate(Src, Dest: PAnsiChar; ToOem: Boolean):
 begin
   if (Src <> nil) then
   begin
-    Result := StrLen(Src);
+    Result := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src);
   {$IFNDEF UNIX}
     if doOemTranslate in FOptions then
     begin
@@ -2888,7 +2901,7 @@ begin
   {$ENDIF}
     begin
       if (Src <> Dest) then
-      StrCopy(Dest, Src);
+      {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(Dest, Src);
     end;
   end
   else
@@ -2964,6 +2977,13 @@ begin
   if Result = nil then
     Result := TMemoryStream.Create;
 end;
+
+{$IFDEF WITH_FTDATASETSUPPORT}
+function TZAbstractRODataset.CreateNestedDataSet(DataSetField: TDataSetField): TDataSet;
+begin
+  Result := inherited CreateNestedDataSet(DataSetField);
+end;
+{$ENDIF}
 
 {**
   Closes the specified BLOB field.
@@ -3104,7 +3124,7 @@ begin
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
 {$IFDEF WITH_TRECORDBUFFER}
-  GetCalcFields(TRecordBuffer(FSortRowBuffer1));
+  GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(FSortRowBuffer1));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer1));
 {$ENDIF}
@@ -3117,7 +3137,7 @@ begin
   FetchFromResultSet(ResultSet, FieldsLookupTable, Fields, RowAccessor);
   FRowAccessor.RowBuffer^.BookmarkFlag := Ord(bfCurrent);
 {$IFDEF WITH_TRECORDBUFFER}
-  GetCalcFields(TRecordBuffer(FSortRowBuffer2));
+  GetCalcFields({$IFDEF WITH_GETCALCFIELDS_TRECBUF}NativeInt{$ELSE}TRecordBuffer{$ENDIF}(FSortRowBuffer2));
 {$ELSE}
   GetCalcFields(PChar(FSortRowBuffer2));
 {$ENDIF}
@@ -3417,19 +3437,17 @@ end;
 
 procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TFieldDef);
 
-{$IFDEF FPC}
 const
+{$IFDEF FPC}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
     ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
     ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd
-    , ftString, ftBlob);
-
+    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp,
+    ftFMTBcd , ftString, ftBlob);
 {$ELSE}
- {$IFDEF VER180}
- const
+  {$IFDEF VER180} //D2006
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
@@ -3438,8 +3456,16 @@ const
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
     ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
  {$ELSE}
+  {$IFDEF VER185} //D2007
+  BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
+    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
+    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
+    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
+    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
+    ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval); // 38..41
+ {$ELSE}
 {$IFDEF VER200}
-const
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
       ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
@@ -3451,7 +3477,6 @@ const
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream);
 {$ELSE}
 {$IFDEF VER210}
-const
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
       ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
@@ -3464,7 +3489,6 @@ const
       ftTimeStampOffset, ftObject, ftSingle);
 {$ELSE}
 {$IFDEF VER220}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,  // 0..6
     ftFloat, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes, // 7..13
@@ -3476,7 +3500,6 @@ const
     ftTimeStampOffset, ftObject, ftSingle); // 49..51
 {$ELSE}
 {$IFDEF VER230}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
@@ -3488,7 +3511,6 @@ const
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
 {$IFDEF VER240}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
@@ -3500,7 +3522,6 @@ const
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
 {$IFDEF VER250}
-const
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
     ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
@@ -3511,13 +3532,14 @@ const
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
 {$ELSE}
- const
-  BaseFieldTypes: array[TFieldType] of TFieldType = (
-    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
-    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
-    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimestamp, ftFMTBcd);
+  BaseFieldTypes: array[TFieldType] of TFieldType =
+   (ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
+    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo,
+    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString,
+    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
+    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd);
+{$ENDIF}
 {$ENDIF}
 {$ENDIF}
 {$ENDIF}

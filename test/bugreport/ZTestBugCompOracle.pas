@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase,
+  ZDataset, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
     {$IFDEF WITH_VCL_PREFIX}
     Vcl.DBCtrls,
@@ -85,7 +85,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  ZTestCase, ZTestConsts, ZSqlUpdate, ZSysUtils;
+  ZTestCase, ZSysUtils;
 
 { ZTestCompOracleBugReport }
 
@@ -170,9 +170,10 @@ begin
 
   Dir := '';
   Query := CreateQuery;
+  BinaryStream := TMemoryStream.Create;
+  BinFileStream := nil;
   try
     BinFileStream := TFileStream.Create('..\..\..\database\images\horse.jpg', fmOpenRead);
-    BinaryStream := TMemoryStream.Create;
     Query.SQL.Text := 'select * from blob_values'; //NCLOB and BFILE is inlcuded
     Query.Open;
     CheckEquals(6, Query.Fields.Count);
@@ -222,7 +223,8 @@ begin
       end;
     end;
     Query.Free;
-    BinFileStream.Free;
+    if Assigned(BinFileStream) then
+      BinFileStream.Free;
     BinaryStream.Free;
   end;
 end;

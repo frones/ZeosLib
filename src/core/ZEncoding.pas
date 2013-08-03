@@ -318,7 +318,8 @@ function GetValidatedUnicodeStream(const Ansi: ZAnsiString;
 
 implementation
 
-uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF};
+uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
+  ZSysUtils{$IFDEF WITH_STRLEN_DEPRECATED}, AnsiStrings{$ENDIF};
 
 {$IFNDEF WITH_LCONVENCODING}
 function AnsiToWide(const S: ZAnsiString;
@@ -581,7 +582,7 @@ begin
       I know this can lead to pain with two byte ansi chars, but what else can i do?
     step two: detect the encoding }
 
-  if ( StrLen(PAnsiChar(Bytes)) < Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
+  if ( {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(Bytes)) < Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
     result := ceUTF16
   else
     if ConSettings.AutoEncode then

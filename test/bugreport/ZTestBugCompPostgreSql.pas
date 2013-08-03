@@ -863,7 +863,7 @@ var
 begin
   if SkipForReason(srClosedBug) then Exit;
 
-  TestMantis229_AsMemo;
+  //TestMantis229_AsMemo; 7.0 doesn't support this option
   TestMantis229_AsString;
 end;
 
@@ -875,7 +875,6 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
-  Query.Properties.Values['handle_indeterminate_datatype'] := 'true';
   Connection.Connect;
   try
     Query.SQL.Text := 'select :p1 as Param1, :p2 as param2';

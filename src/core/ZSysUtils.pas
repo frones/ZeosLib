@@ -148,6 +148,7 @@ function SQLStrToFloat(const Str: AnsiString): Extended;
 }
 function BufferToStr(Buffer: PWideChar; Length: LongInt): string; overload;
 function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
 
 {**
   Converts a string into boolean value.
@@ -368,7 +369,7 @@ function ZStrToFloat(Value: AnsiString): Extended; overload;
 
 implementation
 
-uses ZMatchPattern, StrUtils;
+uses ZMatchPattern, StrUtils {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
   Determines a position of a first delimiter.
@@ -645,6 +646,12 @@ begin
   Result := '';
   if Assigned(Buffer) then
     SetString(Result, Buffer, Length);
+end;
+
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
+begin
+  SetLength(Result, Length);
+  System.Move(Buffer^, Pointer(Result)^, Length);
 end;
 
 {**
@@ -951,10 +958,31 @@ function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   Temp: string;
-  dotPosition:Integer;
+  DateFound: Boolean;
+
+  procedure ExtractTime(AString: String);
+  var dotPos: Integer;
+  begin
+    Hour := StrToIntDef(Copy(AString, 1, 2), 0);
+    Min := StrToIntDef(Copy(AString, 4, 2), 0);
+    Sec := StrToIntDef(Copy(AString, 7, 2), 0);
+
+    //it the time Length is bigger than 8, it can have milliseconds and it ...
+    dotPos := 0;
+    MSec := 0;
+    if Length(AString) > 8 then
+      dotPos :=Pos ('.', AString);
+
+    //if the dot are found, milliseconds are present.
+    if dotPos > 0 then begin
+      MSec := StrToIntDef(LeftStr(RightStr(AString,Length(AString)-dotPos)+'000',3),0);
+    end;
+  end;
 begin
   Temp := Value;
   Result := 0;
+  DateFound := False;
+
   if Length(Temp) >= 10 then
   begin
     Year := StrToIntDef(Copy(Temp, 1, 4), 0);
@@ -965,28 +993,19 @@ begin
     begin
       try
         Result := EncodeDate(Year, Month, Day);
+        DateFound := True;
       except
       end;
     end;
     Temp := RightStr(Temp, Length(Temp)-11);
   end;
-  if Length(Temp) >= 8 then
+
+  if (Length(Temp) >= 8) or ( not DateFound ) then
   begin
-    Hour := StrToIntDef(Copy(Temp, 1, 2), 0);
-    Min := StrToIntDef(Copy(Temp, 4, 2), 0);
-    Sec := StrToIntDef(Copy(Temp, 7, 2), 0);
-
-    //it the time Length is bigger than 8, it can have milliseconds and it ...
-    dotPosition:=0;
-    MSec:=0;
-    if Length(Temp) > 8 then
-      dotPosition:=Pos('.', Temp);
-
-    //if the dot are found, milliseconds are present.
-    if dotPosition>0 then begin
-      MSec:=StrToIntDef(LeftStr(RightStr(Temp,Length(Temp)-dotPosition)+'000',3),0);
-    end;
-
+    if DateFound then
+      ExtractTime(Temp)
+    else
+      ExtractTime(Value);
     try
       if Result >= 0 then
         Result := Result + EncodeTime(Hour, Min, Sec, MSec)
@@ -1344,8 +1363,8 @@ begin
   OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
   OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
 
-  if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
-    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+  if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator))) = nil then
+    if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
       //No DecimalSeparator and no ThousandSeparator
       Result := StrToFloat(String(Value))
     else
@@ -1356,12 +1375,12 @@ begin
       Result := StrToFloat(String(Value));
     end
   else
-    if AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
+    if {$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator))) = nil then
       //default DecimalSepartor
       Result := StrToFloat(String(Value))
     else
-      if StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
-        StrLen(AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
+      if {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen({$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldDecimalSeparator)))) <
+          {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen({$IFDEF WITH_ANSISTRINGPOS_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrPos(PAnsiChar(Value), PAnsiChar(AnsiString(OldThousandSeparator)))) then
           //default DecimalSepartor and ThousandSeparator
         Result := StrToFloat(String(Value))
       else

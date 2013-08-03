@@ -234,9 +234,9 @@ type
   {** Implements PostgreSQL Database Metadata. }
   TZPostgreSQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
-    function EscapeString(const S: string): string;
     function GetRuleType(const Rule: String): TZImportedKey;
   protected
+    function EscapeString(const S: string): string; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-27
 
     // (technobot) should any of these be moved to TZPostgreSQLDatabaseInfo?:

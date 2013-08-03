@@ -56,8 +56,8 @@ unit ZTestDbcPostgreSqlMetadata;
 interface
 {$I ZDbc.inc}
 uses
-  SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZClasses, ZCompatibility,
-  ZSqlTestCase, ZDbcResultSet, ZDbcResultSetMetadata, ZDbcPostgreSql;
+  SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDbcIntfs, ZClasses, ZCompatibility, ZSqlTestCase, ZDbcPostgreSql;
 
 type
 
