@@ -55,7 +55,8 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, ZClasses, ZCompatibility, ZVariant, ZTokenizer, ZExprParser;
+uses SysUtils, Classes, {$IFDEF WITH_TOBJECTLIST_INLINE}System.Contnrs, {$ENDIF}
+  ZClasses, ZCompatibility, ZVariant, ZTokenizer, ZExprParser;
 
 type
   {** Defines an expression exception. }
