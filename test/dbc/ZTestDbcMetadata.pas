@@ -356,7 +356,8 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
     CheckEquals(FKTable, UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
     CheckEquals(FKColumn, UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
     if StartsWith(Protocol, 'firebird') or
-       StartsWith(Protocol, 'interbase') then
+       StartsWith(Protocol, 'interbase') or
+       StartsWith(Protocol, 'ado') then
       CheckEquals(1, Resultset.GetShortByName('KEY_SEQ'))
     else
       CheckEquals(KeySeq, Resultset.GetShortByName('KEY_SEQ'));

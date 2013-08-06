@@ -163,7 +163,7 @@ begin
     Query.Post;
     Query.Close;
     Query.Open;
-    Query.Last;
+    Query.First;
     CheckEquals(TestString, Query.Fields[2].AsString);
   finally
     Query.SQL.Text := 'delete from people where p_id = '+IntToStr(RowID);

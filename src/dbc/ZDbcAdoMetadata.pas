@@ -144,6 +144,7 @@ type
       Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
     function SupportsNonEscapedSearchStrings: Boolean; override;
+    function SupportsUpdateAutoIncrementFields: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1205,6 +1206,15 @@ begin
   Result := True;
 end;
 
+{**
+  Does the Database support updating auto incremental fields?
+  @return <code>true</code> if the DataBase allows it.
+}
+function TZAdoDatabaseInfo.SupportsUpdateAutoIncrementFields: Boolean;
+begin
+  Result := False;
+end;
+
 { TZAdoDatabaseMetadata }
 
 
@@ -1740,7 +1750,7 @@ begin
             (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0));
           Result.UpdateBooleanByName('SEARCHABLE',
             (Flags and (DBCOLUMNFLAGS_ISLONG) = 0));
-
+          Result.UpdateNullByName('AUTO_INCREMENT');
           Result.InsertRow;
         end;
         Close;

@@ -445,6 +445,7 @@ type
     function SupportsBatchUpdates: Boolean;
     function SupportsNonEscapedSearchStrings: Boolean;
     function SupportsMilliseconds: Boolean;
+    function SupportsUpdateAutoIncrementFields: Boolean;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer;

@@ -664,11 +664,29 @@ begin
   if not TableColumns.IsNull(21) then
     ColumnInfo.Searchable := TableColumns.GetBoolean(21);
   if not TableColumns.IsNull(22) then
-    ColumnInfo.Writable := TableColumns.GetBoolean(22);
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.Writable := TableColumns.GetBoolean(22)
+      else
+        ColumnInfo.Writable := False
+    else
+      ColumnInfo.Writable := TableColumns.GetBoolean(22);
   if not TableColumns.IsNull(23) then
-    ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23);
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23)
+      else
+        ColumnInfo.DefinitelyWritable := False
+    else
+      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23);
   if not TableColumns.IsNull(24) then
-    ColumnInfo.ReadOnly := TableColumns.GetBoolean(24);
+    if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
+      if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
+        ColumnInfo.ReadOnly := TableColumns.GetBoolean(24)
+      else
+        ColumnInfo.ReadOnly := True
+    else
+      ColumnInfo.ReadOnly := TableColumns.GetBoolean(24);
   if not TableColumns.IsNull(13) then
     ColumnInfo.DefaultValue := TableColumns.GetString(13);
 end;

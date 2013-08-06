@@ -746,7 +746,10 @@ begin
         MaxLenghtBytes := GetFieldLength(I);
         if (FSqlData.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
         begin
-          ColumnDisplaySize := MaxLenghtBytes;
+          if not ( FieldSQLType = stBytes ) then
+            if ConSettings.ClientCodePage^.ID = CS_NONE then
+          else
+            ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
           Precision := MaxLenghtBytes;
         end
         else
