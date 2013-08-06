@@ -476,6 +476,7 @@ var
   LogMessage: string;
 begin
   LogMessage := 'COMMIT';
+  if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
   try
     FAdoConnection.CommitTrans;
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
@@ -501,6 +502,7 @@ var
   LogMessage: string;
 begin
   LogMessage := 'ROLLBACK';
+  if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
   try
     FAdoConnection.RollbackTrans;
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
