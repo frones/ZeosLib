@@ -145,7 +145,7 @@ type
     { Measurement methods. }
     function GetTickCount: Cardinal;
   public
-    constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ELSE} overload;{$ENDIF}
+    constructor Create(MethodName: string); {$IFNDEF FPC} override; {$ELSE} overload; virtual;{$ENDIF}
     destructor Destroy; override;
     {$IFDEF FPC}
     constructor Create; override; overload;

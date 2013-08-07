@@ -62,7 +62,7 @@ uses
   Types,
 {$ENDIF}
   {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, DB,
-  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataSet,
+  {$IFDEF ENABLE_POOLED}ZClasses,{$ENDIF} ZDataset,
   ZCompatibility, ZDbcIntfs, ZConnection, Contnrs, ZTestCase, ZScriptParser, ZDbcLogging;
 
 const
@@ -209,8 +209,8 @@ type
     procedure LogEvent(Event: TZLoggingEvent);
 
     { Different convenience methods. }
-    function CreateDbcConnection: IZConnection;
-    function CreateDatasetConnection: TZConnection;
+    function CreateDbcConnection: IZConnection; virtual;
+    function CreateDatasetConnection: TZConnection; virtual;
     procedure PrintResultSet(ResultSet: IZResultSet;
       ShowTypes: Boolean; Note: string = '');
 
