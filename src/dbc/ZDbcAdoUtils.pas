@@ -598,7 +598,7 @@ procedure RefreshParameters(AdoCommand: ZPlainAdo.Command;
   procedure RefreshFromOleDB;
   var
     I: Integer;
-    ParamCount: UINT;
+    ParamCount: NativeUInt;
     ParamInfo: PDBParamInfoArray;
     NamesBuffer: POleStr;
     Name: WideString;
