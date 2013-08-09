@@ -122,8 +122,8 @@ begin
     Query.Fields[2].AsString  := TestString;
     Query.Post;
     Query.Close;
+    Query.SQL.Text := 'select * from people where p_id = '+IntToStr(RowID);
     Query.Open;
-    Query.Last;
     CheckEquals(TestString, Query.Fields[2].AsString);
   finally
     Query.SQL.Text := 'delete from people where p_id = '+IntToStr(RowID);

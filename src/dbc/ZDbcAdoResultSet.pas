@@ -118,7 +118,7 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
+  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding;
 
 {**
   Creates this object and assignes the main properties.
@@ -200,9 +200,9 @@ begin
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
     ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, ConSettings.CPType);
-    if F.Type_ = adGuid then 
-        FieldSize := 38 
-      else 
+    if F.Type_ = adGuid then
+        FieldSize := 38
+      else
         FieldSize := F.DefinedSize;
       if FieldSize < 0 then
       FieldSize := 0;
@@ -368,8 +368,13 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  {NL := Length(Result);
+  if (VarType(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) = varOleStr)
+    {$IFDEF UNICODE} or ( VarType(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) = varUString){$ENDIF} then
+    Result := ZDbcString(ZWideString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value))
+  else
+    Result := ZDbcString(AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value))
+  {Why this? It cuts wanted trailing spaces!
+  NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do Dec(NL);
   SetLength(Result, NL);}
 end;
@@ -392,7 +397,7 @@ begin
   if LastWasNull then
      Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  {for what?
+  {Why this? It cuts wanted trailing spaces!
   NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do
      Dec(NL);
@@ -682,20 +687,23 @@ begin
      Exit;
 
   V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  if VarIsStr(V) then
+  if VarIsStr(V) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
   begin
     Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
     case GetMetadata.GetColumnType(ColumnIndex) of
       stAsciiStream:
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          Result.SetString(GetStatement.GetConnection.GetIZPlainDriver.ZPlainString(WideString(V), ConSettings))
+          if ConSettings^.AutoEncode then
+            if ConSettings^.CPType = cCP_UTF8 then
+              Result.SetString(UTF8Encode(V))
+            else
+              Result.SetString(AnsiString(V))
+          else
+            Result.SetString(AnsiString(V))
         else
-          Result.SetString(RawByteString(V));
+          Result.SetString(GetValidatedAnsiString(V, ConSettings, True));
       stUnicodeStream:
-        if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          Result.SetUnicodeString(WideString(V))
-        else
-          Result.SetUnicodeString(GetStatement.GetConnection.GetIZPlainDriver.ZDbcUnicodeString(RawByteString(V), ConSettings.CTRL_CP));
+        Result.SetUnicodeString(WideString(V));
       else
         Result.SetString(RawByteString(V));
     end;
@@ -770,4 +778,5 @@ begin
 end;
 
 end.
+
 

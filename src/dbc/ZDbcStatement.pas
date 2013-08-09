@@ -474,7 +474,7 @@ begin
   begin
     {$IFNDEF UNICODE}
     FASQL := GetEncodedSQL(Value);
-    FWSQL := ZDbcUnicodeString(Value, ConSettings.CTRL_CP);
+    FWSQL := ZDbcUnicodeString(FASQL, ConSettings^.ClientCodePage^.CP);
     {$else}
     FASQL := Value;
     FWSQL := ZDbcString(Value);
