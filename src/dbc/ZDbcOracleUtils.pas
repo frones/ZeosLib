@@ -416,7 +416,7 @@ begin
         Variable.TypeCode := SQLT_STR;
         Length := Variable.DataSize + 1;
       end;
-    stAsciiStream, stUnicodeStream, stBinaryStream:
+    stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
       begin
         if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
         begin
@@ -439,7 +439,7 @@ begin
 
   Variable.Length := Length;
   GetMem(Variable.Data, Variable.Length);
-  if Variable.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
+  if Variable.TypeCode in [SQLT_BIN, SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
   begin
     PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
       PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
@@ -463,10 +463,11 @@ procedure LoadOracleVars(PlainDriver: IZOraclePlainDriver;
   Connection: IZConnection; ErrorHandle: POCIError; Variables: PZSQLVars;
   Values: TZVariantDynArray; ChunkSize: Integer);
 var
-  I: Integer;
+  I, Len: Integer;
   Status: Integer;
   CurrentVar: PZSQLVar;
   TempDate: TDateTime;
+  TempBytes: TByteDynArray;
   TempBlob: IZBlob;
   WriteTempBlob: IZOracleBlob;
   TempStream: TStream;
@@ -525,22 +526,31 @@ begin
           end;
         SQLT_BLOB, SQLT_CLOB:
           begin
-            TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-            if not TempBlob.IsEmpty then
+            if Values[I].VType = vtBytes then
             begin
-              if (CurrentVar.TypeCode = SQLT_CLOB) then
-                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings))
-              else
-                TempStream := TempBlob.GetStream;
+              TempBytes := DefVarManager.GetAsBytes(Values[I]);
+              Len := Length(TempBytes);
+              TempStream := TMemoryStream.Create;
+              TempStream.Size := Len;
+              System.Move(Pointer(TempBytes)^, TMemoryStream(TempStream).Memory^, Len);
             end
-            else TempStream := TMemoryStream.Create;
-
+            else
+            begin
+              TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
+              if not TempBlob.IsEmpty then
+              begin
+                if (CurrentVar.TypeCode = SQLT_CLOB) then
+                  TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings))
+                else
+                  TempStream := TempBlob.GetStream;
+              end
+              else TempStream := TMemoryStream.Create;
+            end;
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
-                nil, 0, Connection, PPOCIDescriptor(CurrentVar.Data)^,
+                TMemoryStream(TempStream).Memory, TempStream.Size, Connection, PPOCIDescriptor(CurrentVar.Data)^,
                 CurrentVar.ColType, ChunkSize);
-              WriteTempBlob.SetStream(TempStream);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteBlob;
               CurrentVar.Blob := WriteTempBlob;
@@ -592,7 +602,9 @@ begin
     Result := stTimestamp
   else if TypeName = 'BLOB' then
     Result := stBinaryStream
-  else if (TypeName = 'RAW') or (TypeName = 'LONG RAW') then
+  else if (TypeName = 'RAW') then
+    Result := stBytes
+  else if (TypeName = 'LONG RAW') then
     Result := stBinaryStream
   else if TypeName = 'CLOB' then
     Result := stAsciiStream
