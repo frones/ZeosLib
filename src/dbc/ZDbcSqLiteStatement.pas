@@ -466,6 +466,7 @@ var
   TempBlob: IZBlob;
   I, L: Integer;
   TempAnsi: RawByteString;
+  Bts: TByteDynArray;
 
   Function AsPAnsiChar(Const S : RawByteString; Len: Integer) : PAnsiChar;
   begin
@@ -502,8 +503,9 @@ begin
             SoftVarManager.GetAsFloat(Value));
         stBytes:
           begin
-            TempAnsi := RawByteString(SoftVarManager.GetAsString(Value));
-            L := Length(TempAnsi);
+            Bts := SoftVarManager.GetAsBytes(Value);
+            L := Length(Bts);
+            ZSetString(PAnsiChar(Bts), L, TempAnsi);
             FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
               AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
           end;
@@ -519,17 +521,17 @@ begin
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
             SoftVarManager.GetAsDateTime(Value))))),
-                -1, @BindingDestructor);
+                10, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('hh:mm:ss',
             SoftVarManager.GetAsDateTime(Value))))),
-                -1, @BindingDestructor);
+                8, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd hh:mm:ss',
             SoftVarManager.GetAsDateTime(Value))))),
-                -1, @BindingDestructor);
+                19, @BindingDestructor);
         { works equal but selects from data which was written in string format
           won't match! e.G. TestQuery etc. On the other hand-> i've prepared
           this case on the resultsets too. JULIAN_DAY_PRECISION?}
