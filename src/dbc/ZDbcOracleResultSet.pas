@@ -825,7 +825,7 @@ var
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
-  TempColumnNameLen: Integer;
+  TempColumnNameLen, CSForm: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -983,8 +983,13 @@ begin
       Scale := CurrentVar.Scale;
       if (ColumnType in [stString, stUnicodeString]) then
       begin
-        ColumnDisplaySize := CurrentVar.DataSize;
-        Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.DataSize,
+        FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
+          @ColumnDisplaySize, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+        FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
+          @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
+        if CSForm = SQLCS_NCHAR then //AL16UTF16 or AL16UTF16LE?? We should determine the NCHAR set on connect
+          ColumnDisplaySize := ColumnDisplaySize div 2;
+        Precision := GetFieldSize(ColumnType, ConSettings, ColumnDisplaySize,
           ConSettings.ClientCodePage^.CharWidth);
       end
       else
