@@ -674,6 +674,7 @@ var
   ValuePtr1, ValuePtr2: Pointer;
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
+  Bts1, Bts2: TByteDynArray;
 
   function CompareFloat(Value1, Value2: Extended): Integer;
   begin
@@ -690,7 +691,7 @@ var
   begin
     if Value1 = Value2 then
       Result := 0
-    else if Value1 = True then
+    else if Value1 then
       Result := 1
     else
       Result := -1;
@@ -777,8 +778,20 @@ begin
             + 1 + SizeOf(Pointer)])^;
           Length2 := PSmallInt(@Buffer2.Columns[FColumnOffsets[ColumnIndex]
             + 1 + SizeOf(Pointer)])^;
-          Result := CompareStr(BufferToStr(PAnsiChar(InternalGetBytes(Buffer1, ColumnIndex)), Length1),
-             BufferToStr(PAnsiChar(InternalGetBytes(Buffer2, ColumnIndex)), Length2));
+          Result := Length1 - Length2;
+          if Result = 0 then
+          begin
+            Bts1 := InternalGetBytes(Buffer1, ColumnIndex+1);
+            Bts2 := InternalGetBytes(Buffer2, ColumnIndex+1);
+            if (Assigned(Bts1) and Assigned(Bts2)) then
+              MemLCompAnsi(PAnsiChar(Bts1), PAnsiChar(Bts2), Length1)
+            else
+              if not Assigned(Bts1) and not Assigned(Bts2) then
+                Result := 0
+              else
+                if Assigned(Bts1) then Result := 1
+                else Result := 1;
+          end;
         end;
       stAsciiStream, stBinaryStream, stUnicodeStream:
         begin
@@ -2631,3 +2644,4 @@ begin
 end;
 
 end.
+
