@@ -487,10 +487,10 @@ begin
         stBoolean:
           if SoftVarManager.GetAsBoolean(Value) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(AnsiString('Y'))), 1, @BindingDestructor)
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-              {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar('N')), 1, @BindingDestructor);
+              {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(AnsiString('N'))), 1, @BindingDestructor);
         stByte, stShort, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             SoftVarManager.GetAsInteger(Value));
