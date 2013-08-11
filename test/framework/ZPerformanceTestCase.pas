@@ -225,6 +225,7 @@ type
     FDetails: Boolean;
     FOutputType: string;
     FSkipPerformance: Boolean;
+    Used: Boolean;
   protected
     property Results: TObjectList read FResults write FResults;
 
@@ -1103,6 +1104,7 @@ begin
   FSelectedAPIs := TStringList.Create;
   FSelectedTests := TStringList.Create;
   FProtocols := TStringList.Create;
+  Used := False;
 end;
 
 {**
@@ -1111,7 +1113,7 @@ end;
 destructor TZPerformanceResultProcessor.Destroy;
 var I: Integer;
 begin
-  if not FSkipPerformance then
+  if Used then
   begin
     ProcessResults;
     PrintResults;
@@ -1502,6 +1504,7 @@ procedure TZPerformanceResultProcessor.RegisterResult(const APIName, TestName,
   Protocol, Properties: String; const TryIndex: Integer; const Metric: Double);
 var iProt: Integer;
 begin
+  Used := True;
   Results.Add(TZPerformanceResultItem.Create(APIName, TestName, Protocol,
     Properties, TryIndex, Metric));
   if not (( APIName = 'all apis' ) or ( TestName = 'all tests' ) or

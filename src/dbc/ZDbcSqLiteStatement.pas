@@ -487,7 +487,7 @@ begin
         stBoolean:
           if SoftVarManager.GetAsBoolean(Value) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
               {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar('N')), 1, @BindingDestructor);

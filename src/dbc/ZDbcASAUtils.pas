@@ -910,19 +910,19 @@ begin
   with FSQLDA.sqlvar[Index] do
   begin
     case sqlType and $FFFE of
-         DT_VARCHAR:
-                            begin
-                              PZASASQLSTRING( sqlData).length := BlobSize;
-                              {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( @PZASASQLSTRING( sqlData).data[0],
-                                Value, BlobSize);
-                            end;
-         DT_LONGVARCHAR:
-                            begin
-                              {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( @PZASABlobStruct( sqlData).arr[0], Value,
-                                BlobSize);
-                              PZASABlobStruct( sqlData).stored_len := BlobSize;
-                              PZASABlobStruct( sqlData).untrunc_len := BlobSize;
-                            end;
+      DT_VARCHAR:
+        begin
+          PZASASQLSTRING( sqlData).length := BlobSize;
+          {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( @PZASASQLSTRING( sqlData).data[0],
+            PAnsiChar(AnsiTmp), BlobSize);
+        end;
+      DT_LONGVARCHAR:
+        begin
+          {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( @PZASABlobStruct( sqlData).arr[0],
+            PAnsiChar(AnsiTmp), BlobSize);
+          PZASABlobStruct( sqlData).stored_len := BlobSize;
+          PZASABlobStruct( sqlData).untrunc_len := BlobSize;
+        end;
     else
       CreateException( SUnsupportedParameterType);
     end;
