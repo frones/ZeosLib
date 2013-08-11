@@ -106,6 +106,8 @@ type
     function RandomBts(Length: Integer): TByteDynArray;
     function RandomInt(MinValue, MaxValue: Integer): Integer;
     function RandomFloat(MinValue, MaxValue: Double): Double;
+    function RandomGUIDString: String;
+    function RandomGUIDBytes: TByteDynArray;
 
     { Tests table preparation methods. }
     procedure PopulateTable(TableName: string; PrimaryKey: string;
@@ -265,7 +267,8 @@ var
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils;
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils
+  {$IFDEF WITH_FTGUID},ComObj, ActiveX{$ENDIF};
 
 { TZPerformanceSQLTestCase }
 
@@ -366,6 +369,33 @@ function TZPerformanceSQLTestCase.RandomFloat(MinValue,
   MaxValue: Double): Double;
 begin
   Result := (MinValue * 100 + Random(Trunc((MaxValue - MinValue) * 100))) / 100;
+end;
+
+function TZPerformanceSQLTestCase.RandomGUIDString: String;
+{$IFDEF WITH_FTGUID}
+var GUID: TGUID;
+{$ENDIF}
+begin
+  {$IFDEF WITH_FTGUID}
+  if CoCreateGuid(GUID) = S_OK then
+    Result := GUIDToString(GUID)
+  else
+  {$ENDIF}
+    Result := '{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}';
+end;
+
+function TZPerformanceSQLTestCase.RandomGUIDBytes: TByteDynArray;
+{$IFDEF WITH_FTGUID}
+var GUID: TGUID;
+{$ENDIF}
+begin
+  SetLength(Result, 16);
+  {$IFDEF WITH_FTGUID}
+  if CoCreateGuid(GUID) = S_OK then
+    System.Move(Pointer(@GUID)^, Pointer(Result)^, 16)
+  else
+  {$ENDIF}
+    Result := RandomBts(16);
 end;
 
 {**
@@ -524,7 +554,9 @@ begin
             ftWideMemo:
               Query1.Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
             {$ENDIF}
-            ftSmallint, ftInteger, ftWord, ftLargeint:
+            ftSmallint:
+              Query1.Fields[i].AsInteger := Random(255);
+            ftInteger, ftWord, ftLargeint:
               if UpperCase(PrimaryKey) = UpperCase(Query.Fields[I].FieldName) then
                 Query1.Fields[i].AsInteger := Index
               else if UpperCase(ForeignKey) = UpperCase(Query.Fields[I].FieldName) then
@@ -541,10 +573,14 @@ begin
               Query1.Fields[i].Value := RandomBts(Query1.Fields[i].Size);
             ftBlob:
               Query1.Fields[i].Value := RandomBts(RecordCount*100);
+            {$IFDEF WITH_FTGUID}
+            ftGuid:
+              Query1.Fields[i].AsString := RandomGUIDString;
+            {$ENDIF}
             {ftAutoInc, ftGraphic,
             ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,
             ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
-            ftVariant, ftInterface, ftIDispatch, ftGuid, );}
+            ftVariant, ftInterface, ftIDispatch);}
           end;
         end;
         Query1.Post;
@@ -625,7 +661,10 @@ begin
   begin
     FDataSetTypes[i] := Query.Fields[i].DataType;
     FResultSetTypes[i] := ConvertDatasetToDbcType(FDataSetTypes[i]);
-    FFieldSizes[i] := Query.Fields[i].DisplayWidth;
+    if FResultSetTypes[i] = stBytes then
+      FFieldSizes[i] := Query.Fields[i].Size
+    else
+      FFieldSizes[i] := Query.Fields[i].DisplayWidth;
     FFieldNames[i] := Query.Fields[i].FieldName;
   end;
   Query.Close;

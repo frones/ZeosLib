@@ -56,11 +56,7 @@ interface
 {$I ZPerformance.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
-  ZPerformanceTestCase, ZDbcIntfs, ZCompatibility
-  {$IFDEF ENABLE_MYSQL}
-    ,ZDbcMySql
-  {$ENDIF}
-  ;
+  ZPerformanceTestCase, ZDbcIntfs, ZCompatibility;
 
 type
 
@@ -220,7 +216,8 @@ begin
         stDate:    Statement.SetDate(N, Now);
         stTime:    Statement.SetTime(N, Now);
         stTimestamp: Statement.SetTimestamp(N, now);
-        stBytes, stGUID: Statement.SetBytes(N, RandomBts(16));
+        stGUID: Statement.SetBytes(N, RandomGUIDBytes);
+        stBytes: Statement.SetBytes(N, RandomBts(FieldSizes[N-1]));
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
@@ -330,7 +327,8 @@ begin
         stDate:    Statement.SetDate(N, Now);
         stTime:    Statement.SetTime(N, Now);
         stTimestamp: Statement.SetTimestamp(N, now);
-        stBytes, stGUID: Statement.SetBytes(N, RandomBts(16));
+        stGUID: Statement.SetBytes(N, RandomGUIDBytes);
+        stBytes: Statement.SetBytes(N, RandomBts(FieldSizes[N]));
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
@@ -443,7 +441,7 @@ var
   ResultSet: IZResultSet;
 begin
   if SkipForReason(srNoPerformance) then Exit;
-  
+
   ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
   for I := 1 to GetRecordCount do
   begin
@@ -463,7 +461,8 @@ begin
         stDate:    ResultSet.UpdateDate(N, Now);
         stTime:    ResultSet.UpdateTime(N, Now);
         stTimestamp: ResultSet.UpdateTimestamp(N, now);
-        stBytes, stGUID: ResultSet.UpdateBytes(N, RandomBts(16));
+        stGUID: ResultSet.UpdateBytes(N, RandomGUIDBytes);
+        stBytes: ResultSet.UpdateBytes(N, RandomBts(FieldSizes[N-1]));
         stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
         stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
         stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);
@@ -522,7 +521,8 @@ begin
         stDate:    ResultSet.UpdateDate(N, Now);
         stTime:    ResultSet.UpdateTime(N, Now);
         stTimestamp: ResultSet.UpdateTimestamp(N, now);
-        stBytes, stGUID: ResultSet.UpdateBytes(N, RandomBts(16));
+        stGUID: ResultSet.UpdateBytes(N, RandomGUIDBytes);
+        stBytes: ResultSet.UpdateBytes(N, RandomBts(FieldSizes[N-1]));
         stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
         stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
         stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);
@@ -534,7 +534,7 @@ end;
 
 procedure TZCachedDbcPerformanceTestCase.TearDownTestUpdate;
 begin
-  FAsciiStream.Free; 
+  FAsciiStream.Free;
   FUnicodeStream.Free;
   FBinaryStream.Free;
   inherited;
