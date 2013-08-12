@@ -237,8 +237,9 @@ begin
     adDBTimeStamp, adFileTime: Result := stTimestamp;
     adLongVarChar: Result := stAsciiStream;
     adLongVarWChar: Result := stUnicodeStream;
-    adBinary, adVarBinary, adLongVarBinary: Result := stBinaryStream;
-    adGUID: Result := stString;
+    adBinary, adVarBinary: Result := stBytes;
+    adLongVarBinary: Result := stBinaryStream;
+    adGUID: Result := stGUID;
 
     adEmpty, adError, AdArray, adChapter, adIDispatch, adIUnknown,
     adPropVariant, adUserDefined, adVariant: Result := stString;
@@ -282,6 +283,7 @@ begin
     stTime: Result := adDBTime;
     stTimestamp: Result := adDBTimeStamp;
     stBytes: Result := adVarBinary;
+    stGUID: Result := adGUID;
     stAsciiStream: Result := adLongVarChar;
     stUnicodeStream: Result := adLongVarWChar;
     stBinaryStream: Result := adLongVarBinary;
@@ -571,7 +573,7 @@ begin
       end;
   end;
 
-  if VarIsNull(V) then
+  if VarIsNull(V) or (SQLType = stBytes) then
     T := ConvertSqlTypeToAdo(TmpSQLType)
   else
     T := ConvertVariantToAdo(VarType(V));

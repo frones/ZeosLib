@@ -118,7 +118,8 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding;
+  Variants, Math, OleDB,
+  ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding;
 
 {**
   Creates this object and assignes the main properties.
@@ -200,13 +201,13 @@ begin
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
     ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, ConSettings.CPType);
-    if F.Type_ = adGuid then
-        FieldSize := 38
-      else
-        FieldSize := F.DefinedSize;
-      if FieldSize < 0 then
+    FieldSize := F.DefinedSize;
+    if FieldSize < 0 then
       FieldSize := 0;
-    ColumnInfo.ColumnDisplaySize := FieldSize;
+    if F.Type_ = adGuid then
+      ColumnInfo.ColumnDisplaySize := 38
+    else
+      ColumnInfo.ColumnDisplaySize := FieldSize;
     ColumnInfo.Precision := FieldSize;
     ColumnInfo.Currency := ColType = adCurrency;
     ColumnInfo.Signed := False;
@@ -592,12 +593,26 @@ end;
     value returned is <code>null</code>
 }
 function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+var
+  V: Variant;
+  GUID: TGUID;
 begin
   SetLength(Result, 0);
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  if VarType(V) = varByte then
+    Result := V
+  else
+    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType = stGUID then
+    begin
+      SetLength(Result, 16);
+      GUID := StringToGUID(V);
+      System.Move(Pointer(@GUID)^, Pointer(Result)^, 16);
+    end
+    else
+      Result := V
 end;
 
 {**
