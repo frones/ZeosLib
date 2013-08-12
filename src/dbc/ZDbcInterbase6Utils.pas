@@ -1523,7 +1523,7 @@ begin
   {$R-}
   for Result := 0 to GetFieldCount - 1 do
     if FXSQLDA.sqlvar[Result].aliasname_length = Length(name) then
-      if {$IFDEF WITH_STRLICOPY_DEPRECATED}AnsiStrings{$ENDIF}StrLIComp(@FXSQLDA.sqlvar[Result].aliasname, PAnsiChar(Name), FXSQLDA.sqlvar[Result].aliasname_length) = 0 then
+      if {$IFDEF WITH_STRLICOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLIComp(@FXSQLDA.sqlvar[Result].aliasname, PAnsiChar(Name), FXSQLDA.sqlvar[Result].aliasname_length) = 0 then
         Exit;
   raise Exception.Create(Format(SFieldNotFound1, [name]));
   {$IFOPT D+}

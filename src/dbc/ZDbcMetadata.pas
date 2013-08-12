@@ -387,6 +387,7 @@ type
       Concurrency: TZResultSetConcurrency): Boolean; virtual;
     function SupportsBatchUpdates: Boolean; virtual;
     function SupportsNonEscapedSearchStrings: Boolean; virtual;
+    function SupportsUpdateAutoIncrementFields: Boolean; virtual;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; virtual;
@@ -1736,6 +1737,15 @@ end;
 function TZAbstractDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
 begin
   Result := False;
+end;
+
+{**
+  Does the Database support updating auto incremental fields?
+  @return <code>true</code> if the DataBase allows it.
+}
+function TZAbstractDatabaseInfo.SupportsUpdateAutoIncrementFields: Boolean;
+begin
+  Result := True;
 end;
 
 { TZAbstractDatabaseMetadata }

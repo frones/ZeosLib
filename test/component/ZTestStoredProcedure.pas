@@ -1147,11 +1147,10 @@ begin
   CheckEquals('@p4', StoredProc.Params[4].Name);
   StoredProc.Open;
 
-  CheckEquals(2, ord(StoredProc.Fields.Count));
-  CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
-  CheckStringFieldType(StoredProc.Fields[1].DataType, Connection.DbcConnection.GetConSettings);
-
-  CheckStringFieldType(StoredProc.Params[4].DataType, Connection.DbcConnection.GetConSettings);
+  CheckEquals(3, ord(StoredProc.Fields.Count));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
+  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType));
+  CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
 end;
 
 { TZTestOracleStoredProcedure }

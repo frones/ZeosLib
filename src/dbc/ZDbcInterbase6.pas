@@ -466,7 +466,7 @@ begin
       {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end
   else
-    StrPCopy(DBName, AnsiString(Database));
+    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(Database));
 
   try
     { Create new db if needed }

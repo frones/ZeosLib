@@ -209,7 +209,7 @@ implementation
 
 uses
   Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
-  ZEncoding;
+  ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLStatement }
 
@@ -919,7 +919,7 @@ var
     UpdateNull(Index);
 
     FPQparamValues[ParamIndex] := AllocMem(Length(Value) + 1);
-    StrCopy(FPQparamValues[Index], PAnsiChar(Value));
+    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(FPQparamValues[Index], PAnsiChar(Value));
   end;
 
   procedure UpdateBinary(Value: Pointer; const Len, Index: Integer);
