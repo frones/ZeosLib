@@ -94,7 +94,8 @@ type
   public
     destructor Destroy; override;
 
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; override;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
@@ -278,6 +279,15 @@ end;
 function TZAdoConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
 begin
   Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+end;
+
+function TZAdoConnection.GetBinaryEscapeString(const Value: RawByteString): String;
+begin
+  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 {**
