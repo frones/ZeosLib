@@ -57,7 +57,7 @@ interface
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   SysUtils, Classes, Types,
-  ZPerformanceTestCase, ZDbcIntfs, ZCompatibility;
+  ZPerformanceTestCase, ZDbcIntfs, ZCompatibility, ZSQLTestCase;
 
 type
 
@@ -185,7 +185,7 @@ var I: Integer;
 begin
   inherited;
   FSQL := 'INSERT INTO '+PerformanceTable+' VALUES (';
-  for i := 0 to high(ResultSetTypes) do
+  for i := 0 to high(ConnectionConfig.PerformanceResultSetTypes) do
     if i = 0 then FSQL := FSQL+'?'
     else FSQL := FSQL+',?';
   FSQL := FSQL+')';
@@ -207,8 +207,8 @@ begin
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
-    for N := 1 to high(ResultSetTypes)+1 do
-      case ResultSetTypes[N-1] of
+    for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
+      case ConnectionConfig.PerformanceResultSetTypes[N-1] of
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
         stByte:    Statement.SetByte(N, Ord(Random(255)));
         stShort,
@@ -217,13 +217,13 @@ begin
         stFloat,
         stDouble,
         stBigDecimal: Statement.SetFloat(N, RandomFloat(-100, 100));
-        stString: Statement.SetString(N, RandomStr(FieldSizes[N-1]));
-        stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+        stString: Statement.SetString(N, RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1]));
+        stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1])));
         stDate:    Statement.SetDate(N, Now);
         stTime:    Statement.SetTime(N, Now);
         stTimestamp: Statement.SetTimestamp(N, now);
         stGUID: Statement.SetBytes(N, RandomGUIDBytes);
-        stBytes: Statement.SetBytes(N, RandomBts(FieldSizes[N-1]));
+        stBytes: Statement.SetBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N-1]));
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
@@ -268,8 +268,8 @@ begin
 
   ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
   while ResultSet.Next do
-    for i := 1 to high(ResultSetTypes)+1 do
-      case ResultSetTypes[i-1] of
+    for i := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
+      case ConnectionConfig.PerformanceResultSetTypes[i-1] of
         stBoolean: ResultSet.GetBoolean(I);
         stByte:    ResultSet.GetByte(I);
         stShort,
@@ -294,11 +294,11 @@ var I: Integer;
 begin
   inherited;
   FSQL := 'UPDATE '+PerformanceTable+' SET';
-  for i := 1 to high(FieldNames) do
+  for i := 1 to high(ConnectionConfig.PerformanceFieldNames) do
     if I = 1 then
-      FSQL := FSQL + ' '+FieldNames[I]+'=?'
+      FSQL := FSQL + ' '+ConnectionConfig.PerformanceFieldNames[I]+'=?'
     else
-      FSQL := FSQL + ', '+FieldNames[I]+'=?';
+      FSQL := FSQL + ', '+ConnectionConfig.PerformanceFieldNames[I]+'=?';
   FSQL := FSQL + ' WHERE '+PerformancePrimaryKey+'=?';
 end;
 
@@ -318,8 +318,8 @@ begin
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
-    for N := 1 to high(ResultSetTypes) do
-      case ResultSetTypes[N] of
+    for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes) do
+      case ConnectionConfig.PerformanceResultSetTypes[N] of
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
         stByte:    Statement.SetByte(N, Ord(Random(255)));
         stShort,
@@ -328,13 +328,13 @@ begin
         stFloat,
         stDouble,
         stBigDecimal: Statement.SetFloat(N, RandomFloat(-100, 100));
-        stString: Statement.SetString(N, RandomStr(FieldSizes[N]));
-        stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(FieldSizes[N])));
+        stString: Statement.SetString(N, RandomStr(ConnectionConfig.PerformanceFieldSizes[N]));
+        stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[N])));
         stDate:    Statement.SetDate(N, Now);
         stTime:    Statement.SetTime(N, Now);
         stTimestamp: Statement.SetTimestamp(N, now);
         stGUID: Statement.SetBytes(N, RandomGUIDBytes);
-        stBytes: Statement.SetBytes(N, RandomBts(FieldSizes[N]));
+        stBytes: Statement.SetBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N]));
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
@@ -351,7 +351,7 @@ begin
             Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
           end;
       end;
-    Statement.SetInt(High(ResultSetTypes)+1, I);
+    Statement.SetInt(High(ConnectionConfig.PerformanceResultSetTypes)+1, I);
     Statement.ExecuteUpdatePrepared;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -385,17 +385,17 @@ begin
   SetLength(FDirectSQLTypes, 0);
   SetLength(FDirectFieldNames, 0);
   SetLength(FDirectFieldSizes, 0);
-  for i := 0 to high(ResultSetTypes) do
+  for i := 0 to high(ConnectionConfig.PerformanceResultSetTypes) do
   begin
     { copy predefined values to temporary arrays }
     SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)+1);
-    FDirectSQLTypes[High(FDirectSQLTypes)] := ResultSetTypes[i];
+    FDirectSQLTypes[High(FDirectSQLTypes)] := ConnectionConfig.PerformanceResultSetTypes[i];
     SetLength(FDirectFieldNames, Length(FDirectFieldNames)+1);
-    FDirectFieldNames[High(FDirectFieldNames)] := FieldNames[i];
+    FDirectFieldNames[High(FDirectFieldNames)] := ConnectionConfig.PerformanceFieldNames[i];
     SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)+1);
-    FDirectFieldSizes[High(FDirectFieldSizes)] := FieldSizes[i];
+    FDirectFieldSizes[High(FDirectFieldSizes)] := ConnectionConfig.PerformanceFieldSizes[i];
     { check types }
-    case ResultSetTypes[i] of
+    case ConnectionConfig.PerformanceResultSetTypes[i] of
       stBytes, stBinaryStream:
         if StartsWith(Protocol, 'firebird') and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
         begin
@@ -552,8 +552,8 @@ begin
   for I := 1 to GetRecordCount do
   begin
     ResultSet.MoveToInsertRow;
-    for N := 1 to high(ResultSetTypes)+1 do
-      case ResultSetTypes[N-1] of
+    for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
+      case ConnectionConfig.PerformanceResultSetTypes[N-1] of
         stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
         stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,
@@ -562,13 +562,13 @@ begin
         stFloat,
         stDouble,
         stBigDecimal: ResultSet.UpdateFloat(N, RandomFloat(-100, 100));
-        stString: ResultSet.UpdateString(N, RandomStr(FieldSizes[N-1]));
-        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+        stString: ResultSet.UpdateString(N, RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1]));
+        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1])));
         stDate:    ResultSet.UpdateDate(N, Now);
         stTime:    ResultSet.UpdateTime(N, Now);
         stTimestamp: ResultSet.UpdateTimestamp(N, now);
         stGUID: ResultSet.UpdateBytes(N, RandomGUIDBytes);
-        stBytes: ResultSet.UpdateBytes(N, RandomBts(FieldSizes[N-1]));
+        stBytes: ResultSet.UpdateBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N-1]));
         stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
         stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
         stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);
@@ -612,8 +612,8 @@ begin
   ResultSet := CreateResultSet('SELECT * from '+PerformanceTable);
   while ResultSet.Next do
   begin
-    for N := 2 to high(ResultSetTypes)+1 do
-      case ResultSetTypes[N-1] of
+    for N := 2 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
+      case ConnectionConfig.PerformanceResultSetTypes[N-1] of
         stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
         stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,
@@ -622,13 +622,13 @@ begin
         stFloat,
         stDouble,
         stBigDecimal: ResultSet.UpdateFloat(N, RandomFloat(-100, 100));
-        stString: ResultSet.UpdateString(N, RandomStr(FieldSizes[N-1]));
-        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+        stString: ResultSet.UpdateString(N, RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1]));
+        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1])));
         stDate:    ResultSet.UpdateDate(N, Now);
         stTime:    ResultSet.UpdateTime(N, Now);
         stTimestamp: ResultSet.UpdateTimestamp(N, now);
         stGUID: ResultSet.UpdateBytes(N, RandomGUIDBytes);
-        stBytes: ResultSet.UpdateBytes(N, RandomBts(FieldSizes[N-1]));
+        stBytes: ResultSet.UpdateBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N-1]));
         stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
         stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
         stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);

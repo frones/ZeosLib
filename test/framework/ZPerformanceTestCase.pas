@@ -64,20 +64,12 @@ type
   {** A method for test set up, run or tear down. }
   TZTestMethod = procedure of object;
 
-  TDataSetTypesDynArray = array of TFieldType;
-  TResultSetTypesDynArray = array of TZSQLType;
-
   {** Implements a abstract performance test case. }
 
   { TZPerformanceSQLTestCase }
 
   TZPerformanceSQLTestCase = class (TZAbstractCompSQLTestCase)
   private
-    FDataSetTypes: TDataSetTypesDynArray;
-    FResultSetTypes: TResultSetTypesDynArray;
-    FFieldSizes: TIntegerDynArray;
-    FFieldNames: TStringDynArray;
-    FFieldPropertiesDetermined: Boolean;
     FSelectedAPIs: TStrings;
     FSelectedTests: TStrings;
     FRecordCount: Integer;
@@ -90,8 +82,8 @@ type
 
     procedure RunSelectedTest(TestName: string; SetUpMethod: TZTestMethod;
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
+    procedure DetermineFieldsProperties(ConnectionConfig: TZConnectionConfig);
   protected
-    procedure DetermineFieldsProperties;
     procedure LoadConfiguration; override;
     procedure SetUp; override;
     function GetImplementedAPI: string; virtual; abstract;
@@ -166,11 +158,6 @@ type
     procedure TearDownTestLookup; virtual;
 
     property SkipPerformanceTransactionMode: Boolean read FSkipPerformanceTransactionMode;
-    property FieldPropertiesDetermined: Boolean read FFieldPropertiesDetermined;
-    property DataSetTypes: TDataSetTypesDynArray read FDataSetTypes;
-    property ResultSetTypes: TResultSetTypesDynArray read FResultSetTypes;
-    property FieldSizes: TIntegerDynArray read FFieldSizes;
-    property FieldNames: TStringDynArray read FFieldNames;
     property PerformanceTable: String read FPerformanceTable;
     property PerformancePrimaryKey: String read FPerformancePrimaryKey;
   public
@@ -284,7 +271,7 @@ uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils
 constructor TZPerformanceSQLTestCase.Create(MethodName: string);
 begin
   inherited Create(MethodName);
-  FFieldPropertiesDetermined := False;
+  //FFieldPropertiesDetermined := False;
 end;
 {**
   Destroys this object and clean ups the memory.
@@ -339,8 +326,8 @@ end;
 procedure TZPerformanceSQLTestCase.SetUp;
 begin
   inherited SetUp;
-  if not FieldPropertiesDetermined then
-     DetermineFieldsProperties;
+  if not (ConnectionConfig.PerformanceFieldPropertiesDetermined) then
+    DetermineFieldsProperties(ConnectionConfig);
 end;
 
 function TZPerformanceSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
@@ -550,9 +537,9 @@ begin
         end;
 
         Query1.Insert;
-        for I := 0 to High(DataSetTypes) do
+        for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
         begin
-          case DataSetTypes[i] of
+          case ConnectionConfig.PerformanceDataSetTypes[i] of
             ftString, ftFixedChar:
               Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].DisplayWidth);
             ftMemo, ftFmtMemo:
@@ -655,31 +642,39 @@ begin
   end;
 end;
 
-procedure TZPerformanceSQLTestCase.DetermineFieldsProperties;
+procedure TZPerformanceSQLTestCase.DetermineFieldsProperties(ConnectionConfig: TZConnectionConfig);
 var
   Query: TZQuery;
   I: Integer;
+  DataSetTypes: TDataSetTypesDynArray;
+  ResultSetTypes: TResultSetTypesDynArray;
+  FieldSizes: TIntegerDynArray;
+  FieldNames: TStringDynArray;
 begin
   Query := CreateQuery;
   Query.SQL.Text := 'select * from '+PerformanceTable;
   Query.Open;
-  SetLength(FDataSetTypes, Query.Fields.Count);
-  SetLength(FResultSetTypes, Query.Fields.Count);
-  SetLength(FFieldSizes, Query.Fields.Count);
-  SetLength(FFieldNames, Query.Fields.Count);
+  SetLength(DataSetTypes, Query.Fields.Count);
+  SetLength(ResultSetTypes, Query.Fields.Count);
+  SetLength(FieldSizes, Query.Fields.Count);
+  SetLength(FieldNames, Query.Fields.Count);
   for i := 0 to Query.Fields.Count -1 do
   begin
-    FDataSetTypes[i] := Query.Fields[i].DataType;
-    FResultSetTypes[i] := ConvertDatasetToDbcType(FDataSetTypes[i]);
-    if FResultSetTypes[i] = stBytes then
-      FFieldSizes[i] := Query.Fields[i].Size
+    DataSetTypes[i] := Query.Fields[i].DataType;
+    ResultSetTypes[i] := ConvertDatasetToDbcType(DataSetTypes[i]);
+    if ResultSetTypes[i] = stBytes then
+      FieldSizes[i] := Query.Fields[i].Size
     else
-      FFieldSizes[i] := Query.Fields[i].DisplayWidth;
-    FFieldNames[i] := Query.Fields[i].FieldName;
+      FieldSizes[i] := Query.Fields[i].DisplayWidth;
+    FieldNames[i] := Query.Fields[i].FieldName;
   end;
   Query.Close;
   Query.Free;
-  FFieldPropertiesDetermined := True;
+  ConnectionConfig.PerformanceDataSetTypes := DataSetTypes;
+  ConnectionConfig.PerformanceResultSetTypes := ResultSetTypes;
+  ConnectionConfig.PerformanceFieldSizes := FieldSizes;
+  ConnectionConfig.PerformanceFieldNames := FieldNames;
+  ConnectionConfig.PerformanceFieldPropertiesDetermined := True;
 end;
 
 {**
@@ -805,7 +800,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestDelete;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -815,7 +810,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestFetch;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -825,7 +820,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestFilter;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -835,7 +830,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestInsert;
 begin
-  CleanupTable(PERFORMANCE_TABLE_NAME);
+  CleanupTable(FPerformanceTable);
   DefaultSetUpTest;
 end;
 
@@ -844,7 +839,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestOpen;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -854,7 +849,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestSort;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -864,7 +859,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestUpdate;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -874,7 +869,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestDirectUpdate;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -884,7 +879,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestLocate;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -894,7 +889,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestLookup;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -1162,6 +1157,7 @@ end;
 destructor TZPerformanceResultProcessor.Destroy;
 var I: Integer;
 begin
+  Used := False;
   if Used then
   begin
     ProcessResults;

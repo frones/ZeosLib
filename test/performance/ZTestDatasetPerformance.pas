@@ -173,9 +173,7 @@ procedure TZDatasetPerformanceTestCase.SetUpTestInsert;
 begin
   inherited SetUpTestInsert;
   Query.SQL.Text := 'SELECT * FROM '+PerformanceTable;
-  // Query.RequestLive := True;
   Query.Open;
-
 end;
 
 {**
@@ -183,15 +181,45 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.RunTestInsert;
 var
-  I: Integer;
+  I, N: Integer;
 begin
   for I := 1 to GetRecordCount do
     with Query do
     begin
       Append;
-      Fields[0].AsInteger := I;
-      Fields[1].AsFloat := RandomFloat(-100, 100);
-      Fields[2].AsString := RandomStr(10);
+      for N := 0 to Length(ConnectionConfig.PerformanceDataSetTypes) do
+        case ConnectionConfig.PerformanceDataSetTypes[N] of
+          ftBoolean: Fields[N].AsBoolean := Random(1) = 1;
+          {stByte:    Fields[N].AsInteger := Random(127);
+          stShort,
+          stInteger,
+          stLong:    Fields[N].AsInteger := I;
+          stFloat,
+          stDouble,
+          stBigDecimal: Fields[N].AsFloat := RandomFloat(-100, 100);
+          stString:     Fields[N].AsString := RandomStr(FieldSizes[N]);
+          stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
+          stDate:    Statement.SetDate(N, Now);
+          stTime:    Statement.SetTime(N, Now);
+          stTimestamp: Statement.SetTimestamp(N, now);
+          stGUID: Statement.SetBytes(N, RandomBts(16));
+          stBytes: Statement.SetBytes(N, RandomBts(FieldSizes[N-1]));
+          stAsciiStream:
+            begin
+              Ansi := RawByteString(RandomStr(GetRecordCount*100));
+              Statement.SetBlob(N, stAsciiStream, TZAbstractBlob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, Connection, False));
+            end;
+          stUnicodeStream:
+            begin
+              Uni := ZWideString(RandomStr(GetRecordCount*100));
+              Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(PWideChar(Uni), GetRecordCount*100*2, Connection, True));
+            end;
+          stBinaryStream:
+            begin
+              Bts := RandomBts(GetRecordCount*100);
+              Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+            end;}
+        end;
       Post;
     end;
   if not SkipPerformanceTransactionMode then
