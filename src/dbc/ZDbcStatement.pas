@@ -2582,9 +2582,9 @@ begin
   if FCachedQuery = nil then
   begin
     FCachedQuery := TStringList.Create;
-    if Pos('?', SQL) > 0 then
+    if Pos('?', SSQL) > 0 then
     begin
-      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SSQL, [toUnifyWhitespaces]);
       try
         Temp := '';
         for I := 0 to Tokens.Count - 1 do
@@ -2615,7 +2615,7 @@ begin
       end;
     end
     else
-      FCachedQuery.Add(SQL);
+      FCachedQuery.Add(SSQL);
   end;
   Result := FCachedQuery;
 end;
