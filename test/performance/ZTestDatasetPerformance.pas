@@ -64,6 +64,7 @@ type
   TZDatasetPerformanceTestCase = class (TZPerformanceSQLTestCase)
   private
     FQuery: TZQuery;
+    FLastStringField: String;
   protected
     property Query: TZQuery read FQuery write FQuery;
 
@@ -181,45 +182,47 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.RunTestInsert;
 var
-  I, N: Integer;
+  Index, I: Integer;
 begin
-  for I := 1 to GetRecordCount do
+  for Index := 1 to GetRecordCount do
     with Query do
     begin
       Append;
-      for N := 0 to Length(ConnectionConfig.PerformanceDataSetTypes) do
-        case ConnectionConfig.PerformanceDataSetTypes[N] of
-          ftBoolean: Fields[N].AsBoolean := Random(1) = 1;
-          {stByte:    Fields[N].AsInteger := Random(127);
-          stShort,
-          stInteger,
-          stLong:    Fields[N].AsInteger := I;
-          stFloat,
-          stDouble,
-          stBigDecimal: Fields[N].AsFloat := RandomFloat(-100, 100);
-          stString:     Fields[N].AsString := RandomStr(FieldSizes[N]);
-          stUnicodeString: Statement.SetUnicodeString(N, ZWideString(RandomStr(FieldSizes[N-1])));
-          stDate:    Statement.SetDate(N, Now);
-          stTime:    Statement.SetTime(N, Now);
-          stTimestamp: Statement.SetTimestamp(N, now);
-          stGUID: Statement.SetBytes(N, RandomBts(16));
-          stBytes: Statement.SetBytes(N, RandomBts(FieldSizes[N-1]));
-          stAsciiStream:
-            begin
-              Ansi := RawByteString(RandomStr(GetRecordCount*100));
-              Statement.SetBlob(N, stAsciiStream, TZAbstractBlob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, Connection, False));
-            end;
-          stUnicodeStream:
-            begin
-              Uni := ZWideString(RandomStr(GetRecordCount*100));
-              Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(PWideChar(Uni), GetRecordCount*100*2, Connection, True));
-            end;
-          stBinaryStream:
-            begin
-              Bts := RandomBts(GetRecordCount*100);
-              Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
-            end;}
-        end;
+      for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
+        case ConnectionConfig.PerformanceDataSetTypes[i] of
+          ftString, ftFixedChar:
+            Fields[i].AsString := RandomStr(ConnectionConfig.PerformanceFieldSizes[i]);
+          ftMemo, ftFmtMemo:
+            Fields[i].AsString := RandomStr(RecordCount*100);
+          {$IFDEF WITH_WIDEFIELDS}
+          ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
+            Fields[i].AsWideString := WideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[i]));
+          ftWideMemo:
+            Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
+          {$ENDIF}
+          ftSmallint:
+            Fields[i].AsInteger := Random(255);
+          ftInteger, ftWord, ftLargeint:
+            Fields[i].AsInteger := Index;
+          ftBoolean:
+            Fields[i].AsBoolean := Random(1) = 0;
+          ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
+            Fields[i].AsFloat := RandomFloat(-100, 100);
+          ftDate, ftTime, ftDateTime, ftTimeStamp:
+            Fields[i].AsFloat := now;
+          ftVarBytes, ftBytes:
+            Fields[i].Value := RandomBts(ConnectionConfig.PerformanceFieldSizes[i]);
+          ftBlob:
+            Fields[i].Value := RandomBts(RecordCount*100);
+          {$IFDEF WITH_FTGUID}
+          ftGuid:
+            Fields[i].AsString := RandomGUIDString;
+          {$ENDIF}
+          {ftAutoInc, ftGraphic,
+          ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,
+          ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
+          ftVariant, ftInterface, ftIDispatch);}
+      end;
       Post;
     end;
   if not SkipPerformanceTransactionMode then
@@ -252,13 +255,40 @@ end;
    Performs a fetch data
 }
 procedure TZDatasetPerformanceTestCase.RunTestFetch;
+var I: Integer;
 begin
   while not Query.EOF do
     with Query do
     begin
-      Fields[0].AsInteger;
-      Fields[1].AsFloat;
-      Fields[2].AsString;
+      for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
+        case ConnectionConfig.PerformanceDataSetTypes[i] of
+          ftString,
+          ftFixedChar,
+          ftMemo,
+          ftFmtMemo
+          {$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
+            Fields[i].AsString;
+          {$IFDEF WITH_WIDEFIELDS}
+          ftWideString,
+          ftWideMemo
+          {$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
+            Fields[i].AsWideString;
+          {$ENDIF}
+          ftSmallint, ftInteger, ftWord, ftLargeint:
+            Fields[i].AsInteger;
+          ftBoolean:
+            Fields[i].AsBoolean;
+          ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
+            Fields[i].AsFloat;
+          ftDate, ftTime, ftDateTime, ftTimeStamp:
+            Fields[i].AsDateTime;
+          ftVarBytes, ftBytes, ftBlob:
+            Fields[i].Value;
+          {ftAutoInc, ftGraphic,
+          ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,
+          ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
+          ftVariant, ftInterface, ftIDispatch);}
+        end;
       Next;
     end;
   if not SkipPerformanceTransactionMode then
@@ -281,20 +311,55 @@ end;
   Performs an update test.
 }
 procedure TZDatasetPerformanceTestCase.RunTestUpdate;
+var I: Integer;
 begin
   while not Query.EOF do
     with Query do
     begin
       Edit;
-      Fields[1].AsFloat := RandomFloat(-100, 100);
-      Fields[2].AsString := RandomStr(10);
+      for I := 1 to High(ConnectionConfig.PerformanceDataSetTypes) do
+      begin
+        case ConnectionConfig.PerformanceDataSetTypes[i] of
+          ftString, ftFixedChar:
+            Fields[i].AsString := RandomStr(ConnectionConfig.PerformanceFieldSizes[i]);
+          ftMemo, ftFmtMemo:
+            Fields[i].AsString := RandomStr(RecordCount*100);
+          {$IFDEF WITH_WIDEFIELDS}
+          ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
+            Fields[i].AsWideString := WideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[i]));
+          ftWideMemo:
+            Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
+          {$ENDIF}
+          ftSmallint:
+            Fields[i].AsInteger := Random(255);
+          ftInteger, ftWord, ftLargeint:
+            Fields[i].AsInteger := RandomInt(-100, 100);
+          ftBoolean:
+            Fields[i].AsBoolean := Random(1) = 0;
+          ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
+            Fields[i].AsFloat := RandomFloat(-100, 100);
+          ftDate, ftTime, ftDateTime, ftTimeStamp:
+            Fields[i].AsFloat := now;
+          ftVarBytes, ftBytes:
+            Fields[i].Value := RandomBts(ConnectionConfig.PerformanceFieldSizes[i]);
+          ftBlob:
+            Fields[i].Value := RandomBts(RecordCount*100);
+          {$IFDEF WITH_FTGUID}
+          ftGuid:
+            Fields[i].AsString := RandomGUIDString;
+          {$ENDIF}
+          {ftAutoInc, ftGraphic,
+          ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,
+          ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
+          ftVariant, ftInterface, ftIDispatch);}
+        end;
+      end;
       Post;
       Next;
     end;
   if not SkipPerformanceTransactionMode then
     Query.Connection.Commit;
 end;
-
 {**
   The empty Set Up method for delete test.
 }
@@ -340,14 +405,20 @@ end;
   The empty Set Up method for locate test.
 }
 procedure TZDatasetPerformanceTestCase.SetUpTestLocate;
+var I: Integer;
 begin
   inherited SetUpTestLocate;
   Query.SQL.Text := 'SELECT * FROM '+PerformanceTable+' ORDER BY '+PerformancePrimaryKey;
   Query.Open;
   Query.Last;
   Query.First;
-  if not SkipPerformanceTransactionMode then
-    Query.Connection.Commit;
+  FLastStringField := '';
+  for i := High(ConnectionConfig.PerformanceDataSetTypes) downto 0 do
+    if ConnectionConfig.PerformanceDataSetTypes[i] in [ftString{$IFDEF WITH_WIDEFIELDS}, ftWideString{$ENDIF}] then
+    begin
+      FLastStringField := ConnectionConfig.PerformanceFieldNames[i];
+      Break;
+    end;
 end;
 
 {**
@@ -355,7 +426,7 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.RunTestLocate;
 begin
-  Query.Locate('data2','AAAAAAAAAA',[]);
+  Query.Locate(FLastStringField,'AAAAAAAAAA',[]);
   if not SkipPerformanceTransactionMode then
     Query.Connection.Commit;
 end;
@@ -364,14 +435,20 @@ end;
   The empty Set Up method for lookup test.
 }
 procedure TZDatasetPerformanceTestCase.SetUpTestLookup;
+var I: Integer;
 begin
   inherited SetUpTestLookup;
   Query.SQL.Text := 'SELECT * FROM '+PerformanceTable+' ORDER BY '+PerformancePrimaryKey;
   Query.Open;
   Query.Last;
   Query.First;
-  if not SkipPerformanceTransactionMode then
-    Query.Connection.Commit;
+  FLastStringField := '';
+  for i := High(ConnectionConfig.PerformanceDataSetTypes) downto 0 do
+    if ConnectionConfig.PerformanceDataSetTypes[i] in [ftString{$IFDEF WITH_WIDEFIELDS}, ftWideString{$ENDIF}] then
+    begin
+      FLastStringField := ConnectionConfig.PerformanceFieldNames[i];
+      Break;
+    end;
 end;
 
 {**
@@ -379,7 +456,7 @@ end;
 }
 procedure TZDatasetPerformanceTestCase.RunTestLookup;
 begin
-  Query.Lookup('data2','AAAAAAAAAA',PerformancePrimaryKey);
+  Query.Lookup(FLastStringField,'AAAAAAAAAA',PerformancePrimaryKey);
   if not SkipPerformanceTransactionMode then
     Query.Connection.Commit;
 end;
