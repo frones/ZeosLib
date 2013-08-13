@@ -164,7 +164,6 @@ type
     function CreateDatasetConnection: TZConnection; override;
     function CreateDbcConnection: IZConnection; override;
 
-    constructor Create(MethodName: string); override;
     destructor Destroy; override;
 
   published
@@ -268,11 +267,6 @@ uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils
 
 { TZPerformanceSQLTestCase }
 
-constructor TZPerformanceSQLTestCase.Create(MethodName: string);
-begin
-  inherited Create(MethodName);
-  //FFieldPropertiesDetermined := False;
-end;
 {**
   Destroys this object and clean ups the memory.
 }
@@ -1157,7 +1151,6 @@ end;
 destructor TZPerformanceResultProcessor.Destroy;
 var I: Integer;
 begin
-  Used := False;
   if Used then
   begin
     ProcessResults;
