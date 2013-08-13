@@ -55,7 +55,8 @@ interface
 
 {$I ZPerformance.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  SysUtils, Classes, Types,
   ZPerformanceTestCase, ZDbcIntfs, ZCompatibility;
 
 type
@@ -65,6 +66,10 @@ type
   protected
     FConnection: IZConnection;
     FSQL: String;
+    FDirectSQLTypes: TResultSetTypesDynArray;
+    FDirectFieldNames: TStringDynArray;
+    FDirectFieldSizes: TIntegerDynArray;
+    FTrueVal, FFalseVal: String;
   protected
     property SQL: String read FSQL;
     property Connection: IZConnection read FConnection write FConnection;
@@ -85,6 +90,7 @@ type
     procedure SetUpTestUpdate; override;
     procedure RunTestUpdate; override;
     procedure RunTestDelete; override;
+    procedure SetUpTestDirectUpdate; override;
     procedure RunTestDirectUpdate; override;
   end;
 
@@ -107,7 +113,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, ZDbcUtils, Types;
+uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, ZDbcUtils;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -231,7 +237,7 @@ begin
         stBinaryStream:
           begin
             Bts := RandomBts(GetRecordCount*100);
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
           end;
       end;
     Statement.ExecuteUpdatePrepared;
@@ -342,7 +348,7 @@ begin
         stBinaryStream:
           begin
             Bts := RandomBts(GetRecordCount*100);
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
           end;
       end;
     Statement.SetInt(High(ResultSetTypes)+1, I);
@@ -371,24 +377,124 @@ begin
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
+procedure TZNativeDbcPerformanceTestCase.SetUpTestDirectUpdate;
+var
+  I: Integer;
+begin
+  inherited;
+  SetLength(FDirectSQLTypes, 0);
+  SetLength(FDirectFieldNames, 0);
+  SetLength(FDirectFieldSizes, 0);
+  for i := 0 to high(ResultSetTypes) do
+  begin
+    { copy predefined values to temporary arrays }
+    SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)+1);
+    FDirectSQLTypes[High(FDirectSQLTypes)] := ResultSetTypes[i];
+    SetLength(FDirectFieldNames, Length(FDirectFieldNames)+1);
+    FDirectFieldNames[High(FDirectFieldNames)] := FieldNames[i];
+    SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)+1);
+    FDirectFieldSizes[High(FDirectFieldSizes)] := FieldSizes[i];
+    { check types }
+    case ResultSetTypes[i] of
+      stBytes, stBinaryStream:
+        if StartsWith(Protocol, 'firebird') and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
+        begin
+          SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)-1); //omit these types to avoid exception
+          SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
+          SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
+        end;
+      stBoolean:
+        if StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'mysql') then
+        begin
+          Self.FTrueVal := #39'Y'#39;
+          Self.FFalseVal := #39'N'#39;
+        end
+        else
+          if StartsWith(Protocol, 'postgre')then
+          begin
+            Self.FTrueVal := 'TRUE';
+            Self.FFalseVal := 'FALSE';
+          end
+          else
+          begin
+            Self.FTrueVal := '1';
+            Self.FFalseVal := '0';
+        end;
+      stDate, stTime, stTimeStamp: //session dependend values. This i'll solve later
+        begin
+          SetLength(FDirectSQLTypes, Length(FDirectSQLTypes)-1); //omit these types to avoid exception
+          SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
+          SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
+        end;
+    end;
+  end;
+end;
+
 {**
   Performs a direct update test.
 }
 procedure TZNativeDbcPerformanceTestCase.RunTestDirectUpdate;
 var
-  I: Integer;
+  I, N: Integer;
   Statement: IZStatement;
+  SQL: String;
+  OldDecimalSeparator: Char;
+  OldThousandSeparator: Char;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
+  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
   Statement := Connection.CreateStatement;
   for I := 1 to GetRecordCount do
   begin
-    Statement.ExecuteUpdate(Format('UPDATE high_load SET data1=%s, data2=''%s'''
-      + ' WHERE hl_id = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
-      RandomStr(10), I]));
+    SQL := 'UPDATE '+PerformanceTable+' SET ';
+    for N := 1 to high(FDirectSQLTypes) do
+    begin
+      case FDirectSQLTypes[n] of
+        stBoolean:
+          if Random(1) = 1 then
+            SQL := SQL + FDirectFieldNames[N]+'='+ FTrueVal
+          else
+            SQL := SQL + FDirectFieldNames[N]+'='+ FFalseVal;
+        stByte:
+          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(255));
+        stShort,
+        stInteger,
+        stLong:
+          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(I));
+        stFloat,
+        stDouble,
+        stBigDecimal:
+          {$IFNDEF WITH_FORMATSETTINGS}
+          SQL := SQL + FDirectFieldNames[N]+'='+StringReplace(FloatToStr(RandomFloat(-100, 100)), ',','.', [rfReplaceAll]);
+          {$ELSE}
+          SQL := SQL + FDirectFieldNames[N]+'='+FloatToStr(RandomFloat(-100, 100));
+          {$ENDIF}
+        stString, stUnicodeString:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.GetEscapeString(RandomStr(FDirectFieldSizes[N]));
+        stGUID:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.GetEscapeString(RandomGUIDString);
+        stBytes:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.GetBinaryEscapeString(RandomBts(FDirectFieldSizes[N]));
+        stAsciiStream, stUnicodeStream:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.GetEscapeString(RandomStr(GetRecordCount*100));
+        stBinaryStream:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.GetBinaryEscapeString(RandomBts(GetRecordCount*100));
+        //stDate, stTime, stTimestamp //session dependend
+      end;
+      if N = high(FDirectSQLTypes) then
+        SQL := SQL + ' WHERE '+ PerformancePrimaryKey+'='+IntToStr(i)
+      else
+        SQL := SQL + ',';
+    end;
+    Statement.ExecuteUpdate(SQL);
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
 
 { TZCachedDbcPerformanceTestCase }
