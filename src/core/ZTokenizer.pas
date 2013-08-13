@@ -1493,14 +1493,13 @@ begin
       if Stream.Read(NextChar, 1 * SizeOf(Char)) > 0  then //Read next Char
       begin
         Inc(IReadCount); //increment count of read-Chars
-        if NextChar <> Copy(EscapeMarkSequence, i, 1) then //Compare Chars
+        if NextChar <> EscapeMarkSequence[I] then //Compare Chars
         begin
           Stream.Seek(-(iReadCount * SizeOf(Char)), soFromCurrent); //Seek Stream back to starting Position
           Exit;
         end
       end
-      else
-        Exit;
+      else Continue;
   end
   else
     Exit;
