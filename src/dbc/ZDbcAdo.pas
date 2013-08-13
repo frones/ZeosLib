@@ -94,6 +94,7 @@ type
   public
     destructor Destroy; override;
 
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; override;
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
@@ -128,7 +129,7 @@ implementation
 
 uses
   Variants,
-  SysUtils, ActiveX, ZDbcUtils, ZDbcLogging, ZAdoToken,
+  SysUtils, ActiveX, ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils,
   ZDbcAdoStatement, ZDbcAdoMetaData;
 
 const                                                //adXactUnspecified
@@ -272,6 +273,11 @@ begin
 
   FAdoConnection.IsolationLevel := IL[GetTransactionIsolation];
   ReStartTransactionSupport;
+end;
+
+function TZAdoConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+begin
+  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
 end;
 
 {**

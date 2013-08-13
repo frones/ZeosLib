@@ -130,6 +130,9 @@ type
     procedure Close; override;
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; override;
+    function GetEscapeString(const Value: RawByteString): RawByteString; override;
+    function GetEscapeString(const Value: ZWideString): ZWideString; override;
   end;
 
   {** Implements a specialized cached resolver for Interbase/Firebird. }
@@ -743,15 +746,77 @@ end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
-  if Self.GetPlainDriver.GetProtocol = 'firebird-2.5' then
-    if Length(Value)*2 < 32*1024 then
-      GetSQLHexString(PAnsiChar(Value), Length(Value))
+  //http://tracker.firebirdsql.org/browse/CORE-2789
+  if EndsWith(GetPlainDriver.GetProtocol, '2.5') then
+    if (Length(Value)*2+3) < 32*1024 then
+      Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
     else
-      raise Exception.Create('Binary data out of range! Use Blob-Fields!')
+      raise Exception.Create('Binary data out of range! Use parameters!')
   else
-    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use Blob-Fields!');
+    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
+function TZInterbase6Connection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+begin
+  //http://tracker.firebirdsql.org/browse/CORE-2789
+  if EndsWith(GetPlainDriver.GetProtocol, '2.5') then
+    if (Length(Value)*2+3) < 32*1024 then
+      Result := GetSQLHexString(PAnsiChar(Value), Length(Value))
+    else
+      raise Exception.Create('Binary data out of range! Use parameters!')
+  else
+    raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
+end;
+
+function TZInterbase6Connection.GetEscapeString(const Value: RawByteString): RawByteString;
+begin
+  //http://www.firebirdsql.org/manual/qsg10-firebird-sql.html
+  if GetAutoEncodeStrings then
+    if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
+      {$IFDEF UNICODE}
+      Result := Value
+      {$ELSE}
+      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
+      {$ENDIF}
+    else
+      {$IFDEF UNICODE}
+      Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39
+      {$ELSE}
+      Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
+      {$ENDIF}
+  else
+    if StartsWith(Value, RawByteString('''')) and EndsWith(Value, RawByteString('''')) then
+      Result := Value
+    else
+      Result := #39+{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
+end;
+
+function TZInterbase6Connection.GetEscapeString(const Value: ZWideString): ZWideString;
+begin
+  //http://www.firebirdsql.org/manual/qsg10-firebird-sql.html
+  if GetAutoEncodeStrings then
+    if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
+      {$IFDEF UNICODE}
+      Result := GetDriver.GetTokenizer.GetEscapeString(Value)
+      {$ELSE}
+      Result := Value
+      {$ENDIF}
+    else
+      {$IFDEF UNICODE}
+      Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
+      {$ELSE}
+      Result := ZDbcUnicodeString(GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(ZPlainString(Value), #39, #39#39, [rfReplaceAll])+#39))
+      {$ENDIF}
+  else
+    if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
+      Result := Value
+    else
+      {$IFDEF UNICODE}
+      Result := #39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
+      {$ELSE}
+      Result := ZDbcUnicodeString(#39+StringReplace(ZPlainString(Value), #39, #39#39, [rfReplaceAll])+#39);
+      {$ENDIF}
+end;
 {**
   Creates a sequence generator object.
   @param Sequence a name of the sequence generator.

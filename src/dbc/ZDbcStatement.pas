@@ -464,7 +464,7 @@ begin
     {$ELSE}
     FaSQL := ZPlainString(Value);
     {$ENDIF}
-    FWSQL := Value;
+    FWSQL := ZDbcUnicodeString(FASQL, ConSettings^.ClientCodePage^.CP);;
   end;
 end;
 
