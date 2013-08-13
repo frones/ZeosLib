@@ -151,9 +151,25 @@ primary key (cs_id)
 /* Table : high_load                                            */
 /*==============================================================*/
 create table high_load (
-hl_id		      INTEGER 						NOT NULL	default autoincrement,
-data1		      FLOAT							null,
-data2		      CHAR(10)						null,
+hl_id		      INTEGER NOT NULL default autoincrement,
+stBoolean             BIT,
+stByte                TINYINT,
+stShort               SMALLINT,
+stInteger             INTEGER,
+stLong                BIGINT,
+stFloat               FLOAT,
+stDouble              DOUBLE,
+stBigDecimal          DECIMAL(18,4),
+stString              VARCHAR(100),
+stUnicodeString       NVARCHAR(255),
+stBytes               VARBINARY(100),
+stDate                DATE,
+stTime                TIME,
+stTimestamp           TIMESTAMP,
+stGUID                UNIQUEIDENTIFIER,
+stAsciiStream         LONG VARCHAR,
+stUnicodeStream       LONG NVARCHAR,
+stBinaryStream        LONG BINARY,
 primary key (hl_id)
 );
 

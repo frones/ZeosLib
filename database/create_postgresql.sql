@@ -183,9 +183,25 @@ primary key (cs_id)
 /* Table : high_load                                            */
 /*==============================================================*/
 create table high_load (
-hl_id		      INT4 NOT NULL,
-data1		      FLOAT4,
-data2		      CHAR(10),
+hl_id		      SERIAL,
+stBoolean             BOOLEAN,
+stByte                INT2,
+stShort               INT2,
+stInteger             INTEGER,
+stLong                INT8,
+stFloat               FLOAT4,
+stDouble              FLOAT8,
+stBigDecimal          NUMERIC(18,4),
+stString              VARCHAR(100),
+stUnicodeString       VARCHAR(255),
+stBytes               BYTEA,
+stDate                DATE,
+stTime                TIME without time zone,
+stTimestamp           TIMESTAMP without time zone,
+stGUID                CHAR(38),
+stAsciiStream         TEXT,
+stUnicodeStream       TEXT,
+stBinaryStream        OID,
 primary key (hl_id)
 );
 
