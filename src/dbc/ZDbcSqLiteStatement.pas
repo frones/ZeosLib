@@ -366,7 +366,7 @@ begin
       stBytes:
         begin
           TempBytes := SoftVarManager.GetAsBytes(Value);
-          Result := EncodeString(@TempBytes, Length(TempBytes));
+          Result := EncodeString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
       stString:
         Result := ZPlainString(AnsiQuotedStr(SoftVarManager.GetAsString(Value), #39));
