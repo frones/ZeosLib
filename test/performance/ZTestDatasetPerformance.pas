@@ -87,6 +87,7 @@ type
     procedure RunTestUpdate; override;
     procedure SetUpTestDelete; override;
     procedure RunTestDelete; override;
+    procedure SetUpTestDirectUpdate; override;
     procedure RunTestDirectUpdate; override;
     procedure SetUpTestLocate; override;
     procedure RunTestLocate; override;
@@ -96,7 +97,7 @@ type
 
 implementation
 
-uses ZSysUtils;
+uses ZSysUtils, ZTestCase;
 
 { TZDatasetPerformanceTestCase }
 
@@ -339,7 +340,7 @@ begin
           ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
             Fields[i].AsFloat := RandomFloat(-100, 100);
           ftDate, ftTime, ftDateTime, ftTimeStamp:
-            Fields[i].AsFloat := now;
+            Fields[i].AsDateTime := now;
           ftVarBytes, ftBytes:
             Fields[i].Value := RandomBts(ConnectionConfig.PerformanceFieldSizes[i]);
           ftBlob:
@@ -383,22 +384,120 @@ begin
     Query.Connection.Commit;
 end;
 
+procedure TZDatasetPerformanceTestCase.SetUpTestDirectUpdate;
+var
+  I: Integer;
+begin
+  inherited;
+  SetLength(FDirectFieldTypes, 0);
+  SetLength(FDirectFieldNames, 0);
+  SetLength(FDirectFieldSizes, 0);
+  for i := 0 to high(ConnectionConfig.PerformanceResultSetTypes) do
+  begin
+    { copy predefined values to temporary arrays }
+    SetLength(FDirectFieldTypes, Length(FDirectFieldTypes)+1);
+    FDirectFieldTypes[High(FDirectFieldTypes)] := ConnectionConfig.PerformanceDataSetTypes[i];
+    SetLength(FDirectFieldNames, Length(FDirectFieldNames)+1);
+    FDirectFieldNames[High(FDirectFieldNames)] := ConnectionConfig.PerformanceFieldNames[i];
+    SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)+1);
+    FDirectFieldSizes[High(FDirectFieldSizes)] := ConnectionConfig.PerformanceFieldSizes[i];
+    { check types }
+    case ConnectionConfig.PerformanceDataSetTypes[i] of
+      ftBytes, ftBlob:
+        if StartsWith(Protocol, 'firebird') and not EndsWith(Protocol, '2.5') then //firebird below 2.5 doesn't support x'hex' syntax
+        begin
+          SetLength(FDirectFieldTypes, Length(FDirectFieldTypes)-1); //omit these types to avoid exception
+          SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
+          SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
+        end;
+      ftBoolean:
+        if StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'mysql') then
+        begin
+          Self.FTrueVal := #39'Y'#39;
+          Self.FFalseVal := #39'N'#39;
+        end
+        else
+          if StartsWith(Protocol, 'postgre')then
+          begin
+            Self.FTrueVal := 'TRUE';
+            Self.FFalseVal := 'FALSE';
+          end
+          else
+          begin
+            Self.FTrueVal := '1';
+            Self.FFalseVal := '0';
+        end;
+      ftDate, ftTime, ftDateTime, ftTimeStamp: //session dependend values. This i'll solve later
+        begin
+          SetLength(FDirectFieldTypes, Length(FDirectFieldTypes)-1); //omit these types to avoid exception
+          SetLength(FDirectFieldNames, Length(FDirectFieldNames)-1); //omit these names to avoid exception
+          SetLength(FDirectFieldSizes, Length(FDirectFieldSizes)-1); //omit these names to avoid exception
+        end;
+    end;
+  end;
+end;
 {**
   Performs a direct update test.
 }
 procedure TZDatasetPerformanceTestCase.RunTestDirectUpdate;
 var
-  I: Integer;
+  I, N: Integer;
+  SQL: String;
+  OldDecimalSeparator: Char;
+  OldThousandSeparator: Char;
 begin
+  if SkipForReason(srNoPerformance) then Exit;
+
+  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
+  OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
   for I := 1 to GetRecordCount do
   begin
-    Query.SQL.Text := Format('UPDATE '+PerformanceTable+' SET data1=%s, data2=''%s'''
-      + ' WHERE '+PerformancePrimaryKey+' = %d', [FloatToSqlStr(RandomFloat(-100, 100)),
-      RandomStr(10), I]);
+    SQL := 'UPDATE '+PerformanceTable+' SET ';
+    for N := 1 to high(FDirectFieldTypes) do
+    begin
+      case FDirectFieldTypes[n] of
+        ftBoolean:
+          if Random(1) = 1 then
+            SQL := SQL + FDirectFieldNames[N]+'='+ FTrueVal
+          else
+            SQL := SQL + FDirectFieldNames[N]+'='+ FFalseVal;
+        ftSmallint:
+          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(255));
+        ftInteger, ftWord, ftLargeint:
+          SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(I));
+        ftBCD, ftFMTBcd, ftFloat, ftCurrency{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
+          {$IFNDEF WITH_FORMATSETTINGS}
+          SQL := SQL + FDirectFieldNames[N]+'='+StringReplace(FloatToStr(RandomFloat(-100, 100)), ',','.', [rfReplaceAll]);
+          {$ELSE}
+          SQL := SQL + FDirectFieldNames[N]+'='+FloatToStr(RandomFloat(-100, 100));
+          {$ENDIF}
+        ftString, ftFixedChar{$IFDEF WITH_WIDEFIELDS}, ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}{$ENDIF}:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.DbcConnection.GetEscapeString(RandomStr(FDirectFieldSizes[N]));
+        {$IFDEF WITH_FTGUID}
+        ftGuid:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.DbcConnection.GetEscapeString(RandomGUIDString);
+        {$ENDIF}
+        ftBytes:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.DbcConnection.GetBinaryEscapeString(RandomBts(FDirectFieldSizes[N]));
+        ftMemo, ftFmtMemo{$IFDEF WITH_WIDEFIELDS}, ftWideMemo{$ENDIF}:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.DbcConnection.GetEscapeString(RandomStr(GetRecordCount*100));
+        ftBlob:
+          SQL := SQL + FDirectFieldNames[N]+'='+Connection.DbcConnection.GetBinaryEscapeString(RandomBts(GetRecordCount*100));
+        //ftDate, ftTime, ftDateTime, ftTimestamp //session dependend
+      end;
+      if N = high(FDirectFieldTypes) then
+        SQL := SQL + ' WHERE '+ PerformancePrimaryKey+'='+IntToStr(i)
+      else
+        SQL := SQL + ', ';
+    end;
+    Query.SQL.Text := SQL;
     Query.ExecSQL;
   end;
-  if not SkipPerformanceTransactionMode then
-    Query.Connection.Commit;
+  if not SkipPerformanceTransactionMode then Connection.Commit;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
 
 {**

@@ -84,6 +84,12 @@ type
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
     procedure DetermineFieldsProperties(ConnectionConfig: TZConnectionConfig);
   protected
+    FDirectSQLTypes: TResultSetTypesDynArray;
+    FDirectFieldTypes: TDataSetTypesDynArray;
+    FDirectFieldNames: TStringDynArray;
+    FDirectFieldSizes: TIntegerDynArray;
+    FTrueVal, FFalseVal: String;
+
     procedure LoadConfiguration; override;
     procedure SetUp; override;
     function GetImplementedAPI: string; virtual; abstract;

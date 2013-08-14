@@ -201,7 +201,7 @@ stTimestamp           TIMESTAMP without time zone,
 stGUID                CHAR(38),
 stAsciiStream         TEXT,
 stUnicodeStream       TEXT,
-stBinaryStream        OID,
+stBinaryStream        BYTEA,
 primary key (hl_id)
 );
 

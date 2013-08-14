@@ -66,10 +66,6 @@ type
   protected
     FConnection: IZConnection;
     FSQL: String;
-    FDirectSQLTypes: TResultSetTypesDynArray;
-    FDirectFieldNames: TStringDynArray;
-    FDirectFieldSizes: TIntegerDynArray;
-    FTrueVal, FFalseVal: String;
   protected
     property SQL: String read FSQL;
     property Connection: IZConnection read FConnection write FConnection;
