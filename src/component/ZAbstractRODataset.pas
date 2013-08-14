@@ -1873,7 +1873,10 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      RowAccessor := TZRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
+      if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
+      else
+        RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
     finally
       ColumnList.Free;
     end;

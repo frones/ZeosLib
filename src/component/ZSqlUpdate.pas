@@ -127,7 +127,8 @@ type
 
 
   protected
-    procedure Apply_RefreshResultSet(const Sender:IZCachedResultSet;const RefreshResultSet: IZResultSet;const RefreshRowAccessor:TZRowAccessor);
+    procedure Apply_RefreshResultSet(const Sender: IZCachedResultSet;
+      const RefreshResultSet: IZResultSet;const RefreshRowAccessor: TZRowAccessor);
 
     procedure DefineProperties(Filer: TFiler); override;
     procedure CalculateDefaults(Sender: IZCachedResultSet;

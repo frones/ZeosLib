@@ -717,9 +717,18 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  FRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
-  FOldRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
-  FNewRowAccessor := TZRowAccessor.Create(ColumnsInfo, ConSettings);
+  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+  begin
+    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+  end
+  else
+  begin
+    FRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
+    FOldRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
+    FNewRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
+  end;
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
   FRowAccessor.AllocBuffer(FInsertedRow);
