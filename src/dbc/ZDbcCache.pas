@@ -784,13 +784,16 @@ begin
             Bts1 := InternalGetBytes(Buffer1, ColumnIndex+1);
             Bts2 := InternalGetBytes(Buffer2, ColumnIndex+1);
             if (Assigned(Bts1) and Assigned(Bts2)) then
-              MemLCompAnsi(PAnsiChar(Bts1), PAnsiChar(Bts2), Length1)
-            else
-              if not Assigned(Bts1) and not Assigned(Bts2) then
+              if MemLCompAnsi(PAnsiChar(Bts1), PAnsiChar(Bts2), Length1) then
                 Result := 0
               else
-                if Assigned(Bts1) then Result := 1
-                else Result := 1;
+                Result := 1
+            else if not Assigned(Bts1) and not Assigned(Bts2) then
+              Result := 0
+            else if Assigned(Bts1) then
+              Result := 1
+            else
+              Result := -1;
           end;
         end;
       stAsciiStream, stBinaryStream, stUnicodeStream:
