@@ -1440,7 +1440,7 @@ var
         for i := 0 to 20 do
           Result := RawToFloat(PAnsiChar(sTestFloat)+I, '.');
         for i := 1 to 10 do
-          Result := Result + RawToFloat(PAnsiChar(sTestFloat[i]), '.');
+          Result := Result + RawToFloat(PAnsiChar(AnsiString(sTestFloat[i])), '.');
       end;
       Result := Result + RawToFloatDef('test', '.', -999);
     end;
@@ -1455,7 +1455,7 @@ var
         for i := 0 to 20 do
           Result := StrToFloat(String(PAnsiChar(sTestFloat)+I));
         for i := 1 to 10 do
-          Result := Result + StrToFloat(String(PAnsiChar(sTestFloat[i])));
+          Result := Result + StrToFloat(String(PAnsiChar(AnsiString(sTestFloat[i]))));
       end;
       Result := Result + StrToFloatDef('test', -999);
     end;

@@ -4727,9 +4727,9 @@ begin
   Neg    := False;
   NegExp := False;
   Valid  := False;
-  while S[code+1] = ' ' do
+  while (PAnsiChar(S)+code)^ = ' ' do
     Inc(Code);
-  Ch := S[code+1];
+  Ch := (PAnsiChar(S)+code)^;
   if Ch in ['+', '-'] then
   begin
     inc(Code);
@@ -4749,7 +4749,7 @@ begin
   begin
     while true do
       begin
-        Ch := S[code+1];
+        Ch := (PAnsiChar(S)+code)^;
         inc(Code);
         if not (Ch in ['0'..'9']) then
         begin
@@ -4769,16 +4769,16 @@ begin
   if (Ord(Ch) or $20) = ord('e') then
     begin {Ch in ['E','e']}
       Valid := false;
-      Ch := S[code+1];
+      Ch := (PAnsiChar(S)+code)^;
       if Ch in ['+', '-'] then
         begin
           inc(Code);
           NegExp := (Ch = '-');
-          Ch := S[code+1];
+          Ch := (PAnsiChar(S)+code)^;
         end;
       while true do
         begin
-          Ch := S[code+1];
+          Ch := (PAnsiChar(S)+code)^;
           inc(Code);
           if not (Ch in ['0'..'9']) then
             break;
