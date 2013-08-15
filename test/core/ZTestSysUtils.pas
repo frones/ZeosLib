@@ -93,6 +93,7 @@ type
     procedure TestUnicodeToIntDef;
     procedure TestUnicodeToInt64Def;
     procedure TestRawToFloat;
+    procedure TestUnicodeToFloat;
     {$ENDIF}
   end;
 
@@ -1473,6 +1474,59 @@ begin
 
   system.WriteLn('');
   system.WriteLn(Format('Benchmarking(x %d): RawToFloatDef', [1000000*20*10]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToFloatDef: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestUnicodeToFloat;
+const sTestFloat = ZWideString('9876543210.0123456789');
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Extended;
+
+    function TRawToFloat: Extended;
+    var
+      I,N: Integer;
+    begin
+      for N := 0 to 1000000 do
+      begin
+        for i := 0 to 20 do
+          Result := UnicodeToFloat(PWideChar(sTestFloat)+I, '.');
+        for i := 1 to 10 do
+          Result := Result + UnicodeToFloat(PWideChar(ZWideString(sTestFloat[i])), '.');
+      end;
+      Result := Result + UnicodeToFloatDef('test', '.', -999);
+    end;
+
+    function TStrToFloat: Extended;
+    var
+      I,N: Integer;
+    begin
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+      for N := 0 to 1000000 do
+      begin
+        for i := 0 to 20 do
+          Result := StrToFloat(String(PWideChar(sTestFloat)+I));
+        for i := 1 to 10 do
+          Result := Result + StrToFloat(String(PWideChar(ZWideString(sTestFloat[i]))));
+      end;
+      Result := Result + StrToFloatDef('test', -999);
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToFloat;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToFloat;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of UnicodeToFloat VS. StrToFloatDef');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): UnicodeToFloat', [1000000*(20+10)]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToFloatDef: %d ms', [Between1, Between2]));
 
 end;
