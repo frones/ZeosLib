@@ -92,6 +92,7 @@ type
     procedure TestUnicodeToInt;
     procedure TestUnicodeToIntDef;
     procedure TestUnicodeToInt64Def;
+    procedure TestRawToFloat;
     {$ENDIF}
   end;
 
@@ -1380,10 +1381,10 @@ var
     var
       I: Integer;
     begin
-      CheckEquals(Low(Int64), UnicodeToInt64Def(IntToRaw(Low(Int64)), 0), 'Results of UnicodeToInt64Def VS. Low(Int64)');
-      CheckEquals(High(Int64), UnicodeToInt64Def(IntToRaw(High(Int64)), 0), 'Results of UnicodeToInt64Def VS. High(Int64)');
+      CheckEquals(Low(Int64), UnicodeToInt64Def(IntToUnicode(Low(Int64)), 0), 'Results of UnicodeToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), UnicodeToInt64Def(IntToUnicode(High(Int64)), 0), 'Results of UnicodeToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
-        Result := UnicodeToInt64Def(IntToRaw(Int64(i)*Int64(i)), 1);
+        Result := UnicodeToInt64Def(IntToUnicode(Int64(i)*Int64(i)), 1);
       Result := Result + UnicodeToInt64Def('test', -999);
     end;
 
@@ -1420,6 +1421,59 @@ begin
   system.WriteLn('');
   system.WriteLn(Format('Benchmarking(x %d): UnicodeToInt64Def', [10000000]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestRawToFloat;
+const sTestFloat = RawByteString('9876543210.0123456789');
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Extended;
+
+    function TRawToFloat: Extended;
+    var
+      I,N: Integer;
+    begin
+      for N := 0 to 1000000 do
+      begin
+        for i := 0 to 20 do
+          Result := RawToFloat(PAnsiChar(sTestFloat)+I, '.');
+        for i := 1 to 10 do
+          Result := Result + RawToFloat(PAnsiChar(sTestFloat[i]), '.');
+      end;
+      Result := Result + RawToFloatDef('test', '.', -999);
+    end;
+
+    function TStrToFloat: Extended;
+    var
+      I,N: Integer;
+    begin
+      {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
+      for N := 0 to 1000000 do
+      begin
+        for i := 0 to 20 do
+          Result := StrToFloat(String(PAnsiChar(sTestFloat)+I));
+        for i := 1 to 10 do
+          Result := Result + StrToFloat(String(PAnsiChar(sTestFloat[i])));
+      end;
+      Result := Result + StrToFloatDef('test', -999);
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToFloat;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToFloat;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToFloatDef VS. StrToFloatDef');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): RawToFloatDef', [1000000*20*10]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToFloatDef: %d ms', [Between1, Between2]));
 
 end;
 {$ENDIF}
