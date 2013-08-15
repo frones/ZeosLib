@@ -4737,7 +4737,7 @@ begin
   end;
   while true do
   begin
-    Ch := S[code+1];
+    Ch := (PAnsiChar(S)+code)^;
     inc(Code);
     if not (Ch in ['0'..'9']) then
       break;
