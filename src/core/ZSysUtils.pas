@@ -71,8 +71,6 @@ type
     procedure Sort(Compare: TZListSortCompare);
   end;
 
-  TTwoByteDynArray = array of WideChar;
-
 {**
   Determines a position of a first delimiter.
   @param Delimiters a string with possible delimiters.
@@ -143,16 +141,16 @@ function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
   Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
   @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
   @param Def a default value if the string can not be converted.
-  @return a converted value or Def if conversion was failt.
+  @return a converted value or Def if conversion did fail.
 }
 function SQLStrToFloatDef(const Str: RawByteString; const Def: Extended): Extended; overload;
 
 {**
-  Converts SQL AnsiString/RawByteString into float value.
+  Converts SQL PAnsiChar into float value.
   Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
-  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
-  @param Def a default value if the string can not be converted.
-  @return a converted value or Def if conversion was failt.
+  @param Str an SQL PAnsiChar with comma or dot delimiter.
+  @param Def a default value if the PAnsiChar can not be converted.
+  @return a converted value or Def if conversion did fail.
 }
 function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended; Len: Cardinal = 0): Extended; overload;
 
@@ -161,17 +159,18 @@ function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended; Len: Cardinal 
   Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
   @param Str an SQL WideString/Unicodestring with comma or dot delimiter.
   @param Def a default value if the string can not be converted.
-  @return a converted value or Def if conversion was failt.
+  @return a converted value or Def if conversion did fail.
 }
 function SQLStrToFloatDef(const Str: ZWideString; const Def: Extended): Extended; overload;
-//function SQLStrToFloatDef(const Str: PWideChar; const Def: Extended): Extended; overload;
 
 {**
-  Converts SQL string into float value.
-  @param Str an SQL string with comma delimiter.
-  @return a converted value or Def if conversion was failt.
+  Converts SQL PWideChar into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL PWideChar with comma or dot delimiter.
+  @param Def a default value if the string can not be converted.
+  @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloat(const Str: AnsiString): Extended;
+function SQLStrToFloatDef(Buffer: PWideChar; const Def: Extended; Len: Cardinal = 0): Extended; overload;
 
 {**
   Converts a character buffer into pascal string.
@@ -188,6 +187,13 @@ function BufferToStr(Buffer: PWideChar; Length: LongInt): string; overload;
   @return a string retrived from the buffer.
 }
 function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
+
+{**
+  Converts a character buffer into pascal string.
+  @param Buffer a character buffer pointer.
+  @param Length a buffer length.
+  @return a TByteDynArray retrived from the buffer.
+}
 function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
 
 {**
@@ -902,31 +908,37 @@ end;
   @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
-
-function SQLStrToFloatDef(Buffer: PWideChar; const Len: Cardinal;
-  const Def: Extended): Extended;
+}
+function SQLStrToFloatDef(Buffer: PWideChar; const Def: Extended;
+  Len: Cardinal = 0): Extended;
 var
   I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
-  Value: TTwoByteDynArray;
+  Value: array of WideChar;
 begin
   Result := Def;
-  if not (Len = 0) then
+  if Assigned(Buffer) then
   begin
-    Result := ValRawExt(Buffer, '.', InvalidPos);
+    Result := ValUnicodeExt(Buffer, '.', InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
-        Result := RawToFloatDef(Buffer, ',', Def)
+        Result := UnicodeToFloatDef(Buffer, ',', Def)
       else
       begin
         Result := Def;
+        if Len = 0 then
+        {$IFDEF DDELPHI14_UP}
+        Len := StrLen(Buffer);
+        {$ELSE}
+        Len := Length(Buffer);
+        {$ENDIF}
         SetLength(Value, Len+1);
         DotPos := 0; CommaPos := 0; ValidCount := 0; InvalidPos := 0;
-        FillChar(Pointer(Value)^, Len+1, 0);
+        FillChar(Pointer(Value)^, (Len+1)*2, 0);
         for i := 0 to Len-1 do
           case (Buffer+i)^ of
             '0'..'9':
               begin
-                Value[ValidCount] := Ord((Buffer+i)^);
+                Value[ValidCount] := WideChar((Buffer+i)^);
                 Inc(ValidCount);
               end;
             ',':
@@ -935,36 +947,38 @@ begin
                 CommaPos := I;
                 if DotPos = 0 then
                   Inc(ValidCount)
-                else //align result four Byte block and overwrite last ThousandSeparator
-                  PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^;
-                Value[ValidCount-1] := Ord('.');
+                else //align result eight Byte block and overwrite last ThousandSeparator
+                begin
+                  PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^; //Move first four byte block
+                  PLongWord(@Value[DotPos+1])^ := PLongWord(@Value[DotPos+2])^; //Move second four byte block
+                end;
+                Value[ValidCount-1] := WideChar('.');
               end
               else
                 Exit;
             '-', '+':
               begin
-                Value[ValidCount] := Ord((Buffer+i)^);
+                Value[ValidCount] := WideChar((Buffer+i)^);
                 Inc(ValidCount);
               end;
             '.':
               begin
                 if DotPos > 0 then //previously init so commapos can't be an issue here
-                begin
                   if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
                   begin
-                    PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^;
-                    Value[ValidCount-1] := Ord('.');
+                    PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^; //Move first four byte block
+                    PLongWord(@Value[DotPos+1])^ := PLongWord(@Value[DotPos+2])^; //Move second four byte block
+                    Value[ValidCount-1] := WideChar('.');
                     Inc(InvalidPos);
                   end
                   else
-                    Exit;
-                end
+                    Exit
                 else
                   if I < CommaPos then
                     Exit
                   else
                   begin
-                    Value[ValidCount] := Ord('.');
+                    Value[ValidCount] := WideChar('.');
                     Inc(ValidCount);
                   end;
                 DotPos := ValidCount;
@@ -975,10 +989,10 @@ begin
               else
                 InvalidPos := i;
           end;
-        Result := RawToFloatDef(PAnsiChar(Value), '.', Def);
+        Result := UnicodeToFloatDef(PWideChar(Value), '.', Def);
       end;
   end;
-end;}
+end;
 
 {**
   Converts SQL WideString/UnicodeString into float value.
@@ -987,45 +1001,8 @@ end;}
   @return a converted value or Def if conversion was failt.
 }
 function SQLStrToFloatDef(const Str: ZWideString; const Def: Extended): Extended;
-var
-  OldDecimalSeparator: Char;
-  OldThousandSeparator: Char;
-  AString: String;
 begin
-  if Str = '' then
-    Result := Def
-  else
-  begin
-    OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-    OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-    if not CharInSet(Str[1], ['0'..'9', '-']) then
-      AString := ConvertMoneyToFloat(Str)
-    else
-      AString := Str;
-    Result := StrToFloatDef({$IFNDEF UNICODE}String{$ENDIF}(AString), Def);
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
-  end;
-end;
-
-{**
-  Converts SQL string into float value.
-  @param Str an SQL string with comma delimiter.
-  @return a converted value or Def if conversion was failt.
-}
-function SQLStrToFloat(const Str: AnsiString): Extended;
-var
-  OldDecimalSeparator: Char;
-begin
-  OldDecimalSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-  try
-    Result := StrToFloat(String(Str));
-  finally
-    {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
-  end;
+  Result := SQLStrToFloatDef(PWideChar(Str), Def);
 end;
 
 { Convert string buffer into pascal string }
@@ -2033,7 +2010,7 @@ var
     begin
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        if HPos = 2 then //hour can't have 3 digits, date was aligned instead of time  -> let'a fix it
+        if HPos = 2 then //hour can't have 3 digits, date was aligned instead of time  -> let's fix it
         begin
           rMSec[0] := rHour[0]; rMSec[1] := rHour[1];
           rSec[0] := rDay[0]; rSec[1] := rDay[1];

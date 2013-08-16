@@ -1430,15 +1430,15 @@ begin
         vtFloat:
           Result.VFloat := Value.VFloat;
         vtString:
-          Result.VFloat := SqlStrToFloatDef(Value.VString, 0);
+          Result.VFloat := SqlStrToFloatDef(PChar(Value.VString), 0);
         vtAnsiString:
-          Result.VFloat := RawToFloatDef(Value.VAnsiString, '.', 0);
+          Result.VFloat := RawToFloatDef(PAnsiChar(Value.VAnsiString), '.', 0);
         vtUTF8String:
-          Result.VFloat := RawToFloatDef(Value.VUTF8String, '.', 0);
+          Result.VFloat := RawToFloatDef(PAnsiChar(Value.VUTF8String), '.', 0);
         vtRawByteString:
-          Result.VFloat := RawToFloatDef(Value.VRawByteString, '.', 0);
+          Result.VFloat := RawToFloatDef(PAnsiChar(Value.VRawByteString), '.', 0);
         vtUnicodeString:
-          Result.VFloat := SqlStrToFloatDef({$IFNDEF UNICODE}AnsiString{$ENDIF}(Value.VUnicodeString), 0);
+          Result.VFloat := SqlStrToFloatDef(PWideChar(Value.VUnicodeString), 0);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         else
@@ -1713,7 +1713,7 @@ begin
         vtFloat:
           Result.VFloat := Value.VFloat;
         vtString:
-          Result.VFloat := SqlStrToFloatDef(Value.VString, 0);
+          Result.VFloat := SqlStrToFloatDef(PChar(Value.VString), 0);
         vtAnsiString:
           Result.VFloat := SqlStrToFloatDef(PAnsiChar(Value.VAnsiString), 0);
         vtUTF8String:
@@ -1721,7 +1721,7 @@ begin
         vtRawByteString:
           Result.VFloat := SqlStrToFloatDef(PAnsiChar(Value.VRawByteString), 0);
         vtUnicodeString:
-          Result.VFloat := SqlStrToFloatDef(Value.VUnicodeString, 0);
+          Result.VFloat := SqlStrToFloatDef(PWideChar(Value.VUnicodeString), 0);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         else

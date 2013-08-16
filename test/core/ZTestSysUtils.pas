@@ -244,7 +244,30 @@ begin
   CheckEquals(-1012.75, SqlStrToFloatDef(RawByteString('€ -1.012,75'), 11.11));
   CheckEquals(-1012012111.75, SqlStrToFloatDef(RawByteString('$-1.012.012.111,75'), 11.11));
   CheckEquals(1012012111.75, SqlStrToFloatDef(RawByteString('$+1.012.012.111,75'), 11.11));
-  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('€643,11'), 11.11))
+  CheckEquals(643.11, SqlStrToFloatDef(RawByteString('€643,11'), 11.11));
+
+  CheckEquals(12.75, SqlStrToFloatDef(ZWideString('12,75'), 11.11));
+  CheckEquals(12.75, SqlStrToFloatDef(ZWideString('12.75'), 11.11));
+  CheckEquals(0.1275, SqlStrToFloatDef(ZWideString('12.75e-2'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('12.75float'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString(''), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('111,125.33'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(ZWideString('$1.012,75'), 11.11));
+  CheckEquals(1012.75, SqlStrToFloatDef(ZWideString('€ 1.012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.0012,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€ 1.0012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(ZWideString('$1.012.012,75'), 11.11));
+  CheckEquals(1012012.75, SqlStrToFloatDef(ZWideString('€  1.012.012,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('$1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('€  1.012.012.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€  1.012.012.1119,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('$1.012.0121.111,75'), 11.11));
+  CheckEquals(11.11, SqlStrToFloatDef(ZWideString('€  1.012.0121.111,75'), 11.11));
+  CheckEquals(-1012.75, SqlStrToFloatDef(ZWideString('€ -1.012,75'), 11.11));
+  CheckEquals(-1012012111.75, SqlStrToFloatDef(ZWideString('$-1.012.012.111,75'), 11.11));
+  CheckEquals(1012012111.75, SqlStrToFloatDef(ZWideString('$+1.012.012.111,75'), 11.11));
+  CheckEquals(643.11, SqlStrToFloatDef(ZWideString('€643,11'), 11.11));
 end;
 
 {**

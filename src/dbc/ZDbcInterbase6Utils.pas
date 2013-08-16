@@ -2435,7 +2435,6 @@ var
  Stream: TStream;
 begin
   CheckRange(Index);
-//  SetFieldType(Index, Length(Value) + 1, SQL_TEXT + 1, 0);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
@@ -2445,13 +2444,13 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG      : PInteger (sqldata)^ := Round(RawToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_LONG      : PInteger (sqldata)^ := Round(SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]); //AVZ
       SQL_SHORT     : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
-      SQL_DOUBLE    : PDouble (sqldata)^ := RawToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
-      SQL_FLOAT     : PSingle (sqldata)^ := RawToFloat(Value) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := Trunc(RawToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     : PInt64(sqldata)^ := Trunc(SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD:
         begin
           Stream := TStringStream.Create(Value);
