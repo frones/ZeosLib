@@ -4427,7 +4427,7 @@ function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer;
 var
   E: Integer;
 begin
-  Result := ValLong_JOH_PAS_4_b_unicode(S, E);
+  Result := ValLong_JOH_PAS_4_b_unicode(PWideChar(S), E);
   if E <> 0 then Result := Default;
 end;
 
@@ -4964,7 +4964,7 @@ begin
   {$IF defined(WIN32) and not defined(FPC)}
   Result := ValInt64_JOH_IA32_8_a(s, Code);
   {$ELSE}
-  Result := ValInt64_JOH_PAS_4_b(Pointer(S)^, Code);
+  Result := ValInt64_JOH_PAS_4_b_raw(PAnsiChar(S), Code);
   {$IFEND}
 end;
 
