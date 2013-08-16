@@ -1715,13 +1715,13 @@ begin
         vtString:
           Result.VFloat := SqlStrToFloatDef(Value.VString, 0);
         vtAnsiString:
-          Result.VFloat := SqlStrToFloatDef({$IFDEF UNICODE}String{$ENDIF}(Value.VAnsiString), 0);
+          Result.VFloat := SqlStrToFloatDef(PAnsiChar(Value.VAnsiString), 0);
         vtUTF8String:
-          Result.VFloat := SqlStrToFloatDef({$IFDEF UNICODE}String{$ENDIF}(Value.VUTF8String), 0);
+          Result.VFloat := SqlStrToFloatDef(PAnsiChar(Value.VUTF8String), 0);
         vtRawByteString:
-          Result.VFloat := SqlStrToFloatDef(Value.VRawByteString, 0);
+          Result.VFloat := SqlStrToFloatDef(PAnsiChar(Value.VRawByteString), 0);
         vtUnicodeString:
-          Result.VFloat := SqlStrToFloatDef({$IFNDEF UNICODE}String{$ENDIF}(Value.VUnicodeString), 0);
+          Result.VFloat := SqlStrToFloatDef(Value.VUnicodeString, 0);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         else

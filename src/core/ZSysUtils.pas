@@ -71,6 +71,8 @@ type
     procedure Sort(Compare: TZListSortCompare);
   end;
 
+  TTwoByteDynArray = array of WideChar;
+
 {**
   Determines a position of a first delimiter.
   @param Delimiters a string with possible delimiters.
@@ -152,7 +154,7 @@ function SQLStrToFloatDef(const Str: RawByteString; const Def: Extended): Extend
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Buffer: PAnsiChar; const Len: Cardinal; const Def: Extended): Extended; overload;
+function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended; Len: Cardinal = 0): Extended; overload;
 
 {**
   Converts SQL WideString/Unicodestring into float value.
@@ -162,6 +164,7 @@ function SQLStrToFloatDef(Buffer: PAnsiChar; const Len: Cardinal; const Def: Ext
   @return a converted value or Def if conversion was failt.
 }
 function SQLStrToFloatDef(const Str: ZWideString; const Def: Extended): Extended; overload;
+//function SQLStrToFloatDef(const Str: PWideChar; const Def: Extended): Extended; overload;
 
 {**
   Converts SQL string into float value.
@@ -558,10 +561,13 @@ function IntToString(const Value: Int64): String; overload;
 
 function RawToInt(const Value: RawbyteString): Integer;
 function UnicodeToInt(const Value: ZWideString): Integer;
-function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
-function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer;
+function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
+function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
+function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
+function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
 function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
-function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
+function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64; overload;
+function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64; overload;
 
 { Float convertion in Raw and Unicode Format}
 function RawToFloat(const s: RawByteString): Extended; overload;
@@ -802,7 +808,7 @@ function SQLStrToFloatDef(const Str: RawByteString; const Def: Extended): Extend
 begin
   Result := Def;
   if not (Str = '') then
-    Result := SQLStrToFloatDef(PAnsiChar(Str), Length(Str), Def);
+    Result := SQLStrToFloatDef(PAnsiChar(Str), Def);
 end;
 
 {**
@@ -812,11 +818,96 @@ end;
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion was failt.
 }
-function SQLStrToFloatDef(Buffer: PAnsiChar; const Len: Cardinal;
-  const Def: Extended): Extended;
+function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended;
+  Len: Cardinal = 0): Extended;
 var
   I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
   Value: TByteDynArray;
+begin
+  Result := Def;
+  if Assigned(Buffer) then
+  begin
+    Result := ValRawExt(Buffer, '.', InvalidPos);
+    if InvalidPos <> 0 then //posible MoneyType
+      if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
+        Result := RawToFloatDef(Buffer, ',', Def)
+      else
+      begin
+        Result := Def;
+        if Len = 0 then Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer);
+        SetLength(Value, Len+1);
+        DotPos := 0; CommaPos := 0; ValidCount := 0; InvalidPos := 0;
+        FillChar(Pointer(Value)^, Len+1, 0);
+        for i := 0 to Len-1 do
+          case (Buffer+i)^ of
+            '0'..'9':
+              begin
+                Value[ValidCount] := Ord((Buffer+i)^);
+                Inc(ValidCount);
+              end;
+            ',':
+              if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
+              begin
+                CommaPos := I;
+                if DotPos = 0 then
+                  Inc(ValidCount)
+                else //align result four Byte block and overwrite last ThousandSeparator
+                  PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^;
+                Value[ValidCount-1] := Ord('.');
+              end
+              else
+                Exit;
+            '-', '+':
+              begin
+                Value[ValidCount] := Ord((Buffer+i)^);
+                Inc(ValidCount);
+              end;
+            '.':
+              begin
+                if DotPos > 0 then //previously init so commapos can't be an issue here
+                begin
+                  if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
+                  begin
+                    PLongWord(@Value[DotPos-1])^ := PLongWord(@Value[DotPos])^;
+                    Value[ValidCount-1] := Ord('.');
+                    Inc(InvalidPos);
+                  end
+                  else
+                    Exit;
+                end
+                else
+                  if I < CommaPos then
+                    Exit
+                  else
+                  begin
+                    Value[ValidCount] := Ord('.');
+                    Inc(ValidCount);
+                  end;
+                DotPos := ValidCount;
+              end;
+            else
+              if ValidCount > 0 then
+                Exit
+              else
+                InvalidPos := i;
+          end;
+        Result := RawToFloatDef(PAnsiChar(Value), '.', Def);
+      end;
+  end;
+end;
+
+{**
+  Converts SQL AnsiString/RawByteString into float value.
+  Possible is SQLFloat, Float, Hex, Money+Suffix and ThousandSeparators
+  @param Str an SQL AnsiString/RawByteString with comma or dot delimiter.
+  @param Def a default value if the string can not be converted.
+  @return a converted value or Def if conversion was failt.
+
+function SQLStrToFloatDef(Buffer: PWideChar; const Len: Cardinal;
+  const Def: Extended): Extended;
+var
+  I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
+  Value: TTwoByteDynArray;
 begin
   Result := Def;
   if not (Len = 0) then
@@ -887,7 +978,7 @@ begin
         Result := RawToFloatDef(PAnsiChar(Value), '.', Def);
       end;
   end;
-end;
+end;}
 
 {**
   Converts SQL WideString/UnicodeString into float value.
@@ -4110,7 +4201,7 @@ asm
 end;
 {$ELSE}
 {$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
-function ValLong_JOH_PAS_4_b(const s; var code: Integer): Longint;
+function ValLong_JOH_PAS_4_b(const S: PAnsiChar; var code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 var
@@ -4119,7 +4210,7 @@ var
   P: PAnsiChar;
 begin
   Code := 0;
-  P    := @S;
+  P := S;
   if not Assigned(P) then
     begin
       Result := 0;
@@ -4195,7 +4286,7 @@ begin
   if Neg then
     Result := -Result;
   if (not Valid) or (P^ <> #0) then
-    Code := P-@S+1;
+    Code := P-S+1;
 end;
 {$WARNINGS ON}
 {$IFEND}
@@ -4204,17 +4295,28 @@ function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer;
 var
   E: Integer;
 begin
-//  Val(S, Result, E); {when system._ValLong updated}
   {$IF defined(WIN32) and not defined(FPC)}
   Result := ValLong_JOH_IA32_8_a(S, E);
   {$ELSE}
-  Result := ValLong_JOH_PAS_4_b(Pointer(S)^, E);
+  Result := ValLong_JOH_PAS_4_b(PAnsiChar(S), E);
+  {$IFEND}
+  if E <> 0 then Result := Default;
+end;
+
+function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer;
+var
+  E: Integer;
+begin
+  {$IF defined(WIN32) and not defined(FPC)}
+  Result := ValLong_JOH_IA32_8_a(S, E);
+  {$ELSE}
+  Result := ValLong_JOH_PAS_4_b(S, E);
   {$IFEND}
   if E <> 0 then Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValLong_JOH_PAS_4_b_unicode(const s; var code: Integer): Longint;
+function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; var code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 var
@@ -4233,7 +4335,7 @@ var
   {$ENDIF}
 begin
   Code := 0;
-  P    := @S;
+  P := S;
   if not Assigned(P) then
     begin
       Result := 0;
@@ -4309,7 +4411,7 @@ begin
   if Neg then
     Result := -Result;
   if (not Valid) or (P^ <> #0) then
-    Code := P-@S+1;
+    Code := P-S+1;
 end;
 {$WARNINGS ON}
 
@@ -4317,12 +4419,20 @@ function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer
 var
   E: Integer;
 begin
-  Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S)^, E);
+  Result := ValLong_JOH_PAS_4_b_unicode(PWideChar(S), E);
+  if E <> 0 then Result := Default;
+end;
+
+function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer;
+var
+  E: Integer;
+begin
+  Result := ValLong_JOH_PAS_4_b_unicode(S, E);
   if E <> 0 then Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValInt64_JOH_PAS_4_b(const s; var code: Integer): Int64;
+function ValInt64_JOH_PAS_4_b_raw(const s: PAnsiChar; var code: Integer): Int64;
 //function ValLong_JOH_PAS_4_b(const s; var code: Integer): LongInt;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
@@ -4333,7 +4443,7 @@ var
   P: PAnsiChar;
 begin
   Code := 0;
-  P    := @S;
+  P    := S;
   if not Assigned(P) then
     begin
       Result := 0;
@@ -4408,7 +4518,7 @@ begin
   if Neg then
     Result := -Result;
   if (not Valid) or (P^ <> #0) then
-    Code := P-@S+1;
+    Code := P-S+1;
 end;
 {$WARNINGS ON}
 
@@ -4580,13 +4690,13 @@ begin
   {$IF defined(WIN32) and not defined(FPC)}
   Result := ValInt64_JOH_IA32_8_a(s, E);
   {$ELSE}
-  Result := ValInt64_JOH_PAS_4_b(Pointer(S)^, E);
+  Result := ValInt64_JOH_PAS_4_b_raw(PAnsiChar(S), E);
   {$IFEND}
   if E <> 0 then Result := Default;
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
-function ValInt64_JOH_PAS_4_b_unicode(const s; var code: Integer): Int64;
+function ValInt64_JOH_PAS_4_b_unicode(const s: PWideChar; var code: Integer): Int64;
 //function ValLong_JOH_PAS_4_b(const s; var code: Integer): LongInt;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
@@ -4607,7 +4717,7 @@ var
   {$ENDIF}
 begin
   Code := 0;
-  P    := @S;
+  P    := S;
   if not Assigned(P) then
     begin
       Result := 0;
@@ -4682,7 +4792,7 @@ begin
   if Neg then
     Result := -Result;
   if (not Valid) or (P^ <> #0) then
-    Code := P-@S+1;
+    Code := P-S+1;
 end;
 {$WARNINGS ON}
 
@@ -4690,7 +4800,15 @@ function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64
 var
   E: Integer;
 begin
-  Result := ValInt64_JOH_PAS_4_b_unicode(Pointer(S)^, E);
+  Result := ValInt64_JOH_PAS_4_b_unicode(PWideChar(S), E);
+  if E <> 0 then Result := Default;
+end;
+
+function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64;
+var
+  E: Integer;
+begin
+  Result := ValInt64_JOH_PAS_4_b_unicode(S, E);
   if E <> 0 then Result := Default;
 end;
 

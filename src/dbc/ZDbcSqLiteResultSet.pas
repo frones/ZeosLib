@@ -81,6 +81,7 @@ type
     FColumnValues: PPAnsiChar;
     FPlainDriver: IZSQLitePlainDriver;
     FFreeHandle: Boolean;
+    function GetColumnBuffer(const ColumnIndex: Integer): PAnsiChar; {$IFDEF WITH_INLINE}inline;{$ENDIF}
   protected
     procedure Open; override;
     procedure FreeHandle;
@@ -218,6 +219,22 @@ begin
   inherited Destroy;
 end;
 
+function TZSQLiteResultSet.GetColumnBuffer(const ColumnIndex: Integer): PAnsiChar;
+var
+  Temp: PPAnsiChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if (LastRowNo = 0) or (FColumnValues = nil) then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+
+  Temp := FColumnValues;
+  Inc(Temp, ColumnIndex - 1);
+  Result := Temp^;
+  LastWasNull := (Result = nil) or (Result = '');
+end;
+
 {**
   Opens this recordset.
 }
@@ -347,18 +364,8 @@ end;
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
-var
-  Temp: PPAnsiChar;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (LastRowNo = 0) or (FColumnValues = nil) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  Temp := FColumnValues;
-  Inc(Temp, ColumnIndex - 1);
-  Result := (Temp^ = nil);
+  Result := GetColumnBuffer(ColumnIndex) = nil;
 end;
 
 {**
@@ -374,15 +381,8 @@ function TZSQLiteResultSet.GetPChar(ColumnIndex: Integer): PChar;
 var
   TempStr: String;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (LastRowNo = 0) or (FColumnValues = nil) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
   TempStr := GetString(ColumnIndex);
   Result := PChar(TempStr);
-  LastWasNull := Result = nil;
 end;
 
 {**
@@ -395,18 +395,8 @@ end;
     value returned is <code>null</code>
 }
 function TZSQLiteResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
-var
-  Temp: PPAnsiChar;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (LastRowNo = 0) or (FColumnValues = nil) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  Temp := FColumnValues;
-  Inc(Temp, ColumnIndex - 1);
-  Result := Temp^;
+  Result := GetColumnBuffer(ColumnIndex);
   LastWasNull := Result = '';
 end;
 
@@ -424,7 +414,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Result := StrToBoolEx(InternalGetString(ColumnIndex));
+  Result := StrToBoolEx(GetColumnBuffer(ColumnIndex));
 end;
 
 {**
@@ -441,7 +431,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  Result := Byte(RawToIntDef(GetColumnBuffer(ColumnIndex), 0));
 end;
 
 {**
@@ -458,7 +448,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  Result := SmallInt(RawToIntDef(GetColumnBuffer(ColumnIndex), 0));
 end;
 
 {**
@@ -475,7 +465,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := RawToIntDef(InternalGetString(ColumnIndex), 0);
+  Result := RawToIntDef(GetColumnBuffer(ColumnIndex), 0);
 end;
 
 {**
@@ -492,7 +482,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := RawToInt64Def(InternalGetString(ColumnIndex), 0);
+  Result := RawToInt64Def(GetColumnBuffer(ColumnIndex), 0);
 end;
 
 {**
@@ -509,7 +499,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetColumnBuffer(ColumnIndex), 0);
 end;
 
 {**
@@ -526,7 +516,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetColumnBuffer(ColumnIndex), 0);
 end;
 
 {**
@@ -544,7 +534,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+  Result := SQLStrToFloatDef(GetColumnBuffer(ColumnIndex), 0);
 end;
 
 {**
@@ -562,7 +552,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(DecodeString(InternalGetString(ColumnIndex)));
+  Result := StrToBytes(DecodeString(GetColumnBuffer(ColumnIndex)));
 end;
 
 {**
@@ -576,33 +566,25 @@ end;
 }
 function TZSQLiteResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  Buffer: PPAnsiChar;
+  Buffer: PAnsiChar;
   Len: Cardinal;
   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (LastRowNo = 0) or (FColumnValues = nil) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  Buffer := FColumnValues;
-  Inc(Buffer, ColumnIndex - 1);
-  LastWasNull := Buffer^ = '';
+  Buffer := GetColumnBuffer(ColumnIndex);
 
   if LastwasNull then
     Result := 0
   else
   begin
-    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer);
     if (Len = ConSettings^.DateFormatLen) then
-      Result := RawSQLDateToDateTime(Buffer^, PAnsiChar(ConSettings^.DateFormat),
+      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
        Len, ConSettings^.DateFormatLen, Failed)
     else
-      Result := Trunc(RawSQLTimeStampToDateTime(Buffer^, PAnsiChar(ConSettings^.DateTimeFormat),
+      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
         Len, ConSettings^.DateTimeFormatLen, Failed));
     LastWasNull := Result = 0;
   end;
@@ -619,36 +601,28 @@ end;
 }
 function TZSQLiteResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Buffer: PPAnsiChar;
+  Buffer: PAnsiChar;
   Len: Cardinal;
   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (LastRowNo = 0) or (FColumnValues = nil) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  Buffer := FColumnValues;
-  Inc(Buffer, ColumnIndex - 1);
-  LastWasNull := Buffer^ = '';
+  Buffer := GetColumnBuffer(ColumnIndex);
 
   if LastWasNull then
     Result := 0
   else
   begin
-    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
-    if ((Buffer^)+2)^ = ':' then //possible date if Len = 10 then
-      Result := RawSQLTimeToDateTime(Buffer^, PAnsiChar(ConSettings^.TimeFormat),
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer);
+    if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
         Len, ConSettings^.TimeFormatLen, Failed)
     else
       if ConSettings^.DateFormatLen = Len then
         Result := 0
       else
-        Result := Frac(RawSQLTimeStampToDateTime(Buffer^,
+        Result := Frac(RawSQLTimeStampToDateTime(Buffer,
           PAnsiChar(ConSettings^.DateTimeFormat), Len,
           ConSettings^.DateTimeFormatLen, Failed));
   end;
@@ -666,29 +640,21 @@ end;
 }
 function TZSQLiteResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Buffer: PPAnsiChar;
+  Buffer: PAnsiChar;
   Len: Cardinal;
   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if (LastRowNo = 0) or (FColumnValues = nil) then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  Buffer := FColumnValues;
-  Inc(Buffer, ColumnIndex - 1);
-  LastWasNull := Buffer^ = '';
+  Buffer := GetColumnBuffer(ColumnIndex);
 
   if LastWasNull then
     Result := 0
   else
   begin
-    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer^);
-    Result := RawSQLTimeStampToDateTime(Buffer^, PAnsiChar(ConSettings^.DateTimeFormat),
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer);
+    Result := RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
       Len, ConSettings^.DateTimeFormatLen, Failed);
   end;
 end;

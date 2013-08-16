@@ -66,6 +66,7 @@ uses
   ZCompatibility;
 
 const
+  zCP_Binary = -1;
   //zCP_ACP = 0; {ASCII US}
   zCP_EBC037 = 37; {IBM EBCDIC US-Canada}
   zCP_EBC273 = 273; {EBCDIC Code Page 273/1 8-bit Austrian German}

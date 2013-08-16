@@ -471,7 +471,7 @@ begin
   begin
     Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
     Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
   end;
 end;
 
@@ -501,7 +501,7 @@ begin
   begin
     Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
     Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
   end;
 end;
 
@@ -532,7 +532,7 @@ begin
   begin
     Buffer := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
     Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
   end;
 end;
 

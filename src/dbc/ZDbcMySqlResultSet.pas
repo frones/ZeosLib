@@ -514,7 +514,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
 end;
 
 {**
@@ -546,7 +546,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
 end;
 
 {**
@@ -579,7 +579,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := ZSysUtils.SQLStrToFloatDef(Buffer, Len, 0);
+    Result := ZSysUtils.SQLStrToFloatDef(Buffer, 0, Len);
 end;
 
 {**
@@ -1452,7 +1452,7 @@ begin
      FIELD_TYPE_FLOAT: Result := psingle(FColumnArray[ColumnIndex-1].buffer)^;
      FIELD_TYPE_DOUBLE: Result := pdouble(FColumnArray[ColumnIndex-1].buffer)^;
    else
-      Result := SQLStrToFloatDef(InternalGetString(ColumnIndex), 0);
+      Result := SQLStrToFloatDef(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer), 0);
    End
 end;
 

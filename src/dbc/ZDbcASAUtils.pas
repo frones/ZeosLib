@@ -1211,7 +1211,7 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, 0);
+      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, PZASASQLSTRING( sqlData).length);
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
       DT_BIGINT,
@@ -1359,7 +1359,7 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, 0);
+      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, PZASASQLSTRING( sqlData).length);
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
       DT_BIGINT,
@@ -1392,7 +1392,7 @@ begin
       DT_UNSINT      : Result := PLongWord(sqldata)^;
       DT_FLOAT       : Result := PSingle(sqldata)^;
       DT_DOUBLE      : Result := PDouble(sqldata)^;
-      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, 0);
+      DT_VARCHAR     : Result := SQLStrToFloatDef(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), 0, PZASASQLSTRING( sqlData).length);
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
       DT_BIGINT,
