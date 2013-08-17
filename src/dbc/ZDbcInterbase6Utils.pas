@@ -205,6 +205,7 @@ type
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
   private
     procedure EncodeString(Code: Smallint; const Index: Word; const Str: ZAnsiString);
+    procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TByteDynArray);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     destructor Destroy; override;
@@ -1871,6 +1872,47 @@ begin
 end;
 
 {**
+   Encode Bytes dynamic array to Interbase paramter buffer
+   @param Code the Interbase data type
+   @param Index the index target filed
+   @param Value the source array
+}
+
+procedure TZParamsSQLDA.EncodeBytes(Code: Smallint; const Index: Word;
+  const Value: TByteDynArray);
+var
+  Len: Cardinal;
+begin
+  Len := Length(Value);
+  {$R-}
+   with FXSQLDA.sqlvar[Index] do
+    case Code of
+      SQL_TEXT :
+        begin
+          if (sqllen = 0) and ( Len <> 0 ) then //Manits: #0000249/pktfag
+            GetMem(sqldata, Len)
+          else
+            IbReAlloc(sqldata, 0, Len + 1);
+          sqllen := Len;
+          Move(Pointer(Value)^, sqldata^, sqllen);
+        end;
+      SQL_VARYING :
+        begin
+          sqllen := Len + 2;
+          if sqllen = 0 then   //Egonhugeist: Todo: Need test case. Can't believe this line is correct! sqllen is min 2
+            GetMem(sqldata, Len + 2)
+          else
+            IbReAlloc(sqldata, 0, Len + 2);
+          PISC_VARYING(sqldata).strlen :=  Len;
+          Move(Pointer(Value)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+        end;
+    end;
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
+end;
+
+{**
    Set up parameter BigDecimal value
    @param Index the target parameter index
    @param Value the source value
@@ -2050,8 +2092,50 @@ end;
    @param Value the source value
 }
 procedure TZParamsSQLDA.UpdateBytes(const Index: Integer; Value: TByteDynArray);
+var
+ SQLCode: SmallInt;
+ Stream: TStream;
+ Len: Integer;
 begin
-
+  CheckRange(Index);
+//  SetFieldType(Index, Length(Value) + 1, SQL_TEXT + 1, 0);
+  {$R-}
+  with FXSQLDA.sqlvar[Index] do
+  begin
+    if (sqlind <> nil) and (sqlind^ = -1) then
+         Exit;
+    SQLCode := (sqltype and not(1));
+    case SQLCode of
+      SQL_TEXT      : EncodeBytes(SQL_TEXT, Index, Value);
+      SQL_VARYING   : EncodeBytes(SQL_VARYING, Index, Value);
+      SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(String(BytesToStr(Value)));
+      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, BytesToStr(Value));
+      SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_D_FLOAT,
+      SQL_FLOAT     : PSingle (sqldata)^ := ZStrToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     : PInt64(sqldata)^ := Trunc(ZStrToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_BLOB, SQL_QUAD:
+        begin
+          Stream := TMemoryStream.Create;
+          try
+            Len := Length(Value);
+            Stream.Size := Len;
+            System.Move(Pointer(Value)^, TMemoryStream(Stream).Memory^, Len);
+            WriteBlob(index, Stream);
+          finally
+            Stream.Free;
+          end;
+        end;
+    else
+      raise EZIBConvertError.Create(SErrorConvertion);
+    end;
+    if (sqlind <> nil) then
+         sqlind^ := 0; // not null
+  end;
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
 end;
 
 {**
@@ -2734,8 +2818,32 @@ end;
    @return the field Bytes value
 }
 function TZResultSQLDA.GetBytes(const Index: Integer): TByteDynArray;
+var
+  SQLCode: SmallInt;
 begin
+  CheckRange(Index);
   Result := nil;
+  {$R-}
+  with FXSQLDA.sqlvar[Index] do
+  begin
+    if (sqlind <> nil) and (sqlind^ = -1) then
+         Exit;
+    SQLCode := (sqltype and not(1));
+
+      case SQLCode of
+        SQL_TEXT, SQL_VARYING:
+          begin
+            SetLength(Result, sqllen);
+            System.Move(PAnsiChar(sqldata)^, Pointer(Result)^, sqllen);
+          end;
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+      end;
+  end;
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
 end;
 
 {**

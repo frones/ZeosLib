@@ -1885,13 +1885,14 @@ begin
           GetStringByName('TABLE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        Result.UpdateNullByName('DATA_TYPE');
-  //The value in the resultset will be used
+        //The value in the resultset will be used
         SQLType := ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType);
         if SQLType = stUnknown then
           Result.UpdateNullByName('DATA_TYPE')
         else
           Result.UpdateShortByName('DATA_TYPE', Ord(SQLType));
+        if ( SQLType = stBytes) and (UpperCase(GetStringByName('TYPE_NAME')) = 'UNIQUEIDENTIFIER') then
+          Result.UpdateShortByName('DATA_TYPE', Ord(stGUID));
         Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE', GetIntByName('LENGTH'));
         Result.UpdateIntByName('BUFFER_LENGTH', GetIntByName('LENGTH'));

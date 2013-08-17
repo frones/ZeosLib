@@ -1673,7 +1673,7 @@ var
   SQL, Where, ColumnName, DefaultValue: String;
   TypeName, SubTypeName, FieldScale: integer;
   LTableNamePattern, LColumnNamePattern: string;
-  ColumnIndexes : Array[1..14] of integer;
+  ColumnIndexes : Array[1..15] of integer;
   SQLType: TZSQLType;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
@@ -1692,7 +1692,7 @@ begin
         + ' b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH, b.RDB$FIELD_SCALE'
         + ' as RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
         + ' as RDB$DEFAULT_SOURCE_DOMAIN, b.RDB$COMPUTED_SOURCE as RDB$COMPUTED_SOURCE'
-        + ' FROM RDB$RELATION_FIELDS a'
+        + ' , b.RDB$CHARACTER_SET_ID FROM RDB$RELATION_FIELDS a'
         + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
         + ' LEFT JOIN RDB$TYPES c ON b.RDB$FIELD_TYPE = c.RDB$TYPE'
         + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE''';
@@ -1718,7 +1718,7 @@ begin
         + ' b.RDB$FIELD_SUB_TYPE, b.RDB$DESCRIPTION, b.RDB$CHARACTER_LENGTH,'
         + ' b.RDB$FIELD_PRECISION, a.RDB$DEFAULT_SOURCE, b.RDB$DEFAULT_SOURCE'
         + ' as RDB$DEFAULT_SOURCE_DOMAIN,b.RDB$COMPUTED_SOURCE as RDB$COMPUTED_SOURCE'
-        + ' FROM RDB$RELATION_FIELDS a'
+        + ' , b.RDB$CHARACTER_SET_ID FROM RDB$RELATION_FIELDS a'
         + ' JOIN RDB$FIELDS b ON (b.RDB$FIELD_NAME = a.RDB$FIELD_SOURCE)'
         + ' LEFT JOIN RDB$TYPES c ON (b.RDB$FIELD_TYPE = c.RDB$TYPE'
         + ' and c.RDB$FIELD_NAME = ''RDB$FIELD_TYPE'')';
@@ -1753,10 +1753,14 @@ begin
       ColumnIndexes[12] := FindColumn('RDB$DESCRIPTION');
       ColumnIndexes[13] := FindColumn('RDB$FIELD_POSITION');
       ColumnIndexes[14] := FindColumn('RDB$COMPUTED_SOURCE');
+      ColumnIndexes[15] := FindColumn('RDB$CHARACTER_SET_ID');
       while Next do
       begin
         TypeName := GetInt(ColumnIndexes[1]);
-        SubTypeName := GetInt(ColumnIndexes[2]);
+        if TypeName = 14 then //'TEXT'
+          SubTypeName := GetInt(ColumnIndexes[15]) //need a way to determine CS_Binary (octets) for stBytes on the other hand the subtype is useless here
+        else
+          SubTypeName := GetInt(ColumnIndexes[2]);
         FieldScale := GetInt(ColumnIndexes[3]);
         ColumnName := GetString(ColumnIndexes[4]);
 

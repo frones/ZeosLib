@@ -160,7 +160,8 @@ type
     function PingServer: Integer; override;
     function EscapeString(Value: ZAnsiString): ZAnsiString; override;
     function GetCharactersetCode: TZPgCharactersetType;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; override;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; overload; override;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
     function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; override;
     function GetServerSetting(const AName: string): string;
@@ -1067,6 +1068,24 @@ end;
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
 begin
   Result := String(EncodeBinary(Value));
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+end;
+
+{**
+  EgonHugeist:
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to predetect it Result = BinaryString
+  @param Value represents the Binary-String
+  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
+  @result the detectable Binary String
+}
+function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+var Tmp: ZAnsiString;
+begin
+  SetLength(Tmp, Length(Value));
+  System.Move(PAnsiChar(Value)^, PAnsiChar(Tmp)^, Length(Value));
+  Result := String(EncodeBinary(Tmp));
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;

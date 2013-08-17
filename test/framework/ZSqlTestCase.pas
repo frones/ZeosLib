@@ -83,6 +83,9 @@ type
   TZConfigUse = (cuMainConnection, cuNonAscii, cuRealPrepared, cuAutoEncoded);
   TZConfigUses = set of TZConfigUse;
 
+  TDataSetTypesDynArray = array of TFieldType;
+  TResultSetTypesDynArray = array of TZSQLType;
+
   {** Represents a SQL test database configuration. }
   { TZConnectionConfig }
   TZConnectionConfig = class
@@ -112,6 +115,11 @@ type
     FSkip_RealPrepared: Boolean;
     FSkip_Performance: Boolean;
     FTestMode: Byte;
+    FPerformanceDataSetTypes: TDataSetTypesDynArray;
+    FPerformanceResultSetTypes: TResultSetTypesDynArray;
+    FPerformanceFieldSizes: TIntegerDynArray;
+    FPerformanceFieldNames: TStringDynArray;
+    FPerformanceFieldPropertiesDetermined: Boolean;
     procedure SetConfigUses(AValue: TZConfigUses);
   public
     constructor Create; overload;
@@ -146,7 +154,13 @@ type
     property Include_Codepages: Boolean read FExtended_Codepages;
     property Include_AutoEncoding: Boolean read FExtended_AutoEncoding;
     property Skip_RealPrepared: Boolean read FSkip_RealPrepared;
-    property ConfigUses:TZConfigUses read FConfigUses write SetConfigUses;
+    property ConfigUses: TZConfigUses read FConfigUses write SetConfigUses;
+    property TestMode: Byte read FTestMode write FTestMode;
+    property PerformanceDataSetTypes: TDataSetTypesDynArray read FPerformanceDataSetTypes write FPerformanceDataSetTypes;
+    property PerformanceResultSetTypes: TResultSetTypesDynArray read FPerformanceResultSetTypes write FPerformanceResultSetTypes;
+    property PerformanceFieldSizes: TIntegerDynArray read FPerformanceFieldSizes write FPerformanceFieldSizes;
+    property PerformanceFieldNames: TStringDynArray read FPerformanceFieldNames write FPerformanceFieldNames;
+    property PerformanceFieldPropertiesDetermined: Boolean read FPerformanceFieldPropertiesDetermined write FPerformanceFieldPropertiesDetermined;
   end;
 
   {** Implements an abstract class for all SQL test cases. }
@@ -382,6 +396,7 @@ begin
   FSkip_Performance := StrToBoolEx(TestConfig.ReadProperty(COMMON_GROUP,
     SKIP_PERFORMANCE_KEY, TRUE_VALUE));
   FTestMode := 0;
+  FPerformanceFieldPropertiesDetermined := False;
 end;
 
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);

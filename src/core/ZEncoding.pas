@@ -302,7 +302,10 @@ function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   WasDecoded: Boolean; ConSettings: PZConSettings): ZAnsiString; overload;
 
 function GetValidatedAnsiString(const Ansi: ZAnsiString;
-  ConSettings: PZConSettings; const FromDB: Boolean): ZAnsiString;
+  ConSettings: PZConSettings; const FromDB: Boolean): ZAnsiString; overload;
+
+function GetValidatedAnsiString(const Uni: ZWideString;
+  ConSettings: PZConSettings; const FromDB: Boolean): ZAnsiString; overload;
 
 {**
   GetValidatedUnicodeStream the incoming Stream for his given Memory and
@@ -691,8 +694,21 @@ begin
       {$IFDEF WITH_LCONVENCODING}
       Result := Consettings.DbcConvertFunc(Ansi)
       {$ELSE}
-      Result := WideToAnsi(AnsiToWide(Ansi, ConSettings.ClientCodePage.CP), ConSettings.CTRL_CP)
+      Result := WideToAnsi(AnsiToWide(Ansi, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
       {$ENDIF}
+  else
+    Result := ''; // not done yet  and not needed. Makes the compiler happy
+end;
+
+function GetValidatedAnsiString(const Uni: ZWideString;
+  ConSettings: PZConSettings; const FromDB: Boolean): ZAnsiString;
+begin
+  if FromDB then
+    {$IFDEF WITH_LCONVENCODING}
+    Result := UTF8Encode(Uni)
+    {$ELSE}
+    Result := WideToAnsi(Uni, ConSettings^.CTRL_CP)
+    {$ENDIF}
   else
     Result := ''; // not done yet  and not needed. Makes the compiler happy
 end;

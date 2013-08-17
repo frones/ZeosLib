@@ -599,7 +599,7 @@ begin
       stUnicodeString:
         Statement.SetUnicodeString(I + 1,
           RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
-      stBytes:
+      stBytes, stGUID:
         Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stDate:
         Statement.SetDate(I + 1, RowAccessor.GetDate(ColumnIndex, WasNull));

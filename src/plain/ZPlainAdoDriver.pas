@@ -59,6 +59,8 @@ uses ZClasses, ZPlainDriver;
 
 type
   TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
+  protected
+    function IsAnsiDriver: Boolean; override;
   public
     constructor Create;
 
@@ -77,6 +79,11 @@ procedure TZAdoPlainDriver.LoadCodePages;
 begin
   AddCodePage('Not implemented!', -1);
    { TODO -oEgonHugeist : Must be completed!!!! }
+end;
+
+function TZAdoPlainDriver.IsAnsiDriver: Boolean;
+begin
+  Result := False;
 end;
 
 constructor TZAdoPlainDriver.Create;

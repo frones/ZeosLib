@@ -229,7 +229,8 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetBinaryEscapeString(const Value: ZAnsiString): String; virtual;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; overload; virtual;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; virtual;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload; virtual;
     function UseMetadata: boolean;
@@ -1302,6 +1303,14 @@ end;
   @result the detectable Binary String
 }
 function TZAbstractConnection.GetBinaryEscapeString(const Value: ZAnsiString): String;
+begin
+  if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
+    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))
+  else
+    Result := GetSQLHexString(PAnsiChar(Value), Length(Value));
+end;
+
+function TZAbstractConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
 begin
   if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
     Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))

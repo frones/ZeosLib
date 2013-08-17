@@ -93,7 +93,7 @@ type
 type
   {** Defines supported SQL types. }
   TZSQLType = (stUnknown, stBoolean, stByte, stShort, stInteger, stLong, stFloat,
-    stDouble, stBigDecimal, stString, stUnicodeString, stBytes, stDate, stTime,
+    stDouble, stBigDecimal, stString, stUnicodeString, stBytes, stGUID, stDate, stTime,
     stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream);
 
   {** Defines a transaction isolation level. }
@@ -277,7 +277,8 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
     //EgonHugeist
-    function GetBinaryEscapeString(const Value: ZAnsiString): String;
+    function GetBinaryEscapeString(const Value: ZAnsiString): String; overload;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
     function GetEscapeString(const Value: ZAnsiString): ZAnsiString; overload;
     function GetClientCodePageInformations: PZCodePage;

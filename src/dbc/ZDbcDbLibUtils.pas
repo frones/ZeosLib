@@ -126,7 +126,7 @@ function ConvertODBCToSqlType(FieldType: SmallInt;
 begin
   case FieldType of
     1, 12, -8, -9: Result := stString;
-    -7: Result := stBoolean;
+    -7{bit}: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
 //    -6: Result := stByte;
     -5: Result := stLong;
@@ -136,8 +136,8 @@ begin
     2, 3, 6, 7, 8: Result := stDouble;
     11, 93: Result := stTimestamp;
     -1, -10: Result := stAsciiStream;
-    -3, -4, -11: Result := stBinaryStream;
-    -2: Result := stBytes;
+    -4{image}: Result := stBinaryStream;
+    -2{binary},-3{varbinary},-11{uniqueidentifier}: Result := stBytes;
   else
     Result := stUnknown;
   end;
@@ -202,8 +202,9 @@ begin
     SYBBIT, SYBBITN:                            Result := stBoolean;
     SYBTEXT:                                    Result := stAsciiStream;
     SYBNTEXT:                                   Result := stUnicodeStream;
-    SYBIMAGE, SYBBINARY, SYBVARBINARY,
-    XSYBBINARY, XSYBVARBINARY:                  Result := stBinaryStream;
+    SYBIMAGE:                                   Result := stBinaryStream;
+    SYBBINARY, SYBVARBINARY,
+    XSYBBINARY, XSYBVARBINARY:                  Result := stBytes;
     SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stDouble;
     SYBVOID:                                    Result := stUnknown;
     SYBNVARCHAR, XSYBNCHAR, XSYBNVARCHAR:       Result := stUnicodeString;

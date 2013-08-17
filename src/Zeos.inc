@@ -59,6 +59,7 @@
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
  {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
+ {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
 {$ENDIF}
 
 // Compilation directives for Delphi4

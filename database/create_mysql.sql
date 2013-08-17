@@ -177,12 +177,27 @@ create table cargo
 /*==============================================================*/
 /* Table : high_load                                            */
 /*==============================================================*/
-create table high_load
-(
-  hl_id		      INTEGER NOT NULL,
-  data1		      FLOAT,
-  data2		      CHAR(10),
-  primary key (hl_id)
+create table high_load (
+hl_id		      INTEGER NOT NULL,
+stBoolean             ENUM('Y','N'),
+stByte                TINYINT UNSIGNED,
+stShort               SMALLINT,
+stInteger             INTEGER,
+stLong                BIGINT(20),
+stFloat               FLOAT,
+stDouble              DOUBLE,
+stBigDecimal          DECIMAL(18,4),
+stString              VARCHAR(100),
+stUnicodeString       VARCHAR(255),
+stBytes               VARBINARY(100),
+stDate                DATE,
+stTime                TIME,
+stTimestamp           TIMESTAMP,
+stGUID                CHAR(38),
+stAsciiStream         TEXT,
+stUnicodeStream       TEXT,
+stBinaryStream        BLOB,
+primary key (hl_id)
 );
 
 /*==============================================================*/

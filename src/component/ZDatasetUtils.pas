@@ -315,8 +315,12 @@ begin
       Result := ftFloat;
     stString:
       Result := ftString;
-    stBytes:
+    stBytes{$IFNDEF WITH_FTGUID}, stGUID{$ENDIF}:
       Result := ftBytes;
+    {$IFDEF WITH_FTGUID}
+    stGUID:
+      Result := ftGUID;
+    {$ENDIF}
     stDate:
       Result := ftDate;
     stTime:
@@ -372,6 +376,10 @@ begin
       Result := stBinaryStream;
     ftWideString:
       Result := stUnicodeString;
+    {$IFDEF WITH_FTGUID}
+    ftGuid:
+      Result := stGUID;
+    {$ENDIF}
     {$IFDEF WITH_WIDEMEMO}
     ftWideMemo:
       Result := stUnicodeStream;
@@ -462,7 +470,7 @@ begin
         RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
       ftWidestring:
         RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
-      ftBytes:
+      ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
         RowAccessor.SetDate(FieldIndex, ResultSet.GetDate(ColumnIndex));
@@ -532,7 +540,7 @@ begin
       ftWidestring:
         ResultSet.UpdateUnicodeString(ColumnIndex,
           RowAccessor.GetUnicodeString(FieldIndex, WasNull));
-      ftBytes:
+      ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
         ResultSet.UpdateDate(ColumnIndex, RowAccessor.GetDate(FieldIndex, WasNull));

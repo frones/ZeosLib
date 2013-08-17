@@ -87,16 +87,13 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 }
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
-
-{$IFDEF UNICODE}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChars
   @param P2 seconds PWideChars
   @return <code>True</code> if the memory at P1 and P2 are equal
 }
-function MemLCompUnicode(P1, P2: PChar; Len: Integer): Boolean;
-{$ENDIF}
+function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
 
 {**
   Compares two PAnsiChars without stopping at #0
@@ -112,15 +109,16 @@ function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: string): Boolean; {$IFDEF UNICODE} overload;
-function StartsWith(const Str, SubStr: RawByteString): Boolean; overload; {$ENDIF}
+function StartsWith(const Str, SubStr: ZWideString): Boolean; overload;
+function StartsWith(const Str, SubStr: ZAnsiString): Boolean; overload;
 {**
   Checks is the string ends with substring.
   @param Str a string to be checked.
   @param SubStr a string to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(const Str, SubStr: string): Boolean;
+function EndsWith(const Str, SubStr: ZWideString): Boolean; overload;
+function EndsWith(const Str, SubStr: ZAnsiString): Boolean; overload;
 
 {**
   Converts SQL string into float value.
@@ -413,7 +411,6 @@ begin
 end;
 
 
-{$IFDEF UNICODE}
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChar
@@ -430,7 +427,6 @@ begin
   end;
   Result := Len = 0;
 end;
-{$ENDIF}
 
 {**
   Compares two PAnsiChars without stopping at #0
@@ -455,26 +451,20 @@ end;
   @param SubStr a string to test at the start of the Str.
   @return <code>True</code> if Str started with SubStr;
 }
-function StartsWith(const Str, SubStr: string): Boolean;
+function StartsWith(const Str, SubStr: ZWideString): Boolean;
 var
   LenSubStr: Integer;
 begin
   LenSubStr := Length(SubStr);
   if SubStr = '' then
     Result := True
-   else if LenSubStr <= Length(Str) then
-    //Result := Copy(Str, 1, Length(SubStr)) = SubStr;
-   {$IFDEF UNICODE}
-   Result := MemLCompUnicode(PChar(Str), PChar(SubStr), LenSubStr)
-   {$ELSE}
-   Result := MemLCompAnsi(PChar(Str), PChar(SubStr), LenSubStr)
-   {$ENDIF}
+  else if LenSubStr <= Length(Str) then
+    Result := MemLCompUnicode(PWideChar(Str), PWideChar(SubStr), LenSubStr)
   else
     Result := False;
 end;
 
-{$IFDEF UNICODE}
-function StartsWith(const Str, SubStr: RawByteString): Boolean; overload;
+function StartsWith(const Str, SubStr: ZAnsiString): Boolean; overload;
 var
   LenSubStr: Integer;
 begin
@@ -487,7 +477,6 @@ begin
     else
       Result := False;
 end;
-{$ENDIF}
 
 {**
   Checks is the string ends with substring.
@@ -495,7 +484,7 @@ end;
   @param SubStr a string to test at the end of the Str.
   @return <code>True</code> if Str ended with SubStr;
 }
-function EndsWith(const Str, SubStr: string): Boolean;
+function EndsWith(const Str, SubStr: ZWideString): Boolean;
 var
   LenSubStr: Integer;
   LenStr: Integer;
@@ -507,14 +496,27 @@ begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
-      //Result := Copy(Str, LenStr - LenSubStr + 1, LenSubStr) = SubStr
-    {$IFDEF UNICODE}
-      Result := MemLCompUnicode(PChar(Pointer(Str)) + LenStr - LenSubStr,
+      Result := MemLCompUnicode(PWideChar(Pointer(Str)) + LenStr - LenSubStr,
          Pointer(SubStr), LenSubStr)
-    {$ELSE}
-      Result := MemLCompAnsi(PChar(Pointer(Str)) + LenStr - LenSubStr,
+    else
+      Result := False;
+  end;
+end;
+
+function EndsWith(const Str, SubStr: ZAnsiString): Boolean;
+var
+  LenSubStr: Integer;
+  LenStr: Integer;
+begin
+  if SubStr = '' then
+    Result := False // act like Delphi's AnsiEndsStr()
+  else
+  begin
+    LenSubStr := Length(SubStr);
+    LenStr := Length(Str);
+    if LenSubStr <= LenStr then
+      Result := MemLCompAnsi(PAnsiChar(Pointer(Str)) + LenStr - LenSubStr,
          Pointer(SubStr), LenSubStr)
-    {$ENDIF}
     else
       Result := False;
   end;

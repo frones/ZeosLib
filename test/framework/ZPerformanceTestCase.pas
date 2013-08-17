@@ -64,17 +64,12 @@ type
   {** A method for test set up, run or tear down. }
   TZTestMethod = procedure of object;
 
-  TDataSetTypesDynArray = array of TFieldType;
-  TResultSetTypesDynArray = array of TZSQLType;
-
   {** Implements a abstract performance test case. }
+
+  { TZPerformanceSQLTestCase }
+
   TZPerformanceSQLTestCase = class (TZAbstractCompSQLTestCase)
   private
-    FDataSetTypes: TDataSetTypesDynArray;
-    FResultSetTypes: TResultSetTypesDynArray;
-    FFieldSizes: TIntegerDynArray;
-    FFieldNames: TStringDynArray;
-    FFieldPropertiesDetermined: Boolean;
     FSelectedAPIs: TStrings;
     FSelectedTests: TStrings;
     FRecordCount: Integer;
@@ -87,8 +82,14 @@ type
 
     procedure RunSelectedTest(TestName: string; SetUpMethod: TZTestMethod;
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
+    procedure DetermineFieldsProperties(ConnectionConfig: TZConnectionConfig);
   protected
-    procedure DetermineFieldsProperties;
+    FDirectSQLTypes: TResultSetTypesDynArray;
+    FDirectFieldTypes: TDataSetTypesDynArray;
+    FDirectFieldNames: TStringDynArray;
+    FDirectFieldSizes: TIntegerDynArray;
+    FTrueVal, FFalseVal: String;
+
     procedure LoadConfiguration; override;
     procedure SetUp; override;
     function GetImplementedAPI: string; virtual; abstract;
@@ -106,6 +107,8 @@ type
     function RandomBts(Length: Integer): TByteDynArray;
     function RandomInt(MinValue, MaxValue: Integer): Integer;
     function RandomFloat(MinValue, MaxValue: Double): Double;
+    function RandomGUIDString: String;
+    function RandomGUIDBytes: TByteDynArray;
 
     { Tests table preparation methods. }
     procedure PopulateTable(TableName: string; PrimaryKey: string;
@@ -161,18 +164,12 @@ type
     procedure TearDownTestLookup; virtual;
 
     property SkipPerformanceTransactionMode: Boolean read FSkipPerformanceTransactionMode;
-    property FieldPropertiesDetermined: Boolean read FFieldPropertiesDetermined;
-    property DataSetTypes: TDataSetTypesDynArray read FDataSetTypes;
-    property ResultSetTypes: TResultSetTypesDynArray read FResultSetTypes;
-    property FieldSizes: TIntegerDynArray read FFieldSizes;
-    property FieldNames: TStringDynArray read FFieldNames;
     property PerformanceTable: String read FPerformanceTable;
     property PerformancePrimaryKey: String read FPerformancePrimaryKey;
   public
     function CreateDatasetConnection: TZConnection; override;
     function CreateDbcConnection: IZConnection; override;
 
-    constructor Create(MethodName: string); override;
     destructor Destroy; override;
 
   published
@@ -191,6 +188,9 @@ type
   end;
 
   {** Defines a container for performance test results. }
+
+  { TZPerformanceResultItem }
+
   TZPerformanceResultItem = class
   private
     FConnectionName: String;
@@ -213,6 +213,9 @@ type
   end;
 
   {** Implements a performance result processor. }
+
+  { TZPerformanceResultProcessor }
+
   TZPerformanceResultProcessor = class
   private
     FResults: TObjectList;
@@ -244,8 +247,8 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    procedure RegisterResult(const APIName, TestName, Protocol, Properties: String;
-      const TryIndex: Integer; const Metric: Double);
+    procedure RegisterResult(const APIName, TestName, Protocol,
+      ConnectionName: String; const TryIndex: Integer; const Metric: Double);
     procedure ProcessResults;
     procedure PrintResults;
     procedure ClearResults;
@@ -265,15 +268,11 @@ var
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils;
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils
+  {$IFDEF WITH_FTGUID},ComObj, ActiveX{$ENDIF};
 
 { TZPerformanceSQLTestCase }
 
-constructor TZPerformanceSQLTestCase.Create(MethodName: string);
-begin
-  inherited Create(MethodName);
-  FFieldPropertiesDetermined := False;
-end;
 {**
   Destroys this object and clean ups the memory.
 }
@@ -327,8 +326,8 @@ end;
 procedure TZPerformanceSQLTestCase.SetUp;
 begin
   inherited SetUp;
-  if not FieldPropertiesDetermined then
-     DetermineFieldsProperties;
+  if not (ConnectionConfig.PerformanceFieldPropertiesDetermined) then
+    DetermineFieldsProperties(ConnectionConfig);
 end;
 
 function TZPerformanceSQLTestCase.SkipForReason(Reasons: ZSkipReasons): Boolean;
@@ -366,6 +365,33 @@ function TZPerformanceSQLTestCase.RandomFloat(MinValue,
   MaxValue: Double): Double;
 begin
   Result := (MinValue * 100 + Random(Trunc((MaxValue - MinValue) * 100))) / 100;
+end;
+
+function TZPerformanceSQLTestCase.RandomGUIDString: String;
+{$IFDEF WITH_FTGUID}
+var GUID: TGUID;
+{$ENDIF}
+begin
+  {$IFDEF WITH_FTGUID}
+  if CoCreateGuid(GUID) = S_OK then
+    Result := GUIDToString(GUID)
+  else
+  {$ENDIF}
+    Result := '{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}';
+end;
+
+function TZPerformanceSQLTestCase.RandomGUIDBytes: TByteDynArray;
+{$IFDEF WITH_FTGUID}
+var GUID: TGUID;
+{$ENDIF}
+begin
+  SetLength(Result, 16);
+  {$IFDEF WITH_FTGUID}
+  if CoCreateGuid(GUID) = S_OK then
+    System.Move(Pointer(@GUID)^, Pointer(Result)^, 16)
+  else
+  {$ENDIF}
+    Result := RandomBts(16);
 end;
 
 {**
@@ -511,9 +537,9 @@ begin
         end;
 
         Query1.Insert;
-        for I := 0 to High(DataSetTypes) do
+        for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
         begin
-          case DataSetTypes[i] of
+          case ConnectionConfig.PerformanceDataSetTypes[i] of
             ftString, ftFixedChar:
               Query1.Fields[i].AsString := RandomStr(Query1.Fields[i].DisplayWidth);
             ftMemo, ftFmtMemo:
@@ -524,7 +550,9 @@ begin
             ftWideMemo:
               Query1.Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
             {$ENDIF}
-            ftSmallint, ftInteger, ftWord, ftLargeint:
+            ftSmallint:
+              Query1.Fields[i].AsInteger := Random(255);
+            ftInteger, ftWord, ftLargeint:
               if UpperCase(PrimaryKey) = UpperCase(Query.Fields[I].FieldName) then
                 Query1.Fields[i].AsInteger := Index
               else if UpperCase(ForeignKey) = UpperCase(Query.Fields[I].FieldName) then
@@ -541,10 +569,14 @@ begin
               Query1.Fields[i].Value := RandomBts(Query1.Fields[i].Size);
             ftBlob:
               Query1.Fields[i].Value := RandomBts(RecordCount*100);
+            {$IFDEF WITH_FTGUID}
+            ftGuid:
+              Query1.Fields[i].AsString := RandomGUIDString;
+            {$ENDIF}
             {ftAutoInc, ftGraphic,
             ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,
             ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
-            ftVariant, ftInterface, ftIDispatch, ftGuid, );}
+            ftVariant, ftInterface, ftIDispatch);}
           end;
         end;
         Query1.Post;
@@ -571,7 +603,8 @@ end;
   @param TearDownMethod the method to deinitialize the test.
 }
 procedure TZPerformanceSQLTestCase.RunSelectedTest(TestName: string;
-  SetUpMethod, RunTestMethod, TearDownMethod: TZTestMethod);
+  SetUpMethod: TZTestMethod; RunTestMethod: TZTestMethod;
+  TearDownMethod: TZTestMethod);
 var
   I: Integer;
   StartTicks: Cardinal;
@@ -609,28 +642,39 @@ begin
   end;
 end;
 
-procedure TZPerformanceSQLTestCase.DetermineFieldsProperties;
+procedure TZPerformanceSQLTestCase.DetermineFieldsProperties(ConnectionConfig: TZConnectionConfig);
 var
   Query: TZQuery;
   I: Integer;
+  DataSetTypes: TDataSetTypesDynArray;
+  ResultSetTypes: TResultSetTypesDynArray;
+  FieldSizes: TIntegerDynArray;
+  FieldNames: TStringDynArray;
 begin
   Query := CreateQuery;
   Query.SQL.Text := 'select * from '+PerformanceTable;
   Query.Open;
-  SetLength(FDataSetTypes, Query.Fields.Count);
-  SetLength(FResultSetTypes, Query.Fields.Count);
-  SetLength(FFieldSizes, Query.Fields.Count);
-  SetLength(FFieldNames, Query.Fields.Count);
+  SetLength(DataSetTypes, Query.Fields.Count);
+  SetLength(ResultSetTypes, Query.Fields.Count);
+  SetLength(FieldSizes, Query.Fields.Count);
+  SetLength(FieldNames, Query.Fields.Count);
   for i := 0 to Query.Fields.Count -1 do
   begin
-    FDataSetTypes[i] := Query.Fields[i].DataType;
-    FResultSetTypes[i] := ConvertDatasetToDbcType(FDataSetTypes[i]);
-    FFieldSizes[i] := Query.Fields[i].DisplayWidth;
-    FFieldNames[i] := Query.Fields[i].FieldName;
+    DataSetTypes[i] := Query.Fields[i].DataType;
+    ResultSetTypes[i] := ConvertDatasetToDbcType(DataSetTypes[i]);
+    if ResultSetTypes[i] = stBytes then
+      FieldSizes[i] := Query.Fields[i].Size
+    else
+      FieldSizes[i] := Query.Fields[i].DisplayWidth;
+    FieldNames[i] := Query.Fields[i].FieldName;
   end;
   Query.Close;
   Query.Free;
-  FFieldPropertiesDetermined := True;
+  ConnectionConfig.PerformanceDataSetTypes := DataSetTypes;
+  ConnectionConfig.PerformanceResultSetTypes := ResultSetTypes;
+  ConnectionConfig.PerformanceFieldSizes := FieldSizes;
+  ConnectionConfig.PerformanceFieldNames := FieldNames;
+  ConnectionConfig.PerformanceFieldPropertiesDetermined := True;
 end;
 
 {**
@@ -756,7 +800,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestDelete;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -766,7 +810,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestFetch;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -776,7 +820,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestFilter;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -786,7 +830,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestInsert;
 begin
-  CleanupTable(PERFORMANCE_TABLE_NAME);
+  CleanupTable(FPerformanceTable);
   DefaultSetUpTest;
 end;
 
@@ -795,7 +839,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestOpen;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -805,7 +849,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestSort;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -815,7 +859,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestUpdate;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -825,7 +869,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestDirectUpdate;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -835,7 +879,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestLocate;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -845,7 +889,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestLookup;
 begin
-  PopulateTable(PERFORMANCE_TABLE_NAME, PERFORMANCE_PRIMARY_KEY,
+  PopulateTable(FPerformanceTable, FPerformancePrimaryKey,
     FRecordCount, '', 0);
   DefaultSetUpTest;
 end;
@@ -1255,25 +1299,25 @@ begin
         if ( CountConnectionName > 0 ) then
           AverageMetricConnectionName := AverageMetricConnectionName / CountConnectionName
         else AverageMetricConnectionName := -1;
-        RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'all properties', 0, AverageMetricConnectionName);
+        RegisterResult(SelectedAPIs[I], SelectedTests[J], FProtocols[M], 'all connections', 0, AverageMetricConnectionName);
       end; {for M := 0 to FProtocols.Count-1 do}
       if ( CountProtocol > 0 ) then
         AverageMetricProtocol := AverageMetricProtocol / CountProtocol
       else
         AverageMetricProtocol := -1;
-      RegisterResult(SelectedAPIs[I], SelectedTests[J], 'all protocols', 'all properties', 0, AverageMetricProtocol);
+      RegisterResult(SelectedAPIs[I], SelectedTests[J], 'all protocols', 'all connections', 0, AverageMetricProtocol);
     end; { for J := 0 to SelectedTests.Count - 1 do }
     if CountTests > 0 then
       AverageMetricTests := AverageMetricTests / CountTests
     else
       AverageMetricTests := -1;
-    RegisterResult(SelectedAPIs[I], 'all tests', 'all protocols', 'all properties', 0, AverageMetricTests);
+    RegisterResult(SelectedAPIs[I], 'all tests', 'all protocols', 'all connections', 0, AverageMetricTests);
   end;
   if CountTotal > 0 then
     AverageMetricToal := AverageMetricToal / CountTotal
   else
     AverageMetricToal := -1;
-  RegisterResult('all apis', 'all tests', 'all protocols', 'all properties', 0, AverageMetricToal);
+  RegisterResult('all apis', 'all tests', 'all protocols', 'all connections', 0, AverageMetricToal);
 end;
 
 {**
@@ -1453,43 +1497,42 @@ begin
   begin
     for J := 0 to SelectedTests.Count - 1 do
     begin
-      WriteLn(Format('Running API: %s, Test: %s, Records: %d, Repeat: %d',
+      WriteLn(Format('    Running API: %s, Test: %s, Records: %d, Repeat: %d',
         [UpperCase(SelectedAPIs[I]), UpperCase(SelectedTests[J]), RecordCount, RepeatCount]));
 
       for N := 0 to FProtocols.Count -1 do
       begin
         WriteLn('');
-        WriteLn(' Used protocol: '+FProtocols[n]);
-        Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[n], 'all properties', 0);
-        if (Current <> nil) and (Current.Metric >= 0) then
-          WriteLn(Format('  Average - %.2f %s(%s)', [Current.Metric, Units, 'all properties']))
-        else WriteLn('  Average - absent');
-
+        WriteLn('      Used protocol: '+FProtocols[n]);
         if Details then
           for M := 0 to TStringList(FProtocols.Objects[N]).Count -1 do
           begin
             Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[n], TStringList(FProtocols.Objects[N])[M], 0);
             if (Current <> nil) and (Current.Metric >= 0) then
-              WriteLn(Format('  Average - %.2f %s(%s)', [Current.Metric, Units, TStringList(FProtocols.Objects[N])[M]]))
-            else WriteLn('  Average - absent');
+              WriteLn(Format('        Detail Average - %.2f %s (%s)', [Current.Metric, Units, TStringList(FProtocols.Objects[N])[M]]))
+            else WriteLn('        Detail Average - absent');
           end;
+        Current := Self.FindResultItem(SelectedAPIs[I], SelectedTests[J], FProtocols[n], 'all connections', 0);
+        if (Current <> nil) and (Current.Metric >= 0) then
+          WriteLn(Format('      Protocol Average - %.2f %s (%s)', [Current.Metric, Units, FProtocols[n]]))
+        else WriteLn('      Protocol Average - absent');
       end;
-      Current := FindResultItem(SelectedAPIs[I], SelectedTests[J], 'all protocols', 'all properties', 0);
+      Current := FindResultItem(SelectedAPIs[I], SelectedTests[J], 'all protocols', 'all connections', 0);
       if (Current <> nil) and (Current.Metric >= 0) then
-        WriteLn(Format('  Average - %.2f %s all protocols+propeties', [Current.Metric, Units]))
-      else WriteLn('  Average - absent');
+        WriteLn(Format('    Test Average - %.2f %s (%s)', [Current.Metric, Units, SelectedTests[J]]))
+      else WriteLn('    Test Average - absent');
       WriteLn('');
     end;
-    Current := FindResultItem(SelectedAPIs[i], 'all tests', 'all protocols', 'all properties', 0);
+    Current := FindResultItem(SelectedAPIs[i], 'all tests', 'all protocols', 'all connections', 0);
     if (Current <> nil) and (Current.Metric >= 0) then
-      WriteLn(Format('Average - %.2f %s all test+protocols+properties', [Current.Metric, Units]))
-    else WriteLn('Average - absent');
+      WriteLn(Format('  API Average - %.2f %s (%s)', [Current.Metric, Units, SelectedAPIs[i]]))
+    else WriteLn('  API Average - absent');
     WriteLn('');
   end;
-  Current := FindResultItem('all apis', 'all tests', 'all protocols', 'all properties', 0);
+  Current := FindResultItem('all apis', 'all tests', 'all protocols', 'all connections', 0);
   if (Current <> nil) and (Current.Metric >= 0) then
-    WriteLn(Format('Average - %.2f %s total', [Current.Metric, Units]))
-  else WriteLn('Average - absent');
+    WriteLn(Format('Overall Average - %.2f %s', [Current.Metric, Units]))
+  else WriteLn('Overall Average - absent');
   WriteLn('');
 end;
 
@@ -1501,20 +1544,20 @@ end;
   @param Metric a time metric.
 }
 procedure TZPerformanceResultProcessor.RegisterResult(const APIName, TestName,
-  Protocol, Properties: String; const TryIndex: Integer; const Metric: Double);
+  Protocol, ConnectionName: String; const TryIndex: Integer; const Metric: Double);
 var iProt: Integer;
 begin
   Used := True;
   Results.Add(TZPerformanceResultItem.Create(APIName, TestName, Protocol,
-    Properties, TryIndex, Metric));
+    ConnectionName, TryIndex, Metric));
   if not (( APIName = 'all apis' ) or ( TestName = 'all tests' ) or
-    ( Protocol = 'all protocols' ) or ( Properties = 'all properties' )) then
+    ( Protocol = 'all protocols' ) or ( ConnectionName = 'all connections' )) then
   begin
     iProt := FProtocols.IndexOf(Protocol);
     if iProt = -1 then
       iProt := FProtocols.AddObject(Protocol, TStringList.Create);
-    if TStringList(FProtocols.Objects[iProt]).IndexOf(Properties) = -1 then
-      TStringList(FProtocols.Objects[iProt]).Add(Properties);
+    if TStringList(FProtocols.Objects[iProt]).IndexOf(ConnectionName) = -1 then
+      TStringList(FProtocols.Objects[iProt]).Add(ConnectionName);
   end;
 end;
 

@@ -253,6 +253,8 @@ begin
     FColumnCases[I] := Current.CaseSensitive;
     FColumnTypes[I] := Current.ColumnType;
     FColumnLengths[I] := GetColumnSize(Current);
+    if Current.ColumnType = stGUID then
+      FColumnLengths[I] := 16;
     FColumnOffsets[I] := FColumnsSize;
     FColumnDefaultExpressions[I] := Current.DefaultExpression;
     Inc(FColumnsSize, FColumnLengths[I] + 1);
@@ -969,6 +971,7 @@ end;
 function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
 var
   TempBlob: IZBlob;
+  GUID: TGUID;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -992,6 +995,11 @@ begin
       stString: Result := PChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
       stUnicodeString, stUnicodeStream: Result := ZDbcString(GetUnicodeString(ColumnIndex, IsNull)); //wide down to expect codpage Ansi
       stBytes: Result := String(BytesToStr(GetBytes(ColumnIndex, IsNull)));
+      stGUID:
+        begin
+          System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+          Result := GUIDToString(GUID);
+        end;
       stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
       stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
       stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss',
@@ -1391,7 +1399,7 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBytes:
+      stBytes, stGUID:
         begin
           TempShort := PSmallInt(@FBuffer.Columns[
             FColumnOffsets[ColumnIndex - 1] + 1])^;
@@ -1715,7 +1723,7 @@ begin
           Result.VType := vtUnicodeString;
           Result.VUnicodeString := PWideChar(ValuePtr);
         end;
-      stBytes, stAsciiStream, stBinaryStream:
+      stBytes,stGUID,stAsciiStream, stBinaryStream:
         begin
           Result.VType := vtString;
           Result.VString := GetString(ColumnIndex, IsNull);
@@ -2098,6 +2106,8 @@ procedure TZRowAccessor.SetString(ColumnIndex: Integer; Value: String);
 var
   TempStr: string;
   IsNull: Boolean;
+  GUID: TGUID;
+  Bts: TByteDynArray;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -2132,6 +2142,13 @@ begin
       SetUnicodeString(ColumnIndex, ZDbcUnicodeString(Value, ConSettings.CTRL_CP));
       {$ENDIF}
     stBytes: SetBytes(ColumnIndex, StrToBytes(AnsiString(Value)));
+    stGUID:
+      begin
+        GUID := StringToGUID(Value);
+        SetLength(Bts, 16);
+        System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
+        SetBytes(ColumnIndex, Bts);
+      end;
     stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
@@ -2202,7 +2219,7 @@ begin
   if Value <> nil then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBytes:
+      stBytes, stGUID:
         begin
           FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
           TempShort := MinIntValue([High(Value) + 1, FColumnLengths[ColumnIndex - 1]

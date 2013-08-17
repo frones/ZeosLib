@@ -399,16 +399,16 @@ var TempAnsi: ZAnsiString;
 {$ENDIF}
 begin
   {$IFNDEF UNICODE}
-  if not ConSettings.AutoEncode then
+  if not ConSettings^.AutoEncode then
     Result := Ansi
   else
   {$ENDIF}
-    case ConSettings.ClientCodePage.Encoding of
+    case ConSettings^.ClientCodePage^.Encoding of
       ceUTF8:
         {$IFDEF UNICODE}
           Result := UTF8ToString(Ansi);
         {$ELSE}
-          if ( ConSettings.CPType in [cCP_UTF8, cCP_UTF16] ) then
+          if ( ConSettings^.CPType in [cCP_UTF8, cCP_UTF16] ) then
             Result := Ansi
           else
             {$IFDEF WITH_LCONVENCODING}
@@ -417,25 +417,25 @@ begin
               {$IFDEF WITH_FPC_STRING_CONVERSATION}
               begin
                 //avoid string conversations -> move memory
-                TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+                TempAnsi := AnsiToStringEx(Ansi, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
                 SetLength(Result, Length(TempAnsi));
                 Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
               end;
               {$ELSE}
-              Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
+              Result := AnsiToStringEx(Ansi, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
               {$ENDIF}
             {$ENDIF}
         {$ENDIF}
       else
         {$IFDEF UNICODE}
-        Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP);
+        Result := AnsiToStringEx(Ansi, ConSettings^.ClientCodePage^.CP);
         {$ELSE}
           if ConSettings.AutoEncode then
-            if ConSettings.ClientCodePage.CP = zCP_NONE then //that's not nice it slows down the incoming strings! Find a way to determine allways the current server CP
+            if ConSettings^.ClientCodePage^.CP = zCP_NONE then //that's not nice it slows down the incoming strings! Find a way to determine allways the current server CP
               case DetectUTF8Encoding(Ansi) of
                 etUSASCII: Result := Ansi;
                 etAnsi:
-                  if ConSettings.CTRL_CP = zCP_UTF8 then
+                  if ConSettings^.CTRL_CP = zCP_UTF8 then
                     {$IFDEF WITH_FPC_STRING_CONVERSATION}
                     begin
                       //avoid string conversations -> move memory
@@ -449,7 +449,7 @@ begin
                   else
                     Result := Ansi;
                 else
-                  if ConSettings.CTRL_CP = zCP_UTF8 then
+                  if ConSettings^.CTRL_CP = zCP_UTF8 then
                     Result := Ansi
                   else
                     {$IFDEF WITH_FPC_STRING_CONVERSATION}
@@ -559,6 +559,9 @@ begin
   {$IFDEF UNICODE}
   Result := AStr;
   {$ELSE}
+    if not ConSettings.AutoEncode then
+      Result := String(AStr)
+    else
     {$IFDEF WITH_LCONVENCODING}
     Result := UTF8Encode(AStr);
     {$ELSE}
@@ -824,11 +827,18 @@ begin
   {$IFDEF UNICODE}
   Result := AStr;
   {$ELSE}
-    {$IFDEF WITH_LCONVENCODING}
-    Result := UTF8ToString(AStr);
-    {$ELSE}
-    Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
-    {$ENDIF}
+    if FConSettings.AutoEncode then
+      case DetectUTF8Encoding(AStr) of
+        etUTF8, etUSASCII: Result := UTF8Decode(AStr);
+        else
+          Result := WideString(AStr);
+      end
+    else
+      {$IFDEF WITH_LCONVENCODING}
+      Result := UTF8ToString(AStr);
+      {$ELSE}
+      Result := AnsiToWide(AStr, FConSettings.CTRL_CP);
+      {$ENDIF}
   {$ENDIF}
 end;
 
