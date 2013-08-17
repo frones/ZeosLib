@@ -2808,8 +2808,32 @@ end;
    @return the field Bytes value
 }
 function TZResultSQLDA.GetBytes(const Index: Integer): TByteDynArray;
+var
+  SQLCode: SmallInt;
 begin
+  CheckRange(Index);
   Result := nil;
+  {$R-}
+  with FXSQLDA.sqlvar[Index] do
+  begin
+    if (sqlind <> nil) and (sqlind^ = -1) then
+         Exit;
+    SQLCode := (sqltype and not(1));
+
+      case SQLCode of
+        SQL_TEXT, SQL_VARYING:
+          begin
+            SetLength(Result, sqllen);
+            System.Move(PAnsiChar(sqldata)^, Pointer(Result)^, sqllen);
+          end;
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+      end;
+  end;
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
 end;
 
 {**
