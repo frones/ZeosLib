@@ -963,10 +963,8 @@ var
   StatusVector: TARRAY_ISC_STATUS;
 begin
   if StatementHandle <> 0  then
-  begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
-    CheckInterbase6Error(PlainDriver, StatusVector);
-  end;
+  //CheckInterbase6Error(PlainDriver, StatusVector); //raises an unwanted exception if Connection was reopened  See: http://sourceforge.net/p/zeoslib/tickets/40/
 end;
 
 {**
