@@ -522,7 +522,7 @@ begin
       CurrentVar.Handle := nil;
 
       { Artificially define Oracle internal type. }
-      if InParamTypes[I] = stBinaryStream then
+      if InParamTypes[I] in [stBytes, stBinaryStream] then
         TypeCode := SQLT_BLOB
       else if InParamTypes[I] = stAsciiStream then
         TypeCode := SQLT_CLOB

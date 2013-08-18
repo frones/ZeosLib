@@ -55,7 +55,12 @@ interface
 
 {$I ZDbc.inc}
 
-uses Windows, Classes, SysUtils, ActiveX, ZDbcIntfs, ZCompatibility;
+uses Windows, Classes, SysUtils, ActiveX,
+  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZDbcStatement;
+
+type
+  PDirectionTypes = ^TDirectionTypes;
+  TDirectionTypes = array of TOleEnum;
 
 {**
   Converts an ADO native types into string related.
@@ -70,7 +75,7 @@ function ConvertAdoToTypeName(FieldType: SmallInt): string;
   @return a SQL undepended type.
 }
 function ConvertAdoToSqlType(const FieldType: SmallInt;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage; UseCtrsCPType: Boolean = True): TZSQLType;
 
 {**
   Converts a Zeos type into ADO types.
@@ -116,6 +121,28 @@ function ConvertOleDBToAdoSchema(OleDBSchema: TGUID): Integer;
 }
 function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
 
+function GetCurrentResultSet(AdoRecordSet: ZPlainAdo.RecordSet;
+  Connection: IZAdoConnection; Statement: IZStatement; Const SQL: String;
+  ConSettings: PZConSettings;
+  const ResultSetConcurrency: TZResultSetConcurrency): IZResultSet;
+
+function IsSelect(const SQL: string): Boolean;
+
+{**
+  Sets a variant value into specified parameter.
+  @param AdoCommand the ole command
+  @param Connection the Connection interface
+  @param ParameterIndex a index of the parameter.
+  @param SqlType a parameter SQL type.
+  @paran Value a new parameter value.
+}
+procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
+  ParamCount: Integer; const ParameterIndex: Integer;
+  const SQLType: TZSQLType; const Value: TZVariant;
+  const ParamDirection: ParameterDirectionEnum);
+
+procedure RefreshParameters(AdoCommand: ZPlainAdo.Command; DirectionTypes: PDirectionTypes = nil);
+
 var
 {**
   Required to free memory allocated by oledb
@@ -125,7 +152,8 @@ var
 implementation
 
 uses
-  ComObj, OleDB, ZSysUtils, ZPlainAdo;
+  ComObj, OleDB, Variants,
+  ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZEncoding;
 
 {**
   Converts an ADO native types into string related.
@@ -186,7 +214,7 @@ end;
   @return a SQL undepended type.
 }
 function ConvertAdoToSqlType(const FieldType: SmallInt;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage; UseCtrsCPType: Boolean = True): TZSQLType;
 begin
   case FieldType of
     adChar, adVarChar, adBSTR: Result := stString;
@@ -209,18 +237,27 @@ begin
     adDBTimeStamp, adFileTime: Result := stTimestamp;
     adLongVarChar: Result := stAsciiStream;
     adLongVarWChar: Result := stUnicodeStream;
-    adBinary, adVarBinary, adLongVarBinary: Result := stBinaryStream;
-    adGUID: Result := stString;
+    adBinary, adVarBinary: Result := stBytes;
+    adLongVarBinary: Result := stBinaryStream;
+    adGUID: Result := stGUID;
 
     adEmpty, adError, AdArray, adChapter, adIDispatch, adIUnknown,
     adPropVariant, adUserDefined, adVariant: Result := stString;
   else
     Result := stString;
   end;
-  if CtrlsCPType = cCP_UTF16 then
-    case Result of
-      stString: Result := stUnicodeString;
-      stAsciiStream: Result := stUnicodeStream;
+  if UseCtrsCPType then
+    case CtrlsCPType of
+      cCP_UTF16:
+        case Result of
+          stString: Result := stUnicodeString;
+          stAsciiStream: Result := stUnicodeStream;
+        end;
+      else
+        case Result of
+          stUnicodeString: Result := stString;
+          stUnicodeStream: Result := stAsciiStream;
+        end;
     end;
 end;
 
@@ -246,6 +283,7 @@ begin
     stTime: Result := adDBTime;
     stTimestamp: Result := adDBTimeStamp;
     stBytes: Result := adVarBinary;
+    stGUID: Result := adGUID;
     stAsciiStream: Result := adLongVarChar;
     stUnicodeStream: Result := adLongVarWChar;
     stBinaryStream: Result := adLongVarBinary;
@@ -403,6 +441,250 @@ begin
     DataInit.GetInitializationString(DataSource, True, InitStr);
     Result := InitStr;
   end;
+end;
+
+function GetCurrentResultSet(AdoRecordSet: ZPlainAdo.RecordSet;
+  Connection: IZAdoConnection; Statement: IZStatement; Const SQL: String; ConSettings: PZConSettings;
+  const ResultSetConcurrency: TZResultSetConcurrency): IZResultSet;
+var
+  NativeResultSet: IZResultSet;
+begin
+  Result := nil;
+  if Assigned(AdoRecordset) then
+    if (AdoRecordSet.State and adStateOpen) = adStateOpen then
+    begin
+      NativeResultSet := TZAdoResultSet.Create(Statement, SQL, AdoRecordSet);
+      if ResultSetConcurrency = rcUpdatable then
+        Result := TZCachedResultSet.Create(NativeResultSet, SQL,
+          TZAdoCachedResolver.Create(Connection.GetAdoConnection,
+          Statement, NativeResultSet.GetMetaData), ConSettings)
+      else
+        Result := NativeResultSet;
+    end;
+end;
+
+function IsSelect(const SQL: string): Boolean;
+begin
+  Result := Uppercase(Copy(TrimLeft(Sql), 1, 6)) = 'SELECT';
+end;
+
+{**
+  Sets a variant value into specified parameter.
+  @param AdoCommand the ole command
+  @param Connection the Connection interface
+  @param ParameterIndex a index of the parameter.
+  @param SqlType a parameter SQL type.
+  @paran Value a new parameter value.
+}
+procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
+  ParamCount: Integer; const ParameterIndex: Integer;
+  const SQLType: TZSQLType; const Value: TZVariant;
+  const ParamDirection: ParameterDirectionEnum);
+var
+  S: Integer;
+  B: IZBlob;
+  V: Variant;
+  T: Integer;
+  P: ZPlainAdo.Parameter;
+  RetValue: TZVariant;
+  TmpSQLType: TZSQLType;
+begin
+  RetValue:= Value;
+  TmpSQLType := SQLType;
+  if not (RetValue.VType = vtNull) and (RetValue.VType = vtInterface) and
+    (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
+  begin
+    B := DefVarManager.GetAsInterface(Value) as IZBlob;
+    if B.IsEmpty then
+      RetValue := NullVariant
+    else
+      case SQLType of
+        stAsciiStream:
+          begin
+            {$IFDEF UNICODE}
+            DefVarManager.SetAsString(RetValue, String(B.GetString));
+            {$ELSE}
+            DefVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
+            {$ENDIF}
+            TmpSQLType := stString;
+          end;
+        stUnicodeStream:
+          begin
+            if B.Connection = nil then
+              B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Connection, B.WasDecoded);
+            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+            TmpSQLType := stUnicodeString;
+          end;
+        stBinaryStream:
+          begin
+            if Assigned(B) then
+              DefVarManager.SetAsBytes(RetValue, B.GetBytes);
+            TmpSQLType := stBytes;
+          end;
+      end;
+  end;
+
+  case RetValue.VType of
+    vtNull: V := Null;
+    vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
+    vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
+    vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
+    vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
+    vtString:
+      {$IFDEF UNICODE}
+      V := SoftVarManager.GetAsString(RetValue);
+      {$ELSE}
+      if ParamDirection = adParamInputOutput then //can't say why but bidirectional params need to be converted first.
+        //On the other hand they where not refreshed after second call! Is there a problem with Variant vs. OleVariant and strings?
+      begin
+        V := WideString(SoftVarManager.GetAsString(RetValue));
+        TmpSQLType := stUnicodeString;
+      end
+      else
+        if SQLType = stAsciiStream then
+          V := SoftVarManager.GetAsString(RetValue)
+        else
+          V := Connection.GetIZPlainDriver.ZPlainString(SoftVarManager.GetAsString(RetValue), Connection.GetConSettings);
+      {$ENDIF}
+    vtUnicodeString: V := WideString(SoftVarManager.GetAsUnicodeString(RetValue));
+    vtDateTime: V := TDateTime(SoftVarManager.GetAsDateTime(RetValue));
+  end;
+
+  S := 0; //init val
+  case TmpSQLType of
+    stString:
+      begin
+        S := Length(VarToStr(V));
+        if S = 0 then S := 1;
+        //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
+      end;
+    stUnicodeString:
+      begin
+        S := Length(VarToWideStr(V))*2; //strange! Need size in bytes!!
+        if S = 0 then S := 1;
+        //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
+      end;
+    stBytes:
+      begin
+        //V := StrToBytes(VarToStr(V));
+        if (VarType(V) and varArray) <> 0 then
+          S := VarArrayHighBound(V, 1) + 1;
+        if S = 0 then V := Null;
+      end;
+  end;
+
+  if VarIsNull(V) or (SQLType = stBytes) then
+    T := ConvertSqlTypeToAdo(TmpSQLType)
+  else
+    T := ConvertVariantToAdo(VarType(V));
+
+  if ParameterIndex <= ParamCount then
+  begin
+    P := AdoCommand.Parameters.Item[ParameterIndex - 1];
+    P.Direction := ParamDirection; //set ParamDirection! Bidirection is requires for callables f.e.
+    if not VarIsNull(V) then //align new size and type
+    begin
+      P.Type_ := T;
+      P.Size := S;
+    end;
+    if VarIsClear(P.Value) or (P.Value <> V) or (TmpSQLType = stBytes) then //Check if Param is cleared, unasigned or different
+      P.Value := V;
+  end
+  else
+    AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
+      'P' + IntToStr(ParameterIndex), T, ParamDirection, S, V));
+end;
+
+procedure RefreshParameters(AdoCommand: ZPlainAdo.Command;
+  DirectionTypes: PDirectionTypes = nil);
+  procedure RefreshFromOleDB;
+  var
+    I: Integer;
+    ParamCount: NativeUInt;
+    ParamInfo: PDBParamInfoArray;
+    NamesBuffer: POleStr;
+    Name: WideString;
+    Parameter: _Parameter;
+    Direction: ParameterDirectionEnum;
+    OLEDBCommand: ICommand;
+    OLEDBParameters: ICommandWithParameters;
+    CommandPrepare: ICommandPrepare;
+  begin
+    OLEDBCommand := (AdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand;
+    OLEDBCommand.QueryInterface(ICommandWithParameters, OLEDBParameters);
+    OLEDBParameters.SetParameterInfo(0, nil, nil);
+    if Assigned(OLEDBParameters) then
+    begin
+      ParamInfo := nil;
+      NamesBuffer := nil;
+      try
+        OLEDBCommand.QueryInterface(ICommandPrepare, CommandPrepare);
+        if Assigned(CommandPrepare) then CommandPrepare.Prepare(0);
+        if OLEDBParameters.GetParameterInfo(ParamCount, PDBPARAMINFO(ParamInfo), @NamesBuffer) = S_OK then
+          for I := 0 to ParamCount - 1 do
+            with ParamInfo[I] do
+            begin
+              { When no default name, fabricate one like ADO does }
+              if pwszName = nil then
+                Name := 'Param' + IntToStr(I+1) else { Do not localize }
+                Name := pwszName;
+              { ADO maps DBTYPE_BYTES to adVarBinary }
+              if wType = DBTYPE_BYTES then wType := adVarBinary;
+              { ADO maps DBTYPE_STR to adVarChar }
+              if wType = DBTYPE_STR then wType := adVarChar;
+              { ADO maps DBTYPE_WSTR to adVarWChar }
+              if wType = DBTYPE_WSTR then wType := adVarWChar;
+              Direction := dwFlags and $F;
+              { Verify that the Direction is initialized }
+              if Assigned(DirectionTypes) then
+                Parameter := AdoCommand.CreateParameter(Name, wType, DirectionTypes^[i], ulParamSize, EmptyParam)
+              else
+              begin
+                if Direction = adParamUnknown then Direction := adParamInput;
+                Parameter := AdoCommand.CreateParameter(Name, wType, Direction, ulParamSize, EmptyParam);
+              end;
+              Parameter.Precision := bPrecision;
+              Parameter.NumericScale := ParamInfo[I].bScale;
+              Parameter.Attributes := dwFlags and $FFFFFFF0; { Mask out Input/Output flags }
+            end;
+      finally
+        if Assigned(CommandPrepare) then CommandPrepare.Unprepare;
+        if (ParamInfo <> nil) then ZAdoMalloc.Free(ParamInfo);
+        if (NamesBuffer <> nil) then ZAdoMalloc.Free(NamesBuffer);
+      end;
+    end;
+  end;
+
+  procedure RefreshFromADO;
+  var
+    I: Integer;
+    Parameter: _Parameter;
+  begin
+    with AdoCommand do
+    try
+      Parameters.Refresh;
+      for I := 0 to Parameters.Count - 1 do
+        with Parameters[I] do
+        begin
+        { We can't use the instance of the parameter in the ADO collection because
+          it will be freed when the connection is closed even though we have a
+          reference to it.  So instead we create our own and copy the settings }
+          if Assigned(DirectionTypes) then
+            Parameter := CreateParameter(Name, Type_, DirectionTypes^[i], Size, EmptyParam)
+          else
+            Parameter := CreateParameter(Name, Type_, Direction, Size, EmptyParam);
+          Parameter.Precision := Precision;
+          Parameter.NumericScale := NumericScale;
+          Parameter.Attributes := Attributes;
+        end;
+    except
+      { do nothing }
+    end;
+  end;
+begin
+  if ( AdoCommand.CommandType = adCmdText ) then
+    RefreshFromOLEDB else
+    RefreshFromADO;
 end;
 
 initialization

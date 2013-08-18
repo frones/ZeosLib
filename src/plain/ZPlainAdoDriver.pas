@@ -59,6 +59,8 @@ uses ZClasses, ZPlainDriver;
 
 type
   TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
+  protected
+    function IsAnsiDriver: Boolean; override;
   public
     constructor Create;
 
@@ -76,6 +78,11 @@ uses ZCompatibility, ZEncoding;
 procedure TZAdoPlainDriver.LoadCodePages;
 begin
   AddCodePage('CP_ADO', 0, ceAnsi, ZDefaultSystemCodePage,'',1, False);
+end;
+
+function TZAdoPlainDriver.IsAnsiDriver: Boolean;
+begin
+  Result := False;
 end;
 
 constructor TZAdoPlainDriver.Create;

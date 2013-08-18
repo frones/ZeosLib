@@ -366,7 +366,7 @@ begin
       stBytes:
         begin
           TempBytes := ClientVarManager.GetAsBytes(Value);
-          Result := EncodeString(@TempBytes, Length(TempBytes));
+          Result := EncodeString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
       stString, stUnicodeString:
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}
@@ -461,6 +461,7 @@ var
   TempBlob: IZBlob;
   I, L: Integer;
   TempAnsi: RawByteString;
+  Bts: TByteDynArray;
 
   Function AsPAnsiChar(Const S : RawByteString; Len: Integer) : PAnsiChar;
   begin
@@ -482,10 +483,10 @@ begin
         stBoolean:
           if ClientVarManager.GetAsBoolean(Value) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar('Y')), 1, @BindingDestructor)
+            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(AnsiString('Y'))), 1, @BindingDestructor)
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-              {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar('N')), 1, @BindingDestructor);
+              {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(AnsiString('N'))), 1, @BindingDestructor);
         stByte, stShort, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             ClientVarManager.GetAsInteger(Value));
@@ -497,8 +498,9 @@ begin
             ClientVarManager.GetAsFloat(Value));
         stBytes:
           begin
-            TempAnsi := BytesToStr(ClientVarManager.GetAsBytes(Value));
-            L := Length(TempAnsi);
+            Bts := SoftVarManager.GetAsBytes(Value);
+            L := Length(Bts);
+            ZSetString(PAnsiChar(Bts), L, TempAnsi);
             FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
               AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
           end;
@@ -517,7 +519,7 @@ begin
           {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
             DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
               PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, False))),
-                -1, @BindingDestructor);
+                8, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
           {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(

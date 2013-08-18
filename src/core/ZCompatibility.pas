@@ -617,11 +617,18 @@ begin
   {$IFDEF UNICODE}
   Result := AStr;
   {$ELSE}
-    {$IFDEF WITH_LCONVENCODING}
-    Result := UTF8ToString(AStr);
-    {$ELSE}
-    Result := ZRawToUnicode(AStr, FConSettings.CTRL_CP);
-    {$ENDIF}
+    if FConSettings.AutoEncode then
+      case DetectUTF8Encoding(AStr) of
+        etUTF8, etUSASCII: Result := UTF8Decode(AStr);
+        else
+          Result := WideString(AStr);
+      end
+    else
+      {$IFDEF WITH_LCONVENCODING}
+      Result := UTF8ToString(AStr);
+      {$ELSE}
+      Result := ZRawToUnicode(AStr, FConSettings.CTRL_CP);
+      {$ENDIF}
   {$ENDIF}
 end;
 

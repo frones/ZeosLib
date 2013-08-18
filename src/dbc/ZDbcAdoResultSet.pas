@@ -86,6 +86,9 @@ type
     function GetRow: Integer; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): String; override;
+    function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
+    function GetRawByteString(ColumnIndex: Integer): RawByteString; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -118,7 +121,8 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB, ZMessages, ZDbcUtils, ZDbcAdoUtils;
+  Variants, Math, OleDB,
+  ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding;
 
 {**
   Creates this object and assignes the main properties.
@@ -200,13 +204,13 @@ begin
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
     ColumnInfo.ColumnType := ConvertAdoToSqlType(ColType, ConSettings.CPType);
-    if F.Type_ = adGuid then 
-        FieldSize := 38 
-      else 
-        FieldSize := F.DefinedSize;
-      if FieldSize < 0 then
+    FieldSize := F.DefinedSize;
+    if FieldSize < 0 then
       FieldSize := 0;
-    ColumnInfo.ColumnDisplaySize := FieldSize;
+    if F.Type_ = adGuid then
+      ColumnInfo.ColumnDisplaySize := 38
+    else
+      ColumnInfo.ColumnDisplaySize := FieldSize;
     ColumnInfo.Precision := FieldSize;
     ColumnInfo.Currency := ColType = adCurrency;
     ColumnInfo.Signed := False;
@@ -368,10 +372,73 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  {NL := Length(Result);
+  if (VarType(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) = varOleStr)
+    {$IFDEF UNICODE} or ( VarType(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) = varUString){$ENDIF} then
+    Result := ConSettings^.ConvFuncs.ZUnicodeToString(ZWideString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value), ConSettings^.CTRL_CP)
+  else
+    Result := ConSettings^.ConvFuncs.ZRawToString(AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+  {Why this? It cuts wanted trailing spaces!
+  NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do Dec(NL);
   SetLength(Result, NL);}
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>AnsiString</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAdoResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
+begin
+  Result := '';
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+     Exit;
+  Result := AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAdoResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+begin
+  Result := '';
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+     Exit;
+  {$IFDEF WITH_RAWBYTESTRING}
+  Result := UTF8String(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  {$ELSE}
+  Result := UTF8Encode(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  {$ENDIF}
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAdoResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
+begin
+  Result := '';
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+     Exit;
+  Result := RawByteString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
 end;
 
 {**
@@ -392,7 +459,7 @@ begin
   if LastWasNull then
      Exit;
   Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  {for what?
+  {Why this? It cuts wanted trailing spaces!
   NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do
      Dec(NL);
@@ -587,12 +654,26 @@ end;
     value returned is <code>null</code>
 }
 function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+var
+  V: Variant;
+  GUID: TGUID;
 begin
   SetLength(Result, 0);
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  if VarType(V) = varByte then
+    Result := V
+  else
+    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType = stGUID then
+    begin
+      SetLength(Result, 16);
+      GUID := StringToGUID(V);
+      System.Move(Pointer(@GUID)^, Pointer(Result)^, 16);
+    end
+    else
+      Result := V
 end;
 
 {**
@@ -682,15 +763,21 @@ begin
      Exit;
 
   V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
-  if VarIsStr(V) then
+  if VarIsStr(V) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
   begin
     Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
     case GetMetadata.GetColumnType(ColumnIndex) of
       stAsciiStream:
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          Result.SetString(GetStatement.GetConnection.GetIZPlainDriver.ZPlainString(ZWideString(V), ConSettings))
+          if ConSettings^.AutoEncode then
+            if ConSettings^.CPType = cCP_UTF8 then
+              Result.SetString(UTF8Encode(V))
+            else
+              Result.SetString(AnsiString(V))
+          else
+            Result.SetString(AnsiString(V))
         else
-          Result.SetString(RawByteString(V));
+          Result.SetString(GetValidatedAnsiString(V, ConSettings, True));
       stUnicodeStream:
         if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
           Result.SetUnicodeString(ZWideString(V))
@@ -770,4 +857,5 @@ begin
 end;
 
 end.
+
 

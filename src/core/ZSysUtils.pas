@@ -152,7 +152,7 @@ function SQLStrToFloatDef(const Str: RawByteString; const Def: Extended): Extend
   @param Def a default value if the PAnsiChar can not be converted.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended; Len: Cardinal = 0): Extended; overload;
+function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 
 {**
   Converts SQL WideString/Unicodestring into float value.
@@ -170,7 +170,7 @@ function SQLStrToFloatDef(const Str: ZWideString; const Def: Extended): Extended
   @param Def a default value if the string can not be converted.
   @return a converted value or Def if conversion did fail.
 }
-function SQLStrToFloatDef(Buffer: PWideChar; const Def: Extended; Len: Cardinal = 0): Extended; overload;
+function SQLStrToFloatDef(Buffer: PWideChar; const Def: Extended; Len: Integer = 0): Extended; overload;
 
 {**
   Converts a character buffer into pascal string.
@@ -825,7 +825,7 @@ end;
   @return a converted value or Def if conversion was failt.
 }
 function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended;
-  Len: Cardinal = 0): Extended;
+  Len: Integer = 0): Extended;
 var
   I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
   Value: TByteDynArray;
@@ -910,7 +910,7 @@ end;
   @return a converted value or Def if conversion was failt.
 }
 function SQLStrToFloatDef(Buffer: PWideChar; const Def: Extended;
-  Len: Cardinal = 0): Extended;
+  Len: Integer = 0): Extended;
 var
   I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
   Value: array of WideChar;
@@ -918,10 +918,10 @@ begin
   Result := Def;
   if Assigned(Buffer) then
   begin
-    Result := ValUnicodeExt(Buffer, '.', InvalidPos);
+    Result := ValUnicodeExt(Buffer, WideChar('.'), InvalidPos);
     if InvalidPos <> 0 then //posible MoneyType
       if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
-        Result := UnicodeToFloatDef(Buffer, ',', Def)
+        Result := UnicodeToFloatDef(Buffer, WideChar(','), Def)
       else
       begin
         Result := Def;
@@ -989,7 +989,7 @@ begin
               else
                 InvalidPos := i;
           end;
-        Result := UnicodeToFloatDef(PWideChar(Value), '.', Def);
+        Result := UnicodeToFloatDef(PWideChar(Value), WideChar('.'), Def);
       end;
   end;
 end;
@@ -1551,9 +1551,9 @@ var
           Inc(DateFormat);
           if Cardinal(I+1) = vallen then Break;
         end;
-        Year := RawToIntDef(rYear, 0);
-        Month := RawToIntDef(rMonth, 0);
-        Day := RawToIntDef(rDay, 0);
+        Year := RawToIntDef(RawByteString(rYear), 0);
+        Month := RawToIntDef(RawByteString(rMonth), 0);
+        Day := RawToIntDef(RawByteString(rDay), 0);
         Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
         if not Failed then
           try
@@ -1626,9 +1626,9 @@ var
               Result := 0;
             Exit;
           end;
-      Year := RawToIntDef(rYear, 0);
-      Month := RawToIntDef(rMonth, 0);
-      Day := RawToIntDef(rDay, 0);
+      Year := RawToIntDef(RawByteString(rYear), 0);
+      Month := RawToIntDef(RawByteString(rMonth), 0);
+      Day := RawToIntDef(RawByteString(rDay), 0);
       Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
       if not Failed then
         try
@@ -1717,10 +1717,10 @@ var
             if Cardinal(i+1) = ValLen then Break;
           end;
           if MPos = 0 then rMSec[0] := '0';
-          Hour := ValRawInt(rHour, CodeH);
-          Minute := ValRawInt(rMin, CodeN);
-          Sec := ValRawInt(rSec, CodeS);
-          MSec := ValRawInt(rMSec, CodeM);
+          Hour := ValRawInt(RawByteString(rHour), CodeH);
+          Minute := ValRawInt(RawByteString(rMin), CodeN);
+          Sec := ValRawInt(RawByteString(rSec), CodeS);
+          MSec := ValRawInt(RawByteString(rMSec), CodeM);
           Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
           if (not Failed) then
             try
@@ -1810,10 +1810,10 @@ var
             if Failed then Result := 0;
             Exit;
           end;
-      Hour := ValRawInt(rHour, CodeH);
-      Minute := ValRawInt(rMin, CodeN);
-      Sec := ValRawInt(rSec, CodeS);
-      MSec := ValRawInt(rMSec, CodeM);
+      Hour := ValRawInt(RawByteString(rHour), CodeH);
+      Minute := ValRawInt(RawByteString(rMin), CodeN);
+      Sec := ValRawInt(RawByteString(rSec), CodeS);
+      MSec := ValRawInt(RawByteString(rMSec), CodeM);
       Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
       if not Failed then
         try
@@ -1949,13 +1949,13 @@ var
             Inc(TimeStampFormat);
             if (i+1) = ValLen then Break;
           end;
-          Year := RawToIntDef(rYear, 0);
-          Month := RawToIntDef(rMonth, 0);
-          Day := RawToIntDef(rDay, 0);
-          Hour := ValRawInt(rHour, CodeH);
-          Minute := ValRawInt(rMin, CodeN);
-          Sec := ValRawInt(rSec, CodeS);
-          MSec := ValRawInt(rMSec, CodeMS);
+          Year := RawToIntDef(RawByteString(rYear), 0);
+          Month := RawToIntDef(RawByteString(rMonth), 0);
+          Day := RawToIntDef(RawByteString(rDay), 0);
+          Hour := ValRawInt(RawByteString(rHour), CodeH);
+          Minute := ValRawInt(RawByteString(rMin), CodeN);
+          Sec := ValRawInt(RawByteString(rSec), CodeS);
+          MSec := ValRawInt(RawByteString(rMSec), CodeMS);
           CheckFailAndEncode;
         end;
       end;
@@ -2144,13 +2144,13 @@ var
         if SPos = 0 then rSec[0] := '0';
         if MSPos = 0 then rMSec[0] := '0';
       end;
-      Year := RawToIntDef(rYear, 0);
-      Month := RawToIntDef(rMonth, 0);
-      Day := RawToIntDef(rDay, 0);
-      Hour := ValRawInt(rHour, CodeH);
-      Minute := ValRawInt(rMin, CodeN);
-      Sec := ValRawInt(rSec, CodeS);
-      MSec := ValRawInt(rMSec, CodeMS);
+      Year := RawToIntDef(RawByteString(rYear), 0);
+      Month := RawToIntDef(RawByteString(rMonth), 0);
+      Day := RawToIntDef(RawByteString(rDay), 0);
+      Hour := ValRawInt(RawByteString(rHour), CodeH);
+      Minute := ValRawInt(RawByteString(rMin), CodeN);
+      Sec := ValRawInt(RawByteString(rSec), CodeS);
+      MSec := ValRawInt(RawByteString(rMSec), CodeMS);
       CheckFailAndEncode;
     end;
   end;

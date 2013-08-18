@@ -143,6 +143,8 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
   end;
 
 var
@@ -872,6 +874,21 @@ begin
   FHandle := nil;
   inherited;
 end;
+
+function TZDBLibConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+begin
+  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+end;
+
+function TZDBLibConnection.GetBinaryEscapeString(const Value: RawByteString): String;
+begin
+  Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+end;
+
 
 initialization
   DBLibDriver := TZDBLibDriver.Create;

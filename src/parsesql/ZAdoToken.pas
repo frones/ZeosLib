@@ -160,6 +160,7 @@ end;
 }
 constructor TZAdoSQLTokenizer.Create;
 begin
+  EscapeState := TZEscapeState.Create;
   NumberState := TZNumberState.Create;
   QuoteState := TZAdoSQLQuoteState.Create;
   WhitespaceState := TZWhitespaceState.Create;

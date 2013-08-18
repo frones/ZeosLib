@@ -1678,6 +1678,7 @@ function TZAdoDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   AdoRecordSet: ZPlainAdo.RecordSet;
   Flags: Integer;
+  SQLType: TZSQLType;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern);
@@ -1701,19 +1702,18 @@ begin
             GetStringByName('TABLE_NAME'));
           Result.UpdateStringByName('COLUMN_NAME',
             GetStringByName('COLUMN_NAME'));
-          Result.UpdateShortByName('DATA_TYPE',
-            Ord(ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              ConSettings.CPType)));
+
+          SQLType := ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
+            ConSettings.CPType);
           Flags := GetIntByName('COLUMN_FLAGS');
   //!!!If the field type is long then this is the only way to know it because it just returns string type
-          if ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              ConSettings.CPType) = stString then
-            if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
-              Result.UpdateShortByName('DATA_TYPE', Ord(stAsciiStream));
-          if ConvertAdoToSqlType(GetShortByName('DATA_TYPE'),
-              ConSettings.CPType) = stUnicodeString then
-            if (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0 then
-              Result.UpdateShortByName('DATA_TYPE', Ord(stUnicodeStream));
+          if ((Flags and DBCOLUMNFLAGS_ISLONG) <> 0 ) and (SQLType in [stBytes, stString, stUnicodeString]) then
+            case SQLType of
+              stBytes: SQLType := stBinaryStream;
+              stString: SQLType := stAsciiStream;
+              stUnicodeString: SQLType := stUnicodeStream;
+            end;
+          Result.UpdateShortByName('DATA_TYPE', Ord(SQLType));
           Result.UpdateIntByName('COLUMN_SIZE',
             GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
           Result.UpdateIntByName('BUFFER_LENGTH',
@@ -1742,7 +1742,7 @@ begin
             Result.UpdateStringByName('IS_NULLABLE', 'YES');
 
           Result.UpdateBooleanByName('WRITABLE',
-            (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0)); 
+            (Flags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0));
 
           Result.UpdateBooleanByName('DEFINITELYWRITABLE',
             (Flags and (DBCOLUMNFLAGS_WRITE) <> 0));

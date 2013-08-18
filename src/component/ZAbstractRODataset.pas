@@ -1375,6 +1375,7 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   ACurrency: Currency;
+  Bts: TByteDynArray;
   {$IFNDEF WITH_WIDESTRUTILS}
   WS: WideString;
   {$ENDIF}
@@ -1400,8 +1401,9 @@ begin
         { Processes binary array fields. }
         ftBytes:
           begin
-            System.Move(PAnsiChar(RowAccessor.GetBytes(ColumnIndex, Result))^,
-              PAnsiChar(Buffer)^, RowAccessor.GetColumnDataSize(ColumnIndex));
+            Bts := RowAccessor.GetBytes(ColumnIndex, Result);
+            System.Move(PAnsiChar(Bts)^,
+              PAnsiChar(Buffer)^, Min(Length(Bts), RowAccessor.GetColumnDataSize(ColumnIndex)));
             Result := not Result;
           end;
         { Processes blob fields. }

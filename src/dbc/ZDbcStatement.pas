@@ -118,7 +118,7 @@ type
     property Info: TStrings read FInfo;
     property Closed: Boolean read FClosed write FClosed;
 
-    {EgonHugeist SSQL only becouse of compatibility to the old code available}
+    {EgonHugeist SSQL only because of compatibility to the old code available}
     property SSQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND} read {$IFDEF UNICODE}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF UNICODE}SetWSQL{$ELSE}SetASQL{$ENDIF};
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: RawByteString read FaSQL write SetASQL;
@@ -473,7 +473,7 @@ begin
     {$ELSE}
     FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
     {$ENDIF}
-    FWSQL := Value;
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);;
   end;
 end;
 
@@ -483,10 +483,10 @@ begin
   begin
     {$IFNDEF UNICODE}
     FASQL := GetEncodedSQL(Value);
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.CTRL_CP);
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
     {$else}
     FASQL := Value;
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(Value, ConSettings^.ClientCodePage^.CP);
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
     {$ENDIF}
   end;
 end;
@@ -2732,9 +2732,9 @@ begin
   if FCachedQuery = nil then
   begin
     FCachedQuery := TStringList.Create;
-    if Pos('?', SQL) > 0 then
+    if Pos('?', SSQL) > 0 then
     begin
-      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SSQL, [toUnifyWhitespaces]);
       try
         Temp := '';
         for I := 0 to Tokens.Count - 1 do
@@ -2765,7 +2765,7 @@ begin
       end;
     end
     else
-      FCachedQuery.Add(SQL);
+      FCachedQuery.Add(SSQL);
   end;
   Result := FCachedQuery;
 end;
