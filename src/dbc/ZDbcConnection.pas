@@ -699,7 +699,6 @@ begin
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
-  Info.NameValueSeparator := '=';
   FClientCodePage := Info.Values['codepage'];
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
