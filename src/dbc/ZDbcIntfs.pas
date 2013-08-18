@@ -279,7 +279,8 @@ type
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
     //EgonHugeist
-    function GetBinaryEscapeString(const Value: RawByteString): String;
+    function GetBinaryEscapeString(const Value: RawByteString): String; overload;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
     function GetClientCodePageInformations: PZCodePage;

@@ -58,11 +58,7 @@ uses
 {$IFNDEF UNIX}
   Windows,
 {$ENDIF}
-  Classes,
-  Contnrs,
-  DateUtils,
-  SysUtils,
-  Types,
+  Classes, Contnrs, DateUtils, SysUtils, Types,
   SyncObjs,
   ZCompatibility,
   ZClasses,
@@ -186,7 +182,8 @@ type
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
-    function GetBinaryEscapeString(const Value: RawByteString): String;
+    function GetBinaryEscapeString(const Value: RawByteString): String; overload;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function GetEncoding: TZCharEncoding;
@@ -687,6 +684,11 @@ end;
   @result the detectable Binary String
 }
 function TZDbcPooledConnection.GetBinaryEscapeString(const Value: RawByteString): String;
+begin
+  Result := GetConnection.GetBinaryEscapeString(Value);
+end;
+
+function TZDbcPooledConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
 begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;

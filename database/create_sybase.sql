@@ -340,8 +340,24 @@ go
 /*==============================================================*/
 create table high_load (
 hl_id		      INTEGER NOT NULL,
-data1		      FLOAT,
-data2		      CHAR(10),
+stBoolean             BIT,
+stByte                TINYINT,
+stShort               SMALLINT,
+stInteger             INTEGER,
+stLong                BIGINT,
+stFloat               FLOAT,
+stDouble              double precision,
+stBigDecimal          money,
+stString              VARCHAR(100),
+stUnicodeString       NVARCHAR(255),
+stBytes               VARBINARY(100),
+stDate                datetime,
+stTime                datetime,
+stTimestamp           datetime,
+stGUID                UNIQUEIDENTIFIER,
+stAsciiStream         text,
+stUnicodeStream       text,
+stBinaryStream        IMAGE,
 primary key (hl_id)
 )
 go

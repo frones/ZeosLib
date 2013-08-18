@@ -278,7 +278,7 @@ begin
         end;
       SQLT_STR:
         Result := PAnsiChar(SQLVarHolder.Data);
-      SQLT_LVB, SQLT_LVC:
+      SQLT_LVB, SQLT_LVC, SQLT_BIN:
         begin
           Result := AnsiString(BufferToStr(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
             PInteger(SQLVarHolder.Data)^));
@@ -825,7 +825,7 @@ var
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
-  TempColumnNameLen: Integer;
+  TempColumnNameLen, CSForm: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -903,7 +903,12 @@ begin
       SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ:
         CurrentVar.ColType := stTimestamp;
       SQLT_BIN, SQLT_LBI:
-        CurrentVar.ColType := stBinaryStream;
+        begin
+          if CurrentVar.DataSize = 0 then
+            CurrentVar.ColType := stBinaryStream
+          else
+            CurrentVar.ColType := stBytes;
+        end;
       SQLT_CLOB:
         begin
           CurrentVar.ColType := stAsciiStream;
@@ -983,12 +988,20 @@ begin
       Scale := CurrentVar.Scale;
       if (ColumnType in [stString, stUnicodeString]) then
       begin
-        ColumnDisplaySize := CurrentVar.DataSize;
-        Precision := GetFieldSize(ColumnType, ConSettings, CurrentVar.DataSize,
+        FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
+          @ColumnDisplaySize, nil, OCI_ATTR_DISP_SIZE, FErrorHandle);
+        FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
+          @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
+        if CSForm = SQLCS_NCHAR then //AL16UTF16 or AL16UTF16LE?? We should determine the NCHAR set on connect
+          ColumnDisplaySize := ColumnDisplaySize div 2;
+        Precision := GetFieldSize(ColumnType, ConSettings, ColumnDisplaySize,
           ConSettings.ClientCodePage^.CharWidth);
       end
       else
-        Precision := CurrentVar.Precision;
+        if (ColumnType = stBytes ) then
+          Precision := CurrentVar.DataSize
+        else
+          Precision := CurrentVar.Precision;
     end;
 
     ColumnsInfo.Add(ColumnInfo);
@@ -1289,7 +1302,7 @@ var
 begin
   Connection := FHandle as IZOracleConnection;
 
-  if FBlobType = stBinaryStream then
+  if FBlobType in [stBytes, stBinaryStream] then
     TempBlobType := OCI_TEMP_BLOB
   else
     TempBlobType := OCI_TEMP_CLOB;

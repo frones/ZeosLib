@@ -139,6 +139,8 @@ type
     function GetDescribeHandle: POCIDescribe;
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
+    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
+    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
   end;
 
   TZOracleSequence = class(TZAbstractSequence)
@@ -162,7 +164,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZDbcUtils,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }
@@ -762,6 +764,31 @@ begin
   if GetPlainDriver.ServerRelease(FServerHandle,FErrorHandle,buf,1024,OCI_HTYPE_SERVER,@version)=OCI_SUCCESS then
     Result := EncodeSQLVersioning((version shr 24) and $ff,(version shr 20) and $f,(version shr 12) and $ff);
   freemem(buf);
+end;
+
+function TZOracleConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+var
+  tmp: RawByteString;
+  L: Integer;
+begin
+  L := Length(Value);
+  SetLength(tmp, L*2);
+  BinToHex(PAnsiChar(Value), PAnsiChar(tmp), L);
+  Result := #39+String(tmp)+#39;
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
+end;
+
+function TZOracleConnection.GetBinaryEscapeString(const Value: RawByteString): String;
+var
+  tmp: RawByteString;
+  L: Integer;
+begin
+  L := Length(Value);
+  SetLength(tmp, L*2);
+  BinToHex(PAnsiChar(Value), PAnsiChar(tmp), L);
+  if GetAutoEncodeStrings then
+    Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 { TZOracleSequence }

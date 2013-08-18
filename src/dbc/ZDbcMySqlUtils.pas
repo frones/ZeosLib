@@ -187,7 +187,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
 begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
-      if Signed then
+      if not Signed and (PlainDriver.GetFieldLength(FieldHandle)=1) then
          Result := stByte
       else
          Result := stShort;
@@ -294,7 +294,7 @@ begin
 
   if TypeName = 'TINYINT' then
   begin
-    if IsUnsigned then
+    if not IsUnsigned then
       Result := stShort
     else
       Result := stByte;
@@ -522,6 +522,7 @@ Begin
         FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
         FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
+        FIELD_TYPE_TINY_BLOB:   Result := FieldSize; //stBytes
         FIELD_TYPE_BLOB:        Result := FieldSize;
         FIELD_TYPE_STRING:      Result := FieldSize;
     else
@@ -596,6 +597,7 @@ begin
       end
     else
       Result.Precision := min(MaxBlobSize,FieldLength);
+
     if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING,
       FIELD_TYPE_VAR_STRING] then
       begin
