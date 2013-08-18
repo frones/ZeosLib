@@ -1513,8 +1513,8 @@ var
   procedure TryExtractDateFromFormat;
   var
     I, Code, YPos, MPos, DPos: Integer;
-    rYear: Array [0..3] of AnsiChar;
-    rMonth, rDay: Array [0..1] of AnsiChar;
+    rYear: Array [0..4] of AnsiChar;
+    rMonth, rDay: Array [0..2] of AnsiChar;
   begin
     Result := 0;
     Failed := FormatLen = 0;
@@ -1528,7 +1528,7 @@ var
       else
       begin
         YPos := 0; MPos := 0; DPos := 0;
-        FillChar(rYear, 4, 0);
+        FillChar(rYear, 5, 0); FillChar(rMonth, 3, 0); FillChar(rDay, 3, 0);
         for i := 0 to FormatLen-1 do
         begin
           case DateFormat^ of
@@ -1551,9 +1551,9 @@ var
           Inc(DateFormat);
           if Cardinal(I+1) = vallen then Break;
         end;
-        Year := RawToIntDef(RawByteString(rYear), 0);
-        Month := RawToIntDef(RawByteString(rMonth), 0);
-        Day := RawToIntDef(RawByteString(rDay), 0);
+        Year := RawToIntDef(rYear, 0);
+        Month := RawToIntDef(rMonth, 0);
+        Day := RawToIntDef(rDay, 0);
         Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
         if not Failed then
           try
@@ -1567,17 +1567,17 @@ var
   var
     DateLenCount: Cardinal;
     YPos, MPos, DPos, Code: Integer;
-    rYear, rMonth: Array [0..24] of AnsiChar;
-    rDay: Array[0..1] of AnsiChar;
+    rYear, rMonth: Array [0..25] of AnsiChar;
+    rDay: Array[0..2] of AnsiChar;
   begin
     Result := 0;
     Failed := False;
     if not (Value = '') then
     begin
       YPos := 0; MPos := 0; DPos := 0; DateLenCount := 0;
-      FillChar(rYear, 25, 0);
-      FillChar(rMonth, 25, 0);
-      FillChar(rDay, 2, 0);
+      FillChar(rYear, 26, 0);
+      FillChar(rMonth, 26, 0);
+      FillChar(rDay, 3, 0);
       while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
       begin
         rYear[YPos] := (Value+DateLenCount)^;
@@ -1626,9 +1626,9 @@ var
               Result := 0;
             Exit;
           end;
-      Year := RawToIntDef(RawByteString(rYear), 0);
-      Month := RawToIntDef(RawByteString(rMonth), 0);
-      Day := RawToIntDef(RawByteString(rDay), 0);
+      Year := RawToIntDef(rYear, 0);
+      Month := RawToIntDef(rMonth, 0);
+      Day := RawToIntDef(rDay, 0);
       Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
       if not Failed then
         try
@@ -1668,8 +1668,8 @@ var
   procedure TryExtractTimeFromFormat;
   var
     I, HPos, NPos, SPos, MPos: Integer;
-    rHour, rMin, rSec: Array [0..1] of AnsiChar;
-    rMSec: Array [0..2] of AnsiChar;
+    rHour, rMin, rSec: Array [0..2] of AnsiChar;
+    rMSec: Array [0..3] of AnsiChar;
   begin
     Result := 0;
     Failed := ( FormatLen = 0 );
@@ -1687,8 +1687,8 @@ var
         if not Failed then
         begin
           HPos := 0; NPos := 0; SPos := 0; MPos := 0;
-          Fillchar(rHour, 2, 0); Fillchar(rMin, 2, 0);
-          Fillchar(rSec, 2, 0); Fillchar(rMSec, 3, 0);
+          Fillchar(rHour, 3, 0); Fillchar(rMin, 3, 0);
+          Fillchar(rSec, 3, 0); Fillchar(rMSec, 4, 0);
           for i := 0 to FormatLen-1 do
           begin
             case TimeFormat^ of
@@ -1717,10 +1717,10 @@ var
             if Cardinal(i+1) = ValLen then Break;
           end;
           if MPos = 0 then rMSec[0] := '0';
-          Hour := ValRawInt(RawByteString(rHour), CodeH);
-          Minute := ValRawInt(RawByteString(rMin), CodeN);
-          Sec := ValRawInt(RawByteString(rSec), CodeS);
-          MSec := ValRawInt(RawByteString(rMSec), CodeM);
+          Hour := ValRawInt(rHour, CodeH);
+          Minute := ValRawInt(rMin, CodeN);
+          Sec := ValRawInt(rSec, CodeS);
+          MSec := ValRawInt(rMSec, CodeM);
           Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
           if (not Failed) then
             try
@@ -1738,19 +1738,17 @@ var
     HPos, NPos, SPos, MPos: Integer;
     Code: Integer;
     TimeLenCount: Cardinal;
-    rHour, rMin: Array [0..24] of AnsiChar;
-    rSec: Array[0..1] of AnsiChar;
-    rMSec: Array[0..2] of AnsiChar;
+    rHour, rMin: Array [0..25] of AnsiChar;
+    rSec: Array[0..2] of AnsiChar;
+    rMSec: Array[0..3] of AnsiChar;
   begin
     Result := 0;
     Failed := False;
     if not (Value = '') then
     begin
       HPos := 0; NPos := 0; SPos := 0; MPos := 0; TimeLenCount := 0;
-      FillChar(rHour, 25, 0);
-      FillChar(rMin, 25, 0);
-      FillChar(rSec, 2, 0);
-      FillChar(rMSec, 3, 0);
+      FillChar(rHour, 26, 0); FillChar(rMin, 26, 0);
+      FillChar(rSec, 3, 0); FillChar(rMSec, 4, 0);
       while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in [':','-','/','\','.']) ) do
       begin
         rHour[HPos] := (Value+TimeLenCount)^;
@@ -1810,10 +1808,10 @@ var
             if Failed then Result := 0;
             Exit;
           end;
-      Hour := ValRawInt(RawByteString(rHour), CodeH);
-      Minute := ValRawInt(RawByteString(rMin), CodeN);
-      Sec := ValRawInt(RawByteString(rSec), CodeS);
-      MSec := ValRawInt(RawByteString(rMSec), CodeM);
+      Hour := ValRawInt(rHour, CodeH);
+      Minute := ValRawInt(rMin, CodeN);
+      Sec := ValRawInt(rSec, CodeS);
+      MSec := ValRawInt(rMSec, CodeM);
       Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
       if not Failed then
         try
@@ -1854,7 +1852,7 @@ function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
   Year, Month, Day, Hour, Minute, Sec, MSec: Word;
-  {I, }YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
+  YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
   CodeH, CodeN, CodeS, CodeMS, Code: Integer;
 
   procedure CheckFailAndEncode;
@@ -1949,13 +1947,13 @@ var
             Inc(TimeStampFormat);
             if (i+1) = ValLen then Break;
           end;
-          Year := RawToIntDef(RawByteString(rYear), 0);
-          Month := RawToIntDef(RawByteString(rMonth), 0);
-          Day := RawToIntDef(RawByteString(rDay), 0);
-          Hour := ValRawInt(RawByteString(rHour), CodeH);
-          Minute := ValRawInt(RawByteString(rMin), CodeN);
-          Sec := ValRawInt(RawByteString(rSec), CodeS);
-          MSec := ValRawInt(RawByteString(rMSec), CodeMS);
+          Year := RawToIntDef(rYear, 0);
+          Month := RawToIntDef(rMonth, 0);
+          Day := RawToIntDef(rDay, 0);
+          Hour := ValRawInt(rHour, CodeH);
+          Minute := ValRawInt(rMin, CodeN);
+          Sec := ValRawInt(rSec, CodeS);
+          MSec := ValRawInt(rMSec, CodeMS);
           CheckFailAndEncode;
         end;
       end;
@@ -1965,9 +1963,9 @@ var
   var
     DotCount, Code: Integer;
     TimeStampLenCount: Cardinal;
-    rYear, rMonth: Array [0..24] of AnsiChar;
-    rDay, rHour, rMin, rSec: Array[0..1] of AnsiChar;
-    rMSec: Array[0..2] of AnsiChar;
+    rYear, rMonth: Array [0..25] of AnsiChar;
+    rDay, rHour, rMin, rSec: Array[0..2] of AnsiChar;
+    rMSec: Array[0..4] of AnsiChar;
 
     procedure ReadDate;
     begin
@@ -2003,7 +2001,7 @@ var
 
     procedure NilDate;
     begin
-      FillChar(rYear, 25, 0); FillChar(rMonth, 25, 0); FillChar(rDay, 2, 0);
+      FillChar(rYear, 25, 0); FillChar(rMonth, 25, 0); FillChar(rDay, 3, 0);
     end;
 
     procedure ReadTime;
@@ -2059,10 +2057,8 @@ var
     begin
       YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0; TimeStampLenCount := 0;
       NilDate;
-      FillChar(rHour, 2, 0);  FillChar(rMin, 2, 0); FillChar(rSec, 2, 0);
-      FillChar(rMSec, 3, 0); DotCount := 0;
-      ReadDate;
-      ReadTime;
+      FillChar(rHour, 3, 0);  FillChar(rMin, 3, 0); FillChar(rSec, 3, 0);
+      FillChar(rMSec, 4, 0); DotCount := 0; ReadDate; ReadTime;
       if (MPos > 2) and ( DotCount = 1) then //float value
       begin
         Result := ValRawExt(Value, '.', Code);
@@ -2144,13 +2140,13 @@ var
         if SPos = 0 then rSec[0] := '0';
         if MSPos = 0 then rMSec[0] := '0';
       end;
-      Year := RawToIntDef(RawByteString(rYear), 0);
-      Month := RawToIntDef(RawByteString(rMonth), 0);
-      Day := RawToIntDef(RawByteString(rDay), 0);
-      Hour := ValRawInt(RawByteString(rHour), CodeH);
-      Minute := ValRawInt(RawByteString(rMin), CodeN);
-      Sec := ValRawInt(RawByteString(rSec), CodeS);
-      MSec := ValRawInt(RawByteString(rMSec), CodeMS);
+      Year := RawToIntDef(rYear, 0);
+      Month := RawToIntDef(rMonth, 0);
+      Day := RawToIntDef(rDay, 0);
+      Hour := ValRawInt(rHour, CodeH);
+      Minute := ValRawInt(rMin, CodeN);
+      Sec := ValRawInt(rSec, CodeS);
+      MSec := ValRawInt(rMSec, CodeMS);
       CheckFailAndEncode;
     end;
   end;
