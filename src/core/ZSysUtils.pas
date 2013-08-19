@@ -1498,6 +1498,34 @@ begin
   end;
 end;
 
+function CheckNumberRange(const Value: AnsiChar; Var Failed: Boolean): Byte; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Failed := not ((Ord(Value) > 47) and (Ord(Value) < 58));
+  if Failed then
+    Result := 0
+  else
+    Result := Ord(Value) -48;
+end;
+
+function CheckNumberRange(const Value: WideChar; Var Failed: Boolean): Word; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Failed := not ((Word(Value) > 47) and (Word(Value) < 58));
+  if Failed then
+    Result := 0
+  else
+    Result := Word(Value) -48;
+end;
+
+function CheckNumberRange(const Value: AnsiChar): Boolean; overload; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result := ((Ord(Value) > 47) and (Ord(Value) < 58));
+end;
+
+function CheckNumberRange(const Value: WideChar): Boolean; overload; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+begin
+  Result := ((Word(Value) > 47) and (Word(Value) < 58));
+end;
+
 {**
   Converts Ansi SQL Date (DateFormat)
   to TDateTime
@@ -1508,13 +1536,11 @@ end;
 function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
-  Year, Month, Day: Word;
+  Year, Month, Day: Cardinal;
 
   procedure TryExtractDateFromFormat;
   var
-    I, Code, YPos, MPos, DPos: Integer;
-    rYear: Array [0..4] of AnsiChar;
-    rMonth, rDay: Array [0..2] of AnsiChar;
+    I, Code: Integer;
   begin
     Result := 0;
     Failed := FormatLen = 0;
@@ -1527,33 +1553,29 @@ var
       end
       else
       begin
-        YPos := 0; MPos := 0; DPos := 0;
-        FillChar(rYear, 5, 0); FillChar(rMonth, 3, 0); FillChar(rDay, 3, 0);
+        Year := 0; Month := 0; Day := 0;
         for i := 0 to FormatLen-1 do
         begin
           case DateFormat^ of
             'Y', 'y':
               begin
-                rYear[YPos] := (Value+i)^;
-                Inc(YPos);
+                Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
               end;
             'M', 'm':
               begin
-                rMonth[MPos] := (Value+i)^;
-                Inc(MPos);
+                Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
               end;
             'D', 'd':
               begin
-                rDay[DPos] := (Value+i)^;
-                Inc(DPos);
+                Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
               end;
           end;
           Inc(DateFormat);
           if Cardinal(I+1) = vallen then Break;
         end;
-        Year := RawToIntDef(rYear, 0);
-        Month := RawToIntDef(rMonth, 0);
-        Day := RawToIntDef(rDay, 0);
         Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
         if not Failed then
           try
@@ -1566,58 +1588,59 @@ var
   procedure TryExtractDateFromUnknownSize;
   var
     DateLenCount: Cardinal;
-    YPos, MPos, DPos, Code: Integer;
-    rYear, rMonth: Array [0..25] of AnsiChar;
-    rDay: Array[0..2] of AnsiChar;
+    YPos, MPos, Code: Integer;
   begin
     Result := 0;
     Failed := False;
     if not (Value = '') then
     begin
-      YPos := 0; MPos := 0; DPos := 0; DateLenCount := 0;
-      FillChar(rYear, 26, 0);
-      FillChar(rMonth, 26, 0);
-      FillChar(rDay, 3, 0);
-      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
+      Year := 0; Month := 0; Day := 0;
+      YPos := 0; MPos := 0; DateLenCount := 0;
+      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\','.']) ) do
       begin
-        rYear[YPos] := (Value+DateLenCount)^;
-        Inc(YPos); Inc(DateLenCount);
+        Year := Year * 10 + CheckNumberRange((Value+DateLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(DateLenCount);
+        Inc(YPos);
       end;
-      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['0'..'9']) ) do
+      while ( DateLenCount < ValLen ) and (not CheckNumberRange((Value+DateLenCount)^)) do
         Inc(DateLenCount);
       while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
       begin
-        rMonth[MPos] := (Value+DateLenCount)^;
-        Inc(MPos); Inc(DateLenCount);
+        Month := Month * 10 + CheckNumberRange((Value+DateLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(DateLenCount);
+        Inc(MPos);
       end;
-      while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['0'..'9']) ) do
+      while ( DateLenCount < ValLen ) and (not CheckNumberRange((Value+DateLenCount)^)) do
         Inc(DateLenCount);
       while ( DateLenCount < ValLen ) and (not ((Value+DateLenCount)^ in ['-','/','\']) ) do
       begin
-        rDay[DPos] := (Value+DateLenCount)^;
-        Inc(DPos); Inc(DateLenCount);
+        Day := Day * 10 + CheckNumberRange((Value+DateLenCount)^, Failed);
+        if Failed then Exit
+        else Inc(DateLenCount);
       end;
       if MPos > 2 then //float ValueTmp
       begin
         Result := Trunc(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
-          if Failed then Result := 0;
-        Exit;
+        if Failed then  Exit;
       end;
       if YPos > 4 then //We've a problem! No date delimiters found? -> YYYYMMDD or YYMMDD or ....Float!
         if YPos = 8 then
-        begin //Let's start from the premise we've LongDateFormat YYYYMMDD
-          rMonth[0] := rYear[4]; rMonth[1] := rYear[5];
-          rDay[0] := rYear[6]; rDay[1] := rYear[7];
-          FillChar((PAnsiChar(@rYear)+4)^, 4, 0); //Reset useless chars
+        begin
+          //Let's start from the premise we've LongDateFormat YYYYMMDD
+          Day := Year mod 100;
+          Month := (Year mod 10000) div 100;
+          Year := Year div 10000;
         end
         else
           if YPos = 6 then
           //Let's start from the premise we've ShortDateFormat YYMMDD
           begin
-            rMonth[0] := rYear[2]; rMonth[1] := rYear[3];
-            rDay[0] := rYear[4]; rDay[1] := rYear[5];
-            FillChar((PAnsiChar(@rYear)+2)^, 4, 0);
+            Day := Year mod 100;
+            Month := (Year mod 10000) div 100;
+            Year := Year div 10000;
           end
           else
           begin
@@ -1626,9 +1649,6 @@ var
               Result := 0;
             Exit;
           end;
-      Year := RawToIntDef(rYear, 0);
-      Month := RawToIntDef(rMonth, 0);
-      Day := RawToIntDef(rDay, 0);
       Failed := not ( (Year <> 0) and (Month <> 0) and (Day <> 0) );
       if not Failed then
         try
@@ -1662,14 +1682,12 @@ end;
 function RawSQLTimeToDateTime(Value, TimeFormat: PAnsiChar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
-  Hour, Minute, Sec, MSec: Word;
-  CodeH, CodeN, CodeS, CodeM: Integer;
+  Hour, Minute, Sec, MSec: Cardinal;
+  Code: Integer;
 
   procedure TryExtractTimeFromFormat;
   var
-    I, HPos, NPos, SPos, MPos: Integer;
-    rHour, rMin, rSec: Array [0..2] of AnsiChar;
-    rMSec: Array [0..3] of AnsiChar;
+    I: Cardinal;
   begin
     Result := 0;
     Failed := ( FormatLen = 0 );
@@ -1677,57 +1695,48 @@ var
     begin
       if TimeFormat = 'FLOAT' then
       begin
-        Result := Frac(ValRawExt(Value, '.', CodeH));
-        Failed := CodeH <> 0;
+        Result := Frac(ValRawExt(Value, '.', Code));
+        Failed := Code <> 0;
         if Failed then Result := 0;
       end
       else
       begin
+        Hour := 0; Minute := 0; Sec := 0; MSec := 0;
         Failed := ( FormatLen = 0 ) and not (ValLen <= FormatLen-4);
         if not Failed then
         begin
-          HPos := 0; NPos := 0; SPos := 0; MPos := 0;
-          Fillchar(rHour, 3, 0); Fillchar(rMin, 3, 0);
-          Fillchar(rSec, 3, 0); Fillchar(rMSec, 4, 0);
           for i := 0 to FormatLen-1 do
           begin
             case TimeFormat^ of
               'H', 'h':
                 begin
-                  rHour[HPos] := (Value+i)^;
-                  Inc(HPos);
+                  Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'N', 'n':
                 begin
-                  rMin[NPos] := (Value+i)^;
-                  Inc(NPos);
+                  Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'S', 's':
                 begin
-                  rSec[SPos] := (Value+i)^;
-                  Inc(SPos);
+                  Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'Z', 'z':
                 begin
-                  rMSec[MPos] := (Value+i)^;
-                  Inc(MPos);
+                  MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
             end;
             Inc(TimeFormat);
-            if Cardinal(i+1) = ValLen then Break;
+            if i+1 = ValLen then Break;
           end;
-          if MPos = 0 then rMSec[0] := '0';
-          Hour := ValRawInt(rHour, CodeH);
-          Minute := ValRawInt(rMin, CodeN);
-          Sec := ValRawInt(rSec, CodeS);
-          MSec := ValRawInt(rMSec, CodeM);
-          Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
-          if (not Failed) then
-            try
-              Result := EncodeTime(Hour, Minute, Sec, MSec);
-            except
-              Failed := True;
-            end;
+          try
+            Result := EncodeTime(Hour, Minute, Sec, MSec);
+          except
+            Failed := True;
+          end;
         end;
       end;
     end;
@@ -1735,94 +1744,93 @@ var
 
   procedure TryExtractTimeFromVaryingSize;
   var
-    HPos, NPos, SPos, MPos: Integer;
-    Code: Integer;
+    HPos, NPos: Integer;
     TimeLenCount: Cardinal;
-    rHour, rMin: Array [0..25] of AnsiChar;
-    rSec: Array[0..2] of AnsiChar;
-    rMSec: Array[0..3] of AnsiChar;
   begin
     Result := 0;
     Failed := False;
     if not (Value = '') then
     begin
-      HPos := 0; NPos := 0; SPos := 0; MPos := 0; TimeLenCount := 0;
-      FillChar(rHour, 26, 0); FillChar(rMin, 26, 0);
-      FillChar(rSec, 3, 0); FillChar(rMSec, 4, 0);
+      Hour := 0; Minute := 0; Sec := 0; MSec := 0;
+      TimeLenCount := 0; HPos := 0; NPos := 0;
       while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in [':','-','/','\','.']) ) do
       begin
-        rHour[HPos] := (Value+TimeLenCount)^;
+        Hour := Hour * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        if Failed then Exit;
         Inc(HPos); Inc(TimeLenCount);
       end;
-      while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in ['0'..'9']) ) do
+      while ( TimeLenCount < ValLen ) and (not CheckNumberRange((Value+TimeLenCount)^)) do
         Inc(TimeLenCount);
       while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in [':','-','/','\','.']) ) do
       begin
-        rMin[NPos] := (Value+TimeLenCount)^;
+        Minute := Minute * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        if Failed then Exit;
         Inc(NPos); Inc(TimeLenCount);
       end;
-      while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in ['0'..'9']) ) do
+      while ( TimeLenCount < ValLen ) and (not CheckNumberRange((Value+TimeLenCount)^)) do
         Inc(TimeLenCount);
       while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in [':','-','/','\','.']) ) do
       begin
-        rSec[SPos] := (Value+TimeLenCount)^;
-        Inc(SPos); Inc(TimeLenCount);
+        Sec := Sec * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeLenCount);
       end;
-      while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in ['0'..'9']) ) do
+      while ( TimeLenCount < ValLen ) and (not CheckNumberRange((Value+TimeLenCount)^) ) do
         Inc(TimeLenCount);
       while ( TimeLenCount < ValLen ) and (not ((Value+TimeLenCount)^ in [':','-','/','\','.']) ) do
       begin
-        rMSec[MPos] := (Value+TimeLenCount)^;
-        Inc(MPos); Inc(TimeLenCount);
+        MSec := MSec * 10 + CheckNumberRange((Value+TimeLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeLenCount);
       end;
       if NPos > 2 then //float value
       begin
-        Result := Frac(ValRawExt(rHour+'.'+rMin, '.', Code));
+        Result := Frac(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
         if Failed then
           Result := 0;
         Exit;
       end;
-      if MPos = 0 then rMSec[0] := '0';
       if HPos > 4 then //We've a problem! No date delimiters found? -> HHNNSSZZZ or HHNNSS or ....Float!
-        if HPos = 9 then
-        begin //Let's start from the premise we've LongTimeFormat HHNNSSZZ
-          rMin[0] := rHour[2]; rMin[1] := rHour[3];
-          rSec[0] := rHour[4]; rSec[1] := rHour[5];
-          rMSec[0] := rHour[6]; rMSec[1] := rHour[7]; rMSec[2] := rHour[8];
-          FillChar((PAnsiChar(@rHour)+2)^, 9, 0); //Reset useless chars
-        end
-        else
-          if HPos = 6 then
-          //Let's start from the premise we've ShortTimeFormat HHNNSS
-          begin
-            rMin[0] := rHour[2]; rMin[1] := rHour[3];
-            rSec[0] := rHour[4]; rSec[1] := rHour[5];
-            rMSec[0] := '0';
-            FillChar((PAnsiChar(@rHour)+2)^, 17, 0);
-          end
-          else
-          begin
-            Result := Frac(ValRawExt(Value, '.', Code));
-            Failed := Code <> 0;
-            if Failed then Result := 0;
-            Exit;
-          end;
-      Hour := ValRawInt(rHour, CodeH);
-      Minute := ValRawInt(rMin, CodeN);
-      Sec := ValRawInt(rSec, CodeS);
-      MSec := ValRawInt(rMSec, CodeM);
-      Failed := ( CodeH or CodeN or CodeS or CodeM) <> 0;
-      if not Failed then
-        try
-          Result := EncodeTime(Hour, Minute, Sec, MSec); //Reset useless chars
-        except
-          Result := Frac(ValRawExt(Value, '.', Code));
-          Failed := Code <> 0;
-          if Failed then Result := 0;
-        end
-      else
-      begin
+        case HPos of
+          9:
+            begin //Let's start from the premise we've LongTimeFormat HHNNSSZZZ
+              MSec :=     Hour mod 1000;
+              Sec :=     (Hour mod 100000)   div 1000;
+              Minute :=  (Hour mod 10000000) div 100000;
+              Hour := Hour div 10000000;
+            end;
+          8:
+            begin //Let's start from the premise we've LongTimeFormat HHNNSSZZ
+              MSec :=    Hour mod 100;
+              Sec :=    (Hour mod 10000)   div 100;
+              Minute := (Hour mod 1000000) div 10000;
+              Hour := Hour div 1000000;
+            end;
+          7:
+            begin //Let's start from the premise we've LongTimeFormat HHNNSSZ
+              MSec :=    Hour mod 10;
+              Sec :=    (Hour mod 1000)   div 10;
+              Minute := (Hour mod 100000) div 1000;
+              Hour := Hour div 100000;
+            end;
+          6:
+            begin//Let's start from the premise we've ShortTimeFormat HHNNSS
+              Sec := Hour mod 100;
+              Minute := (Hour mod 10000) div 100;
+              Hour := Hour div 10000;
+            end
+            else
+            begin
+              Result := Frac(ValRawExt(Value, '.', Code));
+              Failed := Code <> 0;
+              if Failed then Result := 0;
+              Exit;
+            end;
+        end;
+      try
+        Result := EncodeTime(Hour, Minute, Sec, MSec);
+      except
         Result := Frac(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
@@ -1851,9 +1859,9 @@ end;
 function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
-  Year, Month, Day, Hour, Minute, Sec, MSec: Word;
-  YPos, MPos, DPos, HPos, NPos, SPos, MSPos,
-  CodeH, CodeN, CodeS, CodeMS, Code: Integer;
+  Year, Month: Int64;
+  Day, Hour, Minute, Sec, MSec: Word;
+  YPos, MPos, HPos, Code: Integer;
 
   procedure CheckFailAndEncode;
   begin
@@ -1866,7 +1874,7 @@ var
     end
     else
       Failed := (Hour or Minute or Sec or MSec) = 0;
-    if ( not Failed ) and ( ( CodeH or CodeN or CodeS or CodeMS) = 0) then
+    if not Failed then
       try
         if Result >= 0 then
           Result := Result + EncodeTime(Hour, Minute, Sec, MSec)
@@ -1883,9 +1891,6 @@ var
   procedure TryExtractTimeStampFromFormat;
   var
     I: Cardinal;
-    rYear: Array [0..3] of AnsiChar;
-    rMonth, rDay, rHour, rMin, rSec: Array [0..1] of AnsiChar;
-    rMSec: Array [0..2] of AnsiChar;
   begin
     Failed := FormatLen = 0;
     if not Failed then
@@ -1897,63 +1902,53 @@ var
       end
       else
       begin
-        Failed  := (FormatLen = 0) and not (ValLen <= FormatLen-4);
+        Failed  := (ValLen <= FormatLen-4);
         if not Failed then
         begin
-          FillChar(rYear, 4, 0); FillChar(rMonth, 2, 0); FillChar(rDay, 2, 0);
-          FillChar(rHour, 2, 0); FillChar(rMin, 2 , 0); FillChar(rSec, 2, 0);
-          FillChar(rMSec, 3, 0);
-          rHour[0] := '0'; rMin[0] := '0'; rSec[0] := '0'; rMSec[0] := '0';
-          YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0;
+          Year := 0; Month := 0; Day := 0;
+          Hour := 0; Minute := 0; Sec := 0; MSec := 0;
           for i := 0 to FormatLen -1 do
           begin
             case TimeStampFormat^ of
               'Y', 'y':
                 begin
-                  rYear[YPos] := (Value+ i)^;
-                  Inc(YPos);
+                  Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'M', 'm':
                 begin
-                  rMonth[MPos] := (Value+ i)^;
-                  Inc(MPos);
+                  Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'D', 'd':
                 begin
-                  rDay[DPos] := (Value+ i)^;
-                  Inc(DPos);
+                  Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'H', 'h':
                 begin
-                  rHour[HPos] := (Value+ i)^;
-                  Inc(HPos);
+                  Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'N', 'n':
                 begin
-                  rMin[NPos] := (Value+ i)^;
-                  Inc(NPos);
+                  Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'S', 's':
                 begin
-                  rSec[SPos] := (Value+ i)^;
-                  Inc(SPos);
+                  Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
               'Z', 'z':
                 begin
-                  rMSec[MSPos] := (Value+ i)^;
-                  Inc(MSPos);
+                  MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                  if Failed then Exit;
                 end;
             end;
             Inc(TimeStampFormat);
             if (i+1) = ValLen then Break;
           end;
-          Year := RawToIntDef(rYear, 0);
-          Month := RawToIntDef(rMonth, 0);
-          Day := RawToIntDef(rDay, 0);
-          Hour := ValRawInt(rHour, CodeH);
-          Minute := ValRawInt(rMin, CodeN);
-          Sec := ValRawInt(rSec, CodeS);
-          MSec := ValRawInt(rMSec, CodeMS);
           CheckFailAndEncode;
         end;
       end;
@@ -1963,90 +1958,85 @@ var
   var
     DotCount, Code: Integer;
     TimeStampLenCount: Cardinal;
-    rYear, rMonth: Array [0..25] of AnsiChar;
-    rDay, rHour, rMin, rSec: Array[0..2] of AnsiChar;
-    rMSec: Array[0..4] of AnsiChar;
 
     procedure ReadDate;
     begin
+      { read date}
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        rYear[YPos] := (Value+TimeStampLenCount)^;
+        Year := Year * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
         Inc(YPos); Inc(TimeStampLenCount);
       end;
-      if (Value+TimeStampLenCount)^ = '.' then Inc(DotCount); //possible float
+      if (Value+TimeStampLenCount)^ = '.' then
+        Inc(DotCount); //possible float
       if ((Value+TimeStampLenCount)^ = ':') and ( YPos < 3) then
       begin
-        rHour[0] := rYear[0]; rHour[1] := rYear[1];
-        rYear[0] := #0; rYear[1] := #0; HPos := 1;
+        Hour := Year;
+        Year := 0;
         Exit;
       end;
       while ( TimeStampLenCount < ValLen ) and ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) do
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        rMonth[MPos] := (Value+TimeStampLenCount)^;
-        Inc(MPos); Inc(TimeStampLenCount);
+        Month := Month * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeStampLenCount);
+        Inc(MPos);
       end;
       while ( TimeStampLenCount < ValLen ) and ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) do
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        rDay[DPos] := (Value+TimeStampLenCount)^;
-        Inc(DPos); Inc(TimeStampLenCount);
+        Day := Day * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeStampLenCount);
       end;
       while ( TimeStampLenCount < ValLen ) and ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) do
         Inc(TimeStampLenCount);
-    end;
-
-    procedure NilDate;
-    begin
-      FillChar(rYear, 25, 0); FillChar(rMonth, 25, 0); FillChar(rDay, 3, 0);
     end;
 
     procedure ReadTime;
     begin
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        if HPos = 2 then //hour can't have 3 digits, date was aligned instead of time  -> let's fix it
+        if HPos = 2 then //hour can't have 3 digits, date was aligned previously instead of time  > let's fix it
         begin
-          rMSec[0] := rHour[0]; rMSec[1] := rHour[1];
-          rSec[0] := rDay[0]; rSec[1] := rDay[1];
-          rMin[0] := rMonth[0]; rMin[1] := rMonth[1];
-          rHour[0] := rYear[0]; rHour[1] := rYear[1];
-          HPos := 1; NPos := 1; SPos := 1;
-          if ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) then
-          begin
-            rMSec[2] := (Value+TimeStampLenCount)^;
-            Inc(TimeStampLenCount);
-            NilDate;
-            MSPos := 2;
-            Exit;
-          end else MSPos := 1;
+          MSec := Hour * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+          if Failed then Exit;
+          Sec := Day; Day := 0;
+          Minute := Month; Month := 0;
+          Hour := Year; Year := 0;
+          exit;
         end;
-        rHour[HPos] := (Value+TimeStampLenCount)^;
+        Hour := Hour * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
         Inc(HPos); Inc(TimeStampLenCount);
       end;
       while ( TimeStampLenCount < ValLen ) and ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) do
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        rMin[NPos] := (Value+TimeStampLenCount)^;
-        Inc(NPos); Inc(TimeStampLenCount);
+        Minute := Minute * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeStampLenCount);
       end;
       while ( TimeStampLenCount < ValLen ) and ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) do
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) ) do
       begin
-        rSec[SPos] := (Value+TimeStampLenCount)^;
-        Inc(SPos); Inc(TimeStampLenCount);
+        Sec := Sec * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeStampLenCount);
       end;
       while ( TimeStampLenCount < ValLen ) and ((Value+TimeStampLenCount)^ in [':','-','/','\','.',' ']) do
         Inc(TimeStampLenCount);
       while ( TimeStampLenCount < ValLen ) and (not (Value^ in [':','-','/','\','.',' ']) ) do
       begin
-        rMSec[MSPos] := (Value+TimeStampLenCount)^;
-        Inc(MSPos); Inc(TimeStampLenCount);
+        MSec := MSec * 10 + CheckNumberRange((Value+TimeStampLenCount)^, Failed);
+        if Failed then Exit;
+        Inc(TimeStampLenCount);
       end;
     end;
 
@@ -2055,10 +2045,15 @@ var
     Failed := False;
     if not (Value = '') then
     begin
-      YPos := 0; MPos := 0; DPos := 0; HPos := 0; NPos := 0; SPos := 0; MSPos := 0; TimeStampLenCount := 0;
-      NilDate;
-      FillChar(rHour, 3, 0);  FillChar(rMin, 3, 0); FillChar(rSec, 3, 0);
-      FillChar(rMSec, 4, 0); DotCount := 0; ReadDate; ReadTime;
+      Year := 0; Month := 0; Day := 0;
+      Hour := 0; Minute := 0; Sec := 0; MSec := 0;
+      YPos := 0; MPos := 0; HPos := 0; TimeStampLenCount := 0; DotCount := 0;
+      ReadDate;
+      {read time}
+      if Failed then Exit
+      else ReadTime;
+      if Failed then Exit;
+
       if (MPos > 2) and ( DotCount = 1) then //float value
       begin
         Result := ValRawExt(Value, '.', Code);
@@ -2070,49 +2065,73 @@ var
       if YPos > 4 then //We've a problem! No date delimiters found? -> YYYYMMDDHHNNSSZZZ or ... or .. HHNNSS or ....Float!
         if YPos >= 14 then //YYYYMMDDHHNNSS +ZZZ?
         begin //Let's start from the premise we've LongTimeFormat HHNNSSZZ
-          rMonth[0] := rYear[4]; rMonth[1] := rYear[5];
-          rDay[0] := rYear[6]; rDay[1] := rYear[7];
-          rHour[0] := rYear[8]; rHour[1] := rYear[9];
-          rMin[0] := rYear[10]; rMin[1] := rYear[11];
-          rSec[0] := rYear[12]; rSec[1] := rYear[13];
-          if YPos > 14 then rMSec[0] := rYear[14] else rMSec[0] := '0';
-          if YPos > 15 then rMSec[1] := rYear[15];
-          if YPos > 16 then rMSec[2] := rYear[16];
-          FillChar((PAnsiChar(@rYear)+4)^, 21, 0); //Reset useless chars
+          case YPos of
+            17: //YYYYMMDDHHNNSSZZZ
+              begin
+                MSec := Year mod 1000;
+                Year := Year div 1000;
+              end;
+            16: //YYYYMMDDHHNNSSZZ
+              begin
+                MSec := Year mod 100;
+                Year := Year div 100;
+              end;
+            15: //YYYYMMDDHHNNSSZ
+              begin
+                MSec := Year mod 10;
+                Year := Year div 10;
+              end;
+          end;
+          //YYYYMMDDHHNNSS
+          Sec := Year mod 100;
+          Minute := (Year mod 10000) div 100;
+          Hour := (Year mod 1000000) div 10000;
+          Day := (Year mod 100000000) div 1000000;
+          Month := (Year mod 10000000000) div 100000000;
+          Year := Year div 10000000000;
         end
         else
           if YPos = 8 then //Date?
           begin
-            rMonth[0] := rYear[4]; rMonth[1] := rYear[5];
-            rDay[0] := rYear[6]; rDay[1] := rYear[7];
-            rHour[0] := '0'; rMin[0] := '0'; rSec[0] := '0'; rMSec[0] := '0';
-            FillChar((PAnsiChar(@rYear)+4)^, 21, 0); //Reset useless chars
+            //Let's start from the premise we've LongDateFormat YYYYMMDD
+            Day := Year mod 100;
+            Month := (Year mod 10000) div 100;
+            Year := Year div 10000;
           end
           else
           if YPos = 6 then
           //Let's start from the premise we've ShortTimeFormat HHNNSS
           begin
-            if MPos = 0 then
+            if MPos > 5 then
             begin
-              rHour[0] := '0'; rMin[0] := '0'; rSec[0] := '0'; rMSec[0] := '0';
-            end
-            else
-              if MPos > 5 then
-              begin
-                rHour[0] := rMonth[0]; rHour[1] := rMonth[1];
-                rMin[0] := rMonth[2]; rMin[1] := rMonth[3];
-                rSec[0] := rMonth[4]; rSec[1] := rMonth[5];
-                if MPos > 6 then rMSec[0] := rMonth[6] else rMSec[0] := '0';
-                if MPos > 7 then rMSec[1] := rMonth[7];
-                if MPos > 8 then rMSec[2] := rMonth[8];
-                FillChar(rMonth, 25, 0);
+              case MPos of
+                9: //HHNNSSZZZ
+                  begin
+                    MSec := Month mod 1000;
+                    Month := Month div 1000;
+                  end;
+                8: //HHNNSSZZ
+                  begin
+                    MSec := Month mod 100;
+                    Month := Month div 100;
+                  end;
+                7: //HHNNSSZ
+                  begin
+                    MSec := Month mod 100;
+                    Month := Month div 100;
+                  end;
               end;
-            rMonth[0] := rYear[2]; rMonth[1] := rYear[3];
-            rDay[0] := rYear[4]; rDay[1] := rYear[5];
-            FillChar((PAnsiChar(@rYear)+2)^, 21, 0); //Reset useless chars
+              Sec := Month mod 100;
+              Minute := (Month mod 10000) div 100;
+              Hour := (Month mod 1000000) div 10000;
+              Month := 0;
+            end;
+            Day := Year mod 100;
+            Month := (Year mod 10000) div 100;
+            Year := Year div 10000;
           end
           else
-            if DotCount = 1 then
+            if (DotCount = 1) or (DotCount = 0 ) then
             begin
               Result := ValRawExt(Value, '.', Code);
               Failed := ( Code <> 0 );
@@ -2120,33 +2139,10 @@ var
               Exit;
             end
             else
-              if DotCount = 0 then
-              begin
-                Result := ValRawExt(Value, '.', Code);
-                Failed := ( Code <> 0 ) or ( Result = 0 );
-                if Failed then Result := 0;
-                Exit;
-              end
-
-          else
-          begin
-            Failed := True;
-            Exit;
-          end
-      else
-      begin
-        if HPos = 0 then rHour[0] := '0';
-        if NPos = 0 then rMin[0] := '0';
-        if SPos = 0 then rSec[0] := '0';
-        if MSPos = 0 then rMSec[0] := '0';
-      end;
-      Year := RawToIntDef(rYear, 0);
-      Month := RawToIntDef(rMonth, 0);
-      Day := RawToIntDef(rDay, 0);
-      Hour := ValRawInt(rHour, CodeH);
-      Minute := ValRawInt(rMin, CodeN);
-      Sec := ValRawInt(rSec, CodeS);
-      MSec := ValRawInt(rMSec, CodeMS);
+            begin
+              Failed := True;
+              Exit;
+            end;
       CheckFailAndEncode;
     end;
   end;
@@ -2161,7 +2157,7 @@ begin
   end;
 end;
 
-function Concat0(const Value: RawByteString; Const MaxLen: Integer): RawByteString; overload;
+function Concat0(const Value: RawByteString; Const MaxLen: Integer): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 var I: Integer;
 begin
   Result := Value;
@@ -2169,7 +2165,7 @@ begin
     Result := '0'+Result;
 end;
 
-function Concat0(const Value: ZWideString; Const MaxLen: Integer): ZWideString; overload;
+function Concat0(const Value: ZWideString; Const MaxLen: Integer): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
 var I: Integer;
 begin
   Result := Value;
@@ -2275,6 +2271,7 @@ end;
   @param TimeFormat the result format.
   @return a formated RawByteString with Time-Format pattern.
 }
+{$WARNINGS OFF} //suppress D2007 Waring for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
   TimeFormat: PAnsiChar; const FromatLen: Cardinal;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
@@ -2517,6 +2514,7 @@ begin
   if Quoted then Result := #39+Result+#39;
   Result := Result + Suffix;
 end;
+{$WARNINGS ON} //suppress D2007 Waring for undefined result
 
 
 {**
@@ -5109,7 +5107,7 @@ begin
   OldThousandSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := ',';
-  Result := FloatToRaw(Value);
+
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
