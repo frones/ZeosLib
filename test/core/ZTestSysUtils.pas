@@ -400,6 +400,8 @@ const
   Time4_0 = RawByteString('23-59/59\999');
   Time5_0 = RawByteString('235959999');
   Time6_0 = RawByteString('23:59:59.99');
+  Time7_0 = RawByteString('23595999');
+  Time8_0 = RawByteString('2359599');
 
   Time1_1 = RawByteString('23:59:59');
   Time2_1 = RawByteString('23/59/59');
@@ -432,7 +434,6 @@ begin
   TestRawSQLTimeToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
   TestRawSQLTimeToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False, 'HH:NN:SS.ZZZ');
   TestRawSQLTimeToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False, 'HHNNSSZZZ');
-  TestRawSQLTimeToDateTime(Time6_0, EncodeTime(23, 59, 59, 99), False, 'HH:NN:SS.ZZZ');
 
   TestRawSQLTimeToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
   TestRawSQLTimeToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False, 'HH-NN-SS');
@@ -457,6 +458,8 @@ begin
   TestRawSQLTimeToDateTime(Time3_0, EncodeTime(23, 59, 59, 999), False);
   TestRawSQLTimeToDateTime(Time4_0, EncodeTime(23, 59, 59, 999), False);
   TestRawSQLTimeToDateTime(Time5_0, EncodeTime(23, 59, 59, 999), False);
+  TestRawSQLTimeToDateTime(Time7_0, EncodeTime(23, 59, 59, 99), False);
+  TestRawSQLTimeToDateTime(Time8_0, EncodeTime(23, 59, 59, 9), False);
 
   TestRawSQLTimeToDateTime(Time1_1, EncodeTime(23, 59, 59, 0), False);
   TestRawSQLTimeToDateTime(Time2_1, EncodeTime(23, 59, 59, 0), False);
@@ -1515,11 +1518,11 @@ var
       for N := 0 to 1000000 do
       begin
         for i := 0 to 20 do
-          Result := UnicodeToFloat(PWideChar(sTestFloat)+I, '.');
+          Result := UnicodeToFloat(PWideChar(sTestFloat)+I, WideChar('.'));
         for i := 1 to 10 do
-          Result := Result + UnicodeToFloat(PWideChar(ZWideString(sTestFloat[i])), '.');
+          Result := Result + UnicodeToFloat(PWideChar(ZWideString(sTestFloat[i])), WideChar('.'));
       end;
-      Result := Result + UnicodeToFloatDef('test', '.', -999);
+      Result := Result + UnicodeToFloatDef('test', WideChar('.'), -999);
     end;
 
     function TStrToFloat: Extended;
