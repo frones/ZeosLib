@@ -194,9 +194,9 @@ stDate                DATE,
 stTime                TIME,
 stTimestamp           TIMESTAMP,
 stGUID                CHAR(38),
-stAsciiStream         TEXT,
-stUnicodeStream       TEXT,
-stBinaryStream        BLOB,
+stAsciiStream         LONGTEXT,
+stUnicodeStream       LONGTEXT,
+stBinaryStream        LONGBLOB,
 primary key (hl_id)
 );
 

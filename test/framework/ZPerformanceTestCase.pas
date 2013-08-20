@@ -266,10 +266,15 @@ type
 var
   PerformanceResultProcessor: TZPerformanceResultProcessor;
 
+const
+  MaxPerformanceLobSize = 10000;
+  CharRange = 126{~}-32{Space};
+
+
 implementation
 
 uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils
-  {$IFDEF WITH_FTGUID},ComObj, ActiveX{$ENDIF};
+  {$IFDEF WITH_FTGUID},ComObj, ActiveX{$ENDIF}, Math;
 
 { TZPerformanceSQLTestCase }
 
@@ -415,17 +420,24 @@ function TZPerformanceSQLTestCase.RandomStr(Length: Integer): string;
 var
   I: Integer;
   C: Char;
+  PResult: PChar;
 begin
+
   Result := '';
   if Length <= 0 then
-    Length := 32;
-  for I := 1 to Length do
-  begin
-    C := Chr((Random(Ord('z') - Ord('A') + 1)) + Ord('A'));
-    if not CharInSet(C, ['A'..'Z', 'a'..'z']) then
-      C := ' ';
-    Result := Result + C;
-  end;
+    Length := 32
+  else
+    Length := Min(MaxPerformanceLobSize, Length);
+  SetLength(Result, Length);
+  PResult := PChar(Result);
+  for I := 0 to Length-1 do
+  //begin
+    (PResult+i)^ := Chr(Random(CharRange)+32{min Space});
+    //C := Chr((Random(Ord('z') - Ord('A') + 1)) + Ord('A'));
+    //if not CharInSet(C, ['A'..'Z', 'a'..'z']) then
+      //C := ' ';
+    //Result := Result + C;
+  //end;
 end;
 
 {**
@@ -438,7 +450,9 @@ var
   I: Integer;
 begin
   if Length <= 0 then
-    Length := 32;
+    Length := 32
+  else
+    Length := Min(MaxPerformanceLobSize, Length);
   SetLength(Result, Length);
   for I := 1 to Length do
     Result[i-1] := Ord(Random(255));
