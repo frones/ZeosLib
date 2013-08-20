@@ -1682,7 +1682,9 @@ end;
 function RawSQLTimeToDateTime(Value, TimeFormat: PAnsiChar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
-  Hour, Minute, Sec, MSec: Cardinal;
+
+  Hour, Minute: Int64;
+  Sec, MSec: Word;
   Code: Integer;
 
   procedure TryExtractTimeFromFormat;

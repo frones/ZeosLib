@@ -113,13 +113,13 @@ type
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
     procedure SetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer;
       Value: IZBlob);
-    function InternalGetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer): TByteDynArray;
+    function InternalGetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer): TByteDynArray; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: TByteDynArray; NewPointer: Boolean = False);
+      Value: TByteDynArray; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetString(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: RawByteString; NewPointer: Boolean = False);
+      Value: RawByteString; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetUnicodeString(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: ZWideString; NewPointer: Boolean = False);
+      Value: ZWideString; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
