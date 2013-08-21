@@ -78,6 +78,7 @@ type
     FUseResult: Boolean;
     FIgnoreUseResult: Boolean;
     TempStr: String;
+    function GetBuffer(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -120,9 +121,8 @@ type
     FUseResult: Boolean;
     FColumnArray: TZMysqlColumnBuffer;
     FBindBuffer: TZMySqlResultSetBindBuffer;
-    function bufferasint64(ColumnIndex: Integer): Int64;
-    function bufferasextended(ColumnIndex: Integer): Extended;
-
+    function bufferasint64(ColumnIndex: Integer): Int64; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function bufferasextended(ColumnIndex: Integer): Extended; {$IFDEF WITH_INLINE}inline;{$ENDIF}
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
@@ -236,6 +236,25 @@ end;
 destructor TZMySQLResultSet.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TZMySQLResultSet.GetBuffer(ColumnIndex: Integer; var Len: ULong): PAnsiChar;
+var
+  LengthPointer: PULong;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckClosed;
+  if FRowHandle = nil then
+    raise EZSQLException.Create(SRowDataIsNotAvailable);
+{$ENDIF}
+  ColumnIndex := ColumnIndex - 1;
+  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
+  if LengthPointer <> nil then
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
+  else
+    Len := 0;
+  Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
+  LastWasNull := Result = nil;
 end;
 
 {**
@@ -377,27 +396,13 @@ end;
 }
 function TZMySQLResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 var
-  LengthPointer: PULong;
-  Length: ULong;
+  Len: ULong;
   Buffer: PAnsiChar;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if FRowHandle = nil then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Length  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Length := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
   Result := '';
   if not LastWasNull then
-    ZSetString(Buffer, Length, Result);
+    ZSetString(Buffer, Len, Result);
 end;
 
 {**
@@ -427,11 +432,16 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetByte(ColumnIndex: Integer): Byte;
+var
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  if LastWasNull then
+    Result := 0
+  else
+    Result := Byte(RawToIntDef(GetBuffer(ColumnIndex, Len), 0));
 end;
 
 {**
@@ -444,11 +454,16 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+var
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := SmallInt(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  if LastWasNull then
+    Result := 0
+  else
+    Result := SmallInt(RawToIntDef(GetBuffer(ColumnIndex, Len), 0));
 end;
 
 {**
@@ -461,11 +476,16 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetInt(ColumnIndex: Integer): Integer;
+var
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := RawToIntDef(InternalGetString(ColumnIndex), 0);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := RawToIntDef(GetBuffer(ColumnIndex, Len), 0);
 end;
 
 {**
@@ -496,21 +516,14 @@ end;
 }
 function TZMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  LengthPointer: PULong;
   Len: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Len := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
@@ -528,21 +541,14 @@ end;
 }
 function TZMySQLResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
-  LengthPointer: PULong;
   Len: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Len := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
@@ -561,21 +567,14 @@ end;
 }
 function TZMySQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
-  LengthPointer: PULong;
   Len: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Len := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
@@ -593,11 +592,18 @@ end;
     value returned is <code>null</code>
 }
 function TZMySQLResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+var
+  Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(InternalGetString(ColumnIndex));
+  Buffer := GetBuffer(ColumnIndex, Len);
+
+  SetLength(Result, Len);
+  if Len > 0 then
+    System.Move(Buffer^, Pointer(Result)^, Len);
 end;
 
 {**
@@ -611,7 +617,6 @@ end;
 }
 function TZMySQLResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  LengthPointer: PULong;
   Len: ULong;
   Buffer: PAnsiChar;
   Failed: Boolean;
@@ -619,26 +624,20 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Len := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
   begin
     if Len = ConSettings^.DateFormatLen then
     begin
-      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat), 
+      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
         Len, ConSettings^.DateFormatLen, Failed);
     end
     else
-      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, 
-        PAnsiChar(ConSettings^.DateTimeFormat), Len, 
+      Result := Trunc(RawSQLTimeStampToDateTime(Buffer,
+        PAnsiChar(ConSettings^.DateTimeFormat), Len,
           ConSettings^.DateTimeFormatLen, Failed));
     LastWasNull := Result = 0;
   end;
@@ -655,7 +654,6 @@ end;
 }
 function TZMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  LengthPointer: PULong;
   Len: ULong;
   Buffer: PAnsiChar;
   Failed: Boolean;
@@ -663,26 +661,20 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Len := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
   begin
     if (Buffer+2)^ = ':' then //possible date if Len = 10 then
-      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat), 
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
         Len, ConSettings^.TimeFormatLen, Failed)
     else
       if ConSettings^.DateFormatLen = Len then
         Result := 0
       else
-        Result := Frac(RawSQLTimeStampToDateTime(Buffer, 
+        Result := Frac(RawSQLTimeStampToDateTime(Buffer,
           PAnsiChar(ConSettings^.DateTimeFormat), Len,
           ConSettings^.DateTimeFormatLen, Failed));
     LastWasNull := Result = 0;
@@ -701,7 +693,6 @@ end;
 }
 function TZMySQLResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  LengthPointer: PULong;
   Len: ULong;
   Buffer: PAnsiChar;
   Failed: Boolean;
@@ -709,27 +700,21 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  ColumnIndex := ColumnIndex - 1;
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
-  else
-    Len := 0;
-  Buffer := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
-  LastWasNull := Buffer = nil;
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
     if (Buffer+2)^ = ':' then
-      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat), 
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
         Len, ConSettings^.TimeFormatLen, Failed)
     else
       if (ConSettings^.DateTimeFormatLen - Len) <= 4 then
-          Result := RawSQLTimeStampToDateTime(Buffer, 
+          Result := RawSQLTimeStampToDateTime(Buffer,
             PAnsiChar(ConSettings^.DateTimeFormat), Len,
             ConSettings^.DateTimeFormatLen, Failed)
       else
-        Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat), 
+        Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
           Len, ConSettings^.TimeFormatLen, Failed);
   LastWasNull := Result = 0;
 end;
@@ -1056,15 +1041,12 @@ end;
     value returned is <code>false</code>
 }
 function TZMySQLPreparedResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
-var
-  Temp: RawByteString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-   Temp := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(InternalGetString(ColumnIndex));
-  Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
-    (Temp = 'TRUE') or (RawToIntDef(Temp, 0) <> 0);
+  Result := StrToBoolEx(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer));
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1078,16 +1060,24 @@ end;
 }
 function TZMySQLPreparedResultSet.GetByte(ColumnIndex: Integer): Byte;
 var
-   full64: Int64;
-   bitmask: Int64;
+  full64: Int64;
+  bitmask: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  full64 := bufferasInt64(ColumnIndex);
-  bitmask := $FF;
-  Result := Byte(full64 and bitmask);
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  if FColumnArray[ColumnIndex-1].is_null = 1 then
+  begin
+    Result := 0;
+    LastwasNull := True;
+  end
+  else
+  begin
+    LastWasNull := False;
+    full64 := bufferasInt64(ColumnIndex);
+    bitmask := $FF;
+    Result := Integer(full64 and bitmask);
+  end;
 end;
 
 {**
@@ -1101,17 +1091,24 @@ end;
 }
 function TZMySQLPreparedResultSet.GetShort(ColumnIndex: Integer): SmallInt;
 var
-    full64: Int64;
-    bitmask: Int64;
+  full64: Int64;
+  bitmask: Int64;
 Begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
- full64 := bufferasInt64(ColumnIndex);
- bitmask := $FFFFFFFF;
- Result := Integer(full64 and bitmask);
-
- LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+ if FColumnArray[ColumnIndex-1].is_null = 1 then
+ begin
+   Result := 0;
+   LastwasNull := True;
+ end
+ else
+ begin
+   LastWasNull := False;
+   full64 := bufferasInt64(ColumnIndex);
+   bitmask := $FFFFFFFF;
+   Result := Integer(full64 and bitmask);
+ end;
 end;
 
 {**
@@ -1187,7 +1184,6 @@ begin
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   Result := BufferAsExtended(ColumnIndex);
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1206,7 +1202,6 @@ begin
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
   Result := BufferAsExtended(ColumnIndex);
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1224,8 +1219,14 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Result := StrToBytes(InternalGetString(ColumnIndex));
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  SetLength(Result,FColumnArray[ColumnIndex - 1].length);
+  if FColumnArray[ColumnIndex-1].is_null = 1 then
+    LastWasNull := True
+  else
+  begin
+    System.Move(Pointer(FColumnArray[ColumnIndex - 1].buffer), Pointer(Result)^,  FColumnArray[ColumnIndex - 1].length);
+    LastWasNull := False;
+  end;
 end;
 
 {**
@@ -1242,12 +1243,15 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  if not sysUtils.TryEncodeDate(PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Year,
-                                PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Month,
-                                PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Day,
-                                Result) then
-            Result := encodeDate(1900, 1, 1);
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  if LastWasNull then
+    Result := 0
+  else
+    if not sysUtils.TryEncodeDate(
+      PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Year,
+      PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Month,
+      PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Day, Result) then
+            Result := encodeDate(1900, 1, 1);
 end;
 
 {**
@@ -1264,13 +1268,19 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  if not sysUtils.TryEncodeTime(PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Hour,
-                                PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Minute,
-                                PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Second,
-                                0,
-                                Result) then
-      Result :=  encodeTime(0,0,0,0);
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  Result := 0;
+  if FColumnArray[ColumnIndex-1].is_null =1 then
+    LastWasNull := True
+  else
+  begin
+    LastWasNull := False;
+    if not sysUtils.TryEncodeTime(
+      PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Hour,
+      PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Minute,
+      PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.Second,
+      0{PMYSQL_TIME(FColumnArray[ColumnIndex - 1].buffer)^.second_part}, Result) then
+        Result := 0;
+  end;
 end;
 
 {**
@@ -1289,7 +1299,6 @@ begin
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
   Result := GetDate(ColumnIndex) + GetTime(ColumnIndex);
-  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
@@ -1436,24 +1445,28 @@ end;
 
 function TZMySQLPreparedResultSet.bufferasint64(ColumnIndex: Integer): Int64;
 begin
-   Case FColumnArray[ColumnIndex-1].length of
-   1: Result := pshortint(FColumnArray[ColumnIndex-1].buffer)^;
-   2: Result := psmallint(FColumnArray[ColumnIndex-1].buffer)^;
-   4: Result := plongint(FColumnArray[ColumnIndex-1].buffer)^;
-   8: Result := pint64(FColumnArray[ColumnIndex-1].buffer)^;
-   else
-    Result := 0;
+  Case FColumnArray[ColumnIndex-1].length of
+    1: Result := pshortint(FColumnArray[ColumnIndex-1].buffer)^;
+    2: Result := psmallint(FColumnArray[ColumnIndex-1].buffer)^;
+    4: Result := plongint(FColumnArray[ColumnIndex-1].buffer)^;
+    8: Result := pint64(FColumnArray[ColumnIndex-1].buffer)^;
+    else
+      Result := RawToIntDef(RawByteString(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)), 0);
    End
 end;
 
 function TZMySQLPreparedResultSet.bufferasextended(ColumnIndex: Integer): Extended;
 begin
-   Case FBindBuffer.GetBufferType(ColumnIndex) of
-     FIELD_TYPE_FLOAT: Result := psingle(FColumnArray[ColumnIndex-1].buffer)^;
-     FIELD_TYPE_DOUBLE: Result := pdouble(FColumnArray[ColumnIndex-1].buffer)^;
-   else
-      Result := SQLStrToFloatDef(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer), 0);
-   End
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  if LastWasNull then
+    Result := 0
+  else
+    Case FBindBuffer.GetBufferType(ColumnIndex) of
+      FIELD_TYPE_FLOAT: Result := psingle(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_DOUBLE: Result := pdouble(FColumnArray[ColumnIndex-1].buffer)^;
+    else
+       Result := SQLStrToFloatDef(RawByteString(PAnsiChar(FColumnArray[ColumnIndex - 1].buffer)), 0); //PAnsiChar crashs on D7
+    end;
 end;
 
 {**
