@@ -1536,7 +1536,8 @@ end;
 function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
   const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
 var
-  Year, Month, Day: Cardinal;
+  Year, Month: Int64;
+  Day: Word;
 
   procedure TryExtractDateFromFormat;
   var
@@ -2154,7 +2155,7 @@ begin
   if ValLen > 0 then
   begin
     TryExtractTimeStampFromFormat;
-    if Failed and ( FormatLen = 0) then
+    if Failed then
       TryExtractTimeStampFromVaryingSize;
   end;
 end;
