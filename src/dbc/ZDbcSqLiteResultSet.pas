@@ -215,7 +215,7 @@ begin
   FColumnCount := FPlainDriver.column_count(FStmtHandle);
 
   LastRowNo := 0;
-  MaxRows := FPlainDriver.data_count(FStmtHandle) +1; {first ResultSetRow = 1}
+  //MaxRows := FPlainDriver.data_count(FStmtHandle) +1; {first ResultSetRow = 1}
 
   { Fills the column info. }
   ColumnsInfo.Clear;
