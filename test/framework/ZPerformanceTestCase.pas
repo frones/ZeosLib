@@ -174,17 +174,18 @@ type
 
   published
     { DUnit test methods. }
+    { keep this execution order to save setup time !! }
     procedure TestConnect;
     procedure TestInsert;
-    procedure TestOpen;
+    procedure TestUpdate;
     procedure TestFetch;
+    procedure TestOpen;
     procedure TestSort;
     procedure TestFilter;
-    procedure TestUpdate;
-    procedure TestDelete;
-    procedure TestDirectUpdate;
     procedure TestLocate;
     procedure TestLookup;
+    procedure TestDelete;
+    procedure TestDirectUpdate;
   end;
 
   {** Defines a container for performance test results. }
@@ -419,7 +420,7 @@ end;
 function TZPerformanceSQLTestCase.RandomStr(Length: Integer): string;
 var
   I: Integer;
-  C: Char;
+  //C: Char;
   PResult: PChar;
 begin
 
