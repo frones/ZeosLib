@@ -1631,30 +1631,30 @@ begin
   Inc(FAddedColumnCount);
   With FPColumnArray^[FAddedColumnCount-1] do
   begin
-      case buffertype of
-        FIELD_TYPE_DATE:        Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TIME:        Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_DATETIME:    Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TIMESTAMP:   Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TINY:        Length := 1;
-        FIELD_TYPE_SHORT:       Length := 2;
-        FIELD_TYPE_LONG:        Length := 4;
-        FIELD_TYPE_LONGLONG:    Length := 8;
-        FIELD_TYPE_FLOAT:       Length := 4;
-        FIELD_TYPE_DOUBLE:      Length := 8;
-        FIELD_TYPE_NEWDECIMAL:  Length := 11;
-        FIELD_TYPE_BLOB,
-        FIELD_TYPE_MEDIUM_BLOB,
-        FIELD_TYPE_LONG_BLOB,
-        FIELD_TYPE_GEOMETRY:
-          Length := PlainDriver.GetFieldMaxLength(FieldHandle)+1;
-        FIELD_TYPE_VARCHAR,
-        FIELD_TYPE_VAR_STRING,
-        FIELD_TYPE_STRING:
-            Length := Min(MaxBlobSize, Max(PlainDriver.GetFieldLength(FieldHandle), PlainDriver.GetFieldMaxLength(FieldHandle)))+1;
-      else
-        Length := PlainDriver.GetFieldLength(FieldHandle);
-      end;
+    case buffertype of
+      FIELD_TYPE_DATE:        Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_TIME:        Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_DATETIME:    Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_TIMESTAMP:   Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_TINY:        Length := 1;
+      FIELD_TYPE_SHORT:       Length := 2;
+      FIELD_TYPE_LONG:        Length := 4;
+      FIELD_TYPE_LONGLONG:    Length := 8;
+      FIELD_TYPE_FLOAT:       Length := 4;
+      FIELD_TYPE_DOUBLE:      Length := 8;
+      //FIELD_TYPE_NEWDECIMAL:  Length := 11;
+      FIELD_TYPE_BLOB,
+      FIELD_TYPE_MEDIUM_BLOB,
+      FIELD_TYPE_LONG_BLOB,
+      FIELD_TYPE_GEOMETRY:
+        Length := PlainDriver.GetFieldMaxLength(FieldHandle)+1;
+      FIELD_TYPE_VARCHAR,
+      FIELD_TYPE_VAR_STRING,
+      FIELD_TYPE_STRING:
+          Length := Min(MaxBlobSize, Max(PlainDriver.GetFieldLength(FieldHandle), PlainDriver.GetFieldMaxLength(FieldHandle)))+1;
+    else
+      Length := PlainDriver.GetFieldLength(FieldHandle);
+    end;
     SetLength(Buffer, Length);
   end;
   ColOffset := NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);

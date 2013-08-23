@@ -74,7 +74,8 @@ type
   {** Implements Abstract ResultSet. }
   TZAbstractResultSet = class(TZCodePagedObject, IZResultSet)
   private
-    FTemp: String;
+    FRawTemp: RawByteString;
+    FUniTemp: ZWideString;
     FRowNo: Integer;
     FLastRowNo: Integer;
     FMaxRows: Integer;
@@ -133,6 +134,9 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
+    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; overload; virtual;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload; virtual;
+    function GetPWideChar(ColumnIndex: Integer): PWidechar; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
@@ -644,8 +648,57 @@ end;
 
 function TZAbstractResultSet.GetPChar(ColumnIndex: Integer): PChar;
 begin
-  FTemp := GetString(ColumnIndex);
-  Result := PChar(FTemp);
+  {$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF} := GetString(ColumnIndex);
+  Result := PChar({$IFDEF UNICODE}FUniTemp{$ELSE}FRawTemp{$ENDIF});
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the PAnsiChar String
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+begin
+  Result := GetPAnsiChar(ColumnIndex);
+  if LastWasNull then
+    Len := 0
+  else
+    Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Result);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+begin
+  FRawTemp := GetRawByteString(ColumnIndex);
+  Result := PAnsiChar(FRawTemp);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PWideChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPWideChar(ColumnIndex: Integer): PWidechar;
+begin
+  FUniTemp := GetUnicodeString(ColumnIndex);
+  Result := PWideChar(FUniTemp);
 end;
 
 {**

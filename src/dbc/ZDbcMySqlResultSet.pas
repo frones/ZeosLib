@@ -77,7 +77,6 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
     FIgnoreUseResult: Boolean;
-    TempStr: String;
     function GetBuffer(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     procedure Open; override;
@@ -91,7 +90,8 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPChar(ColumnIndex: Integer): PChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -134,6 +134,8 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
+    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -344,7 +346,9 @@ end;
 }
 function TZMySQLResultSet.IsNull(ColumnIndex: Integer): Boolean;
 var
-   Temp: PAnsiChar;
+   Buffer: PAnsiChar;
+   Len: ULong;
+   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -352,14 +356,32 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  Temp := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex - 1);
-  Result := (Temp = nil);
+  Buffer := GetBuffer(ColumnIndex, Len);
+  Result := (Buffer = nil);
   if not Result and (TZAbstractResultSetMetadata(Metadata).
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
-    Result := (AnsiSQLDateToDateTime(String(Temp)) = 0)
-      and (TimestampStrToDateTime(String(Temp)) = 0);
+    Result := ( RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
+        Len, ConSettings^.DateFormatLen, Failed) = 0 ) and
+      (RawSQLTimeStampToDateTime(Buffer,
+        PAnsiChar(ConSettings^.DateTimeFormat), Len,
+          ConSettings^.DateTimeFormatLen, Failed) = 0);
   end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the PAnsiChar String
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+begin
+  Result := GetBuffer(ColumnIndex, Len);
 end;
 
 {**
@@ -371,18 +393,11 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetPChar(ColumnIndex: Integer): PChar;
+function TZMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var
+  Len: ULong;
 begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckClosed;
-  if FRowHandle = nil then
-    raise EZSQLException.Create(SRowDataIsNotAvailable);
-{$ENDIF}
-
-  TempStr := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldData(
-    FRowHandle, ColumnIndex - 1), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-  Result := PChar(TempStr);
-  LastWasNull := Result = nil;
+  Result := GetBuffer(ColumnIndex, Len);
 end;
 
 {**
@@ -1009,8 +1024,39 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-
   Result := FColumnArray[ColumnIndex-1].is_null =1;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the PAnsiChar String
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZMySQLPreparedResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+begin
+  Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
+  Len := FColumnArray[ColumnIndex - 1].length;
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZMySQLPreparedResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+begin
+  Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
+  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
 {**
