@@ -71,7 +71,6 @@ type
     FCursorName: AnsiString;
     FStmtHandle: TISC_STMT_HANDLE;
     FSqlData: IZResultSQLDA;
-    FParamsSqlData: IZParamsSQLDA;
     FIBConnection: IZInterbase6Connection;
   protected
     procedure Open; override;
@@ -80,8 +79,7 @@ type
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
-      SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA;
-      CachedBlob: boolean);
+      SqlData: IZResultSQLDA; CachedBlob: boolean);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -89,6 +87,8 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
+    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -158,7 +158,6 @@ begin
   begin
     { Free output allocated memory }
     FSqlData := nil;
-    FParamsSqlData := nil;
     { Free allocate sql statement }
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
   end;
@@ -176,7 +175,7 @@ end;
 }
 constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
   var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
-  SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
+  SqlData: IZResultSQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, nil,
     Statement.GetConnection.GetConSettings);
@@ -187,7 +186,6 @@ begin
   FCachedBlob := CachedBlob;
   FIBConnection := Statement.GetConnection as IZInterbase6Connection;
 
-  FParamsSqlData := ParamsSqlData;
   FStmtHandle := StatementHandle;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
@@ -256,7 +254,6 @@ var
   TempStream: TStream;
 begin
   Result := nil;
-  CheckClosed;
   CheckBlobColumn(ColumnIndex);
 
   LastWasNull := IsNull(ColumnIndex);
@@ -317,12 +314,14 @@ end;
 }
 function TZInterbase6ResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Result := FSqlData.GetBoolean(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := False
+  else
+    Result := FSqlData.GetBoolean(ColumnIndex - 1);
 end;
 
 {**
@@ -336,12 +335,14 @@ end;
 }
 function TZInterbase6ResultSet.GetByte(ColumnIndex: Integer): Byte;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := FSqlData.GetByte(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := FSqlData.GetByte(ColumnIndex - 1);
 end;
 
 {**
@@ -470,12 +471,14 @@ end;
 }
 function TZInterbase6ResultSet.GetShort(ColumnIndex: Integer): SmallInt;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := FSqlData.GetShort(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := FSqlData.GetShort(ColumnIndex - 1);
 end;
 
 {**
@@ -489,12 +492,14 @@ end;
 }
 function TZInterbase6ResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  Result := FSqlData.GetString(ColumnIndex - 1);
+  if LastWasNull then
+    Result := ''
+  else
+    Result := FSqlData.GetString(ColumnIndex - 1);
 end;
 
 {**
@@ -508,12 +513,14 @@ end;
 }
 function TZInterbase6ResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Result := FSqlData.GetTime(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := FSqlData.GetTime(ColumnIndex - 1);
 end;
 
 {**
@@ -528,12 +535,14 @@ end;
 }
 function TZInterbase6ResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Result := FSqlData.GetTimestamp(ColumnIndex - 1);
   LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := FSqlData.GetTimestamp(ColumnIndex - 1);
 end;
 
 {**
@@ -553,6 +562,44 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the PAnsiChar String
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZInterbase6ResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := nil
+  else
+    Result := FSqlData.GetPAnsiChar(ColumnIndex -1, Len);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZInterbase6ResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var
+  Len: Cardinal;
+begin
+  Result := GetPAnsiChar(ColumnIndex, Len);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>String</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -561,27 +608,29 @@ end;
 }
 function TZInterbase6ResultSet.GetString(ColumnIndex: Integer): String;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
-    case FSqlData.GetIbSqlType(ColumnIndex -1) of
-      SQL_VARYING, SQL_TEXT:
-        if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
-          Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+  if LastWasNull then
+    Result := ''
+  else
+    if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
+      case FSqlData.GetIbSqlType(ColumnIndex -1) of
+        SQL_VARYING, SQL_TEXT:
+          if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
+            Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+              ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+          else
+            Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+              FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP, ConSettings^.CTRL_CP);
         else
           Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-            FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP, ConSettings^.CTRL_CP);
-      else
-        Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-    end
-  else
-    Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-      ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      end
+    else
+      Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 end;
 
 {**
@@ -595,27 +644,29 @@ end;
 }
 function TZInterbase6ResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 begin
-  CheckClosed;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
-  if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
-    case FSqlData.GetIbSqlType(ColumnIndex -1) of
-      SQL_VARYING, SQL_TEXT:
-        if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
-          Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-            ConSettings^.ClientCodePage^.CP)
+  if LastWasNull then
+    Result := ''
+  else
+    if ( ConSettings.ClientCodePage^.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
+      case FSqlData.GetIbSqlType(ColumnIndex -1) of
+        SQL_VARYING, SQL_TEXT:
+          if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
+            Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+              ConSettings^.ClientCodePage^.CP)
+          else
+            Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+              FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1))^.CP);
         else
           Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-            FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP);
-      else
-        Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-          ConSettings^.ClientCodePage^.CP);
-    end
-  else
-    Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-      ConSettings^.ClientCodePage^.CP);
+            ConSettings^.ClientCodePage^.CP);
+      end
+    else
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+        ConSettings^.ClientCodePage^.CP);
 end;
 
 {**

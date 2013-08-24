@@ -169,7 +169,7 @@ begin
 
   FIBConnection := Connection as IZInterbase6Connection;
   ResultSetType := rtScrollInsensitive;
-  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
+  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cachedblob', 'true'));
 end;
 
 {**
@@ -221,7 +221,7 @@ begin
         end;
 
         Result := GetCachedResultSet(SSQL, Self,
-               TZInterbase6ResultSet.Create(Self, LogSQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+               TZInterbase6ResultSet.Create(Self, LogSQL, StmtHandle, Cursor, SQLData, FCachedBlob));
       end
         else
       begin
@@ -374,7 +374,7 @@ begin
 
         LastResultSet := GetCachedResultSet(SSQL, Self,
           TZInterbase6ResultSet.Create(Self, SSQL, StmtHandle, Cursor,
-            SQLData, nil, FCachedBlob));
+            SQLData, FCachedBlob));
       end
       else
       begin
@@ -463,7 +463,7 @@ begin
 
   FIBConnection := Connection as IZInterbase6Connection;
   ResultSetType := rtScrollInsensitive;
-  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
+  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cachedblob', 'true'));
 
   Prepare;
 end;
@@ -543,7 +543,7 @@ begin
       begin
         LastResultSet := GetCachedResultSet(SQL, Self,
         TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
-        SQLData, nil, FCachedBlob));
+        SQLData, FCachedBlob));
       end
         else
       begin
@@ -621,7 +621,7 @@ begin
         end;
 
         if (iError <> DISCONNECT_ERROR) then
-          Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, nil, FCachedBlob));
+          Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, FCachedBlob));
       end
       else
         if (iError <> DISCONNECT_ERROR) then    //AVZ
@@ -725,7 +725,7 @@ begin
 
   FIBConnection := Connection as IZInterbase6Connection;
   ResultSetType := rtScrollInsensitive;
-  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cashedblob', 'true'));
+  FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cachedblob', 'true'));
   with FIBConnection do
   begin
     FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle,
@@ -820,7 +820,7 @@ begin
       begin
         Cursor := RandomString(12);
         LastResultSet := GetCachedResultSet(SQL, Self,
-           TZInterbase6ResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, nil, FCachedBlob));
+           TZInterbase6ResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, FCachedBlob));
       end
       else
       begin
@@ -887,7 +887,7 @@ begin
 
         Result := GetCachedResultSet(ProcSql, Self,
           TZInterbase6ResultSet.Create(Self, ProcSql, FStmtHandle, Cursor,
-          FResultSQLData, nil, FCachedBlob));
+          FResultSQLData, FCachedBlob));
       end;
 
     except

@@ -143,6 +143,8 @@ type
 
     function IsNull(const Index: Integer): Boolean;
     function GetPChar(const Index: Integer): PChar;
+    function GetPAnsiChar(const Index: Integer; var Len: Cardinal): PAnsiChar; overload;
+    function GetPAnsiChar(const Index: Integer): PAnsiChar; overload;
     function GetString(const Index: Integer): RawByteString;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): Byte;
@@ -234,8 +236,8 @@ type
     It class read data from sqlda fields }
   TZResultSQLDA = class (TZSQLDA, IZResultSQLDA)
   private
-    function DecodeString(const Code: Smallint; const Index: Word): RawByteString;
-    procedure DecodeString2(const Code: Smallint; const Index: Word; out Str: RawByteString);
+    FRawTemp: RawByteString;
+    function DecodeString(const IsText: Boolean; const Index: Word): RawByteString; {$IFDEF WITH_INLINE} inline; {$ENDIF}
   protected
     FDefaults: array of Variant;
   public
@@ -249,6 +251,8 @@ type
 
     function IsNull(const Index: Integer): Boolean;
     function GetPChar(const Index: Integer): PChar;
+    function GetPAnsiChar(const Index: Integer; var Len: Cardinal): PAnsiChar; overload;
+    function GetPAnsiChar(const Index: Integer): PAnsiChar; overload;
     function GetString(const Index: Integer): RawByteString;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): Byte;
@@ -2636,41 +2640,30 @@ end;
    @param Index field index
    @result the field string
 }
-function TZResultSQLDA.DecodeString(const Code: Smallint;
+function TZResultSQLDA.DecodeString(const IsText: Boolean;
    const Index: Word): RawByteString;
 var
    l: integer;
 begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
-  case Code of
-    SQL_TEXT:
+  if IsText then
+    begin
+      l := sqllen; {last char = #0}
+      // Trim only spaces. TrimRight also removes other characters)
+      if L > 0 then
       begin
-        ZSetString(sqldata, sqllen, Result);
-        // Trim only spaces. TrimRight also removes other characters)
-        l := sqllen;
-        while (l > 0) and (Result[l] = ' ') do
-           dec(l);
-        if l < sqllen then
-           result := copy(result, 1, l);
-      end;
-    SQL_VARYING : ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, Result);
-  end;
+        while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
+        ZSetString(sqldata, l, Result);
+      end
+      else
+        Result := '';
+    end
+  else
+    ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, Result);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
-end;
-
-{**
-   Decode Interbase field value to pascal string
-   @param Code the Interbase data type
-   @param Index field index
-   @param Str the field string
-}
-procedure TZResultSQLDA.DecodeString2(const Code: Smallint; const Index: Word;
-  out Str: RawByteString);
-begin
-  Str := DecodeString(Code, Index);
 end;
 
 {**
@@ -2713,8 +2706,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := RawToFloat(DecodeString(SQL_TEXT, Index), '.');
-        SQL_VARYING   : Result := RawToFloat(DecodeString(SQL_VARYING, Index), '.');
+        SQL_TEXT      : Result := RawToFloat(DecodeString(True, Index), '.');
+        SQL_VARYING   : Result := RawToFloat(DecodeString(False, Index), '.');
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2765,8 +2758,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
-        SQL_TEXT      : Result := StrToBoolEx(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := StrToBoolEx(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := StrToBoolEx(DecodeString(True, Index));
+        SQL_VARYING   : Result := StrToBoolEx(DecodeString(False, Index));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2871,8 +2864,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := RawToFloat(DecodeString(SQL_TEXT, Index), '.');
-        SQL_VARYING   : Result := RawToFloat(DecodeString(SQL_VARYING, Index), '.');
+        SQL_TEXT      : Result := RawToFloat(DecodeString(True, Index), '.');
+        SQL_VARYING   : Result := RawToFloat(DecodeString(False, Index), '.');
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2923,8 +2916,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := RawToFloat(DecodeString(SQL_TEXT, Index), '.');
-        SQL_VARYING   : Result := RawToFloat(DecodeString(SQL_VARYING, Index), '.');
+        SQL_TEXT      : Result := RawToFloat(DecodeString(True, Index), '.');
+        SQL_VARYING   : Result := RawToFloat(DecodeString(False, Index), '.');
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2985,8 +2978,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := RawToInt(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := RawToInt(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := RawToInt(DecodeString(True, Index));
+        SQL_VARYING   : Result := RawToInt(DecodeString(False, Index));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3009,6 +3002,106 @@ begin
   TempStr := ConSettings^.ConvFuncs.ZRawToString(GetString(Index),
     ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   Result := PChar(TempStr);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the PAnsiChar String
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZResultSQLDA.GetPAnsiChar(const Index: Integer; var Len: Cardinal): PAnsiChar;
+var
+  SQLCode: SmallInt;
+begin
+  CheckRange(Index);
+  Result := nil;
+  FRawTemp := '';
+  {$R-}
+  with FXSQLDA.sqlvar[Index] do
+  begin
+    if (sqlind <> nil) and (sqlind^ = -1) then
+         Exit;
+    SQLCode := (sqltype and not(1));
+
+    if (sqlscale < 0)  then
+    begin
+      case SQLCode of
+        SQL_SHORT  : FRawTemp := FloatToRaw(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]);
+        SQL_LONG   : FRawTemp := FloatToRaw(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]);
+        SQL_INT64,
+        SQL_QUAD   : FRawTemp := FloatToRaw(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
+        SQL_DOUBLE : FRawTemp := FloatToRaw(PDouble(sqldata)^);
+      else
+        raise EZIBConvertError.Create(Format(SErrorConvertionField,
+          [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+      end;
+    end
+    else
+      case SQLCode of
+        SQL_DOUBLE    : FRawTemp := FloatToRaw(PDouble(sqldata)^);
+        SQL_LONG      : FRawTemp := IntToRaw(PInteger(sqldata)^);
+        SQL_D_FLOAT,
+        SQL_FLOAT     : FRawTemp := FloatToRaw(PSingle(sqldata)^);
+        SQL_BOOLEAN   :
+          if Boolean(PSmallint(sqldata)^) = True then
+            FRawTemp := 'YES'
+          else
+            FRawTemp := 'NO';
+        SQL_SHORT     : FRawTemp := IntToRaw(PSmallint(sqldata)^);
+        SQL_INT64     : FRawTemp := IntToRaw(PInt64(sqldata)^);
+        SQL_TEXT      :
+          begin
+            Result := sqldata;
+            // Trim only trailing spaces. TrimRight also removes other characters)
+            Len := sqllen;
+            if Len > 0 then
+              while ((Result+Len-1)^ = ' ') do dec(Len);
+            Exit;
+          end;
+        SQL_VARYING :
+          begin
+            Result := PISC_VARYING(sqldata).str;
+            Len := PISC_VARYING(sqldata).strlen;
+            Exit;
+          end;
+        SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then
+                        begin
+                          ReadBlobFromString(Index, AnsiString(FRawTemp));
+                          FDefaults[Index] := FRawTemp;
+                        end
+                        else
+                          FRawTemp := {$IFDEF WITH_FPC_STRING_CONVERSATION}AnsiString{$ELSE}RawByteString{$ENDIF}(FDefaults[Index]);
+
+      else
+        raise EZIBConvertError.Create(Format(SErrorConvertionField,
+          [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+      end;
+  end;
+  Result := PAnsiChar(FRawTemp);
+  Len := Length(FRawTemp);
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZResultSQLDA.GetPAnsiChar(Const Index: Integer): PAnsiChar;
+var Len: Cardinal;
+begin
+  Result := GetPAnsiChar(Index, Len);
 end;
 
 {**
@@ -3051,8 +3144,8 @@ begin
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := RawToInt(DecodeString(SQL_TEXT, Index));
-        SQL_VARYING   : Result := RawToInt(DecodeString(SQL_VARYING, Index));
+        SQL_TEXT      : Result := RawToInt(DecodeString(True, Index));
+        SQL_VARYING   : Result := RawToInt(DecodeString(False, Index));
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3108,8 +3201,8 @@ begin
             Result := 'NO';
         SQL_SHORT     : Result := IntToRaw(PSmallint(sqldata)^);
         SQL_INT64     : Result := IntToRaw(PInt64(sqldata)^);
-        SQL_TEXT      : DecodeString2(SQL_TEXT, Index, Result);
-        SQL_VARYING   : DecodeString2(SQL_VARYING, Index, Result);
+        SQL_TEXT      : Result := DecodeString(True, Index);
+        SQL_VARYING   : Result := DecodeString(False, Index);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then
                         begin
                           ReadBlobFromString(Index, TempAnsi);
@@ -3267,8 +3360,8 @@ begin
                      end;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
-        SQL_TEXT      : Result := DecodeString(SQL_TEXT, Index);
-        SQL_VARYING   : Result := DecodeString(SQL_VARYING, Index);
+        SQL_TEXT      : Result := DecodeString(True, Index);
+        SQL_VARYING   : Result := DecodeString(False, Index);
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then
                         begin
                           ReadBlobFromVariant(Index, FDefaults[Index]);
