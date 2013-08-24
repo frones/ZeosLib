@@ -272,7 +272,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals(ord(stByte), ResultSet.GetIntByName('DATA_TYPE'));
+  CheckEquals(ord(stShort), ResultSet.GetIntByName('DATA_TYPE'));
   CheckEquals('TINYINT', UpperCase(ResultSet.GetStringByName('TYPE_NAME')));
   CheckEquals(1, ResultSet.GetIntByName('COLUMN_SIZE'));
   CheckEquals(65535, ResultSet.GetIntByName('BUFFER_LENGTH'));
