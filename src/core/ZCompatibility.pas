@@ -244,6 +244,7 @@ type
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;
     {$ENDIF}
+    DataBaseSettings: Pointer;
   end;
 
   TZCodePagedObject = Class(TInterfacedObject)

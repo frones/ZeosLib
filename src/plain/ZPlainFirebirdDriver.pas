@@ -61,7 +61,9 @@ interface
 {$ENDIF}
 {$ENDIF}
 
-uses ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader, ZPlainFirebirdInterbaseConstants;
+uses Types,
+  ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader,
+  ZPlainFirebirdInterbaseConstants;
 
 const
 
@@ -111,6 +113,7 @@ type
     ['{AE2C4379-4E47-4752-BC01-D405ACC337F5}']
 
     function GetFirebirdAPI: TZFirebird_API;
+    function GetCodePageArray: TWordDynArray;
 
     function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
     function ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
@@ -249,8 +252,12 @@ type
   TZFirebirdBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver,
     IZInterbasePlainDriver)
     FIREBIRD_API : TZFIREBIRD_API;
+  private
+    FCodePageArray: TWordDynArray;
   protected
+
     FPreLoader : TZNativeLibraryLoader;
+    procedure FillCodePageArray;
     procedure LoadCodePages; override;
     function GetUnicodeCodePageName: String; override;
     {$IFDEF ENABLE_INTERBASE_CRYPT}
@@ -264,6 +271,7 @@ type
     {$ENDIF}
 
     function GetFirebirdAPI: TZFirebird_API;
+    function GetCodePageArray: TWordDynArray;
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
       parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
@@ -579,6 +587,14 @@ begin
   Result := 'UNICODE_FSS';
 end;
 
+procedure TZFirebirdBaseDriver.FillCodePageArray;
+var I: Integer;
+begin
+  SetLength(FCodePageArray, 70);
+  for i := 0 to High(FCodePages) do
+    FCodePageArray[FCodePages[i].ID] := FCodePages[i].CP;
+end;
+
 procedure TZFirebirdBaseDriver.LoadCodePages;
 begin
   Self.AddCodePage('ASCII', CS_ASCII, ceAnsi, zCP_WIN1252); {English}
@@ -598,7 +614,7 @@ begin
   Self.AddCodePage('KSC_5601', CS_KSC_5601, ceAnsi, zCP_EUCKR, '', 2); {Korean (Unified Hangeul)}
   Self.AddCodePage('NEXT', CS_NEXT);  {NeXTSTEP encoding}
   Self.AddCodePage('NONE', CS_NONE, ceAnsi, ZDefaultSystemCodePage, '', 1, False); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
-  Self.AddCodePage('OCTETS', CS_BINARY); {Binary character}
+  Self.AddCodePage('OCTETS', CS_BINARY, ceAnsi, $fffd); {Binary character}
   Self.AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_EUC_JP, '', 2); {Japanese}
   Self.AddCodePage('UNICODE_FSS', CS_UNICODE_FSS, ceUTF8, zCP_UTF8, '', 3); {UNICODE}
   Self.AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI — Central European}
@@ -702,6 +718,11 @@ end;
 function TZFirebirdBaseDriver.GetFirebirdAPI: TZFirebird_API;
 begin
   result := FIREBIRD_API;
+end;
+
+function TZFirebirdBaseDriver.GetCodePageArray: TWordDynArray;
+begin
+  Result := FCodePageArray;
 end;
 
 function TZFirebirdBaseDriver.isc_array_gen_sdl(status_vector: PISC_STATUS;
@@ -1118,6 +1139,7 @@ begin
     {$ENDIF}
   {$ENDIF}
   Self.LoadCodePages;
+  FillCodePageArray;
 end;
 
 function TZInterbase6PlainDriver.GetDescription: string;
@@ -1147,6 +1169,7 @@ begin
     {$ENDIF}
   {$ENDIF}
   Self.LoadCodePages;
+  FillCodePageArray;
 end;
 
 function TZFirebird10PlainDriver.GetDescription: string;
@@ -1193,6 +1216,7 @@ begin
     {$ENDIF}
   {$ENDIF}
   Self.LoadCodePages;
+  FillCodePageArray;
 end;
 
 function TZFirebird15PlainDriver.GetDescription: string;
@@ -1279,6 +1303,7 @@ begin
     {$ENDIF}
   {$ENDIF}
   Self.LoadCodePages;
+  FillCodePageArray;
 end;
 
 function TZFirebird20PlainDriver.GetDescription: string;
@@ -1375,6 +1400,7 @@ begin
     {$ENDIF}
   {$ENDIF}
   Self.LoadCodePages;
+  FillCodePageArray;
 end;
 
 
@@ -1482,6 +1508,7 @@ begin
     {$ENDIF}
   {$ENDIF}
   Self.LoadCodePages;
+  FillCodePageArray;
 end;
 
 function TZFirebird25PlainDriver.GetProtocol: string;

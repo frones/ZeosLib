@@ -72,6 +72,7 @@ type
     FStmtHandle: TISC_STMT_HANDLE;
     FSqlData: IZResultSQLDA;
     FIBConnection: IZInterbase6Connection;
+    FCodePageArray: TWordDynArray;
   protected
     procedure Open; override;
     function GetFieldValue(ColumnIndex: Integer): Variant;
@@ -135,7 +136,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, ZDbcUtils, ZEncoding;
+  SysUtils, ZDbcUtils, ZEncoding, ZPlainFirebirdDriver;
 
 { TZInterbase6ResultSet }
 
@@ -179,7 +180,7 @@ constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
 begin
   inherited Create(Statement, SQL, nil,
     Statement.GetConnection.GetConSettings);
-  
+
   FFetchStat := 0;
   FSqlData := SqlData;
   FCursorName := CursorName;
@@ -189,6 +190,7 @@ begin
   FStmtHandle := StatementHandle;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
+  FCodePageArray := (Statement.GetConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
 
   Open;
 end;
@@ -615,22 +617,8 @@ begin
   if LastWasNull then
     Result := ''
   else
-    if ( ConSettings.ClientCodePage.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
-      case FSqlData.GetIbSqlType(ColumnIndex -1) of
-        SQL_VARYING, SQL_TEXT:
-          if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
-            Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-              ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-          else
-            Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-              FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1)).CP, ConSettings^.CTRL_CP);
-        else
-          Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-      end
-    else
-      Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
-        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
+      FCodePageArray[FSqlData.GetIbSqlSubType(ColumnIndex -1)], ConSettings^.CTRL_CP);
 end;
 
 {**
@@ -651,22 +639,8 @@ begin
   if LastWasNull then
     Result := ''
   else
-    if ( ConSettings.ClientCodePage^.ID = CS_NONE ) then //CharacterSet 'NONE' doesn't convert anything! Data as is!
-      case FSqlData.GetIbSqlType(ColumnIndex -1) of
-        SQL_VARYING, SQL_TEXT:
-          if FSqlData.GetIbSqlSubType(ColumnIndex -1) = CS_NONE then
-            Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-              ConSettings^.ClientCodePage^.CP)
-          else
-            Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-              FIBConnection.GetPlainDriver.ValidateCharEncoding(FSqlData.GetIbSqlSubType(ColumnIndex -1))^.CP);
-        else
-          Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-            ConSettings^.ClientCodePage^.CP);
-      end
-    else
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
-        ConSettings^.ClientCodePage^.CP);
+    Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+      FCodePageArray[FSqlData.GetIbSqlSubType(ColumnIndex -1)]);
 end;
 
 {**
