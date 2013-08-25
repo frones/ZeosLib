@@ -274,7 +274,7 @@ const
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils
+uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses
   {$IFDEF WITH_FTGUID},ComObj, ActiveX{$ENDIF}, Math;
 
 { TZPerformanceSQLTestCase }
@@ -1508,6 +1508,7 @@ begin
     Units := 'ms'
   else Units := '%';
 
+  WriteLn('PerformanceTests of: '+ZClasses.ZEOS_VERSION);
   for I := 0 to SelectedAPIs.Count - 1 do
   begin
     for J := 0 to SelectedTests.Count - 1 do
