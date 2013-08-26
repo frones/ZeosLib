@@ -449,10 +449,13 @@ end;
 function TZMySQLResultSet.GetByte(ColumnIndex: Integer): Byte;
 var
   Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
@@ -471,10 +474,13 @@ end;
 function TZMySQLResultSet.GetShort(ColumnIndex: Integer): SmallInt;
 var
   Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
@@ -493,14 +499,17 @@ end;
 function TZMySQLResultSet.GetInt(ColumnIndex: Integer): Integer;
 var
   Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
-    Result := RawToIntDef(GetBuffer(ColumnIndex, Len), 0);
+    Result := RawToIntDef(Buffer, 0);
 end;
 
 {**
