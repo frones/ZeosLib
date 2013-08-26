@@ -571,7 +571,8 @@ function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; 
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
-function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64;
+function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64; overload;
+function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64; overload;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64; overload;
 
@@ -4666,6 +4667,14 @@ begin
   {$ELSE}
   Result := ValInt64_JOH_PAS_4_b_raw(PAnsiChar(S), E);
   {$IFEND}
+  if E <> 0 then Result := Default;
+end;
+
+function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64;
+var
+  E: Integer;
+begin
+  Result := ValInt64_JOH_PAS_4_b_raw(S, E);
   if E <> 0 then Result := Default;
 end;
 

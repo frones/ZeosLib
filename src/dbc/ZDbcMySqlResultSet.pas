@@ -459,7 +459,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := Byte(RawToIntDef(GetBuffer(ColumnIndex, Len), 0));
+    Result := Byte(RawToIntDef(Buffer, 0));
 end;
 
 {**
@@ -484,7 +484,7 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := SmallInt(RawToIntDef(GetBuffer(ColumnIndex, Len), 0));
+    Result := SmallInt(RawToIntDef(Buffer, 0));
 end;
 
 {**
