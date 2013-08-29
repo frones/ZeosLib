@@ -782,7 +782,7 @@ begin
     Exit;
   end;
 
-  if db = nil then
+  if ( db = nil ) or ( @SQLite_API.sqlite_errstr = nil ) then
   begin
     case code of
       SQLITE_OK:         Result := 'not an error';
