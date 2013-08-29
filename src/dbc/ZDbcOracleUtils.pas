@@ -502,17 +502,11 @@ begin
           begin
             case Values[i].VType of
               vtString:
-                if DefVarManager.GetAsString(Values[I]) = '' then
-                  PAnsiChar(CurrentVar.Data) := ''
-                else
-                  {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
-                    PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
+                {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
               vtUnicodeString:
-                if DefVarManager.GetAsUnicodeString(Values[I]) = '' then
-                  PAnsiChar(CurrentVar.Data) := ''
-                else
-                  {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
-                    PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
+                {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
+                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
             end;
           end;
         SQLT_VST:
