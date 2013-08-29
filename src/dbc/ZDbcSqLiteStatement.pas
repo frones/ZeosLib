@@ -510,13 +510,37 @@ begin
               AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
           end;
         stString:
+          {$IFDEF FPC}
+          begin
+            TempAnsi := ZPlainString(SoftVarManager.GetAsString(Value));
+            if TempAnsi = '' then
+              FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+                AsPAnsiChar(TempAnsi, 1), 0, @BindingDestructor)
+            else
+              FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              StrNew(PAnsichar(TempAnsi))), -1, @BindingDestructor);
+          end;
+          {$ELSE}
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
+          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsString(Value)))),
               -1, @BindingDestructor);
+          {$ENDIF}
         stUnicodeString:
+          {$IFDEF FPC}
+          begin
+            TempAnsi := ZPlainString(SoftVarManager.GetAsUnicodeString(Value));
+            if TempAnsi = '' then
+              FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+                AsPAnsiChar(TempAnsi, 1), 0, @BindingDestructor)
+            else
+              FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              StrNew(PAnsichar(TempAnsi))), -1, @BindingDestructor);
+          end;
+          {$ELSE}
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(ZPlainString(SoftVarManager.GetAsUnicodeString(Value)))),
                -1, @BindingDestructor);
+          {$ENDIF}
         stDate:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsichar(RawByteString(FormatDateTime('yyyy-mm-dd',
