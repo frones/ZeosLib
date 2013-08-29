@@ -1384,6 +1384,7 @@ begin
   @SQLite_API.sqlite_changes                := GetAddress('sqlite3_changes');
 //  @SQLite_API.sqlite_last_statement_changes := GetAddress('sqlite3_last_statement_changes');
   @SQLite_API.sqlite_errmsg                 := GetAddress('sqlite3_errmsg');
+  @SQLite_API.sqlite_errstr                 := GetAddress('sqlite3_errstr');
   @SQLite_API.sqlite_interrupt              := GetAddress('sqlite3_interrupt');
   @SQLite_API.sqlite_complete               := GetAddress('sqlite3_complete');
   @SQLite_API.sqlite_busy_handler           := GetAddress('sqlite3_busy_handler');
