@@ -490,17 +490,17 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     C := PPChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     L := Min(FColumnLengths[ColumnIndex - 1], Length(Value));
-    if L > 0 then
-    begin
+    //if L > 0 then
+    //begin
       ReallocMem(C^, L * SizeOf(Char) + SizeOf(Char));
       StrPLCopy(PChar(C^), PChar(Value), L);
-    end
+    {end
     else
       if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
       begin
         System.Dispose(C^);
         PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
-      end;
+      end;}
   end;
 end;
 
