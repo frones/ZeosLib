@@ -73,6 +73,7 @@ type
     procedure TestAliases;
     procedure TestStoredResultSet;
     procedure TestLastQuery;
+    procedure TestNotNullValues;
   end;
 
 implementation
@@ -963,6 +964,69 @@ begin
     end;
   finally
     Statement.Close;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestNotNullValues;
+var
+  Sql: string;
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  if StartsWith(Protocol, 'oracle') then Exit; //oracle doesnt allow '' values for not null columns
+
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+
+  Sql := 'DELETE FROM not_null_values where n_id = ' + IntToStr(TEST_ROW_ID);
+  Connection.CreateStatement.ExecuteUpdate(Sql);
+
+  { Tests the equipment table }
+  Sql := 'SELECT * FROM not_null_values where n_id = ' + IntToStr(TEST_ROW_ID);
+  { Inserts test record to equipment }
+  try
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    with ResultSet do
+    begin
+      MoveToInsertRow;
+      UpdateIntByName('n_id', TEST_ROW_ID);
+      UpdateNullByName('n_varchar');
+      try
+        InsertRow;
+      except
+        //do nothing here it will raise a null constraint exception
+      end;
+      MoveToInsertRow;
+      UpdateIntByName('n_id', TEST_ROW_ID);
+      UpdateStringByName('n_varchar', ''); //test empty string
+      try
+        InsertRow;
+      except
+        //do nothing here
+        ResultSet := nil;
+        raise;
+      end;
+    end;
+    ResultSet := Statement.ExecuteQuery(Sql); //load values from db
+    CheckNotNull(ResultSet);
+    with ResultSet do
+    begin
+      try
+        Check(Next);
+        CheckEquals(TEST_ROW_ID, GetIntByName('n_id'));
+        CheckEquals(False, IsNullByName('n_varchar'));
+        CheckEquals('', GetStringByName('n_varchar'));
+      finally
+        //do nothing here
+        ResultSet := nil;
+      end;
+    end;
+  finally
+    if Assigned(Statement) then
+      Statement.Close;
   end;
 end;
 
