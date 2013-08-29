@@ -2858,7 +2858,7 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
 begin
-  SetString(Dest, Src, StrLen(Src));
+  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
@@ -2877,7 +2877,7 @@ begin
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, StrLen(Src));
+  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
   {$ENDIF}
 end;
 
@@ -2916,7 +2916,7 @@ begin
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, StrLen(Src));
+  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
   {$ENDIF}
 end;
 
@@ -5106,7 +5106,7 @@ begin
   {$IFDEF FPC}
   Result := FloatToStr(Value)
   {$ELSE}
-  SetString(Result, Buffer, FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
+  SetString(Result, Buffer, {$IFDEF WITH_FLOATTOTEXT_DEPRECATED}AnsiStrings.{$ENDIF}FloatToText(PAnsiChar(@Buffer), Value, fvExtended,
     ffGeneral, 15, 0));
   {$ENDIF}
 end;

@@ -257,6 +257,7 @@
   {$DEFINE WITH_STRLICOPY_DEPRECATED} //StrLICopy is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLICOMP_DEPRECATED} //StrLIComp is deprecated moved to AnsiStrings
   {$DEFINE WITH_GETCALCFIELDS_TRECBUF} //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
+  {$DEFINE WITH_FLOATTOTEXT_DEPRECATED} //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
 {$ENDIF}
 
 
