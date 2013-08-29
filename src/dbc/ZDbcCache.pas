@@ -490,17 +490,9 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     C := PPChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     L := Min(FColumnLengths[ColumnIndex - 1], Length(Value));
-    //if L > 0 then
-    //begin
-      ReallocMem(C^, L * SizeOf(Char) + SizeOf(Char));
-      StrPLCopy(PChar(C^), PChar(Value), L);
-    {end
-    else
-      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
-      begin
-        System.Dispose(C^);
-        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
-      end;}
+    ReallocMem(C^, L * SizeOf(Char) + SizeOf(Char));
+    System.Move(PChar(Value)^, C^^, L * SizeOf(Char));
+    (C^+L)^ := #0; //set #0 terminator if a truncation is required
   end;
 end;
 
@@ -516,19 +508,10 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     L := Min(Length(Value), FColumnLengths[ColumnIndex - 1]);
-    if L > 0 then
-    begin
-      Value := System.Copy(Value, 1, L);
-      L := L * 2 + 2;
-      ReallocMem(W^, L);
-      System.Move(PWideChar(Value)^, W^^, L);
-    end
-    else
-      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
-      begin
-        System.Dispose(W^);
-        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
-      end;
+    Value := System.Copy(Value, 1, L);
+    L := L * 2 + 2;
+    ReallocMem(W^, L);
+    System.Move(PWideChar(Value)^, W^^, L);
   end;
 end;
 
