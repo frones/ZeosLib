@@ -993,20 +993,12 @@ begin
     begin
       MoveToInsertRow;
       UpdateIntByName('n_id', TEST_ROW_ID);
-      UpdateNullByName('n_varchar');
-      try
-        InsertRow;
-      except
-        //do nothing here it will raise a null constraint exception
-      end;
-      MoveToInsertRow;
-      UpdateIntByName('n_id', TEST_ROW_ID);
       UpdateStringByName('n_varchar', ''); //test empty string
       try
         InsertRow;
       except
-        //do nothing here
         ResultSet := nil;
+        Statement.Close;
         raise;
       end;
     end;
