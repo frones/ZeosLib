@@ -156,6 +156,17 @@ create table string_values
 );
 
 /*==============================================================*/
+/* Table : not_null_values                                      */
+/*==============================================================*/
+create table not_null_values
+(
+   n_id                           int              	not null,
+   n_varchar                      VARCHAR(255)		not null,
+   primary key (n_id)
+);
+
+
+/*==============================================================*/
 /* Table : cargo                                                */
 /*==============================================================*/
 create table cargo
@@ -194,9 +205,9 @@ stDate                DATE,
 stTime                TIME,
 stTimestamp           TIMESTAMP,
 stGUID                CHAR(38),
-stAsciiStream         LONGTEXT,
-stUnicodeStream       LONGTEXT,
-stBinaryStream        LONGBLOB,
+stAsciiStream         TEXT,
+stUnicodeStream       TEXT,
+stBinaryStream        BLOB,
 primary key (hl_id)
 );
 

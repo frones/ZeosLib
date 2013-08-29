@@ -168,6 +168,17 @@ primary key  (s_id)
 );
 
 /*==============================================================*/
+/* Table : not_null_values                                      */
+/*==============================================================*/
+create table not_null_values
+(
+   n_id                           int              	not null,
+   n_varchar                      VARCHAR(255)		not null,
+   primary key (n_id)
+);
+
+
+/*==============================================================*/
 /* Table : case_sensitive                                       */
 /*==============================================================*/
 create table [case_sensitive] (

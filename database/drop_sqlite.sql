@@ -14,6 +14,7 @@ drop table number_values;
 drop table people;
 drop table department;
 drop table string_values;
+drop table not_null_values;
 drop table [case_sensitive];
 drop table high_load;
 drop table default_values;

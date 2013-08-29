@@ -120,6 +120,13 @@ go
 
 if exists (select 1
             from  sysobjects
+           where  id = object_id('not_null_values')
+            and   type = 'U')
+   drop table string_values
+go
+
+if exists (select 1
+            from  sysobjects
            where  id = object_id('"Case_Sensitive"')
             and   type = 'U')
    drop table string_values
@@ -308,6 +315,17 @@ s_nvarchar           varchar(255)         null,
 s_bit                binary(255)          null,
 s_varbit             varbinary(1024)      null,
 primary key  (s_id)
+)
+go
+
+/*==============================================================*/
+/* Table : not_null_values                                      */
+/*==============================================================*/
+create table not_null_values
+(
+   n_id                           int              	not null,
+   n_varchar                      VARCHAR(255)		not null,
+   primary key (n_id)
 )
 go
 

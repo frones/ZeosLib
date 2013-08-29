@@ -8,6 +8,7 @@ drop table blob_values;
 drop table date_values;
 drop table default_values;
 drop table string_values;
+drop table not_null_values;
 drop table number_values;
 
 drop table cargo;
