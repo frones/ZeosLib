@@ -510,7 +510,7 @@ begin
               AsPAnsiChar(TempAnsi, L), L, @BindingDestructor)
           end;
         stString:
-          {$IFDEF FPC}
+          {$IFDEF FPC} //FPC StrNew fails for '' strings and returns nil
           begin
             TempAnsi := ZPlainString(SoftVarManager.GetAsString(Value));
             if TempAnsi = '' then
@@ -526,7 +526,7 @@ begin
               -1, @BindingDestructor);
           {$ENDIF}
         stUnicodeString:
-          {$IFDEF FPC}
+          {$IFDEF FPC} //FPC StrNew fails for '' strings and returns nil
           begin
             TempAnsi := ZPlainString(SoftVarManager.GetAsUnicodeString(Value));
             if TempAnsi = '' then
