@@ -1244,7 +1244,7 @@ begin
   FTests := TInterfaceList.Create;
   LoadConfiguration;
 
-  TimeSeparator := ':';
+  {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}TimeSeparator := ':';
   SetUpStateImages;
   SetupCustomShortcuts;
   TestTree.Items.Clear;
