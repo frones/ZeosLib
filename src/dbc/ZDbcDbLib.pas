@@ -466,7 +466,7 @@ begin
       ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage; //need a tempory CP for the SQL preparation
       ConSettings^.ClientCodePage^.Encoding := ceAnsi;
       ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
-      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
+      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
       ConSettings^.ClientCodePage^.CP := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
       SetConvertFunctions(ConSettings);
     end;
