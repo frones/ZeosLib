@@ -2482,6 +2482,10 @@ begin
     vtInteger: UpdateLong(ColumnIndex, Value.VInteger);
     vtFloat: UpdateBigDecimal(ColumnIndex, Value.VFloat);
     vtString: UpdateString(ColumnIndex, Value.VString);
+    vtAnsiString: UpdateAnsiString(ColumnIndex, Value.VAnsiString);
+    vtUTF8String: UpdateUTF8String(ColumnIndex, Value.VUTF8String);
+    vtRawByteString: UpdateRawByteString(ColumnIndex, Value.VRawByteString);
+    vtBytes: UpdateBytes(ColumnIndex, Value.VBytes);
     vtDateTime: UpdateTimestamp(ColumnIndex, Value.VDateTime);
     vtUnicodeString: UpdateUnicodeString(ColumnIndex, Value.VUnicodeString);
   else
