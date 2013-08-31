@@ -550,7 +550,7 @@ begin
     if L > 0 then
     begin
       ReallocMem(C^, L +1);
-      StrPLCopy(PAnsiChar(C^), PAnsiChar(Value), L);
+      {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(C^), PAnsiChar(Value), L);
     end
     else
       if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
@@ -2855,7 +2855,7 @@ end;
 function TZRawRowAccessor.CompareString(ValuePtr1, ValuePtr2: Pointer): Integer;
 begin
   {$IFDEF MSWINDOWS} //Windows can handle nil pointers Linux not FPC-Bug?
-  Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^))
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^))
   {$ELSE}
   if Assigned(PPAnsichar(ValuePtr1)^) and Assigned(PPAnsiChar(ValuePtr2)^) then
     Result := AnsiStrComp(PAnsiChar(ValuePtr1^), PAnsiChar(ValuePtr2^))
