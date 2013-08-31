@@ -735,7 +735,6 @@ var
   I: Integer;
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
-  ClientCP: PZCodePage;
 begin
   if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -752,19 +751,12 @@ begin
       FieldSqlType := GetFieldSqlType(I);
       ColumnType := FieldSqlType;
 
-      if FieldSqlType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      begin
-        if ConSettings.ClientCodePage^.ID = CS_NONE then
-          ClientCP := FIBConnection.GetPlainDriver.ValidateCharEncoding(GetIbSqlSubType(I))
-        else
-          ClientCP := ConSettings^.ClientCodePage;
-        ColumnCodePage := ClientCP^.CP;
-      end
+      if FieldSqlType in [stString, stUnicodeString] then
+        ColumnCodePage := FCodePageArray[GetIbSqlSubType(I)]
+      else if FieldSqlType in [stAsciiStream, stUnicodeStream] then
+        ColumnCodePage := ConSettings^.ClientCodePage^.CP
       else
-      begin
-        ClientCP := ConSettings^.ClientCodePage; //makes compiler happy
         ColumnCodePage := zCP_NONE;
-      end;
 
       if FieldSqlType in [stBytes, stString, stUnicodeString] then
       begin
@@ -779,7 +771,7 @@ begin
         end
         else
           Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
-            ClientCP^.CharWidth, @ColumnDisplaySize, True);
+            ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
       end;
 
       ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
