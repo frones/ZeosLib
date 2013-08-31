@@ -71,7 +71,6 @@ type
     FCursorName: AnsiString;
     FStmtHandle: TISC_STMT_HANDLE;
     FSqlData: IZResultSQLDA;
-    FParamsSqlData: IZParamsSQLDA;
     FIBConnection: IZInterbase6Connection;
   protected
     procedure Open; override;
@@ -80,8 +79,7 @@ type
   public
     constructor Create(Statement: IZStatement; SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
-      SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA;
-      CachedBlob: boolean);
+      SqlData: IZResultSQLDA; CachedBlob: boolean);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -135,7 +133,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, ZDbcUtils, ZEncoding;
+  SysUtils, ZDbcUtils, ZEncoding{, ZDbcLogging};
 
 { TZInterbase6ResultSet }
 
@@ -158,7 +156,6 @@ begin
   begin
     { Free output allocated memory }
     FSqlData := nil;
-    FParamsSqlData := nil;
     { Free allocate sql statement }
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
   end;
@@ -176,7 +173,7 @@ end;
 }
 constructor TZInterbase6ResultSet.Create(Statement: IZStatement; SQL: string;
   var StatementHandle: TISC_STMT_HANDLE; CursorName: AnsiString;
-  SqlData: IZResultSQLDA; ParamsSqlData: IZParamsSQLDA; CachedBlob: boolean);
+  SqlData: IZResultSQLDA; CachedBlob: boolean);
 begin
   inherited Create(Statement, SQL, nil,
     Statement.GetConnection.GetConSettings);
@@ -187,7 +184,6 @@ begin
   FCachedBlob := CachedBlob;
   FIBConnection := Statement.GetConnection as IZInterbase6Connection;
 
-  FParamsSqlData := ParamsSqlData;
   FStmtHandle := StatementHandle;
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
@@ -678,6 +674,7 @@ begin
       begin
         FFetchStat := GetPlainDriver.isc_dsql_fetch(@StatusVector,
           @FStmtHandle, GetDialect, FSqlData.GetData);
+        //CheckInterbase6Error(GetPlainDriver, StatusVector, lcOther); //EH to test
       end
       else
       begin     //AVZ - Cursor name has a value therefore the result set already exists
