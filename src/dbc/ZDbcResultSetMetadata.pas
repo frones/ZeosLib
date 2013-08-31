@@ -134,6 +134,7 @@ type
     FTableColumns: TZHashMap;
     FIdentifierConvertor: IZIdentifierConvertor;
     FResultSet: TZAbstractResultSet;
+    FConSettings: PZConSettings;
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
@@ -247,6 +248,8 @@ begin
   FLoaded := not (FMetadata <> nil);
   FTableColumns := TZHashMap.Create;
   FResultSet := ParentResultSet;
+
+  FConSettings := FResultSet.GetConSettings;
 end;
 
 {**
@@ -650,11 +653,20 @@ begin
     //stByte, stString, stUnicoeString first. If this type is returned from the
     //ResultSet-Metadata we do NOT overwrite the column-type
     //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
-    tempColType := TZSQLType(TableColumns.GetInt(5));
+    tempColType := TZSQLType(TableColumns.GetShort(5));
     if not (( tempColType in [stBinaryStream, stAsciiStream, stUnicodeStream] )
       and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] )) then
     ColumnInfo.ColumnType := tempColType;
   end;
+  if not FConSettings^.ClientCodePage^.IsStringFieldCPConsistent and
+    ResultSet.GetStatement.GetConnection.GetIZPlainDriver.IsAnsiDriver then //this excludes oracle and ado
+    if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+      if (UpperCase(TableColumns.GetString(6)) = 'NVARCHAR') or (UpperCase(TableColumns.GetString(6)) = 'NCHAR') then
+        ColumnInfo.ColumnCodePage := zCP_UTF8
+      else
+        ColumnInfo.ColumnCodePage :=FConSettings^.ClientCodePage^.CP
+  else
+    ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP;
   if not TableColumns.IsNull(11) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(11));
   if not TableColumns.IsNull(19) then
