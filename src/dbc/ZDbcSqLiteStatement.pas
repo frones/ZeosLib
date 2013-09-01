@@ -518,7 +518,7 @@ begin
                 AsPAnsiChar(TempAnsi, 1), 0, @BindingDestructor)
             else
               FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-              StrNew(PAnsichar(TempAnsi))), -1, @BindingDestructor);
+              StrNew(PAnsichar(TempAnsi)), -1, @BindingDestructor);
           end;
           {$ELSE}
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
@@ -534,7 +534,7 @@ begin
                 AsPAnsiChar(TempAnsi, 1), 0, @BindingDestructor)
             else
               FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-              StrNew(PAnsichar(TempAnsi))), -1, @BindingDestructor);
+              StrNew(PAnsichar(TempAnsi)), -1, @BindingDestructor);
           end;
           {$ELSE}
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
