@@ -296,13 +296,13 @@ begin
     else
       ErrorCode := SQLITE_OK;
     FStmtHandle := nil;
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil,
+    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil,
       lcOther, 'FINALIZE SQLite VM');
   end
   else
   begin
     ErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
+    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
     FFetchingReady := True;
   end;
 end;
@@ -395,7 +395,7 @@ begin
   Temp := FColumnValues;
   Inc(Temp, ColumnIndex - 1);
   Result := Temp^;
-  LastWasNull := Result = '';
+  LastWasNull := Temp^ = nil;
 end;
 
 {**
@@ -750,7 +750,7 @@ begin
       FColumnNames := nil;
       ErrorCode := FPlainDriver.Step(FStmtHandle, FColumnCount,
         FColumnValues, FColumnNames);
-      CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcOther, 'FETCH');
+      CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcOther, 'FETCH');
     end;
 
     if FColumnValues <> nil then

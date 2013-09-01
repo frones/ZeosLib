@@ -310,7 +310,7 @@ begin
 
   if FHandle = nil then
   begin
-    CheckSQLiteError(GetPlainDriver, SQLITE_ERROR, ErrorMessage,
+    CheckSQLiteError(GetPlainDriver, FHandle, SQLITE_ERROR, ErrorMessage,
       lcConnect, LogMessage);
   end;
   DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
@@ -323,7 +323,7 @@ begin
     {$ELSE}
     ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
     {$ENDIF}
-    CheckSQLiteError(GetPlainDriver, ErrorCode, nil, lcConnect, 'SQLite.Key');
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil, lcConnect, 'SQLite.Key');
   end;
 
   { Set busy timeout if requested }
@@ -339,13 +339,13 @@ begin
         SQL := 'PRAGMA encoding = '''+AnsiString(FClientCodePage)+'''';
         ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
           nil, nil, ErrorMessage);
-        CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
+        CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, String(SQL));
     end;
 
     SQL := 'PRAGMA show_datatypes = ON';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
       nil, nil, ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, String(SQL));
 
     StartTransactionSupport;
   except
@@ -438,7 +438,7 @@ begin
     SQL := 'BEGIN TRANSACTION';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 end;
@@ -462,7 +462,7 @@ begin
     SQL := 'COMMIT TRANSACTION';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, String(SQL));
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, String(SQL));
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
 
     StartTransactionSupport;
@@ -488,7 +488,7 @@ begin
     SQL := 'ROLLBACK TRANSACTION';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
 
     StartTransactionSupport;
@@ -559,7 +559,7 @@ begin
     SQL := 'ROLLBACK TRANSACTION';
     ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(AnsiString(SQL)), nil, nil,
       ErrorMessage);
-    CheckSQLiteError(GetPlainDriver, ErrorCode, ErrorMessage, lcExecute, SQL);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
 

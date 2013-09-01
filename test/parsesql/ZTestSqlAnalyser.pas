@@ -421,6 +421,18 @@ begin
   CheckNotNull(SelectSchema);
   CheckEquals('SS:[FR:f1,FR:f2,FR:t1.f3][TR:t2,TR:t1,TR:t3]',
     SchemaToString(SelectSchema));
+
+  {Ticket 46}
+  SelectSchema := FAnalyser.DefineSelectSchemaFromQuery(FTokenizer,
+    'SELECT FIRST 100 SKIP 0 FILM_ID, TITLE, DESCRIPTION, RELEASE_YEAR, '+
+    'LANGUAGE_ID, ORIGINAL_LANGUAGE_ID, RENTAL_DURATION, RENTAL_RATE, LENGTH, '+
+    'REPLACEMENT_COST, RATING, SPECIAL_FEATURES, LAST_UPDATE FROM FILM');
+  CheckNotNull(SelectSchema);
+  CheckEquals('SS:[FR:FILM_ID,FR:TITLE,FR:DESCRIPTION,FR:RELEASE_YEAR,'+
+    'FR:LANGUAGE_ID,FR:ORIGINAL_LANGUAGE_ID,FR:RENTAL_DURATION,FR:RENTAL_RATE,'+
+    'FR:LENGTH,FR:REPLACEMENT_COST,FR:RATING,FR:SPECIAL_FEATURES,'+
+    'FR:LAST_UPDATE][TR:FILM]',
+    SchemaToString(SelectSchema));
 end;
 
 { TZTestGenericStatementAnalyser }

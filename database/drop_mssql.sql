@@ -34,6 +34,9 @@ go
 drop table string_values
 go
 
+drop table not_null_values
+go
+
 /*drop table "Case_Sensitive"
 go*/
 

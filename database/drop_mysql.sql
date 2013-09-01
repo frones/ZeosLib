@@ -21,5 +21,6 @@ drop table IF EXISTS extension;
 drop table IF EXISTS number_values;
 drop table IF EXISTS people;
 drop table IF EXISTS string_values;
+drop table IF EXISTS not_null_values;
 drop table IF EXISTS cargo;
 drop table IF EXISTS high_load;

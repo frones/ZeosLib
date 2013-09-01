@@ -13,6 +13,7 @@ BEGIN
                                             'NUMBER_VALUES',
                                             'PEOPLE',
                                             'STRING_VALUES',
+                                            'NOT_NULL_VALUES',
                                             'CASE_SENSITIVE',
                                             'HIGH_LOAD',
                                             'DEFAULT_VALUES',
