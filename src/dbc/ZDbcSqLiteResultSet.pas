@@ -383,7 +383,7 @@ begin
   Temp := FColumnValues;
   Inc(Temp, ColumnIndex - 1);
   Result := Temp^;
-  LastWasNull := Result = '';
+  LastWasNull := Temp^ = nil;
 end;
 
 {**

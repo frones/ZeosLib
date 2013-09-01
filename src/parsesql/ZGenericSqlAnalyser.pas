@@ -478,6 +478,7 @@ var
   CurrentUpper: string;
   ReadField: Boolean;
   HadWhitespace : Boolean;
+  LastWasBracketSection: Boolean;
 
   procedure ClearElements;
   begin
@@ -487,6 +488,51 @@ var
     Field := '';
     Alias := '';
     ReadField := True;
+    LastWasBracketSection := False;
+  end;
+
+  { improve fail of fieldname detection if whitespaces and non ttWord or ttQuotedIdentifier previously detected
+    f.e.: select first 100 skip 10 field1, field2}
+  function CheckNextTokenForCommaAndWhiteSpaces: Boolean;
+  var
+    CurrentValue: string;
+    CurrentType: TZTokenType;
+    I: Integer;
+  begin
+    Result := False;
+    I := 1;
+    //Check to right side to avoid wrong alias detection
+    while SelectTokens.Count > TokenIndex +i do
+    begin
+      CurrentValue := SelectTokens[TokenIndex+i];
+      CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+        SelectTokens.Objects[TokenIndex+i]{$IFDEF FPC}){$ENDIF});
+      if CurrentType in [ttWhiteSpace, ttSymbol] then
+      begin
+        if (CurrentValue = ',') then
+        begin
+          Result := True;
+          Break;
+        end;
+      end
+      else
+        break;
+      Inc(i);
+    end;
+
+    if Result then
+    begin
+      i := 1;
+      while Tokenindex - i > 0 do
+        if TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+            SelectTokens.Objects[TokenIndex-i]{$IFDEF FPC}){$ENDIF}) = ttWhiteSpace then
+          Inc(i)
+        else
+          Break;
+      Result := Result and (TokenIndex - I > 0) and
+          not ( TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
+        SelectTokens.Objects[TokenIndex-i]{$IFDEF FPC}){$ENDIF}) = ttWord );
+    end;
   end;
 
 begin
@@ -543,12 +589,18 @@ begin
       begin
         CurrentValue := SelectTokens[TokenIndex];
         if CurrentValue = '(' then
-          SkipBracketTokens(SelectTokens, TokenIndex)
+        begin
+          SkipBracketTokens(SelectTokens, TokenIndex);
+          LastWasBracketSection := True;
+        end
         else begin
           CurrentType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
             SelectTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
           if HadWhitespace and (CurrentType in [ttWord, ttQuotedIdentifier]) then
-            Alias := CurrentValue
+            if not LastWasBracketSection and CheckNextTokenForCommaAndWhiteSpaces then
+              Break
+            else
+              Alias := CurrentValue
           else if not (CurrentType in [ttWhitespace, ttComment])
             and (CurrentValue <> ',') then
               Alias := ''

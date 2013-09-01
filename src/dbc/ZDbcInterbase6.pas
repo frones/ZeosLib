@@ -479,16 +479,20 @@ begin
       { Logging connection action }
       DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
         Format('CREATE DATABASE "%s" AS USER "%s"', [Info.Values['createNewDatabase'], User]));
+      URL.Properties.Values['createNewDatabase'] := '';
+      //Allready Connected now if successfully created
+    end
+    else
+    begin
+      FHandle := 0;
+      { Connect to Interbase6 database. }
+      GetPlainDriver.isc_attach_database(@FStatusVector,
+        {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(DBName), DBName,
+          @FHandle, FDPBLength, DPB);
+
+      { Check connection error }
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, lcConnect);
     end;
-
-    { Connect to Interbase6 database. }
-    FHandle := 0;
-    GetPlainDriver.isc_attach_database(@FStatusVector,
-      {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(DBName), DBName,
-        @FHandle, FDPBLength, DPB);
-
-    { Check connection error }
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcConnect);
 
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
@@ -730,14 +734,11 @@ end;
 }
 procedure TZInterbase6Connection.CreateNewDatabase(const SQL: String);
 var
-  DbHandle: PISC_DB_HANDLE;
-  TrHandle: PISC_TR_HANDLE;
+  TrHandle: TISC_TR_HANDLE;
 begin
-  Close;
-  DbHandle := nil;
-  TrHandle := nil;
-  GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @DbHandle, @TrHandle,
-    0, PAnsiChar(AnsiString(sql)), FDialect, nil);
+  TrHandle := 0;
+  GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
+    0, PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(sql)), FDialect, nil);
   CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
 end;
 

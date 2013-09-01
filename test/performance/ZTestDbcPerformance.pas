@@ -66,6 +66,7 @@ type
   protected
     FConnection: IZConnection;
     FSQL: String;
+    FResultSet: IZResultSet;
   protected
     property SQL: String read FSQL;
     property Connection: IZConnection read FConnection write FConnection;
@@ -82,6 +83,7 @@ type
     procedure SetUpTestInsert; override;
     procedure RunTestInsert; override;
     procedure RunTestOpen; override;
+    procedure SetUpTestFetch; override;
     procedure RunTestFetch; override;
     procedure SetUpTestUpdate; override;
     procedure RunTestUpdate; override;
@@ -152,6 +154,12 @@ end;
 }
 procedure TZNativeDbcPerformanceTestCase.DefaultTearDownTest;
 begin
+  if Assigned(FResultSet) then
+  begin
+    FResultSet.Close;
+    FResultSet := nil;
+  end;
+
   if Connection <> nil then
   begin
     Connection.Close;
@@ -252,35 +260,38 @@ begin
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
+procedure TZNativeDbcPerformanceTestCase.SetUpTestFetch;
+begin
+  inherited;
+  FResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
+end;
 {**
    Performs a fetch data
 }
 procedure TZNativeDbcPerformanceTestCase.RunTestFetch;
 var
-  ResultSet: IZResultSet;
   I: Integer;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
-  while ResultSet.Next do
+  while FResultSet.Next do
     for i := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
       case ConnectionConfig.PerformanceResultSetTypes[i-1] of
-        stBoolean: ResultSet.GetBoolean(I);
-        stByte:    ResultSet.GetByte(I);
+        stBoolean: FResultSet.GetBoolean(I);
+        stByte:    FResultSet.GetByte(I);
         stShort,
         stInteger,
-        stLong:    ResultSet.GetInt(I);
+        stLong:    FResultSet.GetInt(I);
         stFloat,
         stDouble,
-        stBigDecimal: ResultSet.GetFloat(I);
-        stString: ResultSet.GetString(I);
-        stUnicodeString: ResultSet.GetUnicodeString(I);
-        stDate:    ResultSet.GetDate(I);
-        stTime:    ResultSet.GetTime(I);
-        stTimestamp: ResultSet.GetTimestamp(I);
-        stBytes: ResultSet.GetBytes(I);
-        stAsciiStream, stUnicodeStream, stBinaryStream: ResultSet.GetBlob(I);
+        stBigDecimal: FResultSet.GetFloat(I);
+        stString: FResultSet.GetString(I);
+        stUnicodeString: FResultSet.GetUnicodeString(I);
+        stDate:    FResultSet.GetDate(I);
+        stTime:    FResultSet.GetTime(I);
+        stTimestamp: FResultSet.GetTimestamp(I);
+        stBytes, stGUID: FResultSet.GetBytes(I);
+        stAsciiStream, stUnicodeStream, stBinaryStream: FResultSet.GetBlob(I);
       end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
@@ -535,48 +546,47 @@ begin
   Bts := RandomBts(GetRecordCount*100);
   TMemoryStream(FBinaryStream).Write(Bts, GetRecordCount*100);
   FBinaryStream.Position := 0;
+  FResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
 end;
 
 procedure TZCachedDbcPerformanceTestCase.RunTestInsert;
 var
   I,N: Integer;
-  ResultSet: IZResultSet;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
-  ResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
   for I := 1 to GetRecordCount do
   begin
-    ResultSet.MoveToInsertRow;
+    FResultSet.MoveToInsertRow;
     for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
       case ConnectionConfig.PerformanceResultSetTypes[N-1] of
-        stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
-        stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
+        stBoolean: FResultSet.UpdateBoolean(N, Random(1) = 1);
+        stByte:    FResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,
         stInteger,
-        stLong:    ResultSet.UpdateInt(N, I);
+        stLong:    FResultSet.UpdateInt(N, I);
         stFloat,
         stDouble,
-        stBigDecimal: ResultSet.UpdateFloat(N, RandomFloat(-100, 100));
-        stString: ResultSet.UpdateString(N, RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1]));
-        stUnicodeString: ResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1])));
-        stDate:    ResultSet.UpdateDate(N, Now);
-        stTime:    ResultSet.UpdateTime(N, Now);
-        stTimestamp: ResultSet.UpdateTimestamp(N, now);
-        stGUID: ResultSet.UpdateBytes(N, RandomGUIDBytes);
-        stBytes: ResultSet.UpdateBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N-1]));
-        stAsciiStream: ResultSet.UpdateAsciiStream(N, FAsciiStream);
-        stUnicodeStream: ResultSet.UpdateUnicodeStream(N, FUnicodeStream);
-        stBinaryStream: ResultSet.UpdateBinaryStream(N, FBinaryStream);
+        stBigDecimal: FResultSet.UpdateFloat(N, RandomFloat(-100, 100));
+        stString: FResultSet.UpdateString(N, RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1]));
+        stUnicodeString: FResultSet.UpdateUnicodeString(N, ZWideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[N-1])));
+        stDate:    FResultSet.UpdateDate(N, Now);
+        stTime:    FResultSet.UpdateTime(N, Now);
+        stTimestamp: FResultSet.UpdateTimestamp(N, now);
+        stGUID: FResultSet.UpdateBytes(N, RandomGUIDBytes);
+        stBytes: FResultSet.UpdateBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N-1]));
+        stAsciiStream: FResultSet.UpdateAsciiStream(N, FAsciiStream);
+        stUnicodeStream: FResultSet.UpdateUnicodeStream(N, FUnicodeStream);
+        stBinaryStream: FResultSet.UpdateBinaryStream(N, FBinaryStream);
       end;
-    ResultSet.InsertRow;
+    FResultSet.InsertRow;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
 
 procedure TZCachedDbcPerformanceTestCase.TearDownTestInsert;
 begin
-  FAsciiStream.Free; 
+  FAsciiStream.Free;
   FUnicodeStream.Free;
   FBinaryStream.Free;
   inherited;

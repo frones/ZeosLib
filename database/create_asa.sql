@@ -126,6 +126,16 @@ create table string_values
 );
 
 /*==============================================================*/
+/* Table : not_null_values                                      */
+/*==============================================================*/
+create table not_null_values
+(
+   n_id                           int              	not null	default autoincrement,
+   n_varchar                      VARCHAR(255)		not null,
+   primary key (n_id)
+);
+
+/*==============================================================*/
 /* Table : Case_Sensitive                                       */
 /*==============================================================*/
 /*create table "Case_Sensitive" (

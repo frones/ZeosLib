@@ -657,7 +657,7 @@ end;
 
 procedure TZPostgreSQLClassicPreparedStatement.UnPrepareInParameters;
 begin
-  if Prepared then
+  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
     ASQL := 'DEALLOCATE '+FRawPlanName+';';
     Execute(ASQL);
@@ -1099,7 +1099,7 @@ procedure TZPostgreSQLCAPIPreparedStatement.Unprepare;
 var
   TempSQL: String;
 begin
-  if Prepared and Assigned(FPostgreSQLConnection) then
+  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
     inherited Unprepare;
     if (not Findeterminate_datatype)  then
