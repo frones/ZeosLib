@@ -74,8 +74,6 @@ type
   {** Implements Abstract ResultSet. }
   TZAbstractResultSet = class(TZCodePagedObject, IZResultSet)
   private
-    FRawTemp: RawByteString;
-    FUniTemp: ZWideString;
     FRowNo: Integer;
     FLastRowNo: Integer;
     FMaxRows: Integer;
@@ -90,6 +88,8 @@ type
     FMetadata: TContainedObject;
     FStatement: IZStatement;
   protected
+    FRawTemp: RawByteString;
+    FUniTemp: ZWideString;
     LastWasNull: Boolean;
 
     function InternalGetString(ColumnIndex: Integer): RawByteString; virtual;

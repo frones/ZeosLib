@@ -90,6 +90,8 @@ type
       ErrorHandle: POCIError);
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
+    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -172,7 +174,8 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZEncoding;
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  ZMessages, ZDbcUtils, ZEncoding;
 
 { TZOracleAbstractResultSet }
 
@@ -228,6 +231,112 @@ begin
 end;
 
 {**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the PAnsiChar String
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+var
+  Blob: IZBlob;
+  SQLVarHolder: PZSQLVar;
+begin
+  SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  Len := 0;
+  Result := nil;
+  if not LastWasNull then
+    case SQLVarHolder.TypeCode of
+      SQLT_INT:
+        begin
+          FRawTemp := IntToRaw(PLongInt(SQLVarHolder.Data)^);
+          Result := PAnsiChar(FRawTemp);
+          Len := Length(FRawTemp);
+        end;
+      SQLT_FLT:
+        begin
+          FRawTemp := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
+          Result := PAnsiChar(FRawTemp);
+          Len := Length(FRawTemp);
+        end;
+      SQLT_STR:
+        begin
+          Result := PAnsiChar(SQLVarHolder.Data);
+          Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Result);
+        end;
+      SQLT_LVB, SQLT_LVC, SQLT_BIN:
+        begin
+          Result := PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer);
+          Len := PInteger(SQLVarHolder.Data)^;
+        end;
+      SQLT_DAT, SQLT_TIMESTAMP:
+        begin
+          FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
+            ConSettings^.FormatSettings, False);
+          Result := PAnsiChar(FRawTemp);
+          Len := Length(FRawTemp);
+        end;
+      SQLT_BLOB, SQLT_CLOB:
+        begin
+          Blob := GetBlob(ColumnIndex);
+          Result := Blob.GetBuffer;
+          Len := Blob.Length;
+        end;
+    end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var
+  Blob: IZBlob;
+  SQLVarHolder: PZSQLVar;
+begin
+  SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  Result := nil;
+  if not LastWasNull then
+    case SQLVarHolder.TypeCode of
+      SQLT_INT:
+        begin
+          FRawTemp := IntToRaw(PLongInt(SQLVarHolder.Data)^);
+          Result := PAnsiChar(FRawTemp);
+        end;
+      SQLT_FLT:
+        begin
+          FRawTemp := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
+          Result := PAnsiChar(FRawTemp);
+        end;
+      SQLT_STR:
+        Result := PAnsiChar(SQLVarHolder.Data);
+      SQLT_LVB, SQLT_LVC, SQLT_BIN:
+        begin
+          Result := PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer);
+        end;
+      SQLT_DAT, SQLT_TIMESTAMP:
+        begin
+          FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
+            ConSettings^.FormatSettings, False);
+          Result := PAnsiChar(FRawTemp);
+        end;
+      SQLT_BLOB, SQLT_CLOB:
+        begin
+          Blob := GetBlob(ColumnIndex);
+          Result := Blob.GetBuffer;
+        end;
+    end;
+end;
+
+{**
   Gets a holder for SQL output variable.
   @param ColumnIndex an index of the column to read.
   @returns an output variable holder or <code>nil</code> if column is empty.
@@ -259,7 +368,6 @@ end;
 function TZOracleAbstractResultSet.GetAsStringValue(ColumnIndex: Integer;
   SQLVarHolder: PZSQLVar): RawByteString;
 var
-  OldSeparator: Char;
   Blob: IZBlob;
 begin
   if SQLVarHolder = nil then
@@ -270,24 +378,15 @@ begin
       SQLT_INT:
         Result := IntToRaw(PLongInt(SQLVarHolder.Data)^);
       SQLT_FLT:
-        begin
-          OldSeparator := {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator;
-          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := '.';
-          Result := NotEmptyStringToASCII7(FloatToSqlStr(PDouble(SQLVarHolder.Data)^));
-          {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldSeparator;
-        end;
+        Result := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
       SQLT_STR:
         Result := PAnsiChar(SQLVarHolder.Data);
       SQLT_LVB, SQLT_LVC, SQLT_BIN:
-        begin
-          ZSetString(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
-            PInteger(SQLVarHolder.Data)^, Result);
-        end;
+        ZSetString(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
+          PInteger(SQLVarHolder.Data)^, Result);
       SQLT_DAT, SQLT_TIMESTAMP:
-        begin
-          Result := NotEmptyStringToASCII7(DateTimeToAnsiSQLDate(
-            GetAsDateTimeValue(ColumnIndex, SQLVarHolder)));
-        end;
+        Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
+          ConSettings^.FormatSettings, False);
       SQLT_BLOB, SQLT_CLOB:
         begin
           Blob := GetBlob(ColumnIndex);
@@ -323,8 +422,8 @@ begin
         Result := Trunc(PDouble(SQLVarHolder.Data)^);
       else
       begin
-        Result := Trunc(SqlStrToFloatDef(
-          GetAsStringValue(ColumnIndex, SQLVarHolder), 0));
+        Result := Trunc(RawToFloatDef(
+          GetAsStringValue(ColumnIndex, SQLVarHolder), '.', 0));
       end;
     end;
   end
