@@ -92,6 +92,8 @@ type
     function GetURL: string;
     procedure SetURL(const Value: string);
     procedure DoOnPropertiesChange(Sender: TObject);
+    function GetParamAndValue(AString: String; Var Param, Value: String): Boolean;
+    procedure AddValues(Values: TStrings);
   public
     constructor Create; overload;
     constructor Create(const AURL: String); overload;
@@ -117,7 +119,7 @@ type
 
 implementation
 
-uses ZCompatibility, ZSysUtils;
+uses ZCompatibility, StrUtils, ZSysUtils;
 
 {TZURLStringList}
 function TZURLStringList.GetTextStr: string;
@@ -148,6 +150,7 @@ begin
   FPrefix := 'zdbc';
   FProperties := TZURLStringList.Create;
   FProperties.CaseSensitive := False;
+  FProperties.NameValueSeparator := '=';
   FProperties.OnChange := DoOnPropertiesChange;
 end;
 
@@ -161,7 +164,7 @@ constructor TZURL.Create(const AURL: String; Info: TStrings);
 begin
   Create(AURL);
   if Assigned(Info) then
-    Self.Properties.AddStrings(Info);
+    AddValues(Info);
 end;
 
 constructor TZURL.Create(const AURL: TZURL);
@@ -179,7 +182,7 @@ begin
   Self.UserName := AUser;
   Self.Password := APassword;
   if Assigned(Info) then
-    Self.Properties.AddStrings(Info);
+    AddValues(Info);
 end;
 
 destructor TZURL.Destroy;
@@ -439,6 +442,34 @@ begin
 
   if Assigned(FOnPropertiesChange) then
     FOnPropertiesChange(Sender);
+end;
+
+function TZURL.GetParamAndValue(AString: String; Var Param, Value: String): Boolean;
+var
+  DelimPos: Integer;
+begin
+  DelimPos := PosEx('=', AString);
+  Result := DelimPos <> 0;
+  Param := '';
+  Value := '';
+  if DelimPos <> 0 then
+  begin
+    Param := Copy(AString, 1, DelimPos -1);
+    Value := Copy(AString, DelimPos+1, Length(AString)-DelimPos);
+    Result := Value <> ''; //avoid loosing empty but added Params. e.g TestIdentifierQuotes
+  end;
+end;
+
+procedure TZURL.AddValues(Values: TStrings);
+var
+  I: Integer;
+  Param, Value: String;
+begin
+  for i := 0 to Values.Count -1 do
+    if GetParamAndValue(Values[i], Param, Value) then
+      FProperties.Values[Param] := Value
+    else
+      FProperties.Add(Values[i]);
 end;
 
 end.

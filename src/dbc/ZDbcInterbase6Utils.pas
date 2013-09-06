@@ -271,7 +271,7 @@ type
   end;
 
   function RandomString(Len: integer): RawByteString;
-  function GetCachedResultSet(SQL: string; Statement: IZStatement;
+  function CreateIBResultSet(SQL: string; Statement: IZStatement;
     NativeResultSet: IZResultSet): IZResultSet;
 
   {Interbase6 Connection Functions}
@@ -469,7 +469,7 @@ end;
   @param NativeResultSet a native result set
   @return cached ResultSet
 }
-function GetCachedResultSet(SQL: string; Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
+function CreateIBResultSet(SQL: string; Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
 var
   CachedResolver: TZInterbase6CachedResolver;
   CachedResultSet: TZCachedResultSet;
@@ -877,11 +877,15 @@ var
   iError : Integer; //Error for disconnect
 begin
   { Allocate an sql statement }
-  PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
-  CheckInterbase6Error(PlainDriver, StatusVector, lcOther, LogSQL);
+  if StmtHandle = 0 then
+  begin
+    PlainDriver.isc_dsql_allocate_statement(@StatusVector, Handle, @StmtHandle);
+    CheckInterbase6Error(PlainDriver, StatusVector, lcOther, LogSQL);
+  end;
   { Prepare an sql statement }
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
     0, PAnsiChar(SQL), Dialect, nil);
+
   iError := CheckInterbase6Error(PlainDriver, StatusVector, lcPrepStmt, LogSQL); //Check for disconnect AVZ
 
   { Set Statement Type }
@@ -968,10 +972,8 @@ var
   StatusVector: TARRAY_ISC_STATUS;
 begin
   if StatementHandle <> 0  then
-  begin
     PlainDriver.isc_dsql_free_statement(@StatusVector, @StatementHandle, Options);
-    CheckInterbase6Error(PlainDriver, StatusVector);
-  end;
+  //CheckInterbase6Error(PlainDriver, StatusVector); //raises an unwanted exception if Connection was reopened  See: http://sourceforge.net/p/zeoslib/tickets/40/
 end;
 
 {**

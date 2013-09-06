@@ -2074,7 +2074,7 @@ begin
           Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, (AttTypMod - 4),
             ConSettings.ClientCodePage.CharWidth))
         else
-          if ( TypeOid = 1043 ) then
+          if (PgType = 'varchar') then
             if ( (GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength = 0 ) then
             begin
               Result.UpdateInt(5, Ord(GetSQLTypeByOid(25))); //Assume text-lob instead

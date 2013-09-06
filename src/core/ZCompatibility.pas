@@ -227,6 +227,17 @@ type
     ZStringToUnicode: TZStringToUnicode;
   end;
 
+  TConFormatSettings = Record
+    DateFormat: RawByteString;
+    DateFormatLen: Cardinal;
+    TimeFormat: RawByteString;
+    TimeFormatMilliPos: Integer;
+    TimeFormatLen: Cardinal;
+    DateTimeFormat: RawByteString;
+    DateTimeFormatLen: Cardinal;
+    DateTimeFormatMilliPos: Integer;
+  End;
+
   PZConSettings = ^TZConSettings;
   TZConSettings = record
     AutoEncode: Boolean;        //Check Encoding and or convert string with FromCP ToCP
@@ -234,12 +245,7 @@ type
     CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    DateFormat: RawByteString;
-    DateFormatLen: Cardinal;
-    TimeFormat: RawByteString;
-    TimeFormatLen: Cardinal;
-    DateTimeFormat: RawByteString;
-    DateTimeFormatLen: Cardinal;
+    FormatSettings: TConFormatSettings;
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;

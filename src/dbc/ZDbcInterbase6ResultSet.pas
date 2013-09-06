@@ -709,6 +709,7 @@ begin
       begin
         FFetchStat := GetPlainDriver.isc_dsql_fetch(@StatusVector,
           @FStmtHandle, GetDialect, FSqlData.GetData);
+        //CheckInterbase6Error(GetPlainDriver, StatusVector, lcOther); //EH to test
       end
       else
       begin     //AVZ - Cursor name has a value therefore the result set already exists

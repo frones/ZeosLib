@@ -95,6 +95,8 @@ type
     StatementType: TZIbSqlStatementType;
   protected
     procedure PrepareInParameters; override;
+    procedure SetASQL(const Value: RawByteString); override;
+    procedure SetWSQL(const Value: ZWideString); override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: string = '') : Integer;
@@ -103,6 +105,7 @@ type
     destructor Destroy; override;
 
     procedure Prepare; override;
+    procedure Unprepare; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -220,21 +223,17 @@ begin
           CheckInterbase6Error(SSQL);
         end;
 
-        Result := GetCachedResultSet(SSQL, Self,
+        Result := CreateIBResultSet(SSQL, Self,
                TZInterbase6ResultSet.Create(Self, LogSQL, StmtHandle, Cursor, SQLData, FCachedBlob));
       end
-        else
-      begin
+      else
         if (iError <> DISCONNECT_ERROR) then
-        begin
           raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-        end;
-      end;
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
-       raise;
+        FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop); //Free Stmt handle only if Execution fails. Otherwise the ResultSet will do this
+        raise;
       end;
     end;
   end;
@@ -287,7 +286,7 @@ begin
         Connection.Commit;
       { Logging SQL Command }
     finally
-      FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
+      FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop); //Free Stmt handle because of single executions without a prepared state
     end;
   end;
 end;
@@ -372,7 +371,7 @@ begin
           CheckInterbase6Error(sSQL);
         end;
 
-        LastResultSet := GetCachedResultSet(SSQL, Self,
+        LastResultSet := CreateIBResultSet(SSQL, Self,
           TZInterbase6ResultSet.Create(Self, SSQL, StmtHandle, Cursor,
             SQLData, FCachedBlob));
       end
@@ -388,7 +387,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
+       FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop); //Free Stmt handle because of single executions without a prepared state
        raise;
       end;
     end;
@@ -422,6 +421,20 @@ begin
       FParamSQLData.InitFields(True);
     end;
   inherited PrepareInParameters;
+end;
+
+procedure TZInterbase6PreparedStatement.SetASQL(const Value: RawByteString);
+begin
+  if ( ASQL <> Value ) and Prepared then
+    Unprepare;
+  inherited SetASQL(Value);
+end;
+
+procedure TZInterbase6PreparedStatement.SetWSQL(const Value: ZWideString);
+begin
+  if ( WSQL <> Value ) and Prepared then
+    Unprepare;
+  inherited SetWSQL(Value);
 end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
@@ -464,34 +477,42 @@ begin
   FIBConnection := Connection as IZInterbase6Connection;
   ResultSetType := rtScrollInsensitive;
   FCachedBlob := StrToBoolEx(DefineStatementParameter(Self, 'cachedblob', 'true'));
+  StmtHandle := 0;
 
   Prepare;
 end;
 
-destructor TZInterbase6PreparedStatement.Destroy;  
+destructor TZInterbase6PreparedStatement.Destroy;
 begin
-  FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_drop);
   inherited Destroy;
+  FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_drop);
 end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
 begin
-  StmtHandle := 0;
   with FIBConnection do
   begin
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, GetEncodedSQL(SQL), SQL, StmtHandle);
+    StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+      GetDBHandle, GetTrHandle, GetDialect, ASQL, LogSQL, StmtHandle); //allocate handle if required or reuse it
+
     if StatementType in [stSelect, stExecProc] then
-      begin
-        SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle
-        , ConSettings);
-        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-          SQL, StmtHandle, SQLData);
-      end;
+    begin
+      SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle,
+        GetTrHandle , ConSettings);
+      PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+        SQL, StmtHandle, SQLData);
+    end;
   end;
   CheckInterbase6Error(SQL);
   LogPrepStmtMessage(lcPrepStmt, SQL);
   inherited Prepare;
+end;
+
+procedure TZInterbase6PreparedStatement.Unprepare;
+begin
+  if StmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
+    FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
+  inherited Unprepare;
 end;
 
 {**
@@ -506,12 +527,13 @@ end;
 function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
-  if StmtHandle = 0 then Prepare;
+  if not Prepared then
+    Prepare;
 
   with FIBConnection do
   begin
     try
-      BindInParameters;     
+      BindInParameters;
 
       if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
@@ -532,16 +554,20 @@ begin
       LastUpdateCount := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
 
       case StatementType of
-        stInsert, stDelete, stUpdate, stSelectForUpdate: Result := False;
-      else
-        Result := True;
+        stInsert,
+        stDelete,
+        stUpdate,
+        stSelectForUpdate:
+          Result := False;
+        else
+          Result := True;
       end;
 
       { Create ResultSet if possible else free Statement Handle }
       if (StatementType in [stSelect, stExecProc])
         and (SQLData.GetFieldCount <> 0) then
       begin
-        LastResultSet := GetCachedResultSet(SQL, Self,
+        LastResultSet := CreateIBResultSet(SQL, Self,
         TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor,
         SQLData, FCachedBlob));
       end
@@ -556,11 +582,8 @@ begin
     except
       on E: Exception do
       begin
-       {if (CursorName <> '') then //AVZ TEST
-       begin
-         StmtHandle := nil;
-       end;}
-       FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
+        {EH: do not Close the Stmt if execution fails !!}
+        //FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
        raise;
       end;
     end;
@@ -581,7 +604,8 @@ function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   iError : Integer; //Check for database disconnect AVZ
 begin
-  if StmtHandle = 0 then Prepare;
+  if not Prepared then
+    Prepare;
 
   with FIBConnection do
   begin
@@ -589,23 +613,17 @@ begin
       BindInParameters;
 
       if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
-      begin
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
-          GetDialect, FParamSQLData.GetData);
-      end
-        else
+          GetDialect, FParamSQLData.GetData)
+      else
       begin
         CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
         if (SQLData = nil) then
-        begin
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
-            GetDialect, FParamSQLData.GetData, nil); //not expecting a result
-        end
-          else
-        begin
+            GetDialect, FParamSQLData.GetData, nil) //not expecting a result
+        else
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, SQLData.GetData); //expecting a result
-        end;
       end;
 
       iError := CheckInterbase6Error(SQL);
@@ -621,7 +639,7 @@ begin
         end;
 
         if (iError <> DISCONNECT_ERROR) then
-          Result := GetCachedResultSet(SQL, Self, TZInterbase6ResultSet.Create(Self, SQL, StmtHandle, Cursor, SQLData, FCachedBlob));
+          Result := CreateIBResultSet(LogSQL, Self, TZInterbase6ResultSet.Create(Self, LogSQL, StmtHandle, Cursor, SQLData, FCachedBlob));
       end
       else
         if (iError <> DISCONNECT_ERROR) then    //AVZ
@@ -635,7 +653,8 @@ begin
         if (Pos('ExecProc', String(CursorName)) <> 0) then
           StmtHandle := 0;
 
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
+        {EH: do not Close the Stmt if execution fails !! This will be done on unprepare}
+        //FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
         raise;
       end;
     end;
@@ -661,31 +680,32 @@ var
 begin
   Result := -1;
 
-  if StmtHandle = 0 then Prepare;
+  if not Prepared then
+    Prepare;
 
   with FIBConnection do
   begin
-      BindInParameters;
+    BindInParameters;
 
-      GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
-        @StmtHandle, GetDialect, FParamSQLData.GetData);
-      iError := CheckInterbase6Error(SQL);
+    GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
+      @StmtHandle, GetDialect, FParamSQLData.GetData);
+    iError := CheckInterbase6Error(SQL);
 
-      Result := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
-      LastUpdateCount := Result;
+    Result := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType);
+    LastUpdateCount := Result;
 
-      case StatementType of
-        stCommit, stRollback, stUnknown: Result := -1;
-        stSelect           : FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
-        stDelete: if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
-        stUpdate: ; //EgonHugeist - but not a UpdateStatement!
-      end;
+    case StatementType of
+      stCommit, stRollback, stUnknown: Result := -1;
+      stSelect: FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
+      stDelete: if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
+      stUpdate: ; //EgonHugeist - but not a UpdateStatement!
+    end;
 
 
 
-      { Autocommit statement. }
-      if Connection.GetAutoCommit then
-        Connection.Commit;
+    { Autocommit statement. }
+    if Connection.GetAutoCommit and ( StatementType <> stSelect ) then
+      Connection.Commit;
   end;
   inherited ExecuteUpdatePrepared;
 
@@ -819,7 +839,7 @@ begin
         and (FResultSQLData.GetFieldCount <> 0) then
       begin
         Cursor := RandomString(12);
-        LastResultSet := GetCachedResultSet(SQL, Self,
+        LastResultSet := CreateIBResultSet(SQL, Self,
            TZInterbase6ResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, FCachedBlob));
       end
       else
@@ -837,7 +857,7 @@ begin
     except
       on E: Exception do
       begin
-       FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
+       //FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
        raise;
       end;
     end;
@@ -885,7 +905,7 @@ begin
           CheckInterbase6Error(ProcSql);
         end;
 
-        Result := GetCachedResultSet(ProcSql, Self,
+        Result := CreateIBResultSet(ProcSql, Self,
           TZInterbase6ResultSet.Create(Self, ProcSql, FStmtHandle, Cursor,
           FResultSQLData, FCachedBlob));
       end;
@@ -893,7 +913,7 @@ begin
     except
       on E: Exception do
       begin
-        FreeStatement(GetPlainDriver, FStmtHandle, DSQL_unprepare); //AVZ
+        //FreeStatement(GetPlainDriver, FStmtHandle, DSQL_unprepare); //AVZ
         raise;
       end;
     end;

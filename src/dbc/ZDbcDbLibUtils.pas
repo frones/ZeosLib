@@ -402,13 +402,13 @@ begin
         end;
       stDate:
         Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-          PAnsiChar(ConSettings^.DateFormat), ConSettings^.DateFormatLen, True);
+          ConSettings^.FormatSettings, True);
       stTime:
         Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-          PAnsiChar(ConSettings^.TimeFormat), ConSettings^.TimeFormatLen, True);
+          ConSettings^.FormatSettings, True);
       stTimestamp:
         Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-          PAnsiChar(ConSettings^.DateTimeFormat), ConSettings^.DateTimeFormatLen, True);
+          ConSettings^.FormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;

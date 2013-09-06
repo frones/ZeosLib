@@ -777,23 +777,26 @@ begin
           Result := ZDbcPostgreSqlUtils.PGEscapeString(Connection.GetConnectionHandle,
             PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
       stDate:
-        begin
+        if DateTimePrefix then
           Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            'YYYY-MM-DD', 10, True);
-          if DateTimePrefix then Result := Result + '::date';
-        end;
+            ConSettings^.FormatSettings, True, '::date')
+        else
+          Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+            ConSettings^.FormatSettings, True);
       stTime:
-        begin
+        if DateTimePrefix then
           Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-            'hh:nn:ss.zzz', 12, True);
-          if DateTimePrefix then Result := Result + '::time';
-        end;
+            ConSettings^.FormatSettings, True, '::time')
+        else
+          Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+            ConSettings^.FormatSettings, True);
       stTimestamp:
-        begin
+        if DateTimePrefix then
           Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-            'yyyy-mm-dd hh:nn:ss.zzz', 23, True);
-          if DateTimePrefix then Result := Result + '::timestamp';
-        end;
+            ConSettings^.FormatSettings, True, '::timestamp')
+        else
+          Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+            ConSettings^.FormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;

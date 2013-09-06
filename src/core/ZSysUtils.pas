@@ -391,7 +391,7 @@ function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
@@ -402,7 +402,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
@@ -412,7 +412,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   @return a formated RawByteString with Time-Format pattern.
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
@@ -422,7 +422,7 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
@@ -432,7 +432,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
@@ -442,7 +442,7 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
@@ -2184,22 +2184,26 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Cardinal;
   sYear, sMonth, sDay: RawByteString;
   YLen, MLen, DLen: Integer;
+  DateFormat: PAnsiChar;
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  Result := '';
   sYear := Concat0(IntToRaw(AYear), 4);
   sMonth := Concat0(IntToRaw(AMonth), 2);
   sDay := Concat0(IntToRaw(ADay), 2);
-  SetLength(Result, DateFromatLen);
+
+  Result := '';
+  SetLength(Result, ConFormatSettings.DateFormatLen);
+
+  DateFormat := PAnsiChar(ConFormatSettings.DateFormat);
   YLen := 4; MLen := 2; DLen := 2;
-  for i := DateFromatLen-1 downto 0 do
+  for i := ConFormatSettings.DateFormatLen-1 downto 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
         begin
@@ -2230,22 +2234,26 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  DateFormat: PAnsiChar; const DateFromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Cardinal;
   sYear, sMonth, sDay: ZWideString;
   YLen, MLen, DLen: Integer;
+  DateFormat: PAnsiChar;
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  Result := '';
   sYear := Concat0(IntToUnicode(AYear), 4);
   sMonth := Concat0(IntToUnicode(AMonth), 2);
   sDay := Concat0(IntToUnicode(ADay), 2);
-  SetLength(Result, DateFromatLen);
+
+  Result := '';
+  SetLength(Result, ConFormatSettings.DateFormatLen);
+
+  DateFormat := PAnsiChar(ConFormatSettings.DateFormat);
   YLen := 4; MLen := 2; DLen := 2;
-  for i := DateFromatLen-1 downto 0 do
+  for i := ConFormatSettings.DateFormatLen-1 downto 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
         begin
@@ -2277,24 +2285,31 @@ end;
 }
 {$WARNINGS OFF} //suppress D2007 Waring for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Cardinal;
   sHour, sMin, sSec, sMSec: RawByteString;
   HLen, NLen, SLen, ZLen: Integer;
+  TimeFormat: PAnsiChar;
 begin
-  Result := '';
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   sHour := Concat0(IntToRaw(AHour), 2);
   sMin := Concat0(IntToRaw(AMinute), 2);
   sSec := Concat0(IntToRaw(ASecond), 2);
-  sMSec := Concat0(IntToRaw(AMilliSecond), 3);
-  SetLength(Result, FromatLen);
+  if AMilliSecond < 100 then
+    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
+  else
+    sMSec := IntToRaw(AMilliSecond);
+
+  Result := '';
+  SetLength(Result, ConFormatSettings.TimeFormatLen);
+
+  TimeFormat := PAnsiChar(ConFormatSettings.TimeFormat);
   HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := FromatLen-1 downto 0 do
+  for i := ConFormatSettings.TimeFormatLen-1 downto 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
@@ -2330,24 +2345,31 @@ end;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  TimeFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Cardinal;
   sHour, sMin, sSec, sMSec: ZWideString;
   HLen, NLen, SLen, ZLen: Integer;
+  TimeFormat: PAnsiChar;
 begin
-  Result := '';
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   sHour := Concat0(IntToUnicode(AHour), 2);
   sMin := Concat0(IntToUnicode(AMinute), 2);
   sSec := Concat0(IntToUnicode(ASecond), 2);
-  sMSec := Concat0(IntToUnicode(AMilliSecond), 3);
-  SetLength(Result, FromatLen);
+  if AMilliSecond < 100 then
+    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
+  else
+    sMSec := IntToRaw(AMilliSecond);
+
+  Result := ''; //speed up setlength
+  SetLength(Result, ConFormatSettings.TimeFormatLen);
+
+  TimeFormat := PAnsiChar(ConFormatSettings.TimeFormat);
   HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := FromatLen-1 downto 0 do
+  for i := ConFormatSettings.TimeFormatLen -1 downto 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
@@ -2384,15 +2406,15 @@ end;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Cardinal;
   sYear, sMonth, sDay, sHour, sMin, sSec, sMSec: RawByteString;
   YLen, MLen, DLen, HLen, NLen, SLen, ZLen: Integer;
+  TimeStampFormat: PAnsiChar;
 begin
-  Result := '';
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   sYear := Concat0(IntToRaw(AYear), 4);
@@ -2401,10 +2423,17 @@ begin
   sHour := Concat0(IntToRaw(AHour), 2);
   sMin := Concat0(IntToRaw(AMinute), 2);
   sSec := Concat0(IntToRaw(ASecond), 2);
-  sMSec := Concat0(IntToRaw(AMilliSecond), 3);
-  SetLength(Result, FromatLen);
+  if AMilliSecond < 100 then
+    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
+  else
+    sMSec := IntToRaw(AMilliSecond);
+
+  Result := '';
+  SetLength(Result, ConFormatSettings.DateTimeFormatLen);
+
+  TimeStampFormat := PAnsiChar(ConFormatSettings.DateTimeFormat);
   YLen := 4; MLen := 2; DLen := 2; HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := FromatLen-1 downto 0 do
+  for i := ConFormatSettings.DateTimeFormatLen-1 downto 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
         begin
@@ -2455,15 +2484,15 @@ end;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  TimeStampFormat: PAnsiChar; const FromatLen: Cardinal;
+  ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Cardinal;
   sYear, sMonth, sDay, sHour, sMin, sSec, sMSec: ZWideString;
   YLen, MLen, DLen, HLen, NLen, SLen, ZLen: Integer;
+  TimeStampFormat: PAnsiChar;
 begin
-  Result := '';
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   sYear := Concat0(IntToUnicode(AYear), 4);
@@ -2472,10 +2501,17 @@ begin
   sHour := Concat0(IntToUnicode(AHour), 2);
   sMin := Concat0(IntToUnicode(AMinute), 2);
   sSec := Concat0(IntToUnicode(ASecond), 2);
-  sMSec := Concat0(IntToUnicode(AMilliSecond), 3);
-  SetLength(Result, FromatLen);
+  if AMilliSecond < 100 then
+    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
+  else
+    sMSec := IntToRaw(AMilliSecond);
+
+  Result := '';
+  SetLength(Result, ConFormatSettings.DateTimeFormatLen);
+
+  TimeStampFormat := PAnsiChar(ConFormatSettings.DateTimeFormat);
   YLen := 4; MLen := 2; DLen := 2; HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := FromatLen-1 downto 0 do
+  for i := ConFormatSettings.DateTimeFormatLen-1 downto 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
         begin
@@ -5147,4 +5183,5 @@ begin
 end;
 
 end.
+
 

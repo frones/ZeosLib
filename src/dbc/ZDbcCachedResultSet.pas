@@ -305,6 +305,16 @@ begin
   RowAccessor.SetRawByteString(ColumnIndex, ResultSet.GetRawByteString(ColumnIndex));
 end;
 
+procedure ZStringFieldAssignFromResultSet_PAnsiChar(RowAccessor: TZRowAccessor;
+    ResultSet: IZResultSet; const ColumnIndex: Integer);
+var
+  Buffer: PAnsiChar;
+  Len: Cardinal;
+begin
+  Buffer := ResultSet.GetPAnsiChar(ColumnIndex, Len);
+  RowAccessor.SetPAnsiChar(ColumnIndex, Buffer, Len);
+end;
+
 procedure ZStringFieldAssignFromResultSet_UnicodeEncoded(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
 begin
@@ -1970,7 +1980,8 @@ begin
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   if Statement.GetConnection.GetIZPlainDriver.IsAnsiDriver and
     ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_RawEncoded
+      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_PAnsiChar
+      //FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_RawEncoded
     else
       FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_UnicodeEncoded;
   Open;

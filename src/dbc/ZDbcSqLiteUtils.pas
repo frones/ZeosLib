@@ -77,6 +77,7 @@ function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
+  Handle: PSqlite;
   ErrorCode: Integer; ErrorMessage: PAnsiChar;
   LogCategory: TZLoggingCategory; LogMessage: string);
 
@@ -234,6 +235,7 @@ end;
   @param LogMessage a logging message.
 }
 procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
+  Handle: PSqlite;
   ErrorCode: Integer; ErrorMessage: PAnsiChar;
   LogCategory: TZLoggingCategory; LogMessage: string);
 var
@@ -257,7 +259,7 @@ begin
   if not (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
   begin
     if Error = '' then
-      Error := PlainDriver.ErrorString(ErrorCode);
+      Error := PlainDriver.ErrorString(Handle, ErrorCode);
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       ErrorCode, Error);
     raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1, [Error]));

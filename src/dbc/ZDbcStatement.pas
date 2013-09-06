@@ -466,7 +466,7 @@ end;
 }
 procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
-  if WSQL <> Value then
+  if FWSQL <> Value then
   begin
     {$IFDEF UNICODE}
     FaSQL := GetEncodedSQL(Value);
@@ -479,7 +479,7 @@ end;
 
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
-  if ASQL <> Value then
+  if FASQL <> Value then
   begin
     {$IFNDEF UNICODE}
     FASQL := GetEncodedSQL(Value);

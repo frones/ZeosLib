@@ -61,7 +61,8 @@ uses
 {$ENDIF}
   Variants,
   Types, SysUtils, DB, Classes, ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
-  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression;
+  Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression
+  {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
 type
   {$IFDEF xFPC} // fixed in r3943 or earlier 2006-06-25
@@ -295,10 +296,11 @@ type
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     procedure InternalDelete; override;
     procedure InternalPost; override;
-
+    {$IFNDEF FPC}
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean); override;
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
+    {$ENDIF}
     procedure DefineProperties(Filer: TFiler); override;
 
 {$IFDEF WITH_TRECORDBUFFER}
@@ -446,6 +448,11 @@ type
     function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
     function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean): Boolean; override;
+    {$IFDEF FPC}
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+      NativeFormat: Boolean); override;
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
+    {$ENDIF}
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
     function UpdateStatus: TUpdateStatus; override;
@@ -638,7 +645,9 @@ begin
   FMasterLink := TMasterDataLink.Create(Self);
   FMasterLink.OnMasterChange := MasterChanged;
   FMasterLink.OnMasterDisable := MasterDisabled;
-  {$IFNDEF WITH_GENERIC_TLISTTFIELD}
+  {$IFDEF WITH_GENERIC_TLISTTFIELD}
+  FIndexFields := TList<TField>.Create;
+  {$ELSE}
   FIndexFields := TList.Create;
   {$ENDIF}
 end;
@@ -665,9 +674,7 @@ begin
 
   FreeAndNil(FDataLink);
   FreeAndNil(FMasterLink);
-  {$IFNDEF WITH_GENERIC_TLISTTFIELD}
   FreeAndNil(FIndexFields);
-  {$ENDIF}
 
   inherited Destroy;
 end;
@@ -1059,15 +1066,9 @@ begin
   begin
     for I := 0 to MasterLink.Fields.Count - 1 do
     begin
-      {$IFDEF WITH_GENERIC_TLISTTFIELD}
-      if I <= High(IndexFields) then
-      {$ELSE}
       if I < IndexFields.Count then
-      {$ENDIF}
-      begin
         Result := CompareKeyFields(TField(IndexFields[I]), ResultSet,
           TField(MasterLink.Fields[I]));
-      end;
 
       if not Result then
         Break;
@@ -1890,9 +1891,7 @@ begin
     FieldsLookupTable := CreateFieldsLookupTable(Fields);
     InitFilterFields := False;
 
-    {$IFNDEF WITH_GENERIC_TLISTTFIELD}
     IndexFields.Clear;
-    {$ENDIF}
     GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
 
     { Performs sorting. }
@@ -2170,11 +2169,7 @@ begin
   begin
     for I := 0 to MasterLink.Fields.Count - 1 do
     begin
-      {$IFDEF WITH_GENERIC_TLISTTFIELD}
-      if I <= High(IndexFields) then
-      {$ELSE}
       if I < IndexFields.Count then
-      {$ENDIF}
       begin
         MasterField := TField(MasterLink.Fields[I]);
         DetailField := TField(IndexFields[I]);
@@ -2233,9 +2228,7 @@ begin
   if FLinkedFields <> Value then {renamed by bangfauzan}
   begin
     FLinkedFields := Value; {renamed by bangfauzan}
-    {$IFNDEF WITH_GENERIC_TLISTTFIELD}
     IndexFields.Clear;
-    {$ENDIF}
     if State <> dsInactive then
     begin
       GetFieldList(IndexFields, FLinkedFields); {renamed by bangfauzan}
@@ -2251,9 +2244,7 @@ end;
 procedure TZAbstractRODataset.SetOptions(Value: TZDatasetOptions);
 begin
   if FOptions <> Value then
-  begin
     FOptions := Value;
-  end;
 end;
 
 {**
@@ -2277,10 +2268,10 @@ begin
     if Active then
       {InternalSort;}
       {bangfauzan modification}
-       if (FSortedFields = '') then
-          Self.InternalRefresh
-       else
-          InternalSort;
+      if (FSortedFields = '') then
+        Self.InternalRefresh
+      else
+        InternalSort;
       {end of bangfauzan modification}
   end;
 end;

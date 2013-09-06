@@ -661,7 +661,7 @@ end;
 
 procedure TZPostgreSQLClassicPreparedStatement.UnPrepareInParameters;
 begin
-  if Prepared then
+  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
     ASQL := 'DEALLOCATE '+FRawPlanName+';';
     Execute(ASQL);
@@ -963,13 +963,13 @@ begin
           UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stDate:
           UpdateString(DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            'YYYY-MM-DD', 10, False), ParamIndex);
+            ConSettings^.FormatSettings, False), ParamIndex);
         stTime:
           UpdateString(DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-            'hh:nn:ss.zzz', 12, False), ParamIndex);
+            ConSettings^.FormatSettings, False), ParamIndex);
         stTimestamp:
           UpdateString(DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-            'yyyy-mm-dd hh:nn:ss.zzz', 23, False), ParamIndex);
+            ConSettings^.FormatSettings, False), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -1103,7 +1103,7 @@ procedure TZPostgreSQLCAPIPreparedStatement.Unprepare;
 var
   TempSQL: String;
 begin
-  if Prepared and Assigned(FPostgreSQLConnection) then
+  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
     inherited Unprepare;
     if (not Findeterminate_datatype)  then

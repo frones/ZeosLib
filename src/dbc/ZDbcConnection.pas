@@ -141,6 +141,7 @@ type
     FTestMode: Byte;
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
+    procedure SetDateTimeFormatProperties;
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
@@ -296,8 +297,8 @@ end;
 
 implementation
 
-uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
+uses ZMessages, ZSysUtils, ZDbcMetadata, ZDbcUtils, ZEncoding,
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings{$ELSE}StrUtils{$ENDIF};
 
 { TZAbstractDriver }
 
@@ -597,6 +598,30 @@ begin
   Result := FURL.Properties;
 end;
 
+procedure TZAbstractConnection.SetDateTimeFormatProperties;
+begin
+  ConSettings^.FormatSettings.DateFormat := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(ConSettings^.FormatSettings.DateFormat);
+  ConSettings^.FormatSettings.TimeFormat := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(ConSettings^.FormatSettings.TimeFormat);
+  ConSettings^.FormatSettings.DateTimeFormat := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(ConSettings^.FormatSettings.DateTimeFormat);
+
+  ConSettings^.FormatSettings.DateFormatLen := Length(ConSettings^.FormatSettings.DateFormat);
+  ConSettings^.FormatSettings.TimeFormatLen := Length(ConSettings^.FormatSettings.TimeFormat);
+  ConSettings^.FormatSettings.DateTimeFormatLen := Length(ConSettings^.FormatSettings.DateTimeFormat);
+
+  ConSettings^.FormatSettings.TimeFormatMilliPos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}PosEx('Z',ConSettings^.FormatSettings.TimeFormat, 1);
+  if (ConSettings^.FormatSettings.TimeFormatMilliPos > 0) then
+    while not CharInSet(ConSettings^.FormatSettings.TimeFormat[ConSettings^.FormatSettings.TimeFormatMilliPos], ['Y','M','D','H','N','S']) do
+      Dec(ConSettings^.FormatSettings.TimeFormatMilliPos) //exclude possible delimiters too
+  else
+    ConSettings^.FormatSettings.TimeFormatMilliPos := ConSettings^.FormatSettings.TimeFormatLen;
+  ConSettings^.FormatSettings.DateTimeFormatMilliPos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}PosEx('Z',ConSettings^.FormatSettings.DateTimeFormat, 1);
+  if (ConSettings^.FormatSettings.DateTimeFormatMilliPos > 0) then
+    while not CharInSet(ConSettings^.FormatSettings.DateTimeFormat[ConSettings^.FormatSettings.DateTimeFormatMilliPos], ['Y','M','D','H','N','S']) do
+      Dec(ConSettings^.FormatSettings.DateTimeFormatMilliPos) //exclude possible delimiters too
+  else
+    ConSettings^.FormatSettings.DateTimeFormatMilliPos := ConSettings^.FormatSettings.TimeFormatLen;
+end;
+
 function TZAbstractConnection.GetEncoding: TZCharEncoding;
 begin
   Result := ConSettings.ClientCodePage^.Encoding;
@@ -707,7 +732,6 @@ begin
   FURL.OnPropertiesChange := OnPropertiesChange;
   FURL.URL := ZUrl.URL;
 
-  Info.NameValueSeparator := '=';
   FClientCodePage := Info.Values['codepage'];
   {CheckCharEncoding}
   ConSettings := New(PZConSettings);
@@ -721,23 +745,21 @@ begin
   InternalCreate;
 
   if Info.Values['dateformat'] = '' then
-    ConSettings^.DateFormat := 'YYYY-MM-DD'
+    ConSettings^.FormatSettings.DateFormat := 'YYYY-MM-DD'
   else
-    ConSettings^.DateFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['dateformat']));
+    ConSettings^.FormatSettings.DateFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['dateformat']));
   if Info.Values['timeformat'] = '' then
     if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-      ConSettings^.TimeFormat := 'HH:NN:SS.ZZZ'
+      ConSettings^.FormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
     else
-      ConSettings^.TimeFormat := 'HH:NN:SS'
+      ConSettings^.FormatSettings.TimeFormat := 'HH:NN:SS'
   else
-    ConSettings^.TimeFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['timeformat']));
+    ConSettings^.FormatSettings.TimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['timeformat']));
   if Info.Values['datetimeformat'] = '' then
-    ConSettings^.DateTimeFormat := ConSettings^.DateFormat+' '+ConSettings^.TimeFormat
+    ConSettings^.FormatSettings.DateTimeFormat := ConSettings^.FormatSettings.DateFormat+' '+ConSettings^.FormatSettings.TimeFormat
   else
-    ConSettings^.DateTimeFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['datetimeformat']));
-  ConSettings^.DateFormatLen :=  Length(ConSettings^.DateFormat);
-  ConSettings^.TimeFormatLen :=  Length(ConSettings^.TimeFormat);
-  ConSettings^.DateTimeFormatLen := Length(ConSettings^.DateTimeFormat);
+    ConSettings^.FormatSettings.DateTimeFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['datetimeformat']));
+  SetDateTimeFormatProperties;
 
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;

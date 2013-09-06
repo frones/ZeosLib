@@ -658,23 +658,33 @@ begin
       and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] )) then
     ColumnInfo.ColumnType := tempColType;
   end;
-  if not FConSettings^.ClientCodePage^.IsStringFieldCPConsistent and
-    ResultSet.GetStatement.GetConnection.GetIZPlainDriver.IsAnsiDriver then //this excludes oracle and ado
-    if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
-      if (UpperCase(TableColumns.GetString(6)) = 'NVARCHAR') or (UpperCase(TableColumns.GetString(6)) = 'NCHAR') then
-        ColumnInfo.ColumnCodePage := zCP_UTF8
-      else
-        ColumnInfo.ColumnCodePage :=FConSettings^.ClientCodePage^.CP
+  if FConSettings = nil then //fix if on creation nil was assigned
+    FConSettings := ResultSet.GetStatement.GetConnection.GetConSettings;
+
+  {Assign ColumnCodePages}
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then //all except ADO and DBLib (currently)
+      ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    else
+      if ResultSet.GetStatement.GetConnection.GetIZPlainDriver.IsAnsiDriver then //this excludes ADO which is allways 2Byte-String based
+        if (UpperCase(TableColumns.GetString(6)) = 'NVARCHAR') or (UpperCase(TableColumns.GetString(6)) = 'NCHAR') then
+          ColumnInfo.ColumnCodePage := zCP_UTF8
+        else
+          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume lacale codepage
   else
-    ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP;
+    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+  {nullable}
   if not TableColumns.IsNull(11) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(11));
+  {auto increment field}
   if not TableColumns.IsNull(19) then
     ColumnInfo.AutoIncrement := TableColumns.GetBoolean(19);
+  {Case sensitive}
   if not TableColumns.IsNull(20) then
     ColumnInfo.CaseSensitive := TableColumns.GetBoolean(20);
   if not TableColumns.IsNull(21) then
     ColumnInfo.Searchable := TableColumns.GetBoolean(21);
+  {Writable}
   if not TableColumns.IsNull(22) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
@@ -683,6 +693,7 @@ begin
         ColumnInfo.Writable := False
     else
       ColumnInfo.Writable := TableColumns.GetBoolean(22);
+  {DefinitelyWritable}
   if not TableColumns.IsNull(23) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
@@ -691,6 +702,7 @@ begin
         ColumnInfo.DefinitelyWritable := False
     else
       ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23);
+  {readonly}
   if not TableColumns.IsNull(24) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
@@ -699,6 +711,7 @@ begin
         ColumnInfo.ReadOnly := True
     else
       ColumnInfo.ReadOnly := TableColumns.GetBoolean(24);
+  {default value}
   if not TableColumns.IsNull(13) then
     ColumnInfo.DefaultValue := TableColumns.GetString(13);
 end;

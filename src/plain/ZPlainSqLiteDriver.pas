@@ -270,10 +270,10 @@ type
     sqlite_callback: Tsqlite_callback; arg: Pointer;
     var errmsg: PAnsiChar): Integer; cdecl;
   Tsqlite_errmsg = function(db: Psqlite): PAnsiChar; cdecl;
+  Tsqlite_errstr = function(code: Integer): PAnsiChar; cdecl;
   Tsqlite_last_insert_rowid = function(db: Psqlite): Integer; cdecl;
   Tsqlite_changes = function(db: Psqlite): Integer; cdecl;
   Tsqlite_last_statement_changes = function(db: Psqlite): Integer; cdecl;
-  Tsqlite_error_string = function(code: Integer): PAnsiChar; cdecl;
   Tsqlite_interrupt = procedure(db: Psqlite); cdecl;
   Tsqlite_complete = function(const sql: PAnsiChar): Integer; cdecl;
   Tsqlite_busy_handler = procedure(db: Psqlite;
@@ -385,10 +385,10 @@ TZSQLite_API = record
 
   sqlite_exec: Tsqlite_exec;
   sqlite_errmsg: Tsqlite_errmsg;
+  sqlite_errstr: Tsqlite_errstr;
   sqlite_last_insert_rowid: Tsqlite_last_insert_rowid;
   sqlite_changes: Tsqlite_changes;
   sqlite_last_statement_changes: Tsqlite_last_statement_changes;
-  sqlite_error_string: Tsqlite_error_string;
   sqlite_interrupt: Tsqlite_interrupt;
   sqlite_complete: Tsqlite_complete;
   sqlite_busy_handler: Tsqlite_busy_handler;
@@ -432,7 +432,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): String;
+    function ErrorString(db: Psqlite; code: Integer): String;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -561,7 +561,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(code: Integer): String;
+    function ErrorString(db: Psqlite; code: Integer): String;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -767,38 +767,85 @@ begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLiteBaseDriver.ErrorString(code: Integer): String;
+function TZSQLiteBaseDriver.ErrorString(db: Psqlite; code: Integer): String;
+var
+  ErrorMessagePointer: PAnsiChar;
+  ErrorMessage: String;
+  ErrorString: String;
 begin
-   case code of
-    SQLITE_OK:         Result := 'not an error';
-    SQLITE_ERROR:      Result := 'SQL logic error or missing database';
-    SQLITE_INTERNAL:   Result := 'internal SQLite implementation flaw';
-    SQLITE_PERM:       Result := 'access permission denied';
-    SQLITE_ABORT:      Result := 'callback requested query abort';
-    SQLITE_BUSY:       Result := 'database is locked';
-    SQLITE_LOCKED:     Result := 'database table is locked';
-    SQLITE_NOMEM:      Result := 'out of memory';
-    SQLITE_READONLY:   Result := 'attempt to write a readonly database';
-    _SQLITE_INTERRUPT:  Result := 'interrupted';
-    SQLITE_IOERR:      Result := 'disk I/O error';
-    SQLITE_CORRUPT:    Result := 'database disk image is malformed';
-    SQLITE_NOTFOUND:   Result := 'table or record not found';
-    SQLITE_FULL:       Result := 'database is full';
-    SQLITE_CANTOPEN:   Result := 'unable to open database file';
-    SQLITE_PROTOCOL:   Result := 'database locking protocol failure';
-    SQLITE_EMPTY:      Result := 'table contains no data';
-    SQLITE_SCHEMA:     Result := 'database schema has changed';
-    SQLITE_TOOBIG:     Result := 'too much data for one table row';
-    SQLITE_CONSTRAINT: Result := 'constraint failed';
-    SQLITE_MISMATCH:   Result := 'datatype mismatch';
-    SQLITE_MISUSE:     Result := 'library routine called out of sequence';
-    SQLITE_NOLFS:      Result := 'kernel lacks large file support';
-    SQLITE_AUTH:       Result := 'authorization denied';
-    SQLITE_FORMAT:     Result := 'auxiliary database format error';
-    SQLITE_RANGE:      Result := 'bind index out of range';
-    SQLITE_NOTADB:     Result := 'file is encrypted or is not a database';
-   else
+  if code = SQLITE_OK then
+  begin
+    Result := 'not an error';
+    Exit;
+  end;
+
+  if code = SQLITE_NOMEM then
+  begin
+    Result := 'out of memory';
+    Exit;
+  end;
+
+  if ( db = nil ) or ( @SQLite_API.sqlite_errstr = nil ) then
+  begin
+    case code of
+      SQLITE_OK:         Result := 'not an error';
+      SQLITE_ERROR:      Result := 'SQL logic error or missing database';
+      SQLITE_INTERNAL:   Result := 'internal SQLite implementation flaw';
+      SQLITE_PERM:       Result := 'access permission denied';
+      SQLITE_ABORT:      Result := 'callback requested query abort';
+      SQLITE_BUSY:       Result := 'database is locked';
+      SQLITE_LOCKED:     Result := 'database table is locked';
+      SQLITE_NOMEM:      Result := 'out of memory';
+      SQLITE_READONLY:   Result := 'attempt to write a readonly database';
+      _SQLITE_INTERRUPT:  Result := 'interrupted';
+      SQLITE_IOERR:      Result := 'disk I/O error';
+      SQLITE_CORRUPT:    Result := 'database disk image is malformed';
+      SQLITE_NOTFOUND:   Result := 'table or record not found';
+      SQLITE_FULL:       Result := 'database is full';
+      SQLITE_CANTOPEN:   Result := 'unable to open database file';
+      SQLITE_PROTOCOL:   Result := 'database locking protocol failure';
+      SQLITE_EMPTY:      Result := 'table contains no data';
+      SQLITE_SCHEMA:     Result := 'database schema has changed';
+      SQLITE_TOOBIG:     Result := 'too much data for one table row';
+      SQLITE_CONSTRAINT: Result := 'constraint failed';
+      SQLITE_MISMATCH:   Result := 'datatype mismatch';
+      SQLITE_MISUSE:     Result := 'library routine called out of sequence';
+      SQLITE_NOLFS:      Result := 'kernel lacks large file support';
+      SQLITE_AUTH:       Result := 'authorization denied';
+      SQLITE_FORMAT:     Result := 'auxiliary database format error';
+      SQLITE_RANGE:      Result := 'bind index out of range';
+      SQLITE_NOTADB:     Result := 'file is encrypted or is not a database';
+    else
       Result := 'unknown error';
+    end;
+
+    exit;
+  end
+  else
+  begin
+    ErrorMessagePointer := Self.SQLite_API.sqlite_errstr(code);
+    {$IFDEF UNICODE}
+    ErrorString := Trim(UTF8ToUnicodeString(ErrorMessagePointer));
+    {$ELSE}
+      {$IFNDEF FPC}
+      ErrorString := Trim(UTF8ToAnsi(StrPas(ErrorMessagePointer)));
+      {$ELSE}
+      ErrorString := Trim(ErrorMessagePointer);
+      {$ENDIF}
+    {$ENDIF}
+
+    ErrorMessagePointer := Self.SQLite_API.sqlite_errmsg(db);
+    {$IFDEF UNICODE}
+    ErrorMessage := Trim(UTF8ToUnicodeString(ErrorMessagePointer));
+    {$ELSE}
+      {$IFNDEF FPC}
+      ErrorMessage := Trim(UTF8ToAnsi(ErrorMessagePointer));
+      {$ELSE}
+      ErrorMessage := Trim(ErrorMessagePointer);
+      {$ENDIF}
+    {$ENDIF}
+
+    Result := ErrorString + ': ' + ErrorMessage;
   end;
 end;
 
@@ -1314,6 +1361,7 @@ begin
   @SQLite_API.sqlite_changes                := GetAddress('sqlite3_changes');
 //  @SQLite_API.sqlite_last_statement_changes := GetAddress('sqlite3_last_statement_changes');
   @SQLite_API.sqlite_errmsg                 := GetAddress('sqlite3_errmsg');
+  @SQLite_API.sqlite_errstr                 := GetAddress('sqlite3_errstr');
   @SQLite_API.sqlite_interrupt              := GetAddress('sqlite3_interrupt');
   @SQLite_API.sqlite_complete               := GetAddress('sqlite3_complete');
   @SQLite_API.sqlite_busy_handler           := GetAddress('sqlite3_busy_handler');

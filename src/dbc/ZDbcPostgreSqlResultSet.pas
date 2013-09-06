@@ -596,12 +596,12 @@ begin
     Result := 0
   else
   begin
-    if Len = ConSettings^.DateFormatLen then
-      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
-       Len, ConSettings^.DateFormatLen, Failed)
+    if Len = ConSettings^.FormatSettings.DateFormatLen then
+      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
+       Len, ConSettings^.FormatSettings.DateFormatLen, Failed)
     else
-      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
-        Len, ConSettings^.DateTimeFormatLen, Failed));
+      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+        Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
   end;
 end;
 
@@ -628,12 +628,12 @@ begin
   if LastWasNull then
     Result := 0
   else
-    if not (Len > ConSettings^.TimeFormatLen) and ( ( ConSettings^.TimeFormatLen - Len) <= 4 )then
-      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
-       Len, ConSettings^.TimeFormatLen, Failed)
+    if not (Len > ConSettings^.FormatSettings.TimeFormatLen) and ( ( ConSettings^.FormatSettings.TimeFormatLen - Len) <= 4 )then
+      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
+       Len, ConSettings^.FormatSettings.TimeFormatLen, Failed)
     else
-      Result := Frac(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
-        Len, ConSettings^.DateTimeFormatLen, Failed));
+      Result := Frac(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+        Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
 end;
 
 {**
@@ -661,8 +661,8 @@ begin
     Result := 0
   else
     Result := RawSQLTimeStampToDateTime(Buffer,
-      PAnsiChar(ConSettings^.DateTimeFormat),  Len,
-      ConSettings^.DateTimeFormatLen, Failed);
+      PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),  Len,
+      ConSettings^.FormatSettings.DateTimeFormatLen, Failed);
 end;
 
 {**

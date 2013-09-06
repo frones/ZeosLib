@@ -281,13 +281,13 @@ begin
     else
       ErrorCode := SQLITE_OK;
     FStmtHandle := nil;
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil,
+    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil,
       lcOther, 'FINALIZE SQLite VM');
   end
   else
   begin
     ErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
+    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
     FErrorCode := SQLITE_DONE;
   end;
 end;
@@ -673,12 +673,12 @@ begin
           Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
           Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          if (Len = ConSettings^.DateFormatLen) then
-            Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.DateFormat),
-             Len, ConSettings^.DateFormatLen, Failed)
+          if (Len = ConSettings^.FormatSettings.DateFormatLen) then
+            Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
+             Len, ConSettings^.FormatSettings.DateFormatLen, Failed)
           else
-            Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
-              Len, ConSettings^.DateTimeFormatLen, Failed));
+            Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+              Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
         end;
       LastWasNull := Result = 0;
     end;
@@ -719,15 +719,15 @@ begin
           Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
           if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
-            Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.TimeFormat),
-              Len, ConSettings^.TimeFormatLen, Failed)
+            Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
+              Len, ConSettings^.FormatSettings.TimeFormatLen, Failed)
           else
-            if ConSettings^.DateFormatLen = Len then
+            if ConSettings^.FormatSettings.DateFormatLen = Len then
               Result := 0
             else
               Result := Frac(RawSQLTimeStampToDateTime(Buffer,
-                PAnsiChar(ConSettings^.DateTimeFormat), Len,
-                ConSettings^.DateTimeFormatLen, Failed));
+                PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
+                ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
         end;
       LastWasNull := Result = 0;
     end;
@@ -768,8 +768,8 @@ begin
           Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
           Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          Result := RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.DateTimeFormat),
-            Len, ConSettings^.DateTimeFormatLen, Failed);
+          Result := RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+            Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed);
         end;
       LastWasNull := Result = 0;
     end;
@@ -856,7 +856,7 @@ begin
   if Assigned(FStmtHandle) and not FFirstRow then
   begin
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FErrorCode, nil, lcOther, 'FETCH');
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'FETCH');
   end;
 
   if FFirstRow then //avoid incrementing issue on fetching since the first row is allready fetched by stmt

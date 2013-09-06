@@ -312,10 +312,11 @@ begin
     Exit;
 
   if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-    ConSettings^.TimeFormat := 'HH:NN:SS.ZZZZZZ'
+    ConSettings^.FormatSettings.TimeFormat := 'HH:NN:SS.ZZZZZZ'
   else
-    ConSettings^.TimeFormat := 'HH:NN:SS';
-  ConSettings^.TimeFormat := ConSettings^.DateFormat+' '+ConSettings^.TimeFormat;
+    ConSettings^.FormatSettings.TimeFormat := 'HH:NN:SS';
+  ConSettings^.FormatSettings.DateTimeFormat := ConSettings^.FormatSettings.DateFormat+' '+ConSettings^.FormatSettings.TimeFormat;
+  SetDateTimeFormatProperties;
 
   LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
 

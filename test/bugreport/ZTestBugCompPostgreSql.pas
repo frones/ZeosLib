@@ -96,6 +96,7 @@ type
     procedure TestMantis229;
     procedure TestLobTypeCast;
     procedure TestUnknowParam;
+    procedure TestTicket44;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -879,6 +880,23 @@ begin
   try
     Query.SQL.Text := 'select :p1 as Param1, :p2 as param2';
     Query.Open;
+    Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZTestCompPostgreSQLBugReport.TestTicket44;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Connection.Connect;
+  try
+    Query.SQL.Text := 'select table_catalog from information_schema.columns';
+    Query.Open;
+    CheckEquals(UpperCase(DataBase), UpperCase(Query.Fields[0].AsString));
     Query.Close;
   finally
     Query.Free;

@@ -120,6 +120,8 @@ type
       Value: RawByteString; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetUnicodeString(Buffer: PZRowBuffer; ColumnIndex: Integer;
       Value: ZWideString; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetPAnsiChar(Buffer: PZRowBuffer; ColumnIndex: Integer;
+      Value: PAnsiChar; Len: Cardinal; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
     procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
@@ -160,6 +162,7 @@ type
     function GetColumnOffSet(ColumnIndex: Integer): Integer;
     function GetColumnDefaultExpression(ColumnIndex: Integer): string;
     procedure SetColumnDefaultExpression(ColumnIndex: Integer; Value: string);
+    procedure SetColumnCodePage(ColumnIndex: Integer; Value: Word);
 
     //======================================================================
     // Methods for accessing results by column index
@@ -205,6 +208,8 @@ type
     procedure SetDouble(ColumnIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure SetString(ColumnIndex: Integer; Value: String); virtual;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Const Len: Cardinal); overload; virtual;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload;
     procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); virtual;
     procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); virtual;
     procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); virtual;
@@ -248,6 +253,7 @@ type
     //---------------------------------------------------------------------
 
     procedure SetString(ColumnIndex: Integer; Value: String); override;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Const Len: Cardinal); override;
     //procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); override;
     //procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); override;
     procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); override;
@@ -277,6 +283,7 @@ type
     //---------------------------------------------------------------------
 
     procedure SetString(ColumnIndex: Integer; Value: String); override;
+    procedure SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Const Len: Cardinal); override;
     //procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); override;
     //procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); override;
     procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); override;
@@ -547,17 +554,9 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     L := Length(Value);
-    if L > 0 then
-    begin
-      ReallocMem(C^, L +1);
-      {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(C^), PAnsiChar(Value), L);
-    end
-    else
-      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
-      begin
-        System.Dispose(C^);
-        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
-      end;
+    ReallocMem(C^, L +1);
+    System.Move(PAnsiChar(Value)^, C^^, L);
+    (C^+L)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
 
@@ -573,17 +572,27 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     L := Length(Value)*2 + 2;
-    if L > 0 then
-    begin
-      ReallocMem(W^, L);
-      System.Move(PWideChar(Value)^, W^^, L);
-    end
-    else
-      if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
-      begin
-        System.Dispose(W^);
-        PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
-      end;
+    Value := System.Copy(Value, 1, L);
+    L := L * 2 + 2;
+    ReallocMem(W^, L);
+    System.Move(PWideChar(Value)^, W^^, L);
+  end;
+end;
+
+procedure TZRowAccessor.InternalSetPAnsiChar(Buffer: PZRowBuffer; ColumnIndex: Integer;
+  Value: PAnsiChar; Len: Cardinal; NewPointer: Boolean = False);
+var
+  C: PPAnsiChar;
+begin
+  if Assigned(Buffer) then
+  begin
+    if NewPointer then
+      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+    C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+    Len := Len;
+    ReallocMem(C^, Len+1);
+    Move(Value^, C^^, Len);
+    (C^+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
 
@@ -1013,6 +1022,11 @@ begin
   FColumnDefaultExpressions[ColumnIndex-1] := Value;
 end;
 
+procedure TZRowAccessor.SetColumnCodePage(ColumnIndex: Integer; Value: Word);
+begin
+  FColumnCodePages[ColumnIndex-1] := Value;
+end;
+
 //
 //======================================================================
 // Methods for accessing results by column index
@@ -1122,9 +1136,9 @@ begin
         Result := GUIDToString(GUID);
         {$ENDIF}
       end;
-    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
-    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
+    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
     stUnicodeStream:
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1188,9 +1202,9 @@ begin
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
           Result := TempBlob.GetString;
       end;
-    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
-    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
+    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
     else
       Result := ConSettings^.ConvFuncs.ZStringToUTF8(GetString(ColumnIndex, IsNull), ConSettings^.CTRL_CP);
   end;
@@ -1230,9 +1244,9 @@ begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
         Result := ConSettings^.ConvFuncs.ZStringToRaw(GUIDToString(GUID), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
       end;
-    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
-    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
+    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1282,9 +1296,9 @@ begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
         Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
-    stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
-    stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
-    stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
+    stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
     else
       Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
   end;
@@ -2431,6 +2445,82 @@ begin
 end;
 
 {**
+  Sets the designated column with a <code>PAnsiChar</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the new column value
+  @param Len the length of the String
+}
+procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Const Len: Cardinal);
+var
+  TempStr: RawByteString;
+  IsNull: Boolean;
+  GUID: TGUID;
+  Bts: TByteDynArray;
+begin
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean:
+      begin
+        TempStr := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(Value);
+        SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
+          or (TempStr = 'YES') or (TempStr = 'TRUE'));
+      end;
+    stByte: SetByte(ColumnIndex, RawToIntDef(Value, 0));
+    stShort: SetShort(ColumnIndex, RawToIntDef(Value, 0));
+    stInteger: SetInt(ColumnIndex, RawToIntDef(Value, 0));
+    stLong: SetLong(ColumnIndex, RawToInt64Def(Value, 0));
+    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value, 0));
+    //stString, stUnicodeString: do not handle here!
+    stBytes:
+      begin
+        SetLength(Bts, Len);
+        System.Move(Value^, Pointer(Bts)^, Len);
+        SetBytes(ColumnIndex, Bts);
+      end;
+    stGUID:
+      if Value = '' then
+        SetNull(ColumnIndex)
+      else
+      begin
+        {$IFDEF UNICODE}
+        GUID := StringToGUID(NotEmptyASCII7ToString(Value, Len));
+        {$ELSE}
+        GUID := StringToGUID(Value);
+        {$ENDIF}
+        SetLength(Bts, 16);
+        System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
+        SetBytes(ColumnIndex, Bts);
+      end;
+    stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value)));
+    stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value)));
+    stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value)));
+    stUnicodeStream, stAsciiStream, stBinaryStream:
+      GetBlob(ColumnIndex, IsNull).SetString(Value);
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>PAnsiChar</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the new column value
+}
+procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar);
+begin
+  SetPAnsiChar(ColumnIndex, Value, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Value));
+end;
+
+{**
   Sets the designated column with a <code>AnsiString</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
@@ -3096,9 +3186,9 @@ begin
           System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
           Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
         end;
-      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
-      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
-      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
+      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
       else
         Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
     end;
@@ -3124,20 +3214,44 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
-    stString:
+    stString, stUnicodeString:
       begin
         InternalSetString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
       end;
-    stUnicodeString:
-      {$IFDEF UNICODE}
-      SetUnicodeString(ColumnIndex, Value);
-      {$ELSE}
-      SetUnicodeString(ColumnIndex, ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings.CTRL_CP));
-      {$ENDIF}
     else
       Inherited SetString(ColumnIndex, Value);
   end;
+end;
+
+{**
+  Sets the designated column with a <code>PAnsiChar</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the new column value
+  @param Len the Length of the new column value
+}
+procedure TZRawRowAccessor.SetPAnsiChar(ColumnIndex: Integer;
+  Value: PAnsiChar; const Len: Cardinal);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  if Assigned(Value) then
+    case FColumnTypes[ColumnIndex - 1] of
+      stString, stUnicodeString:
+        begin
+          InternalSetPAnsiChar(FBuffer, ColumnIndex, Value, Len);
+          FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+        end;
+      else inherited SetPAnsiChar(ColumnIndex, Value, Len)
+    end
+  else
+    SetNull(ColumnIndex);
 end;
 
 {**
@@ -3284,7 +3398,11 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
+        {$IFDEF UNICODE}
+        Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+        {$ELSE}
         Result := ConSettings^.ConvFuncs.ZUnicodeToString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.CTRL_CP);
+        {$ENDIF}
       else Result := Inherited GetString(ColumnIndex, IsNull);
     end;
     IsNull := False;
@@ -3429,9 +3547,9 @@ begin
           System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
           Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
         end;
-      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), 'yyyy-mm-dd', 10, False);
-      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), 'hh:mm:ss', 8, False);
-      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), 'yyyy-mm-dd hh:mm:ss', 19, False);
+      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
       else
         Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
     end;
@@ -3457,15 +3575,47 @@ begin
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
-    stString:
+    stString, stUnicodeString:
       begin
+        {$IFDEF UNICODE}
+        InternalSetUnicodeString(FBuffer, ColumnIndex, Value);
+        {$ELSE}
         InternalSetUnicodeString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings^.CTRL_CP));
+        {$ENDIF}
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
       end;
-    stUnicodeString:
-      SetUnicodeString(ColumnIndex, ConSettings^.ConvFuncs.ZStringToUnicode(Value, ConSettings.CTRL_CP));
     else inherited SetString(ColumnIndex, Value)
   end;
+end;
+
+{**
+  Sets the designated column with a <code>PAnsiChar</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the new column value
+  @param Len the Length of the new column value
+}
+procedure TZUnicodeRowAccessor.SetPAnsiChar(ColumnIndex: Integer;
+  Value: PAnsiChar; const Len: Cardinal);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  if Assigned(Value) then
+    case FColumnTypes[ColumnIndex - 1] of
+      stString, stUnicodeString:
+        begin
+          InternalSetUnicodeString(FBuffer, ColumnIndex, ConSettings^.ConvFuncs.ZRawToUnicode(Value, FColumnCodePages[ColumnIndex - 1]));
+          FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+        end;
+      else inherited SetPAnsiChar(ColumnIndex, Value, Len)
+    end
+  else
+    SetNull(ColumnIndex);
 end;
 
 {**
