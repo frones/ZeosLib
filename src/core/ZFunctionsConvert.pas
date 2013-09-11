@@ -181,3 +181,4 @@ initialization
   InternalDefaultFormatSettings.ThousandSeparator   := ',';
   InternalDefaultFormatSettings.DecimalSeparator    := '.';
 end.
+

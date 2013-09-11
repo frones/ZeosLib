@@ -290,7 +290,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcUtils, ZDbcPostgreSql;
+  ZFastCode, ZMessages, ZDbcUtils, ZDbcPostgreSql;
 
 { TZPostgreSQLDatabaseInfo }
 
@@ -1405,7 +1405,7 @@ begin
     SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
       + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
       + ' NULL AS RESERVED3, d.description AS REMARKS, '
-      + IntToString(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
+      + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
       + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
       + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
       + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
@@ -1423,7 +1423,7 @@ begin
     SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
       + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
       + ' NULL AS RESERVED3, NULL AS REMARKS, '
-      + IntToString(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
+      + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
       + ' FROM pg_proc p';
     if ProcedureCondition <> '' then
       SQL := SQL + ' WHERE ' + ProcedureCondition;
@@ -1616,7 +1616,7 @@ begin
           if ArgNames.Count > I then
             ColumnName := ArgNames.Strings[I]
           else
-            ColumnName := '$' + IntToString(I + 1);
+            ColumnName := '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(I + 1);
 
           // column type
           if IsInParam then
@@ -3217,9 +3217,9 @@ begin
 
     SQL := Select + ' ct.relname AS TABLE_NAME, NOT i.indisunique'
       + ' AS NON_UNIQUE, NULL AS INDEX_QUALIFIER, ci.relname AS INDEX_NAME,'
-      + ' CASE i.indisclustered WHEN true THEN ' + IntToString(Ord(tiClustered))
-      + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + IntToString(Ord(tiHashed))
-      + ' ELSE ' + IntToString(Ord(tiOther)) + ' END END AS TYPE,'
+      + ' CASE i.indisclustered WHEN true THEN ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiClustered))
+      + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiHashed))
+      + ' ELSE ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiOther)) + ' END END AS TYPE,'
       + ' a.attnum AS ORDINAL_POSITION, a.attname AS COLUMN_NAME,'
       + ' NULL AS ASC_OR_DESC, ci.reltuples AS CARDINALITY,'
       + ' ci.relpages AS PAGES, NULL AS FILTER_CONDITION'

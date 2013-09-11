@@ -246,7 +246,7 @@ type
 implementation
 
 uses
-  ZDbcUtils;
+  ZFastCode, ZDbcUtils;
 
 { TZOracleDatabaseInfo }
 
@@ -1292,9 +1292,9 @@ var
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(NewName+IntToString(N)) = -1 then
+        if Names.IndexOf(NewName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N)) = -1 then
         begin
-          Result := NewName+IntToString(N);
+          Result := NewName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
           Names.Add(Result);
           Break;
         end;

@@ -210,8 +210,9 @@ type
 implementation
 
 uses
-  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
-  ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  ZFastCode, Types, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
+  ZTokenizer, ZEncoding;
 
 { TZPostgreSQLStatement }
 
@@ -583,7 +584,7 @@ end;
 
 procedure TZPostgreSQLClassicPreparedStatement.SetPlanNames;
 begin
-  FPlanName := '"'+IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle))+'"';
+  FPlanName := '"'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle))+'"';
   FRawPlanName := {$IFDEF UNICODE}RawByteString{$ENDIF}(FPlanName);
 end;
 
@@ -617,7 +618,7 @@ begin
         if Tokens[I] = '?' then
         begin
           Inc(N);
-          TempSQL := TempSQL + '$' + IntToString(N);
+          TempSQL := TempSQL + '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
         end else
           TempSQL := TempSQL + Tokens[I];
       end;
@@ -872,7 +873,7 @@ begin
 end;
 procedure TZPostgreSQLCAPIPreparedStatement.SetPlanNames;
 begin
-  FPlanName := IntToString(Int64(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle)));
+  FPlanName := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Int64(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle)));
   FRawPlanName := NotEmptyStringToASCII7(FPlanName);
 end;
 
@@ -1079,7 +1080,7 @@ begin
           if Tokens[I] = '?' then
           begin
             Inc(N);
-            TempSQL := TempSQL + '$' + IntToString(N);
+            TempSQL := TempSQL + '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
           end else
             TempSQL := TempSQL + Tokens[I];
         end;

@@ -83,27 +83,35 @@
 // Compilation directives for Delphi 7
 {$IFDEF VER150}
   {$DEFINE VER150BELOW} // Used in zeos.inc only
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$DEFINE Use_FastCodeFillChar}
 {$ENDIF}
 
 // Compilation directives for Delphi 8
 {$IFDEF VER160}
 // No directives needed
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$DEFINE Use_FastCodeFillChar}
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
 {$IFDEF VER170}
-// No directives needed
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$DEFINE Use_FastCodeFillChar}
 {$ENDIF}
 
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
 {$IFDEF VER180}
   {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {EH since D2006 FastCode proc FillChar is already included}
 {$ENDIF}
 
 // Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
-{$IFDEF VER185}
+{$IF defined(VER185) or defined(VER190)}
   {$DEFINE BDS4_UP} // Used in code
-{$ENDIF}
+  {EH: Since D2007 the fast move Procs of FastCode-project are allready included}
+{$IFEND}
 
 // Compilation directives for Delphi 2009
 {$IFDEF VER200}
@@ -145,6 +153,7 @@
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
+  {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
 {$ENDIF}
 
 // Compilation directives for Delphi XE3

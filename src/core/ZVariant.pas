@@ -430,8 +430,8 @@ var
 implementation
 
 uses
-  Variants, Math, ZMessages, ZEncoding
-  {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}, AnsiStrings{$ENDIF};
+  Variants, Math, {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings, {$ENDIF}
+  ZMessages, ZEncoding, ZFastCode;
 
 { TZDefaultVariantManager }
 
@@ -2194,7 +2194,7 @@ begin
 {$ifdef fpc}
         Result := Value.VInteger;
 {$else}
-        Result := IntToString(Value.VInteger);
+        Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Value.VInteger);
 {$endif}
     vtFloat: Result := Value.VFloat;
     vtString: Result := Value.VString;

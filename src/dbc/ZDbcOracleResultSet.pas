@@ -174,7 +174,7 @@ type
 implementation
 
 uses
-  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} ZFastCode,
   ZMessages, ZDbcUtils, ZEncoding;
 
 { TZOracleAbstractResultSet }

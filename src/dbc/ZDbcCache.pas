@@ -295,7 +295,7 @@ const
 
 implementation
 
-uses Math, ZMessages, ZSysUtils, ZDbcUtils
+uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZRowAccessor }
@@ -635,7 +635,7 @@ begin
       Index := 0;
       BookmarkFlag := 0;//bfCurrent;
       UpdateType := utUnmodified;
-      FillChar(Columns, FColumnsSize, 0);
+      FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
       for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
     end;
 end;
@@ -832,7 +832,7 @@ begin
             System.Dispose(P^);
           end;
       end;
-    FillChar(Columns, FColumnsSize, 0);
+    FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
     for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
   end;
 end;
@@ -1065,10 +1065,10 @@ begin
         Result := 'True'
       else
         Result := 'False';
-    stByte: Result := IntToString(GetByte(ColumnIndex, IsNull));
-    stShort: Result := IntToString(GetShort(ColumnIndex, IsNull));
-    stInteger: Result := IntToString(GetInt(ColumnIndex, IsNull));
-    stLong: Result := IntToString(GetLong(ColumnIndex, IsNull));
+    stByte: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetByte(ColumnIndex, IsNull));
+    stShort: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetShort(ColumnIndex, IsNull));
+    stInteger: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetInt(ColumnIndex, IsNull));
+    stLong: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetLong(ColumnIndex, IsNull));
     stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
     stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
     stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));

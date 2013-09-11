@@ -128,7 +128,7 @@ var
 implementation
 
 uses
-  ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
+  ZFastCode, ZDbcASAMetadata, ZDbcASAStatement, ZDbcASAUtils, ZSybaseToken,
   ZSybaseAnalyser, ZDbcLogging, ZSysUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -442,7 +442,7 @@ begin
     if Info.Values['LINKS'] <> ''
       then Links := 'LINKS=' + Info.Values['LINKS'];
     if (Links = '') and (Port <> 0)
-      then Links := 'LINKS=tcpip(PORT=' + IntToString(Port) + ')';
+      then Links := 'LINKS=tcpip(PORT=' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port) + ')';
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
@@ -543,7 +543,7 @@ begin
   ASATL := Ord( TransactIsolationLevel);
   if ASATL > 1 then
     ASATL := ASATL - 1;
-  SetOption( 1, nil, 'ISOLATION_LEVEL', IntToString( ASATL));
+  SetOption( 1, nil, 'ISOLATION_LEVEL', {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( ASATL));
 end;
 
 function TZASAConnection.DetermineASACharSet: String;

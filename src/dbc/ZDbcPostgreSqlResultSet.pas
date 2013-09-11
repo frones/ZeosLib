@@ -136,7 +136,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZEncoding, ZDbcPostgreSql,
+  Math, ZMessages, ZDbcUtils, ZEncoding, ZDbcPostgreSql, ZFastCode,
   ZDbcPostgreSqlUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLResultSet }

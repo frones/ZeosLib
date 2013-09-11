@@ -189,7 +189,7 @@ type
 
 implementation
 
-uses ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
+uses ZFastCode, ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
 
 { TZColumnInfo }
 
@@ -390,7 +390,7 @@ begin
       if ColumnName = '' then
         ColumnName := 'Column';
       if N > 0 then
-        ColumnName := ColumnName + '_' + IntToString(N);
+        ColumnName := ColumnName + '_' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
       FColumnsLabels.Add(ColumnName);
     end;
   end;

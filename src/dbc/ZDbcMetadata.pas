@@ -503,7 +503,7 @@ var
 
 implementation
 
-uses ZVariant, ZCollections, ZMessages;
+uses ZFastCode, ZVariant, ZCollections, ZMessages;
 
 { TZAbstractDatabaseInfo }
 
@@ -4594,7 +4594,7 @@ var
 begin
   Result := '';
   for I := Low(Types) to High(Types) do
-    Result := Result + ':' + IntToString(Types[I]);
+    Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Types[I]);
   Result := Format('get-udts:%s:%s:%s%s',
     [Catalog, SchemaPattern, TypeNamePattern, Result]);
 end;

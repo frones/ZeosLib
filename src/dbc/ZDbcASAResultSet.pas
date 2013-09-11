@@ -182,7 +182,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, Math, ZdbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
+ SysUtils, Math, ZFastCode, ZDbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
 
 { TZASAResultSet }
 
@@ -913,7 +913,7 @@ begin
     FASAConnection.GetPlainDriver.db_update( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, 'Update row:' + IntToString( RowNo));
+      FASAConnection.GetDBHandle, lcOther, 'Update row:' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( RowNo));
 
     FUpdate := false;
     FUpdateSQLData.FreeSQLDA;
@@ -925,7 +925,7 @@ begin
   FASAConnection.GetPlainDriver.db_delete( FASAConnection.GetDBHandle,
     PAnsiChar(FCursorName));
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, lcOther, 'Delete row:' + IntToStr( RowNo));
+    FASAConnection.GetDBHandle, lcOther, 'Delete row:' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( RowNo));
 
   FDelete := True;
   if LastRowNo <> MaxInt then

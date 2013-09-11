@@ -119,7 +119,7 @@ type
 
 implementation
 
-uses ZCompatibility, StrUtils, ZSysUtils;
+uses ZCompatibility, StrUtils, ZFastCode;
 
 {TZURLStringList}
 function TZURLStringList.GetTextStr: string;
@@ -282,7 +282,7 @@ begin
   begin
     Result := Result + HostName;
     if Port <> 0 then
-      Result := Result + ':' + IntToString(Port);
+      Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port);
   end;
 
   // Database

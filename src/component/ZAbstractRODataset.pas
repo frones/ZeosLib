@@ -490,7 +490,7 @@ type
 
 implementation
 
-uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
+uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
@@ -2185,7 +2185,7 @@ begin
           if DetailField is TLargeIntField then
             TLargeIntField(DetailField).{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Temp
           else
-            DetailField.AsString := IntToString(Temp);
+            DetailField.AsString := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Temp);
         end
         // Processes all other fields.
         else

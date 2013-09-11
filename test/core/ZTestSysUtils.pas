@@ -99,7 +99,7 @@ type
 
 implementation
 
-uses ZEncoding;
+uses ZEncoding {$IFDEF BENCHMARK},ZFastCode{$ENDIF};
 
 { TZTestSysUtilsCase }
 
@@ -831,7 +831,7 @@ var
       I: Integer;
     begin
       for i := 0 to 10000000 do
-        Result := NotEmptyStringToASCII7(IntToStr(i));
+        Result := NotEmptyStringToASCII7(SysUtils.IntToStr(i));
     end;
 begin
   Start := GetTickCount;
@@ -870,7 +870,7 @@ var
       I: Integer;
     begin
       for i := -1 to 10000000 do
-        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(i));
+        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(SysUtils.IntToStr(i));
     end;
 begin
   Start := GetTickCount;
@@ -890,6 +890,14 @@ begin
 
 end;
 
+{$ifopt Q+}
+  {$define OverflowCheckEnabled}
+  {$Q-}
+{$endif}
+{$ifopt R+}
+  {$define RangeCheckEnabled}
+  {$R-}
+{$endif}
 procedure TZTestSysUtilsCase.TestInt64ToRaw_VS_IntToStr;
 var
   Between1, Between2: Cardinal;
@@ -917,9 +925,9 @@ var
       for i := 0 to 10000000 do
       begin
         I64 := i * i;
-        Result := NotEmptyStringToASCII7(IntToStr(I64));
+        Result := NotEmptyStringToASCII7(SysUtils.IntToStr(I64));
       end;
-      Result := NotEmptyStringToASCII7(IntToStr(High(Int64)));
+      Result := NotEmptyStringToASCII7(SysUtils.IntToStr(High(Int64)));
     end;
 begin
   Start := GetTickCount;
@@ -938,6 +946,12 @@ begin
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+NotEmptyStringToASCII7: %d ms', [Between1, Between2]));
 
 end;
+{$ifdef OverflowCheckEnabled}
+  {$Q+}
+{$endif}
+{$ifdef RangeCheckEnabled}
+  {$R+}
+{$endif}
 
 procedure TZTestSysUtilsCase.TestInt64ToUnicode_VS_IntToStr;
 var
@@ -966,9 +980,9 @@ var
       for i := -10 to 10000000 do
       begin
         I64 := Int64(i) * Int64(i);
-        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(I64));
+        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(SysUtils.IntToStr(I64));
       end;
-      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(IntToStr(High(Int64)-1));
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(SysUtils.IntToStr(High(Int64)-1));
     end;
 begin
   Start := GetTickCount;
@@ -1198,7 +1212,7 @@ var
       I: Integer;
     begin
       for i := 0 to 10000000 do
-        Result := StrToInt(IntToStr(i));
+        Result := SysUtils.StrToInt(SysUtils.IntToStr(i));
     end;
 begin
   Start := GetTickCount;
@@ -1238,8 +1252,8 @@ var
       I: Integer;
     begin
       for i := 0 to 10000000 do
-        Result := StrToIntDef(IntToStr(i), 1);
-      Result := Result + StrToIntDef('test', -999);
+        Result := StrToIntDef(SysUtils.IntToStr(i), 1);
+      Result := Result + SysUtils.StrToIntDef('test', -999);
     end;
 begin
   Start := GetTickCount;
@@ -1280,10 +1294,10 @@ var
     var
       I: Integer;
     begin
-      CheckEquals(Low(Int64), StrToInt64Def(IntToStr(Low(Int64)), 0), 'Results of RawToInt64Def VS. Low(Int64)');
-      CheckEquals(High(Int64), StrToInt64Def(IntToStr(High(Int64)), 0), 'Results of RawToInt64Def VS. High(Int64)');
+      CheckEquals(Low(Int64), StrToInt64Def(SysUtils.IntToStr(Low(Int64)), 0), 'Results of RawToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(SysUtils.IntToStr(High(Int64)), 0), 'Results of RawToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
-        Result := StrToInt64Def(IntToStr(Int64(i)*Int64(i)), 1);
+        Result := StrToInt64Def(SysUtils.IntToStr(Int64(i)*Int64(i)), 1);
       Result := Result + StrToInt64Def('test', -999);
     end;
 begin
@@ -1325,9 +1339,9 @@ var
       for i := -20 to 10000000 do
         Result :=
           {$IFDEF UNICODE}
-            StrToInt(IntToStr(I));
+            StrToInt(SysUtils.IntToStr(I));
           {$ELSE}
-            StrToInt(String(ZWideString(IntToStr(I))));
+            StrToInt(String(ZWideString(SysUtils.IntToStr(I))));
           {$ENDIF}
     end;
 begin
@@ -1370,9 +1384,9 @@ var
       for i := -20 to 10000000 do
         Result :=
           {$IFDEF UNICODE}
-            StrToIntDef(IntToStr(I),1);
+            StrToIntDef(SysUtils.IntToStr(I),1);
           {$ELSE}
-            StrToIntDef(String(ZWideString(IntToStr(I))), 1);
+            StrToIntDef(String(ZWideString(SysUtils.IntToStr(I))), 1);
           {$ENDIF}
         {$IFDEF UNICODE}
           Result := Result +  StrToIntDef('test', -999);
@@ -1398,6 +1412,14 @@ begin
 
 end;
 
+{$ifopt Q+}
+  {$define OverflowCheckEnabled}
+  {$Q-}
+{$endif}
+{$ifopt R+}
+  {$define RangeCheckEnabled}
+  {$R-}
+{$endif}
 procedure TZTestSysUtilsCase.TestUnicodeToInt64Def;
 var
   Between1, Between2: Cardinal;
@@ -1411,7 +1433,7 @@ var
       CheckEquals(Low(Int64), UnicodeToInt64Def(IntToUnicode(Low(Int64)), 0), 'Results of UnicodeToInt64Def VS. Low(Int64)');
       CheckEquals(High(Int64), UnicodeToInt64Def(IntToUnicode(High(Int64)), 0), 'Results of UnicodeToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
-        Result := UnicodeToInt64Def(IntToUnicode(Int64(i)*Int64(i)), 1);
+        Result := UnicodeToInt64Def(IntToUnicode(Int64(i*i)), 1);
       Result := Result + UnicodeToInt64Def('test', -999);
     end;
 
@@ -1420,16 +1442,16 @@ var
       I: Integer;
     begin
       {$IFDEF UNICODE}
-      CheckEquals(Low(Int64), StrToInt64Def(IntToStr(Low(Int64)), 0), 'Results of StrToInt64Def VS. Low(Int64)');
-      CheckEquals(High(Int64), StrToInt64Def(IntToStr(High(Int64)), 0), 'Results of StrToInt64Def VS. High(Int64)');
+      CheckEquals(Low(Int64), StrToInt64Def(SysUtils.IntToStr(Low(Int64)), 0), 'Results of StrToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(SysUtils.IntToStr(High(Int64)), 0), 'Results of StrToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
-        Result := StrToInt64Def(IntToStr(Int64(i)*Int64(i)), 1);
+        Result := StrToInt64Def(SysUtils.IntToStr(Int64(i*i)), 1);
       Result := Result + StrToInt64Def('test', -999);
       {$ELSE}
-      CheckEquals(Low(Int64), StrToInt64Def(String(ZWideString(IntToStr(Low(Int64)))), 0), 'Results of StrToInt64Def VS. Low(Int64)');
-      CheckEquals(High(Int64), StrToInt64Def(String(ZWideString(IntToStr(High(Int64)))), 0), 'Results of StrToInt64Def VS. High(Int64)');
+      CheckEquals(Low(Int64), StrToInt64Def(String(ZWideString(SysUtils.IntToStr(Low(Int64)))), 0), 'Results of StrToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(String(ZWideString(SysUtils.IntToStr(High(Int64)))), 0), 'Results of StrToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
-        Result := StrToInt64Def(String(ZWideString(IntToStr(Int64(i)*Int64(i)))), 1);
+        Result := StrToInt64Def(String(ZWideString(SysUtils.IntToStr(Int64(i*i)))), 1);
       Result := Result + StrToInt64Def('test', -999);
       {$ENDif}
     end;
@@ -1450,6 +1472,12 @@ begin
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
 
 end;
+{$ifdef OverflowCheckEnabled}
+  {$Q+}
+{$endif}
+{$ifdef RangeCheckEnabled}
+  {$R+}
+{$endif}
 
 procedure TZTestSysUtilsCase.TestRawToFloat;
 const sTestFloat = RawByteString('9876543210.0123456789');

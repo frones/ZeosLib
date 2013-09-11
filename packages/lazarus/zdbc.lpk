@@ -25,7 +25,7 @@
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
-    <Version Major="7" Minor="1"/>
+    <Version Major="7" Minor="2"/>
     <Files Count="10">
       <Item1>
         <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>

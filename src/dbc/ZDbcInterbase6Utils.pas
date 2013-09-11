@@ -445,7 +445,7 @@ const
 implementation
 
 uses
-  Variants, ZSysUtils, Math, ZDbcInterbase6, ZEncoding
+  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -1393,7 +1393,7 @@ begin
   FTransactionHandle := TransactionHandle;
 
   GetMem(FXSQLDA, XSQLDA_LENGTH(0));
-  FillChar(FXSQLDA^, XSQLDA_LENGTH(0), 0);
+  FillChar(FXSQLDA^, XSQLDA_LENGTH(0), {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
   FXSQLDA.sqln := 0;
   FXSQLDA.sqld := 0;
 
@@ -3306,7 +3306,7 @@ begin
     case (sqltype and not(1)) of
       SQL_QUAD, SQL_DOUBLE, SQL_INT64, SQL_BLOB, SQL_ARRAY: result := PISC_QUAD(sqldata)^;
     else
-      raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + IntToString((sqltype and not(1))));
+      raise EZIBConvertError.Create(SUnsupportedDataType + ' ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr((sqltype and not(1))));
     end
   else
     raise EZIBConvertError.Create('Invalid State.');
@@ -3358,7 +3358,7 @@ begin
                      begin
                        if FPlainDriver.GetProtocol <> 'interbase-7' then
                          raise EZIBConvertError.Create(SUnsupportedDataType);
-                       Result := IntToString(PSmallint(sqldata)^);
+                       Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PSmallint(sqldata)^);
                      end;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;

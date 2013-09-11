@@ -398,7 +398,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZMessages, ZDbcResultSet, ZCollections;
+uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections;
 
 var
 {**
@@ -1360,7 +1360,7 @@ begin
           SetLength(Result, Length(VBytes)*2);
           BinToHex(PAnsiChar(VBytes), PChar(Result), Length(VBytes));
         end;
-      vtInteger : result := IntToString(VInteger);
+      vtInteger : result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(VInteger);
       vtFloat : result := FloatToStr(VFloat);
       vtString : result := '''' + VString + '''';
       vtAnsiString: result := '''' + ConSettings^.ConvFuncs.ZAnsiToString(VAnsiString, ConSettings^.CTRL_CP)+'''';

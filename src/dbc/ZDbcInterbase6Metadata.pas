@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcInterbase6, ZURL;
+  ZDbcInterbase6;
 
 type
 
@@ -254,7 +254,7 @@ type
 
 implementation
 
-uses ZMessages, ZDbcInterbase6Utils, ZDbcUtils;
+uses ZMessages, ZDbcInterbase6Utils;
 
 { TZInterbase6DatabaseInfo }
 

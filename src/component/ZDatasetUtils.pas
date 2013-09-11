@@ -290,7 +290,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
+  ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
   ZDbcUtils, ZSysUtils {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
 
 {**
@@ -968,7 +968,6 @@ begin
 
     if DecodedKeyValues[I].VType = vtNull then
       Continue;
-
     CurrentType := ResultSet.GetMetadata.GetColumnType(Current.FieldNo);
 
     if PartialKey then
@@ -1777,7 +1776,7 @@ begin
           end;
         end;
       else
-        raise EZDatabaseError.Create(SUnKnownParamDataType + IntToString(Ord(Param.DataType)));
+        raise EZDatabaseError.Create(SUnKnownParamDataType + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
     end;
   end;
 end;

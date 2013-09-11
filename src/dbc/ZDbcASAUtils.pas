@@ -265,8 +265,8 @@ function RandomString( Len: integer): string;
 
 implementation
 
-uses Variants, ZMessages, ZDbcCachedResultSet, Math, ZEncoding
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding;
 
 { TZASASQLDA }
 
@@ -2270,7 +2270,7 @@ function RandomString( Len: integer): string;
 begin
   Result := '';
   while Length( Result) < Len do
-    Result := Result + IntToString( Trunc( Random( High( Integer))));
+    Result := Result + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( Trunc( Random( High( Integer))));
   if Length( Result) > Len then
     Result := Copy( Result, 1, Len);
 end;

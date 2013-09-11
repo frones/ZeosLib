@@ -256,7 +256,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZCollections, ZDbcMySqlUtils;
+  ZFastCode, Math, ZMessages, ZDbcUtils, ZCollections, ZDbcMySqlUtils;
 
 { TZMySQLDatabaseInfo }
 
@@ -2277,7 +2277,7 @@ begin
   SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
       'NULL AS RESERVED3, p.comment AS REMARKS, '+
-      IntToString(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
+      {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
       'WHERE 1=1' + SchemaCondition + ProcedureNameCondition+
       ' ORDER BY p.db, p.name';
     Result := CopyToVirtualResultSet(
@@ -2361,10 +2361,10 @@ var
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(AName+IntToString(N)) = -1 then
+        if Names.IndexOf(AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N)) = -1 then
         begin
-          Names.Add(AName+IntToString(N));
-          Result := AName+IntToString(N);
+          Names.Add(AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N));
+          Result := AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
           Break;
         end;
   end;
@@ -2438,7 +2438,7 @@ begin
 
   SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
-    IntToString(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
+    {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
     ' from  mysql.proc p where 1 = 1'+SchemaCondition+ProcedureNameCondition+
     ' ORDER BY p.db, p.name';
 

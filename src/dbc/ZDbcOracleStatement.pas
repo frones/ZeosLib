@@ -163,7 +163,7 @@ type
 implementation
 
 uses
-  ZTokenizer, ZDbcOracle, ZDbcOracleResultSet
+  ZFastCode, ZTokenizer, ZDbcOracle, ZDbcOracleResultSet
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZOracleStatement }
@@ -755,7 +755,7 @@ begin
   with FOracleParams[ParameterIndex-1] do
   begin
     if not GetConnection.UseMetadata then
-      pName := 'pOut'+IntToString(ParameterIndex);
+      pName := 'pOut'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ParameterIndex);
     pSQLType := SQLType;
   end;
 end;
@@ -800,7 +800,7 @@ begin
   begin
     AConnection := GetConnection;
     if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
-      pName := 'p'+IntToString(ParameterIndex);
+      pName := 'p'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
   end;

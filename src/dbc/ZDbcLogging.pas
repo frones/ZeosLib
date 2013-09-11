@@ -112,7 +112,7 @@ type
 
 implementation
 
-uses ZSysUtils;
+uses ZFastCode;
 
 var DefaultLoggingFormatter: TZLoggingFormatter;
 
@@ -138,7 +138,7 @@ begin
   Result := Result + ', msg: ' + LoggingEvent.Message;
   if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> '') then
   begin
-    Result := Result + ', errcode: ' + IntToString(LoggingEvent.ErrorCode)
+    Result := Result + ', errcode: ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(LoggingEvent.ErrorCode)
       + ', error: ' + LoggingEvent.Error;
   end;
 end;

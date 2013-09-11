@@ -518,7 +518,7 @@ const
 implementation
 
 uses
-  Math, StrUtils, ZSysUtils;
+  ZFastCode, Math, StrUtils, ZSysUtils;
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -1432,7 +1432,7 @@ function TZTokenizer.AnsiGetEscapeString(const EscapeString: RawByteString): Str
 var
   Temp: String;
 begin
-  Temp := EscapeMarkSequence+IntToString(Length(EscapeString))+ReverseString(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
     Result := Temp+String(EscapeString)+Temp
@@ -1448,7 +1448,7 @@ function TZTokenizer.GetEscapeString(const EscapeString: String): String;
 var
   Temp: String;
 begin
-  Temp := EscapeMarkSequence+IntToString(Length(EscapeString))+ReverseString(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}

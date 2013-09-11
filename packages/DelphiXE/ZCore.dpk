@@ -37,6 +37,7 @@ contains
   ZExpression in '..\..\src\core\ZExpression.pas',
   ZExprParser in '..\..\src\core\ZExprParser.pas',
   ZExprToken in '..\..\src\core\ZExprToken.pas',
+  ZFastCode in '..\..\src\core\ZFastCode.pas',
   ZMatchPattern in '..\..\src\core\ZMatchPattern.pas',
   ZSysUtils in '..\..\src\core\ZSysUtils.pas',
   ZTokenizer in '..\..\src\core\ZTokenizer.pas',
