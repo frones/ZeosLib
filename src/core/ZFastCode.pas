@@ -68,9 +68,9 @@ interface
     {$IF CompilerVersion >= 18.0}
       {$DEFINE SSE2}
       {$WARN UNSAFE_CODE OFF}
+      {$WARN UNSAFE_CAST OFF}
     {$IFEND}
   {$ENDIF}
-
 
 {***** BEGIN LICENSE BLOCK *****
  FastcodeCPUID extraction
@@ -93,12 +93,16 @@ interface
 
  Contributor(s): Dennis Passmore <Dennis_Passmore@ ultimatesoftware.com>,
                  Dennis Christensen <marianndkc@home3.gvdnet.dk>,
-                 Jouni Turunen <jouni.turunen@NOSPAM.xenex.fi>.
+                 Jouni Turunen <jouni.turunen@NOSPAM.iki.fi>.
+                 John O'Harrow <john@elmcrest.demon.co.uk>
 
 ***** END LICENSE BLOCK *****
 
 Version  Changes
 -------  ------
+ 3.0.5   25-Feb-2008 : Added 2008 FastCode Targets
+ 3.0.4   20-Nov-2007 : Added SSE4A, SSE4.1, SSE4.2 and SSE5 detections. Added 2007 FastCode Targets
+ 3.0.3   20-Nov-2006 : Added SSSE3 Detection
  3.0.2   27 Apr 2006 : AMD X2 text changed from 'AMD_64_SSE3' to 'AMD_64X2'
  3.0.1   18 Apr 2006 : Bug in Yohan fctPMY target fixed, was incorrectly set to fctPMD
  3.0.0   27 Feb 2006 : Added new 2006 computed targets. Added Yonah and Presler
@@ -113,21 +117,26 @@ type
 
   TInstructions =
     (isFPU, {80x87}
-    isTSC, {RDTSC}
-    isCX8, {CMPXCHG8B}
-    isSEP, {SYSENTER/SYSEXIT}
-    isCMOV, {CMOVcc, and if isFPU, FCMOVcc/FCOMI}
-    isMMX, {MMX}
-    isFXSR, {FXSAVE/FXRSTOR}
-    isSSE, {SSE}
-    isSSE2, {SSE2}
-    isSSE3, {SSE3*}
-    isMONITOR, {MONITOR/MWAIT*}
-    isCX16, {CMPXCHG16B*}
-    isX64, {AMD AMD64* or Intel EM64T*}
-    isExMMX, {MMX+ - AMD only}
-    isEx3DNow, {3DNow!+ - AMD only}
-    is3DNow); {3DNow! - AMD only}
+     isTSC, {RDTSC}
+     isCX8, {CMPXCHG8B}
+     isSEP, {SYSENTER/SYSEXIT}
+     isCMOV, {CMOVcc, and if isFPU, FCMOVcc/FCOMI}
+     isMMX, {MMX}
+     isFXSR, {FXSAVE/FXRSTOR}
+     isSSE, {SSE}
+     isSSE2, {SSE2}
+     isSSE3, {SSE3*}
+     isSSSE3, {SSSE3}
+     isSSE4A, {SSE4A}
+     isSSE41, {SSE4.1}
+     isSSE42, {SSE4.2}
+     isSSE5,  {SSE5}
+     isMONITOR, {MONITOR/MWAIT*}
+     isCX16, {CMPXCHG16B*}
+     isX64, {AMD AMD64* or Intel EM64T*}
+     isExMMX, {MMX+ - AMD only}
+     isEx3DNow, {3DNow!+ - AMD only}
+     is3DNow); {3DNow! - AMD only}
 
   {Note: when changing TInstruction, also change InstructionSupportStr below
          * - instruction(s) not supported in Delphi 7 assembler}
@@ -147,16 +156,21 @@ type
   end;
 
   TFastCodeTarget =
-    (fctRTLReplacement, {not specific to any CPU}
-    fctBlendedIA32,     {not specific to any CPU, requires FPU and CMOV}
-    fctBlendedMMX,      {not specific to any CPU, requires FPU, MMX and CMOV  "Old fctBlended target"}
-    fctBlendedSSE,      {not specific to any CPU, requires FPU, MMX, CMOV and SSE}
-    fctBlendedSSE2,     {not specific to any CPU, requires FPU, MMX, CMOV, SSE, SSE2}
-    fctPMD, {Dothan}
+   (fctIA32,             {not specific to any CPU}
+    fctIA32SizePenalty,  {not specific to any CPU, In library routines with size penalties used This target was called "fctRTLReplacement" earlier}
+    fctMMX,              {not specific to any CPU, requires FPU, MMX and CMOV  "Old fctBlended target"}
+    fctMMXSizePenalty,   {not specific to any CPU, requires FPU, MMX and CMOV  "Old fctBlended target" In library routines with size penalties used}
+    fctSSE,              {not specific to any CPU, requires FPU, MMX, CMOV and SSE}
+    fctSSE2,             {not specific to any CPU, requires FPU, MMX, CMOV, SSE, SSE2}
+    fctSSE3,             {not specific to any CPU, requires FPU, MMX, CMOV, SSE, SSE2, SSE3}
+    fctSSSE3,            {not specific to any CPU, requires FPU, MMX, CMOV, SSE, SSE2, SSE3, SSSE3}
+    fctPascal,           {use Pascal routines in library}
+    fctPascalSizePenalty,{use Pascal routines with size penalty in library}
+    fctPMC, {Conroe}
     fctPMY, {Yonah}
     fctP4N, {Northwood}
-    fctP4R, {Presler}
-    fctAmd64, {AMD 64}
+    fctP4P, {Penryn: Core 2 with SSE4.1}
+    fctAmd64_SSE4A, {AMD Phenom with SSE4A}
     fctAmd64_SSE3); {X2/Opteron/Athlon FX/Athlon 64 with SSE3}
   {Note: when changing TFastCodeTarget, also change FastCodeTargetStr array
          below}
@@ -169,12 +183,13 @@ const
   InstructionSupportStr:
   array[Low(TInstructions)..High(TInstructions)] of ShortString =
     ('FPU', 'TSC', 'CX8', 'SEP', 'CMOV', 'MMX', 'FXSR', 'SSE', 'SSE2', 'SSE3',
-    'MONITOR', 'CX16', 'X64', 'MMX+', '3DNow!+', '3DNow!');
+    'SSSE3', 'SSE4A', 'SSE41', 'SSE42', 'SSE5', 'MONITOR', 'CX16', 'X64', 'MMX+', '3DNow!+', '3DNow!');
 
   FastCodeTargetStr:
   array[Low(TFastCodeTarget)..High(TFastCodeTarget)] of ShortString =
-    ('RTLReplacement', 'Blended_IA32', 'Blended_MMX', 'Blended_SSE',
-     'Blended_SSE2', 'Dothan', 'Yonah', 'Northwood', 'Presler', 'AMD_64', 'AMD_64X2');
+    ('IA32', 'IA32_SizePenalty', 'MMX', 'MMX_SizePenalty', 'SSE',
+     'SSE2', 'SSE3', 'SSSE3', 'Pascal', 'Pascal_SizePenalty',
+     'Conroe', 'Yonah', 'Northwood', 'Penryn', 'Phenom', 'AMD_64X2');
 
 var
   CPU: TCPU;
@@ -5025,13 +5040,19 @@ type
     cfFXSR, cfSSE, cfSSE2, cfSS, cfHTT, cfTM, cfIA_64, cfPBE,
     {in ECX}
     cfSSE3, cf_c1, cf_c2, cfMON, cfDS_CPL, cf_c5, cf_c6, cfEIST,
-    cfTM2, cf_c9, cfCID, cf_c11, cf_c12, cfCX16, cfxTPR, cf_c15,
-    cf_c16, cf_c17, cf_c18, cf_c19, cf_c20, cf_c21, cf_c22, cf_c23,
+    cfTM2, cfSSSE3, cfCID, cfSSE5, cf_c12, cfCX16, cfxTPR, cf_c15,
+    cf_c16, cf_c17, cf_c18, cfSSE41, cfSSE42, cf_c21, cf_c22, cf_c23,
     cf_c24, cf_c25, cf_c26, cf_c27, cf_c28, cf_c29, cf_c30, cf_c31);
   TCpuFeatureSet = set of TCpuFeatures;
 
   TCpuExtendedFeatures =
-    (cefFPU, cefVME, cefDE, cefPSE, cefTSC, cefMSR, cefPAE, cefMCE,
+    ({in EDX}
+    cefLahv, cefCMP, cefSVM, cefEXT, cefALT, cefABM, cefSSE4A, cefMisAlign,
+    cef3DPre, cefOSVW, cef_d10, cef_d11, cefSkinit, cefWDT, cef_d14, cef_d15,
+    cef_d16, cef_d17, cef_d18, cef_d19, cef_d20, cef_d21, cef_d22, cef_d23,
+    cef_d24, cef_d25, cef_d26, cef_d27, cef_d28, cef_d29, cef_d30, cef_d31,
+    {in ECX}
+    cefFPU, cefVME, cefDE, cefPSE, cefTSC, cefMSR, cefPAE, cefMCE,
     cefCX8, cefAPIC, cef_10, cefSEP, cefMTRR, cefPGE, cefMCA, cefCMOV,
     cefPAT, cefPSE36, cef_18, ceMPC, ceNX, cef_21, cefExMMX, cefMMX,
     cefFXSR, cef_25, cef_26, cef_27, cef_28, cefLM, cefEx3DNow, cef3DNow);
@@ -5053,9 +5074,11 @@ const
   PMBaniasEffModel = 9;
   PMDothanEffModel = $D;
   PMYonahEffModel = $E;
+  PMConroeEffModel = $F;
+  PMPenrynEffModel = $7;
   P3LowestEffModel = 7;
 
-function IsCPUID_Available: Boolean; register; {$IFDEF FPC}assembler;{$ENDIF}
+function IsCPUID_Available: Boolean; register;
 asm
   PUSHFD                 {save EFLAGS to stack}
   POP     EAX            {store EFLAGS in EAX}
@@ -5189,6 +5212,14 @@ begin
     Include(CPU.InstructionSupport, isSSE2);
   if cfSSE3 in CpuFeatures then
     Include(CPU.InstructionSupport, isSSE3);
+  if cfSSSE3 in CpuFeatures then
+    Include(CPU.InstructionSupport, isSSSE3);
+  if cfSSE41 in CpuFeatures then
+    Include(CPU.InstructionSupport, isSSE41);
+  if cfSSE42 in CpuFeatures then
+    Include(CPU.InstructionSupport, isSSE42);
+  if cfSSE5 in CpuFeatures then
+    Include(CPU.InstructionSupport, isSSE5);
   if (CPU.Vendor = cvIntel) and (cfMON in CpuFeatures) then
     Include(CPU.InstructionSupport, isMONITOR);
   if cfCX16 in CpuFeatures then
@@ -5197,6 +5228,11 @@ end;
 
 procedure GetCPUExtendedFeatures;
 {preconditions: maximum extended CPUID >= $80000001}
+type
+  _Int64 = packed record
+    Lo: Longword;
+    Hi: Longword;
+  end;
 var
   Registers: TRegisters;
   CpuExFeatures: TCpuExtendedFeatureSet;
@@ -5205,7 +5241,8 @@ begin
   GetCPUID($80000001, Registers);
 
   {get CPU extended features}
-  CPUExFeatures := TCPUExtendedFeatureSet(Registers.EDX);
+  System.Move(Registers.ECX, _Int64(CPUExFeatures).Lo, 4);
+  System.Move(Registers.EDX, _Int64(CPUExFeatures).Hi, 4);
 
   {get instruction support}
   if cefLM in CpuExFeatures then
@@ -5216,6 +5253,8 @@ begin
     Include(CPU.InstructionSupport, isEx3DNow);
   if cef3DNow in CpuExFeatures then
     Include(CPU.InstructionSupport, is3DNow);
+  if cefSSE4A in CpuExFeatures then
+    Include(CPU.InstructionSupport, isSSE4A);
 end;
 
 procedure GetProcessorCacheInfo;
@@ -5338,6 +5377,11 @@ begin
       Exclude(CPU.InstructionSupport, isSSE);
       Exclude(CPU.InstructionSupport, isSSE2);
       Exclude(CPU.InstructionSupport, isSSE3);
+      Exclude(CPU.InstructionSupport, isSSSE3);
+      Exclude(CPU.InstructionSupport, isSSE41);
+      Exclude(CPU.InstructionSupport, isSSE42);
+      Exclude(CPU.InstructionSupport, isSSE5);
+      Exclude(CPU.InstructionSupport, isSSE4A);
     end;
   end;
 end;
@@ -5400,42 +5444,58 @@ end;
 procedure GetFastCodeTarget;
 {precondition: GetCPUInfo must have been called}
 begin
-  FastCodeTarget := fctRTLReplacement;
+ {$IFDEF FastcodeSizePenalties}
+   FastCodeTarget := fctIA32SizePenalty;
+ {$ELSE}
+   FastCodeTarget := fctIA32;
+ {$ENDIF}
 
+  if (isSSSE3 in CPU.InstructionSupport) then
+    FastCodeTarget := fctSSSE3 else
+  if (isSSE3 in CPU.InstructionSupport) then
+    FastCodeTarget := fctSSE3 else
   if (isSSE2 in CPU.InstructionSupport) then
-    FastCodeTarget := fctBlendedSSE2 else
+    FastCodeTarget := fctSSE2 else
   if (isSSE in CPU.InstructionSupport) then
-    FastCodeTarget := fctBlendedSSE else
-  if (isSSE in CPU.InstructionSupport) then
-    FastCodeTarget := fctBlendedSSE else
+    FastCodeTarget := fctSSE else
   if ([isFPU, isMMX, isCMOV] <= CPU.InstructionSupport) then
-    FastCodeTarget := fctBlendedMMX else
-  if ([isFPU, isCMOV] <= CPU.InstructionSupport) then
-    FastCodeTarget := fctBlendedIA32;
+ {$IFDEF FastcodeSizePenalties}
+    FastCodeTarget := fctMMX_SizePenalty;
+ {$ELSE}
+    FastCodeTarget := fctMMX;
+ {$ENDIF}
 
   case CPU.Vendor of
     cvIntel:
       case CPU.EffFamily of
         6: {Intel P6, P2, P3, PM}
            case CPU.EffModel of
-            PMDothanEffModel : FastCodeTarget := fctPMD; // Dothan
             PMYonahEffModel  : FastCodeTarget := fctPMY; // Yonah
+            PMConroeEffModel : FastCodeTarget := fctPMC; // Conroe
+            PMPenrynEffModel : if (isSSE41 in CPU.InstructionSupport) then FastCodeTarget := fctP4P; // Penryn
            end;
         $F: {Intel P4}
            case CPU.EffModel of
             0,1,2 : FastCodeTarget := fctP4N; // Northwood
-            6     : FastCodeTarget := fctP4R; // Presler
            end;
       end;
     cvAMD:
       case CPU.EffFamily of
         $F: {AMD K8}
-           if ((CPU.EffModelBasic=$B) or (CPU.EffModelBasic=$3)) and (isSSE3 in CPU.InstructionSupport) then
-            FastCodeTarget := fctAmd64_SSE3 //AMD X2 dual core CPU
-           else
-            FastCodeTarget := fctAmd64;
+            if ((CPU.EffModelBasic=$B) or (CPU.EffModelBasic=$3)) and (isSSE3 in CPU.InstructionSupport) then
+              FastCodeTarget := fctAmd64_SSE3; //AMD X2 dual core CPU
+        16: if (isSSE4A in CPU.InstructionSupport) then
+         FastCodeTarget := fctAmd64_SSE4A; // Phenom
       end;
   end;
+
+ {$IFDEF FastcodePascal}
+   FastCodeTarget := fctPascal;
+ {$ENDIF}
+ {$IFDEF FastcodePascalSizePenalty}
+   FastCodeTarget := fctPascalSizePenalty;
+ {$ENDIF}
+
 end;
 {$IFEND}
 
