@@ -801,7 +801,7 @@ begin
       else
       begin
         Result := Def;
-        if Len = 0 then Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer);
+        if Len = 0 then Len := ZFastCode.StrLen(Buffer);
         SetLength(Value, Len+1);
         DotPos := 0; CommaPos := 0; ValidCount := 0; InvalidPos := 0;
         FillChar(Pointer(Value)^, Len+1, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -888,7 +888,7 @@ begin
         Result := Def;
         if Len = 0 then
         {$IFDEF DDELPHI14_UP}
-        Len := StrLen(Buffer);
+        Len := SysUtils.StrLen(Buffer);
         {$ELSE}
         Len := Length(Buffer);
         {$ENDIF}
@@ -2856,7 +2856,7 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
 begin
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
@@ -2875,7 +2875,7 @@ begin
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
   {$ENDIF}
 end;
 
@@ -2914,7 +2914,7 @@ begin
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
   {$ENDIF}
 end;
 

@@ -702,7 +702,7 @@ begin
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(InParamValues[I].VRawByteString))),false);
+        FParamBindBuffer.AddColumn(MyType,Max(1, Length(InParamValues[I].VRawByteString)),false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
@@ -728,7 +728,7 @@ begin
                 TempBlob := nil;
               end;
             else
-              {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(InParamValues[I].VRawByteString));
+              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(InParamValues[I].VRawByteString));
           end;
         FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
         FIELD_TYPE_DATETIME:

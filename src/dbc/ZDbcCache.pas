@@ -536,7 +536,7 @@ begin
     else
       if PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
       begin
-        System.Dispose(P^);
+        System.FreeMem(P^);
         PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
       end;
   end;
@@ -2092,7 +2092,7 @@ begin
       stBytes,stGUID, stString, stUnicodeString:
         if PNativeUInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ > 0 then
         begin
-          System.Dispose(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+          System.FreeMem(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
           PNativeUInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
         end;
     end;
@@ -2517,7 +2517,7 @@ end;
 }
 procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; Value: PAnsiChar);
 begin
-  SetPAnsiChar(ColumnIndex, Value, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Value));
+  SetPAnsiChar(ColumnIndex, Value, ZFastCode.StrLen(Value));
 end;
 
 {**

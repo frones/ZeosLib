@@ -60,7 +60,8 @@
  {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
- {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
+ {$DEFINE USE_FAST_TRUNC}       // use Fastcode Trunc(): Int64 functions
+ {$DEFINE USE_FAST_STRLEN}      // use FastCode StrLen(): Cardinal function
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -241,6 +242,7 @@
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
   {$DEFINE WITH_SYSTEM_PREFIX}
+  {$UNDEF USE_FAST_TRUNC} //since XE2 a different Extended record is used
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
@@ -273,7 +275,10 @@
 {$ENDIF}
 
 {$IFNDEF WIN32} //global undefines
-  {$UNDEF USE_FAST_TRUNC}
+  {$IFDEF USE_FAST_TRUNC}
+    {$UNDEF USE_FAST_TRUNC}
+  {$ENDIF}
+  {$UNDEF USE_FAST_STRLEN}
 {$ENDIF}
 // Debug/release compiler options
 {$D+}

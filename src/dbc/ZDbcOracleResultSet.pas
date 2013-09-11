@@ -265,7 +265,7 @@ begin
       SQLT_STR:
         begin
           Result := PAnsiChar(SQLVarHolder.Data);
-          Len := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Result);
+          Len := ZFastCode.StrLen(Result);
         end;
       SQLT_LVB, SQLT_LVC, SQLT_BIN:
         begin

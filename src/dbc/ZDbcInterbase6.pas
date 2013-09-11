@@ -487,7 +487,7 @@ begin
       FHandle := 0;
       { Connect to Interbase6 database. }
       GetPlainDriver.isc_attach_database(@FStatusVector,
-        {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(DBName), DBName,
+        ZFastCode.StrLen(DBName), DBName,
           @FHandle, FDPBLength, DPB);
 
       { Check connection error }

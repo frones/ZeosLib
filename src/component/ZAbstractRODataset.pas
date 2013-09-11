@@ -2971,7 +2971,7 @@ function TZAbstractRODataset.Translate(Src, Dest: PAnsiChar; ToOem: Boolean):
 begin
   if (Src <> nil) then
   begin
-    Result := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src);
+    Result := ZFastCode.StrLen(Src);
   {$IFNDEF UNIX}
     if doOemTranslate in FOptions then
     begin

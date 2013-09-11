@@ -58,7 +58,7 @@ interface
   uses
     ZCompatibility;
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove)}
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
   {$IFDEF VER170}
     {$DEFINE SSE2}
@@ -198,6 +198,13 @@ var
   FillChar: procedure (var Dest; count: Integer; Value: AnsiChar);
 {$ENDIF Use_FastCodeFillChar}
 
+var
+  {$IFDEF FPC}
+  StrLen: function(Str: PAnsiChar): LongInt;
+  {$ELSE}
+  StrLen: function(const Str: PAnsiChar): Cardinal;
+  {$ENDIF}
+
 {$IFNDEF WITH_FASTCODE_INTTOSTR}
 function IntToStr(const Value: Integer): String; overload;
 function IntToStr(const Value: Int64): String; overload;
@@ -259,7 +266,9 @@ function Trunc(const X: Single): Int64; overload;
 implementation
 
 uses
-  {$IFDEF MSWINDOWS}Windows, {$ENDIF}SysUtils, SysConst;
+  {$IFDEF MSWINDOWS}Windows, {$ENDIF}
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings, {$ENDIF}
+  SysUtils, SysConst;
 
 {$IFDEF PatchSystemMove} //set in Zeos.inc
 var
@@ -4916,7 +4925,88 @@ end;}
 
 {$ENDIF USE_FAST_TRUNC}
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove)}
+{$IFDEF USE_FAST_STRLEN}
+function StrLen_JOH_SSE2_2_a(const Str: PAnsiChar): Cardinal; //Unreleased
+asm
+  lea      ecx, [eax+16]
+  test     ecx, $ff0
+  pxor     xmm0, xmm0
+  jz       @@NearPageEnd     {Within 16 Bytes of Page End}
+@@WithinPage:
+  movdqu   xmm1, [eax]       {Check First 16 Bytes for #0}
+  add      eax, 16
+  pcmpeqb  xmm1, xmm0
+  pmovmskb edx, xmm1
+  test     edx, edx
+  jnz      @@SetResult
+  and      eax, -16          {Align Memory Reads}
+@@AlignedLoop:
+  movdqa   xmm1, [eax]       {Check Next 16 Bytes for #0}
+  add      eax, 16
+  pcmpeqb  xmm1, xmm0
+  pmovmskb edx, xmm1
+  test     edx, edx
+  jz       @@AlignedLoop
+@@SetResult:
+  bsf      edx, edx          {#0 Found - Set Result}
+  add      eax, edx
+  sub      eax, ecx
+  ret
+@@NearPageEnd:
+  mov      edx, eax
+@@Loop:
+  cmp      byte ptr [eax], 0 {Loop until #0 Found or 16-Byte Aligned}
+  je       @@SetResult2
+  add      eax, 1
+  test     eax, 15
+  jnz      @@Loop
+  jmp      @@AlignedLoop
+@@SetResult2:
+  sub      eax, edx
+end;
+
+function StrLen_JOH_IA32_7_d(const Str: PAnsiChar): Cardinal;
+asm
+  cmp   byte ptr [eax], 0
+  je    @@0
+  cmp   byte ptr [eax+1], 0
+  je    @@1
+  cmp   byte ptr [eax+2], 0
+  je    @@2
+  cmp   byte ptr [eax+3], 0
+  je    @@3
+  push  eax
+  and   eax, -4              {DWORD Align Reads}
+@@Loop:
+  add   eax, 4
+  mov   edx, [eax]           {4 Chars per Loop}
+  lea   ecx, [edx-$01010101]
+  not   edx
+  and   edx, ecx
+  and   edx, $80808080       {Set Byte to $80 at each #0 Position}
+  jz    @@Loop               {Loop until any #0 Found}
+@@SetResult:
+  pop   ecx
+  bsf   edx, edx             {Find First #0 Position}
+  shr   edx, 3               {Byte Offset of First #0}
+  add   eax, edx             {Address of First #0}
+  sub   eax, ecx
+  ret
+@@0:
+  xor   eax, eax
+  ret
+@@1:
+  mov   eax, 1
+  ret
+@@2:
+  mov   eax, 2
+  ret
+@@3:
+  mov   eax, 3
+end;
+{$ENDIF USE_FAST_STRLEN}
+
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
 type
   TRegisters = record
     EAX,
@@ -5351,7 +5441,7 @@ end;
 
 initialization
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove)}
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
   GetCPUInfo;
   GetFastCodeTarget;
 {$IFEND}
@@ -5389,5 +5479,21 @@ initialization
   CacheLimit := CPU.L2CacheSize * -512; {Used within SSE Based Moves}
   PatchMove; {Patch Delphi's System.Move}
 {$ENDIF PatchSystemMove} //set in Zeos.inc
+
+{$IFDEF USE_FAST_STRLEN}
+  if isSSE3 in CPU.InstructionSupport then
+    StrLen := StrLen_JOH_SSE2_2_a {Processor Supports SSE3}
+  else
+    if isSSE2 in CPU.InstructionSupport then
+      StrLen := StrLen_JOH_SSE2_2_a {Processor Supports SSE2}
+    else
+      StrLen := StrLen_JOH_IA32_7_d; {Processor does not Support SSE3 or SSE2}
+{$ELSE}
+  {$IFDEF WITH_STRLEN_DEPRECATED}
+    StrLen := AnsiStrings.StrLen;
+  {$ELSE}
+    StrLen := {$IFDEF FPC}System.{$ELSE}SysUtils.{$ENDIF}StrLen;
+  {$ENDIF WITH_STRLEN_DEPRECATED}
+{$ENDIF USE_FAST_STRLEN}
 
 end.

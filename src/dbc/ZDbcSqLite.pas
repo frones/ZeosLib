@@ -137,7 +137,7 @@ var
 implementation
 
 uses
-  ZSysUtils, ZDbcUtils, ZDbcSqLiteStatement, ZSqLiteToken,
+  ZSysUtils, ZDbcUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode,
   ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -260,9 +260,9 @@ var
   ErrorCode: Integer;
 begin
   {$IFDEF UNICODE}
-  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(UTF8String(Key))));
+  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Key)), ZFastCode.StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
-  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
+  ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Key), ZFastCode.StrLen(PAnsiChar(Key)));
   {$ENDIF}
   Result := ErrorCode;
 end;
@@ -278,9 +278,9 @@ var
   ErrorCode: Integer;
 begin
   {$IFDEF UNICODE}
-  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(UTF8String(Key))));
+  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(UTF8String(Key)), ZFastCode.StrLen(PAnsiChar(UTF8String(Key))));
   {$ELSE}
-  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(Key), StrLen(PAnsiChar(Key)));
+  ErrorCode := GetPlainDriver.ReKey(FHandle, PAnsiChar(Key), ZFastCode.StrLen(PAnsiChar(Key)));
   {$ENDIF}
   Result := ErrorCode;
 end;
@@ -319,9 +319,9 @@ begin
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
     {$IFDEF UNICODE}
-    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(UTF8String(Password))));
+    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), ZFastCode.StrLen(PAnsiChar(UTF8String(Password))));
     {$ELSE}
-    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), StrLen(PAnsiChar(Password)));
+    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), ZFastCode.StrLen(PAnsiChar(Password)));
     {$ENDIF}
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil, lcConnect, 'SQLite.Key');
   end;
