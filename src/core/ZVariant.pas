@@ -1398,7 +1398,7 @@ begin
         vtInteger:
           Result.VInteger := Value.VInteger;
         vtFloat:
-          Result.VInteger := Trunc(Value.VFloat);
+          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VFloat);
         vtString:
           Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         vtAnsiString:
@@ -1410,7 +1410,7 @@ begin
         vtUnicodeString:
           Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         vtDateTime:
-          Result.VInteger := Trunc(Value.VDateTime);
+          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
           Result.VInteger := NativeInt(Value.VPointer);
         vtInterface:
@@ -1681,7 +1681,7 @@ begin
         vtInteger:
           Result.VInteger := Value.VInteger;
         vtFloat:
-          Result.VInteger := Trunc(Value.VFloat);
+          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VFloat);
         vtString:
           Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         vtAnsiString:
@@ -1693,7 +1693,7 @@ begin
         vtUnicodeString:
           Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         vtDateTime:
-          Result.VInteger := Trunc(Value.VDateTime);
+          Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
           Result.VInteger := NativeInt(Value.VPointer);
         vtInterface:

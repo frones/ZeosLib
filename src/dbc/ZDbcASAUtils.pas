@@ -793,9 +793,9 @@ begin
   begin
     case sqlType and $FFFE of
       DT_SMALLINT,
-      DT_UNSSMALLINT      : PSmallint(sqldata)^ := Trunc( Value);
+      DT_UNSSMALLINT      : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_INT,
-      DT_UNSINT           : PInteger(sqldata)^ := Trunc( Value);
+      DT_UNSINT           : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
       DT_VARCHAR:
@@ -806,9 +806,9 @@ begin
                                 tmp, sqllen-3);
                             end;
       DT_TINYINT,
-      DT_BIT              : PByte(sqldata)^ := Trunc( Value);
+      DT_BIT              : PByte(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_BIGINT,
-      DT_UNSBIGINT        : PInt64(sqldata)^ := Trunc( Value);
+      DT_UNSBIGINT        : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
     else
       CreateException( SUnsupportedParameterType);
     end;
@@ -831,9 +831,9 @@ begin
   begin
     case sqlType and $FFFE of
       DT_SMALLINT,
-      DT_UNSSMALLINT      : PSmallint(sqldata)^ := Trunc( Value);
+      DT_UNSSMALLINT      : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_INT,
-      DT_UNSINT           : PInteger(sqldata)^ := Trunc( Value);
+      DT_UNSINT           : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
       DT_VARCHAR:
@@ -844,9 +844,9 @@ begin
                                 tmp, sqllen-3);
                             end;
       DT_TINYINT,
-      DT_BIT              : PByte(sqldata)^ := Trunc( Value);
+      DT_BIT              : PByte(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_BIGINT,
-      DT_UNSBIGINT        : PInt64(sqldata)^ := Trunc( Value);
+      DT_UNSBIGINT        : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
     else
       CreateException( SUnsupportedParameterType);
     end;
@@ -869,9 +869,9 @@ begin
   begin
     case sqlType and $FFFE of
       DT_SMALLINT,
-      DT_UNSSMALLINT      : PSmallint(sqldata)^ := Trunc( Value);
+      DT_UNSSMALLINT      : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_INT,
-      DT_UNSINT           : PInteger(sqldata)^ := Trunc( Value);
+      DT_UNSINT           : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_FLOAT            : PSingle(sqldata)^ := Value;
       DT_DOUBLE           : PDouble(sqldata)^ := Value;
       DT_VARCHAR:
@@ -882,9 +882,9 @@ begin
                                 tmp, sqllen-3);
                             end;
       DT_TINYINT,
-      DT_BIT              : PByte(sqldata)^ := Trunc( Value);
+      DT_BIT              : PByte(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
       DT_BIGINT,
-      DT_UNSBIGINT        : PInt64(sqldata)^ := Trunc( Value);
+      DT_UNSBIGINT        : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Value);
     else
       CreateException( SUnsupportedParameterType);
     end;
@@ -1283,8 +1283,8 @@ begin
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
       DT_UNSINT      : Result := PLongWord(sqldata)^;
-      DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
-      DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
+      DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PSingle(sqldata)^);
+      DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
            ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
@@ -1335,7 +1335,7 @@ end;
 }
 function TZASASQLDA.GetDate(const Index: Integer): TDateTime;
 begin
-  Result := Trunc( GetTimestamp( Index));
+  Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( GetTimestamp( Index));
 end;
 
 {**
@@ -1425,8 +1425,8 @@ begin
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
       DT_UNSINT      : Result := PLongWord(sqldata)^;
-      DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
-      DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
+      DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PSingle(sqldata)^);
+      DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
            ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
@@ -1464,8 +1464,8 @@ begin
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
       DT_UNSINT      : Result := PLongWord(sqldata)^;
-      DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
-      DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
+      DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PSingle(sqldata)^);
+      DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
            ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
@@ -1564,8 +1564,8 @@ begin
       DT_UNSSMALLINT : Result := PWord(sqldata)^;
       DT_INT         : Result := PInteger(sqldata)^;
 //      DT_UNSINT      : Result := PLongWord(sqldata)^;
-      DT_FLOAT       : Result := Trunc( PSingle(sqldata)^);
-      DT_DOUBLE      : Result := Trunc( PDouble(sqldata)^);
+      DT_FLOAT       : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PSingle(sqldata)^);
+      DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
            ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
@@ -2270,7 +2270,7 @@ function RandomString( Len: integer): string;
 begin
   Result := '';
   while Length( Result) < Len do
-    Result := Result + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( Trunc( Random( High( Integer))));
+    Result := Result + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Random( High( Integer))));
   if Length( Result) > Len then
     Result := Copy( Result, 1, Len);
 end;

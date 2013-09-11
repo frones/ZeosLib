@@ -563,7 +563,7 @@ function FloatToSqlRaw(const Value: Extended): RawByteString;
 implementation
 
 uses ZFastCode, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} StrUtils,
-  ZMatchPattern, DateUtils;
+  ZMatchPattern, DateUtils, Math;
 
 
 {**
@@ -1509,7 +1509,7 @@ var
     if not Failed then
       if DateFormat = 'FLOAT' then
       begin
-        Result := Trunc(ValRawExt(Value, '.', Code));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
         if Failed then Result := 0;
       end
@@ -1584,7 +1584,7 @@ var
       end;
       if MPos > 2 then //float ValueTmp
       begin
-        Result := Trunc(ValRawExt(Value, '.', Code));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
         Failed := Code <> 0;
         if Failed then  Exit;
       end;
@@ -1606,7 +1606,7 @@ var
           end
           else
           begin
-            Result := Trunc(ValRawExt(Value, '.', Code));
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
             if Code <> 0 then
               Result := 0;
             Exit;
@@ -1616,7 +1616,7 @@ var
         try
           Result := EncodeDate(Year, Month, Day);
         except
-          Result := Trunc(ValRawExt(Value, '.', Code));
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
           Failed := Code <> 0;
           if Failed then Result := 0;
         end;

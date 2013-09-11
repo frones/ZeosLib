@@ -1370,9 +1370,9 @@ begin
       stShort: Result := GetShort(ColumnIndex, IsNull);
       stInteger: Result := GetInt(ColumnIndex, IsNull);
       stLong: Result := GetLong(ColumnIndex, IsNull);
-      stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
@@ -1412,9 +1412,9 @@ begin
       stShort: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := GetInt(ColumnIndex, IsNull);
       stLong: Result := GetLong(ColumnIndex, IsNull);
-      stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
@@ -1455,9 +1455,9 @@ begin
       stInteger:
         Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := GetLong(ColumnIndex, IsNull);
-      stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
@@ -1498,9 +1498,9 @@ begin
       stInteger: Result := GetInt(ColumnIndex, IsNull);
       stLong:
         Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
@@ -1696,7 +1696,7 @@ begin
       stDate, stTime, stTimestamp:
         Result := Int(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
-        Result := Trunc(AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull)));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull)));
     end;
     IsNull := False;
   end
@@ -2305,10 +2305,10 @@ begin
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, Trunc(Value));
-    stShort: SetShort(ColumnIndex, Trunc(Value));
-    stInteger: SetInt(ColumnIndex, Trunc(Value));
-    stLong: SetLong(ColumnIndex, Trunc(Value));
+    stByte: SetByte(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stShort: SetShort(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stInteger: SetInt(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stLong: SetLong(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
     stFloat:
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
@@ -2337,10 +2337,10 @@ begin
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, Trunc(Value));
-    stShort: SetShort(ColumnIndex, Trunc(Value));
-    stInteger: SetInt(ColumnIndex, Trunc(Value));
-    stLong: SetLong(ColumnIndex, Trunc(Value));
+    stByte: SetByte(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stShort: SetShort(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stInteger: SetInt(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stLong: SetLong(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble:
       begin
@@ -2370,10 +2370,10 @@ begin
 {$ENDIF}
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, Trunc(Value));
-    stShort: SetShort(ColumnIndex, Trunc(Value));
-    stInteger: SetInt(ColumnIndex, Trunc(Value));
-    stLong: SetLong(ColumnIndex, Trunc(Value));
+    stByte: SetByte(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stShort: SetShort(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stInteger: SetInt(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stLong: SetLong(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
     stFloat: SetFloat(ColumnIndex, Value);
     stDouble: SetDouble(ColumnIndex, Value);
     stBigDecimal:
@@ -2718,9 +2718,9 @@ begin
       begin
         FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-          Trunc(Value);
+          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
       end;
-    stTimestamp: SetTimestamp(ColumnIndex, Trunc(Value));
+    stTimestamp: SetTimestamp(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
     stString, stUnicodeString: SetString(ColumnIndex, FormatDateTime('yyyy-mm-dd', Value));
   end;
 end;

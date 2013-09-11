@@ -660,7 +660,7 @@ begin
         Len, ConSettings^.FormatSettings.DateFormatLen, Failed);
     end
     else
-      Result := Trunc(RawSQLTimeStampToDateTime(Buffer,
+      Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawSQLTimeStampToDateTime(Buffer,
         PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
           ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
     LastWasNull := Result = 0;

@@ -134,7 +134,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging
+  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteResultSetMetadata }
@@ -677,7 +677,7 @@ begin
             Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
              Len, ConSettings^.FormatSettings.DateFormatLen, Failed)
           else
-            Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
               Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
         end;
       LastWasNull := Result = 0;

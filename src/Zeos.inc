@@ -60,6 +60,7 @@
  {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
+ {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -218,9 +219,11 @@
 {$IFDEF DELPHI15_UP}
   {$DEFINE WITH_FORMATSETTINGS}
   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
-  {$IFDEF WIN64}
+  {$IFNDEF WIN32}
     {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
-    {$DEFINE PUREPASCAL}
+    {$IFNDEF PUREPASCAL}
+      {$DEFINE PUREPASCAL}
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 
@@ -269,7 +272,9 @@
   {$DEFINE WITH_FLOATTOTEXT_DEPRECATED} //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
 {$ENDIF}
 
-
+{$IFNDEF WIN32} //global undefines
+  {$UNDEF USE_FAST_TRUNC}
+{$ENDIF}
 // Debug/release compiler options
 {$D+}
 

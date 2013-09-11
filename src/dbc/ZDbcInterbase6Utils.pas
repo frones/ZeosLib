@@ -457,7 +457,7 @@ function RandomString(Len: integer): RawByteString;
 begin
   Result := '';
   while Length(Result) < Len do
-    Result := Result + IntToRaw(Trunc(Random(High(Integer))));
+    Result := Result + IntToRaw({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Random(High(Integer))));
   if Length(Result) > Len then
     Result := Copy(Result, 1, Len);
 end;
@@ -1930,8 +1930,8 @@ begin
     if (sqlscale < 0)  then
     begin //http://code.google.com/p/fbclient/wiki/DatatypeMapping
       case SQLCode of
-        SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
         SQL_QUAD   : //PInt64(sqldata)^    := Trunc(Value * GetIBScaleDivisor(sqlscale)); EgonHugeist: Trunc seems to have rounding issues!
             //remain issues if decimal digits > scale than we've school learned rounding success randomly only
@@ -1946,12 +1946,12 @@ begin
     else
       case SQLCode of
         SQL_DOUBLE    : PDouble(sqldata)^   := Value;
-        SQL_LONG      : PInteger(sqldata)^ := Trunc(Value);
+        SQL_LONG      : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_D_FLOAT,
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
-        SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
-        SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
-        SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
+        SQL_BOOLEAN   : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_SHORT     : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
         SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToRaw(Value));
       else
@@ -2101,7 +2101,7 @@ begin
       SQL_DOUBLE    : PDouble (sqldata)^ := RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
       SQL_FLOAT     : PSingle (sqldata)^ := RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := Trunc(RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD:
         begin
           Stream := TMemoryStream.Create;
@@ -2211,10 +2211,10 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_QUAD   : PInt64(sqldata)^    := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_DOUBLE : PDouble(sqldata)^   := Value;
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
@@ -2223,12 +2223,12 @@ begin
     else
       case SQLCode of
         SQL_DOUBLE    : PDouble(sqldata)^   := Value;
-        SQL_LONG      : PInteger(sqldata)^ := Trunc(Value);
+        SQL_LONG      : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_D_FLOAT,
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
-        SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
-        SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
-        SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
+        SQL_BOOLEAN   : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_SHORT     : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
         SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToRaw(Value));
       else
@@ -2263,10 +2263,10 @@ begin
     if (sqlscale < 0)  then
     begin
       case SQLCode of
-        SQL_SHORT  : PSmallInt(sqldata)^ := Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_LONG   : PInteger(sqldata)^  := Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_QUAD   : PInt64(sqldata)^    := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
         SQL_DOUBLE : PDouble(sqldata)^   := Value;
         SQL_D_FLOAT,
         SQL_FLOAT  : PSingle(sqldata)^   := Value;
@@ -2277,12 +2277,12 @@ begin
     else
       case SQLCode of
         SQL_DOUBLE    : PDouble(sqldata)^   := Value;
-        SQL_LONG      : PInteger(sqldata)^ := Trunc(Value);
+        SQL_LONG      : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_D_FLOAT,
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
-        SQL_BOOLEAN   : PSmallint(sqldata)^ := Trunc(Value);
-        SQL_SHORT     : PSmallint(sqldata)^ := Trunc(Value);
-        SQL_INT64     : PInt64(sqldata)^ := Trunc(Value);
+        SQL_BOOLEAN   : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_SHORT     : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
         SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToRaw(Value));
       else
@@ -2540,7 +2540,7 @@ begin
       SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,
       SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := Trunc(SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD:
         begin
           Stream := TStringStream.Create(Value);
@@ -2745,7 +2745,7 @@ begin
         SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale] <> 0;
         SQL_INT64,
         SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale] <> 0;
-        SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^) > 0;
+        SQL_DOUBLE : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^) > 0;
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2753,10 +2753,10 @@ begin
     end
     else
       case SQLCode of
-        SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^) <> 0;
+        SQL_DOUBLE    : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^) <> 0;
         SQL_LONG      : Result := PInteger(sqldata)^ <> 0;
         SQL_D_FLOAT,
-        SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^) <> 0;
+        SQL_FLOAT     : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^) <> 0;
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
         SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
         SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
@@ -2823,7 +2823,7 @@ end;
 }
 function TZResultSQLDA.GetDate(const Index: Integer): TDateTime;
 begin
-  Result := Trunc(GetTimestamp(Index));
+  Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetTimestamp(Index));
 end;
 
 {**
@@ -2965,7 +2965,7 @@ begin
         SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
         SQL_INT64,
         SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
-        SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
+        SQL_DOUBLE : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -2973,10 +2973,10 @@ begin
     end
     else
       case SQLCode of
-        SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^);
+        SQL_DOUBLE    : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         SQL_LONG      : Result := PInteger(sqldata)^;
         SQL_D_FLOAT,
-        SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
+        SQL_FLOAT     : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
@@ -3131,7 +3131,7 @@ begin
         SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
         SQL_INT64,
         SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
-        SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
+        SQL_DOUBLE : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
       else
         raise EZIBConvertError.Create(Format(SErrorConvertionField,
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
@@ -3139,10 +3139,10 @@ begin
     end
     else
       case SQLCode of
-        SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^);
+        SQL_DOUBLE    : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(sqldata)^);
         SQL_LONG      : Result := PInteger(sqldata)^;
         SQL_D_FLOAT,
-        SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
+        SQL_FLOAT     : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(sqldata)^);
         SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
         SQL_SHORT     : Result := PSmallint(sqldata)^;
         SQL_INT64     : Result := PInt64(sqldata)^;
@@ -3268,7 +3268,7 @@ begin
                             Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10));
                         end;
         else
-          Result := Trunc(GetDouble(Index));
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(Index));
         end;
   end;
  {$IFOPT D+}

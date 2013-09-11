@@ -600,7 +600,7 @@ begin
       Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
        Len, ConSettings^.FormatSettings.DateFormatLen, Failed)
     else
-      Result := Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+      Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
         Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
   end;
 end;

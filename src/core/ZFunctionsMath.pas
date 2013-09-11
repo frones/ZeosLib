@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  SysUtils, ZFunctions, ZExpression, ZVariant;
+  SysUtils, ZFunctions, ZExpression, ZVariant, ZFastCode;
 
 {**  Math functions }
 
@@ -509,7 +509,7 @@ function TZTruncFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 1);
-  VariantManager.SetAsInteger(Result, Trunc(VariantManager.GetAsFloat(Stack.GetParameter(1))));
+  VariantManager.SetAsInteger(Result, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(VariantManager.GetAsFloat(Stack.GetParameter(1))));
 end;
 
 { TZIntFunction }

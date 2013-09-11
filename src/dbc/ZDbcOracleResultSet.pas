@@ -419,10 +419,10 @@ begin
       SQLT_INT:
         Result := PLongInt(SQLVarHolder.Data)^;
       SQLT_FLT:
-        Result := Trunc(PDouble(SQLVarHolder.Data)^);
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(SQLVarHolder.Data)^);
       else
       begin
-        Result := Trunc(RawToFloatDef(
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloatDef(
           GetAsStringValue(ColumnIndex, SQLVarHolder), '.', 0));
       end;
     end;
@@ -653,7 +653,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := Trunc(GetAsDoubleValue(ColumnIndex, nil));
+  Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDoubleValue(ColumnIndex, nil));
 end;
 
 {**
@@ -740,7 +740,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Result := Trunc(GetAsDateTimeValue(ColumnIndex, nil));
+  Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(ColumnIndex, nil));
 end;
 
 {**
