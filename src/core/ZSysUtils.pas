@@ -887,11 +887,7 @@ begin
       begin
         Result := Def;
         if Len = 0 then
-        {$IFDEF DDELPHI14_UP}
-        Len := SysUtils.StrLen(Buffer);
-        {$ELSE}
         Len := Length(Buffer);
-        {$ENDIF}
         SetLength(Value, Len+1);
         DotPos := 0; CommaPos := 0; ValidCount := 0; InvalidPos := 0;
         FillChar(Pointer(Value)^, (Len+1)*2, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});

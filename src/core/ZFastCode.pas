@@ -225,13 +225,6 @@ function IntToStr(const Value: Integer): String; overload;
 function IntToStr(const Value: Int64): String; overload;
 {$ENDIF WITH_FASTCODE_INTTOSTR}
 
-{$IFDEF Use_FastCodeFillChar}
-  procedure FillChar_DKC_SSE2_10_b(var Dest; count: Integer; Value: AnsiChar);
-  procedure FillChar_JOH_SSE_1_d (var Dest; count: Integer; Value: AnsiChar);
-  procedure FillChar_JOH_MMX_4_b(var Dest; count: Integer; Value: AnsiChar);
-  procedure FillChar_JOH_IA32_2_b (var Dest; count: Integer; Value: AnsiChar);
-{$ENDIF Use_FastCodeFillChar}
-
 { Integer convertion in Raw and Unicode Format}
 function IntToRaw(Value: Integer): RawByteString; overload;
 function IntToRaw(Value: Int64): RawByteString; overload;
@@ -893,62 +886,55 @@ asm
 @@Done:
 end;
 
-procedure FillChar_JOH_IA32_2_b(var Dest; count: Integer; Value: AnsiChar);
-asm {Size = 153 Bytes}
-  cmp   edx, 32
-  mov   ch, cl                    {Copy Value into both Bytes of CX}
-  jl    @@Small
-  mov   [eax  ], cx               {Fill First 8 Bytes}
-  mov   [eax+2], cx
-  mov   [eax+4], cx
-  mov   [eax+6], cx
-  sub   edx, 16
-  fld   qword ptr [eax]
-  fst   qword ptr [eax+edx]       {Fill Last 16 Bytes}
-  fst   qword ptr [eax+edx+8]
-  mov   ecx, eax
-  and   ecx, 7                    {8-Byte Align Writes}
-  sub   ecx, 8
-  sub   eax, ecx
-  add   edx, ecx
-  add   eax, edx
-  neg   edx
-@@Loop:
-  fst   qword ptr [eax+edx]       {Fill 16 Bytes per Loop}
-  fst   qword ptr [eax+edx+8]
-  add   edx, 16
-  jl    @@Loop
-  ffree st(0)
+procedure FillChar_JOH_IA32_4_a(var Dest; Count: Integer; Value: Char);
+asm
+  cmp    edx, 32
+  mov    ch, cl           {Copy Value into both Bytes of CX}
+  jl     @@SmallFill
+  push   edi
+  movzx  edi, cx
+  shl    ecx, 16
+  or     ecx, edi         {All 4 Bytes = Value}
+  sub    edx, 4
+  mov    [eax], ecx       {Fill First 4 Bytes}
+  mov    [eax+edx-4], ecx {Fill Last 8 Bytes}
+  mov    [eax+edx], ecx
+  add    eax, 4
+  and    eax, -4          {DWORD Align}
+  mov    edi, eax
+  mov    eax, ecx
+  shr    edx, 2
+  mov    ecx, edx
+  rep    stosd
+  pop    edi
   ret
-  nop
-  nop
-  nop
-@@Small:
-  test  edx, edx
-  jle   @@Done
-  mov   [eax+edx-1], cl       {Fill Last Byte}
-  and   edx, -2               {No. of Words to Fill}
-  neg   edx
-  lea   edx, [@@SmallFill + 60 + edx * 2]
-  jmp   edx
-  nop                             {Align Jump Destinations}
-  nop
+  nop                     {Align}
 @@SmallFill:
-  mov   [eax+28], cx
-  mov   [eax+26], cx
-  mov   [eax+24], cx
-  mov   [eax+22], cx
-  mov   [eax+20], cx
-  mov   [eax+18], cx
-  mov   [eax+16], cx
-  mov   [eax+14], cx
-  mov   [eax+12], cx
-  mov   [eax+10], cx
-  mov   [eax+ 8], cx
-  mov   [eax+ 6], cx
-  mov   [eax+ 4], cx
-  mov   [eax+ 2], cx
-  mov   [eax   ], cx
+  test   edx, edx
+  jle    @@Done
+  mov    [eax+edx-1], cl  {Fill Last Byte}
+  and    edx, -2          {Byte Pairs to Fill}
+  neg    edx
+  lea    edx, [@@Fill + 60 + edx * 2]
+  jmp    edx
+  nop                     {Align Jump Destinations}
+  nop
+@@Fill:
+  mov    [eax+28], cx
+  mov    [eax+26], cx
+  mov    [eax+24], cx
+  mov    [eax+22], cx
+  mov    [eax+20], cx
+  mov    [eax+18], cx
+  mov    [eax+16], cx
+  mov    [eax+14], cx
+  mov    [eax+12], cx
+  mov    [eax+10], cx
+  mov    [eax+ 8], cx
+  mov    [eax+ 6], cx
+  mov    [eax+ 4], cx
+  mov    [eax+ 2], cx
+  mov    [eax   ], cx
   ret {DO NOT REMOVE - This is for Alignment}
 @@Done:
 end;
@@ -5519,7 +5505,7 @@ initialization
         if isMMX in CPU.InstructionSupport then
           FillChar := FillChar_JOH_MMX_4_b {Processor Supports MMX}
         else
-          FillChar := FillChar_JOH_IA32_2_b; {Processor does not Support MMX or SSE}
+          FillChar := FillChar_JOH_IA32_4_a; {Processor does not Support MMX or SSE}
 {$ENDIF Use_FastCodeFillChar}
 
 {$IFDEF PatchSystemMove} //set in Zeos.inc
