@@ -673,7 +673,7 @@ begin
   try
     if not LastWasNull then
     begin
-      case TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) of
+      case GetMetadata.GetColumnType(ColumnIndex) of
         stAsciiStream:
           if ConSettings.AutoEncode then
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True))
@@ -690,7 +690,7 @@ begin
       Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
     end
     else
-      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
+      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection, GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream));
   finally
     if Assigned(Stream) then
       Stream.Free;
