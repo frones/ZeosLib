@@ -680,17 +680,17 @@ begin
           else
             Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
-      else
-        {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
-        if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
-          Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
-        else
-          Stream := FPlaindriver.column_blob(FStmtHandle,columnIndex);
+        stBinaryStream:
+          {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
+          if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
+            Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
+          else
+            Stream := FPlaindriver.column_blob(FStmtHandle,columnIndex);
       end;
-      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
+      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection, GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream);
     end
     else
-      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection, GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream));
+      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
   finally
     if Assigned(Stream) then
       Stream.Free;
