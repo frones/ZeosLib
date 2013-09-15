@@ -1001,16 +1001,11 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLPreparedResultSet.GetByte(ColumnIndex: Integer): Byte;
-var
-   full64: Int64;
-   bitmask: Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  full64 := bufferasInt64(ColumnIndex);
-  bitmask := $FF;
-  Result := Byte(full64 and bitmask);
+  Result := Byte(bufferasInt64(ColumnIndex));
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1024,17 +1019,11 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLPreparedResultSet.GetShort(ColumnIndex: Integer): SmallInt;
-var
-    full64: Int64;
-    bitmask: Int64;
 Begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
- full64 := bufferasInt64(ColumnIndex);
- bitmask := $FFFFFFFF;
- Result := Integer(full64 and bitmask);
-
+ Result := Integer(bufferasInt64(ColumnIndex));
  LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
 
@@ -1066,15 +1055,10 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLPreparedResultSet.GetLong(ColumnIndex: Integer): Int64;
-//var
-  //full64, bitmask: Int64;
 Begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-// full64 := bufferasInt64(ColumnIndex);
-// bitmask := $FFFFFFFF;
- //Result := Int64(full64 and bitmask);
   Result := bufferasInt64(ColumnIndex);
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
 end;
@@ -1367,8 +1351,10 @@ begin
    4: Result := plongint(FColumnArray[ColumnIndex-1].buffer)^;
    8: Result := pint64(FColumnArray[ColumnIndex-1].buffer)^;
    else
-    Result := 0;
-   End
+     Result := 0;
+   end;
+   if (Result < 0) and not GetMetadata.IsSigned(ColumnIndex) then
+     Result := -Result;
 end;
 
 function TZMySQLPreparedResultSet.bufferasextended(ColumnIndex: Integer): Extended;
