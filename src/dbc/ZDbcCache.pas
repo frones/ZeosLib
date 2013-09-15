@@ -564,18 +564,18 @@ procedure TZRowAccessor.InternalSetUnicodeString(Buffer: PZRowBuffer;
   ColumnIndex: Integer; Value: ZWideString; NewPointer: Boolean = False);
 var
   W: ZPPWideChar;
-  L: SmallInt;
+  LStr, LMem: Cardinal;
 begin
   if Assigned(Buffer) then
   begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
-    L := Length(Value)*2 + 2;
-    Value := System.Copy(Value, 1, L);
-    L := L * 2 + 2;
-    ReallocMem(W^, L);
-    System.Move(PWideChar(Value)^, W^^, L);
+    LStr := Length(Value);
+    LMem := LStr * 2;
+    ReallocMem(W^, LMem+2); //including #0#0 terminator
+    System.Move(PWideChar(Value)^, W^^, LMem);
+    (W^+LStr)^ := WideChar(#0);
   end;
 end;
 
@@ -589,7 +589,6 @@ begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
-    Len := Len;
     ReallocMem(C^, Len+1);
     Move(Value^, C^^, Len);
     (C^+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces

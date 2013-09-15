@@ -905,7 +905,7 @@ var
 begin
   CheckIndex( Index);
   AnsiTmp := FPlainDriver.ZPlainString(Value, FConSettings);
-  BlobSize := SysUtils.StrLen( Value);
+  BlobSize := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}{$IFDEF UNICODE}System.Length{$ELSE}ZFastCode.StrLen{$ENDIF}{$ENDIF}( Value);
   if BlobSize < MinBLOBSize then
     SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1)
   else

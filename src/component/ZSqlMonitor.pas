@@ -120,8 +120,6 @@ type
 implementation
 
 
-uses ZFastCode {$IFDEF WITH_UNITANSISTRINGS},AnsiStrings{$ENDIF};
-
 { TZSQLMonitor }
 
 {**
@@ -256,7 +254,7 @@ begin
     begin
       Temp := AnsiString(TZLoggingEvent(FTraceList[I]).AsString + LineEnding);
       Buffer := PAnsiChar(Temp);
-      Stream.Write(Buffer^, ZFastCode.StrLen(Buffer) * sizeof(Ansichar));
+      Stream.Write(Buffer^, Length(Temp));
     end;
   finally
     Stream.Free;
@@ -298,7 +296,7 @@ begin
       Stream.Seek(0, soFromEnd);
       Temp := AnsiString(Event.AsString(FLoggingFormatter) + LineEnding);
       Buffer := PAnsiChar(Temp);
-      Stream.Write(Buffer^, ZFastCode.StrLen(Buffer)*sizeof(Ansichar));
+      Stream.Write(Buffer^, Length(Temp));
     finally
       Stream.Free;
     end;

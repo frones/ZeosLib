@@ -887,7 +887,11 @@ begin
       begin
         Result := Def;
         if Len = 0 then
+        {$IFDEF WITH_PWIDECHAR_STRLEN}
+        Len := SysUtils.StrLen(Buffer);
+        {$ELSE}
         Len := Length(Buffer);
+        {$ENDIF}
         SetLength(Value, Len+1);
         DotPos := 0; CommaPos := 0; ValidCount := 0; InvalidPos := 0;
         FillChar(Pointer(Value)^, (Len+1)*2, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
@@ -2871,7 +2875,7 @@ begin
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
+  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
   {$ENDIF}
 end;
 
@@ -2910,7 +2914,7 @@ begin
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
+  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
   {$ENDIF}
 end;
 
