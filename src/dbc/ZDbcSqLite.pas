@@ -347,6 +347,16 @@ begin
       nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, String(SQL));
 
+    if Info.Values['foreign_keys'] <> '' then
+    begin
+      if StrToBoolEx(Info.Values['foreign_keys']) then
+        SQL := 'PRAGMA foreign_keys = 1'
+      else
+        SQL := 'PRAGMA foreign_keys = 0';
+      ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil, ErrorMessage);
+      CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, String(SQL));
+      DriverManager.LogMessage(lcConnect, GetPlainDriver.GetProtocol, String(SQL));
+    end;
     StartTransactionSupport;
   except
     GetPlainDriver.Close(FHandle);

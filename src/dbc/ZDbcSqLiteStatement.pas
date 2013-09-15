@@ -615,7 +615,7 @@ begin
     FErrorCode := SQLITE_OK;
   FStmtHandle := nil;
   CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil,
-    lcUnprepStmt, 'Unprepare SQLite Statment');
+    lcUnprepStmt, 'Unprepare SQLite Statement');
   inherited UnPrepare;
 end;
 
@@ -643,7 +643,6 @@ begin
     if ColumnNames <> nil then
       FreeMem(ColumnNames);
     ColumnNames := nil;
-    Unprepare;
     raise;
   end;
 
@@ -688,7 +687,6 @@ begin
       ColumnValues, ColumnNames);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, 'Step');
   except
-    UnPrepare;
     raise;
   end;
 

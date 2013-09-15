@@ -97,6 +97,7 @@ type
     procedure TestLobTypeCast;
     procedure TestUnknowParam;
     procedure TestTicket44;
+    procedure TestUnicodeEscape;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -898,6 +899,34 @@ begin
     Query.Open;
     CheckEquals(UpperCase(DataBase), UpperCase(Query.Fields[0].AsString));
     Query.Close;
+  finally
+    Query.Free;
+  end;
+end;
+
+(*
+http://zeoslib.sourceforge.net/viewtopic.php?f=39&t=3968
+I have delphi xe3 prof. and zeos 7.0.3-stable installed, DB is PostgreSQL 9, and I have a problem when I put by Param string value (contains \U escape character) to TZQuery.SQL.Text.
+code:
+q := TZQuery.Create(nil);
+q.Connection := Conn;
+q.SQL.Text := 'select :content';
+q.ParamByName('content').AsString := sText;
+q.ExecSQL; //exception
+q.Free;
+when for example sText := 'C:/User'; executing this query q raises exception class EZSQLException with message 'SQL Error: ERROR: invalid Unicode escape at character 31 HINT: Unicode escapes must be \uXXXX or \UXXXXXXXX.'.
+*)
+procedure TZTestCompPostgreSQLBugReport.TestUnicodeEscape;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Connection.Connect;
+  try
+    Query.SQL.Text := 'select :content';
+    Query.ParamByName('content').AsString := 'C:/User';
+    Query.ExecSQL;
   finally
     Query.Free;
   end;

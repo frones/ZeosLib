@@ -639,7 +639,7 @@ begin
               (Connection as IZPostgreSQLConnection).Is_bytea_output_hex, Self.FHandle));
           stAsciiStream:
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
-          else
+          stUnicodeStream:
             begin
               WS := ZDbcUnicodeString(InternalGetString(ColumnIndex));
               Stream := WideStringStream(Ws);
