@@ -1254,8 +1254,8 @@ begin
   if S = '' then
     Result := S
   else
-    if FIC.IsQuoted(S) then
-       Result := FIC.ExtractQuote(S)
+    if IC.IsQuoted(S) then
+       Result := IC.ExtractQuote(S)
     else
       Result := s;
 end;

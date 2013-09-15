@@ -2123,7 +2123,7 @@ begin
 
       Result.UpdateNullByName('AUTO_INCREMENT');
       Result.UpdateBooleanByName('CASE_SENSITIVE',
-        GetIdentifierConvertor.IsCaseSensitive(GetString(3 {attname})));
+        IC.IsCaseSensitive(GetString(3 {attname})));
       Result.UpdateBooleanByName('SEARCHABLE', True);
       Result.UpdateBooleanByName('WRITABLE', True);
       Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);

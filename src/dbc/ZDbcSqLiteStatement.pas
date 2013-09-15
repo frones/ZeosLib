@@ -575,7 +575,7 @@ begin
     FErrorCode := SQLITE_OK;
   FStmtHandle := nil;
   CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil,
-    lcUnprepStmt, 'Unprepare SQLite Statment');
+    lcUnprepStmt, 'Unprepare SQLite Statement');
   inherited UnPrepare;
 end;
 
@@ -591,7 +591,6 @@ begin
     if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE)then
       Result := CreateResultSet(SSQL, FStmtHandle, FErrorCode);
   except
-    Unprepare;
     raise;
   end;
 end;
@@ -625,7 +624,6 @@ begin
     FErrorCode := FPlainDriver.Step(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, 'Step');
   except
-    UnPrepare;
     raise;
   end;
 

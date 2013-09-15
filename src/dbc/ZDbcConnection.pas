@@ -315,6 +315,8 @@ end;
 }
 destructor TZAbstractDriver.Destroy;
 begin
+  FTokenizer := nil;
+  FAnalyser := nil;
   FCachedPlainDrivers.Clear;
   FCachedPlainDrivers := nil;
   inherited Destroy;

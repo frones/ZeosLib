@@ -711,7 +711,7 @@ begin
               (Connection as IZPostgreSQLConnection).Is_bytea_output_hex, Self.FHandle));
           stAsciiStream:
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
-          else
+          stUnicodeStream:
             begin
               WS := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
               Stream := WideStringStream(Ws);

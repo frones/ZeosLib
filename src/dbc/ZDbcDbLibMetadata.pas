@@ -1203,7 +1203,7 @@ begin
   if S = '' then
     Result := NullText
   else
-    if FIC.IsQuoted(s) then
+    if IC.IsQuoted(s) then
       Result := S
     else
       Result := AnsiQuotedStr(S, QuoteChar);
@@ -1221,8 +1221,8 @@ begin
     Result := 'null'
   else
   begin
-    if FIC.IsQuoted(s) then
-      Result := FIC.ExtractQuote(s)
+    if IC.IsQuoted(s) then
+      Result := IC.ExtractQuote(s)
     else
       Result := S;
     Result := AnsiQuotedStr(Result, #39);
