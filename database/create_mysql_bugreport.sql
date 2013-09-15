@@ -107,7 +107,8 @@ INSERT INTO table733236 VALUES("2004-12-31", "23:59:59", "2004-12-31 23:59:59",2
 
 create table table768163
 (
-  fld1 int unsigned
+  fld1 int unsigned,
+  fld2 bigint
 );
 
 /*==============================================================*/

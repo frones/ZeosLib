@@ -1367,8 +1367,8 @@ var
           PackageNameCondition := ConstructNameCondition(Copy(Value, 1, iPos-1),'package_name');
           PackageProcNameCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'object_name');
           PackageAsProcCondition := ConstructNameCondition(Copy(Value, iPos+1,Length(Value)-iPos),'package_name');
-          PackageName := '= '+#39+FIC.ExtractQuote(Copy(Value, 1, iPos-1))+#39;
-          ProcName := FIC.ExtractQuote(Copy(Value, iPos+1,Length(Value)-iPos));
+          PackageName := '= '+#39+IC.ExtractQuote(Copy(Value, 1, iPos-1))+#39;
+          ProcName := IC.ExtractQuote(Copy(Value, iPos+1,Length(Value)-iPos));
         end
         else
         begin
@@ -1376,7 +1376,7 @@ var
           PackageProcNameCondition := ConstructNameCondition(Value,'object_name');
           PackageAsProcCondition := ConstructNameCondition(Value,'package_name');
           PackageName := 'IS NULL';
-          ProcName := FIC.ExtractQuote(Value);
+          ProcName := IC.ExtractQuote(Value);
         end;
     end;
   begin
@@ -1422,7 +1422,7 @@ var
     TempSet.Close;
     for i := 0 to Procs.Count -1 do
     begin
-      TempProcedureNamePattern := ProcedureNamePattern+'.'+FIC.Quote(Procs[i]);
+      TempProcedureNamePattern := ProcedureNamePattern+'.'+IC.Quote(Procs[i]);
       TempSet := IZStmt.ExecuteQuery(GetColumnSQL('>')); //ParameterValues have allways Position > 0
       AddColumns(False, False);
     end;
@@ -1530,9 +1530,9 @@ begin
   begin
     while Next do
     begin
-      sName := GetIdentifierConvertor.Quote(GetString(3));
+      sName := IC.Quote(GetString(3));
       if GetString(4) <> '' then
-        sName :=  sName+'.'+GetIdentifierConvertor.Quote(GetString(4));
+        sName :=  sName+'.'+IC.Quote(GetString(4));
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
       Result.UpdateString(2, GetString(2));
@@ -1713,7 +1713,7 @@ begin
 
       Result.UpdateNull(19);   //AUTO_INCREMENT
       Result.UpdateBoolean(20, //CASE_SENSITIVE
-        GetIdentifierConvertor.IsCaseSensitive(GetString(4)));
+        IC.IsCaseSensitive(GetString(4)));
       Result.UpdateBoolean(21, True);  //SEARCHABLE
       Result.UpdateBoolean(22, not (GetString(6) = 'BFILE'));  //WRITABLE
       Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE

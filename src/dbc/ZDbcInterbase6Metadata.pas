@@ -256,7 +256,6 @@ type
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
     property ConSettings;
-    destructor Destroy; override;
   end;
 
 implementation
@@ -1186,15 +1185,6 @@ end;
 
 
 { TZInterbase6DatabaseMetadata }
-
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZInterbase6DatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
 
 {**
   Constructs a database information object and returns the interface to it. Used

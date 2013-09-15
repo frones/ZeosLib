@@ -981,7 +981,7 @@ begin
 
     with GetConnection.CreateStatement.ExecuteQuery(
       Format('SHOW TABLES FROM %s LIKE ''%s''',
-      [GetIdentifierConvertor.Quote(LCatalog), LTableNamePattern])) do
+      [IC.Quote(LCatalog), LTableNamePattern])) do
     begin
       while Next do
       begin
@@ -1002,8 +1002,8 @@ begin
         try
           if GetConnection.CreateStatement.ExecuteQuery(
             Format('SHOW COLUMNS FROM %s.%s',
-            [GetIdentifierConvertor.Quote(LCatalog),
-             GetIdentifierConvertor.Quote(LTableNamePattern)])).Next then
+            [IC.Quote(LCatalog),
+             IC.Quote(LTableNamePattern)])).Next then
           begin
             Result.MoveToInsertRow;
             Result.UpdateString(1, LCatalog);
@@ -1168,8 +1168,8 @@ begin
 
         with GetConnection.CreateStatement.ExecuteQuery(
           Format('SHOW FULL COLUMNS FROM %s.%s LIKE ''%s''',
-          [GetIdentifierConvertor.Quote(TempCatalog),
-          GetIdentifierConvertor.Quote(TempTableNamePattern),
+          [IC.Quote(TempCatalog),
+          IC.Quote(TempTableNamePattern),
           TempColumnNamePattern])) do
         begin
           ColumnIndexes[1] := FindColumn('Field');
@@ -1286,7 +1286,7 @@ begin
             Res.UpdateBoolean(19, //AUTO_INCREMENT
               Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
             Res.UpdateBoolean(20, //CASE_SENSITIVE
-              GetIdentifierConvertor.IsCaseSensitive(GetString(ColumnIndexes[1]))); //Field
+              IC.IsCaseSensitive(GetString(ColumnIndexes[1]))); //Field
             Res.UpdateBoolean(21, True);  //SEARCHABLE
             Res.UpdateBoolean(22, True);  //WRITABLE
             Res.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
@@ -1528,8 +1528,8 @@ begin
 
     with GetConnection.CreateStatement.ExecuteQuery(
       Format('SHOW KEYS FROM %s.%s',
-      [GetIdentifierConvertor.Quote(LCatalog),
-      GetIdentifierConvertor.Quote(Table)])) do
+      [IC.Quote(LCatalog),
+      IC.Quote(Table)])) do
     begin
       ColumnIndexes[1] := FindColumn('Key_name');
       ColumnIndexes[2] := FindColumn('Column_name');
@@ -1651,7 +1651,7 @@ begin
     try
       with GetConnection.CreateStatement.ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
-        [GetIdentifierConvertor.Quote(LCatalog), Table])) do
+        [IC.Quote(LCatalog), Table])) do
       begin
         ColumnIndexes[1] := FindColumn('Type');
         ColumnIndexes[2] := FindColumn('Comment');
@@ -1801,7 +1801,7 @@ begin
     try
       with GetConnection.CreateStatement.ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s',
-        [GetIdentifierConvertor.Quote(LCatalog)])) do
+        [IC.Quote(LCatalog)])) do
       begin
         ColumnIndexes[1] := FindColumn('Type');
         ColumnIndexes[2] := FindColumn('Comment');
@@ -1956,7 +1956,7 @@ begin
     try
       with GetConnection.CreateStatement.ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s',
-        [GetIdentifierConvertor.Quote(LForeignCatalog)])) do
+        [IC.Quote(LForeignCatalog)])) do
       begin
         ColumnIndexes[1] := FindColumn('Type');
         ColumnIndexes[2] := FindColumn('Comment');
@@ -2208,8 +2208,8 @@ begin
 
     with GetConnection.CreateStatement.ExecuteQuery(
       Format('SHOW INDEX FROM %s.%s',
-      [GetIdentifierConvertor.Quote(LCatalog),
-      GetIdentifierConvertor.Quote(Table)])) do
+      [IC.Quote(LCatalog),
+      IC.Quote(Table)])) do
     begin
       ColumnIndexes[1] := FindColumn('Table');
       ColumnIndexes[2] := FindColumn('Non_unique');
@@ -2523,7 +2523,7 @@ begin
               else
                 Result.UpdateString(4, GetNextName('$', True))
             else
-              if GetIdentifierConvertor.IsQuoted(Params[1]) then
+              if IC.IsQuoted(Params[1]) then
                 Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
               else
                 Result.UpdateString(4, GetNextName(Params[1]));

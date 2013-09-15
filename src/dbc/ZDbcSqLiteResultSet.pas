@@ -642,21 +642,21 @@ begin
   try
     if not LastWasNull then
     begin
-      case TZAbstractResultSetMetadata(Metadata).GetColumnType(ColumnIndex) of
+      case GetMetadata.GetColumnType(ColumnIndex) of
         stAsciiStream:
           if ConSettings.AutoEncode then
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True))
           else
             Stream := TStringStream.Create(InternalGetString(ColumnIndex));
         stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
-      else
-        {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
-        if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
-          Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
-        else
-          Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
+        stBinaryStream:
+          {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
+          if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
+            Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
+          else
+            Stream := FPlaindriver.getblob(FStmtHandle,columnIndex);
       end;
-      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
+      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection, GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream);
     end
     else
       Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);

@@ -121,12 +121,12 @@ type
     FCachedResultSets: IZHashMap;
     FDatabaseInfo: IZDatabaseInfo;
     FConSettings: PZConSettings;
+    FIC: IZIdentifierConvertor;
     function GetInfo: TStrings;
     function GetURLString: String;
     function StripEscape(const Pattern: string): string;
     function HasNoWildcards(const Pattern: string): boolean;
   protected
-    FIC: IZIdentifierConvertor;
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
     function EscapeString(const S: string): string; virtual;
@@ -152,6 +152,7 @@ type
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
     property ConSettings: PZConSettings read FConSettings write FConSettings;
+    property IC: IZIdentifierConvertor read FIC;
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; virtual;
@@ -451,9 +452,10 @@ type
   TZDefaultIdentifierConvertor = class (TZAbstractObject,
     IZIdentifierConvertor)
   private
-    FMetadata: IZDatabaseMetadata;
+    FMetadata: Pointer;
+    function GetMetaData: IZDatabaseMetadata;
   protected
-    property Metadata: IZDatabaseMetadata read FMetadata write FMetadata;
+    property Metadata: IZDatabaseMetadata read GetMetaData;
 
     function IsLowerCase(const Value: string): Boolean;
     function IsUpperCase(const Value: string): Boolean;
@@ -1852,8 +1854,8 @@ end;
 
 function TZAbstractDatabaseMetadata.DecomposeObjectString(const S: String): String;
 begin
-  if FIC.IsQuoted(s) then
-    Result := FIC.ExtractQuote(s)
+  if IC.IsQuoted(s) then
+    Result := IC.ExtractQuote(s)
   else
     Result := s;
 end;
@@ -4647,7 +4649,15 @@ constructor TZDefaultIdentifierConvertor.Create(
   Metadata: IZDatabaseMetadata);
 begin
   inherited Create;
-  FMetadata := Metadata;
+  FMetadata := Pointer(Metadata);
+end;
+
+function TZDefaultIdentifierConvertor.GetMetaData;
+begin
+  if Assigned(FMetadata) then
+    Result := IZDatabaseMetadata(FMetadata)
+  else
+    Result := nil;
 end;
 
 {**

@@ -591,12 +591,14 @@ begin
     Query.Open;
     Query.Append;
     TLargeIntField(Query.Fields[0]).AsLargeInt := 2147483648;
+    TLargeIntField(Query.Fields[1]).AsLargeInt := -5;//-2147483648;
     Query.Post;
     Query.Close;
 
     Query.SQL.Text := 'select * from table768163';
     Query.Open;
     CheckEquals(2147483648, TLargeIntField(Query.Fields[0]).AsLargeInt);
+    CheckEquals(-5{-2147483648}, TLargeIntField(Query.Fields[1]).AsLargeInt);
     Query.Close;
   finally
     Query.Free;

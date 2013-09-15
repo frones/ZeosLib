@@ -2098,13 +2098,13 @@ begin
         Result.UpdateInt(16, Result.GetInt(7));
         Result.UpdateInt(17, GetInt(8 {attnum}));
 
-        Result.UpdateNullByName('AUTO_INCREMENT');
-        Result.UpdateBooleanByName('CASE_SENSITIVE',
-          GetIdentifierConvertor.IsCaseSensitive(GetString(3 {attname})));
-        Result.UpdateBooleanByName('SEARCHABLE', True);
-        Result.UpdateBooleanByName('WRITABLE', True);
-        Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-        Result.UpdateBooleanByName('READONLY', False);
+      Result.UpdateNullByName('AUTO_INCREMENT');
+      Result.UpdateBooleanByName('CASE_SENSITIVE',
+        IC.IsCaseSensitive(GetString(3 {attname})));
+      Result.UpdateBooleanByName('SEARCHABLE', True);
+      Result.UpdateBooleanByName('WRITABLE', True);
+      Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
+      Result.UpdateBooleanByName('READONLY', False);
 
         Result.InsertRow;
       end;
