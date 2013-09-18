@@ -1360,9 +1360,9 @@ begin
       FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
-      FIELD_TYPE_DATETIME  = 12,
-      FIELD_TYPE_YEAR      = 13,
-      FIELD_TYPE_NEWDATE   = 14,
+      FIELD_TYPE_DATETIME  = 12,*)
+      FIELD_TYPE_YEAR:      Result := PWord(FColumnArray[ColumnIndex-1].buffer)^;
+      (*FIELD_TYPE_NEWDATE   = 14,
       FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
       FIELD_TYPE_BIT: ;
       FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
@@ -1391,9 +1391,9 @@ begin
       FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
-      FIELD_TYPE_DATETIME  = 12,
-      FIELD_TYPE_YEAR      = 13,
-      FIELD_TYPE_NEWDATE   = 14,
+      FIELD_TYPE_DATETIME  = 12, *)
+      FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
+      (*FIELD_TYPE_NEWDATE   = 14,
       FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
       FIELD_TYPE_BIT: ;
       FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
