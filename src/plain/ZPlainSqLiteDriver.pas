@@ -527,7 +527,7 @@ type
     function column_int64(Stmt: Psqlite3_stmt; iCol: Integer): Int64;
     function column_text(Stmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
     function column_text16(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-    function column_type_AsString(Stmt: Psqlite3_stmt; iCol: Integer): String;
+    function column_type_AsString(Stmt: Psqlite3_stmt; iCol: Integer): RawByteString;
     function column_type(Stmt: Psqlite3_stmt; iCol: Integer): Integer;
     function column_value(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value;
 
@@ -656,7 +656,7 @@ type
     function column_int64(Stmt: Psqlite3_stmt; iCol: Integer): Int64;
     function column_text(Stmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
     function column_text16(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-    function column_type_AsString(Stmt: Psqlite3_stmt; iCol: Integer): String;
+    function column_type_AsString(Stmt: Psqlite3_stmt; iCol: Integer): RawByteString;
     function column_type(Stmt: Psqlite3_stmt; iCol: Integer): Integer;
     function column_value(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value;
 
@@ -1249,20 +1249,17 @@ begin
   Result := SQLite_API.sqlite_column_type(stmt, iCol);
 end;
 
-function TZSQLiteBaseDriver.column_type_AsString(Stmt: Psqlite3_stmt; iCol: Integer): String;
+function TZSQLiteBaseDriver.column_type_AsString(Stmt: Psqlite3_stmt; iCol: Integer): RawByteString;
 begin
   case SQLite_API.sqlite_column_type(stmt, iCol) of
     SQLITE_INTEGER:
-       Result := 'INT(19)';
+       Result := 'BIGINT';
     SQLITE_FLOAT:
-       Result := 'FLOAT(16)';
+       Result := 'DOUBLE';
     SQLITE3_TEXT:
-       //RESULT := 'CHAR'; //EgonHugeist: Need to boil down this type  !
-                         //Else Metadatainformations are not readable !
-       Result := 'VARCHAR';
+       RESULT := 'TEXT';
     SQLITE_BLOB:
        Result := 'BLOB';
-    //SQLITE_NULL:
     else Result := '';
   end
 end;
