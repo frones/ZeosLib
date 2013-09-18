@@ -1335,6 +1335,8 @@ begin
           Result := StrToBoolEx(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, False)
         else
           Result := StrToBoolEx(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, False);
+      stUnicodeStream: StrToBoolEx(GetBlob(ColumnIndex, IsNull).GetUnicodeString, False);
+      stAsciiStream: StrToBoolEx(GetBlob(ColumnIndex, IsNull).GetString, False);
     end;
     IsNull := False;
   end
@@ -1377,6 +1379,8 @@ begin
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := UnicodeToIntDef(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1419,6 +1423,8 @@ begin
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := UnicodeToIntDef(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1462,6 +1468,8 @@ begin
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := UnicodeToIntDef(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1505,6 +1513,8 @@ begin
           Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := UnicodeToInt64Def(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := RawToInt64Def(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1548,6 +1558,8 @@ begin
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1591,6 +1603,8 @@ begin
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1635,6 +1649,8 @@ begin
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, 0);
+      stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetUnicodeString, 0);
+      stAsciiStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1684,6 +1700,11 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+var
+  Failed: Boolean;
+  AnsiBuffer: PAnsiChar;
+  TempBlob: IZBlob;
+  BufLen: Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -1695,6 +1716,33 @@ begin
       stDate, stTime, stTimestamp:
         Result := Int(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        begin
+          AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+          BufLen := ZFastCode.StrLen(AnsiBuffer); //determine Length once if conversion fals
+          Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer,
+            PAnsiChar(ConSettings^.FormatSettings.DateFormat),
+            BufLen, ConSettings^.FormatSettings.DateFormatLen, Failed);
+          if Failed then
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
+              PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+              BufLen, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+        end
+        else
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull)));
+      stAsciiStream:
+        begin
+          TempBlob := GetBlob(ColumnIndex, IsNull);
+          AnsiBuffer := TempBlob.GetBuffer;
+          Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer,
+            PAnsiChar(ConSettings^.FormatSettings.DateFormat),
+            TempBlob.Length, ConSettings^.FormatSettings.DateFormatLen, Failed);
+          if Failed then
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
+              PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+              TempBlob.Length, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+        end;
+      stUnicodeStream:
         Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull)));
     end;
     IsNull := False;
@@ -1713,6 +1761,11 @@ end;
     value returned is <code>null</code>
 }
 function TZRowAccessor.GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+var
+  Failed: Boolean;
+  AnsiBuffer: PAnsiChar;
+  TempBlob: IZBlob;
+  BufLen: Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1724,6 +1777,33 @@ begin
       stDate, stTime, stTimestamp:
         Result := Frac(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        begin
+          AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+          BufLen := ZFastCode.StrLen(AnsiBuffer);
+          Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer,
+            PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
+            BufLen, ConSettings^.FormatSettings.TimeFormatLen, Failed);
+          if Failed then
+            Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
+              PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+              BufLen, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+        end
+        else
+          Result := Frac(AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull)));
+      stAsciiStream:
+        begin
+          TempBlob := GetBlob(ColumnIndex, IsNull);
+          AnsiBuffer := TempBlob.GetBuffer;
+          Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer,
+            PAnsiChar(ConSettings^.FormatSettings.DateFormat),
+            TempBlob.Length, ConSettings^.FormatSettings.DateFormatLen, Failed);
+          if Failed then
+            Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
+              PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+              TempBlob.Length, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+        end;
+      stUnicodeStream:
         Result := Frac(AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull)));
     end;
     IsNull := False;
@@ -1743,6 +1823,10 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+var
+  Failed: Boolean;
+  AnsiBuffer: PAnsiChar;
+  TempBlob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -1754,6 +1838,24 @@ begin
       stDate, stTime, stTimestamp:
         Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        begin
+          AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+            Result := ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
+              PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+              ZFastCode.StrLen(AnsiBuffer), ConSettings^.FormatSettings.DateTimeFormatLen, Failed);
+        end
+        else
+          Result := AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull));
+      stAsciiStream:
+        begin
+          TempBlob := GetBlob(ColumnIndex, IsNull);
+          AnsiBuffer := TempBlob.GetBuffer;
+          Result := ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
+            PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+            TempBlob.Length, ConSettings^.FormatSettings.DateTimeFormatLen, Failed);
+        end;
+      stUnicodeStream:
         Result := AnsiSQLDateToDateTime(GetString(ColumnIndex, IsNull));
     end;
     IsNull := False;

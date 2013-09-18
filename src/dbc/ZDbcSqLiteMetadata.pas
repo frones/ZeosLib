@@ -246,7 +246,7 @@ type
 implementation
 
 uses
-  ZDbcUtils;
+  ZDbcUtils, ZDbcSqLite;
 
 { TZSQLiteDatabaseInfo }
 
@@ -1303,8 +1303,9 @@ function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   Temp: string;
-  Precision, Decimals: Integer;
+  Precision, Decimals, UndefinedVarcharAsStringLength: Integer;
   Temp_scheme: string;
+
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1312,6 +1313,8 @@ begin
     Temp_scheme := '' // OR  'main.'
   else
     Temp_scheme := SchemaPattern +'.';
+
+  UndefinedVarcharAsStringLength := (GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
 
   with GetConnection.CreateStatement.ExecuteQuery(
     Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern])) do
@@ -1325,8 +1328,8 @@ begin
       Result.UpdateNull(2);
       Result.UpdateString(3, TableNamePattern);
       Result.UpdateString(4, GetString(2));
-      Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetString(3),
-        Precision, Decimals, ConSettings.CPType)));
+      Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(3),
+        UndefinedVarcharAsStringLength, Precision, Decimals, ConSettings.CPType)));
 
       { Defines a table name. }
       Temp := UpperCase(GetString(3));

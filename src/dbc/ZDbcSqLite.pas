@@ -82,6 +82,7 @@ type
     function UseOldBlobEncoding: Boolean;
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
+    function GetUndefinedVarcharAsStringLength: Integer;
   end;
 
   {** Implements SQLite Database Connection. }
@@ -96,7 +97,7 @@ type
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
-
+    function GetUndefinedVarcharAsStringLength: Integer;
   public
     destructor Destroy; override;
 
@@ -234,6 +235,7 @@ begin
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
   CheckCharEncoding('UTF-8');
+  FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
   Open;
 end;
 
@@ -451,6 +453,11 @@ begin
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL);
     DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
   end;
+end;
+
+function TZSQLiteConnection.GetUndefinedVarcharAsStringLength: Integer;
+begin
+  Result := FUndefinedVarcharAsStringLength;
 end;
 
 {**

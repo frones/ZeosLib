@@ -56,7 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging, ZCompatibility;
+  Classes, SysUtils,
+  ZSysUtils, ZDbcIntfs, ZPlainSqLiteDriver, ZDbcLogging, ZCompatibility;
 
 {**
   Convert string SQLite field type to SQLType
@@ -65,7 +66,8 @@ uses
   @param Decimals the column position after decimal point
   @result the SQLType field type value
 }
-function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
+function ConvertSQLiteTypeToSQLType(TypeName: RawByteString;
+  const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
   var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
@@ -108,7 +110,8 @@ function ConvertSQLiteVersionToSQLVersion( const SQLiteVersion: PAnsiChar ): Int
 
 implementation
 
-uses ZMessages{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  ZMessages, ZFastCode;
 
 {**
   Convert string SQLite field type to SQLType
@@ -117,81 +120,83 @@ uses ZMessages{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
   @param Decimals the column position after decimal point
   @result the SQLType field type value
 }
-function ConvertSQLiteTypeToSQLType(TypeName: string; var Precision: Integer;
+function ConvertSQLiteTypeToSQLType(TypeName: RawByteString;
+  const UndefinedVarcharAsStringLength: Integer; var Precision: Integer;
   var Decimals: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
 var
   P1, P2: Integer;
-  Temp: string;
+  Temp: RawByteString;
 begin
-  TypeName := UpperCase(TypeName);
+  TypeName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(TypeName);
   Result := stString;
   Precision := 0;
   Decimals := 0;
 
-  P1 := Pos('(', TypeName);
-  P2 := Pos(')', TypeName);
+  P1 := Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
+  P2 := Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName);
   if (P1 > 0) and (P2 > 0) then
   begin
     Temp := Copy(TypeName, P1 + 1, P2 - P1 - 1);
     TypeName := Copy(TypeName, 1, P1 - 1);
-    P1 := Pos(',', Temp);
+    P1 := Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), Temp);
     if P1 > 0 then
     begin
-      Precision := StrToIntDef(Copy(Temp, 1, P1 - 1), 0);
-      Decimals := StrToIntDef(Copy(Temp, P1 + 1, Length(Temp) - P1), 0);
+      Precision := RawToIntDef(Copy(Temp, 1, P1 - 1), 0);
+      Decimals := RawToIntDef(Copy(Temp, P1 + 1, Length(Temp) - P1), 0);
     end
     else
-      Precision := StrToIntDef(Temp, 0);
+      Precision := RawToIntDef(Temp, 0);
   end;
 
-  if StartsWith(TypeName, 'BOOL') then
+  if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
     Result := stBoolean
-  else if TypeName = 'TINYINT' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TINYINT') then
     Result := stByte
-  else if TypeName = 'SMALLINT' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALLINT') then
     Result := stShort
-  else if TypeName = 'MEDIUMINT' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MEDIUMINT') then
     Result := stInteger
-  else if StartsWith(TypeName, 'INT') then
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT')) then
     Result := stInteger
-  else if TypeName = 'BIGINT' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('BIGINT') then
     Result := stLong
-  else if StartsWith(TypeName, 'REAL') then
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('REAL')) then
     Result := stDouble
-  else if StartsWith(TypeName, 'FLOAT') then
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('FLOAT')) then
     Result := stDouble
-  else if (TypeName = 'NUMERIC') or (TypeName = 'DECIMAL')
-    or (TypeName = 'NUMBER') then
+  else if (TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('NUMERIC')) or
+    (TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DECIMAL'))
+      or (TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('NUMBER')) then
   begin
    { if Decimals = 0 then
       Result := stInteger
     else} Result := stDouble;
   end
-  else if StartsWith(TypeName, 'DOUB') then
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('DOUB')) then
     Result := stDouble
-  else if TypeName = 'MONEY' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MONEY') then
     Result := stBigDecimal
-  else if StartsWith(TypeName, 'CHAR') then
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) then
     Result := stString
-  else if TypeName = 'VARCHAR' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('VARCHAR') then
     Result := stString
-  else if TypeName = 'VARBINARY' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('VARBINARY') then
     Result := stBytes
-  else if TypeName = 'BINARY' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('BINARY') then
     Result := stBytes
-  else if TypeName = 'DATE' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DATE') then
     Result := stDate
-  else if TypeName = 'TIME' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TIME') then
     Result := stTime
-  else if TypeName = 'TIMESTAMP' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TIMESTAMP') then
     Result := stTimestamp
-  else if TypeName = 'DATETIME' then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DATETIME') then
     Result := stTimestamp
-  else if Pos('BLOB', TypeName) > 0 then
+  else if Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('BLOB'), TypeName) > 0 then
     Result := stBinaryStream
-  else if Pos('CLOB', TypeName) > 0 then
+  else if Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('CLOB'), TypeName) > 0 then
     Result := stAsciiStream
-  else if Pos('TEXT', TypeName) > 0 then
+  else if Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('TEXT'), TypeName) > 0 then
     Result := stAsciiStream;
 
   if (Result = stInteger) and (Precision <> 0) then
@@ -206,6 +211,14 @@ begin
       Result := stLong;
   end;
 
+  if (Result = stString) then
+    if  (Precision = 0) then
+      if (UndefinedVarcharAsStringLength = 0) then
+        Result := stAsciiStream
+      else
+        Precision := UndefinedVarcharAsStringLength;
+
+
   if ( CtrlsCPType = cCP_UTF16 ) then
     case Result of
       stString:  Result := stUnicodeString;
@@ -213,17 +226,10 @@ begin
     end;
 
   if (Result = stString) then
-    if (Precision = 0) then
-      Precision := 255 *{$IFDEF UNICODE}2{$ELSE}4{$ENDIF}//UTF8 assumes 4Byte/Char
-    else
-      Precision := Precision*{$IFDEF UNICODE}2{$ELSE}4{$ENDIF};//UTF8 assumes 4Byte/Char
+    Precision := Precision*{$IFDEF UNICODE}2{$ELSE}4{$ENDIF};//UTF8 assumes 4Byte/Char
 
   if (Result = stUnicodeString) then
-    if (Precision = 0) then
-      Precision := 255 * 2 //UTF8 assumes 4Byte/Char -> 2 * UnicodeChar
-    else
-      Precision := Precision * 2;//UTF8 assumes 4Byte/Char
-
+    Precision := Precision * 2;//UTF8 assumes 4Byte/Char
 end;
 
 {**

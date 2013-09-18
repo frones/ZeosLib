@@ -203,7 +203,7 @@ end;
 }
 procedure TZSQLiteResultSet.Open;
 var
-  I: Integer;
+  I, UndefinedVarcharAsStringLength: Integer;
   ColumnInfo: TZColumnInfo;
   FieldPrecision: Integer;
   FieldDecimals: Integer;
@@ -212,6 +212,7 @@ begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
+  UndefinedVarcharAsStringLength := (GetStatement.GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
   FColumnCount := FPlainDriver.column_count(FStmtHandle);
 
   LastRowNo := 0;
@@ -231,11 +232,12 @@ begin
       TypeName := FPlainDriver.column_decltype(FStmtHandle, i);
       if TypeName = nil then
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.column_type_AsString(FStmtHandle, i),
-          FieldPrecision, FieldDecimals, ConSettings.CPType)
+          UndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
+          ConSettings.CPType)
       else
-        ColumnType := ConvertSQLiteTypeToSQLType(ConSettings^.ConvFuncs.ZRawToString(TypeName,
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP),
-          FieldPrecision, FieldDecimals, ConSettings.CPType);
+        ColumnType := ConvertSQLiteTypeToSQLType(TypeName,
+          UndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
+          ConSettings.CPType);
 
 
       if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
