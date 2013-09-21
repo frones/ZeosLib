@@ -805,20 +805,37 @@ begin
     Stream := nil;
     try
       case GetMetadata.GetColumnType(ColumnIndex) of
-        stAsciiStream:
+         stAsciiStream, stUnicodeStream:
+           Result := TZAbstractClob.CreateWithData(
+            FPlainDriver.column_text(FStmtHandle, ColumnIndex-1),
+            FPlainDriver.column_bytes(FStmtHandle, ColumnIndex-1),
+            zCP_UTF8, ConSettings);
+
+        stBinaryStream:
+          begin
+            {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
+            if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
+              Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
+            else
+              Stream := FPlaindriver.column_blob_AsStream(FStmtHandle,ColumnIndex-1);
+            Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
+          end;
+        else
+          Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
+        (*stAsciiStream:
           if ConSettings.AutoEncode then
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True))
           else
             Stream := TStringStream.Create(InternalGetString(ColumnIndex));
-        stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
+        stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);}
         stBinaryStream:
           {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
           if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
             Stream := TStringStream.Create(DecodeString(InternalGetString(ColumnIndex)))
           else
-            Stream := FPlaindriver.column_blob_AsStream(FStmtHandle,columnIndex-1);
+            Stream := FPlaindriver.column_blob_AsStream(FStmtHandle,columnIndex-1);*)
       end;
-      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection, GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream);
+      //Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection, GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream);
     finally
       if Assigned(Stream) then
         Stream.Free;

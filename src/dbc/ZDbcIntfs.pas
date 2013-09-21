@@ -917,6 +917,24 @@ type
     function Clone: IZBlob;
   end;
 
+  IZCLob = interface(IZBlob)
+    ['{191B8627-198F-4572-82D3-A083CD184DD3}']
+    //function GetLength: Cardinal;
+    function GetRawByteString: RawByteString;
+    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
+    function GetAnsiString: AnsiString;
+    procedure SetAnsiString(Const Value: AnsiString);
+    function GetUTF8String: UTF8String;
+    procedure SetUTF8String(Const Value: UTF8String);
+    function GetRawByteStream: TStream;
+    function GetAnsiStream: TStream;
+    function GetUTF8Stream: TStream;
+    function GetPAnsiChar(const CodePage: Word): PAnsiChar;
+    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
+    function GetPWideChar: PWideChar;
+    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
+  end;
+
   {** Database notification interface. }
   IZNotification = interface(IZInterface)
     ['{BF785C71-EBE9-4145-8DAE-40674E45EF6F}']

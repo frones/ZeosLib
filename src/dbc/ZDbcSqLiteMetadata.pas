@@ -1327,7 +1327,7 @@ begin
       else Result.UpdateNull(1);
       Result.UpdateNull(2);
       Result.UpdateString(3, TableNamePattern);
-      Result.UpdateString(4, GetString(2));
+      Result.UpdateRawByteString(4, GetRawByteString(2));
       Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(3),
         UndefinedVarcharAsStringLength, Precision, Decimals, ConSettings.CPType)));
 
