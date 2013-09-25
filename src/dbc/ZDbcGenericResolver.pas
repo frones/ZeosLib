@@ -866,7 +866,6 @@ begin
 
     if SQL <> '' then
     begin
-
       FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
       // if Property ValidateUpdateCount isn't set : assume it's true
       lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)

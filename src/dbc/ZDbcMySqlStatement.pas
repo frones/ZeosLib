@@ -126,7 +126,8 @@ type
       const BindCount : Integer; var ColumnArray:TZMysqlColumnBuffer);
     function GetColumnArray : TZMysqlColumnBuffer;
     function GetBufferAddress : Pointer;
-    function GetBufferType(ColumnIndex: Integer) : TMysqlFieldTypes;
+    function GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
+    function GetBufferIsSigned(ColumnIndex: Integer): Boolean;
   end;
 
   {** Encapsulates a MySQL bind buffer for ResultSets. }
@@ -1622,7 +1623,7 @@ end;
 
 function TZMySQLAbstractBindBuffer.GetBufferAddress: Pointer;
 begin
-  result:=@FBindArray[0];
+  result := @FBindArray[0];
 end;
 
 function TZMySQLAbstractBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
@@ -1630,6 +1631,10 @@ begin
   result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.buffer_type])^;
 end;
 
+function TZMySQLAbstractBindBuffer.GetBufferIsSigned(ColumnIndex: Integer): Boolean;
+begin
+  result := PByte(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.is_unsigned])^ <> 0;
+end;
 
 { TZMySQLResultSetBindBuffer }
 
@@ -1672,7 +1677,7 @@ begin
   ColOffset := NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);
   PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^ := buffertype;
   PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
-  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= 0;
+  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= PlainDriver.GetFieldFlags(FieldHandle) and UNSIGNED_FLAG;
   PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount-1].buffer[0];
   PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount-1].length;
   PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;

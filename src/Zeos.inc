@@ -215,6 +215,8 @@
 {$IFDEF DELPHI14_UP}
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
   {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
+  {$DEFINE WITH_UINT64}                 // D2010 has virtually UInt64
+  {$DEFINE WITH_PUINT64}                // D2010 has virtually PUInt64
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}
