@@ -58,8 +58,8 @@ interface
 {$I ZCore.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZCollections, SysUtils, Classes,
-  ZCompatibility, ZTokenizer, ZTestCase;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes,
+  ZClasses, ZCollections, SysUtils, ZCompatibility, ZTokenizer, ZTestCase;
 
 type
   {** Implements an abstract test case for tokenizers. }

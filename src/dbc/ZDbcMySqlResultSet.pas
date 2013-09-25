@@ -1345,16 +1345,69 @@ end;
 
 function TZMySQLPreparedResultSet.bufferasint64(ColumnIndex: Integer): Int64;
 begin
-   Case FColumnArray[ColumnIndex-1].length of
-   1: Result := pshortint(FColumnArray[ColumnIndex-1].buffer)^;
-   2: Result := psmallint(FColumnArray[ColumnIndex-1].buffer)^;
-   4: Result := plongint(FColumnArray[ColumnIndex-1].buffer)^;
-   8: Result := pint64(FColumnArray[ColumnIndex-1].buffer)^;
-   else
-     Result := 0;
-   end;
-   if (Result < 0) and not GetMetadata.IsSigned(ColumnIndex) then
-     Result := -Result;
+  //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
+  if FBindBuffer.GetBufferIsSigned(ColumnIndex) then
+    Case FBindBuffer.GetBufferType(ColumnIndex) of
+      FIELD_TYPE_DECIMAL:   Result := 0;
+      FIELD_TYPE_TINY:      Result := PByte(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_SHORT:     Result := PWord(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_LONG:      Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_FLOAT:     Result := 0;
+      FIELD_TYPE_DOUBLE:    Result := 0;
+      FIELD_TYPE_NULL:      Result := 0;
+      FIELD_TYPE_TIMESTAMP: Result := 0;
+      FIELD_TYPE_LONGLONG:  Result := PULongLong(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
+      (*FIELD_TYPE_DATE      = 10,
+      FIELD_TYPE_TIME      = 11,
+      FIELD_TYPE_DATETIME  = 12,*)
+      FIELD_TYPE_YEAR:      Result := PWord(FColumnArray[ColumnIndex-1].buffer)^;
+      (*FIELD_TYPE_NEWDATE   = 14,
+      FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
+      FIELD_TYPE_BIT: ;
+      FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
+      FIELD_TYPE_ENUM      = 247,
+      FIELD_TYPE_SET       = 248,
+      FIELD_TYPE_TINY_BLOB,
+      FIELD_TYPE_MEDIUM_BLOB,
+      FIELD_TYPE_LONG_BLOB,
+      FIELD_TYPE_BLOB:      Result := 0;
+      FIELD_TYPE_VAR_STRING = 253,
+      FIELD_TYPE_STRING:    = 254,
+      FIELD_TYPE_GEOMETRY:  = 255*)
+      else Result := 0;
+    end
+  else
+    Case FBindBuffer.GetBufferType(ColumnIndex) of
+      FIELD_TYPE_DECIMAL:   Result := 0;
+      FIELD_TYPE_TINY:      Result := PShortInt(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_SHORT:     Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_LONG:      Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_FLOAT:     Result := 0;
+      FIELD_TYPE_DOUBLE:    Result := 0;
+      FIELD_TYPE_NULL:      Result := 0;
+      FIELD_TYPE_TIMESTAMP: Result := 0;
+      FIELD_TYPE_LONGLONG:  Result := PInt64(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
+      (*FIELD_TYPE_DATE      = 10,
+      FIELD_TYPE_TIME      = 11,
+      FIELD_TYPE_DATETIME  = 12, *)
+      FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
+      (*FIELD_TYPE_NEWDATE   = 14,
+      FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
+      FIELD_TYPE_BIT: ;
+      FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
+      FIELD_TYPE_ENUM      = 247,
+      FIELD_TYPE_SET       = 248,
+      FIELD_TYPE_TINY_BLOB,
+      FIELD_TYPE_MEDIUM_BLOB,
+      FIELD_TYPE_LONG_BLOB,
+      FIELD_TYPE_BLOB:      Result := 0;
+      FIELD_TYPE_VAR_STRING = 253,
+      FIELD_TYPE_STRING:    = 254,
+      FIELD_TYPE_GEOMETRY:  = 255*)
+      else Result := 0;
+    end;
 end;
 
 function TZMySQLPreparedResultSet.bufferasextended(ColumnIndex: Integer): Extended;

@@ -907,6 +907,9 @@ begin
   Connection.Connect;
   try
     Query.SQL.Text := 'select :content';
+    Query.ParamByName('content').AsString := 'C:\User';
+    Query.ExecSQL;
+    Query.SQL.Text := 'select :content';
     Query.ParamByName('content').AsString := 'C:/User';
     Query.ExecSQL;
   finally

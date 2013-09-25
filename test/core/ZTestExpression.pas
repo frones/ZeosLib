@@ -61,7 +61,8 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, SysUtils, Classes, ZExpression, ZVariables;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
+  ZTestCase, ZExpression, ZVariables;
 
 type
 

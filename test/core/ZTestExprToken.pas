@@ -57,7 +57,8 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer, ZExprToken, ZTestTokenizer;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZClasses, ZTokenizer, ZExprToken, ZTestTokenizer;
 
 type
 
