@@ -483,6 +483,7 @@ procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
 var
   S: Integer;
   B: IZBlob;
+  Clob: IZClob;
   V: Variant;
   T: Integer;
   P: ZPlainAdo.Parameter;
@@ -499,21 +500,29 @@ begin
       RetValue := NullVariant
     else
       case SQLType of
-        stAsciiStream:
+        stAsciiStream, stUnicodeStream:
+          if Supports(B, IZClob, Clob) then
           begin
-            {$IFDEF UNICODE}
-            DefVarManager.SetAsString(RetValue, String(B.GetString));
-            {$ELSE}
-            DefVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
-            {$ENDIF}
-            TmpSQLType := stString;
-          end;
-        stUnicodeStream:
-          begin
-            if B.Connection = nil then
-              B := TZAbstractBlob.CreateWithData(B.GetBuffer, B.Length, Connection, B.WasDecoded);
-            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+            DefVarManager.SetAsUnicodeString(RetValue, Clob.GetUnicodeString);
             TmpSQLType := stUnicodeString;
+          end
+          else
+          begin
+            if SQLType = stAsciiStream then
+            begin
+              {$IFDEF UNICODE}
+              DefVarManager.SetAsString(RetValue, String(B.GetString));
+              {$ELSE}
+              DefVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
+              {$ENDIF}
+              TmpSQLType := stString;
+            end
+            else
+            begin
+              Clob := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), zCP_UTF16, Connection.GetConSettings);
+              DefVarManager.SetAsUnicodeString(RetValue, Clob.GetUnicodeString);
+              TmpSQLType := stUnicodeString;
+            end;
           end;
         stBinaryStream:
           begin

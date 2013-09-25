@@ -2060,9 +2060,9 @@ begin
 
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
-      Result.UpdateString(2, GetString(1 {nspname}));
-      Result.UpdateString(3, GetString(2 {relname}));
-      Result.UpdateString(4, GetString(3 {attname}));
+      Result.UpdateRawByteString(2, GetRawByteString(1 {nspname}));
+      Result.UpdateRawByteString(3, GetRawByteString(2 {relname}));
+      Result.UpdateRawByteString(4, GetRawByteString(3 {attname}));
       SQLType := GetSQLTypeByOid(TypeOid);
       Result.UpdateInt(5, Ord(SQLType));
       Result.UpdateString(6, PgType);

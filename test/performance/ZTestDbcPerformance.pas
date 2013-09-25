@@ -111,7 +111,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, ZDbcUtils;
+uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -231,17 +231,17 @@ begin
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stAsciiStream, TZAbstractBlob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, Connection, False));
+            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, ZDefaultSystemCodePage, Connection.GetConSettings));
           end;
         stUnicodeStream:
           begin
             Uni := ZWideString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(PWideChar(Uni), GetRecordCount*100*2, Connection, True));
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), GetRecordCount*100, Connection.GetConSettings));
           end;
         stBinaryStream:
           begin
             Bts := RandomBts(GetRecordCount*100);
-            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100));
           end;
       end;
     Statement.ExecuteUpdatePrepared;
@@ -345,17 +345,17 @@ begin
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stAsciiStream, TZAbstractBlob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, Connection, False));
+            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, ZDefaultSystemCodePage, Connection.GetConSettings));
           end;
         stUnicodeStream:
           begin
             Uni := ZWideString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractBlob.CreateWithData(PWideChar(Uni), GetRecordCount*100*2, Connection, True));
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), GetRecordCount*100, Connection.GetConSettings));
           end;
         stBinaryStream:
           begin
             Bts := RandomBts(GetRecordCount*100);
-            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100, Connection, False));
+            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), GetRecordCount*100));
           end;
       end;
     Statement.SetInt(High(ConnectionConfig.PerformanceResultSetTypes)+1, I);

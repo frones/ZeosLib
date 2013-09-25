@@ -272,6 +272,11 @@ function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
 function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
   ParamHandle: POCIParam; stmt_handle: POCIHandle; obj: POCIObject; Level: ub2): POCIObject;
 
+procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Pointer;
+  const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+  const LobLocator: POCILobLocator; const ChunkSize: Integer;
+  BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
+
 implementation
 
 uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
@@ -470,6 +475,7 @@ var
   TempDate: TDateTime;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  Clob: IZClob;
   WriteTempBlob: IZOracleBlob;
   TempStream: TStream;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
@@ -508,7 +514,7 @@ begin
               Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0);
             CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, '');
           end;
-        SQLT_BLOB, SQLT_CLOB:
+        SQLT_BLOB:
           begin
             if Values[I].VType = vtBytes then
             begin
@@ -522,27 +528,53 @@ begin
             begin
               TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
               if not TempBlob.IsEmpty then
-              begin
-                if (CurrentVar.TypeCode = SQLT_CLOB) then
-                  TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                      TempBlob.Length, TempBlob.WasDecoded, Connection.GetConSettings))
-                else
-                  TempStream := TempBlob.GetStream;
-              end
-              else TempStream := TMemoryStream.Create;
+                TempStream := TempBlob.GetStream
+              else
+                TempStream := TMemoryStream.Create;
             end;
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver,
-                TMemoryStream(TempStream).Memory, TempStream.Size, Connection, PPOCIDescriptor(CurrentVar.Data)^,
-                CurrentVar.ColType, ChunkSize);
+                TMemoryStream(TempStream).Memory, TempStream.Size,
+                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize);
               WriteTempBlob.CreateBlob;
-              WriteTempBlob.WriteBlob;
+              WriteTempBlob.WriteLob;
               CurrentVar.Blob := WriteTempBlob;
             finally
               WriteTempBlob := nil;
               TempStream.Free;
             end;
           end;
+        SQLT_CLOB:
+          try
+            if Supports(DefVarManager.GetAsInterface(Values[I]), IZCLob, Clob) then
+              WriteTempBlob := TZOracleClob.Create(PlainDriver,
+                Clob.GetPAnsiChar(Connection.GetConSettings^.ClientCodePage^.CP),
+                Clob.Length, OracleConnection.GetConnectionHandle,
+                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, Connection.GetConSettings,
+                Connection.GetConSettings^.ClientCodePage^.CP)
+            else
+            begin
+              TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
+              if not TempBlob.IsEmpty then
+                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, Connection.GetConSettings))
+              else
+                TempStream := TMemoryStream.Create;
+              WriteTempBlob := TZOracleClob.Create(PlainDriver,
+                TMemoryStream(TempStream).Memory,
+                TempStream.Size, OracleConnection.GetConnectionHandle,
+                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, Connection.GetConSettings,
+                Connection.GetConSettings^.ClientCodePage^.CP);
+            end;
+            WriteTempBlob.CreateBlob;
+            WriteTempBlob.WriteLob;
+            CurrentVar.Blob := WriteTempBlob;
+          finally
+            WriteTempBlob := nil;
+          end
       end;
     end;
   end;
@@ -1060,5 +1092,90 @@ begin
     lcOther, 'OCITypeByRef from OCI_ATTR_REF_TDO');
   DescribeObjectByTDO(PlainDriver, Connection, Result);
 end;
+
+procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Pointer;
+  const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+  const LobLocator: POCILobLocator; const ChunkSize: Integer;
+  BlobSize: Int64; Const BinaryLob: Boolean; const ConSettings: PZConSettings);
+var
+  Status: sword;
+  ContentSize, OffSet: ub4;
+
+  function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
+  var
+    AContentSize: ub4;
+  begin
+    if BinaryLob then
+    begin
+      AContentSize := ContentSize;
+      Result := PlainDriver.LobWrite(ContextHandle, ErrorHandle, LobLocator,
+        AContentSize, AOffSet, (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece,
+        nil, nil, 0, SQLCS_IMPLICIT);
+    end
+    else
+    begin
+      if ContentSize > 0 then
+        AContentSize := ConSettings^.ClientCodePage^.CharWidth
+      else
+      begin
+        AContentSize := ContentSize;
+        AChunkSize := ConSettings^.ClientCodePage^.CharWidth;
+      end;
+
+      Result := PlainDriver.LobWrite(ContextHandle, ErrorHandle, LobLocator,
+        AContentSize, AOffSet, (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece,
+        nil, nil, ConSettings^.ClientCodePage^.ID, SQLCS_IMPLICIT);
+    end;
+    ContentSize := AContentSize;
+    inc(OffSet, AChunkSize);
+  end;
+begin
+
+  { Opens a large object or file for read. }
+  Status := PlainDriver.LobOpen(ContextHandle, ErrorHandle, LobLocator, OCI_LOB_READWRITE);
+  CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Open Large Object');
+
+  { Checks for empty blob.}
+  { This test doesn't use IsEmpty because that function does allow for zero length blobs}
+  if (BlobSize > 0) then
+  begin
+    if not BinaryLob then
+      BlobSize := BlobSize-1;
+    if BlobSize > ChunkSize then
+    begin
+      OffSet := 0;
+      ContentSize := 0;
+
+      Status := DoWrite(1, ChunkSize, OCI_FIRST_PIECE);
+      if Status <> OCI_NEED_DATA then
+        CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Write Large Object');
+
+      if (BlobSize - OffSet) > ChunkSize then
+        while (BlobSize - OffSet) > ChunkSize do //take care there is room left for LastPiece
+        begin
+          Status := DoWrite(offset, ChunkSize, OCI_NEXT_PIECE);
+          if Status <> OCI_NEED_DATA then
+            CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Write Large Object');
+        end;
+      Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
+    end
+    else
+    begin
+      ContentSize := BlobSize;
+      Status := PlainDriver.LobWrite(ContextHandle, ErrorHandle, LobLocator,
+        ContentSize, 1, BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
+    end;
+  end
+  else
+    Status := PlainDriver.LobTrim(ContextHandle, ErrorHandle, LobLocator, 0);
+
+  CheckOracleError(PlainDriver, ErrorHandle,
+    Status, lcOther, 'Write Large Object');
+
+  { Closes large object or file. }
+  Status := PlainDriver.LobClose(ContextHandle, ErrorHandle, LobLocator);
+  CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, 'Close Large Object');
+end;
+
 
 end.

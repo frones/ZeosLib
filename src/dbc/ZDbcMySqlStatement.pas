@@ -501,6 +501,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  Clob: IZClob;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -547,10 +548,13 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                Result := FPlainDriver.EscapeString(FHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                    ConSettings, True);
+                if Supports(TempBlob, IZClob, Clob) then
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    Clob.GetRawByteString, ConSettings, True)
+                else
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings), ConSettings, True);
             end;
           end
           else
@@ -663,6 +667,7 @@ var
   MyType: TMysqlFieldTypes;
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
+  Clob: IZCLob;
   TempAnsi: RawByteString;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
@@ -687,8 +692,11 @@ begin
               FParamBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
             else
             begin
-              TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                        TempBlob.Length, TempBlob.WasDecoded, ConSettings);
+              if Supports(TempBlob, IZClob, Clob) then
+                TempAnsi := Clob.GetRawByteString
+              else
+                TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                          TempBlob.Length, ConSettings);
               TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
               TempBlob.SetString(TempAnsi);
               InParamValues[I].VInterface  := TempBlob;
@@ -1036,6 +1044,7 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
+  Clob: IZClob;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -1080,12 +1089,15 @@ begin
           if not TempBlob.IsEmpty then
             case InParamTypes[ParamIndex] of
               stBinaryStream:
-                Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
+                Result := GetSQLHexAnsiString(TempBlob.GetBuffer, TempBlob.Length);
               else
-                Result := FPlainDriver.EscapeString(FHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                  ConSettings, True);
+                if Supports(TempBlob, IZClob, Clob) then
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    CLob.GetRawByteString, ConSettings, True)
+                else
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, ConSettings), ConSettings, True);
             end
           else
             Result := 'NULL';

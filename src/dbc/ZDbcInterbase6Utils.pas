@@ -329,7 +329,8 @@ type
     BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo);
   procedure ReadBlobBufer(PlainDriver: IZInterbasePlainDriver;
     Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-    BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer);
+    BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
+    const Binary: Boolean);
   function GetIBScaleDivisor(Scale: SmallInt): Int64;
 
 
@@ -1047,6 +1048,7 @@ procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
 var
   I: Integer;
   TempBlob: IZBlob;
+  Clob: IZClob;
   TempStream: TStream;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
@@ -1110,8 +1112,10 @@ begin
           if not TempBlob.IsEmpty then
           begin
             if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then
-              TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length,
-                TempBlob.WasDecoded, ConSettings))
+              if Supports(TempBlob, IZClob, Clob) then
+                TempStream := Clob.GetRawByteStream
+              else
+                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings))
             else
               TempStream := TempBlob.GetStream;
             if Assigned(TempStream) then
@@ -1188,7 +1192,8 @@ end;
 }
 procedure ReadBlobBufer(PlainDriver: IZInterbasePlainDriver;
   Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-  BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer);
+  BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
+  const Binary: Boolean);
 var
   TempBuffer: PAnsiChar;
   BlobInfo: TIbBlobInfo;
@@ -1214,7 +1219,11 @@ begin
   SegmentLenght := BlobInfo.MaxSegmentSize;
 
   { Allocates a blob buffer }
-  Buffer := AllocMem(BlobSize);
+  if Binary then
+    Buffer := AllocMem(BlobSize)
+  else
+    Buffer := AllocMem(BlobSize+1); //left space for leading #0 terminator
+
   TempBuffer := Buffer;
 
   { Copies data to blob buffer }
@@ -3396,7 +3405,7 @@ var
   Buffer: Pointer;
 begin
   ReadBlobBufer(FPlainDriver, FHandle, FTransactionHandle, GetQuad(Index),
-    Size, Buffer);
+    Size, Buffer, GetFieldSqlType(Index) = stBinaryStream);
   try
     SetLength(Str, Size);
     SetString(Str, PAnsiChar(Buffer), Size);
@@ -3416,7 +3425,7 @@ var
   Buffer: Pointer;
 begin
   ReadBlobBufer(FPlainDriver, FHandle, FTransactionHandle, GetQuad(Index),
-    Size, Buffer);
+    Size, Buffer, GetFieldSqlType(Index) = stBinaryStream);
   try
     Stream.Seek(0, 0);
     Stream.Write(Buffer^, Size);
@@ -3439,7 +3448,7 @@ var
   PData: Pointer;
 begin
   ReadBlobBufer(FPlainDriver, FHandle, FTransactionHandle, GetQuad(Index),
-    Size, Buffer);
+    Size, Buffer, GetFieldSqlType(Index) = stBinaryStream);
   Value := VarArrayCreate([0, Size-1], varByte);
   PData := VarArrayLock(Value);
   try

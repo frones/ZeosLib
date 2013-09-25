@@ -765,33 +765,13 @@ begin
   V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
   if VarIsStr(V) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
   begin
-    Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
-    case GetMetadata.GetColumnType(ColumnIndex) of
-      stAsciiStream:
-        if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          if ConSettings^.AutoEncode then
-            if ConSettings^.CPType = cCP_UTF8 then
-              Result.SetString(UTF8Encode(V))
-            else
-              Result.SetString(AnsiString(V))
-          else
-            Result.SetString(AnsiString(V))
-        else
-          Result.SetString(GetValidatedAnsiString(V, ConSettings, True));
-      stUnicodeStream:
-        if (VarType(V) = varOleStr) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-          Result.SetUnicodeString(ZWideString(V))
-        else
-          Result.SetUnicodeString(ConSettings^.ConvFuncs.ZRawToUnicode(RawByteString(V), ConSettings.CTRL_CP));
-      else
-        Result.SetString(RawByteString(V));
-    end;
+    Result := TZAbstractClob.CreateWithData(PWideChar(ZWideString(V)), Length(ZWideString(V)), ConSettings);
   end;
   if VarIsArray(V) then
   begin
     P := VarArrayLock(V);
     try
-      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1, GetStatement.GetConnection);
+      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
     finally
       VarArrayUnLock(V);
     end;

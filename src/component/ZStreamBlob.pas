@@ -114,10 +114,14 @@ type THackedDataset = class(TDataset);
   Destroys this object and cleanups the memory.
 }
 destructor TZBlobStream.Destroy;
-{$IFDEF WITH_WIDEMEMO}
 var
+  CLob: IZClob;
+  {$IFDEF WITH_WIDEMEMO}
   TempStream: TStream;
-{$ENDIF}
+  {$ENDIF}
+  {$IFNDEF UNICODE}
+  TempAnsi: RawByteString;
+  {$ENDIF}
 begin
   if Mode in [bmWrite, bmReadWrite] then
   begin
@@ -126,14 +130,32 @@ begin
     {$IFDEF WITH_WIDEMEMO}
       if FField.DataType = ftWideMemo then
       begin
-        TempStream := GetValidatedUnicodeStream(Memory, Cardinal(Size),
-          FConSettings, False);
-        Blob.SetStream(TempStream, True);
-        TempStream.Free;
+        if Supports(Blob, IZCLob, Clob) then
+          Clob.SetPWideChar(Memory, Cardinal(Size) div 2)
+        else
+        begin
+          TempStream := GetValidatedUnicodeStream(Memory, Cardinal(Size),
+            FConSettings, False);
+          Blob.SetStream(TempStream);
+          TempStream.Free;
+        end;
       end
       else
     {$ENDIF}
-      Blob.SetStream(Self)
+      if (FField.DataType = ftMemo) and Supports(Blob, IZCLob, Clob) then
+        {$IFDEF UNICODE}
+        Clob.SetPAnsiChar(Memory, ZDefaultSystemCodePage, Size)
+        {$ELSE}
+        if FConSettings^.AutoEncode then
+        begin
+          TempAnsi := GetValidatedAnsiStringFromBuffer(Memory, Size, FConSettings, FConSettings^.CTRL_CP);
+          Clob.SetRawByteString(TempAnsi, FConSettings^.CTRL_CP);
+        end
+        else
+          Clob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size)
+        {$ENDIF}
+      else
+        Blob.SetStream(Self)
     end
     else
       Blob.SetStream(nil);

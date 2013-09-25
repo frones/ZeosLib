@@ -89,6 +89,7 @@ type
     FWSQL: ZWideString;
     FaSQL: RawByteString;
     FIsAnsiDriver: Boolean;
+    FCachedLob: Boolean;
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
     procedure SetASQL(const Value: RawByteString); virtual;
@@ -125,6 +126,7 @@ type
     property LogSQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FaSQL{$ENDIF};
     property ChunkSize: Integer read FChunkSize;
     property IsAnsiDriver: Boolean read FIsAnsiDriver;
+    property CachedLob: Boolean read FCachedLob;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -398,7 +400,8 @@ type
 
 implementation
 
-uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections;
+uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections, ZDbcUtils,
+  ZEncoding;
 
 var
 {**
@@ -437,12 +440,9 @@ begin
   FInfo := TStringList.Create;
   if Info <> nil then
     FInfo.AddStrings(Info);
-  if FInfo.Values['chunk_size'] = '' then
-    FChunkSize := StrToIntDef(Connection.GetParameters.Values['chunk_size'], 4096)
-  else
-    FChunkSize := StrToIntDef(FInfo.Values['chunk_size'], 4096);
-
+  FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
   FIsAnsiDriver := Connection.GetIZPlainDriver.IsAnsiDriver;
+  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'true'));
 end;
 
 {**
@@ -1783,7 +1783,10 @@ end;
 procedure TZAbstractPreparedStatement.SetAsciiStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stAsciiStream, TZAbstractBlob.CreateWithStream(Value, GetConnection));
+  if ConSettings^.AutoEncode then
+    SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_NONE, ConSettings))
+  else
+    SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, ConSettings^.ClientCodePage^.CP, ConSettings));
 end;
 
 {**
@@ -1807,7 +1810,7 @@ end;
 procedure TZAbstractPreparedStatement.SetUnicodeStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stUnicodeStream, TZAbstractBlob.CreateWithStream(Value, GetConnection));
+  SetBlob(ParameterIndex, stUnicodeStream, TZAbstractClob.CreateWithData(nil, 0, zCP_UTF16, ConSettings));
 end;
 
 {**
@@ -1828,7 +1831,7 @@ end;
 procedure TZAbstractPreparedStatement.SetBinaryStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stBinaryStream, TZAbstractBlob.CreateWithStream(Value, GetConnection));
+  SetBlob(ParameterIndex, stBinaryStream, TZAbstractBlob.CreateWithStream(Value));
 end;
 
 {**

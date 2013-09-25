@@ -58,7 +58,7 @@ interface
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
-  ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver,
   ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
 
 type
@@ -111,23 +111,32 @@ type
   end;
 
   {** Implements external blob wrapper object for Intebase/Firbird. }
-  TZInterbase6Blob = class(TZAbstractBlob)
+  TZInterbase6UnCachedBlob = Class(TZAbstractUnCachedBlob)
   private
     FBlobId: TISC_QUAD;
-    FBlobRead: Boolean;
-    FIBConnection: IZInterbase6Connection;
+    FDBHandle: PISC_DB_HANDLE;
+    FTrHandle: PISC_TR_HANDLE;
+    FPlainDriver: IZInterbasePlainDriver;
   protected
-    procedure ReadBlob;
+    procedure ReadLob; override;
   public
-    constructor Create(IBConnection: IZInterbase6Connection;
+    constructor Create(const DBHandle: PISC_DB_HANDLE;
+      const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
       var BlobId: TISC_QUAD);
+  end;
 
-    function IsEmpty: Boolean; override;
-    function Clone: IZBlob; override;
-    function GetStream: TStream; override;
-    function GetString: RawByteString; override;
-    function GetUnicodeString: ZWideString; override;
-    function GetBytes: TByteDynArray; override;
+  TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob)
+  private
+    FBlobId: TISC_QUAD;
+    FDBHandle: PISC_DB_HANDLE;
+    FTrHandle: PISC_TR_HANDLE;
+    FPlainDriver: IZInterbasePlainDriver;
+  protected
+    procedure ReadLob; override;
+  public
+    constructor Create(const DBHandle: PISC_DB_HANDLE;
+      const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
+      var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
   end;
 
 implementation
@@ -136,7 +145,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, ZDbcUtils, ZEncoding, ZPlainFirebirdDriver;
+  SysUtils, ZDbcUtils, ZEncoding;
 
 { TZInterbase6ResultSet }
 
@@ -253,7 +262,6 @@ var
   Size: Integer;
   Buffer: Pointer;
   BlobId: TISC_QUAD;
-  TempStream: TStream;
 begin
   Result := nil;
   CheckBlobColumn(ColumnIndex);
@@ -262,44 +270,32 @@ begin
   if LastWasNull then
       Exit;
 
+  BlobId := FSqlData.GetQuad(ColumnIndex - 1);
   if FCachedBlob then
-  begin
+    case GetMetaData.GetColumnType(ColumnIndex) of
+      stBinaryStream:
+        Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
+          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId);
+      stAsciiStream, stUnicodeStream:
+        Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
+          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+          ConSettings);
+    end
+  else
     try
-      BlobId := FSqlData.GetQuad(ColumnIndex - 1);
       with FIBConnection do
         ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-          BlobId, Size, Buffer);
-
+          BlobId, Size, Buffer, Self.GetMetaData.GetColumnType(ColumnIndex) = stBinaryStream);
       case GetMetaData.GetColumnType(ColumnIndex) of
         stBinaryStream:
-          Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
-        stAsciiStream:
-          begin
-            Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
-            TempStream := TStringStream.Create(GetValidatedAnsiString(Result.GetString, Consettings, True));
-            if Assigned(TempStream) then
-            begin
-              Result.SetStream(TempStream);
-              TempStream.Free;
-            end;
-          end;
-        else
-          begin
-            TempStream := GetValidatedUnicodeStream(Buffer, Size, ConSettings, True);
-            Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection, True);
-            if Assigned(TempStream) then
-              TempStream.Free;
-          end;
+          Result := TZAbstractBlob.CreateWithData(Buffer, Size);
+        stAsciiStream, stUnicodeStream:
+          Result := TZAbstractClob.CreateWithData(Buffer,
+            Size, ConSettings^.ClientCodePage^.CP, ConSettings);
       end;
     finally
       FreeMem(Buffer, Size);
     end;
-  end
-  else
-  begin
-    BlobId := FSqlData.GetQuad(ColumnIndex - 1);
-    Result := TZInterbase6Blob.Create(FIBConnection, BlobId);
-  end;
 end;
 {$IFDEF FPC}
   {$HINTS ON}
@@ -798,72 +794,72 @@ begin
   Result := FCursorName;
 end;
 
-{ TZInterbase6Blob }
-
-function TZInterbase6Blob.Clone: IZBlob;
+{ TZInterbase6UnCachedBlob }
+{**
+  Reads the blob information by blob handle.
+  @param handle a Interbase6 database connect handle.
+  @param the statement previously prepared
+}
+constructor TZInterbase6UnCachedBlob.Create(const DBHandle: PISC_DB_HANDLE;
+  const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
+  var BlobId: TISC_QUAD);
 begin
-  Result := TZInterbase6Blob.Create(FIBConnection, FBlobId);
+  FBlobId := BlobId;
+  FDBHandle := DBHandle;
+  FTrHandle := TrHandle;
+  FPlainDriver := PlainDriver;
 end;
+
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
+procedure TZInterbase6UnCachedBlob.ReadLob;
+var
+  Size: Integer;
+  Buffer: Pointer;
+begin
+  InternalClear;
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, True);
+  BlobSize := Size;
+  BlobData := Buffer;
+  inherited ReadLob;
+end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
+
+{ TZInterbase6UnCachedClob }
 
 {**
   Reads the blob information by blob handle.
   @param handle a Interbase6 database connect handle.
   @param the statement previously prepared
 }
-constructor TZInterbase6Blob.Create(IBConnection: IZInterbase6Connection;
-  var BlobId: TISC_QUAD);
+constructor TZInterbase6UnCachedClob.Create(const DBHandle: PISC_DB_HANDLE;
+  const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
+  var BlobId: TISC_QUAD; const ConSettings: PZConSettings);
 begin
+  inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   FBlobId := BlobId;
-  FBlobRead := False;
-  FIBConnection := IBConnection;
-end;
-
-function TZInterbase6Blob.GetBytes: TByteDynArray;
-begin
-  ReadBlob;
-  Result := inherited GetBytes;
-end;
-
-function TZInterbase6Blob.GetStream: TStream;
-begin
-  ReadBlob;
-  Result := inherited GetStream;
-end;
-
-function TZInterbase6Blob.GetString: RawByteString;
-begin
-  ReadBlob;
-  Result := inherited GetString;
-end;
-
-function TZInterbase6Blob.GetUnicodeString: ZWideString;
-begin
-  ReadBlob;
-  Result := inherited GetUnicodeString;
-end;
-
-function TZInterbase6Blob.IsEmpty: Boolean;
-begin
-  ReadBlob;
-  Result := inherited IsEmpty;
+  FDBHandle := DBHandle;
+  FTrHandle := TrHandle;
+  FPlainDriver := PlainDriver;
 end;
 
 {$IFDEF FPC}
   {$HINTS OFF}
 {$ENDIF}
-procedure TZInterbase6Blob.ReadBlob;
+procedure TZInterbase6UnCachedClob.ReadLob;
 var
   Size: Integer;
   Buffer: Pointer;
 begin
-  if FBlobRead then
-   Exit;
-   
-  with FIBConnection do
-    ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle, FBlobId, Size, Buffer);
-  BlobSize := Size;
+  InternalClear;
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, False);
+  (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
+  FBlobSize := Size+1;
   BlobData := Buffer;
-  FBlobRead := True;
+  inherited ReadLob;
 end;
 {$IFDEF FPC}
   {$HINTS ON}

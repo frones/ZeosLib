@@ -76,7 +76,8 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst);
+    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
+    doCachedLobs);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -1771,6 +1772,10 @@ begin
       Temp.Values['preferprepared'] := 'true'
     else
       Temp.Values['preferprepared'] := 'false';
+    if doCachedLobs in FOptions then
+      Temp.Values['cachedlob'] := 'true'
+    else
+      Temp.Values['cachedlob'] := 'false';
 
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally

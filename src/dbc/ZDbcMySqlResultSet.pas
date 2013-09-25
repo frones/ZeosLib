@@ -251,10 +251,10 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex - 1;
   LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer <> nil then
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^
+  if LengthPointer = nil then
+    Len := 0
   else
-    Len := 0;
+    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^;
   Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
   LastWasNull := Result = nil;
 end;
@@ -754,31 +754,25 @@ end;
 }
 function TZMySQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  Stream: TStream;
+  Buffer: PAnsiChar;
+  Len: Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-  Stream := nil;
+  Result := nil;
   try
     if not IsNull(ColumnIndex) then
     begin
+      Buffer := GetBuffer(ColumnIndex, Len);
       case GetMetaData.GetColumnType(ColumnIndex) of
-        stAsciiStream: Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
-        stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
+        stBytes, stBinaryStream:
+          Result := TZAbstractBlob.CreateWithData(Buffer, Len);
         else
-          Stream := TStringStream.Create(InternalGetString(ColumnIndex));
+          Result := TZAbstractClob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
       end;
-      if not Assigned(Stream) then //improve TZTestCompMySQLBugReport.Test1045286
-        Stream := TMemoryStream.Create;
-      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
-        GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream);
-    end
-    else
-      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
+    end;
   finally
-    if Assigned(Stream) then
-      Stream.Free;
   end;
 end;
 
@@ -889,6 +883,7 @@ begin
     FPlainDriver.FreeResult(FQueryHandle);
   FQueryHandle := nil;
 end;
+
 { TZMySQLPreparedResultSet }
 
 {**
@@ -1451,9 +1446,12 @@ begin
   CheckColumnConvertion(ColumnIndex, stBinaryStream);
 {$ENDIF}
   Result := TMemoryStream.Create;
-  Result.Write(FColumnArray[ColumnIndex - 1].buffer[0], FColumnArray[ColumnIndex - 1].length);
-  Result.Position := 0;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  if not LastWasNull then
+  begin
+    Result.Write(FColumnArray[ColumnIndex - 1].buffer[0], FColumnArray[ColumnIndex - 1].length);
+    Result.Position := 0;
+  end;
 end;
 
 {**
@@ -1467,7 +1465,7 @@ end;
 }
 function TZMySQLPreparedResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  Stream: TStream;
+  RawTemp: RawByteString;
 begin
   Result := nil;
 {$IFNDEF DISABLE_CHECKING}
@@ -1477,25 +1475,25 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
       Exit;
-
-  Stream := nil;
   try
     if not LastWasNull then
     begin
       case GetMetadata.GetColumnType(ColumnIndex) of
-        stBinaryStream: Stream := GetBinaryStream(ColumnIndex);
-        stUnicodeStream: Stream := GetUnicodeStream(ColumnIndex);
+        stBinaryStream, stBytes:
+          Result := TZAbstractBlob.CreateWithData(Pointer(FColumnArray[ColumnIndex - 1].buffer),
+            FColumnArray[ColumnIndex - 1].length);
+        stAsciiStream, stUnicodeStream, stString, stUnicodeString:
+          Result := TZAbstractClob.CreateWithData(PAnsichar(FColumnArray[ColumnIndex - 1].buffer),
+            FColumnArray[ColumnIndex - 1].length, ConSettings^.ClientCodePage^.CP, ConSettings);
       else
-        Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
+        begin
+          RawTemp := InternalGetString(ColumnIndex);
+          Result := TZAbstractClob.CreateWithData(PAnsiChar(RawTemp), Length(RawTemp),
+            ConSettings^.ClientCodePage^.CP, ConSettings);
+        end;
       end;
-      Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
-        GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream)
-    end
-    else
-      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
+    end;
   finally
-    if Assigned(Stream) then
-      Stream.Free;
   end;
 end;
 

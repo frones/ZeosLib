@@ -437,6 +437,7 @@ procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
+  CLob: IZCLob;
   I, L: Integer;
   TempAnsi: RawByteString;
   Bts: TByteDynArray;
@@ -535,8 +536,11 @@ begin
               end
               else
               begin
-                TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings);
+                if Supports(TempBlob, IZClob, CLob) then
+                  TempAnsi := Clob.GetRawByteString
+                else
+                  TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, ConSettings);
                 FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
                   {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(TempAnsi)),
                   Length(TempAnsi), @BindingDestructor);

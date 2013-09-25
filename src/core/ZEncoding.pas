@@ -1653,7 +1653,7 @@ begin
       ceUTF16:
         begin
           SetLength(US, Size div 2);
-          System.Move(PWideChar(Bytes)^, PWideChar(US)^, Size);
+          System.Move(Bytes[0], US[1], Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
             {$IFDEF WITH_LCONVENCODING}
             Result := Consettings.PlainConvertFunc(UTF8Encode(US))
@@ -1786,7 +1786,6 @@ begin
       System.Move(PWideChar(US)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
     end;
-    SetLength(Bytes, 0);
   end;
 end;
 

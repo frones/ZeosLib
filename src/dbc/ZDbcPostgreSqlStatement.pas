@@ -265,7 +265,7 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, SQL,
-  ConnectionHandle, QueryHandle, ChunkSize);
+  ConnectionHandle, QueryHandle, CachedLob, ChunkSize);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
@@ -505,7 +505,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, Self.SQL,
-  FConnectionHandle, QueryHandle, ChunkSize);
+  FConnectionHandle, QueryHandle, CachedLob, ChunkSize);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
@@ -906,9 +906,10 @@ var
   Value: TZVariant;
   TempBlob: IZBlob;
   TempStream: TStream;
-  WriteTempBlob: IZPostgreSQLBlob;
+  WriteTempBlob: IZPostgreSQLOidBlob;
   ParamIndex: Integer;
   TempBytes: TByteDynArray;
+  CLob: IZClob;
 
   procedure UpdateNull(const Index: Integer);
   begin
@@ -982,10 +983,10 @@ begin
                   begin
                     TempStream := TempBlob.GetStream;
                     try
-                      WriteTempBlob := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0,
+                      WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
                         FConnectionHandle, 0, ChunkSize);
                       WriteTempBlob.SetStream(TempStream);
-                      WriteTempBlob.WriteBlob;
+                      WriteTempBlob.WriteLob;
                       UpdateString(IntToRaw(WriteTempBlob.GetBlobOid), ParamIndex);
                     finally
                       WriteTempBlob := nil;
@@ -995,9 +996,12 @@ begin
                   else
                     UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex);
                 stAsciiStream, stUnicodeStream:
+                  if Supports(TempBlob, IZClob, Clob) then
+                    UpdateString(Clob.GetRawByteString, ParamIndex)
+                  else
                   begin
                     UpdateString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings), ParamIndex);
+                    TempBlob.Length, ConSettings), ParamIndex);
                   end;
               end; {case..}
               TempBlob := nil;
@@ -1260,7 +1264,7 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(GetPlainDriver, Self, SQL,
-    ConnectionHandle, QueryHandle, ChunkSize);
+    ConnectionHandle, QueryHandle, CachedLob, ChunkSize);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin

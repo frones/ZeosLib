@@ -68,7 +68,9 @@ type
     FQueryHandle: PZPostgreSQLResult;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
+    FIs_bytea_output_hex: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
+    FCachedLob: boolean;
     function GetBuffer(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -77,7 +79,7 @@ type
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-      QueryHandle: PZPostgreSQLResult; Chunk_Size: Integer);
+      QueryHandle: PZPostgreSQLResult; CachedLob: Boolean; Chunk_Size: Integer);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -103,34 +105,59 @@ type
   end;
 
   {** Represents an interface, specific for PostgreSQL blobs. }
-  IZPostgreSQLBlob = interface(IZBlob)
+  IZPostgreSQLOidBlob = interface(IZBlob)
     ['{BDFB6B80-477D-4CB1-9508-9541FEA6CD72}']
     function GetBlobOid: Oid;
-    procedure ReadBlob;
-    procedure WriteBlob;
+    procedure WriteLob;
   end;
 
   {** Implements external blob wrapper object for PostgreSQL. }
-  TZPostgreSQLBlob = class(TZAbstractBlob, IZPostgreSQLBlob)
+  TZPostgreSQLOidBlob = class(TZAbstractUnCachedBlob, IZPostgreSQLOidBlob)
   private
     FHandle: PZPostgreSQLConnect;
     FBlobOid: Oid;
     FPlainDriver: IZPostgreSQLPlainDriver;
     FChunk_Size: Integer;
   public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver; Data: Pointer;
-      Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid; Chunk_Size: Integer);
-
-    destructor Destroy; override;
+    constructor Create(const PlainDriver: IZPostgreSQLPlainDriver; const
+      Data: Pointer; const Size: Integer; const Handle: PZPostgreSQLConnect;
+      const BlobOid: Oid; const Chunk_Size: Integer);
 
     function GetBlobOid: Oid;
-    procedure ReadBlob;
-    procedure WriteBlob;
+    procedure ReadLob; override;
+    procedure WriteLob; override;
 
-    function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
+  end;
 
-    function GetStream: TStream; override;
+  TZPostgreSQLUnCachedBLob = class(TZAbstractUnCachedBLob)
+  private
+    FPlainDriver: IZPostgreSQLPlainDriver;
+    FQueryHandle: PZPostgreSQLResult;
+    FRowNo: Integer;
+    FColumnIndex: Integer;
+    FIs_bytea_output_hex: Boolean;
+    FHandle: PZPostgreSQLConnect;
+  protected
+    procedure ReadLob; override;
+  public
+    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
+      const QueryHandle: PZPostgreSQLResult; const Handle: PZPostgreSQLConnect;
+      Const RowNo, ColumnIndex: Integer; const Is_bytea_output_hex: Boolean);
+  end;
+
+  TZPostgreSQLUnCachedCLob = class(TZAbstractUnCachedCLob)
+  private
+    FPlainDriver: IZPostgreSQLPlainDriver;
+    FQueryHandle: PZPostgreSQLResult;
+    FRowNo: Integer;
+    FColumnIndex: Integer;
+  protected
+    procedure ReadLob; override;
+  public
+    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
+      const ConSettings: PZConSettings; const QueryHandle: PZPostgreSQLResult;
+      Const RowNo, ColumnIndex: Integer);
   end;
 
 implementation
@@ -151,7 +178,7 @@ uses
 }
 constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-  QueryHandle: PZPostgreSQLResult; Chunk_Size: Integer);
+  QueryHandle: PZPostgreSQLResult; CachedLob: Boolean; Chunk_Size: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
 
@@ -161,6 +188,8 @@ begin
   ResultSetConcurrency := rcReadOnly;
   FChunk_Size := Chunk_Size; //size of red/write lob chunks
   FUndefinedVarcharAsStringLength := (Statement.GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
+  FIs_bytea_output_hex := (Statement.GetConnection as IZPostgreSQLConnection).Is_bytea_output_hex;
+  FCachedLob := CachedLob;
 
   Open;
 end;
@@ -679,7 +708,8 @@ var
   BlobOid: Oid;
   Stream: TStream;
   Connection: IZConnection;
-  WS: ZWideString;
+  Buffer: PAnsiChar;
+  Len: Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -688,44 +718,55 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex-1) <> 0;
+
   Connection := Statement.GetConnection;
   if (GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream)
     and (Connection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
-    if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
-      BlobOid := RawToIntDef(InternalGetString(ColumnIndex), 0)
+    if LastWasNull then
+      BlobOid := 0
     else
-      BlobOid := 0;
-
-    Result := TZPostgreSQLBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid, FChunk_Size);
+      BlobOid := RawToIntDef(InternalGetString(ColumnIndex), 0);
+    Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid, FChunk_Size);
   end
   else
   begin
-    if FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex - 1) = 0 then
+    if not LastWasNull then
     begin
       Stream := nil;
       try
         case GetMetadata.GetColumnType(ColumnIndex) of
           stBinaryStream:
-            Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex),
-              (Connection as IZPostgreSQLConnection).Is_bytea_output_hex, Self.FHandle));
-          stAsciiStream:
-            Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True));
-          stUnicodeStream:
+              if FCachedLob then
             begin
-              WS := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
-              Stream := WideStringStream(Ws);
+              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex),
+                FIs_bytea_output_hex, FHandle));
+              Result := TZAbstractBlob.CreateWithStream(Stream);
+            end
+            else
+              Result := TZPostgreSQLUnCachedBLob.Create(FPlainDriver,
+                FQueryHandle, FHandle, RowNo -1, ColumnIndex -1, FIs_bytea_output_hex);
+          stAsciiStream, stUnicodeStream:
+            begin
+              if FCachedLob then
+                Result := TZPostgreSQLUnCachedCLob.Create(FPlainDriver, ConSettings, FQueryHandle, RowNo-1, ColumnIndex-1)
+              else
+              begin
+                Buffer := GetBuffer(ColumnIndex, Len);
+                Result := TZAbstractCLob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
+              end;
             end;
+          else
+            Result := TZAbstractBlob.CreateWithStream(nil);
         end;
-        Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection,
-          GetMetadata.GetColumnType(ColumnIndex) = stUnicodeStream);
       finally
         if Assigned(Stream) then
           Stream.Free;
       end;
     end
     else
-      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
+      Result := TZAbstractBlob.CreateWithStream(nil);
   end;
 end;
 
@@ -789,7 +830,7 @@ begin
     RaiseForwardOnlyException;
 end;
 
-{ TZPostgreSQLBlob }
+{ TZPostgreSQLOidBlob }
 
 {**
   Constructs this class and assignes the main properties.
@@ -798,11 +839,11 @@ end;
   @param Size the size of the blobdata.
   @param Handle a PostgreSQL connection reference.
 }
-constructor TZPostgreSQLBlob.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Data: Pointer; Size: Integer; Handle: PZPostgreSQLConnect; BlobOid: Oid;
-  Chunk_Size: Integer);
+constructor TZPostgreSQLOidBlob.Create(const PlainDriver: IZPostgreSQLPlainDriver;
+  const Data: Pointer; const Size: Integer; const Handle: PZPostgreSQLConnect;
+  const BlobOid: Oid; const Chunk_Size: Integer);
 begin
-  inherited CreateWithData(Data, Size, nil);
+  inherited CreateWithData(Data, Size);
   FHandle := Handle;
   FBlobOid := BlobOid;
   FPlainDriver := PlainDriver;
@@ -810,18 +851,10 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZPostgreSQLBlob.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
   Gets the blob handle oid.
   @return the blob handle oid.
 }
-function TZPostgreSQLBlob.GetBlobOid: Oid;
+function TZPostgreSQLOidBlob.GetBlobOid: Oid;
 begin
   Result := FBlobOid;
 end;
@@ -829,45 +862,41 @@ end;
 {**
   Reads the blob by the blob handle.
 }
-procedure TZPostgreSQLBlob.ReadBlob;
+procedure TZPostgreSQLOidBlob.ReadLob;
 var
   BlobHandle: Integer;
   Buffer: PAnsiChar;
   ReadNum: Integer;
-  ReadStream: TMemoryStream;
+  OffSet: Integer;
 begin
   if not Updated and (FBlobOid > 0) then
   begin
     BlobHandle := FPlainDriver.OpenLargeObject(FHandle, FBlobOid, INV_READ);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Read Large Object',nil);
-    ReadStream := nil;
     if BlobHandle >= 0 then
     begin
-      ReadStream := TMemoryStream.Create;
       Buffer := AllocMem(FChunk_Size+1);
+      OffSet := 0;
       repeat
         ReadNum := FPlainDriver.ReadLargeObject(FHandle, BlobHandle,
           Buffer, FChunk_Size);
+        Inc(OffSet, ReadNum);
+        ReallocMem(FBlobData, OffSet);
         if ReadNum > 0 then
-        begin
-          ReadStream.SetSize(ReadStream.Size + ReadNum);
-          ReadStream.Write(Buffer^, ReadNum);
-        end;
+          System.Move(Buffer^, Pointer(NativeUInt(FBlobData)+NativeUInt(OffSet-ReadNum))^, ReadNum);
       until ReadNum < FChunk_Size;
+      BlobSize := OffSet;
       FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
-      ReadStream.Position := 0;
       FreeMem(Buffer, FChunk_Size+1);
     end;
-    SetStream(ReadStream);
-    if ReadStream <> nil then
-      ReadStream.free;
+    inherited ReadLob; //don't forget this...
   end;
 end;
 
 {**
   Writes the blob by the blob handle.
 }
-procedure TZPostgreSQLBlob.WriteBlob;
+procedure TZPostgreSQLOidBlob.WriteLob;
 var
   BlobHandle: Integer;
   Position: Integer;
@@ -909,33 +938,63 @@ begin
 end;
 
 {**
-  Checks if this blob has an empty content.
-  @return <code>True</code> if this blob is empty.
-}
-function TZPostgreSQLBlob.IsEmpty: Boolean;
-begin
-  ReadBlob;
-  Result := inherited IsEmpty;
-end;
-
-{**
   Clones this blob object.
   @return a clonned blob object.
 }
-function TZPostgreSQLBlob.Clone: IZBlob;
+function TZPostgreSQLOidBlob.Clone: IZBlob;
 begin
-  Result := TZPostgreSQLBlob.Create(FPlainDriver, BlobData, BlobSize,
+  Result := TZPostgreSQLOidBlob.Create(FPlainDriver, BlobData, BlobSize,
     FHandle, FBlobOid, FChunk_Size);
 end;
 
-{**
-  Gets the associated stream object.
-  @return an associated or newly created stream object.
-}
-function TZPostgreSQLBlob.GetStream: TStream;
+{ TZPostgreSQLUnCachedCLob }
+procedure TZPostgreSQLUnCachedBLob.ReadLob;
+var
+  Buffer: Pointer;
 begin
-  ReadBlob;
-  Result := inherited GetStream;
+  Clear;
+  Updated := False;
+  BlobSize := FPlainDriver.DecodeBytea(FRowNo, FColumnIndex,
+    FIs_bytea_output_hex, FHandle, FQueryHandle, Buffer);
+  BlobData := Buffer;
+  inherited ReadLob; //don't forget this!! or lob will read again.. eg. Transaction?
+end;
+
+constructor TZPostgreSQLUnCachedBLob.Create(PlainDriver: IZPostgreSQLPlainDriver;
+  const QueryHandle: PZPostgreSQLResult; const Handle: PZPostgreSQLConnect;
+  Const RowNo, ColumnIndex: Integer; const Is_bytea_output_hex: Boolean);
+begin
+  FPlainDriver := PlainDriver;
+  FQueryHandle := QueryHandle;
+  FRowNo := RowNo;
+  FColumnIndex := ColumnIndex;
+  FHandle := Handle;
+  FIs_bytea_output_hex := Is_bytea_output_hex;
+end;
+
+{ TZPostgreSQLUnCachedCLob }
+procedure TZPostgreSQLUnCachedCLob.ReadLob;
+var
+  Len: Cardinal;
+  Buffer: PAnsichar;
+begin
+  Len := FPlainDriver.GetLength(FQueryHandle, FRowNo, FColumnIndex);
+  Buffer := FPlainDriver.GetValue(FQueryHandle, FRowNo, FColumnIndex);
+  if (Len > 0) and (FPlainDriver.GetFieldType(FQueryHandle, FColumnIndex) = 1042) then
+    while (Buffer+Len)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
+  InternalSetPAnsiChar(Buffer, FConSettings^.ClientCodePage^.CP, Len);
+  inherited ReadLob; //don't forget this!! or lob will read again.. eg. Transaction?
+end;
+
+constructor TZPostgreSQLUnCachedCLob.Create(PlainDriver: IZPostgreSQLPlainDriver;
+  const ConSettings: PZConSettings; const QueryHandle: PZPostgreSQLResult;
+  Const RowNo, ColumnIndex: Integer);
+begin
+  FPlainDriver := PlainDriver;
+  FQueryHandle := QueryHandle;
+  FRowNo := RowNo;
+  FColumnIndex := ColumnIndex;
+  FConSettings := ConSettings;
 end;
 
 end.

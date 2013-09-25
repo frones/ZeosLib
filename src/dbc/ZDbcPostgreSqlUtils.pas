@@ -750,8 +750,9 @@ function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVaria
   DateTimePrefix, QuotedNumbers: Boolean; ConSettings: PZConSettings): RawByteString;
 var
   TempBlob: IZBlob;
+  Clob: IZClob;
   TempStream: TStream;
-  WriteTempBlob: IZPostgreSQLBlob;
+  WriteTempBlob: IZPostgreSQLOidBlob;
 begin
   if DefVarManager.IsNull(Value)  then
     Result := 'NULL'
@@ -809,10 +810,10 @@ begin
                 begin
                   TempStream := TempBlob.GetStream;
                   try
-                    WriteTempBlob := TZPostgreSQLBlob.Create(PlainDriver, nil, 0,
+                    WriteTempBlob := TZPostgreSQLOidBlob.Create(PlainDriver, nil, 0,
                       Connection.GetConnectionHandle, 0, ChunkSize);
                     WriteTempBlob.SetStream(TempStream);
-                    WriteTempBlob.WriteBlob;
+                    WriteTempBlob.WriteLob;
                     Result := IntToRaw(WriteTempBlob.GetBlobOid);
                   finally
                     WriteTempBlob := nil;
@@ -822,18 +823,28 @@ begin
                 else
                   Result := Connection.EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
-                if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
-                  Result := PlainDriver.EscapeString(
-                    Connection.GetConnectionHandle,
-                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                      TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                      ConSettings, True)
+                if Supports(TempBlob, IZClob, Clob) then
+                  if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
+                    Result := PlainDriver.EscapeString(
+                      Connection.GetConnectionHandle, Clob.GetRawByteString,
+                        ConSettings, True)
+                  else
+                    Result := ZDbcPostgreSqlUtils.PGEscapeString(
+                      Connection.GetConnectionHandle, Clob.GetRawByteString,
+                        ConSettings, True)
                 else
-                  Result := ZDbcPostgreSqlUtils.PGEscapeString(
-                    Connection.GetConnectionHandle,
-                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                      TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                      ConSettings, True);
+                  if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
+                    Result := PlainDriver.EscapeString(
+                      Connection.GetConnectionHandle,
+                      GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                        TempBlob.Length, ConSettings),
+                        ConSettings, True)
+                  else
+                    Result := ZDbcPostgreSqlUtils.PGEscapeString(
+                      Connection.GetConnectionHandle,
+                      GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                        TempBlob.Length, ConSettings),
+                        ConSettings, True);
             end; {case..}
           end
           else

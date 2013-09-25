@@ -815,8 +815,8 @@ function TZDBLibResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   DL: Integer;
   Data: Pointer;
-  TempStream: TStream;
   TempAnsi: RawByteString;
+  US: ZWideString;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
@@ -825,20 +825,28 @@ begin
   DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
   Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   LastWasNull := Data = nil;
-  Result := TZAbstractBlob.CreateWithData(Data, DL, FDBLibConnection);
-  if (GetMetaData.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream]) then
-  begin
-    TempAnsi := Result.GetString;
-    TempAnsi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempAnsi, #0, '', [rfReplaceAll]);
-    if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
-      Result.SetString(ZEncoding.GetValidatedAnsiString(TempAnsi, ConSettings, True))
-    else
-    begin
-      TempStream := ZEncoding.GetValidatedUnicodeStream(TempAnsi, ConSettings, True);
-      Result.SetStream(TempStream, True);
-      TempStream.Free;
+
+  Result := nil;
+  if not LastWasNull then
+    case GetMetaData.GetColumnType(ColumnIndex) of
+      stBytes, stBinaryStream:
+        Result := TZAbstractBlob.CreateWithData(Data, DL);
+      stAsciiStream, stUnicodeStream:
+        Result := TZAbstractClob.CreateWithData(Data, DL,
+          ConSettings^.ClientCodePage^.CP, ConSettings);
+      stString, stUnicodeString:
+        begin
+          US := GetUnicodeString(ColumnIndex);
+          Result := TZAbstractClob.CreateWithData(PWideChar(US), Length(US),
+            ConSettings);
+        end
+      else
+      begin
+        TempAnsi := InternalGetString(ColumnIndex);
+        Result := TZAbstractClob.CreateWithData(PAnsiChar(TempAnsi),
+          Length(TempAnsi), ConSettings^.ClientCodePage^.CP, ConSettings);
+      end;
     end;
-  end;
 end;
 
 {**

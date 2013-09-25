@@ -914,15 +914,23 @@ var
             LobLocator := nil;
 
           OracleConnection := Connection as IZOracleConnection;
-          TempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0, OracleConnection,
-            LobLocator, CurrentVar.ColType, GetChunkSize);
-          (TempBlob as IZOracleBlob).ReadBlob;
+          if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_BFILEE] then
+            TempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
+              OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                LobLocator, GetChunkSize)
+          else
+            TempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
+              OracleConnection.GetConnectionHandle,
+              OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+              LobLocator, GetChunkSize, Connection.GetConSettings,
+              Connection.GetConSettings^.ClientCodePage^.CP);
+          //(TempBlob as IZOracleBlob).Readlob;
           DefVarManager.SetAsInterface(outParamValues[Index], TempBlob);
           TempBlob := nil;
         end;
       SQLT_NTY:
         DefVarManager.SetAsInterface(outParamValues[Index],
-          TZOracleBlob.CreateWithStream(nil, GetConnection));
+          TZOracleBlob.CreateWithStream(nil));
       end;
   end;
 begin

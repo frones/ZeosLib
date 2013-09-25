@@ -72,6 +72,7 @@ type
     FPlainDriver: IZOraclePlainDriver;
     FConnection: IZOracleConnection;
     FOutVars: PZSQLVars;
+    FChunkSize: Integer;
   protected
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
     function GetAsStringValue(ColumnIndex: Integer;
@@ -136,39 +137,59 @@ type
     ['{3D861AAC-B263-42F1-B359-2A188D1D986A}']
     function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
-    procedure ReadBlob;
-    procedure WriteBlob;
+    procedure ReadLob;
+    procedure WriteLob;
   end;
 
   {** Implements external blob wrapper object for Oracle. }
-  TZOracleBlob = class(TZAbstractBlob, IZOracleBlob)
+  TZOracleBlob = class(TZAbstractUnCachedBlob, IZOracleBlob)
   private
-    FHandle: IZConnection;
+    FContextHandle: POCISvcCtx;
+    FErrorHandle: POCIError;
     FLobLocator: POCILobLocator;
     FPlainDriver: IZOraclePlainDriver;
-    FBlobType: TZSQLType;
     FTemporary: Boolean;
     FChunkSize: Integer;
   protected
     procedure InternalSetData(AData: Pointer; ASize: Integer);
   public
-    constructor Create(PlainDriver: IZOraclePlainDriver; Data: Pointer;
-      Size: Integer; Handle: IZConnection; LobLocator: POCILobLocator;
-      BlobType: TZSQLType; ChunkSize: Integer);
+    constructor Create(const PlainDriver: IZOraclePlainDriver; const Data: Pointer;
+      const Size: Int64; const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+      const LobLocator: POCILobLocator; const ChunkSize: Integer);
     destructor Destroy; override;
 
     function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
-    procedure ReadBlob;
-    procedure WriteBlob;
+    procedure ReadLob; override;
+    procedure WriteLob; override;
 
-    function Length: LongInt; override;
-    function IsEmpty: Boolean; override;
     function Clone: IZBlob; override;
+  end;
 
-    function GetString: RawByteString; override;
-    function GetBytes: TByteDynArray; override;
-    function GetStream: TStream; override;
+  {** Implements external blob wrapper object for Oracle. }
+  TZOracleClob = class(TZAbstractUnCachedCLob, IZOracleBlob)
+  private
+    FContextHandle: POCISvcCtx;
+    FErrorHandle: POCIError;
+    FLobLocator: POCILobLocator;
+    FConnectionHandle: POCIEnv;
+    FPlainDriver: IZOraclePlainDriver;
+    FTemporary: Boolean;
+    FChunkSize: Integer;
+  public
+    constructor Create(const PlainDriver: IZOraclePlainDriver;
+      const Data: Pointer; const Size: Cardinal; const ConnectionHandle: POCIEnv;
+      const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+      const LobLocator: POCILobLocator; const ChunkSize: Integer;
+      const ConSettings: PZConSettings; const CodePage: Word);
+    destructor Destroy; override;
+
+    function GetLobLocator: POCILobLocator;
+    procedure CreateBlob;
+    procedure ReadLob; override;
+    procedure WriteLob; override;
+
+    function Clone: IZBlob; override;
   end;
 
 implementation
@@ -199,6 +220,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
   FConnection := Statement.GetConnection as IZOracleConnection;
+  FChunkSize := Statement.GetChunkSize;
 
   Open;
 end;
@@ -860,10 +882,9 @@ end;
 }
 function TZOracleAbstractResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  Connection: IZOracleConnection;
   CurrentVar: PZSQLVar;
   LobLocator: POCILobLocator;
-  Stream: TStream;
+  RawTemp: RawByteString;
 begin
   Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
@@ -883,31 +904,36 @@ begin
     else
       LobLocator := nil;
 
-    Connection := GetStatement.GetConnection as IZOracleConnection;
-    Result := TZOracleBlob.Create(FPlainDriver, nil, 0, Connection, LobLocator,
-      CurrentVar.ColType, GetStatement.GetChunkSize);
-    (Result as IZOracleBlob).ReadBlob;
-
+    if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_BFILEE] then
+      Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FConnection.GetContextHandle,
+        FConnection.GetErrorHandle, LobLocator, FChunkSize)
+    else
+      Result := TZOracleClob.Create(FPlainDriver, nil, 0,
+        FConnection.GetConnectionHandle, FConnection.GetContextHandle,
+        FConnection.GetErrorHandle, LobLocator, FChunkSize, FConnection.GetConSettings,
+        FConnection.GetConSettings^.ClientCodePage^.CP);
   end
   else
     if CurrentVar.TypeCode=SQLT_NTY then
-      Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection)
+      Result := TZAbstractBlob.CreateWithStream(nil)
     else
     begin
       if CurrentVar.Indicator >= 0 then
       begin
-        Stream := nil;
         try
-          Stream := TStringStream.Create(
-            GetAsStringValue(ColumnIndex, CurrentVar));
-          Result := TZAbstractBlob.CreateWithStream(Stream, GetStatement.GetConnection);
+          if CurrentVar.TypeCode in [SQLT_LVB, SQLT_LVC, SQLT_BIN] then
+            Result := TZAbstractBlob.CreateWithData(PAnsiChar(CurrentVar.Data) + SizeOf(Integer), PInteger(CurrentVar.Data)^)
+          else
+          begin
+            RawTemp := GetAsStringValue(ColumnIndex, CurrentVar);
+            Result := TZAbstractClob.CreateWithData(PAnsiChar(RawTemp),
+              Length(RawTemp), ConSettings^.ClientCodePage^.CP, ConSettings);
+          end;
         finally
-          if Assigned(Stream) then
-            Stream.Free;
         end;
       end
       else
-        Result := TZAbstractBlob.CreateWithStream(nil, GetStatement.GetConnection);
+        Result := TZAbstractBlob.CreateWithStream(nil);
     end;
 end;
 
@@ -1363,16 +1389,16 @@ end;
   @param LobLocator an Oracle lob locator reference.
   @param BlobType a blob type.
 }
-constructor TZOracleBlob.Create(PlainDriver: IZOraclePlainDriver;
-  Data: Pointer; Size: Integer; Handle: IZConnection;
-  LobLocator: POCILobLocator; BlobType: TZSQLType; ChunkSize: Integer);
+constructor TZOracleBlob.Create(const PlainDriver: IZOraclePlainDriver;
+  const Data: Pointer; const Size: Int64; const ContextHandle: POCISvcCtx;
+  const ErrorHandle: POCIError; const LobLocator: POCILobLocator; const ChunkSize: Integer);
 begin
-  inherited CreateWithData(Data, Size, Handle);
-  FHandle := Handle;
+  inherited CreateWithData(Data, Size);
+  FContextHandle := ContextHandle;
+  FErrorHandle := ErrorHandle;
   FLobLocator := LobLocator;
   FPlainDriver := PlainDriver;
   FTemporary := False;
-  FBlobType := BlobType;
   FChunkSize := ChunkSize;
 end;
 
@@ -1380,16 +1406,9 @@ end;
   Destroys this object and cleanups the memory.
 }
 destructor TZOracleBlob.Destroy;
-var
-  Connection: IZOracleConnection;
 begin
   if FTemporary then
-  begin
-    Connection := FHandle as IZOracleConnection;
-    FPlainDriver.LobFreeTemporary(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator);
-  end;
-
+    FPlainDriver.LobFreeTemporary(FContextHandle, FErrorHandle, FLobLocator);
   inherited Destroy;
 end;
 
@@ -1406,23 +1425,12 @@ end;
   Creates a temporary blob.
 }
 procedure TZOracleBlob.CreateBlob;
-var
-  Status: Integer;
-  Connection: IZOracleConnection;
-  TempBlobType: ub1;
 begin
-  Connection := FHandle as IZOracleConnection;
-
-  if FBlobType in [stBytes, stBinaryStream] then
-    TempBlobType := OCI_TEMP_BLOB
-  else
-    TempBlobType := OCI_TEMP_CLOB;
-
-  Status := FPlainDriver.LobCreateTemporary(Connection.GetContextHandle,
-    Connection.GetErrorHandle, FLobLocator, OCI_DEFAULT, OCI_DEFAULT,
-    TempBlobType, False, OCI_DURATION_DEFAULT);
-  CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-    Status, lcOther, 'Create Large Object');
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.LobCreateTemporary(FContextHandle, FErrorHandle,
+      FLobLocator, OCI_DEFAULT, OCI_DEFAULT, OCI_TEMP_BLOB, False,
+      OCI_DURATION_DEFAULT),
+    lcOther, 'Create Large Object');
 
   FTemporary := True;
 end;
@@ -1430,198 +1438,60 @@ end;
 {**
   Reads the blob by the blob handle.
 }
-procedure TZOracleBlob.ReadBlob;
+procedure TZOracleBlob.ReadLob;
 const
   MemDelta = 1 shl 12;  // read page (2^...)
 var
   Status: Integer;
   Buf: PByteArray;
-  ReadNumBytes, ReadNumChars, Offset, Cap: ub4;
-  Connection: IZOracleConnection;
-  AnsiTemp: RawByteString;
-  Stream: TStream;
-  csid: ub2;
-  csfrm: ub1;
-
-  procedure DoRead(const csid: ub2; const csfrm: ub1);
-  begin
-    FillChar(Buf^, FChunkSize+1, #0);
-    ReadNumChars := 0;
-    Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator, ReadNumChars, Offset + 1,
-      Buf, FChunkSize, nil, nil, Connection.GetClientCodePageInformations^.ID, csfrm);
-    if ReadNumChars > 0 then
-    begin
-      Inc(Offset, ReadNumChars);
-      AnsiTemp := AnsiTemp+PAnsiChar(Buf);
-    end;
-  end;
+  ReadNumBytes, Offset, Cap: ub4;
 begin
   if not Updated and (FLobLocator <> nil)
     and (BlobData = nil) and (not FTemporary) then
   begin
-    Connection := FHandle as IZOracleConnection;
-
     { Opens a large object or file for read. }
-    Status := FPlainDriver.LobOpen(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator, OCI_LOB_READONLY);
-    CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-      Status, lcOther, 'Open Large Object');
+    Status := FPlainDriver.LobOpen(FContextHandle, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
+    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object');
     try
       { Reads data in chunks by MemDelta or more }
       Offset := 0;
       Buf := nil;
       try
-        case FBlobType of
-          stBinaryStream:
-            repeat //BLOB
-              {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
-              Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
-              ReallocMem(Buf, Cap);
-              ReadNumBytes := Cap - Offset;
+        repeat
+          {Calc new progressive by 1/8 and aligned by MemDelta capacity for buffer}
+          Cap := (Offset + (Offset shr 3) + 2 * MemDelta - 1) and not (MemDelta - 1);
+          ReallocMem(Buf, Cap);
+          ReadNumBytes := Cap - Offset;
 
-              Status := FPlainDriver.LobRead(Connection.GetContextHandle,
-                Connection.GetErrorHandle, FLobLocator, ReadNumBytes, Offset + 1,
-                @Buf[Offset], ReadNumBytes, nil, nil, 0, SQLCS_IMPLICIT);
-              CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-                Status, lcOther, 'Read Large Object');
-              if ReadNumBytes > 0 then
-                Inc(Offset, ReadNumBytes);
-            until Offset < Cap;
-          else //CLob
-          begin
-            GetMem(Buf, FChunkSize+1);
-            AnsiTemp := '';
-            Offset := 0;
-            csid := Connection.GetClientCodePageInformations^.ID;
-            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-              FPlainDriver.LobCharSetForm(Connection.GetConnectionHandle,
-                Connection.GetErrorHandle, FLobLocator, @csfrm), lcOther, 'Determine LOB SCFORM'); //need to determine proper CharSet-Form
-            DoRead(csid, csfrm);
-            if Status = OCI_NEED_DATA then
-              while Status = OCI_NEED_DATA do
-                DoRead(csid, csfrm);
-            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-              Status, lcOther, 'Read Large Object');
-            if FBlobType = stUnicodeStream then
-              Stream := ZEncoding.GetValidatedUnicodeStream(AnsiTemp, Connection.GetConSettings, True)
-            else
-              Stream := TStringStream.Create(GetValidatedAnsiString(AnsiTemp, Connection.GetConSettings, True));
-            ReallocMem(Buf, Stream.Size);
-            Move(TMemoryStream(Stream).Memory^, PAnsichar(Buf)^, Stream.Size);
-            OffSet := Stream.Size;
-            Stream.Free;
-            FDecoded := FBlobType = stUnicodeStream;
-          end;
-        end;
+          Status := FPlainDriver.LobRead(FContextHandle, FErrorHandle,
+            FLobLocator, ReadNumBytes, Offset + 1, @Buf[Offset], ReadNumBytes,
+            nil, nil, 0, SQLCS_IMPLICIT);
+          CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Read Large Object');
+          if ReadNumBytes > 0 then
+            Inc(Offset, ReadNumBytes);
+        until Offset < Cap;
       except
         FreeMem(Buf);
         raise;
       end;
     finally
       { Closes large object or file. }
-      Status := FPlainDriver.LobClose(Connection.GetContextHandle,
-        Connection.GetErrorHandle, FLobLocator);
-      CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-        Status, lcOther, 'Close Large Object');
+      Status := FPlainDriver.LobClose(FContextHandle,FErrorHandle, FLobLocator);
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object');
     end;
     { Assigns data }
     InternalSetData(Buf, Offset);
   end;
+  inherited ReadLob;
 end;
 
 {**
   Writes the blob by the blob handle.
 }
-procedure TZOracleBlob.WriteBlob;
-var
-  Status: sword;
-  Connection: IZOracleConnection;
-  ContentSize, OffSet: ub4;
-
-  function DoWrite(AOffSet: ub4; AChunkSize: ub4; APiece: ub1): sword;
-  var
-    AContentSize: ub4;
-  begin
-    if Self.FBlobType = stBinaryStream then
-    begin
-      AContentSize := ContentSize;
-      Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
-        Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
-        (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece, nil, nil, 0, SQLCS_IMPLICIT);
-    end
-    else
-    begin
-      if ContentSize > 0 then
-        AContentSize := AChunkSize div Connection.GetClientCodePageInformations^.CharWidth
-      else
-      begin
-        AContentSize := ContentSize;
-        AChunkSize := Connection.GetClientCodePageInformations^.CharWidth;
-      end;
-
-      Result := FPlainDriver.LobWrite(Connection.GetContextHandle,
-        Connection.GetErrorHandle, FLobLocator, AContentSize, AOffSet,
-        (PAnsiChar(BlobData)+OffSet), AChunkSize, APiece, nil, nil, Connection.GetClientCodePageInformations^.ID, SQLCS_IMPLICIT);
-    end;
-    ContentSize := AContentSize;
-    inc(OffSet, AChunkSize);
-  end;
+procedure TZOracleBlob.WriteLob;
 begin
-  Connection := FHandle as IZOracleConnection;
-
-  { Opens a large object or file for read. }
-  Status := FPlainDriver.LobOpen(Connection.GetContextHandle,
-    Connection.GetErrorHandle, FLobLocator, OCI_LOB_READWRITE);
-  CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-    Status, lcOther, 'Open Large Object');
-
-  { Checks for empty blob.}
-  { This test doesn't use IsEmpty because that function does allow for zero length blobs}
-  if (BlobSize > 0) then
-  begin
-    if BlobSize > FChunkSize then
-    begin
-      OffSet := 0;
-      ContentSize := 0;
-
-      Status := DoWrite(1, FChunkSize, OCI_FIRST_PIECE);
-      if Status <> OCI_NEED_DATA then
-        CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-          Status, lcOther, 'Write Large Object');
-
-      if (BlobSize - OffSet) > FChunkSize then
-        while (BlobSize - OffSet) > FChunkSize do //take care there is room left for LastPiece
-        begin
-          Status := DoWrite(offset, FChunkSize, OCI_NEXT_PIECE);
-          if Status <> OCI_NEED_DATA then
-            CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-              Status, lcOther, 'Write Large Object');
-
-        end;
-      Status := DoWrite(offset, BlobSize - OffSet, OCI_LAST_PIECE);
-    end
-    else
-    begin
-      ContentSize := BlobSize;
-      Status := FPlainDriver.LobWrite(Connection.GetContextHandle,
-        Connection.GetErrorHandle, FLobLocator, ContentSize, 1,
-        BlobData, BlobSize, OCI_ONE_PIECE, nil, nil, 0, SQLCS_IMPLICIT);
-    end;
-  end
-  else
-  begin
-    Status := FPlainDriver.LobTrim(Connection.GetContextHandle,
-      Connection.GetErrorHandle, FLobLocator, 0);
-  end;
-  CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-    Status, lcOther, 'Write Large Object');
-
-  { Closes large object or file. }
-  Status := FPlainDriver.LobClose(Connection.GetContextHandle,
-    Connection.GetErrorHandle, FLobLocator);
-  CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
-    Status, lcOther, 'Close Large Object');
+  OraWriteLob(FPlainDriver, BlobData, FContextHandle, FErrorHandle, FLobLocator,
+    FChunkSize, BlobSize, True, nil);
 end;
 
 {**
@@ -1635,59 +1505,129 @@ begin
 end;
 
 {**
-  Checks if this blob has an empty content.
-  @return <code>True</code> if this blob is empty.
-}
-function TZOracleBlob.IsEmpty: Boolean;
-begin
-  ReadBlob;
-  Result := inherited IsEmpty;
-end;
-
-function TZOracleBlob.Length: LongInt;
-begin
-  ReadBlob;
-  Result := inherited Length;
-end;
-
-{**
   Clones this blob object.
   @return a clonned blob object.
 }
 function TZOracleBlob.Clone: IZBlob;
 begin
-  Result := TZOracleBlob.Create(FPlainDriver, BlobData, BlobSize,
-    FHandle, FLobLocator, FBlobType, FChunkSize);
+  Result := TZOracleBlob.Create(FPlainDriver, BlobData, Length, FContextHandle,
+    FErrorHandle, FLobLocator, FChunkSize);
+end;
+
+{ TZOracleClob }
+
+constructor TZOracleClob.Create(const PlainDriver: IZOraclePlainDriver;
+  const Data: Pointer; const Size: Cardinal; const ConnectionHandle: POCIEnv;
+  const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
+  const LobLocator: POCILobLocator; const ChunkSize: Integer;
+  const ConSettings: PZConSettings; const CodePage: Word);
+begin
+  inherited CreateWithData(Data, Size, CodePage, ConSettings);
+  FContextHandle := ContextHandle;
+  FConnectionHandle := ConnectionHandle;
+  FErrorHandle := ErrorHandle;
+  FLobLocator := LobLocator;
+  FPlainDriver := PlainDriver;
+  FTemporary := False;
+  FChunkSize := ChunkSize;
+end;
+
+destructor TZOracleClob.Destroy;
+begin
+  if FTemporary then
+    FPlainDriver.LobFreeTemporary(FContextHandle, FErrorHandle, FLobLocator);
+  inherited Destroy;
+end;
+
+function TZOracleClob.GetLobLocator: POCILobLocator;
+begin
+  Result := FLobLocator;
 end;
 
 {**
-  Gets the associated stream object.
-  @return an associated or newly created stream object.
+  Creates a temporary blob.
 }
-function TZOracleBlob.GetStream: TStream;
+procedure TZOracleClob.CreateBlob;
 begin
-  ReadBlob;
-  Result := inherited GetStream;
+  CheckOracleError(FPlainDriver, FErrorHandle,
+    FPlainDriver.LobCreateTemporary(FContextHandle, FErrorHandle, FLobLocator,
+      OCI_DEFAULT, OCI_DEFAULT, OCI_TEMP_CLOB, False, OCI_DURATION_DEFAULT),
+    lcOther, 'Create Large Object');
+
+  FTemporary := True;
 end;
 
-{**
-  Gets the string from the stored data.
-  @return a string which contains the stored data.
-}
-function TZOracleBlob.GetString: RawByteString;
+procedure TZOracleClob.ReadLob;
+const
+  MemDelta = 1 shl 12;  // read page (2^...)
+var
+  Status: Integer;
+  Buf: PByteArray;
+  ReadNumChars, Offset: ub4;
+  csfrm: ub1;
+
+  procedure DoRead(const csid: ub2; const csfrm: ub1);
+  begin
+    FillChar(Buf^, FChunkSize+1, #0);
+    ReadNumChars := 0;
+    Status := FPlainDriver.LobRead(FContextHandle,FErrorHandle, FLobLocator,
+      ReadNumChars, Offset + 1, Buf, FChunkSize, nil, nil, csid, csfrm);
+    if ReadNumChars > 0 then
+    begin
+      Inc(Offset, ReadNumChars);
+      ReallocMem(FBlobData, Offset+1);
+      System.Move(Buf^, (PAnsiChar(FBlobData)+NativeUInt(OffSet-ReadNumChars))^, ReadNumChars);
+    end;
+  end;
 begin
-  ReadBlob;
-  Result := inherited GetString;
+  if not Updated and (FLobLocator <> nil) and (BlobData = nil) and (not FTemporary) then
+  begin
+    { Opens a large object or file for read. }
+    Status := FPlainDriver.LobOpen(FContextHandle, FErrorHandle, FLobLocator, OCI_LOB_READONLY);
+    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Open Large Object');
+    try
+      { Reads data in chunks by MemDelta or more }
+      Offset := 0;
+      Buf := nil;
+      try
+        GetMem(Buf, FChunkSize+1);
+        Offset := 0;
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          FPlainDriver.LobCharSetForm(FConnectionHandle, FErrorHandle,
+            FLobLocator, @csfrm),
+          lcOther, 'Determine LOB SCFORM'); //need to determine proper CharSet-Form
+        DoRead(FConSettings^.ClientCodePage^.ID, csfrm);
+        while Status = OCI_NEED_DATA do
+          DoRead(FConSettings^.ClientCodePage^.ID, csfrm);
+        CheckOracleError(FPlainDriver, FErrorHandle,
+          Status, lcOther, 'Read Large Object');
+        BlobSize := OffSet+1; //oracle includes #0 terminator
+        (PAnsiChar(FBlobData)+NativeUInt(OffSet))^ := #0;
+      except
+        FreeMem(Buf);
+        raise;
+      end;
+    finally
+      { Closes large object or file. }
+      Status := FPlainDriver.LobClose(FContextHandle, FErrorHandle, FLobLocator);
+      CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object');
+    end;
+  end;
+  inherited ReadLob;
 end;
 
-{**
-  Gets the byte buffer from the stored data.
-  @return a byte buffer which contains the stored data.
-}
-function TZOracleBlob.GetBytes: TByteDynArray;
+procedure TZOracleClob.WriteLob;
 begin
-  ReadBlob;
-  Result := inherited GetBytes;
+  GetPAnsiChar(FConSettings^.ClientCodePage^.CP); //convert if required
+  OraWriteLob(FPlainDriver, BlobData, FContextHandle, FErrorHandle, FLobLocator,
+    FChunkSize, BlobSize, False, FConSettings);
+end;
+
+function TZOracleClob.Clone: IZBlob;
+begin
+  Result := TZOracleClob.Create(FPlainDriver, BlobData, Length, FConnectionHandle,
+    FContextHandle, FErrorHandle, FLobLocator, FChunkSize, FConSettings,
+    CurrentCodePage);
 end;
 
 end.

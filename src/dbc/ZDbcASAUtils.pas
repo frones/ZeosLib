@@ -128,7 +128,7 @@ type
     function GetTimestamp(const Index: Integer): TDateTime;
     function GetValue(const Index: Word): Variant;
 
-    procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord);
+    procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord; const Binary: Boolean = True);
     procedure ReadBlobToStream(const Index: Word; Stream: TStream);
     procedure ReadBlobToString(const Index: Word; var str: RawByteString);
     procedure ReadBlobToVariant(const Index: Word; var Value: Variant);
@@ -210,7 +210,7 @@ type
     function GetTimestamp(const Index: Integer): TDateTime;
     function GetValue(const Index: Word): Variant;
 
-    procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord);
+    procedure ReadBlobToMem(const Index: Word; var Buffer: Pointer; var Length: LongWord; const Binary: Boolean = True);
     procedure ReadBlobToStream(const Index: Word; Stream: TStream);
     procedure ReadBlobToString(const Index: Word; var str: RawByteString);
     procedure ReadBlobToVariant(const Index: Word; var Value: Variant);
@@ -1755,7 +1755,7 @@ end;
    @param Str destination string
 }
 procedure TZASASQLDA.ReadBlobToMem(const Index: Word; var Buffer: Pointer;
-  var Length: LongWord);
+  var Length: LongWord; const Binary: Boolean = True);
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
@@ -1766,10 +1766,14 @@ begin
        Exit;
 
     if ( ( sqlType and $FFFE = DT_LONGVARCHAR) or
+         ( sqlType and $FFFE = DT_LONGNVARCHAR) or
          ( sqlType and $FFFE = DT_LONGBINARY)) then
     begin
       Length := PZASABlobStruct( sqlData).untrunc_len;
-      GetMem( Buffer, Length);
+      if Binary then
+        GetMem( Buffer, Length)
+      else
+        GetMem( Buffer, Length +1);
       ReadBlob( Index, Buffer, Length);
     end
     else
@@ -2192,6 +2196,7 @@ var
   i: Integer;
   TempBlob: IZBlob;
   TempStream: TStream;
+  CLob: IZClob;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create( SInvalidInputParameterCount);
@@ -2245,8 +2250,11 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) then
-                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings))
+                if Supports(TempBlob, IZClob, Clob) then
+                  TempStream := Clob.GetRawByteStream
+                else
+                  TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(
+                    TempBlob.GetBuffer, TempBlob.Length, ConSettings))
               else
                 TempStream := TempBlob.GetStream;
               if Assigned(TempStream) then

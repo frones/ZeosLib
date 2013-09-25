@@ -144,7 +144,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, ZPlainASAConstants;
+uses ZSysUtils, ZDbcUtils, ZPlainASAConstants, ZDbcResultSet;
 
 { TZASAStatement }
 
@@ -989,7 +989,11 @@ begin
         begin
           GetMem( P, PZASABlobStruct( Value.GetData.sqlvar[I].sqlData).untrunc_len);
           Value.ReadBlobToMem( I, P, L);
-          TempBlob := TZASABlob.CreateWithData( P, L, GetConnection);
+          if Value.GetFieldSqlType(I) = stBinaryStream then
+            TempBlob := TZAbstractBlob.CreateWithData(P, L)
+          else
+            TempBlob := TZAbstractCLob.CreateWithData(P, L, ConSettings^.ClientCodePage^.CP, ConSettings);
+          FreeMem(P);
           DefVarManager.SetAsInterface( Temp, TempBlob);
         end;
     end;

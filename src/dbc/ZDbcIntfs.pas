@@ -897,21 +897,16 @@ type
 
     function IsEmpty: Boolean;
     function IsUpdated: Boolean;
-    function Length: LongInt;
-    function WasDecoded: Boolean;
-    function Connection: IZConnection;
+    function Length: Integer;
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
-    function GetUnicodeString: ZWideString;
-    procedure SetUnicodeString(const Value: ZWideString);
     function GetBytes: TByteDynArray;
     procedure SetBytes(const Value: TByteDynArray);
-    function GetUnicodeStream: TStream;
     function GetStream: TStream;
-    procedure SetStream(Value: TStream; Encoded: Boolean = False);
+    procedure SetStream(Value: TStream); overload;
     function GetBuffer: Pointer;
-    procedure SetBuffer(Buffer: Pointer; Length: Integer);
+    procedure SetBuffer(Buffer: Pointer; Length: Int64);
 
     procedure Clear;
     function Clone: IZBlob;
@@ -919,16 +914,19 @@ type
 
   IZCLob = interface(IZBlob)
     ['{191B8627-198F-4572-82D3-A083CD184DD3}']
-    //function GetLength: Cardinal;
     function GetRawByteString: RawByteString;
     procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
     function GetAnsiString: AnsiString;
     procedure SetAnsiString(Const Value: AnsiString);
     function GetUTF8String: UTF8String;
     procedure SetUTF8String(Const Value: UTF8String);
+    procedure SetUnicodeString(const Value: ZWideString);
+    function GetUnicodeString: ZWideString;
+    procedure SetStream(Value: TStream; CodePage: Word); overload;
     function GetRawByteStream: TStream;
     function GetAnsiStream: TStream;
     function GetUTF8Stream: TStream;
+    function GetUnicodeStream: TStream;
     function GetPAnsiChar(const CodePage: Word): PAnsiChar;
     procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
     function GetPWideChar: PWideChar;
