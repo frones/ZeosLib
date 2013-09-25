@@ -56,7 +56,8 @@ unit ZTestSqlStrings;
 interface
 {$I ZComponent.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+  ZTestCase, ZSqlStrings, ZTokenizer, ZGenericSqlToken;
 
 type
 
