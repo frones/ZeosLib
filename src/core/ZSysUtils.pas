@@ -2137,6 +2137,77 @@ begin
     Result := '0'+Result;
 end;
 
+procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
+  const Len: Cardinal; var Value: ZWideString; out P: PWideChar); overload;
+var SLen: Cardinal;
+begin
+  if Quoted then
+  begin
+    if Suffix = '' then
+    begin
+      SetLength(Value, Len +2);
+      Value[1] := WideChar(#39);
+      Value[Len+2] := WideChar(#39);
+    end
+    else
+    begin
+      SLen := Length(Suffix);
+      SetLength(Value, Len +2+Slen);
+      Value[1] := WideChar(#39);
+      Value[Len+2] := WideChar(#39);
+      System.Move(Suffix[1], Value[Len+3], Slen*2);
+    end;
+    P := PWideChar(Value)+1;
+  end
+  else
+  begin
+    if Suffix = '' then
+      SetLength(Value, Len)
+    else
+    begin
+      SLen := Length(Suffix);
+      SetLength(Value, Len+Slen);
+      System.Move(Suffix[1], Value[Len+1], Slen*2);
+    end;
+    P := PWideChar(Value);
+  end;
+end;
+
+procedure PrepareDateTimeStr(const Quoted: Boolean;
+  const Suffix: RawByteString; const Len: Cardinal; var Value: RawByteString; out P: PAnsiChar); overload;
+var SLen: Cardinal;
+begin
+  if Quoted then
+  begin
+    if Suffix = '' then
+    begin
+      SetLength(Value, Len +2);
+      Value[1] := AnsiChar(#39);
+      Value[Len+2] := AnsiChar(#39);
+    end
+    else
+    begin
+      SLen := Length(Suffix);
+      SetLength(Value, Len +2+Slen);
+      Value[1] := AnsiChar(#39);
+      Value[Len+2] := AnsiChar(#39);
+      System.Move(Suffix[1], Value[Len+3], Slen);
+    end;
+    P := PAnsiChar(Value)+1;
+  end
+  else
+  begin
+    if Suffix = '' then
+      SetLength(Value, Len)
+    else
+    begin
+      SLen := Length(Suffix);
+      SetLength(Value, Len+Slen);
+      System.Move(Suffix[1], Value[Len+1], Slen);
+    end;
+    P := PAnsiChar(Value);
+  end;
+end;
 {**
   Converts DateTime value to a rawbyteString
   @param Value a TDateTime value.
@@ -2148,43 +2219,46 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Cardinal;
-  sYear, sMonth, sDay: RawByteString;
-  YLen, MLen, DLen: Integer;
+  I: Integer;
   DateFormat: PAnsiChar;
+  PA: PAnsiChar;
+  YearSet: Boolean;
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  sYear := Concat0(IntToRaw(AYear), 4);
-  sMonth := Concat0(IntToRaw(AMonth), 2);
-  sDay := Concat0(IntToRaw(ADay), 2);
+  YearSet := False;
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result, PA);
 
-  Result := '';
-  SetLength(Result, ConFormatSettings.DateFormatLen);
-
+  I := ConFormatSettings.DateFormatLen-1;
   DateFormat := PAnsiChar(ConFormatSettings.DateFormat);
-  YLen := 4; MLen := 2; DLen := 2;
-  for i := ConFormatSettings.DateFormatLen-1 downto 0 do
+  while I > 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
         begin
-          (PAnsiChar(Result)+i)^ := sYear[YLen];
-          Dec(YLen);
+          if YearSet then  //Year has eiter two or four digits
+            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear div 100])
+          else
+          begin
+            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear mod 100]);
+            YearSet := True;
+          end;
+          Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PAnsiChar(Result)+i)^ := sMonth[MLen];
-          Dec(MLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMonth]);
+          Dec(I, 2);
         end;
       'D', 'd':
         begin
-          (PAnsiChar(Result)+i)^ := sDay[DLen];
-          Dec(DLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ADay]);
+          Dec(I, 2);
         end;
       else
-        (PAnsiChar(Result)+i)^ := (DateFormat+i)^;
-    end;
-  if Quoted then Result := #39+Result+#39;
-  Result := Result + Suffix;
+      begin
+        (PA+i)^ := (DateFormat+i)^;
+        Dec(i);
+      end;
+  end;
 end;
 
 {**
@@ -2198,43 +2272,46 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Cardinal;
-  sYear, sMonth, sDay: ZWideString;
-  YLen, MLen, DLen: Integer;
+  I: Integer;
   DateFormat: PAnsiChar;
+  PW: PWideChar;
+  YearSet: Boolean;
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  sYear := Concat0(IntToUnicode(AYear), 4);
-  sMonth := Concat0(IntToUnicode(AMonth), 2);
-  sDay := Concat0(IntToUnicode(ADay), 2);
+  YearSet := False;
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result, PW);
 
-  Result := '';
-  SetLength(Result, ConFormatSettings.DateFormatLen);
-
+  I := ConFormatSettings.DateFormatLen-1;
   DateFormat := PAnsiChar(ConFormatSettings.DateFormat);
-  YLen := 4; MLen := 2; DLen := 2;
-  for i := ConFormatSettings.DateFormatLen-1 downto 0 do
+  while I > 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
         begin
-          (PWideChar(Result)+i)^ := sYear[YLen];
-          Dec(YLen);
+          if YearSet then //Year has eiter two or four digits
+            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear div 100])
+          else
+          begin
+            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear mod 100]);
+            YearSet := True;
+          end;
+          Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PWideChar(Result)+i)^ := sMonth[MLen];
-          Dec(MLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMonth]);
+          Dec(I, 2);
         end;
       'D', 'd':
         begin
-          (PWideChar(Result)+i)^ := sDay[DLen];
-          Dec(DLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ADay]);
+          Dec(I, 2);
         end;
       else
-        (PWideChar(Result)+i)^ := WideChar((DateFormat+i)^);
-    end;
-  if Quoted then Result := #39+Result+#39;
-  Result := Result + Suffix;
+      begin
+        (PW+i)^ := WideChar((DateFormat+i)^);
+        Dec(i);
+      end;
+  end;
 end;
 
 {**

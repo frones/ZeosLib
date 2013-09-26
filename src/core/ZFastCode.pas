@@ -58,6 +58,31 @@ interface
   uses
     ZCompatibility;
 
+const
+  TwoDigitLookup : packed array[0..99] of array[1..2] of AnsiChar =
+    ('00','01','02','03','04','05','06','07','08','09',
+     '10','11','12','13','14','15','16','17','18','19',
+     '20','21','22','23','24','25','26','27','28','29',
+     '30','31','32','33','34','35','36','37','38','39',
+     '40','41','42','43','44','45','46','47','48','49',
+     '50','51','52','53','54','55','56','57','58','59',
+     '60','61','62','63','64','65','66','67','68','69',
+     '70','71','72','73','74','75','76','77','78','79',
+     '80','81','82','83','84','85','86','87','88','89',
+     '90','91','92','93','94','95','96','97','98','99');
+
+  TwoDigitLookupW : packed array[0..99] of array[1..2] of WideChar =
+    (ZWideString('00'),ZWideString('01'),ZWideString('02'),ZWideString('03'),ZWideString('04'),ZWideString('05'),ZWideString('06'),ZWideString('07'),ZWideString('08'),ZWideString('09'),
+     ZWideString('10'),ZWideString('11'),ZWideString('12'),ZWideString('13'),ZWideString('14'),ZWideString('15'),ZWideString('16'),ZWideString('17'),ZWideString('18'),ZWideString('19'),
+     ZWideString('20'),ZWideString('21'),ZWideString('22'),ZWideString('23'),ZWideString('24'),ZWideString('25'),ZWideString('26'),ZWideString('27'),ZWideString('28'),ZWideString('29'),
+     ZWideString('30'),ZWideString('31'),ZWideString('32'),ZWideString('33'),ZWideString('34'),ZWideString('35'),ZWideString('36'),ZWideString('37'),ZWideString('38'),ZWideString('39'),
+     ZWideString('40'),ZWideString('41'),ZWideString('42'),ZWideString('43'),ZWideString('44'),ZWideString('45'),ZWideString('46'),ZWideString('47'),ZWideString('48'),ZWideString('49'),
+     ZWideString('50'),ZWideString('51'),ZWideString('52'),ZWideString('53'),ZWideString('54'),ZWideString('55'),ZWideString('56'),ZWideString('57'),ZWideString('58'),ZWideString('59'),
+     ZWideString('60'),ZWideString('61'),ZWideString('62'),ZWideString('63'),ZWideString('64'),ZWideString('65'),ZWideString('66'),ZWideString('67'),ZWideString('68'),ZWideString('69'),
+     ZWideString('70'),ZWideString('71'),ZWideString('72'),ZWideString('73'),ZWideString('74'),ZWideString('75'),ZWideString('76'),ZWideString('77'),ZWideString('78'),ZWideString('79'),
+     ZWideString('80'),ZWideString('81'),ZWideString('82'),ZWideString('83'),ZWideString('84'),ZWideString('85'),ZWideString('86'),ZWideString('87'),ZWideString('88'),ZWideString('89'),
+     ZWideString('90'),ZWideString('91'),ZWideString('92'),ZWideString('93'),ZWideString('94'),ZWideString('95'),ZWideString('96'),ZWideString('97'),ZWideString('98'),ZWideString('99'));
+
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
   {$IFDEF VER170}
@@ -2354,31 +2379,6 @@ begin
   FlushInstructionCache(GetCurrentProcess, @System.Move, SizeOf(NewMove));
 end; {PatchMove}
 {$ENDIF PatchSystemMove} //set in Zeos.inc
-
-const
-  TwoDigitLookup : packed array[0..99] of array[1..2] of AnsiChar =
-    ('00','01','02','03','04','05','06','07','08','09',
-     '10','11','12','13','14','15','16','17','18','19',
-     '20','21','22','23','24','25','26','27','28','29',
-     '30','31','32','33','34','35','36','37','38','39',
-     '40','41','42','43','44','45','46','47','48','49',
-     '50','51','52','53','54','55','56','57','58','59',
-     '60','61','62','63','64','65','66','67','68','69',
-     '70','71','72','73','74','75','76','77','78','79',
-     '80','81','82','83','84','85','86','87','88','89',
-     '90','91','92','93','94','95','96','97','98','99');
-
-  TwoDigitLookupW : packed array[0..99] of array[1..2] of WideChar =
-    (ZWideString('00'),ZWideString('01'),ZWideString('02'),ZWideString('03'),ZWideString('04'),ZWideString('05'),ZWideString('06'),ZWideString('07'),ZWideString('08'),ZWideString('09'),
-     ZWideString('10'),ZWideString('11'),ZWideString('12'),ZWideString('13'),ZWideString('14'),ZWideString('15'),ZWideString('16'),ZWideString('17'),ZWideString('18'),ZWideString('19'),
-     ZWideString('20'),ZWideString('21'),ZWideString('22'),ZWideString('23'),ZWideString('24'),ZWideString('25'),ZWideString('26'),ZWideString('27'),ZWideString('28'),ZWideString('29'),
-     ZWideString('30'),ZWideString('31'),ZWideString('32'),ZWideString('33'),ZWideString('34'),ZWideString('35'),ZWideString('36'),ZWideString('37'),ZWideString('38'),ZWideString('39'),
-     ZWideString('40'),ZWideString('41'),ZWideString('42'),ZWideString('43'),ZWideString('44'),ZWideString('45'),ZWideString('46'),ZWideString('47'),ZWideString('48'),ZWideString('49'),
-     ZWideString('50'),ZWideString('51'),ZWideString('52'),ZWideString('53'),ZWideString('54'),ZWideString('55'),ZWideString('56'),ZWideString('57'),ZWideString('58'),ZWideString('59'),
-     ZWideString('60'),ZWideString('61'),ZWideString('62'),ZWideString('63'),ZWideString('64'),ZWideString('65'),ZWideString('66'),ZWideString('67'),ZWideString('68'),ZWideString('69'),
-     ZWideString('70'),ZWideString('71'),ZWideString('72'),ZWideString('73'),ZWideString('74'),ZWideString('75'),ZWideString('76'),ZWideString('77'),ZWideString('78'),ZWideString('79'),
-     ZWideString('80'),ZWideString('81'),ZWideString('82'),ZWideString('83'),ZWideString('84'),ZWideString('85'),ZWideString('86'),ZWideString('87'),ZWideString('88'),ZWideString('89'),
-     ZWideString('90'),ZWideString('91'),ZWideString('92'),ZWideString('93'),ZWideString('94'),ZWideString('95'),ZWideString('96'),ZWideString('97'),ZWideString('98'),ZWideString('99'));
 
 const
   MinInt64Uni : ZWideString = '-9223372036854775808';

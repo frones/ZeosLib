@@ -302,6 +302,15 @@ var
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
       ClientCodePage: @ClientCodePageDummy;
+      FormatSettings:
+          (DateFormat: 'DD-MM-YYYY';
+          DateFormatLen: 10;
+          TimeFormat: 'HH:NN:SS.ZZZ';
+          TimeFormatMilliPos: 10;
+          TimeFormatLen: 12;
+          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
+          DateTimeFormatLen: 23;
+          DateTimeFormatMilliPos: 21);
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
