@@ -369,7 +369,7 @@ begin
             else
               Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
                 GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                TempBlob.Length, TempBlob.WasDecoded, ConSettings), #39)
+                TempBlob.Length, ConSettings), #39)
           else
             Result := 'NULL';
         end;
