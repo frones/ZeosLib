@@ -76,6 +76,12 @@ type
     procedure TestRawSQLDateToDateTime;
     procedure TestRawSQLTimeToDateTime;
     procedure TestRawSQLTimeStampToDateTime;
+    procedure TestDateTimeToRawSQLDate;
+    procedure TestDateTimeToUnicodeSQLDate;
+    procedure TestDateTimeToRawSQLTime;
+    procedure TestDateTimeToUnicodeSQLTime;
+    procedure TestDateTimeToRawSQLTimeStamp;
+    procedure TestDateTimeToUnicodeSQLTimeStamp;
     {$IFDEF BENCHMARK}
     procedure TestASCII7ToString_VS_RawByteToString;
     procedure TestIntToRaw_VS_IntToStr;
@@ -94,6 +100,12 @@ type
     procedure TestUnicodeToInt64Def;
     procedure TestRawToFloat;
     procedure TestUnicodeToFloat;
+    procedure BenchTestDateTimeToRawSQLDate;
+    procedure BenchTestDateTimeToUnicodeSQLDate;
+    procedure BenchTestDateTimeToRawSQLTime;
+    procedure BenchTestDateTimeToUnicodeSQLTime;
+    procedure BenchTestDateTimeToRawSQLTimeStamp;
+    procedure BenchTestDateTimeToUnicodeSQLTimeStamp;
     {$ENDIF}
   end;
 
@@ -705,6 +717,78 @@ begin
   TestRawSQLTimeStampToDateTime(TimeStamp2_3, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
   TestRawSQLTimeStampToDateTime(TimeStamp3_3, 0, True);
   TestRawSQLTimeStampToDateTime(TimeStamp4_3, 0, True);
+end;
+
+procedure TZTestSysUtilsCase.TestDateTimeToRawSQLDate;
+begin
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
+end;
+
+procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLDate;
+begin
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False, '::'),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True, '::'),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
+end;
+
+procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTime;
+begin
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
+end;
+
+procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTime;
+begin
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
+end;
+
+procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTimeStamp;
+begin
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
+end;
+
+procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTimeStamp;
+begin
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
 end;
 
 {$IFDEF BENCHMARK}
@@ -1583,6 +1667,318 @@ begin
   system.WriteLn(Format('Benchmarking(x %d): UnicodeToFloat', [1000000*(20+10)]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToFloatDef: %d ms', [Between1, Between2]));
 
+end;
+
+procedure TZTestSysUtilsCase.BenchTestDateTimeToRawSQLDate;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+  ADate: TDateTime;
+
+  function TDateTimeToRawSQLDate(const Value: TDateTime): RawByteString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, False);
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, True);
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+  end;
+
+  function TFormatDateTime(const Value: TDateTime; const Format: String): RawByteString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(FormatDateTime(Format, Value));
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+  end;
+begin
+  ADate := now;
+  Start := GetTickCount;
+  S1 := TDateTimeToRawSQLDate(ADate);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TFormatDateTime(ADate, String(ConSettingsDummy.FormatSettings.DateFormat));
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of DateTimeToRawSQLDate VS. RawbyteString(FormatDateTime())');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToRawSQLDate', [2500000*4]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
+end;
+
+procedure TZTestSysUtilsCase.BenchTestDateTimeToUnicodeSQLDate;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  ADate: TDateTime;
+
+  function TDateTimeToUnicodeSQLDate(const Value: TDateTime): ZWideString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, False);
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, True);
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+  end;
+
+  function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value));
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+  end;
+begin
+  ADate := now;
+  Start := GetTickCount;
+  S1 := TDateTimeToUnicodeSQLDate(ADate);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TFormatDateTime(ADate, String(ConSettingsDummy.FormatSettings.DateFormat));
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of DateTimeToUnicodeSQLDate VS. FormatDateTime');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToUnicodeSQLDate', [2500000*4]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
+end;
+
+procedure TZTestSysUtilsCase.BenchTestDateTimeToRawSQLTime;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+  ATime: TDateTime;
+
+  function TDateTimeToRawSQLTime(const Value: TDateTime): RawByteString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, False);
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, True);
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+  end;
+
+  function TFormatDateTime(const Value: TDateTime; const Format: String): RawByteString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(FormatDateTime(Format, Value));
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+  end;
+begin
+  ATime := now;
+  Start := GetTickCount;
+  S1 := TDateTimeToRawSQLTime(ATime);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TFormatDateTime(ATime, String(ConSettingsDummy.FormatSettings.TimeFormat));
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of DateTimeToRawSQLTime VS. RawbyteString(FormatDateTime())');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToRawSQLTime', [2500000*4]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
+end;
+
+procedure TZTestSysUtilsCase.BenchTestDateTimeToUnicodeSQLTime;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  ATime: TDateTime;
+
+  function TDateTimeToUnicodeSQLTime(const Value: TDateTime): ZWideString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, False);
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, True);
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+  end;
+
+  function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value));
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+  end;
+begin
+  ATime := now;
+  Start := GetTickCount;
+  S1 := TDateTimeToUnicodeSQLTime(ATime);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TFormatDateTime(ATime, String(ConSettingsDummy.FormatSettings.TimeFormat));
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of DateTimeToUnicodeSQLTime VS. FormatDateTime');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToUnicodeSQLTime', [2500000*4]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
+end;
+
+procedure TZTestSysUtilsCase.BenchTestDateTimeToRawSQLTimeStamp;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+  ADateTime: TDateTime;
+
+  function TDateTimeToRawSQLTimeStamp(const Value: TDateTime): RawByteString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False);
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True);
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+    for i := 0 to 2500000 do
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+  end;
+
+  function TFormatDateTime(const Value: TDateTime; const Format: String): RawByteString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(FormatDateTime(Format, Value));
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+    for i := 0 to 2500000 do
+      Result := {$IFDEF UNICODE}RawByteString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+  end;
+begin
+  ADateTime := now;
+  Start := GetTickCount;
+  S1 := TDateTimeToRawSQLTimeStamp(ADateTime);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TFormatDateTime(ADateTime, String(ConSettingsDummy.FormatSettings.DateTimeFormat));
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of DateTimeToRawSQLTimeStamp VS. RawbyteString(FormatDateTime())');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToRawSQLTimeStamp', [2500000*4]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
+end;
+
+procedure TZTestSysUtilsCase.BenchTestDateTimeToUnicodeSQLTimeStamp;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  ADateTime: TDateTime;
+
+  function TDateTimeToUnicodeSQLTimeStamp(const Value: TDateTime): ZWideString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False);
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True);
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+    for i := 0 to 2500000 do
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+  end;
+
+  function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
+  var
+    I: Integer;
+  begin
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value));
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39);
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(FormatDateTime(Format, Value)+'suffix');
+    for i := 0 to 2500000 do
+      Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(#39+FormatDateTime(Format, Value)+#39'suffix');
+  end;
+begin
+  ADateTime := now;
+  Start := GetTickCount;
+  S1 := TDateTimeToUnicodeSQLTimeStamp(ADateTime);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TFormatDateTime(ADateTime, String(ConSettingsDummy.FormatSettings.DateTimeFormat));
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of DateTimeToUnicodeSQLTime VS. FormatDateTime');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToUnicodeSQLTime', [2500000*4]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
 end;
 {$ENDIF}
 
