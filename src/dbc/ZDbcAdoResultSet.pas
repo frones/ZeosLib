@@ -731,13 +731,21 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZAdoResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+var V: Variant;
+Failed: Boolean;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    if VarIsStr(V) then
+      Result := RawSQLTimeStampToDateTime(PAnsiChar(AnsiString(V)),
+        PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
+        Length(V), ConSettings^.FormatSettings.DateTimeFormatLen, Failed)
+    else
+      Result := V;
   except
     Result := 0;
   end;
