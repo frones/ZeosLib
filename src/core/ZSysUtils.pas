@@ -2121,22 +2121,6 @@ begin
   end;
 end;
 
-function Concat0(const Value: RawByteString; Const MaxLen: Integer): RawByteString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-var I: Integer;
-begin
-  Result := Value;
-  for i := Length(Value) to MaxLen-1 do
-    Result := '0'+Result;
-end;
-
-function Concat0(const Value: ZWideString; Const MaxLen: Integer): ZWideString; overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
-var I: Integer;
-begin
-  Result := Value;
-  for i := Length(Value) to MaxLen-1 do
-    Result := '0'+Result;
-end;
-
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
   const Len: Cardinal; var Value: ZWideString; out P: PWideChar); overload;
 var SLen: Cardinal;
@@ -2326,53 +2310,53 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Cardinal;
-  sHour, sMin, sSec, sMSec: RawByteString;
-  HLen, NLen, SLen, ZLen: Integer;
+  I: Integer;
   TimeFormat: PAnsiChar;
+  PA: PAnsiChar;
+  ZSet: Boolean;
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  sHour := Concat0(IntToRaw(AHour), 2);
-  sMin := Concat0(IntToRaw(AMinute), 2);
-  sSec := Concat0(IntToRaw(ASecond), 2);
-  if AMilliSecond < 100 then
-    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
-  else
-    sMSec := IntToRaw(AMilliSecond);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result, PA);
+  ZSet := False;
 
-  Result := '';
-  SetLength(Result, ConFormatSettings.TimeFormatLen);
-
+  I := ConFormatSettings.TimeFormatLen-1;
   TimeFormat := PAnsiChar(ConFormatSettings.TimeFormat);
-  HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := ConFormatSettings.TimeFormatLen-1 downto 0 do
+  while I > 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
-          (PAnsiChar(Result)+i)^ := sHour[HLen];
-          Dec(HLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AHour]);
+          Dec(I, 2);
         end;
       'N', 'n':
         begin
-          (PAnsiChar(Result)+i)^ := sMin[NLen];
-          Dec(NLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMinute]);
+          Dec(I, 2);
         end;
       'S', 's':
         begin
-          (PAnsiChar(Result)+i)^ := sSec[SLen];
-          Dec(SLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ASecond]);
+          Dec(I, 2);
         end;
       'Z', 'z':
         begin
-          (PAnsiChar(Result)+i)^ := sMSec[ZLen];
-          Dec(ZLen);
+          Dec(I);
+          if ZSet then
+            Continue
+          else
+          begin
+            (PWord(@PByteArray(PA)[i]))^ := Word(TwoDigitLookup[AMilliSecond mod 100]);
+            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMilliSecond div 10]);
+            ZSet := True;
+          end;
         end;
       else
-        (PAnsiChar(Result)+i)^ := (TimeFormat+i)^;
+      begin
+        (PA+i)^ := (TimeFormat+i)^;
+        Dec(i);
+      end;
     end;
-  if Quoted then Result := #39+Result+#39;
-  Result := Result + Suffix;
 end;
 
 {**
@@ -2386,53 +2370,53 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Cardinal;
-  sHour, sMin, sSec, sMSec: ZWideString;
-  HLen, NLen, SLen, ZLen: Integer;
+  I: Integer;
   TimeFormat: PAnsiChar;
+  PW: PWideChar;
+  ZSet: Boolean;
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  sHour := Concat0(IntToUnicode(AHour), 2);
-  sMin := Concat0(IntToUnicode(AMinute), 2);
-  sSec := Concat0(IntToUnicode(ASecond), 2);
-  if AMilliSecond < 100 then
-    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
-  else
-    sMSec := IntToRaw(AMilliSecond);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result, PW);
+  ZSet := False;
 
-  Result := ''; //speed up setlength
-  SetLength(Result, ConFormatSettings.TimeFormatLen);
-
+  I := ConFormatSettings.TimeFormatLen-1;
   TimeFormat := PAnsiChar(ConFormatSettings.TimeFormat);
-  HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := ConFormatSettings.TimeFormatLen -1 downto 0 do
+  while I > 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
-          (PWideChar(Result)+i)^ := sHour[HLen];
-          Dec(HLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AHour]);
+          Dec(I, 2);
         end;
       'N', 'n':
         begin
-          (PWideChar(Result)+i)^ := sMin[NLen];
-          Dec(NLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMinute]);
+          Dec(I, 2);
         end;
       'S', 's':
         begin
-          (PWideChar(Result)+i)^ := sSec[SLen];
-          Dec(SLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ASecond]);
+          Dec(I, 2);
         end;
       'Z', 'z':
         begin
-          (PWideChar(Result)+i)^ := sMSec[ZLen];
-          Dec(ZLen);
+          Dec(I);
+          if ZSet then
+            Continue
+          else
+          begin
+            (PLongWord(@PWordArray(PW)[i]))^ := LongWord(TwoDigitLookupW[AMilliSecond mod 100]);
+            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMilliSecond div 10]);
+            ZSet := True;
+          end;
         end;
       else
-        (PWideChar(Result)+i)^ := WideChar((TimeFormat+i)^);
+      begin
+        (PW+i)^ := WideChar((TimeFormat+i)^);
+        Dec(i);
+      end;
     end;
-  if Quoted then Result := #39+Result+#39;
-  Result := Result + Suffix;
 end;
 
 
@@ -2447,71 +2431,75 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Cardinal;
-  sYear, sMonth, sDay, sHour, sMin, sSec, sMSec: RawByteString;
-  YLen, MLen, DLen, HLen, NLen, SLen, ZLen: Integer;
+  I: Integer;
   TimeStampFormat: PAnsiChar;
+  ZSet, YearSet: Boolean;
+  PA: PAnsiChar;
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  sYear := Concat0(IntToRaw(AYear), 4);
-  sMonth := Concat0(IntToRaw(AMonth), 2);
-  sDay := Concat0(IntToRaw(ADay), 2);
-  sHour := Concat0(IntToRaw(AHour), 2);
-  sMin := Concat0(IntToRaw(AMinute), 2);
-  sSec := Concat0(IntToRaw(ASecond), 2);
-  if AMilliSecond < 100 then
-    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
-  else
-    sMSec := IntToRaw(AMilliSecond);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result, PA);
+  ZSet := False;
+  YearSet := False;
 
-  Result := '';
-  SetLength(Result, ConFormatSettings.DateTimeFormatLen);
-
+  I := ConFormatSettings.DateTimeFormatLen-1;
   TimeStampFormat := PAnsiChar(ConFormatSettings.DateTimeFormat);
-  YLen := 4; MLen := 2; DLen := 2; HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := ConFormatSettings.DateTimeFormatLen-1 downto 0 do
+  while I > 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
         begin
-          (PAnsiChar(Result)+i)^ := sYear[YLen];
-          Dec(YLen);
+          if YearSet then  //Year has eiter two or four digits
+            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear div 100])
+          else
+          begin
+            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear mod 100]);
+            YearSet := True;
+          end;
+          Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PAnsiChar(Result)+i)^ := sMonth[MLen];
-          Dec(MLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMonth]);
+          Dec(i, 2);
         end;
       'D', 'd':
         begin
-          (PAnsiChar(Result)+i)^ := sDay[DLen];
-          Dec(DLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ADay]);
+          Dec(i, 2);
         end;
       'H', 'h':
         begin
-          (PAnsiChar(Result)+i)^ := sHour[HLen];
-          Dec(HLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AHour]);
+          Dec(i, 2);
         end;
       'N', 'n':
         begin
-          (PAnsiChar(Result)+i)^ := sMin[NLen];
-          Dec(NLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMinute]);
+          Dec(i, 2);
         end;
       'S', 's':
         begin
-          (PAnsiChar(Result)+i)^ := sSec[SLen];
-          Dec(SLen);
+          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ASecond]);
+          Dec(i, 2);
         end;
       'Z', 'z':
         begin
-          (PAnsiChar(Result)+i)^ := sMSec[ZLen];
-          Dec(ZLen);
+          Dec(I);
+          if ZSet then
+            Continue
+          else
+          begin
+            (PWord(@PByteArray(PA)[i]))^ := Word(TwoDigitLookup[AMilliSecond mod 100]);
+            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMilliSecond div 10]);
+            ZSet := True;
+          end;
         end;
       else
-        (PAnsiChar(Result)+i)^ := (TimeStampFormat+i)^;
+      begin
+        (PA+i)^ := (TimeStampFormat+i)^;
+        Dec(i);
+      end;
     end;
-  if Quoted then Result := #39+Result+#39;
-  Result := Result + Suffix;
 end;
 
 {**
@@ -2525,71 +2513,75 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
-  I: Cardinal;
-  sYear, sMonth, sDay, sHour, sMin, sSec, sMSec: ZWideString;
-  YLen, MLen, DLen, HLen, NLen, SLen, ZLen: Integer;
+  I: Integer;
   TimeStampFormat: PAnsiChar;
+  ZSet, YearSet: Boolean;
+  PW: PWideChar;
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  sYear := Concat0(IntToUnicode(AYear), 4);
-  sMonth := Concat0(IntToUnicode(AMonth), 2);
-  sDay := Concat0(IntToUnicode(ADay), 2);
-  sHour := Concat0(IntToUnicode(AHour), 2);
-  sMin := Concat0(IntToUnicode(AMinute), 2);
-  sSec := Concat0(IntToUnicode(ASecond), 2);
-  if AMilliSecond < 100 then
-    sMSec := Concat0(IntToRaw(AMilliSecond), 3)
-  else
-    sMSec := IntToRaw(AMilliSecond);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result, PW);
+  ZSet := False;
+  YearSet := False;
 
-  Result := '';
-  SetLength(Result, ConFormatSettings.DateTimeFormatLen);
-
+  I := ConFormatSettings.DateTimeFormatLen-1;
   TimeStampFormat := PAnsiChar(ConFormatSettings.DateTimeFormat);
-  YLen := 4; MLen := 2; DLen := 2; HLen := 2; NLen := 2; SLen := 2; ZLen := 3;
-  for i := ConFormatSettings.DateTimeFormatLen-1 downto 0 do
+  while I > 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
         begin
-          (PWideChar(Result)+i)^ := sYear[YLen];
-          Dec(YLen);
+          if YearSet then  //Year has eiter two or four digits
+            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear div 100])
+          else
+          begin
+            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear mod 100]);
+            YearSet := True;
+          end;
+          Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PWideChar(Result)+i)^ := sMonth[MLen];
-          Dec(MLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMonth]);
+          Dec(i, 2);
         end;
       'D', 'd':
         begin
-          (PWideChar(Result)+i)^ := sDay[DLen];
-          Dec(DLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ADay]);
+          Dec(i, 2);
         end;
       'H', 'h':
         begin
-          (PWideChar(Result)+i)^ := sHour[HLen];
-          Dec(HLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AHour]);
+          Dec(i, 2);
         end;
       'N', 'n':
         begin
-          (PWideChar(Result)+i)^ := sMin[NLen];
-          Dec(NLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMinute]);
+          Dec(i, 2);
         end;
       'S', 's':
         begin
-          (PWideChar(Result)+i)^ := sSec[SLen];
-          Dec(SLen);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ASecond]);
+          Dec(i, 2);
         end;
       'Z', 'z':
         begin
-          (PWideChar(Result)+i)^ := sMSec[ZLen];
-          Dec(ZLen);
+          Dec(I);
+          if ZSet then
+            Continue
+          else
+          begin
+            (PLongWord(@PWordArray(PW)[i]))^ := LongWord(TwoDigitLookupW[AMilliSecond mod 100]);
+            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMilliSecond div 10]);
+            ZSet := True;
+          end;
         end;
       else
-        (PWideChar(Result)+i)^ := WideChar((TimeStampFormat+i)^);
+      begin
+        (PW+i)^ := WideChar((TimeStampFormat+i)^);
+        Dec(i);
+      end;
     end;
-  if Quoted then Result := #39+Result+#39;
-  Result := Result + Suffix;
 end;
 {$WARNINGS ON} //suppress D2007 Waring for undefined result
 

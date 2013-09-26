@@ -747,6 +747,10 @@ procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTime;
 begin
   CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
     FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 50), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 50)));
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 1), ConSettingsDummy.FormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 1)));
   CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
     #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
   CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
@@ -1273,7 +1277,7 @@ begin
 
   system.WriteLn('');
   system.WriteLn('Benchmarking(x 10.000.000): Unicode to CP1252 RawByteString');
-  system.WriteLn(Format('TestUTF8EncodeOversized: %d ms VS. TestUTF8EncodeTestSize: %d ms', [Between1, Between2]));
+  system.WriteLn(Format('TestWideToAnsiOversized: %d ms VS. TestWideToTestSize: %d ms', [Between1, Between2]));
 
 end;
 {$ENDIF}
