@@ -60,7 +60,7 @@ uses
 
 const
   ZEOS_MAJOR_VERSION = 7;
-  ZEOS_MINOR_VERSION = 1;
+  ZEOS_MINOR_VERSION = 2;
   ZEOS_SUB_VERSION = 0;
   ZEOS_STATUS = 'alfa';
   ZEOS_VERSION = '7.2.0-alfa';
