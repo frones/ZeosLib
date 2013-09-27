@@ -832,7 +832,7 @@ begin
           if PNativeUInt(@Columns[FColumnOffsets[I] +1])^ > 0 then
           begin
             P := PPointer(@Columns[FColumnOffsets[I] +1]);
-            System.Dispose(P^);
+            System.FreeMem(P^);
           end;
       end;
     FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});

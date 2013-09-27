@@ -2073,7 +2073,10 @@ begin
           DestResultSet.UpdateTimestamp(I, SrcResultSet.GetTimestamp(I));
         stAsciiStream,
         stUnicodeStream:
-          DestResultSet.UpdateString(I, SrcResultSet.GetString(I));
+          if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+            DestResultSet.UpdateRawByteString(I, SrcResultSet.GetRawByteString(I))
+          else
+            DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
       end;
       if SrcResultSet.WasNull then
         DestResultSet.UpdateNull(I);

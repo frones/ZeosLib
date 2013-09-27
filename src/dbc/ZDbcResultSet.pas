@@ -3698,7 +3698,7 @@ begin
         {$IFDEF WITH_RAWBYTESTRING}
         Result := UTF8String(PWideChar(FBlobData))
         {$ELSE}
-        Result := UTF8Encode(PWideChar(FBlobData))
+        Result := UTF8Encode(ZWideString(PWideChar(FBlobData)))
         {$ENDIF}
       else
         {$IFDEF WITH_RAWBYTESTRING}
