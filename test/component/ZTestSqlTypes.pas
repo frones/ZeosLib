@@ -57,8 +57,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, ZSqlStrings, SysUtils, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZSqlTestCase;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
+  ZSqlStrings, ZTokenizer, ZGenericSqlToken, ZConnection, ZDataset, ZSqlTestCase;
 
 type
 
@@ -75,7 +75,8 @@ type
 
 implementation
 
-uses Classes, ZTestConsts, ZSysUtils, ZDbcUtils, ZTestCase;
+uses Classes,
+  ZTestConsts, ZSysUtils, ZDbcUtils, ZTestCase;
 
 { TZTestSQLTypesCase }
 

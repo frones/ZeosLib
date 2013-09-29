@@ -58,8 +58,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, SysUtils, ZDbcIntfs,
-  ZSqlTestCase, ZCompatibility;
+  Classes, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility;
 
 type
   {** Implements a test case for . }

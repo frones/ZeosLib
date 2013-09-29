@@ -1,0 +1,16 @@
+SQLite3, Version 3.8.0.2
+http://www.sqlite.org/download.html
+
+Kompiliert von Simon Ameis <simon.ameis@web.de> auf Debian 7.1 (x86_64)
+für MS Windows x86_64 (64 Bit!)
+
+Lizenz: Public Domain (wie das Original)
+Jegliche Haftung wird bis auf das gesetzliche Minimum abglehnt. Im Zweifelsfall bitte selbst übersetzen.
+
+# So wird's gebaut:
+# Abhängigkeiten installieren
+apt-get install gcc-mingw32
+# Erstellen
+./configure --host=amd64-mingw32msvc
+make
+# Fertige Binärdateien sind im Verzeichnis .libs zu finden

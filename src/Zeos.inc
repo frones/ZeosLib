@@ -39,6 +39,7 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
+ {$DEFINE ZEOS_TEST_ONLY}
  // Compilation directives for Lazarus
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
@@ -90,7 +91,7 @@
 
 // Compilation directives for Delphi 8
 {$IFDEF VER160}
-// No directives needed
+  {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
 {$ENDIF}
@@ -99,6 +100,8 @@
 {$IFDEF VER170}
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
+  {$DEFINE VER150BELOW} // Used in zeos.inc only
+  {$DEFINE VER170BELOW} // Used in Zeos.inc only
 {$ENDIF}
 
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
@@ -235,8 +238,10 @@
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
   {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
-  {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
-  {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
+  {$IFNDEF VER170BELOW} //D2005 supports inline
+    {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
+  {$ENDIF}
+  {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}
