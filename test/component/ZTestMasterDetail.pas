@@ -59,7 +59,7 @@ interface
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
   ZSqlStrings, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZSqlTestCase, ZDbcMySql, ZDbcPostgreSql, ZDbcDbLib;
+  ZConnection, ZDataset, ZSqlTestCase;
 
 type
 

@@ -57,7 +57,8 @@ interface
 
 {$I ZCore.inc}
 
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZSysUtils, SysUtils, ZSqlTestCase, ZCompatibility;
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZSysUtils, SysUtils, ZSqlTestCase, ZCompatibility;
 
 type
 

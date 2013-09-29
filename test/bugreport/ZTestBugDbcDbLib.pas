@@ -56,7 +56,8 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZCompatibility, ZDbcDbLib, ZSqlTestCase;
+  Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZDbcIntfs, ZCompatibility, ZSqlTestCase;
 
 type
 
@@ -97,7 +98,7 @@ EgonHugeist:
 procedure ZTestDbcDbLibBugReport.Mantis54Dbc;
 var stmnt: IZPreparedStatement;
 begin
-  stmnt := connection.PrepareStatement('select * from mantis54');
+  stmnt := Connection.PrepareStatement('select * from mantis54');
   with Stmnt.ExecuteQueryPrepared do
   begin
     CheckEquals(Ord(stInteger), Ord(GetMetadata.GetColumnType(1)));

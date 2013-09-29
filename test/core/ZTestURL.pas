@@ -58,7 +58,8 @@ interface
 {$I ZCore.inc}
 
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTestCase,ZURL;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  ZTestCase, ZURL;
 
 type
 
@@ -86,6 +87,7 @@ type
   end;
 
 implementation
+
 uses ZCompatibility;
 
 procedure TZURLTest.TestAssignToUrl;

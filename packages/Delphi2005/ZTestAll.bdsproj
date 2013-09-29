@@ -123,7 +123,7 @@
       <Directories Name="UnitOutputDir">build</Directories>
       <Directories Name="PackageDLLOutputDir"></Directories>
       <Directories Name="PackageDCPOutputDir">build</Directories>
-      <Directories Name="SearchPath">build;..\..\test\external</Directories>
+      <Directories Name="SearchPath">build;..\..\test\external;..\..\test\framework;..\..\test\core;..\..\test\dbc;..\..\test\parsesql;..\..\test\component;..\..\test\bugreport;..\..\test\performance</Directories>
       <Directories Name="Packages"></Directories>
       <Directories Name="Conditionals"></Directories>
       <Directories Name="DebugSourceDirs"></Directories>
