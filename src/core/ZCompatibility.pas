@@ -284,8 +284,8 @@ function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType;
 {$IFEND}
 
 {$IFNDEF WITH_CHARINSET}
-function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
-function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
+function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 {$IF not Declared(UTF8ToString)}

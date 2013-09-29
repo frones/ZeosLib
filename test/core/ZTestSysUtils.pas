@@ -88,6 +88,9 @@ type
     procedure TestIntToUnicode_VS_IntToStr;
     procedure TestInt64ToRaw_VS_IntToStr;
     procedure TestInt64ToUnicode_VS_IntToStr;
+    {$IFDEF USE_FAST_TRUNC}
+    procedure TestTrunc;
+    {$ENDIF USE_FAST_TRUNC}
     {$IFDEF WITH_UNICODEFROMLOCALECHARS}
     procedure TestUnicodeFromLocalChars;
     procedure TestLocalCharsFromUnicode;
@@ -1090,6 +1093,46 @@ begin
 
 end;
 
+{$IFDEF USE_FAST_TRUNC}
+procedure TZTestSysUtilsCase.TestTrunc;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Int64;
+
+    function TestFastCodeTrunc: Int64;
+    var
+      I: Integer;
+    begin
+      for i := 1 to 10000000 do
+        Result := ZFastCode.Trunc(1000.5/I);
+    end;
+
+    function TestSystemTrunc: Int64;
+    var
+      I: Integer;
+    begin
+      for i := 1 to 10000000 do
+        Result := System.Trunc(1000.5/I);
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TestFastCodeTrunc;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TestSystemTrunc;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of ZFastCode.Trunc VS. System.Trunc');
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 10.000.000): Trunc');
+  system.WriteLn(Format('Zeos: %d ms VS. System.Trunc: %d ms', [Between1, Between2]));
+end;
+{$ENDIF USE_FAST_TRUNC}
+
 {$IFDEF WITH_UNICODEFROMLOCALECHARS}
 procedure TZTestSysUtilsCase.TestLocalCharsFromUnicode;
 const TestString = ZWideString('ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...');
@@ -1281,6 +1324,7 @@ begin
 
 end;
 {$ENDIF}
+
 procedure TZTestSysUtilsCase.TestRawToInt;
 var
   Between1, Between2: Cardinal;
@@ -1981,7 +2025,7 @@ begin
   CheckEquals(s1, s2, 'Results of DateTimeToUnicodeSQLTime VS. FormatDateTime');
 
   system.WriteLn('');
-  system.WriteLn(Format('Benchmarking(x %d): DateTimeToUnicodeSQLTime', [2500000*4]));
+  system.WriteLn(Format('Benchmarking(x %d): DateTimeToUnicodeSQLTimeStamp', [2500000*4]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
 end;
 {$ENDIF}

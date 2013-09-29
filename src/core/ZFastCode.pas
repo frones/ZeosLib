@@ -59,7 +59,7 @@ interface
     ZCompatibility;
 
 const
-  TwoDigitLookup : packed array[0..99] of array[1..2] of AnsiChar =
+  TwoDigitLookupRaw : packed array[0..99] of array[1..2] of AnsiChar =
     ('00','01','02','03','04','05','06','07','08','09',
      '10','11','12','13','14','15','16','17','18','19',
      '20','21','22','23','24','25','26','27','28','29',
@@ -70,8 +70,11 @@ const
      '70','71','72','73','74','75','76','77','78','79',
      '80','81','82','83','84','85','86','87','88','89',
      '90','91','92','93','94','95','96','97','98','99');
+var
+  TwoDigitLookupW : packed array[0..99] of Word absolute TwoDigitLookupRaw;
 
-  TwoDigitLookupW : packed array[0..99] of array[1..2] of WideChar =
+const
+  TwoDigitLookupWide : packed array[0..99] of array[1..2] of WideChar =
     (ZWideString('00'),ZWideString('01'),ZWideString('02'),ZWideString('03'),ZWideString('04'),ZWideString('05'),ZWideString('06'),ZWideString('07'),ZWideString('08'),ZWideString('09'),
      ZWideString('10'),ZWideString('11'),ZWideString('12'),ZWideString('13'),ZWideString('14'),ZWideString('15'),ZWideString('16'),ZWideString('17'),ZWideString('18'),ZWideString('19'),
      ZWideString('20'),ZWideString('21'),ZWideString('22'),ZWideString('23'),ZWideString('24'),ZWideString('25'),ZWideString('26'),ZWideString('27'),ZWideString('28'),ZWideString('29'),
@@ -82,6 +85,8 @@ const
      ZWideString('70'),ZWideString('71'),ZWideString('72'),ZWideString('73'),ZWideString('74'),ZWideString('75'),ZWideString('76'),ZWideString('77'),ZWideString('78'),ZWideString('79'),
      ZWideString('80'),ZWideString('81'),ZWideString('82'),ZWideString('83'),ZWideString('84'),ZWideString('85'),ZWideString('86'),ZWideString('87'),ZWideString('88'),ZWideString('89'),
      ZWideString('90'),ZWideString('91'),ZWideString('92'),ZWideString('93'),ZWideString('94'),ZWideString('95'),ZWideString('96'),ZWideString('97'),ZWideString('98'),ZWideString('99'));
+var
+  TwoDigitLookupLW : packed array[0..99] of LongWord absolute TwoDigitLookupWide;
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
@@ -301,6 +306,7 @@ implementation
 uses
   {$IFDEF MSWINDOWS}Windows, {$ENDIF}
   {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings, {$ENDIF}
+  {$IFDEF FPC}ZSysUtils, {$ENDIF}
   SysUtils, SysConst;
 
 {$IFDEF PatchSystemMove} //set in Zeos.inc
@@ -2480,7 +2486,7 @@ asm
   mul    edi                     {EDX = Dividend DIV 100}
   mov    eax, edx                {Set Next Dividend}
   imul   edx, -200               {-2 * (100 * Dividend DIV  100)}
-  movzx  edx, word ptr [TwoDigitLookup+ebx*2+edx] {Dividend MOD 100 in ASCII}
+  movzx  edx, word ptr [TwoDigitLookupRaw+ebx*2+edx] {Dividend MOD 100 in ASCII}
   mov    [ecx+esi], dx
   sub    esi, 2
   jg     @@Loop                  {Loop Until 1 or 2 Digits Remaining}
@@ -2489,7 +2495,7 @@ asm
   pop    edi
   pop    ebx
   jnz    @@LastDigit
-  movzx  eax, word ptr [TwoDigitLookup+eax*2]
+  movzx  eax, word ptr [TwoDigitLookupRaw+eax*2]
   mov    [ecx], ax               {Save Final 2 Digits}
   ret
 @@LastDigit:
@@ -2499,107 +2505,6 @@ end;
 
 function IntToRaw(Value: Int64): string;
 //function IntToStr64_JOH_IA32_6_d(Value: Int64): string;
-  (*function IntToStr32_JOH_IA32_6_d(Value: Integer): string;
-  asm
-    push   ebx
-    push   edi
-    push   esi
-    mov    ebx, eax                {Value}
-    sar    ebx, 31                 {0 for +ve Value or -1 for -ve Value}
-    xor    eax, ebx
-    sub    eax, ebx                {ABS(Value)}
-    mov    esi, 10                 {Max Digits in Result}
-    mov    edi, edx                {@Result}
-    cmp    eax, 10
-    sbb    esi, 0
-    cmp    eax, 100
-    sbb    esi, 0
-    cmp    eax, 1000
-    sbb    esi, 0
-    cmp    eax, 10000
-    sbb    esi, 0
-    cmp    eax, 100000
-    sbb    esi, 0
-    cmp    eax, 1000000
-    sbb    esi, 0
-    cmp    eax, 10000000
-    sbb    esi, 0
-    cmp    eax, 100000000
-    sbb    esi, 0
-    cmp    eax, 1000000000
-    sbb    esi, ebx                {Digits (Including Sign Character)}
-    mov    ecx, [edx]              {Result}
-    test   ecx, ecx
-    je     @@NewStr                {Create New String for Result}
-    cmp    dword ptr [ecx-8], 1
-    jne    @@ChangeStr             {Reference Count <> 1}
-    cmp    esi, [ecx-4]
-    je     @@LengthOk              {Existing Length = Required Length}
-    sub    ecx, 8                  {Allocation Address}
-    push   eax                     {ABS(Value)}
-    push   ecx
-    mov    eax, esp
-    lea    edx, [esi+9]            {New Allocation Size}
-    call   system.@ReallocMem      {Reallocate Result String}
-    pop    ecx
-    pop    eax                     {ABS(Value)}
-    add    ecx, 8                  {Result}
-    mov    [ecx-4], esi            {Set New Length}
-    mov    byte ptr [ecx+esi], 0   {Add Null Terminator}
-    mov    [edi], ecx              {Set Result Address}
-    jmp    @@LengthOk
-  @@ChangeStr:
-    mov     edx, dword ptr [ecx-8]  {Reference Count}
-    add     edx, 1
-    jz      @@NewStr                {RefCount = -1 (String Constant)}
-    lock    dec dword ptr [ecx-8]   {Decrement Existing Reference Count}
-  @@NewStr:
-    push   eax                     {ABS(Value)}
-    mov    eax, esi                {Length}
-    call   system.@NewAnsiString
-    mov    [edi], eax              {Set Result Address}
-    mov    ecx, eax                {Result}
-    pop    eax                     {ABS(Value)}
-  @@LengthOk:
-    mov    byte ptr [ecx], '-'     {Store '-' Character (May be Overwritten)}
-    add    esi, ebx                {Digits (Excluding Sign Character)}
-    sub    ecx, ebx                {Destination of 1st Digit}
-    sub    esi, 2                  {Digits (Excluding Sign Character) - 2}
-    jle    @@FinalDigits           {1 or 2 Digit Value}
-    cmp    esi, 8                  {10 Digit Value?}
-    jne    @@SetResult             {Not a 10 Digit Value}
-    sub    eax, 2000000000         {Digit 10 must be either '1' or '2'}
-    mov    dl, '2'
-    jnc    @@SetDigit10            {Digit 10 = '2'}
-    mov    dl, '1'                 {Digit 10 = '1'}
-    add    eax, 1000000000
-  @@SetDigit10:
-    mov    [ecx], dl               {Save Digit 10}
-    mov    esi, 7                  {9 Digits Remaining}
-    add    ecx, 1                  {Destination of 2nd Digit}
-  @@SetResult:
-    mov    edi, $28F5C29           {((2^32)+100-1)/100}
-  @@Loop:
-    mov    ebx, eax                {Dividend}
-    mul    edi                     {EDX = Dividend DIV 100}
-    mov    eax, edx                {Set Next Dividend}
-    imul   edx, -200               {-2 * (100 * Dividend DIV  100)}
-    movzx  edx, word ptr [TwoDigitLookup+ebx*2+edx] {Dividend MOD 100 in ASCII}
-    mov    [ecx+esi], dx
-    sub    esi, 2
-    jg     @@Loop                  {Loop Until 1 or 2 Digits Remaining}
-  @@FinalDigits:
-    pop    esi
-    pop    edi
-    pop    ebx
-    jnz    @@LastDigit
-    movzx  eax, word ptr [TwoDigitLookup+eax*2]
-    mov    [ecx], ax               {Save Final 2 Digits}
-    ret
-  @@LastDigit:
-    or     al , '0'                {Ascii Adjustment}
-    mov    [ecx], al               {Save Final Digit}
-  end;*)
 asm
   push   ebx
   mov    ecx, [ebp+8]            {Low Integer of Value}
@@ -2791,7 +2696,7 @@ asm
   lea    edx, [edx*4+edx]
   shl    edx, 2                  {Dividend DIV 100 * 100}
   sub    ebx, edx                {Remainder (0..99)}
-  movzx  ebx, word ptr [TwoDigitLookup+ebx*2]
+  movzx  ebx, word ptr [TwoDigitLookupRaw+ebx*2]
   shl    ebx, 16
   mov    edx, $51EB851F
   mov    ecx, eax                {Dividend}
@@ -2802,7 +2707,7 @@ asm
   lea    edx, [edx*4+edx]
   shl    edx, 2                  {Dividend DIV 100 * 100}
   sub    ecx, edx                {Remainder (0..99)}
-  or     bx, word ptr [TwoDigitLookup+ecx*2]
+  or     bx, word ptr [TwoDigitLookupRaw+ecx*2]
   mov    [edi+esi-4], ebx        {Store 4 Digits}
   mov    ebx, eax
   mov    edx, $51EB851F
@@ -2812,8 +2717,8 @@ asm
   lea    eax, [eax*4+eax]
   shl    eax, 2                  {EDX = Dividend DIV 100 * 100}
   sub    ebx, eax                {Remainder (0..99)}
-  movzx  ebx, word ptr [TwoDigitLookup+ebx*2]
-  movzx  ecx, word ptr [TwoDigitLookup+edx*2]
+  movzx  ebx, word ptr [TwoDigitLookupRaw+ebx*2]
+  movzx  ecx, word ptr [TwoDigitLookupRaw+edx*2]
   shl    ebx, 16
   or     ebx, ecx
   mov    [edi+esi-8], ebx        {Store 4 Digits}
@@ -2826,7 +2731,7 @@ asm
   mul    edx
   mov    eax, edx                {Set Next Dividend}
   imul   edx, -200
-  movzx  edx, word ptr [TwoDigitLookup+ebx*2+edx] {Dividend MOD 100 in ASCII}
+  movzx  edx, word ptr [TwoDigitLookupRaw+ebx*2+edx] {Dividend MOD 100 in ASCII}
   mov    [edi+esi], dx
   sub    esi, 2
   jg     @@SmallLoop             {Repeat Until Less than 2 Digits Remaining}
@@ -2835,7 +2740,7 @@ asm
   mov    [edi], al               {Save Final Digit}
   jmp    @@Done
 @@Last2Digits:
-  movzx  eax, word ptr [TwoDigitLookup+eax*2]
+  movzx  eax, word ptr [TwoDigitLookupRaw+eax*2]
   mov    [edi], ax               {Save Final 2 Digits}
 @@Done:
   pop    esi
@@ -2894,10 +2799,10 @@ begin
       K  := I - K;               {Dividend mod 100}
       I  := J;                   {Next Dividend}
       Dec(Digits, 2);
-      PWord(@PByteArray(P)[Digits])^ := Word(TwoDigitLookup[K]);
+      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K];
     until Digits <= 2;
   if Digits = 2 then
-    PWord(@PByteArray(P)[Digits-2])^ := Word(TwoDigitLookup[I])
+    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[I]
   else
     P^ := I or ord('0');
 end;
@@ -2993,13 +2898,13 @@ begin
   L32 := I32 * 100;
   L32 := J32 - L32;
   Dec(Digits, 4);
-  J32 := (Word(TwoDigitLookup[K32]) shl 16) + Word(TwoDigitLookup[L32]);
+  J32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[L32];
   PInteger(@PByteArray(P)[Digits])^ := J32;
   J32 := I32 div 100;
   K32 := J32 * 100;
   K32 := I32 - K32;
   Dec(Digits, 4);
-  I32 := (Word(TwoDigitLookup[K32]) shl 16) + Word(TwoDigitLookup[J32]);
+  I32 := (TwoDigitLookupW[K32] shl 16) + TwoDigitLookupW[J32];
   PInteger(@PByteArray(P)[Digits])^ := I32;
   I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
   if Digits > 2 then
@@ -3009,10 +2914,10 @@ begin
       K32 := I32 - K32;
       I32 := J32;
       Dec(Digits, 2);
-      PWord(@PByteArray(P)[Digits])^ := Word(TwoDigitLookup[K32]);
+      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K32];
     until Digits <= 2;
   if Digits = 2 then
-    PWord(@PByteArray(P)[Digits-2])^ := Word(TwoDigitLookup[I32])
+    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[I32]
   else
     P^ := I32 or ord('0');
 end;
@@ -3022,6 +2927,7 @@ function IntToUnicode(Value: Integer): ZWideString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr_JOH_PAS_5(Value: Integer): string;
+{$IFNDEF WITH_FASTCODE_INTTOSTR}
 var
   Negative       : Boolean;
   I, J, K        : Cardinal;
@@ -3065,13 +2971,18 @@ begin
       K  := I - K;               {Dividend mod 100}
       I  := J;                   {Next Dividend}
       Dec(Digits, 2);
-      PLongWord(@PWordArray(P)[Digits])^ := LongWord(TwoDigitLookupW[K]);
+      PLongWord(@PWordArray(P)[Digits])^ := TwoDigitLookupLW[K];
     until Digits <= 2;
   if Digits = 2 then
-    PLongWord(@PWordArray(P)[Digits-2])^ := LongWord(TwoDigitLookupW[I])
+    PLongWord(@PWordArray(P)[Digits-2])^ := TwoDigitLookupLW[I]
   else
     PWord(P)^ := I or Word('0');
 end;
+{$ELSE}
+begin
+  Result := IntToStr(Value);
+end;
+{$ENDIF}
 
 function IntToUnicode(Value: Int64): ZWideString;
 //fast pure pascal by John O'Harrow see:
@@ -3085,11 +2996,7 @@ var
   Digits             : Byte;
   P                  : PWideChar;
   NewLen             : Integer;
-{$ENDIF}
 begin
-  {$IFDEF WITH_FASTCODE_INTTOSTR}
-  Result := IntToStr(Value);
-  {$ELSE}
   if Value = $8000000000000000 then
     begin {Special WideString since ABS($8000000000000000) Fails}
       Result := MinInt64Uni;
@@ -3150,16 +3057,16 @@ begin
   J32 := I32 div 100;
   K32 := J32 * 100;
   K32 := I32 - K32;
-  PLongWord(P + Digits - 2)^ := LongWord(TwoDigitLookupW[K32]);
+  PLongWord(P + Digits - 2)^ := TwoDigitLookupLW[K32];
   I32 := J32 div 100;
   L32 := I32 * 100;
   L32 := J32 - L32;
-  PLongWord(P + Digits - 4)^ := LongWord(TwoDigitLookupw[L32]);
+  PLongWord(P + Digits - 4)^ := TwoDigitLookupLW[L32];
   J32 := I32 div 100;
   K32 := J32 * 100;
   K32 := I32 - K32;
-  PLongWord(P + Digits - 6)^ := LongWord(TwoDigitLookupW[K32]);
-  PLongWord(P + Digits - 8)^ := LongWord(TwoDigitLookupW[J32]);
+  PLongWord(P + Digits - 6)^ := TwoDigitLookupLW[K32];
+  PLongWord(P + Digits - 8)^ := TwoDigitLookupLW[J32];
   Dec(Digits, 8);
   I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
   if Digits > 2 then
@@ -3169,14 +3076,19 @@ begin
       K32 := I32 - K32;
       I32 := J32;
       Dec(Digits, 2);
-      PLongWord(P + Digits)^ := LongWord(TwoDigitLookupW[K32]);
+      PLongWord(P + Digits)^ := TwoDigitLookupLW[K32];
     until Digits <= 2;
   if Digits = 2 then
-    PLongWord(P + Digits-2)^ := LongWord(TwoDigitLookupW[I32])
+    PLongWord(P + Digits-2)^ := TwoDigitLookupLW[I32]
   else
     P^ := WideChar(I32 or ord('0'));
-  {$ENDIF}
 end;
+{$ELSE}
+begin
+  Result := IntToStr(Value);
+end;
+{$ENDIF}
+
 {$ifdef OverflowCheckEnabled}
   {$Q+}
 {$endif}
@@ -3595,6 +3507,11 @@ function UnicodeToInt(const Value: ZWideString): Integer;
 //function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
 //originally wrtten by John O'Harrow
 //http://fastcode.sourceforge.net/
+{$IFDEF FPC} //FPC leaks imbelievable here. Speed decrese from Delphi to FPC *10000. Don't know why.
+begin
+  Result := RawToInt(PosEmptyUnicodeStringToAscii7(Value));
+end;
+{$ELSE}
 const
   AdjustLowercase = Ord('a') - 10;
   AdjustUppercase = Ord('A') - 10;
@@ -3677,6 +3594,7 @@ begin
   if (not Valid) or (P^ <> #0) then
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
+{$ENDIF FPC}
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
@@ -3919,6 +3837,7 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
+{$IFNDEF FPC}
 function ValLong_JOH_PAS_4_b_unicode(const S: PWideChar; var code: Integer): Longint;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
@@ -4016,13 +3935,18 @@ begin
   if (not Valid) or (P^ <> #0) then
     Code := P-S+1;
 end;
+{$ENDIF FPC}
 {$WARNINGS ON}
 
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer;
 var
   E: Integer;
 begin
+  {$IFDEF FPC} //FPC leaks imbelievable here. Speed decrese from Delphi to FPC *10000. Don't know why.
+  Result := ValLong_JOH_PAS_4_b(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), E);
+  {$ELSE}
   Result := ValLong_JOH_PAS_4_b_unicode(PWideChar(S), E);
+  {$ENDIF}
   if E <> 0 then Result := Default;
 end;
 
@@ -4030,7 +3954,11 @@ function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer;
 var
   E: Integer;
 begin
+  {$IFDEF FPC} //FPC leaks imbelievable here. Speed decrese from Delphi to FPC *10000. Don't know why.
+  Result := ValLong_JOH_PAS_4_b(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), E);
+  {$ELSE}
   Result := ValLong_JOH_PAS_4_b_unicode(PWideChar(S), E);
+  {$ENDIF}
   if E <> 0 then Result := Default;
 end;
 
@@ -4307,6 +4235,7 @@ begin
 end;
 
 {$WARNINGS OFF} //value digits might not be initialized
+{$IFNDEF FPC}
 function ValInt64_JOH_PAS_4_b_unicode(const s: PWideChar; var code: Integer): Int64;
 //function ValLong_JOH_PAS_4_b(const s; var code: Integer): LongInt;
 //fast pascal from John O'Harrow see:
@@ -4405,13 +4334,18 @@ begin
   if (not Valid) or (P^ <> #0) then
     Code := P-S+1;
 end;
+{$ENDIF}
 {$WARNINGS ON}
 
 function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64;
 var
   E: Integer;
 begin
+  {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
+  Result := ValInt64_JOH_PAS_4_b_raw(PAnsiChar(PosEmptyUnicodeStringToASCII7(S)), E);
+  {$ELSE}
   Result := ValInt64_JOH_PAS_4_b_unicode(PWideChar(S), E);
+  {$ENDIF}
   if E <> 0 then Result := Default;
 end;
 
@@ -4419,7 +4353,11 @@ function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64;
 var
   E: Integer;
 begin
+  {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
+  Result := ValInt64_JOH_PAS_4_b_raw(PAnsiChar(PosEmptyUnicodeStringToASCII7(S)), E);
+  {$ELSE}
   Result := ValInt64_JOH_PAS_4_b_unicode(S, E);
+  {$ENDIF}
   if E <> 0 then Result := Default;
 end;
 
@@ -4605,7 +4543,11 @@ function UnicodeToFloat(const s: ZWideString): Extended; overload;
 var
   E: Integer;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E);
+  {$ELSE}
   Result :=  ValUnicodeExt(PWideChar(s), {$IFNDEF UNICODE}WideChar{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
+  {$ENDIF}
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
@@ -4614,7 +4556,11 @@ function UnicodeToFloat(const s: PWideChar): Extended; overload;
 var
   E: Integer;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E);
+  {$ELSE}
   Result :=  ValUnicodeExt(s, {$IFNDEF UNICODE}WideChar{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
+  {$ENDIF}
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
@@ -4624,7 +4570,11 @@ function UnicodeToFloat(const s: ZWideString; const DecimalSep: WideChar): Exten
 var
   E: Integer;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E);
+  {$ELSE}
   Result :=  ValUnicodeExt(PWidechar(s), DecimalSep, E);
+  {$ENDIF}
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
@@ -4633,7 +4583,11 @@ function UnicodeToFloat(const s: PWideChar; const DecimalSep: WideChar): Extende
 var
   E: Integer;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E);
+  {$ELSE}
   Result :=  ValUnicodeExt(s, DecimalSep, E);
+  {$ENDIF}
   if E <> 0 then
     raise EConvertError.CreateResFmt(@SInvalidFloat, [s]);
 end;
@@ -4642,7 +4596,11 @@ function UnicodeToFloatDef(const s: ZWideString; const DecimalSep: WideChar; con
 var
   E: Integer;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E);
+  {$ELSE}
   Result :=  ValUnicodeExt(PWideChar(s), DecimalSep, E);
+  {$ENDIF}
   if E <> 0 then Result := Default;
 end;
 
@@ -4650,20 +4608,34 @@ function UnicodeToFloatDef(const s: PWideChar; const DecimalSep: WideChar; const
 var
   E: Integer;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E);
+  {$ELSE}
   Result :=  ValUnicodeExt(s, DecimalSep, E);
+  {$ENDIF}
   if E <> 0 then Result := Default;
 end;
 
 function ValUnicodeExt(const s: ZWideString; const DecimalSep: WideChar; var code: Integer): Extended;
 begin
+  {$IFDEF FPC}
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+  {$ELSE}
   Result := ValUnicodeExt(PWideChar(S), DecimalSep, Code);
+  {$ENDIF}
 end;
+
 {$WARNINGS OFF} //suppress a wrong warning!!
 function ValUnicodeExt(const s: PWideChar; const DecimalSep: WideChar; var code: Integer): Extended;
 //function ValExt_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Extended;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //modified for varying DecimalSeperator
+{$IFDEF FPC}
+begin
+  Result := ValRawExt(PAnsiChar(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+end;
+{$ELSE}
 var
   Digits, ExpValue: Integer;
   Ch: WideChar;
@@ -4746,6 +4718,7 @@ begin
   if Valid and (ch = #0) then
     code := 0;
 end;
+{$ENDIF FPC}
 
 {$IFDEF USE_FAST_TRUNC}
 procedure RaiseInvalidOpException;

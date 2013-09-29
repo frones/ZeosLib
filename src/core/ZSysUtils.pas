@@ -2219,22 +2219,22 @@ begin
       'Y', 'y':
         begin
           if YearSet then  //Year has eiter two or four digits
-            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear div 100])
+            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AYear div 100]
           else
           begin
-            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear mod 100]);
+            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AYear mod 100];
             YearSet := True;
           end;
           Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMonth]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMonth];
           Dec(I, 2);
         end;
       'D', 'd':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ADay]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[ADay];
           Dec(I, 2);
         end;
       else
@@ -2254,6 +2254,12 @@ end;
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+{$IFDEF FPC} //imbelievable performance drop!!!
+begin
+  Result := NotEmptyASCII7ToUnicodeString(DateTimeToRawSQLDate(Value,
+    ConFormatSettings, Quoted, PosEmptyUnicodeStringToAscii7(Suffix)));
+end;
+{$ELSE}
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2272,22 +2278,22 @@ begin
       'Y', 'y':
         begin
           if YearSet then //Year has eiter two or four digits
-            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear div 100])
+            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
           else
           begin
-            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear mod 100]);
+            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
             YearSet := True;
           end;
           Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMonth]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMonth];
           Dec(I, 2);
         end;
       'D', 'd':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ADay]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ADay];
           Dec(I, 2);
         end;
       else
@@ -2297,6 +2303,7 @@ begin
       end;
   end;
 end;
+{$ENDIF}
 
 {**
   Converts DateTime value into a RawByteString with format pattern
@@ -2326,17 +2333,17 @@ begin
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AHour]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AHour];
           Dec(I, 2);
         end;
       'N', 'n':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMinute]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMinute];
           Dec(I, 2);
         end;
       'S', 's':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ASecond]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[ASecond];
           Dec(I, 2);
         end;
       'Z', 'z':
@@ -2346,8 +2353,8 @@ begin
             Continue
           else
           begin
-            (PWord(@PByteArray(PA)[i]))^ := Word(TwoDigitLookup[AMilliSecond mod 100]);
-            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMilliSecond div 10]);
+            (PWord(@PByteArray(PA)[i]))^ := TwoDigitLookupW[AMilliSecond mod 100];
+            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
@@ -2368,6 +2375,12 @@ end;
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+{$IFDEF FPC} //imbelievable performance drop!!!
+begin
+  Result := NotEmptyASCII7ToUnicodeString(DateTimeToRawSQLTime(Value,
+    ConFormatSettings, Quoted, PosEmptyUnicodeStringToAscii7(Suffix)));
+end;
+{$ELSE}
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2386,17 +2399,17 @@ begin
     case (TimeFormat+i)^ of
       'H', 'h':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AHour]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AHour];
           Dec(I, 2);
         end;
       'N', 'n':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMinute]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMinute];
           Dec(I, 2);
         end;
       'S', 's':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ASecond]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ASecond];
           Dec(I, 2);
         end;
       'Z', 'z':
@@ -2406,8 +2419,8 @@ begin
             Continue
           else
           begin
-            (PLongWord(@PWordArray(PW)[i]))^ := LongWord(TwoDigitLookupW[AMilliSecond mod 100]);
-            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMilliSecond div 10]);
+            (PLongWord(@PWordArray(PW)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
+            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
@@ -2418,6 +2431,7 @@ begin
       end;
     end;
 end;
+{$ENDIF FPC}
 
 
 {**
@@ -2449,37 +2463,37 @@ begin
       'Y', 'y':
         begin
           if YearSet then  //Year has eiter two or four digits
-            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear div 100])
+            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AYear div 100]
           else
           begin
-            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AYear mod 100]);
+            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AYear mod 100];
             YearSet := True;
           end;
           Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMonth]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMonth];
           Dec(i, 2);
         end;
       'D', 'd':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ADay]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[ADay];
           Dec(i, 2);
         end;
       'H', 'h':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AHour]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AHour];
           Dec(i, 2);
         end;
       'N', 'n':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMinute]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMinute];
           Dec(i, 2);
         end;
       'S', 's':
         begin
-          (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[ASecond]);
+          (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[ASecond];
           Dec(i, 2);
         end;
       'Z', 'z':
@@ -2489,8 +2503,8 @@ begin
             Continue
           else
           begin
-            (PWord(@PByteArray(PA)[i]))^ := Word(TwoDigitLookup[AMilliSecond mod 100]);
-            (PWord(@PByteArray(PA)[i-1]))^ := Word(TwoDigitLookup[AMilliSecond div 10]);
+            (PWord(@PByteArray(PA)[i]))^ := TwoDigitLookupW[AMilliSecond mod 100];
+            (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
@@ -2511,6 +2525,12 @@ end;
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   ConFormatSettings: TConFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
+{$IFDEF FPC} //imbelievable performance drop!!!
+begin
+  Result := NotEmptyASCII7ToUnicodeString(DateTimeToRawSQLTimeStamp(Value,
+    ConFormatSettings, Quoted, PosEmptyUnicodeStringToAscii7(Suffix)));
+end;
+{$ELSE}
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2531,37 +2551,37 @@ begin
       'Y', 'y':
         begin
           if YearSet then  //Year has eiter two or four digits
-            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear div 100])
+            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
           else
           begin
-            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AYear mod 100]);
+            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear mod 100];
             YearSet := True;
           end;
           Dec(i,2);
         end;
       'M', 'm':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMonth]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMonth];
           Dec(i, 2);
         end;
       'D', 'd':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ADay]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ADay];
           Dec(i, 2);
         end;
       'H', 'h':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AHour]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AHour];
           Dec(i, 2);
         end;
       'N', 'n':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMinute]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMinute];
           Dec(i, 2);
         end;
       'S', 's':
         begin
-          (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[ASecond]);
+          (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[ASecond];
           Dec(i, 2);
         end;
       'Z', 'z':
@@ -2571,8 +2591,8 @@ begin
             Continue
           else
           begin
-            (PLongWord(@PWordArray(PW)[i]))^ := LongWord(TwoDigitLookupW[AMilliSecond mod 100]);
-            (PLongWord(@PWordArray(PW)[i-1]))^ := LongWord(TwoDigitLookupW[AMilliSecond div 10]);
+            (PLongWord(@PWordArray(PW)[i]))^ := TwoDigitLookupLW[AMilliSecond mod 100];
+            (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AMilliSecond div 10];
             ZSet := True;
           end;
         end;
@@ -2583,6 +2603,7 @@ begin
       end;
     end;
 end;
+{$ENDIF FPC}
 {$WARNINGS ON} //suppress D2007 Waring for undefined result
 
 
