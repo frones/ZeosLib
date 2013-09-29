@@ -98,6 +98,7 @@ type
     FTrHandle: TISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FHardCommit: boolean;
+    FDisposeClientCodePage: Boolean;
   private
     procedure StartTransaction; virtual;
   protected
@@ -331,6 +332,7 @@ var
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
+  FDisposeClientCodePage := False;
   Self.FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
   FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
@@ -397,9 +399,7 @@ destructor TZInterbase6Connection.Destroy;
 begin
   if not Closed then
     Close;
-  if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
-     ( ConSettings.ClientCodePage.CP = zCP_NONE ) then
-    Dispose(ConSettings.ClientCodePage);
+  if FDisposeClientCodePage then Dispose(ConSettings^.ClientCodePage); //FreeMem for own created ClientCodePage rec
   inherited Destroy;
 end;
 
@@ -542,6 +542,7 @@ begin
               TmpClientCodePageNew.CP := TmpClientCodePageOld.CP;
               TmpClientCodePageNew.ZAlias := '';
               ConSettings.ClientCodePage := TmpClientCodePageNew;
+              FDisposeClientCodePage := True;
               {Also reset the MetaData ConSettings}
               (FMetadata as TZInterbase6DatabaseMetadata).ConSettings := ConSettings;
               { now we're able to read and write strings for columns without a
