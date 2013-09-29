@@ -1877,7 +1877,7 @@ begin
       stUnicodeString:
         begin
           Result.VType := vtUnicodeString;
-          Result.VUnicodeString := GetUnicodeString(ValuePtr);
+          Result.VUnicodeString := GetUnicodeString(ColumnIndex, IsNull);
         end;
       stBytes,stGUID,stAsciiStream, stBinaryStream:
         begin
