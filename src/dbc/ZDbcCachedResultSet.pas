@@ -307,12 +307,8 @@ end;
 
 procedure ZStringFieldAssignFromResultSet_PAnsiChar(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
-var
-  Buffer: PAnsiChar;
-  Len: Cardinal;
 begin
-  Buffer := ResultSet.GetPAnsiChar(ColumnIndex, Len);
-  RowAccessor.SetPAnsiChar(ColumnIndex, Buffer, Len);
+  RowAccessor.SetPAnsiRec(ColumnIndex, ResultSet.GetPAnsiRec(ColumnIndex));
 end;
 
 procedure ZStringFieldAssignFromResultSet_UnicodeEncoded(RowAccessor: TZRowAccessor;

@@ -91,8 +91,8 @@ type
       ErrorHandle: POCIError);
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -262,50 +262,50 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZOracleAbstractResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 var
   Blob: IZBlob;
   SQLVarHolder: PZSQLVar;
 begin
   SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  Len := 0;
-  Result := nil;
+  Result.Len := 0;
+  Result.P := nil;
   if not LastWasNull then
     case SQLVarHolder.TypeCode of
       SQLT_INT:
         begin
           FRawTemp := IntToRaw(PLongInt(SQLVarHolder.Data)^);
-          Result := PAnsiChar(FRawTemp);
-          Len := Length(FRawTemp);
+          Result.P := PAnsiChar(FRawTemp);
+          Result.Len := Length(FRawTemp);
         end;
       SQLT_FLT:
         begin
           FRawTemp := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
-          Result := PAnsiChar(FRawTemp);
-          Len := Length(FRawTemp);
+          Result.P := PAnsiChar(FRawTemp);
+          Result.Len := Length(FRawTemp);
         end;
       SQLT_STR:
         begin
-          Result := PAnsiChar(SQLVarHolder.Data);
-          Len := ZFastCode.StrLen(Result);
+          Result.P := PAnsiChar(SQLVarHolder.Data);
+          Result.Len := ZFastCode.StrLen(Result.P);
         end;
       SQLT_LVB, SQLT_LVC, SQLT_BIN:
         begin
-          Result := PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer);
-          Len := PInteger(SQLVarHolder.Data)^;
+          Result.P := PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer);
+          Result.Len := PInteger(SQLVarHolder.Data)^;
         end;
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
           FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
             ConSettings^.FormatSettings, False);
-          Result := PAnsiChar(FRawTemp);
-          Len := Length(FRawTemp);
+          Result.P := PAnsiChar(FRawTemp);
+          Result.Len := Length(FRawTemp);
         end;
       SQLT_BLOB, SQLT_CLOB:
         begin
           Blob := GetBlob(ColumnIndex);
-          Result := Blob.GetBuffer;
-          Len := Blob.Length;
+          Result.P := Blob.GetBuffer;
+          Result.Len := Blob.Length;
         end;
     end;
 end;

@@ -143,8 +143,8 @@ type
 
     function IsNull(const Index: Integer): Boolean;
     function GetPChar(const Index: Integer): PChar;
-    function GetPAnsiChar(const Index: Integer; var Len: Cardinal): PAnsiChar; overload;
-    function GetPAnsiChar(const Index: Integer): PAnsiChar; overload;
+    function GetPAnsiRec(const Index: Integer): TZAnsiRec;
+    function GetPAnsiChar(const Index: Integer): PAnsiChar;
     function GetString(const Index: Integer): RawByteString;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): Byte;
@@ -251,8 +251,8 @@ type
 
     function IsNull(const Index: Integer): Boolean;
     function GetPChar(const Index: Integer): PChar;
-    function GetPAnsiChar(const Index: Integer; var Len: Cardinal): PAnsiChar; overload;
-    function GetPAnsiChar(const Index: Integer): PAnsiChar; overload;
+    function GetPAnsiRec(const Index: Integer): TZAnsiRec;
+    function GetPAnsiChar(const Index: Integer): PAnsiChar;
     function GetString(const Index: Integer): RawByteString;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): Byte;
@@ -3025,12 +3025,13 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZResultSQLDA.GetPAnsiChar(const Index: Integer; var Len: Cardinal): PAnsiChar;
+function TZResultSQLDA.GetPAnsiRec(const Index: Integer): TZAnsiRec;
 var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  Result := nil;
+  Result.P := nil;
+  Result.Len := 0;
   FRawTemp := '';
   {$R-}
   with FXSQLDA.sqlvar[Index] do
@@ -3067,17 +3068,17 @@ begin
         SQL_INT64     : FRawTemp := IntToRaw(PInt64(sqldata)^);
         SQL_TEXT      :
           begin
-            Result := sqldata;
+            Result.P := sqldata;
             // Trim only trailing spaces. TrimRight also removes other characters)
-            Len := sqllen;
-            if Len > 0 then
-              while ((Result+Len-1)^ = ' ') do dec(Len);
+            Result.Len := sqllen;
+            if Result.Len > 0 then
+              while ((Result.P+Result.Len-1)^ = ' ') do dec(Result.Len);
             Exit;
           end;
         SQL_VARYING :
           begin
-            Result := PISC_VARYING(sqldata).str;
-            Len := PISC_VARYING(sqldata).strlen;
+            Result.P := PISC_VARYING(sqldata).str;
+            Result.Len := PISC_VARYING(sqldata).strlen;
             Exit;
           end;
         SQL_BLOB      : if VarIsEmpty(FDefaults[Index]) then
@@ -3093,8 +3094,8 @@ begin
           [GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
       end;
   end;
-  Result := PAnsiChar(FRawTemp);
-  Len := Length(FRawTemp);
+  Result.P := PAnsiChar(FRawTemp);
+  Result.Len := Length(FRawTemp);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
@@ -3110,9 +3111,8 @@ end;
     value returned is <code>null</code>
 }
 function TZResultSQLDA.GetPAnsiChar(Const Index: Integer): PAnsiChar;
-var Len: Cardinal;
 begin
-  Result := GetPAnsiChar(Index, Len);
+  Result := GetPAnsiRec(Index).P;
 end;
 
 {**

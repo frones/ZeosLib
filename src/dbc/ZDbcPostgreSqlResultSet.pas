@@ -85,7 +85,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -363,11 +363,14 @@ end;
 function TZPostgreSQLResultSet.GetBuffer(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
 begin
   ColumnIndex := ColumnIndex - 1;
-  Result := nil;
-
   LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
 
-  if not LastWasNull then
+  if LastWasNull then
+  begin
+    Result := nil;
+    Len := 0;
+  end
+  else
   begin
     Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
     Result := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
@@ -386,9 +389,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZPostgreSQLResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result := GetBuffer(ColumnIndex, Len);
+  Result.P := GetBuffer(ColumnIndex, Result.Len);
 end;
 
 {**

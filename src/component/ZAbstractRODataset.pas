@@ -556,6 +556,15 @@ begin
     RowAccessor.GetColumnDataSize(ColumnIndex));
 end;
 
+function RowAccessorStringFieldGetterFromAnsiRec(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  Ansirec: TZAnsiRec;
+begin
+  Ansirec := RowAccessor.GetAnsiRec(ColumnIndex, Result);
+  System.Move(AnsiRec.P^, Buffer^, AnsiRec.Len+1);
+end;
+
 { EZDatabaseError }
 
 {**

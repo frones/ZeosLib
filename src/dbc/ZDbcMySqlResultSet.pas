@@ -90,7 +90,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -134,7 +134,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -379,9 +379,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZMySQLResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result := GetBuffer(ColumnIndex, Len);
+  Result.P := GetBuffer(ColumnIndex, Result.Len);
 end;
 
 {**
@@ -1041,11 +1041,19 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZMySQLPreparedResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
-  Len := FColumnArray[ColumnIndex - 1].length;
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
+  if LastWasNull then
+  begin
+    Result.P := nil;
+    Result.Len := 0;
+  end
+  else
+  begin
+    Result.P := PAnsiChar(FColumnArray[ColumnIndex - 1].buffer);
+    Result.Len := FColumnArray[ColumnIndex - 1].length;
+  end;
 end;
 
 {**

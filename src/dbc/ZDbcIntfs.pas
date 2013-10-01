@@ -666,14 +666,16 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; overload;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
     function GetString(ColumnIndex: Integer): String;
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
     function GetRawByteString(ColumnIndex: Integer): RawByteString;
     function GetBinaryString(ColumnIndex: Integer): RawByteString; deprecated;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
+    function GetPWideChar(ColumnIndex: Integer): PWideChar;
+    function GetPWideRec(ColumnIndex: Integer): TZWideRec;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): SmallInt;

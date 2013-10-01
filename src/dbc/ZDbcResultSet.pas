@@ -134,9 +134,10 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; overload; virtual;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload; virtual;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; virtual;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; virtual;
     function GetPWideChar(ColumnIndex: Integer): PWidechar; virtual;
+    function GetPWideRec(ColumnIndex: Integer): TZWideRec; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
@@ -742,13 +743,13 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZAbstractResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result := GetPAnsiChar(ColumnIndex);
+  Result.P := GetPAnsiChar(ColumnIndex);
   if LastWasNull then
-    Len := 0
+    Result.Len := 0
   else
-    Len := ZFastCode.StrLen(Result);
+    Result.Len := ZFastCode.StrLen(Result.P);
 end;
 
 {**
@@ -781,6 +782,21 @@ begin
   Result := PWideChar(FUniTemp);
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PWideChar</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPWideRec(ColumnIndex: Integer): TZWideRec;
+begin
+  FUniTemp := GetUnicodeString(ColumnIndex);
+  Result.P := PWideChar(FUniTemp);
+  Result.Len := Length(FUniTemp);
+end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as

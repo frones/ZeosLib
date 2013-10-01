@@ -99,6 +99,20 @@ type
   PUInt                 = ^UInt;
   ZPPWideChar            = ^PWideChar;//BCB issue: PPWideChar is not part of system
 
+  PPZAnsiRec = ^PZAnsiRec;
+  PZAnsiRec = ^TZAnsiRec;
+  TZAnsiRec = Record
+    Len: Cardinal;
+    P: PAnsiChar;
+  end;
+
+  PPZWideRec = ^PZWideRec;
+  PZWideRec = ^TZWideRec;
+  TZWideRec = Record
+    Len: Cardinal;
+    P: PWideChar;
+  end;
+
   TObjectDynArray       = array of TObject;
 {$IFDEF FPC}
 type

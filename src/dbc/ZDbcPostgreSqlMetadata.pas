@@ -2114,7 +2114,7 @@ begin
         Result.UpdateInt(11, Ord(ntNullable));
       end;
 
-      Result.UpdateString(12, GetString(10 {description}));
+      Result.UpdateRawByteString(12, GetRawByteString(10 {description}));
       Result.UpdateString(13, GetString(9 {adsrc}));
       Result.UpdateNull(14);
       Result.UpdateNull(15);

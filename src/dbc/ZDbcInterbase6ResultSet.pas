@@ -88,7 +88,7 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; override;
+    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
@@ -567,16 +567,21 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetPAnsiChar(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZInterbase6ResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
-    Result := nil
+  begin
+    Result.P := nil;
+    Result.Len := 0;
+  end
   else
-    Result := FSqlData.GetPAnsiChar(ColumnIndex -1, Len);
+  begin
+    Result := FSqlData.GetPAnsiRec(ColumnIndex -1);
+  end;
 end;
 
 {**
@@ -589,10 +594,8 @@ end;
     value returned is <code>null</code>
 }
 function TZInterbase6ResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var
-  Len: Cardinal;
 begin
-  Result := GetPAnsiChar(ColumnIndex, Len);
+  Result := GetPAnsiRec(ColumnIndex).P;
 end;
 
 {**
