@@ -491,7 +491,7 @@ procedure TZPerformanceSQLTestCase.PopulateTable(TableName: string;
   PrimaryKey: string; RecordCount: Integer;
   ForeignKey: string; ForeignKeyRange: Integer);
 var
-  I, Index, Count: Integer;
+  I, Index, Count, CommitCount: Integer;
   Query, Query1: TZQuery;
   CurrentCount: Integer;
   TransactIsolationLevel: TZTransactIsolationLevel;
@@ -540,16 +540,13 @@ begin
       Index := 0;
       Query1.SQL.Text := Format('SELECT * FROM %s', [TableName]);;
       Query1.Open;
+      CommitCount := 0;
       while Count > 0 do
       begin
         Inc(Index);
 
-        if not Query.Eof
-          and (Query.FieldByName(PrimaryKey).AsInteger = Index) then
-        begin
+        if not Query.Eof and (Query.FieldByName(PrimaryKey).AsInteger = Index) then
           Query.Next;
-          Continue;
-        end;
 
         Query1.Insert;
         for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
@@ -595,10 +592,17 @@ begin
           end;
         end;
         Query1.Post;
+        Inc(CommitCount);
+        if CommitCount mod 1000 = 0 then
+        begin
+          Connection.Commit;
+          Connection.StartTransaction;
+        end;
         Dec(Count);
       end;
     end;
-    Connection.Commit;
+    if not (CommitCount mod 1000 = 0) then
+      Connection.Commit;
     Query.Close;
     Query1.Close;
   finally
