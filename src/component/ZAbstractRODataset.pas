@@ -1387,6 +1387,7 @@ var
   RowBuffer: PZRowBuffer;
   ACurrency: Currency;
   Bts: TByteDynArray;
+  WideRec: TZWideRec;
   {$IFNDEF WITH_WIDESTRUTILS}
   WS: WideString;
   {$ENDIF}
@@ -1422,14 +1423,16 @@ begin
           Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         ftWideString:
           begin
-            {$IFDEF WITH_WIDESTRUTILS}
+            WideRec := RowAccessor.GetWideRec(ColumnIndex, Result);
+            System.Move(WideRec.P^, PWideChar(Buffer)^, (WideRec.Len+1)*2);
+            (*{$IFDEF WITH_WIDESTRUTILS}
             WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
             {$ELSE}
             //FPC: WideStrings are COM managed fields
             WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
             //include null terminator in copy
             System.Move(PWideChar(WS)^,buffer^,(length(WS)+1)*sizeof(WideChar));
-            {$ENDIF}
+            {$ENDIF}             *)
             Result := not Result;
           end;
         {$IFDEF WITH_FTGUID}

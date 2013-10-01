@@ -96,7 +96,7 @@ type
   TZRowAccessor = class(TObject)
   private
     FRawTemp: RawByteString;
-    //FUniTemp: ZWideString;
+    FUniTemp: ZWideString;
     FRowSize: Integer;
     FColumnsSize: Integer;
     FColumnCount: Integer;
@@ -177,6 +177,7 @@ type
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
     function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
+    function GetWideRec(ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; virtual;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
     function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean; virtual;
     function GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt; virtual;
@@ -251,6 +252,7 @@ type
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
     function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
+    function GetWideRec(ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
@@ -282,6 +284,7 @@ type
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
     function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
+    function GetWideRec(ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
     function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
@@ -1359,6 +1362,61 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>TZWideRec/UnicodeString</code> in the ObjectPascal programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZRowAccessor.GetWideRec(ColumnIndex: Integer;
+  var IsNull: Boolean): TZWideRec;
+var
+  TempBlob: IZBlob;
+  Clob: IZClob;
+  GUID: TGUID;
+  Bts: TByteDynArray;
+begin
+  case FColumnTypes[ColumnIndex - 1] of
+    stByte: FUniTemp := IntToUnicode(GetByte(ColumnIndex, IsNull));
+    stShort: FUniTemp := IntToUnicode(GetShort(ColumnIndex, IsNull));
+    stInteger: FUniTemp := IntToUnicode(GetInt(ColumnIndex, IsNull));
+    stLong: FUniTemp := IntToUnicode(GetLong(ColumnIndex, IsNull));
+    //stUnicodeString, stString: do not handle here!
+    stAsciiStream, stUnicodeStream:
+      begin
+        TempBlob := GetBlobObject(FBuffer, ColumnIndex);
+        if (TempBlob <> nil) and not TempBlob.IsEmpty then
+          if Supports(TempBlob, IZClob, Clob) then
+          begin
+            Result.P := Clob.GetPWideChar;
+            Result.Len := Clob.Length;
+            Exit;
+          end
+          else
+            FUniTemp := NotEmptyASCII7ToUnicodeString(TempBlob.GetString);
+      end;
+    stBytes, stBinaryStream:
+      begin
+        Bts := GetBytes(ColumnIndex, IsNull);
+        FUniTemp := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+      end;
+    stGUID:
+      begin
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        FUniTemp := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
+      end;
+    stDate: FUniTemp := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTime: FUniTemp := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
+    else
+      FUniTemp := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
+  end;
+  Result.P := PWideChar(FUniTemp);
+  Result.Len := Length(FuniTemp);
+end;
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>WideString/UnicodeString</code> in the ObjectPascal programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1384,7 +1442,7 @@ begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
           if Supports(TempBlob, IZClob, Clob) then
-            Clob.GetUnicodeString
+            Result := Clob.GetUnicodeString
           else
             Result := NotEmptyASCII7ToUnicodeString(TempBlob.GetString);
       end;
@@ -3437,13 +3495,43 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+function TZRawRowAccessor.GetWideRec(ColumnIndex: Integer;
+  var IsNull: Boolean): TZWideRec;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stUnicodeString);
+{$ENDIF}
+  Result.P := nil;
+  Result.Len := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stUnicodeString, stString:
+        begin
+          FUniTemp := ConSettings^.ConvFuncs.ZRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Cardinal), ConSettings^.ClientCodePage^.CP);
+          Result.P := PWideChar(FUniTemp);
+          Result.Len := Length(FUniTemp);
+        end
+      else
+        Result := inherited GetWideRec(ColumnIndex, IsNull);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>WideString/UnicodeString</code> in the ObjectPascal programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
 function TZRawRowAccessor.GetUnicodeString(ColumnIndex: Integer;
   var IsNull: Boolean): ZWideString;
-var
-  TempBlob: IZBlob;
-  Clob: IZClob;
-  GUID: TGUID;
-  Bts: TByteDynArray;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
@@ -3452,36 +3540,10 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stByte: Result := IntToUnicode(GetByte(ColumnIndex, IsNull));
-      stShort: Result := IntToUnicode(GetShort(ColumnIndex, IsNull));
-      stInteger: Result := IntToUnicode(GetInt(ColumnIndex, IsNull));
-      stLong: Result := IntToUnicode(GetLong(ColumnIndex, IsNull));
       stUnicodeString, stString:
         Result := ConSettings^.ConvFuncs.ZRawToUnicode(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Cardinal), ConSettings^.ClientCodePage^.CP);
-      stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-          if (TempBlob <> nil) and not TempBlob.IsEmpty then
-            if Supports(TempBlob, IZClob, Clob) then
-              Result := Clob.GetUnicodeString
-            else
-              Result := ZWideString(TempBlob.GetString);
-        end;
-      stBytes, stBinaryStream:
-        begin
-          Bts := GetBytes(ColumnIndex, IsNull);
-          Result := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
-        end;
-      stGUID:
-        begin
-          System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
-          Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
-        end;
-      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
-      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
-      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
       else
-        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
+        Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;
     IsNull := False;
   end
@@ -3836,13 +3898,42 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
+function TZUnicodeRowAccessor.GetWideRec(ColumnIndex: Integer;
+  var IsNull: Boolean): TZWideRec;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stUnicodeString);
+{$ENDIF}
+  Result.P := nil;
+  Result.Len := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stUnicodeString, stString:
+        begin
+          Result.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Word);
+          Result.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+        end;
+      else
+        Result := inherited GetWideRec(ColumnIndex, IsNull);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>WideString/UnicodeString</code> in the ObjectPascal programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
 function TZUnicodeRowAccessor.GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean):
    ZWideString;
-var
-  TempBlob: IZBlob;
-  Clob: IZClob;
-  GUID: TGUID;
-  Bts: TByteDynArray;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
@@ -3851,36 +3942,10 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stByte: Result := IntToUnicode(GetByte(ColumnIndex, IsNull));
-      stShort: Result := IntToUnicode(GetShort(ColumnIndex, IsNull));
-      stInteger: Result := IntToUnicode(GetInt(ColumnIndex, IsNull));
-      stLong: Result := IntToUnicode(GetLong(ColumnIndex, IsNull));
       stUnicodeString, stString:
         Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Word);
-      stAsciiStream, stUnicodeStream:
-        begin
-          TempBlob := GetBlobObject(FBuffer, ColumnIndex);
-          if (TempBlob <> nil) and not TempBlob.IsEmpty then
-            if Supports(TempBlob, IZClob, Clob) then
-              Result := Clob.GetUnicodeString
-            else
-              Result := ZWideString(TempBlob.GetString);
-        end;
-      stBytes, stBinaryStream:
-        begin
-          Bts := GetBytes(ColumnIndex, IsNull);
-          Result := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts[0]), Length(Bts));
-        end;
-      stGUID:
-        begin
-          System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
-          Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
-        end;
-      stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
-      stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
-      stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.FormatSettings, False);
       else
-        Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
+        Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;
     IsNull := False;
   end
