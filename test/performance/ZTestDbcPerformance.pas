@@ -205,9 +205,11 @@ var
   Ansi: RawByteString;
   Uni: ZWideString;
   Bts: TByteDynArray;
+  ConSettings: PZConSettings;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
+  ConSettings := Connection.GetConSettings;
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
@@ -231,12 +233,12 @@ begin
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, ZDefaultSystemCodePage, Connection.GetConSettings));
+            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, ConSettings^.ClientCodePage^.CP, Consettings));
           end;
         stUnicodeStream:
           begin
             Uni := ZWideString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), GetRecordCount*100, Connection.GetConSettings));
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), GetRecordCount*100, ConSettings));
           end;
         stBinaryStream:
           begin
@@ -319,9 +321,11 @@ var
   Ansi: RawByteString;
   Uni: ZWideString;
   Bts: TByteDynArray;
+  ConSettings: PZConSettings;
 begin
   if SkipForReason(srNoPerformance) then Exit;
 
+  Consettings := Connection.GetConSettings;
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
@@ -345,12 +349,12 @@ begin
         stAsciiStream:
           begin
             Ansi := RawByteString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, ZDefaultSystemCodePage, Connection.GetConSettings));
+            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), GetRecordCount*100, ConSettings^.ClientCodePage^.CP, ConSettings));
           end;
         stUnicodeStream:
           begin
             Uni := ZWideString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), GetRecordCount*100, Connection.GetConSettings));
+            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), GetRecordCount*100, ConSettings));
           end;
         stBinaryStream:
           begin
