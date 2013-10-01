@@ -3755,7 +3755,7 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        Result := AnsiString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+        Result := AnsiString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Word));
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;
@@ -3785,9 +3785,9 @@ begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
         {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+        Result := UTF8String(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Cardinal));
         {$ELSE}
-        Result := UTF8Encode(ZWideString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^));
+        Result := UTF8Encode(ZWideString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Word)));
         {$ENDIF}
       else
         Result := inherited GetUTF8String(ColumnIndex, IsNull);
@@ -3817,7 +3817,7 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^, ConSettings^.ClientCodePage^.CP);
+        Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Word), ConSettings^.ClientCodePage^.CP);
       else
         Result := Inherited GetRawByteString(ColumnIndex, IsNull);
     end;
@@ -3856,7 +3856,7 @@ begin
       stInteger: Result := IntToUnicode(GetInt(ColumnIndex, IsNull));
       stLong: Result := IntToUnicode(GetLong(ColumnIndex, IsNull));
       stUnicodeString, stString:
-        Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+        Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+SizeOf(Word);
       stAsciiStream, stUnicodeStream:
         begin
           TempBlob := GetBlobObject(FBuffer, ColumnIndex);
