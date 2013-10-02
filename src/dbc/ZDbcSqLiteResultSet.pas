@@ -675,12 +675,11 @@ begin
           Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
           Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          if (Len = ConSettings^.FormatSettings.DateFormatLen) then
-            Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
-             Len, ConSettings^.FormatSettings.DateFormatLen, Failed)
+          if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
+            Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
           else
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
-              Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+              RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
         end;
       LastWasNull := Result = 0;
     end;
@@ -721,15 +720,10 @@ begin
           Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
           if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
-            Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
-              Len, ConSettings^.FormatSettings.TimeFormatLen, Failed)
+            Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
           else
-            if ConSettings^.FormatSettings.DateFormatLen = Len then
-              Result := 0
-            else
-              Result := Frac(RawSQLTimeStampToDateTime(Buffer,
-                PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
-                ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+            Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len,
+              ConSettings^.ReadFormatSettings, Failed));
         end;
       LastWasNull := Result = 0;
     end;
@@ -770,8 +764,7 @@ begin
           Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
           Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          Result := RawSQLTimeStampToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
-            Len, ConSettings^.FormatSettings.DateTimeFormatLen, Failed);
+          Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
         end;
       LastWasNull := Result = 0;
     end;

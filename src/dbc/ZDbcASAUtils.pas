@@ -1531,7 +1531,7 @@ begin
       DT_DOUBLE      : Result := FloatToRaw( PDouble(sqldata)^);
       DT_VARCHAR     : ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, Result);
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
-      DT_TIMESTAMP_STRUCT : Result := DateTimeToRawSQLTimeStamp(GetTimestamp(Index), FConSettings^.FormatSettings, False);
+      DT_TIMESTAMP_STRUCT : Result := DateTimeToRawSQLTimeStamp(GetTimestamp(Index), FConSettings^.ReadFormatSettings, False);
       DT_TINYINT     : Result := IntToRaw( PByte(sqldata)^);
       DT_BIT         : Result := NotEmptyStringToASCII7(BoolToStr( ( PByte(sqldata)^ = 1), True));
       DT_BIGINT,

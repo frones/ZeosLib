@@ -741,9 +741,8 @@ begin
   try
     V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
     if VarIsStr(V) then
-      Result := RawSQLTimeStampToDateTime(PAnsiChar(AnsiString(V)),
-        PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat),
-        Length(V), ConSettings^.FormatSettings.DateTimeFormatLen, Failed)
+      Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
+        Length(V), ConSettings^.ReadFormatSettings, Failed)
     else
       Result := V;
   except

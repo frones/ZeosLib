@@ -237,15 +237,13 @@ type
     ZStringToUnicode: TZStringToUnicode;
   end;
 
-  TConFormatSettings = Record
+  TZFormatSettings = Record
     DateFormat: RawByteString;
     DateFormatLen: Cardinal;
     TimeFormat: RawByteString;
-    TimeFormatMilliPos: Integer;
     TimeFormatLen: Cardinal;
     DateTimeFormat: RawByteString;
     DateTimeFormatLen: Cardinal;
-    DateTimeFormatMilliPos: Integer;
   End;
 
   PZConSettings = ^TZConSettings;
@@ -255,7 +253,9 @@ type
     CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    FormatSettings: TConFormatSettings;
+    DisplayFormatSettings: TZFormatSettings;
+    ReadFormatSettings: TZFormatSettings;
+    WriteFormatSettings: TZFormatSettings;
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;
@@ -303,6 +303,8 @@ function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload; 
 function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
 
+procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
+
 var
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
@@ -312,15 +314,27 @@ var
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
       ClientCodePage: @ClientCodePageDummy;
-      FormatSettings:
+      DisplayFormatSettings:
+        (DateFormat: 'DD-MM-YYYY';
+          DateFormatLen: 10;
+          TimeFormat: 'HH:NN:SS.ZZZ';
+          TimeFormatLen: 12;
+          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS';
+          DateTimeFormatLen: 23);
+      ReadFormatSettings:
           (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
           TimeFormat: 'HH:NN:SS.ZZZ';
-          TimeFormatMilliPos: 10;
           TimeFormatLen: 12;
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
-          DateTimeFormatLen: 23;
-          DateTimeFormatMilliPos: 21);
+          DateTimeFormatLen: 23);
+      WriteFormatSettings:
+          (DateFormat: 'DD-MM-YYYY';
+          DateFormatLen: 10;
+          TimeFormat: 'HH:NN:SS.ZZZ';
+          TimeFormatLen: 12;
+          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
+          DateTimeFormatLen: 23);
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
@@ -431,6 +445,16 @@ begin
     Result := etANSI; //Ansi
 end;
 {$ENDIF}
+
+procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
+begin
+  Dest.DateFormat := Source.DateFormat;
+  Dest.DateFormatLen := Source.DateFormatLen;
+  Dest.TimeFormat := Source.TimeFormat;
+  Dest.TimeFormatLen := Source.TimeFormatLen;
+  Dest.DateTimeFormat := Source.DateTimeFormat;
+  Dest.DateTimeFormatLen := Source.DateTimeFormatLen;
+end;
 
 {**
 EgonHugeist:

@@ -353,9 +353,13 @@ const
 
   procedure TestRawSQLDateToDateTime(Value: RawByteString;
     const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString = '');
-  var Failed: Boolean;
+  var
+    Failed: Boolean;
+    ZFormatSettings: TZFormatSettings;
   begin
-    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTime(PAnsiChar(Value), PAnsiChar(DateFormat), Length(Value), Length(DateFormat), Failed), 'Expected Date');
+    ZFormatSettings.DateFormat := DateFormat;
+    ZFormatSettings.DateFormatLen := Length(DateFormat);
+    CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
 
@@ -437,10 +441,14 @@ const
   Time5_3 = RawByteString('00000000000.999999988425926');
 
   procedure TestRawSQLTimeToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString = '');
-  var Failed: Boolean;
+    const Expected: TDateTime; const ExpFailed: Boolean; const TimeFormat: RawByteString = '');
+  var
+    Failed: Boolean;
+    ZFormatSettings: TZFormatSettings;
   begin
-    CheckEquals(Expected, ZSysUtils.RawSQLTimeToDateTime(PAnsiChar(Value), PAnsiChar(DateFormat), Length(Value), Length(DateFormat), Failed), 'Expected Date');
+    ZFormatSettings.TimeFormat := TimeFormat;
+    ZFormatSettings.TimeFormatLen := Length(TimeFormat);
+    CheckEquals(Expected, ZSysUtils.RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
 begin
@@ -571,10 +579,14 @@ const
   TimeStamp5_3 = RawByteString('a6525.99u999988425926');
 
   procedure TestRawSQLTimeStampToDateTime(Value: RawByteString;
-    const Expected: TDateTime; const ExpFailed: Boolean; const DateFormat: RawByteString = '');
-  var Failed: Boolean;
+    const Expected: TDateTime; const ExpFailed: Boolean; const DateTimeFormat: RawByteString = '');
+  var
+    Failed: Boolean;
+    ZFormatSettings: TZFormatSettings;
   begin
-    CheckEquals(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), PAnsiChar(DateFormat), Length(Value), Length(DateFormat), Failed), 'Expected Date');
+    ZFormatSettings.DateTimeFormat := DateTimeFormat;
+    ZFormatSettings.DateTimeFormatLen := Length(DateTimeFormat);
+    CheckEquals(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
 
@@ -724,78 +736,78 @@ end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToRawSQLDate;
 begin
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
-  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
+  CheckEquals(String(DateTimeToRawSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLDate;
 begin
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, False, '::'),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
-  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.FormatSettings, True, '::'),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31)));
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39);
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, False, '::'),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+'::');
+  CheckEquals(DateTimeToUnicodeSQLDate(EncodeDate(1999, 12, 31), ConSettingsDummy.ReadFormatSettings, True, '::'),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateFormat), EncodeDate(1999, 12, 31))+#39'::');
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTime;
 begin
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 50), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 50)));
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 1), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 1)));
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 50), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 50)));
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 1), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 1)));
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToRawSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTime;
 begin
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToUnicodeSQLTime(EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.TimeFormat), EncodeTime(23, 59, 59, 999))+#39'::');
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToRawSQLTimeStamp;
 begin
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToRawSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToUnicodeSQLTimeStamp;
 begin
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False)),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True)),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, False, '::')),
-    FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
-  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.FormatSettings, True, '::')),
-    #39+FormatDateTime(String(ConSettingsDummy.FormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False)),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999)));
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True)),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39);
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, False, '::')),
+    FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+'::');
+  CheckEquals(String(DateTimeToUnicodeSQLTimeStamp(EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), ConSettingsDummy.ReadFormatSettings, True, '::')),
+    #39+FormatDateTime(String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat), EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999))+#39'::');
 end;
 
 {$IFDEF BENCHMARK}
@@ -1729,13 +1741,13 @@ var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, False);
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.ReadFormatSettings, False);
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, True);
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.ReadFormatSettings, True);
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.ReadFormatSettings, False, 'suffix');
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+      Result := DateTimeToRawSQLDate(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
   function TFormatDateTime(const Value: TDateTime; const Format: String): RawByteString;
@@ -1758,7 +1770,7 @@ begin
   Stop := GetTickCount;
   Between1 := Stop - Start;
   Start := GetTickCount;
-  S2 := TFormatDateTime(ADate, String(ConSettingsDummy.FormatSettings.DateFormat));
+  S2 := TFormatDateTime(ADate, String(ConSettingsDummy.ReadFormatSettings.DateFormat));
   Stop := GetTickCount;
   Between2 := Stop - Start;
 
@@ -1781,13 +1793,13 @@ var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, False);
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.ReadFormatSettings, False);
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, True);
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.ReadFormatSettings, True);
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.ReadFormatSettings, False, 'suffix');
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+      Result := DateTimeToUnicodeSQLDate(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
   function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
@@ -1810,7 +1822,7 @@ begin
   Stop := GetTickCount;
   Between1 := Stop - Start;
   Start := GetTickCount;
-  S2 := TFormatDateTime(ADate, String(ConSettingsDummy.FormatSettings.DateFormat));
+  S2 := TFormatDateTime(ADate, String(ConSettingsDummy.ReadFormatSettings.DateFormat));
   Stop := GetTickCount;
   Between2 := Stop - Start;
 
@@ -1833,13 +1845,13 @@ var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, False);
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.ReadFormatSettings, False);
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, True);
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.ReadFormatSettings, True);
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.ReadFormatSettings, False, 'suffix');
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+      Result := DateTimeToRawSQLTime(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
   function TFormatDateTime(const Value: TDateTime; const Format: String): RawByteString;
@@ -1862,7 +1874,7 @@ begin
   Stop := GetTickCount;
   Between1 := Stop - Start;
   Start := GetTickCount;
-  S2 := TFormatDateTime(ATime, String(ConSettingsDummy.FormatSettings.TimeFormat));
+  S2 := TFormatDateTime(ATime, String(ConSettingsDummy.ReadFormatSettings.TimeFormat));
   Stop := GetTickCount;
   Between2 := Stop - Start;
 
@@ -1885,13 +1897,13 @@ var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, False);
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.ReadFormatSettings, False);
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, True);
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.ReadFormatSettings, True);
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.ReadFormatSettings, False, 'suffix');
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+      Result := DateTimeToUnicodeSQLTime(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
   function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
@@ -1914,7 +1926,7 @@ begin
   Stop := GetTickCount;
   Between1 := Stop - Start;
   Start := GetTickCount;
-  S2 := TFormatDateTime(ATime, String(ConSettingsDummy.FormatSettings.TimeFormat));
+  S2 := TFormatDateTime(ATime, String(ConSettingsDummy.ReadFormatSettings.TimeFormat));
   Stop := GetTickCount;
   Between2 := Stop - Start;
 
@@ -1937,13 +1949,13 @@ var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False);
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, False);
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True);
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, True);
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, False, 'suffix');
     for i := 0 to 2500000 do
-      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+      Result := DateTimeToRawSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
   function TFormatDateTime(const Value: TDateTime; const Format: String): RawByteString;
@@ -1966,7 +1978,7 @@ begin
   Stop := GetTickCount;
   Between1 := Stop - Start;
   Start := GetTickCount;
-  S2 := TFormatDateTime(ADateTime, String(ConSettingsDummy.FormatSettings.DateTimeFormat));
+  S2 := TFormatDateTime(ADateTime, String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat));
   Stop := GetTickCount;
   Between2 := Stop - Start;
 
@@ -1989,13 +2001,13 @@ var
     I: Integer;
   begin
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False);
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, False);
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True);
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, True);
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, False, 'suffix');
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, False, 'suffix');
     for i := 0 to 2500000 do
-      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.FormatSettings, True, 'suffix');
+      Result := DateTimeToUnicodeSQLTimeStamp(Value, ConSettingsDummy.ReadFormatSettings, True, 'suffix');
   end;
 
   function TFormatDateTime(const Value: TDateTime; const Format: String): ZWideString;
@@ -2018,7 +2030,7 @@ begin
   Stop := GetTickCount;
   Between1 := Stop - Start;
   Start := GetTickCount;
-  S2 := TFormatDateTime(ADateTime, String(ConSettingsDummy.FormatSettings.DateTimeFormat));
+  S2 := TFormatDateTime(ADateTime, String(ConSettingsDummy.ReadFormatSettings.DateTimeFormat));
   Stop := GetTickCount;
   Between2 := Stop - Start;
 

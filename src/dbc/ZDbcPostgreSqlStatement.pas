@@ -965,13 +965,13 @@ begin
           UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stDate:
           UpdateString(DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.FormatSettings, False), ParamIndex);
+            ConSettings^.WriteFormatSettings, False), ParamIndex);
         stTime:
           UpdateString(DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.FormatSettings, False), ParamIndex);
+            ConSettings^.WriteFormatSettings, False), ParamIndex);
         stTimestamp:
           UpdateString(DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.FormatSettings, False), ParamIndex);
+            ConSettings^.WriteFormatSettings, False), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;

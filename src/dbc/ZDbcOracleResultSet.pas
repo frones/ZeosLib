@@ -297,7 +297,7 @@ begin
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
           FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
-            ConSettings^.FormatSettings, False);
+            ConSettings^.ReadFormatSettings, False);
           Result.P := PAnsiChar(FRawTemp);
           Result.Len := Length(FRawTemp);
         end;
@@ -347,7 +347,7 @@ begin
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
           FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
-            ConSettings^.FormatSettings, False);
+            ConSettings^.ReadFormatSettings, False);
           Result := PAnsiChar(FRawTemp);
         end;
       SQLT_BLOB, SQLT_CLOB:
@@ -408,7 +408,7 @@ begin
           PInteger(SQLVarHolder.Data)^, Result);
       SQLT_DAT, SQLT_TIMESTAMP:
         Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
-          ConSettings^.FormatSettings, False);
+          ConSettings^.ReadFormatSettings, False);
       SQLT_BLOB, SQLT_CLOB:
         begin
           Blob := GetBlob(ColumnIndex);

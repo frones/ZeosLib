@@ -141,7 +141,7 @@ type
     FTestMode: Byte;
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
-    procedure SetDateTimeFormatProperties;
+    procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
@@ -600,28 +600,88 @@ begin
   Result := FURL.Properties;
 end;
 
-procedure TZAbstractConnection.SetDateTimeFormatProperties;
+procedure TZAbstractConnection.SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
 begin
-  ConSettings^.FormatSettings.DateFormat := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(ConSettings^.FormatSettings.DateFormat);
-  ConSettings^.FormatSettings.TimeFormat := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(ConSettings^.FormatSettings.TimeFormat);
-  ConSettings^.FormatSettings.DateTimeFormat := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(ConSettings^.FormatSettings.DateTimeFormat);
+  {date formats}
+  if DetermineFromInfo then
+  begin
+    if Info.Values['datewriteformat'] = '' then
+      ConSettings^.WriteFormatSettings.DateFormat := 'YYYY-MM-DD'
+    else
+      ConSettings^.WriteFormatSettings.DateFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datewriteformat']));
 
-  ConSettings^.FormatSettings.DateFormatLen := Length(ConSettings^.FormatSettings.DateFormat);
-  ConSettings^.FormatSettings.TimeFormatLen := Length(ConSettings^.FormatSettings.TimeFormat);
-  ConSettings^.FormatSettings.DateTimeFormatLen := Length(ConSettings^.FormatSettings.DateTimeFormat);
+    if Info.Values['datereadformat'] = '' then
+      ConSettings^.ReadFormatSettings.DateFormat := 'YYYY-MM-DD'
+    else
+      ConSettings^.ReadFormatSettings.DateFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datereadformat']));
 
-  ConSettings^.FormatSettings.TimeFormatMilliPos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}PosEx('Z',ConSettings^.FormatSettings.TimeFormat, 1);
-  if (ConSettings^.FormatSettings.TimeFormatMilliPos > 0) then
-    while not CharInSet(ConSettings^.FormatSettings.TimeFormat[ConSettings^.FormatSettings.TimeFormatMilliPos], ['Y','M','D','H','N','S']) do
-      Dec(ConSettings^.FormatSettings.TimeFormatMilliPos) //exclude possible delimiters too
-  else
-    ConSettings^.FormatSettings.TimeFormatMilliPos := ConSettings^.FormatSettings.TimeFormatLen;
-  ConSettings^.FormatSettings.DateTimeFormatMilliPos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}PosEx('Z',ConSettings^.FormatSettings.DateTimeFormat, 1);
-  if (ConSettings^.FormatSettings.DateTimeFormatMilliPos > 0) then
-    while not CharInSet(ConSettings^.FormatSettings.DateTimeFormat[ConSettings^.FormatSettings.DateTimeFormatMilliPos], ['Y','M','D','H','N','S']) do
-      Dec(ConSettings^.FormatSettings.DateTimeFormatMilliPos) //exclude possible delimiters too
-  else
-    ConSettings^.FormatSettings.DateTimeFormatMilliPos := ConSettings^.FormatSettings.TimeFormatLen;
+    if Info.Values['datedisplayformat'] = '' then
+      ConSettings^.DisplayFormatSettings.DateFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ShortDateFormat)
+    else
+      ConSettings^.DisplayFormatSettings.DateFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datedisplayformat']));
+
+    {time formats}
+    if Info.Values['timewiteformat'] = '' then
+      if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
+        ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
+      else
+        ConSettings^.WriteFormatSettings.TimeFormat := 'HH:NN:SS'
+    else
+      ConSettings^.WriteFormatSettings.TimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['timewiteformat']));
+
+    if Info.Values['timereadformat'] = '' then
+      if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
+        ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
+      else
+        ConSettings^.ReadFormatSettings.TimeFormat := 'HH:NN:SS'
+    else
+      ConSettings^.ReadFormatSettings.TimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['timereadformat']));
+
+    if Info.Values['timedisplayformat'] = '' then
+      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat)
+    else
+      ConSettings^.DisplayFormatSettings.TimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['timedisplayformat']));
+
+    {timestamp format}
+    if Info.Values['datetimewriteformat'] = '' then
+      if (ConSettings^.ReadFormatSettings.DateFormat = 'FLOAT') or
+         (ConSettings^.ReadFormatSettings.TimeFormat = 'FLOAT') then
+        ConSettings^.ReadFormatSettings.DateTimeFormat := 'FLOAT'
+      else
+        ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
+    else
+      ConSettings^.WriteFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimewriteformat']));
+
+    if Info.Values['datetimereadformat'] = '' then
+      if (ConSettings^.ReadFormatSettings.DateFormat = 'FLOAT') or
+         (ConSettings^.ReadFormatSettings.TimeFormat = 'FLOAT') then
+        ConSettings^.ReadFormatSettings.DateTimeFormat := 'FLOAT'
+      else
+        ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
+    else
+      ConSettings^.ReadFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimereadformat']));
+
+    if Info.Values['datetimediaplayformat'] = '' then
+      if (ConSettings^.ReadFormatSettings.DateFormat = 'FLOAT') or
+         (ConSettings^.ReadFormatSettings.TimeFormat = 'FLOAT') then
+        ConSettings^.ReadFormatSettings.DateTimeFormat := 'FLOAT'
+      else
+        ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
+    else
+      ConSettings^.DisplayFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimediaplayformat']));
+  end;
+
+  ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
+  ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
+  ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
+
+  ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
+  ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
+  ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
+
+  ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
+  ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
+  ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
 function TZAbstractConnection.GetEncoding: TZCharEncoding;
@@ -745,22 +805,6 @@ begin
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   InternalCreate;
-
-  if Info.Values['dateformat'] = '' then
-    ConSettings^.FormatSettings.DateFormat := 'YYYY-MM-DD'
-  else
-    ConSettings^.FormatSettings.DateFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['dateformat']));
-  if Info.Values['timeformat'] = '' then
-    if GetMetaData.GetDatabaseInfo.SupportsMilliseconds then
-      ConSettings^.FormatSettings.TimeFormat := 'HH:NN:SS.ZZZ'
-    else
-      ConSettings^.FormatSettings.TimeFormat := 'HH:NN:SS'
-  else
-    ConSettings^.FormatSettings.TimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['timeformat']));
-  if Info.Values['datetimeformat'] = '' then
-    ConSettings^.FormatSettings.DateTimeFormat := ConSettings^.FormatSettings.DateFormat+' '+ConSettings^.FormatSettings.TimeFormat
-  else
-    ConSettings^.FormatSettings.DateTimeFormat := NotEmptyStringToASCII7(UpperCase(Info.Values['datetimeformat']));
   SetDateTimeFormatProperties;
 
   {$IFDEF ZEOS_TEST_ONLY}

@@ -361,11 +361,8 @@ begin
   if not Result and (TZAbstractResultSetMetadata(Metadata).
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
-    Result := ( RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
-        Len, ConSettings^.FormatSettings.DateFormatLen, Failed) = 0 ) and
-      (RawSQLTimeStampToDateTime(Buffer,
-        PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
-          ConSettings^.FormatSettings.DateTimeFormatLen, Failed) = 0);
+    Result := ( RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed) = 0 ) and
+      (RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed) = 0);
   end;
 end;
 
@@ -654,15 +651,11 @@ begin
     Result := 0
   else
   begin
-    if Len = ConSettings^.FormatSettings.DateFormatLen then
-    begin
-      Result := RawSQLDateToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.DateFormat),
-        Len, ConSettings^.FormatSettings.DateFormatLen, Failed);
-    end
+    if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
+      Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
     else
-      Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawSQLTimeStampToDateTime(Buffer,
-        PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
-          ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+      Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+        RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
     LastWasNull := Result = 0;
   end;
 end;
@@ -692,15 +685,9 @@ begin
   else
   begin
     if (Buffer+2)^ = ':' then //possible date if Len = 10 then
-      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
-        Len, ConSettings^.FormatSettings.TimeFormatLen, Failed)
+      Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed)
     else
-      if ConSettings^.FormatSettings.DateFormatLen = Len then
-        Result := 0
-      else
-        Result := Frac(RawSQLTimeStampToDateTime(Buffer,
-          PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
-          ConSettings^.FormatSettings.DateTimeFormatLen, Failed));
+      Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
     LastWasNull := Result = 0;
   end;
 end;
@@ -730,16 +717,12 @@ begin
     Result := 0
   else
     if (Buffer+2)^ = ':' then
-      Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
-        Len, ConSettings^.FormatSettings.TimeFormatLen, Failed)
+      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
     else
-      if (ConSettings^.FormatSettings.DateTimeFormatLen - Len) <= 4 then
-          Result := RawSQLTimeStampToDateTime(Buffer,
-            PAnsiChar(ConSettings^.FormatSettings.DateTimeFormat), Len,
-            ConSettings^.FormatSettings.DateTimeFormatLen, Failed)
+      if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
+        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
       else
-        Result := RawSQLTimeToDateTime(Buffer, PAnsiChar(ConSettings^.FormatSettings.TimeFormat),
-          Len, ConSettings^.FormatSettings.TimeFormatLen, Failed);
+        Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
   LastWasNull := Result = 0;
 end;
 

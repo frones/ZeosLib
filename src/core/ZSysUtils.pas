@@ -355,14 +355,22 @@ function VarToBytes(const Value: Variant): TByteDynArray;
 function AnsiSQLDateToDateTime(const Value: string): TDateTime;
 
 {**
-  Converts Ansi SQL Date (DateFormat)
-  to TDateTime
+  Converts Ansi SQL Date (DateFormat) to TDateTime
   @param Value a date and time string.
   @param Dateformat a Pointer to DateFormat. May be nil;
   @return a decoded TDateTime value.
 }
-function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
-  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+
+{**
+  Converts Unicode SQL Date (DateFormat) to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a Pointer to DateFormat. May be nil;
+  @return a decoded TDateTime value.
+}
+function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
@@ -370,8 +378,17 @@ function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
   @param Timeformat a TimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLTimeToDateTime(Value, TimeFormat: PAnsichar;
-  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+
+{**
+  Converts Unicode SQL Time (hh:nn:ss or hh:mm:nn.zzz or TimeFormat) to TDateTime
+  @param Value a date and time string.
+  @param Timeformat a TimeFormat.
+  @return a decoded TDateTime value.
+}
+function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts Ansi SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
@@ -380,8 +397,18 @@ function RawSQLTimeToDateTime(Value, TimeFormat: PAnsichar;
   @param DateTimeformat a DateTimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+
+{**
+  Converts Unicode SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
+    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
+  @param Value a date and time string.
+  @param DateTimeformat a DateTimeFormat.
+  @return a decoded TDateTime value.
+}
+function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 
 {**
   Converts DateTime value to a rawbyteString
@@ -391,7 +418,7 @@ function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
@@ -402,7 +429,7 @@ function DateTimeToRawSQLDate(const Value: TDateTime;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
@@ -412,7 +439,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   @return a formated RawByteString with Time-Format pattern.
 }
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
@@ -422,7 +449,7 @@ function DateTimeToRawSQLTime(const Value: TDateTime;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
@@ -432,7 +459,7 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 
 {**
@@ -442,7 +469,7 @@ function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
@@ -554,6 +581,7 @@ function PosEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; o
 function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString; overload;
 function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
 function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
+function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
 
 //function ValUnicodeInt(const s: ZWideString; var code: Integer): Integer;
 
@@ -1494,18 +1522,19 @@ end;
   @param Dateformat a Pointer to DateFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLDateToDateTime(Value, DateFormat: PAnsichar;
-  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLDateToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 var
   Year, Month: Int64;
   Day: Word;
+  DateFormat: PAnsiChar;
 
   procedure TryExtractDateFromFormat;
   var
     I, Code: Integer;
   begin
     Result := 0;
-    Failed := FormatLen = 0;
+    Failed := ZFormatSettings.DateFormatLen = 0;
     if not Failed then
       if DateFormat = 'FLOAT' then
       begin
@@ -1516,7 +1545,7 @@ var
       else
       begin
         Year := 0; Month := 0; Day := 0;
-        for i := 0 to FormatLen-1 do
+        for i := 0 to ZFormatSettings.DateFormatLen-1 do
         begin
           case DateFormat^ of
             'Y', 'y':
@@ -1623,15 +1652,30 @@ var
     end;
   end;
 begin
+  DateFormat := PAnsiChar(ZFormatSettings.DateFormat);
   Failed := False;
   if Value = '' then
     Result := 0
   else
   begin
     TryExtractDateFromFormat;
-    if Failed and ( FormatLen = 0 )then
+    if Failed and ( ZFormatSettings.DateFormatLen = 0 )then
       TryExtractDateFromUnknownSize;
   end;
+end;
+
+{**
+  Converts Ansi SQL Date (DateFormat)
+  to TDateTime
+  @param Value a date and time string.
+  @param Dateformat a Pointer to DateFormat.
+  @return a decoded TDateTime value.
+}
+function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+begin
+  Result := RawSQLDateToDateTime(PAnsiChar(PosEmptyUnicodeStringToASCII7(Value, ValLen)),
+    ValLen, ZFormatSettings, Failed);
 end;
 
 {**
@@ -1641,20 +1685,20 @@ end;
   @param Timeformat a TimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLTimeToDateTime(Value, TimeFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLTimeToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 var
-
   Hour, Minute: Int64;
   Sec, MSec: Word;
   Code: Integer;
+  TimeFormat: PAnsiChar;
 
   procedure TryExtractTimeFromFormat;
   var
     I: Cardinal;
   begin
     Result := 0;
-    Failed := ( FormatLen = 0 );
+    Failed := ( ZFormatSettings.TimeFormatLen = 0 );
     if not Failed then
     begin
       if TimeFormat = 'FLOAT' then
@@ -1666,10 +1710,10 @@ var
       else
       begin
         Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-        Failed := ( FormatLen = 0 ) and not (ValLen <= FormatLen-4);
+        Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= ZFormatSettings.TimeFormatLen-4);
         if not Failed then
         begin
-          for i := 0 to FormatLen-1 do
+          for i := 0 to ZFormatSettings.TimeFormatLen-1 do
           begin
             case TimeFormat^ of
               'H', 'h':
@@ -1803,14 +1847,28 @@ var
   end;
 begin
   Failed := False;
+  TimeFormat := PAnsiChar(ZFormatSettings.TimeFormat);
   if ValLen = 0 then
     Result := 0
   else
   begin
     TryExtractTimeFromFormat; //prefered. Adapts to given Format-Mask
-    if Failed and ( FormatLen = 0 )then
+    if Failed and ( ZFormatSettings.TimeFormatLen = 0 )then
       TryExtractTimeFromVaryingSize;
   end;
+end;
+
+{**
+  Converts Unicode SQL Time (TimeFormat) to TDateTime
+  @param Value a date and time string.
+  @param Timeformat a TimeFormat.
+  @return a decoded TDateTime value.
+}
+function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+begin
+  Result := RawSQLTimeToDateTime(PAnsiChar(PosEmptyUnicodeStringToAscii7(Value, ValLen)),
+    ValLen, ZFormatSettings, Failed);
 end;
 
 {**
@@ -1820,12 +1878,13 @@ end;
   @param DateTimeformat a DateTimeFormat.
   @return a decoded TDateTime value.
 }
-function RawSQLTimeStampToDateTime(Value, TimeStampFormat: PAnsiChar;
-  const ValLen, FormatLen: Cardinal; var Failed: Boolean): TDateTime;
+function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 var
   Year, Month: Int64;
   Day, Hour, Minute, Sec, MSec: Word;
   YPos, MPos, HPos, Code: Integer;
+  TimeStampFormat: PAnsiChar;
 
   procedure CheckFailAndEncode;
   begin
@@ -1856,7 +1915,7 @@ var
   var
     I: Cardinal;
   begin
-    Failed := FormatLen = 0;
+    Failed := ZFormatSettings.DateTimeFormatLen = 0;
     if not Failed then
       if TimeStampFormat = 'FLOAT' then
       begin
@@ -1866,12 +1925,12 @@ var
       end
       else
       begin
-        Failed  := (ValLen <= FormatLen-4);
+        Failed  := (ValLen <= ZFormatSettings.DateTimeFormatLen-4);
         if not Failed then
         begin
           Year := 0; Month := 0; Day := 0;
           Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-          for i := 0 to FormatLen -1 do
+          for i := 0 to ZFormatSettings.DateTimeFormatLen -1 do
           begin
             case TimeStampFormat^ of
               'Y', 'y':
@@ -2115,12 +2174,28 @@ begin
   Result := 0;
   if ValLen > 0 then
   begin
+    TimeStampFormat := PAnsiChar(ZFormatSettings.DateTimeFormat);
     TryExtractTimeStampFromFormat;
     if Failed then
       TryExtractTimeStampFromVaryingSize;
   end;
 end;
 
+{**
+  Converts Unicode SQL DateTime/TimeStamp (yyyy-mm-dd hh:nn:ss or
+    yyyy-mm-dd hh:mm:nn.zzz or DateTimeFormat) to TDateTime
+  @param Value a date and time string.
+  @param DateTimeformat a DateTimeFormat.
+  @return a decoded TDateTime value.
+}
+function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
+  ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
+begin
+  Result := RawSQLTimeStampToDateTime(PAnsiChar(PosEmptyUnicodeStringToAscii7(Value, ValLen)),
+    ValLen, ZFormatSettings, Failed)
+end;
+
+{$IFNDEF FPC}
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
   const Len: Cardinal; var Value: ZWideString; out P: PWideChar); overload;
 var SLen: Cardinal;
@@ -2156,6 +2231,7 @@ begin
     P := PWideChar(Value);
   end;
 end;
+{$ENDIF}
 
 procedure PrepareDateTimeStr(const Quoted: Boolean;
   const Suffix: RawByteString; const Len: Cardinal; var Value: RawByteString; out P: PAnsiChar); overload;
@@ -2199,7 +2275,7 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToRawSQLDate(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
@@ -2252,7 +2328,7 @@ end;
   @return a formated RawByteString with DateFormat pattern.
 }
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
@@ -2313,7 +2389,7 @@ end;
 }
 {$WARNINGS OFF} //suppress D2007 Waring for undefined result
 function DateTimeToRawSQLTime(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
@@ -2373,7 +2449,7 @@ end;
   @return a formated WideString/UnicodeString with Time-Format pattern.
 }
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
@@ -2441,7 +2517,7 @@ end;
   @return a formated RawByteString in TimeStamp-Format pattern.
 }
 function DateTimeToRawSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: RawByteString = ''): RawByteString;
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
@@ -2523,7 +2599,7 @@ end;
   @return a formated WideString/UnicodeString in TimeStamp-Format pattern.
 }
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
-  ConFormatSettings: TConFormatSettings;
+  ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
@@ -3029,7 +3105,7 @@ begin
   l := Length(Src); //temp l speeds x2
   SetString(result,nil,l);
   for i := 0 to l-1 do
-    PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+    PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -3043,7 +3119,7 @@ begin
   {$IFDEF UNICODE}
   System.SetString(result, nil, Len);
   for i := 0 to Len-1 do
-    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
   System.SetString(Result, PAnsiChar(Src), Len);
   {$ENDIF}
@@ -3058,7 +3134,7 @@ begin
   L := System.Length(Src); //temp l speeds x2
   System.SetString(Result,nil, l);
   for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -3093,7 +3169,7 @@ begin
   begin
     SetString(result,nil,l);
     for i := 0 to l-1 do
-      PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+      PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
   {$ELSE}
   Result := Src;
@@ -3112,7 +3188,7 @@ begin
   begin
     System.SetString(result, nil, Len);
     for i := 0 to Len-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
   {$ELSE}
   System.SetString(Result, PAnsiChar(Src), Len);
@@ -3132,7 +3208,7 @@ begin
   begin
     System.SetString(Result,nil, l);
     for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   end;
   {$ELSE}
   Result := Src;
@@ -3153,7 +3229,7 @@ begin
   begin
     System.SetString(Result,nil, l);
     for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   end;
   {$ELSE}
   Result := Src;
@@ -3166,7 +3242,7 @@ begin
   l := Length(Src); //temp l speeds x2
   SetString(result,nil,l);
   for i := 0 to l-1 do
-    PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+    PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
 end;
 
 function NotEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString;
@@ -3174,7 +3250,7 @@ var i: integer;
 begin
   System.SetString(result, nil, Len);
   for i := 0 to Len-1 do
-    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
 end;
 
 function NotEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString;
@@ -3188,7 +3264,7 @@ begin
   System.SetString(Result,nil, l);
   {$ENDIF}
   for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
 end;
 
 
@@ -3216,7 +3292,7 @@ begin
   begin
     SetString(result,nil,l);
     for i := 0 to l-1 do
-      PWordArray(result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+      PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
 
@@ -3229,7 +3305,7 @@ begin
   begin
     System.SetString(result, nil, Len);
     for i := 0 to Len-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..254 equals to widechars
+      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
 
@@ -3248,7 +3324,7 @@ begin
     System.SetString(Result,nil, l);
     {$ENDIF}
     for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
 
@@ -3268,7 +3344,25 @@ begin
     System.SetString(Result,nil, l);
     {$ENDIF}
     for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..254 equals to widechars
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
+  end;
+end;
+
+function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
+var i: integer;
+begin
+  if Len = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+    Result := ''
+  else
+  begin
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    Result := ''; //speeds up SetLength x2
+    SetLength(Result, len);
+    {$ELSE}
+    System.SetString(Result,nil, len);
+    {$ENDIF}
+    for i := 0 to len-1 do
+      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
 

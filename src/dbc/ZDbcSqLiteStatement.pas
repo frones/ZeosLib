@@ -353,13 +353,13 @@ begin
           AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stDate:
         Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.FormatSettings, True);
+          ConSettings^.WriteFormatSettings, True);
       stTime:
         Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.FormatSettings, True);
+          ConSettings^.WriteFormatSettings, True);
       stTimestamp:
         Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.FormatSettings, True);
+          ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
@@ -503,19 +503,19 @@ begin
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
           {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
             DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.FormatSettings, False))),
+            ConSettings^.WriteFormatSettings, False))),
               -1, @BindingDestructor);
         stTime:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
           {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
             DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-              ConSettings^.FormatSettings, False))),
+              ConSettings^.WriteFormatSettings, False))),
                 8, @BindingDestructor);
         stTimestamp:
           FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
           {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
             DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-              ConSettings^.FormatSettings, False))),
+              ConSettings^.WriteFormatSettings, False))),
               -1, @BindingDestructor);
         { works equal but selects from data which was written in string format
           won't match! e.G. TestQuery etc. On the other hand-> i've prepared

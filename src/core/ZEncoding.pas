@@ -390,13 +390,7 @@ function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings; ToCP: Word): RawByteString; overload;
 
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  WasDecoded: Boolean; ConSettings: PZConSettings): RawByteString; overload;
-
 function GetValidatedAnsiString(const Ansi: RawByteString;
-  ConSettings: PZConSettings; const FromDB: Boolean): RawByteString; overload;
-
-function GetValidatedAnsiString(const Uni: ZWideString;
   ConSettings: PZConSettings; const FromDB: Boolean): RawByteString; overload;
 
 {**
@@ -1913,33 +1907,6 @@ begin
     Result := ''; // not done yet  and not needed. Makes the compiler happy
 end;
 
-function GetValidatedAnsiString(const Uni: ZWideString;
-  ConSettings: PZConSettings; const FromDB: Boolean): RawByteString;
-begin
-  if FromDB then
-    {$IFDEF WITH_LCONVENCODING}
-    Result := UTF8Encode(Uni)
-    {$ELSE}
-    Result := ZUnicodeToRaw(Uni, ConSettings^.CTRL_CP)
-    {$ENDIF}
-  else
-    Result := ''; // not done yet  and not needed. Makes the compiler happy
-end;
-
-function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
-  WasDecoded: Boolean; ConSettings: PZConSettings): RawByteString;
-var
-  US: ZWideString;
-begin
-  if WasDecoded then
-  begin
-    SetLength(US, Size div 2);
-    System.Move(Buffer^, PWideChar(US)^, Size);
-    Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP);
-  end
-  else
-    Result := GetValidatedAnsiStringFromBuffer(Buffer, Size, ConSettings);
-end;
 {**
   GetValidatedUnicodeStream the incoming Stream for his given Memory and
   returns a valid Unicode/Widestring Stream

@@ -473,8 +473,12 @@ begin
     DetermineMSDateFormat;
   end
   else
-    ConSettings.FormatSettings.DateFormat := 'yyyy/mm/dd';
-  SetDateTimeFormatProperties;
+  begin
+    ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
+    ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
+  end;
+  CopyZFormatSettings(ConSettings^.ReadFormatSettings, ConSettings^.WriteFormatSettings);
+  SetDateTimeFormatProperties(False);
 
   InternalSetTransactionIsolation(GetTransactionIsolation);
   ReStartTransactionSupport;
@@ -639,18 +643,17 @@ begin
   Stmt := CreateRegularStatement(Self.Info);
   RS := Stmt.ExecuteQuery('SELECT dateformat FROM syslanguages WHERE name = @@LANGUAGE');
   if RS.Next then
-    ConSettings^.FormatSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(1));
+    ConSettings^.ReadFormatSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(1));
   RS := nil;
   Stmt.close;
   Stmt := nil;
-  if ConSettings^.FormatSettings.DateFormat = 'dmy' then
-    ConSettings^.FormatSettings.DateFormat := 'dd/mm/yyyy'
-  else if ConSettings^.FormatSettings.DateFormat = 'mdy' then
-    ConSettings^.FormatSettings.DateFormat := 'mm/dd/yyyy'
+  if ConSettings^.ReadFormatSettings.DateFormat = 'dmy' then
+    ConSettings^.ReadFormatSettings.DateFormat := 'DD/MM/YYYY'
+  else if ConSettings^.ReadFormatSettings.DateFormat = 'mdy' then
+    ConSettings^.ReadFormatSettings.DateFormat := 'MM/DD/YYYY'
   else
-    ConSettings^.FormatSettings.DateFormat := 'yyyy/mm/dd';
-  ConSettings^.FormatSettings.DateTimeFormat := ConSettings^.FormatSettings.DateFormat+' hh:nn:ss:zzz';
-  SetDateTimeFormatProperties;
+    ConSettings^.ReadFormatSettings.DateFormat := 'YYYY/MM/DD';
+  ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' HH:NN:SS:ZZZ';
 end;
 
 function TZDBLibConnection.DetermineMSServerCollation: String;
