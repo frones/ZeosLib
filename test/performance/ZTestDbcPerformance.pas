@@ -542,7 +542,7 @@ var
 begin
   inherited;
   Count := Min(MaxPerformanceLobSize, GetRecordCount);
-  FAsciiStream := TStringStream.Create(RawByteString(RandomStr(Count)));
+  FAsciiStream := TStringStream.Create(ZAnsiString(RandomStr(Count)));
   FUnicodeStream := WideStringStream(ZWideString(RandomStr(Count)));
   FBinaryStream := TMemoryStream.Create;
   Bts := RandomBts(Count);
