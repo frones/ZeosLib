@@ -237,7 +237,7 @@ type
   TZResultSQLDA = class (TZSQLDA, IZResultSQLDA)
   private
     FRawTemp: RawByteString;
-    function DecodeString(const IsText: Boolean; const Index: Word): RawByteString; {$IFDEF WITH_INLINE} inline; {$ENDIF}
+    function DecodeString(const IsText: Boolean; const Index: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_URW1135_ISSUE)} inline; {$IFEND}
   protected
     FDefaults: array of Variant;
   public

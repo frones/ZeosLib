@@ -124,6 +124,7 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_INLINE_ANSISTRLCOMP}
+  {$DEFINE WITH_URW1135_ISSUE} //D2009 can't compile for some strange reasons with inlined code.
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
