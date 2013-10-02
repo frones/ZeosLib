@@ -492,7 +492,7 @@ type
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
-  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
+  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset, ZEncoding
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
@@ -534,35 +534,53 @@ end;
 
 function RowAccessorStringFieldGetterFromUTF8(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  UTF8: UTF8String;
+  L: Integer;
 begin
-  {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(Buffer,
-    PAnsiChar(RowAccessor.GetUTF8String(ColumnIndex, Result)),
-    RowAccessor.GetColumnDataSize(ColumnIndex));
+  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(Length(UTF8), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(UTF8[1], Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
 end;
 
 function RowAccessorStringFieldGetterFromAnsi(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  L: Integer;
+  Ansi: AnsiString;
 begin
-  {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(Buffer,
-    PAnsiChar(RowAccessor.GetAnsiString(ColumnIndex, Result)),
-    RowAccessor.GetColumnDataSize(ColumnIndex));
-end;
-
-function RowAccessorStringFieldGetterFromRaw(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
-begin
-  {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(Buffer,
-    PAnsiChar(RowAccessor.GetRawByteString(ColumnIndex, Result)),
-    RowAccessor.GetColumnDataSize(ColumnIndex));
+  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(Length(Ansi), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(Ansi[1], Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
 end;
 
 function RowAccessorStringFieldGetterFromAnsiRec(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
 var
   Ansirec: TZAnsiRec;
+  L: Integer;
 begin
   Ansirec := RowAccessor.GetAnsiRec(ColumnIndex, Result);
-  System.Move(AnsiRec.P^, Buffer^, AnsiRec.Len+1);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(AnsiRec.Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(AnsiRec.P^, Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
 end;
 
 { EZDatabaseError }
@@ -750,11 +768,14 @@ begin
   end
   else
   begin
-    FStringFieldGetter := @RowAccessorStringFieldGetterFromRaw;
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsiRec;
     FStringFieldSetter := @RowAccessorStringFieldSetterFromRaw;
   end;
   {$ELSE}
-  FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
+  if ZCompatibleCodePages(ZDefaultSystemCodePage, Connection.DbcConnection.GetConSettings^.ClientCodePage^.CP) then
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsiRec
+  else
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
   FStringFieldSetter := @RowAccessorStringFieldSetterFromAnsi;
   {$ENDIF}
 end;
@@ -1383,14 +1404,11 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
     {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
-  ColumnIndex: Integer;
+  ColumnIndex, Len: Integer;
   RowBuffer: PZRowBuffer;
   ACurrency: Currency;
   Bts: TByteDynArray;
   WideRec: TZWideRec;
-  {$IFNDEF WITH_WIDESTRUTILS}
-  WS: WideString;
-  {$ENDIF}
 begin
   if GetActiveBuffer(RowBuffer) then
   begin
@@ -1424,15 +1442,14 @@ begin
         ftWideString:
           begin
             WideRec := RowAccessor.GetWideRec(ColumnIndex, Result);
-            System.Move(WideRec.P^, PWideChar(Buffer)^, (WideRec.Len+1)*2);
-            (*{$IFDEF WITH_WIDESTRUTILS}
-            WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
-            {$ELSE}
-            //FPC: WideStrings are COM managed fields
-            WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
-            //include null terminator in copy
-            System.Move(PWideChar(WS)^,buffer^,(length(WS)+1)*sizeof(WideChar));
-            {$ENDIF}             *)
+            if Result then
+              PWideChar(Buffer)^ := WideChar(#0)
+            else
+            begin //instead of WStrCopy()
+              Len := Min(WideRec.Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+              System.Move(WideRec.P^, PWideChar(Buffer)^, Len*2);
+              (PWideChar(Buffer)+Len)^ := WideChar(#0);
+            end;
             Result := not Result;
           end;
         {$IFDEF WITH_FTGUID}
