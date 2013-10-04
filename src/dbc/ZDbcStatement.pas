@@ -365,25 +365,30 @@ type
   TZEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FExecStatement: IZStatement;
-    FCachedQuery: TStrings;
+    FCachedQueryRaw: TRawDynArray;
+    FCachedQueryUni: TUnicodeDynArray;
+    FNCharDetected: TBooleanDynArray;
+    FParamIndex: TBooleanDynArray;
     FLastStatement: IZStatement;
     procedure SetLastStatement(LastStatement: IZStatement);
   protected
     FNeedNCharDetection: Boolean;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
-    property CachedQuery: TStrings read FCachedQuery write FCachedQuery;
+    property CachedQueryRaw: TRawDynArray read FCachedQueryRaw write FCachedQueryRaw;
+    property CachedQueryUni: TUnicodeDynArray read FCachedQueryUni write FCachedQueryUni;
+    property IsParamIndex: TBooleanDynArray read FParamIndex write FParamIndex;
+    property IsNCharIndex: TBooleanDynArray read FNCharDetected write FNCharDetected;
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
 
     function CreateExecStatement: IZStatement; virtual; abstract;
     function PrepareWideSQLParam(ParamIndex: Integer): ZWideString; virtual;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; virtual;
     function GetExecStatement: IZStatement;
-    function TokenizeSQLQuery: TStrings;
+    procedure TokenizeSQLQueryRaw;
+    procedure TokenizeSQLQueryUni;
     function PrepareWideSQLQuery: ZWideString; virtual;
     function PrepareAnsiSQLQuery: RawByteString; virtual;
   public
-    destructor Destroy; override;
-
     procedure Close; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
@@ -2666,16 +2671,6 @@ end;
 { TZEmulatedPreparedStatement }
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZEmulatedPreparedStatement.Destroy;
-begin
-  if FCachedQuery <> nil then
-    FCachedQuery.Free;
-  inherited Destroy;
-end;
-
-{**
   Sets a reference to the last statement.
   @param LastStatement the last statement interface.
 }
@@ -2726,51 +2721,24 @@ end;
   Splits a SQL query into a list of sections.
   @returns a list of splitted sections.
 }
-function TZEmulatedPreparedStatement.TokenizeSQLQuery: TStrings;
-var
-  I: Integer;
-  Tokens: TStrings;
-  Temp: string;
+procedure TZEmulatedPreparedStatement.TokenizeSQLQueryRaw;
 begin
-  if FCachedQuery = nil then
-  begin
-    FCachedQuery := TStringList.Create;
-    if Pos('?', SSQL) > 0 then
-    begin
-      Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SSQL, [toUnifyWhitespaces]);
-      try
-        Temp := '';
-        for I := 0 to Tokens.Count - 1 do
-        begin
-          if Tokens[I] = '?' then
-          begin
-            if FNeedNCharDetection and not (Temp = '') then
-                FCachedQuery.Add(Temp)
-            else
-              FCachedQuery.Add(Temp);
-            FCachedQuery.AddObject('?', Self);
-            Temp := '';
-          end
-          else
-            if FNeedNCharDetection and (Tokens[I] = 'N') and (Tokens.Count > i) and (Tokens[i+1] = '?') then
-            begin
-              FCachedQuery.Add(Temp);
-              FCachedQuery.Add(Tokens[i]);
-              Temp := '';
-            end
-            else
-              Temp := Temp + Tokens[I];
-        end;
-        if Temp <> '' then
-          FCachedQuery.Add(Temp);
-      finally
-        Tokens.Free;
-      end;
-    end
-    else
-      FCachedQuery.Add(SSQL);
-  end;
-  Result := FCachedQuery;
+  if Length(FCachedQueryRaw) = 0 then
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected,
+      FNeedNCharDetection);
+end;
+
+{**
+  Splits a SQL query into a list of sections.
+  @returns a list of splitted sections.
+}
+procedure TZEmulatedPreparedStatement.TokenizeSQLQueryUni;
+begin
+  if Length(FCachedQueryUni) = 0 then
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SSQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected,
+      FNeedNCharDetection);
 end;
 
 {**
@@ -2781,22 +2749,25 @@ function TZEmulatedPreparedStatement.PrepareWideSQLQuery: ZWideString;
 var
   I: Integer;
   ParamIndex: Integer;
-  Tokens: TStrings;
 begin
   ParamIndex := 0;
   Result := '';
-  Tokens := TokenizeSQLQuery;
+  TokenizeSQLQueryUni;
 
-  for I := 0 to Tokens.Count - 1 do
+  for I := 0 to High(FCachedQueryUni) do
   begin
-    if Tokens[I] = '?' then
+    if FParamIndex[i] then
     begin
       Result := Result + PrepareWideSQLParam(ParamIndex);
       Inc(ParamIndex);
     end
     else
-      Result := Result + ZPlainUnicodeString(Tokens[I]);
+      Result := Result + FCachedQueryUni[I];
   end;
+  {$IFDEF UNICODE}
+  if ConSettings^.AutoEncode then
+     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
 end;
 
 {**
@@ -2807,24 +2778,23 @@ function TZEmulatedPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
 var
   I: Integer;
   ParamIndex: Integer;
-  Tokens: TStrings;
 begin
   ParamIndex := 0;
   Result := '';
-  Tokens := TokenizeSQLQuery;
+  TokenizeSQLQueryRaw;
 
-  for I := 0 to Tokens.Count - 1 do
+  for I := 0 to High(FCachedQueryRaw) do
   begin
-    if Tokens[I] = '?' then
+    if FParamIndex[i] then
     begin
       Result := Result + PrepareAnsiSQLParam(ParamIndex);
       Inc(ParamIndex);
     end
     else
-      Result := Result + ZPlainString(Tokens[I]);
+      Result := Result + FCachedQueryRaw[I];
   end;
   {$IFNDEF UNICODE}
-  if GetConnection.AutoEncodeStrings then
+  if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
   {$ENDIF}
 end;

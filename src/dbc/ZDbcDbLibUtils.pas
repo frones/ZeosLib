@@ -372,7 +372,6 @@ function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
 var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  CLob: IZCLob;
 begin
   TempBytes := nil;
 
@@ -418,40 +417,40 @@ begin
             if ParamType = stBinaryStream then
               Result := GetSQLHexAnsiString(PAnsiChar(TempBlob.GetBuffer), TempBlob.Length, True)
             else
-              if Supports(TempBlob, IZClob, Clob) then
+              if TempBlob.IsClob then
                 if NChar then
                 {$IFDEF WITH_UNITANSISTRINGS}
                   Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
-                    Clob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
                 else
                   Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
-                    CLob.GetAnsiString, #0, '', [rfReplaceAll]), '''')
+                    TempBlob.GetAnsiString, #0, '', [rfReplaceAll]), '''')
                 {$ELSE}
                   Result := AnsiQuotedStr(StringReplace(
-                    Clob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
+                    TempBlob.GetPAnsiChar(zCP_UTF8), #0, '', [rfReplaceAll]), '''')
                 else
                   Result := AnsiQuotedStr(StringReplace(
-                    CLob.GetAnsiString, #0, '', [rfReplaceAll]), '''')
+                    TempBlob.GetAnsiString, #0, '', [rfReplaceAll]), '''')
                 {$ENDIF}
-            else
-              if NChar then
-              {$IFDEF WITH_UNITANSISTRINGS}
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
               else
-                Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
-              {$ELSE}
-                Result := AnsiQuotedStr(StringReplace(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
-              else
-                Result := AnsiQuotedStr(StringReplace(
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
-              {$ENDIF}
+                if NChar then
+                {$IFDEF WITH_UNITANSISTRINGS}
+                  Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
+                else
+                  Result := AnsiStrings.AnsiQuotedStr(AnsiStrings.StringReplace(
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
+                {$ELSE}
+                  Result := AnsiQuotedStr(StringReplace(
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings, zCP_UTF8), #0, '', [rfReplaceAll]), '''')
+                else
+                  Result := AnsiQuotedStr(StringReplace(
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings), #0, '', [rfReplaceAll]), '''')
+                {$ENDIF}
           end
           else
             Result := 'NULL';

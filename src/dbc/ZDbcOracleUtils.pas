@@ -475,7 +475,6 @@ var
   TempDate: TDateTime;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  Clob: IZClob;
   WriteTempBlob: IZOracleBlob;
   TempStream: TStream;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
@@ -547,16 +546,16 @@ begin
           end;
         SQLT_CLOB:
           try
-            if Supports(DefVarManager.GetAsInterface(Values[I]), IZCLob, Clob) then
+            TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
+            if TempBlob.IsClob then
               WriteTempBlob := TZOracleClob.Create(PlainDriver,
-                Clob.GetPAnsiChar(Connection.GetConSettings^.ClientCodePage^.CP),
-                Clob.Length, OracleConnection.GetConnectionHandle,
+                TempBlob.GetPAnsiChar(Connection.GetConSettings^.ClientCodePage^.CP),
+                TempBlob.Length, OracleConnection.GetConnectionHandle,
                 OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
                 PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, Connection.GetConSettings,
                 Connection.GetConSettings^.ClientCodePage^.CP)
             else
             begin
-              TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
               if not TempBlob.IsEmpty then
                 TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, Connection.GetConSettings))

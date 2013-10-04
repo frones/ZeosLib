@@ -56,7 +56,7 @@ interface
 {$I ZBugReport.inc}
 
 uses
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  Classes, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
   ZDataset, ZDbcIntfs, ZSqlTestCase,
   {$IFNDEF LINUX}
     {$IFDEF WITH_VCL_PREFIX}
@@ -86,7 +86,7 @@ type
 implementation
 
 uses
-  Variants, ZTestCase;
+  Variants;
 
 { ZTestCompSQLiteBugReport }
 

@@ -1048,7 +1048,6 @@ procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
 var
   I: Integer;
   TempBlob: IZBlob;
-  Clob: IZClob;
   TempStream: TStream;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
@@ -1112,8 +1111,8 @@ begin
           if not TempBlob.IsEmpty then
           begin
             if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then
-              if Supports(TempBlob, IZClob, Clob) then
-                TempStream := Clob.GetRawByteStream
+              if TempBlob.IsClob then
+                TempStream := TempBlob.GetRawByteStream
               else
                 TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings))
             else

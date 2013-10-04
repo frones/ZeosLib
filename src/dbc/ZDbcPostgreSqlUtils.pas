@@ -750,8 +750,6 @@ function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVaria
   DateTimePrefix, QuotedNumbers: Boolean; ConSettings: PZConSettings): RawByteString;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
-  TempStream: TStream;
   WriteTempBlob: IZPostgreSQLOidBlob;
 begin
   if DefVarManager.IsNull(Value)  then
@@ -808,29 +806,26 @@ begin
               stBinaryStream:
                 if (Connection.IsOidAsBlob) or oidasblob then
                 begin
-                  TempStream := TempBlob.GetStream;
                   try
                     WriteTempBlob := TZPostgreSQLOidBlob.Create(PlainDriver, nil, 0,
                       Connection.GetConnectionHandle, 0, ChunkSize);
-                    WriteTempBlob.SetStream(TempStream);
-                    WriteTempBlob.WriteLob;
+                    WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
                     Result := IntToRaw(WriteTempBlob.GetBlobOid);
                   finally
                     WriteTempBlob := nil;
-                    TempStream.Free;
                   end;
                 end
                 else
                   Result := Connection.EncodeBinary(TempBlob.GetString);
               stAsciiStream, stUnicodeStream:
-                if Supports(TempBlob, IZClob, Clob) then
+                if TempBlob.IsClob then
                   if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then
                     Result := PlainDriver.EscapeString(
-                      Connection.GetConnectionHandle, Clob.GetRawByteString,
+                      Connection.GetConnectionHandle, TempBlob.GetRawByteString,
                         ConSettings, True)
                   else
                     Result := ZDbcPostgreSqlUtils.PGEscapeString(
-                      Connection.GetConnectionHandle, Clob.GetRawByteString,
+                      Connection.GetConnectionHandle, TempBlob.GetRawByteString,
                         ConSettings, True)
                 else
                   if PlainDriver.SupportsStringEscaping(Connection.ClientSettingsChanged) then

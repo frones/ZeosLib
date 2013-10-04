@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, Contnrs,
-  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata;
+  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -154,6 +154,14 @@ function GetFieldSize(const SQLType: TZSQLType;ConSettings: PZConSettings;
     SizeInBytes: Boolean = False): Integer;
 
 function WideStringStream(const AString: WideString): TStream;
+
+function TokenizeSQLQueryRaw(const SQL: String; Const ConSettings: PZConSettings;
+  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  const NeedNCharDetection: Boolean = False): TRawDynArray;
+function TokenizeSQLQueryUni(const SQL: String; Const ConSettings: PZConSettings;
+  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
+
 
 implementation
 
@@ -424,29 +432,38 @@ end;
 }
 
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
-var
-  HexVal: AnsiString;
+var RawTemp: RawByteString;
 begin
-  SetLength(HexVal,Len * 2 );
-  BinToHex(Value, PAnsiChar(HexVal), Len);
-
-  if ODBC then
-    Result := '0x'+ZWideString(HexVal)
-  else
-    Result := 'x'#39+ZWideString(HexVal)+#39;
+  RawTemp := GetSQLHexAnsiString(Value, Len, ODBC);
+  Result := NotEmptyASCII7ToUnicodeString(RawTemp);
 end;
 
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
-var
-  HexVal: RawByteString;
+var P: PAnsiChar;
 begin
-  SetLength(HexVal,Len * 2 );
-  BinToHex(Value, PAnsiChar(HexVal), Len);
-
+  Result := ''; //init speeds setlength x2
   if ODBC then
-    Result := '0x'+HexVal
+  begin
+    SetLength(Result,(Len * 2)+2);
+    P := PAnsiChar(Result);
+    P^ := '0';
+    Inc(P);
+    P^ := 'x';
+    Inc(P);
+    BinToHex(Value, P, Len);
+  end
   else
-    Result := 'x'#39+HexVal+#39;
+  begin
+    SetLength(Result, (Len * 2)+3);
+    P := PAnsiChar(Result);
+    P^ := 'x';
+    Inc(P);
+    P^ := #39;
+    Inc(P);
+    BinToHex(Value, P, Len);
+    Inc(P, Len*2);
+    P^ := #39;
+  end;
 end;
 
 function GetSQLHexString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): String;
@@ -515,6 +532,133 @@ begin
   Result.Write(PWideChar(AString)^, Length(AString)*2);
   Result.Position := 0;
 end;
+
+{**
+  Splits a SQL query into a list of sections.
+  @returns a list of splitted sections.
+}
+function TokenizeSQLQueryRaw(const SQL: String; Const ConSettings: PZConSettings;
+  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  const NeedNCharDetection: Boolean = False): TRawDynArray;
+var
+  I: Integer;
+  Tokens: TStrings;
+  Temp: RawByteString;
+  NextIsNChar: Boolean;
+  procedure Add(const Value: RawByteString; const Param: Boolean = False);
+  begin
+    SetLength(Result, Length(Result)+1);
+    Result[High(Result)] := Value;
+    SetLength(IsParamIndex, Length(Result));
+    IsParamIndex[High(IsParamIndex)] := Param;
+    SetLength(IsNCharIndex, Length(Result));
+    if Param and NextIsNChar then
+    begin
+      IsNCharIndex[High(IsNCharIndex)] := True;
+      NextIsNChar := False;
+    end
+    else
+      IsNCharIndex[High(IsNCharIndex)] := False;
+  end;
+begin
+  if (Pos('?', SQL) > 0) then
+  begin
+    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+    try
+      Temp := '';
+      NextIsNChar := False;
+      for I := 0 to Tokens.Count - 1 do
+      begin
+        if Tokens[I] = '?' then
+        begin
+          Add(Temp);
+          Add('?', True);
+          Temp := '';
+        end
+        else
+          if NeedNCharDetection and (Tokens[I] = 'N') and (Tokens.Count > i) and (Tokens[i+1] = '?') then
+          begin
+            Add(Temp);
+            Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+            Temp := '';
+            NextIsNChar := True;
+          end
+          else
+            Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+      end;
+      if Temp <> '' then
+        Add(Temp);
+    finally
+      Tokens.Free;
+    end;
+  end
+  else
+    Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+end;
+
+{**
+  Splits a SQL query into a list of sections.
+  @returns a list of splitted sections.
+}
+function TokenizeSQLQueryUni(const SQL: String; Const ConSettings: PZConSettings;
+  const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
+var
+  I: Integer;
+  Tokens: TStrings;
+  Temp: ZWideString;
+  NextIsNChar: Boolean;
+  procedure Add(const Value: ZWideString; Const Param: Boolean = False);
+  begin
+    SetLength(Result, Length(Result)+1);
+    Result[High(Result)] := Value;
+    SetLength(IsParamIndex, Length(Result));
+    IsParamIndex[High(IsParamIndex)] := Param;
+    SetLength(IsNCharIndex, Length(Result));
+    if Param and NextIsNChar then
+    begin
+      IsNCharIndex[High(IsNCharIndex)] := True;
+      NextIsNChar := False;
+    end
+    else
+      IsNCharIndex[High(IsNCharIndex)] := False;
+  end;
+begin
+  if (Pos('?', SQL) > 0) then
+  begin
+    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
+    try
+      Temp := '';
+      NextIsNChar := False;
+      for I := 0 to Tokens.Count - 1 do
+      begin
+        if Tokens[I] = '?' then
+        begin
+          Add(Temp);
+          Add('?', True);
+          Temp := '';
+        end
+        else
+          if NeedNCharDetection and (Tokens[I] = 'N') and (Tokens.Count > i) and (Tokens[i+1] = '?') then
+          begin
+            Add(Temp);
+            Add(ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i], ConSettings^.CTRL_CP));
+            Temp := '';
+            NextIsNChar := True;
+          end
+          else
+            Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i], ConSettings^.CTRL_CP);
+      end;
+      if Temp <> '' then
+        Add(Temp);
+    finally
+      Tokens.Free;
+    end;
+  end
+  else
+    Add(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings^.CTRL_CP));
+end;
+
 
 end.
 

@@ -350,12 +350,32 @@ type
     function GetBytes: TByteDynArray; virtual;
     procedure SetBytes(const Value: TByteDynArray); virtual;
     function GetStream: TStream; virtual;
-    procedure SetStream(Value: TStream); virtual;
+    procedure SetStream(Value: TStream); overload; virtual;
     function GetBuffer: Pointer; virtual;
-    procedure SetBuffer(Buffer: Pointer; Length: Int64);
+    procedure SetBuffer(Buffer: Pointer; Length: Integer);
 
     procedure Clear; virtual;
     function Clone: IZBlob; virtual;
+    function IsClob: Boolean; virtual;
+
+    {clob operations}
+    function GetRawByteString: RawByteString; virtual;
+    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word); virtual;
+    function GetAnsiString: AnsiString; virtual;
+    procedure SetAnsiString(Const Value: AnsiString); virtual;
+    function GetUTF8String: UTF8String; virtual;
+    procedure SetUTF8String(Const Value: UTF8String); virtual;
+    procedure SetUnicodeString(const Value: ZWideString); virtual;
+    function GetUnicodeString: ZWideString; virtual;
+    procedure SetStream(Value: TStream; CodePage: Word); overload; virtual;
+    function GetRawByteStream: TStream; virtual;
+    function GetAnsiStream: TStream; virtual;
+    function GetUTF8Stream: TStream; virtual;
+    function GetUnicodeStream: TStream; virtual;
+    function GetPAnsiChar(const CodePage: Word): PAnsiChar; virtual;
+    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal); virtual;
+    function GetPWideChar: PWideChar; virtual;
+    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal); virtual;
   end;
 
   TZAbstractUnCachedBlob = class(TZAbstractBlob)
@@ -375,7 +395,7 @@ type
   end;
 
   {** Implements external or internal clob wrapper object. }
-  TZAbstractCLob = class(TZAbstractBlob, IZCLob)
+  TZAbstractCLob = class(TZAbstractBlob)
   private
     FCurrentCodePage: Word;
   protected
@@ -398,27 +418,28 @@ type
 
     function Length: Integer; override;
     function GetString: RawByteString; override; //deprected;
-    function GetRawByteString: RawByteString; virtual;
-    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
-    function GetAnsiString: AnsiString; virtual;
-    procedure SetAnsiString(Const Value: AnsiString);
-    function GetUTF8String: UTF8String; virtual;
-    procedure SetUTF8String(Const Value: UTF8String);
-    function GetUnicodeString: ZWideString; virtual;
-    procedure SetUnicodeString(const Value: ZWideString);
+    function GetRawByteString: RawByteString; override;
+    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word); override;
+    function GetAnsiString: AnsiString; override;
+    procedure SetAnsiString(Const Value: AnsiString); override;
+    function GetUTF8String: UTF8String; override;
+    procedure SetUTF8String(Const Value: UTF8String); override;
+    function GetUnicodeString: ZWideString; override;
+    procedure SetUnicodeString(const Value: ZWideString); override;
     function GetStream: TStream; override;
     procedure SetStream(Value: TStream); overload; override;
-    procedure SetStream(Value: TStream; CodePage: Word); reintroduce; overload;
-    function GetRawByteStream: TStream; virtual;
-    function GetAnsiStream: TStream; virtual;
-    function GetUTF8Stream: TStream; virtual;
-    function GetUnicodeStream: TStream; virtual;
-    function GetPAnsiChar(const CodePage: Word): PAnsiChar; virtual;
-    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
-    function GetPWideChar: PWideChar; virtual;
-    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
+    procedure SetStream(Value: TStream; CodePage: Word); reintroduce; overload; override;
+    function GetRawByteStream: TStream; override;
+    function GetAnsiStream: TStream; override;
+    function GetUTF8Stream: TStream; override;
+    function GetUnicodeStream: TStream; override;
+    function GetPAnsiChar(const CodePage: Word): PAnsiChar; override;
+    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal); override;
+    function GetPWideChar: PWideChar; override;
+    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal); override;
 
     function Clone: IZBLob; override;
+    function IsClob: Boolean; override;
   end;
 
   TZAbstractUnCachedCLob = Class(TZAbstractCLob)
@@ -1118,7 +1139,6 @@ end;
 function TZAbstractResultSet.GetAsciiStream(ColumnIndex: Integer): TStream;
 var
   Blob: IZBlob;
-  CLob: IZCLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
@@ -1128,8 +1148,8 @@ begin
   begin
     Blob := GetBlob(ColumnIndex);
     if Blob <> nil then
-      if Supports(Blob, IZCLob, Clob) then
-        Result := Clob.GetStream
+      if Blob.IsClob then
+        Result := Blob.GetStream
       else
         if Self.GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream then
           Result := TStringStream.Create(GetValidatedAnsiStringFromBuffer(Blob.GetBuffer,
@@ -1167,7 +1187,6 @@ end;
 function TZAbstractResultSet.GetUnicodeStream(ColumnIndex: Integer): TStream;
 var
   Blob: IZBlob;
-  CLob: IZCLob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
@@ -1177,8 +1196,8 @@ begin
   begin
     Blob := GetBlob(ColumnIndex);
     if Blob <> nil then
-      if Supports(Blob, IZClob, Clob) then
-        Result := Clob.GetUnicodeStream
+      if Blob.IsClob then
+        Result := Blob.GetUnicodeStream
       else
         Result := Blob.GetStream;
   end;
@@ -3296,6 +3315,96 @@ begin
   Result := TZAbstractBlob.CreateWithData(FBlobData, FBlobSize);
 end;
 
+function TZAbstractBlob.IsClob: Boolean;
+begin
+  Result := False;
+end;
+
+function TZAbstractBlob.GetRawByteString: RawByteString;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetRawByteString(Const Value: RawByteString; const CodePage: Word);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetAnsiString: AnsiString;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetAnsiString(Const Value: AnsiString);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetUTF8String: UTF8String;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetUTF8String(Const Value: UTF8String);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetUnicodeString(const Value: ZWideString);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetUnicodeString: ZWideString;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetStream(Value: TStream; CodePage: Word);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetRawByteStream: TStream;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetAnsiStream: TStream;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetUTF8Stream: TStream;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetUnicodeStream: TStream;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+function TZAbstractBlob.GetPWideChar: PWideChar;
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
+procedure TZAbstractBlob.SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+
 {**
   Checks if this blob has an empty content.
   @return <code>True</code> if this blob is empty.
@@ -3431,7 +3540,7 @@ begin
   Result := FBlobData;
 end;
 
-procedure TZAbstractBlob.SetBuffer(Buffer: Pointer; Length: Int64);
+procedure TZAbstractBlob.SetBuffer(Buffer: Pointer; Length: Integer);
 begin
   FBlobSize := Length;
   if Assigned(Buffer) and ( Length > 0 ) then
@@ -3559,7 +3668,7 @@ begin
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
       ReallocMem(FBlobData, FBlobSize);
-      System.Move(Buffer^, FBlobData^, FBlobSize);
+      System.Move(Buffer^, FBlobData^, FBlobSize-1);
       (PAnsiChar(FBlobData)+Len)^ := #0; //set leading terminator
     end;
   end;
@@ -3574,7 +3683,7 @@ begin
     FBlobSize := (Len +1) *2;
     FCurrentCodePage := zCP_UTF16;
     ReallocMem(FBlobData, FBlobSize);
-    System.Move(Buffer^, FBlobData^, FBlobSize);
+    System.Move(Buffer^, FBlobData^, FBlobSize-2);
     (PWideChar(FBlobData)+Len)^ := WideChar(#0); //set leading terminator
   end;
 end;
@@ -3653,19 +3762,32 @@ end;
   @return a RawByteString which contains the stored data - client encoded.
 }
 function TZAbstractCLob.GetRawByteString: RawByteString;
+var
+  WideRec: TZWideRec;
+  AnsiRec: TZAnsiRec;
 begin
-  if FBlobSize = 0 then
-    Result := ''
-  else
+  Result := '';
+  if FBlobSize > 0 then
     if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
-      Result := PAnsiChar(FBlobData)
+    begin
+      SetLength(Result, FBlobSize-1);
+      System.Move(FBlobData^, PAnsiChar(Result)^, FBlobSize-1);
+    end
     else
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
-        Result := FConSettings^.ConvFuncs.ZUnicodeToRaw(PWideChar(FBlobData), FConSettings^.ClientCodePage^.CP)
+      begin
+        WideRec.P := FBlobData;
+        WideRec.Len := (FBlobSize div 2) -1;
+        Result := ZWideRecToRaw(WideRec, FConSettings^.ClientCodePage^.CP)
+      end
       else
-        Result := ZUnicodeToRaw(ZRawToUnicode(PAnsiChar(FBlobData), FCurrentCodePage), FConSettings^.ClientCodePage^.CP);
+      begin
+        AnsiRec.P := FBlobData;
+        AnsiRec.Len := FBlobSize-1;
+        Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage), FConSettings^.ClientCodePage^.CP);
+      end;
       InternalSetRawByteString(Result, FConSettings^.ClientCodePage^.CP);
     end;
 end;
@@ -3677,19 +3799,32 @@ begin
 end;
 
 function TZAbstractCLob.GetAnsiString: AnsiString;
+var
+  AnsiRec: TZAnsiRec;
+  UniTemp: ZWideString;
 begin
-  if FBlobSize = 0 then
-    Result := ''
-  else
+  Result := '';
+  if FBlobSize > 0 then
     if ZCompatibleCodePages(FCurrentCodePage, ZDefaultSystemCodePage) then
-      Result := PAnsiChar(FBlobData)
+    begin
+      SetLength(Result, FBlobSize-1);
+      System.Move(FBlobData^, PAnsiChar(Result)^, FBlobSize-1);
+    end
     else
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
-        Result := AnsiString(PWideChar(FBlobData))
+      begin
+        SetLength(UniTemp, (FBlobSize div 2) -1);
+        System.Move(FBlobData^, PWideChar(UniTemp)^, FBlobSize - 2);
+        Result := AnsiString(UniTemp)
+      end
       else
-        Result := AnsiString(ZRawToUnicode(PAnsiChar(FBlobData), ZDefaultSystemCodePage));
+      begin
+        AnsiRec.P := FBlobData;
+        AnsiRec.Len := FBlobSize-1;
+        Result := AnsiString(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage));
+      end;
       InternalSetAnsiString(Result);
     end;
 end;
@@ -3701,10 +3836,11 @@ begin
 end;
 
 function TZAbstractCLob.GetUTF8String: UTF8String;
+var
+  AnsiRec: TZAnsiRec;
 begin
-  if FBlobSize = 0 then
-    Result := ''
-  else
+  Result := '';
+  if FBlobSize > 0 then
     if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
       Result := PAnsiChar(FBlobData)
     else
@@ -3717,11 +3853,15 @@ begin
         Result := UTF8Encode(ZWideString(PWideChar(FBlobData)))
         {$ENDIF}
       else
+      begin
+        AnsiRec.P := FBlobData;
+        AnsiRec.Len := FBlobSize-1;
         {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(ZRawToUnicode(PAnsiChar(FBlobData), FCurrentCodePage));
+        Result := UTF8String(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage));
         {$ELSE}
-        Result := UTF8Encode(ZRawToUnicode(PAnsiChar(FBlobData), FCurrentCodePage));
+        Result := UTF8Encode(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage));
         {$ENDIF}
+      end;
       InternalSetUTF8String(Result);
     end;
 end;
@@ -3733,19 +3873,22 @@ begin
 end;
 
 function TZAbstractCLob.GetUnicodeString: ZWideString;
+var
+  AnsiRec: TZAnsiRec;
 begin
-  if FBlobSize = 0 then
-    Result := ''
-  else
+  Result := '';
+  if FBlobSize > 0 then
     if (FCurrentCodePage = zCP_UTF16) or
        (FCurrentCodePage = zCP_UTF16BE) then
-      Result := PWideChar(FBlobData)
+    begin
+      SetLength(Result, (FBlobSize div 2) -1);
+      System.Move(FBlobData^, PWideChar(Result)^, FBlobSize - 2);
+    end
     else
     begin
-      if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8 ) then
-        Result := UTF8ToString(PAnsiChar(FBlobData))
-      else
-        Result := ZRawToUnicode(PAnsiChar(FBlobData), FCurrentCodePage);
+      AnsiRec.P := FBlobData;
+      AnsiRec.Len := FBlobSize -1;
+      Result := ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage);
       InternalSetUnicodeString(Result);
     end;
 end;
@@ -3806,8 +3949,8 @@ begin
   begin
     if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
     begin
-      Result.Size := Length;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+      Result.Size := FBlobSize-1;
+      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-1)
     end
     else
     begin
@@ -3840,28 +3983,26 @@ begin
 end;
 
 function TZAbstractCLob.GetUTF8Stream: TStream;
-var Tmp: UTF8String;
 begin
   Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
   begin
     if ZCompatibleCodePages(FCurrentCodePage, zCP_UTF8) then
     begin
-      Result.Size := Length;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+      Result.Size := FBlobSize -1;
+      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize -1)
     end
     else
     begin
-      Tmp := GetUTF8String;
+      GetUTF8String;
       Result.Size := Length;
-      System.Move(Tmp[1], TMemoryStream(Result).Memory^, Length)
+      System.Move(FBlobData, TMemoryStream(Result).Memory^, FBlobSize -1)
     end;
   end;
   Result.Position := 0;
 end;
 
 function TZAbstractCLob.GetUnicodeStream: TStream;
-var Tmp: ZWideString;
 begin
   Result := TMemoryStream.Create;
   if (FBlobSize > 0) and Assigned(FBlobData) then
@@ -3869,34 +4010,45 @@ begin
     if (FCurrentCodePage = zCP_UTF16) or
        (FCurrentCodePage = zCP_UTF16) then
     begin
-      Result.Size := Length;
-      System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
+      Result.Size := FBlobSize -2;
+      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
     end
     else
     begin
-      Tmp := GetUnicodeString;
-      Result.Size := Length;
-      System.Move(Tmp[1], TMemoryStream(Result).Memory^, Length)
+      GetUnicodeString;
+      Result.Size := FBlobSize-2;
+      System.Move(FBlobData^, TMemoryStream(Result).Memory^, FBlobSize-2)
     end;
   end;
   Result.Position := 0;
 end;
 
 function TZAbstractCLob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
-var TempRaw: RawByteString;
+var
+  TempRaw: RawByteString;
+  WideRec: TZWideRec;
+  AnsiRec: TZAnsiRec;
 begin
   if FBlobData = nil then
     Result := nil
   else
     if ZCompatibleCodePages(FCurrentCodePage, CodePage) then
-      Result := PAnsiChar(FBlobData)
+      Result := FBlobData
     else
     begin
       if (FCurrentCodePage = zCP_UTF16) or
          (FCurrentCodePage = zCP_UTF16BE) then
-        TempRaw := ZUnicodeToRaw(PWideChar(FBlobData), CodePage)
+      begin
+        WideRec.P := FBlobData;
+        WideRec.Len := (FBlobSize div 2) -1;
+        TempRaw := ZWideRecToRaw(WideRec, CodePage);
+      end
       else
-        TempRaw := ZUniCodeToRaw(ZRawToUnicode(PAnsiChar(FBlobData), FCurrentCodePage), CodePage);
+      begin
+        AnsiRec.P := FBlobData;
+        AnsiRec.Len := FBlobSize -1;
+        TempRaw := ZUniCodeToRaw(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage), CodePage);
+      end;
       InternalSetRawByteString(TempRaw, CodePage);
       Result := PAnsiChar(FBlobData);
     end;
@@ -3910,7 +4062,6 @@ begin
 end;
 
 function TZAbstractCLob.GetPWideChar: PWideChar;
-var Temp: ZWideString;
 begin
   if FBlobData = nil then
     Result := nil
@@ -3920,7 +4071,7 @@ begin
       Result := PWideChar(FBlobData)
     else
     begin
-      Temp := GetUnicodeString;
+      GetUnicodeString;
       Result := PWideChar(FBlobData);
     end;
 end;
@@ -3939,9 +4090,14 @@ function TZAbstractCLob.Clone: IZBLob;
 begin
   if (FCurrentCodePage = zCP_UTF16) or
      (FCurrentCodePage = zCP_UTF16BE) then
-    Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize, FConSettings)
+    Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize div 2)-1, FConSettings)
   else
-    Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize, FCurrentCodePage, FConSettings);
+    Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize-1, FCurrentCodePage, FConSettings);
+end;
+
+function TZAbstractCLob.IsClob: Boolean;
+begin
+  Result := True;
 end;
 
 { TZAbstractUnCachedCLob }

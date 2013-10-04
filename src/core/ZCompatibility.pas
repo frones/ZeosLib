@@ -280,6 +280,9 @@ type
     destructor Destroy; override;
   end;
 
+  TRawDynArray = array of RawByteString;
+  TUnicodeDynArray = array of ZWideString;
+
   {$IFDEF WITH_LCONVENCODING}
   function NoConvert(const s: string): string;
   {$ENDIF}

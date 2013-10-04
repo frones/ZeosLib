@@ -942,10 +942,11 @@ begin
                 RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
               stBigDecimal:
                 RowAccessor.SetBigDecimal(Current.ColumnIndex, ResultSet.GetBigDecimal(I));
-              stString, stAsciiStream:
-                RowAccessor.SetString(Current.ColumnIndex, ResultSet.GetString(I));
-              stUnicodeString, stUnicodeStream:
-                RowAccessor.SetUnicodeString(Current.ColumnIndex, ResultSet.GetUnicodeString(I));
+              stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+                if FConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+                  RowAccessor.SetRawByteString(Current.ColumnIndex, ResultSet.GetRawByteString(I))
+                else
+                  RowAccessor.SetUnicodeString(Current.ColumnIndex, ResultSet.GetUnicodeString(I));
               stBytes, stGUID:
                 RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
               stDate:
@@ -953,8 +954,7 @@ begin
               stTime:
                 RowAccessor.SetTime(Current.ColumnIndex, ResultSet.GetTime(I));
               stTimestamp:
-                RowAccessor.SetTimestamp(Current.ColumnIndex,
-                  ResultSet.GetTimestamp(I));
+                RowAccessor.SetTimestamp(Current.ColumnIndex, ResultSet.GetTimestamp(I));
             end;
 
             if ResultSet.WasNull then

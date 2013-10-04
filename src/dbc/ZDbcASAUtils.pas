@@ -2196,7 +2196,6 @@ var
   i: Integer;
   TempBlob: IZBlob;
   TempStream: TStream;
-  CLob: IZClob;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create( SInvalidInputParameterCount);
@@ -2250,8 +2249,8 @@ begin
             if not TempBlob.IsEmpty then
             begin
               if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) then
-                if Supports(TempBlob, IZClob, Clob) then
-                  TempStream := Clob.GetRawByteStream
+                if TempBlob.IsClob then
+                  TempStream := TempBlob.GetRawByteStream
                 else
                   TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(
                     TempBlob.GetBuffer, TempBlob.Length, ConSettings))

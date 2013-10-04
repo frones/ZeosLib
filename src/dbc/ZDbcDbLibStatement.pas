@@ -438,21 +438,20 @@ function TZDBLibPreparedStatementEmulated.PrepareAnsiSQLQuery: RawByteString;
 var
   I: Integer;
   ParamIndex: Integer;
-  Tokens: TStrings;
 begin
   ParamIndex := 0;
   Result := '';
-  Tokens := TokenizeSQLQuery;
+  TokenizeSQLQueryRaw;
 
-  for I := 0 to Tokens.Count - 1 do
+  for I := 0 to High(CachedQueryRaw) do
   begin
-    if Tokens[I] = '?' then
+    if IsParamIndex[i] then
     begin
-      Result := Result + PrepareAnsiSQLParam(ParamIndex, ((i > 0) and (Tokens[i-1] = 'N')));
+      Result := Result + PrepareAnsiSQLParam(ParamIndex, IsNCharIndex[i]);
       Inc(ParamIndex);
     end
     else
-      Result := Result + ZPlainString(Tokens[I]);
+      Result := Result + CachedQueryRaw[I];
   end;
   {$IFNDEF UNICODE}
   if GetConnection.AutoEncodeStrings then

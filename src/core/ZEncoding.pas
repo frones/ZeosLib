@@ -1602,12 +1602,24 @@ begin
   Result := AnsiString(Src);
   {$ELSE}
   Result := '';
-  If DetectUTF8Encoding(PAnsiChar(Src)) in [etUSASCII, etAnsi] then
-    ZSetString(PAnsiChar(Src), Result)
-  else
-  begin
-    Tmp := UTF8ToString(PAnsiChar(Src));
-    Result := AnsiString(Tmp);
+  case DetectUTF8Encoding(PAnsiChar(Src)) of
+    etUSASCII: Result := Src;
+    etAnsi:
+      if ZDefaultSystemCodePage = zCP_UTF8 then
+      begin
+        Tmp := ZWideString(Src);
+        Result := ZWideString(Src);
+      end
+      else
+        Result := Src;
+    else
+      if ZDefaultSystemCodePage = zCP_UTF8 then
+        Result := Src
+      else
+      begin
+        Tmp := UTF8ToString(PAnsiChar(Src));
+        Result := AnsiString(Tmp);
+      end;
   end;
   {$ENDIF}
 end;

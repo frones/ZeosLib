@@ -55,7 +55,8 @@ interface
 
 {$I ZComponent.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, DB, ZCompatibility;
+uses Classes, SysUtils {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}, DB,
+  ZDbcIntfs, ZCompatibility;
 
 type
   {** Implements a class for blobs stream. }
@@ -65,6 +66,9 @@ type
     FBlob: IZBlob;
     FMode: TBlobStreamMode;
     FConSettings: PZConSettings;
+    {$IFDEF WITH_WIDEMEMO}
+    function TestEncoding: TZCharEncoding;
+    {$ENDIF}
   protected
     property Blob: IZBlob read FBlob write FBlob;
     property Mode: TBlobStreamMode read FMode write FMode;
@@ -76,7 +80,7 @@ type
 
 implementation
 
-uses ZEncoding;
+uses ZFastCode, ZSysUtils;
 
 { TZBlobStream }
 
@@ -114,13 +118,10 @@ type THackedDataset = class(TDataset);
   Destroys this object and cleanups the memory.
 }
 destructor TZBlobStream.Destroy;
+{$IFDEF WITH_WIDEMEMO}
+Label DataReady;
 var
-  CLob: IZClob;
-  {$IFDEF WITH_WIDEMEMO}
-  TempStream: TStream;
-  {$ENDIF}
-  {$IFNDEF UNICODE}
-  TempAnsi: RawByteString;
+  US: ZWideString;
   {$ENDIF}
 begin
   if Mode in [bmWrite, bmReadWrite] then
@@ -130,31 +131,32 @@ begin
     {$IFDEF WITH_WIDEMEMO}
       if FField.DataType = ftWideMemo then
       begin
-        if Supports(Blob, IZCLob, Clob) then
-          Clob.SetPWideChar(Memory, Cardinal(Size) div 2)
-        else
-        begin
-          TempStream := GetValidatedUnicodeStream(Memory, Cardinal(Size),
-            FConSettings, False);
-          Blob.SetStream(TempStream);
-          TempStream.Free;
+        {EH: not happy about this part. TBlobStream.LoadFromFile loads single encoded strings
+        but if the Data is set by a Memo than we've got two-byte encoded strings.
+        So there is NO way around to test this encoding. Acutally i've no idea about a more exact way
+        than going this route...}
+        case TestEncoding of  //testencoding adds two leadin null bytes
+          ceDefault: //us ascii found, use faster conversion
+            US := NotEmptyASCII7ToUnicodeString(Memory, Size-2);
+          ceAnsi, ceUTF16: //We've to start from the premisse we've got a Unicode string in there
+            begin
+              if Blob.IsClob then
+                Blob.SetPWideChar(Memory, (Size div 2)-1)
+              else
+                Blob.SetBuffer(PWideChar(US), Size-2);
+              goto DataReady; //this avoids extra moving to UnicodeString and stream
+            end;
+          ceUTF8: US := UTF8ToString(PAnsiChar(Memory));
         end;
+        if Blob.isClob then
+          Blob.SetUnicodeString(US)
+        else
+          Blob.SetBuffer(PWideChar(US), Length(US)*2);
+        DataReady:
+        SetSize(Size-2);
       end
       else
     {$ENDIF}
-      if (FField.DataType = ftMemo) and Supports(Blob, IZCLob, Clob) then
-        {$IFDEF UNICODE}
-        Clob.SetPAnsiChar(Memory, ZDefaultSystemCodePage, Size)
-        {$ELSE}
-        if FConSettings^.AutoEncode then
-        begin
-          TempAnsi := GetValidatedAnsiStringFromBuffer(Memory, Size, FConSettings, FConSettings^.CTRL_CP);
-          Clob.SetRawByteString(TempAnsi, FConSettings^.CTRL_CP);
-        end
-        else
-          Clob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size)
-        {$ENDIF}
-      else
         Blob.SetStream(Self)
     end
     else
@@ -168,6 +170,40 @@ begin
   end;
   inherited Destroy;
 end;
+
+{$IFDEF WITH_WIDEMEMO}
+function TZBlobStream.TestEncoding: TZCharEncoding;
+begin
+  Result := ceDefault;
+  Self.SetSize(Size+2);
+  (PWideChar(Memory)+(Size div 2)-1)^ := WideChar(#0);
+  {EgonHugeist:
+    Step one: Findout, wat's comming in! To avoid User-Bugs as good as possible
+      it is possible that a PAnsiChar OR a PWideChar was written into
+      the Stream!!!  And these chars could be trunced with changing the
+      Stream.Size.
+      I know this can lead to pain with two byte ansi chars, but what else can i do?
+    step two: detect the encoding }
+
+  if ( ZFastCode.StrLen(PAnsiChar(Memory)) < Size-2 ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
+    result := ceUTF16
+  else
+    if FConSettings.AutoEncode then
+      case DetectUTF8Encoding(PAnsichar(Memory)) of
+        etUSASCII: Result := ceDefault; //Exact!
+        etAnsi:
+          { Sure this isn't right in all cases!
+            Two/four byte WideChars causing the same result!
+            Leads to pain! Is there a way to get a better test?
+            I've to start from the premise the function which calls this func
+            should decide wether ansi or unicode}
+          Result := ceAnsi;
+        etUTF8: Result := ceUTF8; //Exact!
+      end
+    else
+      Result := ceDefault;
+end;
+{$ENDIF}
 
 end.
 

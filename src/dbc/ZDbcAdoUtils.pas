@@ -483,7 +483,6 @@ procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
 var
   S: Integer;
   B: IZBlob;
-  Clob: IZClob;
   V: Variant;
   T: Integer;
   P: ZPlainAdo.Parameter;
@@ -501,9 +500,9 @@ begin
     else
       case SQLType of
         stAsciiStream, stUnicodeStream:
-          if Supports(B, IZClob, Clob) then
+          if B.IsClob then
           begin
-            DefVarManager.SetAsUnicodeString(RetValue, Clob.GetUnicodeString);
+            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
             TmpSQLType := stUnicodeString;
           end
           else
@@ -519,8 +518,8 @@ begin
             end
             else
             begin
-              Clob := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), zCP_UTF16, Connection.GetConSettings);
-              DefVarManager.SetAsUnicodeString(RetValue, Clob.GetUnicodeString);
+              B := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), zCP_UTF16, Connection.GetConSettings);
+              DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
               TmpSQLType := stUnicodeString;
             end;
           end;

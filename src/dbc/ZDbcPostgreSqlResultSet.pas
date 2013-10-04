@@ -109,6 +109,7 @@ type
     ['{BDFB6B80-477D-4CB1-9508-9541FEA6CD72}']
     function GetBlobOid: Oid;
     procedure WriteLob;
+    procedure WriteBuffer(const Buffer: Pointer; const Len: integer);
   end;
 
   {** Implements external blob wrapper object for PostgreSQL. }
@@ -126,6 +127,7 @@ type
     function GetBlobOid: Oid;
     procedure ReadLob; override;
     procedure WriteLob; override;
+    procedure WriteBuffer(const Buffer: Pointer; const Len: integer);
 
     function Clone: IZBlob; override;
   end;
@@ -704,7 +706,6 @@ end;
 function TZPostgreSQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   BlobOid: Oid;
-  Stream: TStream;
   Connection: IZConnection;
   Buffer: PAnsiChar;
   Len: Cardinal;
@@ -732,15 +733,15 @@ begin
   begin
     if not LastWasNull then
     begin
-      Stream := nil;
       try
         case GetMetadata.GetColumnType(ColumnIndex) of
           stBinaryStream:
-              if FCachedLob then
+            if FCachedLob then
             begin
-              Stream := TStringStream.Create(FPlainDriver.DecodeBYTEA(InternalGetString(ColumnIndex),
-                FIs_bytea_output_hex, FHandle));
-              Result := TZAbstractBlob.CreateWithStream(Stream);
+              Len := FPlainDriver.DecodeBYTEA(RowNo-1, ColumnIndex-1,
+                FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer(Buffer));
+              Result := TZAbstractBlob.CreateWithData(Buffer, Len);
+              FreeMem(Buffer, Len);
             end
             else
               Result := TZPostgreSQLUnCachedBLob.Create(FPlainDriver,
@@ -748,19 +749,17 @@ begin
           stAsciiStream, stUnicodeStream:
             begin
               if FCachedLob then
-                Result := TZPostgreSQLUnCachedCLob.Create(FPlainDriver, ConSettings, FQueryHandle, RowNo-1, ColumnIndex-1)
-              else
               begin
                 Buffer := GetBuffer(ColumnIndex, Len);
                 Result := TZAbstractCLob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
-              end;
+              end
+              else
+                Result := TZPostgreSQLUnCachedCLob.Create(FPlainDriver, ConSettings, FQueryHandle, RowNo-1, ColumnIndex-1);
             end;
           else
             Result := TZAbstractBlob.CreateWithStream(nil);
         end;
       finally
-        if Assigned(Stream) then
-          Stream.Free;
       end;
     end
     else
@@ -895,6 +894,11 @@ end;
   Writes the blob by the blob handle.
 }
 procedure TZPostgreSQLOidBlob.WriteLob;
+begin
+  WriteBuffer(BlobData, BlobSize);
+end;
+
+procedure TZPostgreSQLOidBlob.WriteBuffer(const Buffer: Pointer; const Len: integer);
 var
   BlobHandle: Integer;
   Position: Integer;
@@ -919,14 +923,14 @@ begin
   CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Open Large Object',nil);
 
   Position := 0;
-  while Position < BlobSize do
+  while Position < Len do
   begin
-    if (BlobSize - Position) < FChunk_Size then
-      Size := BlobSize - Position
+    if (Len - Position) < FChunk_Size then
+      Size := Len - Position
     else
       Size := FChunk_Size;
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
-      Pointer(NativeUInt(BlobData) + NativeUInt(Position)), Size);
+      Pointer(NativeUInt(Buffer) + NativeUInt(Position)), Size);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
     Inc(Position, Size);
   end;
@@ -934,7 +938,6 @@ begin
   FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
   CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Close Large Object',nil);
 end;
-
 {**
   Clones this blob object.
   @return a clonned blob object.

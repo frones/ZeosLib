@@ -56,9 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging,
-  ZPlainPostgreSqlDriver, ZCompatibility, ZVariant, ZDbcGenericResolver,
-  ZDbcCachedResultSet, ZDbcPostgreSql;
+  Classes, SysUtils, Types,
+  ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
+  ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
+  ZDbcPostgreSql;
 
 type
 
@@ -116,9 +117,10 @@ type
     Foidasblob: Boolean;
     FConnectionHandle: PZPostgreSQLConnect;
     Findeterminate_datatype: Boolean;
-    FCachedQuery: TStrings;
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
   protected
+    FCachedQueryRaw: TRawDynArray;
+    FParamIndex, FNCharDetected: TBooleanDynArray;
     procedure SetPlanNames; virtual; abstract;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
@@ -130,6 +132,8 @@ type
   TZPostgreSQLClassicPreparedStatement = class(TZPostgreSQLPreparedStatement)
   private
     FExecSQL: RawByteString;
+    FCachedQueryRaw: TRawDynArray;
+    FParamIndex, FNCharDetected: TBooleanDynArray;
     function GetAnsiSQLQuery: RawByteString;
   protected
     procedure SetPlanNames; override;
@@ -156,6 +160,7 @@ type
     FPQparamValues: TPQparamValues;
     FPQparamLengths: TPQparamLengths;
     FPQparamFormats: TPQparamFormats;
+    FPQFreeAllocMem: TBooleanDynArray;
     function ExectuteInternal(const SQL: RawByteString; const LogSQL: String;
       const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
   protected
@@ -210,9 +215,9 @@ type
 implementation
 
 uses
-  ZFastCode, Types, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZTokenizer, ZEncoding;
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
+  ZTokenizer, ZEncoding, ZDbcUtils;
 
 { TZPostgreSQLStatement }
 
@@ -494,8 +499,6 @@ end;
 
 destructor TZPostgreSQLPreparedStatement.Destroy;
 begin
-  if Assigned(FCachedQuery) then
-    FReeAndNil(FCachedQuery);
   inherited Destroy;
 end;
 
@@ -527,59 +530,21 @@ function TZPostgreSQLClassicPreparedStatement.GetAnsiSQLQuery;
 var
   I: Integer;
   ParamIndex: Integer;
-  Tokens: TStrings;
-
-  function TokenizeSQLQuery: TStrings;
-  var
-    I: Integer;
-    Tokens: TStrings;
-    Temp: string;
-  begin
-    if FCachedQuery = nil then
-    begin
-      FCachedQuery := TStringList.Create;
-      if Pos('?', SQL) > 0 then
-      begin
-        Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
-        try
-          Temp := '';
-          for I := 0 to Tokens.Count - 1 do
-          begin
-            if Tokens[I] = '?' then
-            begin
-              FCachedQuery.Add(Temp);
-              FCachedQuery.AddObject('?', Self);
-              Temp := '';
-            end
-            else
-              Temp := Temp + Tokens[I];
-          end;
-          if Temp <> '' then
-            FCachedQuery.Add(Temp);
-        finally
-          Tokens.Free;
-        end;
-      end
-      else
-        FCachedQuery.Add(SQL);
-    end;
-    Result := FCachedQuery;
-  end;
 begin
   ParamIndex := 0;
   Result := '';
-  Tokens := TokenizeSQLQuery;
+  if Length(FCachedQueryRaw) = 0 then
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
 
-  for I := 0 to Tokens.Count - 1 do
-  begin
-    if Tokens[I] = '?' then
+  for I := 0 to High(FCachedQueryRaw) do
+    if FParamIndex[I] then
     begin
       Result := Result + PrepareAnsiSQLParam(ParamIndex, True);
       Inc(ParamIndex);
     end
     else
-      Result := Result + ZPlainString(Tokens[I]);
-  end;
+      Result := Result + FCachedQueryRaw[i];
 end;
 
 procedure TZPostgreSQLClassicPreparedStatement.SetPlanNames;
@@ -602,33 +567,35 @@ end;
 procedure TZPostgreSQLClassicPreparedStatement.PrepareInParameters;
 var
   I, N: Integer;
-  Tokens: TStrings;
-  TempSQL: String;
+  TempSQL: RawByteString;
   QueryHandle: PZPostgreSQLResult;
 begin
-  if Pos('?', SQL) > 0 then
+  if Length(FCachedQueryRaw) = 0 then
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
+
+  if Length(FCachedQueryRaw) > 1 then //params found
   begin
-    Tokens := Connection.GetDriver.GetTokenizer.
-      TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
-    try
-      TempSQL := 'PREPARE '+FPlanName+' AS ';
-      N := 0;
-      for I := 0 to Tokens.Count - 1 do
+    TempSQL := 'PREPARE '+NotEmptyStringToAscii7(FPlanName)+' AS ';
+    N := 0;
+    for I := 0 to High(FCachedQueryRaw) do
+    begin
+      if FParamIndex[i] then
       begin
-        if Tokens[I] = '?' then
-        begin
-          Inc(N);
-          TempSQL := TempSQL + '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
-        end else
-          TempSQL := TempSQL + Tokens[I];
-      end;
-    finally
-      Tokens.Free;
+        Inc(N);
+        TempSQL := TempSQL + '$' + IntToRaw(N);
+      end
+      else
+        TempSQL := TempSQL + FCachedQueryRaw[i];
     end;
+    {$IFNDEF UNICODE}
+    if ConSettings^.AutoEncode then
+       TempSQL := GetConnection.GetDriver.GetTokenizer.GetEscapeString(TempSQL);
+    {$ENDIF}
   end
   else Exit;
 
-  {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := TempSQL;
+  ASQL := TempSQL;
   QueryHandle := FPlainDriver.ExecuteQuery(FConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcPrepStmt,
@@ -641,8 +608,7 @@ procedure TZPostgreSQLClassicPreparedStatement.BindInParameters;
 var
   I: Integer;
 begin
-  if Self.InParamCount > 0 then
-  begin
+  if InParamCount > 0 then
     if Prepared then
     begin
       FExecSQL := 'EXECUTE '+FRawPlanName+'(';
@@ -654,10 +620,13 @@ begin
       FExecSQL := FExecSQL+');';
     end
     else
-      FExecSQL := GetAnsiSQLQuery;
-  end
+      FExecSQL := GetAnsiSQLQuery
   else
     FExecSQL := ASQL;
+  {$IFNDEF UNICODE}
+  if GetConnection.AutoEncodeStrings then
+     FExecSQL := GetConnection.GetDriver.GetTokenizer.GetEscapeString(FExecSQL);
+  {$ENDIF}
 end;
 
 procedure TZPostgreSQLClassicPreparedStatement.UnPrepareInParameters;
@@ -898,6 +867,7 @@ begin
     SetLength(FPQparamValues, InParamCount);
     SetLength(FPQparamLengths, InParamCount);
     SetLength(FPQparamFormats, InParamCount);
+    SetLength(FPQFreeAllocMem, InParamCount);
   end;
 end;
 
@@ -905,15 +875,17 @@ procedure TZPostgreSQLCAPIPreparedStatement.BindInParameters;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
-  TempStream: TStream;
   WriteTempBlob: IZPostgreSQLOidBlob;
   ParamIndex: Integer;
   TempBytes: TByteDynArray;
-  CLob: IZClob;
 
   procedure UpdateNull(const Index: Integer);
   begin
-    FreeMem(FPQparamValues[Index]);
+    if FPQFreeAllocMem[Index] then
+    begin
+      FreeMem(FPQparamValues[Index]);
+      FPQFreeAllocMem[Index] := False;
+    end;
 
     FPQparamValues[Index] := nil;
     FPQparamLengths[Index] := 0;
@@ -921,19 +893,39 @@ var
   end;
 
   procedure UpdateString(Value: RawByteString; const Index: Integer);
+  var L: Integer;
   begin
     UpdateNull(Index);
 
-    FPQparamValues[ParamIndex] := AllocMem(Length(Value) + 1);
-    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(FPQparamValues[Index], PAnsiChar(Value));
+    L := Length(Value)+1;
+    FPQparamValues[ParamIndex] := AllocMem(L);
+    if L = 1 then
+      FPQparamValues[Index]^ := #0
+    else
+      System.Move(Value[1], FPQparamValues[Index]^, L);
+    FPQFreeAllocMem[Index] := True;
   end;
 
-  procedure UpdateBinary(Value: Pointer; const Len, Index: Integer);
+  procedure UpdatePAnsiChar(const Value: PAnsiChar; Const Index: Integer);
   begin
     UpdateNull(Index);
 
-    FPQparamValues[Index] := AllocMem(Len);
-    System.Move(Value^, FPQparamValues[Index]^, Len);
+    FPQparamValues[Index] := Value;
+    FPQFreeAllocMem[Index] := False;
+  end;
+
+  procedure UpdateBinary(Value: Pointer; const Len, Index: Integer; Const FreeMem: Boolean);
+  begin
+    UpdateNull(Index);
+
+    if FreeMem then
+    begin
+      FPQparamValues[Index] := AllocMem(Len);
+      System.Move(Value^, FPQparamValues[Index]^, Len);
+    end
+    else
+      FPQparamValues[Index] := Value;
+    FPQFreeAllocMem[Index] := FreeMem;
     FPQparamLengths[Index] := Len;
     FPQparamFormats[Index] := 1;
   end;
@@ -959,7 +951,7 @@ begin
         stBytes:
           begin
             TempBytes := ClientVarManager.GetAsBytes(Value);
-            UpdateBinary(PAnsiChar(TempBytes), Length(TempBytes), ParamIndex);
+            UpdateBinary(PAnsiChar(TempBytes), Length(TempBytes), ParamIndex, True);
           end;
         stString, stUnicodeString:
           UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
@@ -981,23 +973,21 @@ begin
                 stBinaryStream:
                   if Foidasblob then
                   begin
-                    TempStream := TempBlob.GetStream;
                     try
                       WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
                         FConnectionHandle, 0, ChunkSize);
-                      WriteTempBlob.SetStream(TempStream);
-                      WriteTempBlob.WriteLob;
+                      WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
+                      //WriteTempBlob.WriteLob;
                       UpdateString(IntToRaw(WriteTempBlob.GetBlobOid), ParamIndex);
                     finally
                       WriteTempBlob := nil;
-                      TempStream.Free;
                     end;
                   end
                   else
-                    UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex);
+                    UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex, False);
                 stAsciiStream, stUnicodeStream:
-                  if Supports(TempBlob, IZClob, Clob) then
-                    UpdateString(Clob.GetRawByteString, ParamIndex)
+                  if TempBlob.IsClob then
+                    UpdatePAnsiChar(TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), ParamIndex)
                   else
                   begin
                     UpdateString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
@@ -1025,12 +1015,14 @@ begin
   begin
     for i := 0 to InParamCount-1 do
     begin
-      FreeMem(FPQparamValues[i]);
+      if FPQFreeAllocMem[i] then
+        FreeMem(FPQparamValues[i]);
       FPQparamValues[i] := nil;
     end;
     SetLength(FPQparamValues, 0);
     SetLength(FPQparamLengths, 0);
     SetLength(FPQparamFormats, 0);
+    SetLength(FPQFreeAllocMem, 0);
   end;
 end;
 
@@ -1042,15 +1034,16 @@ function TZPostgreSQLCAPIPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
 var
   I: Integer;
   ParamIndex: Integer;
-  Tokens: TStrings;
 begin
   ParamIndex := 0;
   Result := '';
-  Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
 
-  for I := 0 to Tokens.Count - 1 do
-  begin
-    if Tokens[I] = '?' then
+  if Length(FCachedQueryRaw) = 0 then
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
+
+  for I := 0 to High(FCachedQueryRaw) do
+    if FParamIndex[I] then
     begin
       if InParamCount <= ParamIndex then
         raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -1060,8 +1053,7 @@ begin
       Inc(ParamIndex);
     end
     else
-      Result := Result + ZPlainString(Tokens[I]);
-  end;
+      Result := Result + FCachedQueryRaw[i];
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;

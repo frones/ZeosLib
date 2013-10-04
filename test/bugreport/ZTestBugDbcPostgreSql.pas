@@ -633,14 +633,13 @@ procedure TZTestDbcPostgreSQLBugReport.Test_Mantis0000148;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
-  Blob: IZBlob;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
   ///
-  Blob := ResultSet.GetBlob(1);
+  ResultSet.GetBlob(1);
   Statement.Close;
 end;
 

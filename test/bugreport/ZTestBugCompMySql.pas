@@ -59,7 +59,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZDbcIntfs,
   ZSqlTestCase, ZCompatibility, ZTestConsts, ZSqlUpdate, ZSqlProcessor,
   ZAbstractRODataset;
 

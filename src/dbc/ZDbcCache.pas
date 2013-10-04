@@ -683,7 +683,6 @@ var
   Length1, Length2: SmallInt;
   ValuePtr1, ValuePtr2: Pointer;
   Blob1, Blob2: IZBlob;
-  Clob1, Clob2: IZClob;
   BlobEmpty1, BlobEmpty2: Boolean;
   Bts1, Bts2: TByteDynArray;
 
@@ -810,8 +809,8 @@ begin
               if FColumnTypes[ColumnIndex] in [stAsciiStream,stBinaryStream] then
                 Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
               else
-                if Supports(Blob1, IZClob, Clob1) and Supports(Blob2, IZClob, Clob2) then
-                  Result := WideCompareStr(Clob1.GetUnicodeString, Clob2.GetUnicodeString)
+                if Blob1.IsClob and Blob2.IsClob then
+                  Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
                 else
                   Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
           end;
@@ -1077,7 +1076,6 @@ end;
 function TZRowAccessor.GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
 var
   Blob: IZBlob;
-  Clob: IZClob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
@@ -1111,12 +1109,12 @@ begin
       begin
         Blob := GetBlobObject(FBuffer, ColumnIndex);
         if (Blob <> nil) and not Blob.IsEmpty then
-          if Supports(Blob, IZClob, Clob) then
+          if Blob.IsClob then
           begin
             if ConSettings^.AutoEncode then
-              Result.P := Clob.GetPAnsiChar(ConSettings^.CTRL_CP)
+              Result.P := Blob.GetPAnsiChar(ConSettings^.CTRL_CP)
             else
-              Result.P := Clob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+              Result.P := Blob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
             Result.Len := Blob.Length;
           end
           else
@@ -1146,7 +1144,6 @@ end;
 function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
@@ -1167,11 +1164,11 @@ begin
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if Supports(TempBlob, IZClob, Clob) then
+          if TempBlob.IsClob then
             {$IFDEF UNICODE}
-            Result := Clob.GetUnicodeString
+            Result := TempBlob.GetUnicodeString
             {$ELSE}
-            Result := Clob.GetPAnsiChar(ConSettings^.CTRL_CP)
+            Result := TempBlob.GetPAnsiChar(ConSettings^.CTRL_CP)
             {$ENDIF}
           else
             Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
@@ -1207,7 +1204,6 @@ end;
 function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
@@ -1241,8 +1237,8 @@ begin
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if Supports(TempBlob, IZClob, Clob) then
-            Result := Clob.GetAnsiString
+          if TempBlob.IsClob then
+            Result := TempBlob.GetAnsiString
           else
             Result := TempBlob.GetString;
       end;
@@ -1269,7 +1265,6 @@ end;
 function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
@@ -1296,8 +1291,8 @@ begin
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if Supports(TempBlob, IZClob, Clob) then
-            Result := Clob.GetUTF8String
+          if TempBlob.IsClob then
+            Result := TempBlob.GetUTF8String
           else
             Result := TempBlob.GetString;
       end;
@@ -1376,7 +1371,6 @@ function TZRowAccessor.GetWideRec(ColumnIndex: Integer;
   var IsNull: Boolean): TZWideRec;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
   GUID: TGUID;
   Bts: TByteDynArray;
 begin
@@ -1390,10 +1384,10 @@ begin
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if Supports(TempBlob, IZClob, Clob) then
+          if TempBlob.IsClob then
           begin
-            Result.P := Clob.GetPWideChar;
-            Result.Len := Clob.Length;
+            Result.P := TempBlob.GetPWideChar;
+            Result.Len := TempBlob.Length div 2;
             Exit;
           end
           else
@@ -1431,7 +1425,6 @@ function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
   var IsNull: Boolean): ZWideString;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
   GUID: TGUID;
   Bts: TByteDynArray;
 begin
@@ -1445,8 +1438,8 @@ begin
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          if Supports(TempBlob, IZClob, Clob) then
-            Result := Clob.GetUnicodeString
+          if TempBlob.IsClob then
+            Result := TempBlob.GetUnicodeString
           else
             Result := NotEmptyASCII7ToUnicodeString(TempBlob.GetString);
       end;
@@ -1863,7 +1856,6 @@ var
   AnsiBuffer: PAnsiChar;
   WideBuffer: PWideChar;
   TempBlob: IZBlob;
-  Clob: IZClob;
   BufLen: Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1899,14 +1891,14 @@ begin
       stAsciiStream, stUnicodeStream:
         begin
           TempBlob := GetBlob(ColumnIndex, IsNull);
-          if Supports(TempBlob, IZClob, Clob) then
+          if TempBlob.IsClob then
           begin
-            AnsiBuffer := Clob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-            Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, Clob.Length,
+            AnsiBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, TempBlob.Length,
               ConSettings^.ReadFormatSettings, Failed);
             if Failed then
               Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer, Clob.Length,
+                ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer, TempBlob.Length,
                 ConSettings^.ReadFormatSettings, Failed));
           end;
         end;
@@ -1932,7 +1924,6 @@ var
   AnsiBuffer: PAnsiChar;
   WideBuffer: PWideChar;
   TempBlob: IZBlob;
-  CLob: IZClob;
   BufLen: Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1968,14 +1959,14 @@ begin
       stAsciiStream, stUnicodeStream:
         begin
           TempBlob := GetBlob(ColumnIndex, IsNull);
-          if Supports(TempBlob, IZClob, Clob) then
+          if TempBlob.IsClob then
           begin
-            AnsiBuffer := Clob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-            Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, Clob.Length,
+            AnsiBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+            Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, TempBlob.Length,
               ConSettings^.ReadFormatSettings, Failed);
             if Failed then
               Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
-                Clob.Length, ConSettings^.ReadFormatSettings, Failed));
+                TempBlob.Length, ConSettings^.ReadFormatSettings, Failed));
           end;
         end;
     end;
@@ -1999,7 +1990,6 @@ function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): 
 var
   Failed: Boolean;
   TempBlob: IZBlob;
-  CLob: IZClob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -2024,11 +2014,9 @@ begin
       stAsciiStream, stUnicodeStream:
         begin
           TempBlob := GetBlob(ColumnIndex, IsNull);
-          if Supports(TempBlob, IZClob, Clob) then
-          begin
-            Result := ZSysUtils.RawSQLTimeStampToDateTime(Clob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP),
-              Clob.Length, ConSettings^.ReadFormatSettings, Failed);
-          end;
+          if TempBlob.IsClob then
+            Result := ZSysUtils.RawSQLTimeStampToDateTime(TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP),
+              TempBlob.Length, ConSettings^.ReadFormatSettings, Failed);
         end;
     end;
     IsNull := False;
@@ -2100,15 +2088,14 @@ end;
 function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
 var
   TempBlob: IZBlob;
-  Clob: IZClob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
   TempBlob := GetBlobObject(FBuffer, ColumnIndex);
   if (TempBlob <> nil) and not TempBlob.IsEmpty then
-    if Supports(TempBlob, IZClob, Clob) then
-      Result := Clob.GetUnicodeStream
+    if TempBlob.IsClob then
+      Result := TempBlob.GetUnicodeStream
     else
       Result := TempBlob.GetStream
   else
@@ -2682,7 +2669,7 @@ var
   IsNull: Boolean;
   Bts: TByteDynArray;
   GUID: TGUID;
-  Clob: IZClob;
+  TempBlob: IZBlob;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
@@ -2714,14 +2701,17 @@ begin
     stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
     stAsciiStream, stUnicodeStream:
-      if Supports(GetBlob(ColumnIndex, IsNull), IZClob, Clob) then
-        {$IFDEF UNICODE}
-        CLob.SetUnicodeString(Value)
-        {$ELSE}
-        Clob.SetUnicodeString(ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-        {$ENDIF}
-      else
-        GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
+      begin
+        TempBlob := GetBlob(ColumnIndex, IsNull);
+        if TempBlob.IsClob then
+          {$IFDEF UNICODE}
+          TempBlob.SetUnicodeString(Value)
+          {$ELSE}
+          TempBlob.SetUnicodeString(ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, ConSettings^.ClientCodePage^.CP))
+          {$ENDIF}
+        else
+          GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
+      end;
     stBinaryStream:
       GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
   end;
@@ -2745,7 +2735,6 @@ var
   GUID: TGUID;
   Bts: TByteDynArray;
   Blob: IZBlob;
-  Clob: IZClob;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
@@ -2788,8 +2777,8 @@ begin
     stUnicodeStream, stAsciiStream:
       begin
         Blob := GetBlob(ColumnIndex, IsNull);
-        if Supports(Blob, IZClob, Clob) then
-          Clob.SetPAnsiChar(Value.P, ConSettings^.ClientCodePage^.CP, Value.Len)
+        if Blob.IsClob then
+          Blob.SetPAnsiChar(Value.P, ConSettings^.ClientCodePage^.CP, Value.Len)
         else
           Blob.SetBuffer(Value.P, Value.Len);
       end;
@@ -2921,7 +2910,7 @@ var
 {$ENDIF}
   GUID: TGUID;
   Bts: TByteDynArray;
-  CLob: IZClob;
+  Blob: IZBlob;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     {$IFDEF UNICODE}
@@ -2941,10 +2930,13 @@ begin
     stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(PWidechar(Value), 0));
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
-      if Supports(GetBlob(ColumnIndex, IsNull), IZClob, Clob) then
-        Clob.SetUnicodeString(Value)
-      else
-        GetBlob(ColumnIndex, IsNull).SetString(RawByteString(Value));
+      begin
+        Blob := GetBlob(ColumnIndex, IsNull);
+        if Blob.IsClob then
+          Blob.SetUnicodeString(Value)
+        else
+          Blob.SetString(RawByteString(Value));
+      end;
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(Value));
     stGUID:
@@ -3096,18 +3088,17 @@ procedure TZRowAccessor.SetAsciiStream(ColumnIndex: Integer; Value: TStream);
 var
   IsNull: Boolean;
   Blob: IZBlob;
-  Clob: IZClob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stAsciiStream);
 {$ENDIF}
   IsNull := False;
   Blob := GetBlob(ColumnIndex, IsNull);
-  if Supports(Blob, IZClob, Clob) then
+  if Blob.IsClob then
     if ConSettings^.AutoEncode then
-      Clob.SetStream(Value)
+      Blob.SetStream(Value)
     else
-      Clob.SetStream(Value, ConSettings^.ClientCodePage^.CP)
+      Blob.SetStream(Value, ConSettings^.ClientCodePage^.CP)
   else
     GetBlob(ColumnIndex, IsNull).SetStream(Value);
 end;
@@ -3148,16 +3139,17 @@ procedure TZRowAccessor.SetUnicodeStream(ColumnIndex: Integer;
   Value: TStream);
 var
   IsNull: Boolean;
-  Clob: IZClob;
+  Blob: IZBlob;
 begin
   IsNull := False;
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeStream);
 {$ENDIF}
-  if Supports(GetBlob(ColumnIndex, IsNull), IZClob, Clob) then
-    Clob.SetStream(Value, zCP_UTF16)
+  Blob := GetBlob(ColumnIndex, IsNull);
+  if Blob.IsClob then
+    Blob.SetStream(Value, zCP_UTF16)
   else
-    GetBlob(ColumnIndex, IsNull).SetStream(Value);
+    Blob.SetStream(Value);
 end;
 
 {**

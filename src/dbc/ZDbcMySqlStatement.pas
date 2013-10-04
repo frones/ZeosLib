@@ -502,7 +502,6 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  Clob: IZClob;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -549,9 +548,9 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                if Supports(TempBlob, IZClob, Clob) then
+                if TempBlob.IsClob then
                   Result := FPlainDriver.EscapeString(FHandle,
-                    Clob.GetRawByteString, ConSettings, True)
+                    TempBlob.GetRawByteString, ConSettings, True)
                 else
                   Result := FPlainDriver.EscapeString(FHandle,
                     GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
@@ -668,7 +667,6 @@ var
   MyType: TMysqlFieldTypes;
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
-  Clob: IZCLob;
   TempAnsi: RawByteString;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
@@ -693,8 +691,8 @@ begin
               FParamBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
             else
             begin
-              if Supports(TempBlob, IZClob, Clob) then
-                TempAnsi := Clob.GetRawByteString
+              if TempBlob.IsClob then
+                TempAnsi := TempBlob.GetRawByteString
               else
                 TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                           TempBlob.Length, ConSettings);
@@ -1045,7 +1043,6 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  Clob: IZClob;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
@@ -1092,9 +1089,9 @@ begin
               stBinaryStream:
                 Result := GetSQLHexAnsiString(TempBlob.GetBuffer, TempBlob.Length);
               else
-                if Supports(TempBlob, IZClob, Clob) then
+                if TempBlob.IsClob then
                   Result := FPlainDriver.EscapeString(FHandle,
-                    CLob.GetRawByteString, ConSettings, True)
+                    TempBlob.GetRawByteString, ConSettings, True)
                 else
                   Result := FPlainDriver.EscapeString(FHandle,
                     GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,

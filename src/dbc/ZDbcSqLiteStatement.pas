@@ -437,7 +437,6 @@ procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
   Value: TZVariant;
   TempBlob: IZBlob;
-  CLob: IZCLob;
   I, L: Integer;
   TempAnsi: RawByteString;
   Bts: TByteDynArray;
@@ -536,8 +535,8 @@ begin
               end
               else
               begin
-                if Supports(TempBlob, IZClob, CLob) then
-                  TempAnsi := Clob.GetRawByteString
+                if TempBlob.IsClob then
+                  TempAnsi := TempBlob.GetRawByteString
                 else
                   TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, ConSettings);

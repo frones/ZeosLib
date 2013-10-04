@@ -1589,26 +1589,12 @@ end;
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
   ColumnIndex: Integer; Value: TStream);
-var
-  TempStream: TStream;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  {EgonHugeist:
-    Findout, wat's comming in! To avoid User-Bugs
-    it is possible that a PAnsiChar OR a PWideChar was written into
-    the Stream!!!  And these chars could be trunced with changing the
-    Stream.Size.}
-  if Assigned(Value) then
-  begin
-    TempStream := GetValidatedUnicodeStream(TMemoryStream(Value).Memory, Value.Size, ConSettings, False);
-    FRowAccessor.SetUnicodeStream(ColumnIndex, TempStream);
-    TempStream.Free;
-  end
-  else
-    FRowAccessor.SetUnicodeStream(ColumnIndex, nil);
+  FRowAccessor.SetUnicodeStream(ColumnIndex, Value);
 end;
 
 {**

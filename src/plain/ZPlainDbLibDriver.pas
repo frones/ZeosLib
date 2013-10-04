@@ -483,15 +483,15 @@ end;
 procedure AddmMSCodePages(PlainDriver: TZAbstractPlainDriver);
 begin
   { SingleByte }
-  PlainDriver.AddCodePage('WIN1250', 1, ceAnsi, zCP_WIN1250); {Microsoft Windows Codepage 1250 (East European)}
-  PlainDriver.AddCodePage('WIN1251', 2, ceAnsi, zCP_WIN1251); {Microsoft Windows Codepage 1251 (Cyrl)}
-  PlainDriver.AddCodePage('WIN1252', 3, ceAnsi, zCP_WIN1252); {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
-  PlainDriver.AddCodePage('WIN1253', 4, ceAnsi, zCP_WIN1253); {Microsoft Windows Codepage 1253 (Greek)}
-  PlainDriver.AddCodePage('WIN1254', 5, ceAnsi, zCP_WIN1254); {Microsoft Windows Codepage 1254 (Turk)}
-  PlainDriver.AddCodePage('WIN1255', 6, ceAnsi, zCP_WIN1255); {Microsoft Windows Codepage 1255 (Hebrew)}
-  PlainDriver.AddCodePage('WIN1256', 7, ceAnsi, cCP_WIN1256); {Microsoft Windows Codepage 1256 (Arab)}
-  PlainDriver.AddCodePage('WIN1257', 8, ceAnsi, zCP_WIN1257); {Microsoft Windows Codepage 1257 (BaltRim)}
-  PlainDriver.AddCodePage('WIN1258', 9, ceAnsi, zCP_WIN1258); {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
+  PlainDriver.AddCodePage('WIN1250', 1, ceAnsi, zCP_WIN1250, '', 1, False); {Microsoft Windows Codepage 1250 (East European)}
+  PlainDriver.AddCodePage('WIN1251', 2, ceAnsi, zCP_WIN1251, '', 1, False); {Microsoft Windows Codepage 1251 (Cyrl)}
+  PlainDriver.AddCodePage('WIN1252', 3, ceAnsi, zCP_WIN1252, '', 1, False); {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+  PlainDriver.AddCodePage('WIN1253', 4, ceAnsi, zCP_WIN1253, '', 1, False); {Microsoft Windows Codepage 1253 (Greek)}
+  PlainDriver.AddCodePage('WIN1254', 5, ceAnsi, zCP_WIN1254, '', 1, False); {Microsoft Windows Codepage 1254 (Turk)}
+  PlainDriver.AddCodePage('WIN1255', 6, ceAnsi, zCP_WIN1255, '', 1, False); {Microsoft Windows Codepage 1255 (Hebrew)}
+  PlainDriver.AddCodePage('WIN1256', 7, ceAnsi, cCP_WIN1256, '', 1, False); {Microsoft Windows Codepage 1256 (Arab)}
+  PlainDriver.AddCodePage('WIN1257', 8, ceAnsi, zCP_WIN1257, '', 1, False); {Microsoft Windows Codepage 1257 (BaltRim)}
+  PlainDriver.AddCodePage('WIN1258', 9, ceAnsi, zCP_WIN1258, '', 1, False); {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
 end;
 
 { Handle sql server error messages }
