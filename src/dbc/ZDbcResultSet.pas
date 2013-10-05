@@ -3741,7 +3741,7 @@ end;
 
 function TZAbstractCLob.Length: Integer;
 begin
-  if FBlobSize = 0 then
+  if FBlobSize < 1 then
     Result := 0
   else
     if ( FCurrentCodePage = zCP_UTF16 ) or

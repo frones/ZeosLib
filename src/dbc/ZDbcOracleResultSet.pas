@@ -139,6 +139,7 @@ type
     procedure CreateBlob;
     procedure ReadLob;
     procedure WriteLob;
+    procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
   end;
 
   {** Implements external blob wrapper object for Oracle. }
@@ -162,6 +163,7 @@ type
     procedure CreateBlob;
     procedure ReadLob; override;
     procedure WriteLob; override;
+    procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
 
     function Clone: IZBlob; override;
   end;
@@ -188,6 +190,7 @@ type
     procedure CreateBlob;
     procedure ReadLob; override;
     procedure WriteLob; override;
+    procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
 
     function Clone: IZBlob; override;
   end;
@@ -1494,6 +1497,12 @@ begin
     FChunkSize, BlobSize, True, nil);
 end;
 
+procedure TZOracleBlob.WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+begin
+  OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+    FChunkSize, Len, True, nil);
+end;
+
 {**
   Replace data in blob by AData without copy (keep ref of AData)
 }
@@ -1621,6 +1630,16 @@ begin
   GetPAnsiChar(FConSettings^.ClientCodePage^.CP); //convert if required
   OraWriteLob(FPlainDriver, BlobData, FContextHandle, FErrorHandle, FLobLocator,
     FChunkSize, BlobSize, False, FConSettings);
+end;
+
+procedure TZOracleClob.WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
+begin
+  if Buffer = nil then
+    OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+      FChunkSize, Len, False, FConSettings)
+  else
+    OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
+      FChunkSize, Len+1, False, FConSettings);
 end;
 
 function TZOracleClob.Clone: IZBlob;

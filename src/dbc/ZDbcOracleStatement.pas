@@ -922,9 +922,7 @@ var
             TempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
               OracleConnection.GetConnectionHandle,
               OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-              LobLocator, GetChunkSize, Connection.GetConSettings,
-              Connection.GetConSettings^.ClientCodePage^.CP);
-          //(TempBlob as IZOracleBlob).Readlob;
+              LobLocator, GetChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
           DefVarManager.SetAsInterface(outParamValues[Index], TempBlob);
           TempBlob := nil;
         end;

@@ -476,13 +476,17 @@ var
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
   WriteTempBlob: IZOracleBlob;
-  TempStream: TStream;
+
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   OracleConnection: IZOracleConnection;
   ClientVarManager: IZClientVariantManager;
+  Buffer: Pointer;
+  AnsiTemp: RawByteString;
+  ConSettings: PZConSettings;
 begin
   OracleConnection := Connection as IZOracleConnection;
   ClientVarManager := Connection.GetClientVariantManager;
+  ConSettings := Connection.GetConSettings;
   for I := 0 to Variables.ActualNum - 1 do
   begin
     CurrentVar := @Variables.Variables[I + 1];
@@ -519,57 +523,74 @@ begin
             begin
               TempBytes := DefVarManager.GetAsBytes(Values[I]);
               Len := Length(TempBytes);
-              TempStream := TMemoryStream.Create;
-              TempStream.Size := Len;
-              System.Move(Pointer(TempBytes)^, TMemoryStream(TempStream).Memory^, Len);
+              if Len > 0 then
+                Buffer := @TempBytes[0]
+              else
+                Buffer := nil;
             end
             else
             begin
               TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
-              if not TempBlob.IsEmpty then
-                TempStream := TempBlob.GetStream
+              if TempBlob.IsEmpty then
+              begin
+                Buffer := nil;
+                Len := 0;
+              end
               else
-                TempStream := TMemoryStream.Create;
+              begin
+                Buffer := TempBlob.GetBuffer;
+                Len := TempBlob.Length;
+              end;
             end;
             try
-              WriteTempBlob := TZOracleBlob.Create(PlainDriver,
-                TMemoryStream(TempStream).Memory, TempStream.Size,
+              WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
                 OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
                 PPOCIDescriptor(CurrentVar.Data)^, ChunkSize);
               WriteTempBlob.CreateBlob;
-              WriteTempBlob.WriteLob;
+              WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
               CurrentVar.Blob := WriteTempBlob;
             finally
               WriteTempBlob := nil;
-              TempStream.Free;
             end;
           end;
         SQLT_CLOB:
           try
             TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
             if TempBlob.IsClob then
+            begin
               WriteTempBlob := TZOracleClob.Create(PlainDriver,
-                TempBlob.GetPAnsiChar(Connection.GetConSettings^.ClientCodePage^.CP),
-                TempBlob.Length, OracleConnection.GetConnectionHandle,
+                nil, 0, OracleConnection.GetConnectionHandle,
                 OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, Connection.GetConSettings,
-                Connection.GetConSettings^.ClientCodePage^.CP)
+                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, ConSettings,
+                ConSettings^.ClientCodePage^.CP);
+              WriteTempBlob.CreateBlob;
+              Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+              WriteTempBlob.WriteLobFromBuffer(Buffer, TempBlob.Length);
+            end
             else
             begin
               if not TempBlob.IsEmpty then
-                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, Connection.GetConSettings))
+              begin
+                AnsiTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, Connection.GetConSettings);
+                Len := Length(AnsiTemp);
+                if Len = 0 then
+                  Buffer := nil
+                else
+                  Buffer := @AnsiTemp[1];
+              end
               else
-                TempStream := TMemoryStream.Create;
-              WriteTempBlob := TZOracleClob.Create(PlainDriver,
-                TMemoryStream(TempStream).Memory,
-                TempStream.Size, OracleConnection.GetConnectionHandle,
-                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, Connection.GetConSettings,
-                Connection.GetConSettings^.ClientCodePage^.CP);
+              begin
+                Buffer := nil;
+                Len := 0;
+              end;
+              WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
+                OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
+                OracleConnection.GetErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
+                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+              WriteTempBlob.CreateBlob;
+              WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
             end;
-            WriteTempBlob.CreateBlob;
-            WriteTempBlob.WriteLob;
             CurrentVar.Blob := WriteTempBlob;
           finally
             WriteTempBlob := nil;
