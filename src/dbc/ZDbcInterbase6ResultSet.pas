@@ -272,16 +272,6 @@ begin
 
   BlobId := FSqlData.GetQuad(ColumnIndex - 1);
   if FCachedBlob then
-    case GetMetaData.GetColumnType(ColumnIndex) of
-      stBinaryStream:
-        Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
-          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId);
-      stAsciiStream, stUnicodeStream:
-        Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
-          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
-          ConSettings);
-    end
-  else
     try
       with FIBConnection do
         ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
@@ -295,6 +285,16 @@ begin
       end;
     finally
       FreeMem(Buffer, Size);
+    end
+  else
+    case GetMetaData.GetColumnType(ColumnIndex) of
+      stBinaryStream:
+        Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
+          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId);
+      stAsciiStream, stUnicodeStream:
+        Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
+          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+          ConSettings);
     end;
 end;
 {$IFDEF FPC}
