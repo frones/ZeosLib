@@ -116,6 +116,7 @@ type
   IZParamsSQLDA = interface(IZSQLDA)
     ['{D2C3D5E1-F3A6-4223-9A6E-3048B99A06C4}']
     procedure WriteBlob(const Index: Integer; Stream: TStream);
+    procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
     procedure UpdateNull(const Index: Integer; Value: boolean);
     procedure UpdateBoolean(const Index: Integer; Value: boolean);
     procedure UpdateByte(const Index: Integer; Value: ShortInt);
@@ -213,6 +214,7 @@ type
     destructor Destroy; override;
 
     procedure WriteBlob(const Index: Integer; Stream: TStream);
+    procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
 
     procedure UpdateNull(const Index: Integer; Value: boolean);
     procedure UpdateBoolean(const Index: Integer; Value: boolean);
@@ -1048,7 +1050,9 @@ procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
 var
   I: Integer;
   TempBlob: IZBlob;
-  TempStream: TStream;
+  Buffer: Pointer;
+  Len: Integer;
+  RawTemp: RawByteString;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -1112,16 +1116,26 @@ begin
           begin
             if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then
               if TempBlob.IsClob then
-                TempStream := TempBlob.GetRawByteStream
+              begin
+                Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+                Len := TempBlob.Length;
+              end
               else
-                TempStream := TStringStream.Create(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings))
+              begin
+                RawTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer, TempBlob.Length, ConSettings);
+                Len := Length(RawTemp);
+                if Len = 0 then
+                  Buffer := PAnsiChar(RawTemp)
+                else
+                  Buffer := @RawTemp[1];
+              end
             else
-              TempStream := TempBlob.GetStream;
-            if Assigned(TempStream) then
             begin
-              ParamSqlData.WriteBlob(I, TempStream);
-              TempStream.Free;
+              Buffer := TempBlob.GetBuffer;
+              Len := TempBlob.Length;
             end;
+            if Buffer <> nil then
+              ParamSqlData.WriteLobBuffer(i, Buffer, Len);
           end;
         end
       else
@@ -2642,6 +2656,40 @@ begin
   End;
 end;
 
+procedure TZParamsSQLDA.WriteLobBuffer(const Index: Integer;
+  const Buffer: Pointer; const Len: Integer);
+var
+  BlobId: TISC_QUAD;
+  BlobHandle: TISC_BLOB_HANDLE;
+  StatusVector: TARRAY_ISC_STATUS;
+  CurPos, SegLen: Integer;
+begin
+  BlobHandle := 0;
+
+  { create blob handle }
+  FPlainDriver.isc_create_blob2(@StatusVector, FHandle, FTransactionHandle,
+    @BlobHandle, @BlobId, 0, nil);
+  CheckInterbase6Error(FPlainDriver, StatusVector);
+
+  { put data to blob }
+  CurPos := 0;
+  SegLen := DefaultBlobSegmentSize;
+  while (CurPos < Len) do
+  begin
+    if (CurPos + SegLen > Len) then
+      SegLen := Len - CurPos;
+    if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
+      Pointer(NativeUInt(Buffer)+NativeUInt(CurPos))) > 0 then
+      CheckInterbase6Error(FPlainDriver, StatusVector);
+    Inc(CurPos, SegLen);
+  end;
+
+  { close blob handle }
+  FPlainDriver.isc_close_blob(@StatusVector, @BlobHandle);
+  CheckInterbase6Error(FPlainDriver, StatusVector);
+
+  UpdateQuad(Index, BlobId);
+end;
 { TResultSQLDA }
 
 {**
