@@ -641,7 +641,7 @@ var
   Rs: IZResultSet;
 begin
   Stmt := CreateRegularStatement(Self.Info);
-  RS := Stmt.ExecuteQuery('SELECT dateformat FROM syslanguages WHERE name = @@LANGUAGE');
+  RS := Stmt.ExecuteQuery('SELECT dateformat FROM master.dbo.syslanguages WHERE name = @@LANGUAGE');
   if RS.Next then
     ConSettings^.ReadFormatSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(1));
   RS := nil;
