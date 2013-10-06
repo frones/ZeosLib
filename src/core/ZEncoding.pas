@@ -1214,7 +1214,8 @@ end;
 }
 function ZCompatibleCodePages(const CP1, CP2: Word): Boolean;
 begin
-  Result := (CP1 = CP2) or (CP1 = zCP_us_ascii) or (CP2 = zCP_us_ascii);
+  Result := (CP1 = CP2) or ((CP1 = zCP_us_ascii) or (CP2 = zCP_us_ascii)) or
+    (((CP1 = zCP_UTF16) or (CP1 = zCP_UTF16BE)) and ((CP2 = zCP_UTF16) or (CP2 = zCP_UTF16BE)));
 end;
 
 {$IFDEF FPC}

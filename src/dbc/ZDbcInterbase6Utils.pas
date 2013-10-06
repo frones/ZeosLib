@@ -1060,8 +1060,8 @@ begin
   {$R-}
   for I := 0 to ParamSqlData.GetFieldCount - 1 do
   begin
-    ParamSqlData.UpdateNull(I, DefVarManager.IsNull(InParamValues[I]));
-    if DefVarManager.IsNull(InParamValues[I])then
+    ParamSqlData.UpdateNull(I, SoftVarManager.IsNull(InParamValues[I]));
+    if SoftVarManager.IsNull(InParamValues[I])then
       Continue
     else
     case InParamTypes[I] of
@@ -1111,7 +1111,7 @@ begin
       stUnicodeStream,
       stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
+          TempBlob := SoftVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
             if (ParamSqlData.GetFieldSqlType(i) in [stUnicodeStream, stAsciiStream] ) then

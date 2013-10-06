@@ -164,7 +164,8 @@ implementation
 
 uses
   ZFastCode, ZTokenizer, ZDbcOracle, ZDbcOracleResultSet
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
+  {$IFDEF UNICODE}, ZEncoding{$ENDIF};
 
 { TZOracleStatement }
 
@@ -845,7 +846,7 @@ begin
       end;
       if ( FOracleParams[i].pType = 4 ) then
       begin
-        DefVarManager.SetNull(FOracleParams[i].pValue);
+        ClientVarManager.SetNull(FOracleParams[i].pValue);
         if not (i = StartProcIndex) then
         begin
           TempOraVar := FOracleParams[I];
@@ -867,6 +868,7 @@ var
   CurrentVar: PZSQLVar;
   LobLocator: POCILobLocator;
   I: integer;
+  L: Cardinal;
   TempBlob: IZBlob;
 
   procedure SetOutParam(CurrentVar: PZSQLVar; Index: Integer);
@@ -875,21 +877,33 @@ var
     Year:SmallInt;
     Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
     dTmp:TDateTime;
-    ps: PAnsiChar;
+    {$IFDEF UNICODE}
+    AnsiRec: TZAnsiRec;
+    {$ELSE}
+    RawTemp: RawByteString;
+    {$ENDIF}
   begin
     case CurrentVar.TypeCode of
-      SQLT_INT: DefVarManager.SetAsInteger( outParamValues[Index], PLongInt(CurrentVar.Data)^ );
-      SQLT_FLT:  DefVarManager.SetAsFloat( outParamValues[Index], PDouble(CurrentVar.Data)^ );
+      SQLT_INT: outParamValues[Index] := EncodeInteger(PLongInt(CurrentVar.Data)^ );
+      SQLT_FLT: outParamValues[Index] := EncodeFloat(PDouble(CurrentVar.Data)^ );
       SQLT_STR:
         begin
-          GetMem(ps,1025);
           try
-            {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy( ps, (CurrentVar.Data), 1024);
-            DefVarManager.SetAsString( OutParamValues[Index],
-              ConSettings^.ConvFuncs.ZRawToString(ps,
-              ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
+            if Currentvar.Data = nil then
+              outParamValues[Index] := NullVariant
+            else
+            begin
+              L := ZFastCode.StrLen(CurrentVar.Data);
+              {$IFDEF UNICODE}
+              AnsiRec.Len := L;
+              AnsiRec.P := CurrentVar.Data;// .Data;
+              outParamValues[Index] := EncodeString(ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP));
+              {$ELSE}
+              ZSetString(CurrentVar.Data, L, RawTemp);
+              outParamValues[Index] := EncodeString(ConSettings.ConvFuncs.ZRawToString(RawTemp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
+              {$ENDIF}
+            end;
           finally
-            FreeMem(ps);
           end;
         end;
       SQLT_TIMESTAMP:
@@ -904,7 +918,7 @@ var
             FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
             Hour, Min, Sec,MSec);
           dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
-          DefVarManager.SetAsDateTime( outParamValues[Index], dTmp );
+          outParamValues[Index] := EncodeDateTime(dTmp);
         end;
       SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE:
         begin
@@ -923,13 +937,12 @@ var
               OracleConnection.GetConnectionHandle,
               OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
               LobLocator, GetChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-          DefVarManager.SetAsInterface(outParamValues[Index], TempBlob);
+          outParamValues[Index] := EncodeInterface(TempBlob);
           TempBlob := nil;
         end;
-      SQLT_NTY:
-        DefVarManager.SetAsInterface(outParamValues[Index],
-          TZOracleBlob.CreateWithStream(nil));
-      end;
+      SQLT_NTY: //currently not supported
+        outParamValues[Index] := NullVariant;
+    end;
   end;
 begin
   for I := 0 to FOracleParamsCount -1 do

@@ -322,11 +322,11 @@ begin
     Exit
   else
     for i := 0 to InParamCount-1 do
-      if DefVarManager.IsNull(InParamValues[i]) then
+      if ClientVarManager.IsNull(InParamValues[i]) then
         if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
           StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
         begin
-          DefVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+          ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
           ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
         end
         else
@@ -670,19 +670,19 @@ begin
     case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_,
       ConSettings.CPType) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Result, Temp);
+        ClientVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stInteger, stLong:
-        DefVarManager.SetAsInteger(Result, Temp);
+        ClientVarManager.SetAsInteger(Result, Temp);
       stFloat, stDouble, stBigDecimal:
-        DefVarManager.SetAsFloat(Result, Temp);
+        ClientVarManager.SetAsFloat(Result, Temp);
       stString, stAsciiStream:
-        DefVarManager.SetAsString(Result, Temp);
+        ClientVarManager.SetAsString(Result, Temp);
       stUnicodeString, stUnicodeStream:
-        DefVarManager.SetAsUnicodeString(Result, Temp);
+        ClientVarManager.SetAsUnicodeString(Result, Temp);
       stBytes:
-        DefVarManager.SetAsBytes(Result, VarToBytes(Temp));
+        ClientVarManager.SetAsBytes(Result, VarToBytes(Temp));
       stDate, stTime, stTimestamp:
-        DefVarManager.SetAsDateTime(Result, Temp);
+        ClientVarManager.SetAsDateTime(Result, Temp);
       stBinaryStream:
         begin
           if VarIsStr(V) then
@@ -700,15 +700,15 @@ begin
                 VarArrayUnLock(V);
               end;
             end;
-          DefVarManager.SetAsInterface(Result, TempBlob);
+          ClientVarManager.SetAsInterface(Result, TempBlob);
           TempBlob := nil;
         end
       else
-        DefVarManager.SetNull(Result);
+        ClientVarManager.SetNull(Result);
     end;
   end;
 
-  LastWasNull := DefVarManager.IsNull(Result) or VarIsNull(Temp) or VarIsClear(Temp);
+  LastWasNull := ClientVarManager.IsNull(Result) or VarIsNull(Temp) or VarIsClear(Temp);
 end;
 
 procedure TZAdoCallableStatement.PrepareInParameters;
@@ -727,11 +727,11 @@ begin
   else
     for i := 0 to InParamCount-1 do
       if FDBParamTypes[i] in [1,3] then //ptInput, ptInputOutput
-        if DefVarManager.IsNull(InParamValues[i]) then
+        if ClientVarManager.IsNull(InParamValues[i]) then
           if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
             StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
           begin
-            DefVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+            ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
             ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
           end
           else

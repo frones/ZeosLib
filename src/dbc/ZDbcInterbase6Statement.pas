@@ -138,7 +138,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils;
+uses ZSysUtils, ZDbcUtils, Types;
 
 { TZInterbase6Statement }
 
@@ -962,7 +962,6 @@ procedure TZInterbase6CallableStatement.FetchOutParams(
   Value: IZResultSQLDA);
 var
   ParamIndex, I: Integer;
-  Temp: TZVariant;
 begin
   I := 0;
   for ParamIndex := 0 to OutParamCount - 1 do
@@ -974,43 +973,42 @@ begin
       Break;
 
     if Value.IsNull(I) then
-      DefVarManager.SetNull(Temp)
+      OutParamValues[ParamIndex] := NullVariant
     else
       case Value.GetFieldSqlType(I) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Temp, Value.GetBoolean(I));
+        OutParamValues[ParamIndex] := EncodeBoolean(Value.GetBoolean(I));
       stByte:
-        DefVarManager.SetAsInteger(Temp, Value.GetByte(I));
+        OutParamValues[ParamIndex] := EncodeInteger(Value.GetByte(I));
       stBytes:
-        DefVarManager.SetAsBytes(Temp, Value.GetBytes(I));
+        OutParamValues[ParamIndex] := EncodeBytes(Value.GetBytes(I));
       stShort:
-        DefVarManager.SetAsInteger(Temp, Value.GetShort(I));
+        OutParamValues[ParamIndex] := EncodeInteger(Value.GetShort(I));
       stInteger:
-        DefVarManager.SetAsInteger(Temp, Value.GetInt(I));
+        OutParamValues[ParamIndex] := EncodeInteger(Value.GetInt(I));
       stLong:
-        DefVarManager.SetAsInteger(Temp, Value.GetLong(I));
+        OutParamValues[ParamIndex] := EncodeInteger(Value.GetLong(I));
       stFloat:
-        DefVarManager.SetAsFloat(Temp, Value.GetFloat(I));
+        OutParamValues[ParamIndex] := EncodeFloat(Value.GetFloat(I));
       stDouble:
-        DefVarManager.SetAsFloat(Temp, Value.GetDouble(I));
+        OutParamValues[ParamIndex] := EncodeFloat(Value.GetDouble(I));
       stBigDecimal:
-        DefVarManager.SetAsFloat(Temp, Value.GetBigDecimal(I));
+        OutParamValues[ParamIndex] := EncodeFloat(Value.GetBigDecimal(I));
       stString:
-        DefVarManager.SetAsString(Temp,
+        OutParamValues[ParamIndex] := EncodeString(
           ConSettings^.ConvFuncs.ZRawToString(Value.GetString(I),
             ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp,
+        OutParamValues[ParamIndex] := EncodeUnicodeString(
           ConSettings^.ConvFuncs.ZRawToUnicode(Value.GetString(I),
             ConSettings^.ClientCodePage^.CP));
       stDate:
-        DefVarManager.SetAsDateTime(Temp, Value.GetDate(I));
+        OutParamValues[ParamIndex] := EncodeDateTime(Value.GetDate(I));
       stTime:
-        DefVarManager.SetAsDateTime(Temp, Value.GetTime(I));
+        OutParamValues[ParamIndex] := EncodeDateTime(Value.GetTime(I));
       stTimestamp:
-        DefVarManager.SetAsDateTime(Temp, Value.GetTimestamp(I));
+        OutParamValues[ParamIndex] := EncodeDateTime(Value.GetTimestamp(I));
     end;
-    OutParamValues[ParamIndex] := Temp;
     Inc(I);
   end;
 end;

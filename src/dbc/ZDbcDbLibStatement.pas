@@ -705,7 +705,7 @@ begin
     if ParamType = stUnknown then
       ParamType := OutParamTypes[I];
 
-    if DefVarManager.IsNull(InParamValues[I]) and (InParamTypes[I] <> stUnknown) then
+    if SoftVarManager.IsNull(InParamValues[I]) and (InParamTypes[I] <> stUnknown) then
     begin
       if FDBLibConnection.FreeTDS then
         FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
@@ -827,7 +827,7 @@ begin
   Result := GetMoreResults;
 
   if FPLainDriver.dbHasRetStat(FHandle) then
-    DefVarManager.SetAsInteger(Temp, FPlainDriver.dbRetStatus(FHandle))
+    SoftVarManager.SetAsInteger(Temp, FPlainDriver.dbRetStatus(FHandle))
   else
     Temp := NullVariant;
   OutParamValues[0] := Temp; //set function RETURN_VALUE
@@ -849,32 +849,32 @@ begin
               SetLength(DatBytes, DatLen);
               Move(PAnsiChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
                 DatBytes[0], Length(DatBytes));
-              DefVarManager.SetAsString(Temp, String(BytesToStr(DatBytes)));
+              SoftVarManager.SetAsBytes(Temp, DatBytes);
             end;
           TDSSQLINT1:
-            DefVarManager.SetAsInteger(Temp,
+            SoftVarManager.SetAsInteger(Temp,
               PByte(FPlainDriver.dbRetData(FHandle, ParamIndex))^);
           TDSSQLINT2:
-            DefVarManager.SetAsInteger(Temp,
+            SoftVarManager.SetAsInteger(Temp,
               PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           TDSSQLINT4:
-            DefVarManager.SetAsInteger(Temp,
+            SoftVarManager.SetAsInteger(Temp,
               PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           TDSSQLFLT4:
-            DefVarManager.SetAsFloat(Temp,
+            SoftVarManager.SetAsFloat(Temp,
               PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           TDSSQLFLT8:
-            DefVarManager.SetAsFloat(Temp,
+            SoftVarManager.SetAsFloat(Temp,
               PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           TDSSQLMONEY4:
             begin
               FPlainDriver.dbConvert(FHandle, TDSSQLMONEY4,
                 FPlainDriver.dbRetData(FHandle, ParamIndex), 4, TDSSQLMONEY,
                 @DatMoney, 8);
-              DefVarManager.SetAsFloat(Temp, DatMoney);
+              SoftVarManager.SetAsFloat(Temp, DatMoney);
             end;
           TDSSQLMONEY:
-            DefVarManager.SetAsFloat(Temp,
+            SoftVarManager.SetAsFloat(Temp,
               PCurrency(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           TDSSQLDECIMAL:
             begin
@@ -882,7 +882,7 @@ begin
                 FPLainDriver.dbRetData(FHandle, ParamIndex),
                 FPLainDriver.dbRetLen(FHandle, ParamIndex),
                 TDSSQLFLT8, @DatDouble, 8);
-              DefVarManager.SetAsFloat(Temp, DatDouble);
+              SoftVarManager.SetAsFloat(Temp, DatDouble);
             end;
           TDSSQLNUMERIC:
             begin
@@ -890,21 +890,21 @@ begin
                 FPLainDriver.dbRetData(FHandle, ParamIndex),
                 FPLainDriver.dbRetLen(FHandle, ParamIndex),
                 TDSSQLFLT8, @DatDouble, 8);
-              DefVarManager.SetAsFloat(Temp, DatDouble);
+              SoftVarManager.SetAsFloat(Temp, DatDouble);
             end;
           TDSSQLDATETIM4:
             begin
               FPLainDriver.dbConvert(FHandle, TDSSQLDATETIM4,
                 FPLainDriver.dbRetData(FHandle, ParamIndex), 4,
                 TDSSQLDATETIME, @DatDBDATETIME, 8);
-              DefVarManager.SetAsDateTime(Temp,
+              SoftVarManager.SetAsDateTime(Temp,
                 DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
             end;
           TDSSQLDATETIME:
             begin
               DatDBDATETIME := PDBDATETIME(
                 FPLainDriver.dbRetData(FHandle, ParamIndex))^;
-              DefVarManager.SetAsDateTime(Temp,
+              SoftVarManager.SetAsDateTime(Temp,
                 DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
             end;
           else
@@ -918,32 +918,32 @@ begin
               SetLength(DatBytes, DatLen);
               Move(PAnsiChar(FPLainDriver.dbRetData(FHandle, ParamIndex))^,
                 DatBytes[0], Length(DatBytes));
-              DefVarManager.SetAsString(Temp, String(BytesToStr(DatBytes)));
+              SoftVarManager.SetAsString(Temp, String(BytesToStr(DatBytes)));
             end;
           DBLIBSQLINT1:
-            DefVarManager.SetAsInteger(Temp,
+            SoftVarManager.SetAsInteger(Temp,
               PByte(FPlainDriver.dbRetData(FHandle, ParamIndex))^);
           DBLIBSQLINT2:
-            DefVarManager.SetAsInteger(Temp,
+            SoftVarManager.SetAsInteger(Temp,
               PSmallInt(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           DBLIBSQLINT4:
-            DefVarManager.SetAsInteger(Temp,
+            SoftVarManager.SetAsInteger(Temp,
               PInteger(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           DBLIBSQLFLT4:
-            DefVarManager.SetAsFloat(Temp,
+            SoftVarManager.SetAsFloat(Temp,
               PSingle(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           DBLIBSQLFLT8:
-            DefVarManager.SetAsFloat(Temp,
+            SoftVarManager.SetAsFloat(Temp,
               PDouble(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           DBLIBSQLMONEY4:
             begin
               FPlainDriver.dbConvert(FHandle, DBLIBSQLMONEY4,
                 FPlainDriver.dbRetData(FHandle, ParamIndex), 4, DBLIBSQLMONEY,
                 @DatMoney, 8);
-              DefVarManager.SetAsFloat(Temp, DatMoney);
+              SoftVarManager.SetAsFloat(Temp, DatMoney);
             end;
           DBLIBSQLMONEY:
-            DefVarManager.SetAsFloat(Temp,
+            SoftVarManager.SetAsFloat(Temp,
               PCurrency(FPLainDriver.dbRetData(FHandle, ParamIndex))^);
           DBLIBSQLDECIMAL:
             begin
@@ -951,7 +951,7 @@ begin
                 FPLainDriver.dbRetData(FHandle, ParamIndex),
                 FPLainDriver.dbRetLen(FHandle, ParamIndex),
                 DBLIBSQLFLT8, @DatDouble, 8);
-              DefVarManager.SetAsFloat(Temp, DatDouble);
+              SoftVarManager.SetAsFloat(Temp, DatDouble);
             end;
           DBLIBSQLNUMERIC:
             begin
@@ -959,21 +959,21 @@ begin
                 FPLainDriver.dbRetData(FHandle, ParamIndex),
                 FPLainDriver.dbRetLen(FHandle, ParamIndex),
                 DBLIBSQLFLT8, @DatDouble, 8);
-              DefVarManager.SetAsFloat(Temp, DatDouble);
+              SoftVarManager.SetAsFloat(Temp, DatDouble);
             end;
           DBLIBSQLDATETIM4:
             begin
               FPLainDriver.dbConvert(FHandle, DBLIBSQLDATETIM4,
                 FPLainDriver.dbRetData(FHandle, ParamIndex), 4,
                 DBLIBSQLDATETIME, @DatDBDATETIME, 8);
-              DefVarManager.SetAsDateTime(Temp,
+              SoftVarManager.SetAsDateTime(Temp,
                 DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
             end;
           DBLIBSQLDATETIME:
             begin
               DatDBDATETIME := PDBDATETIME(
                 FPLainDriver.dbRetData(FHandle, ParamIndex))^;
-              DefVarManager.SetAsDateTime(Temp,
+              SoftVarManager.SetAsDateTime(Temp,
                 DatDBDATETIME.dtdays + 2 + (DatDBDATETIME.dttime / 25920000));
             end;
           else

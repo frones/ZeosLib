@@ -752,7 +752,7 @@ var
   TempBlob: IZBlob;
   WriteTempBlob: IZPostgreSQLOidBlob;
 begin
-  if DefVarManager.IsNull(Value)  then
+  if ClientVarManager.IsNull(Value)  then
     Result := 'NULL'
   else
   begin
@@ -799,7 +799,7 @@ begin
             ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
             case InParamType of

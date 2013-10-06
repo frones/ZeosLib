@@ -375,7 +375,7 @@ var
 begin
   TempBytes := nil;
 
-  if DefVarManager.IsNull(Value) then
+  if SoftVarManager.IsNull(Value) then
     Result := 'NULL'
   else
   begin
@@ -411,7 +411,7 @@ begin
           ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := SoftVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
             if ParamType = stBinaryStream then

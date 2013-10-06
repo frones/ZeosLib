@@ -109,6 +109,12 @@ type
     P: PWideChar;
   end;
 
+  TZCharRec = Record
+    Len: Cardinal; //Length of String
+    CP: Word;      //CodePage of the String
+    P: Pointer;    //Allocated Mem of String including #0 terminator
+  end;
+
   TObjectDynArray       = array of TObject;
 {$IFDEF FPC}
 type

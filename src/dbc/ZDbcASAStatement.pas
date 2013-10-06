@@ -144,7 +144,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, ZPlainASAConstants, ZDbcResultSet;
+uses ZSysUtils, ZDbcUtils, ZPlainASAConstants, ZDbcResultSet, Types;
 
 { TZASAStatement }
 
@@ -942,7 +942,6 @@ procedure TZASACallableStatement.FetchOutParams( Value: IZASASQLDA);
 var
   I: Integer;
   L: LongWord;
-  Temp: TZVariant;
   TempBlob: IZBlob;
   P: Pointer;
 begin
@@ -950,39 +949,39 @@ begin
   for I := 0 to Value.GetFieldCount-1 do
   begin
     if Value.IsNull(I) then
-      DefVarManager.SetNull(Temp)
+      OutParamValues[I] := NullVariant
     else
     case Value.GetFieldSqlType(I) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Temp, Value.GetBoolean(I));
+        OutParamValues[I] := EncodeBoolean(Value.GetBoolean(I));
       stByte:
-        DefVarManager.SetAsInteger(Temp, Value.GetByte(I));
+        OutParamValues[I] := EncodeInteger(Value.GetByte(I));
       stShort:
-        DefVarManager.SetAsInteger(Temp, Value.GetShort(I));
+        OutParamValues[I] := EncodeInteger(Value.GetShort(I));
       stInteger:
-        DefVarManager.SetAsInteger(Temp, Value.GetInt(I));
+        OutParamValues[I] := EncodeInteger(Value.GetInt(I));
       stLong:
-        DefVarManager.SetAsInteger(Temp, Value.GetLong(I));
+        OutParamValues[I] := EncodeInteger(Value.GetLong(I));
       stFloat:
-        DefVarManager.SetAsFloat(Temp, Value.GetFloat(I));
+        OutParamValues[I] := EncodeFloat(Value.GetFloat(I));
       stDouble:
-        DefVarManager.SetAsFloat(Temp, Value.GetDouble(I));
+        OutParamValues[I] := EncodeFloat(Value.GetDouble(I));
       stBigDecimal:
-        DefVarManager.SetAsFloat(Temp, Value.GetBigDecimal(I));
+        OutParamValues[I] := EncodeFloat(Value.GetBigDecimal(I));
       stString:
-        DefVarManager.SetAsString(Temp, ConSettings^.ConvFuncs.ZRawToString(
+        OutParamValues[I] := EncodeString(ConSettings^.ConvFuncs.ZRawToString(
           Value.GetString(I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
       stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, ConSettings^.ConvFuncs.ZRawToUnicode(
+        OutParamValues[I] := EncodeUnicodeString(ConSettings^.ConvFuncs.ZRawToUnicode(
           Value.GetString(I), ConSettings^.ClientCodePage^.CP));
       stBytes:
-        DefVarManager.SetAsBytes( Temp, Value.GetBytes( I));
+        OutParamValues[I] := EncodeBytes(Value.GetBytes( I));
       stDate:
-        DefVarManager.SetAsDateTime(Temp, Value.GetDate(I));
+        OutParamValues[I] := EncodeDateTime(Value.GetDate(I));
       stTime:
-        DefVarManager.SetAsDateTime(Temp, Value.GetTime(I));
+        OutParamValues[I] := EncodeDateTime(Value.GetTime(I));
       stTimestamp:
-        DefVarManager.SetAsDateTime(Temp, Value.GetTimestamp(I));
+        OutParamValues[I] := EncodeDateTime(Value.GetTimestamp(I));
       stAsciiStream,
       stUnicodeStream,
       stBinaryStream:
@@ -994,10 +993,9 @@ begin
           else
             TempBlob := TZAbstractCLob.CreateWithData(P, L, ConSettings^.ClientCodePage^.CP, ConSettings);
           FreeMem(P);
-          DefVarManager.SetAsInterface( Temp, TempBlob);
+          OutParamValues[I] := EncodeInterface(TempBlob);
         end;
     end;
-    OutParamValues[I] := Temp;
   end;
 end;
 

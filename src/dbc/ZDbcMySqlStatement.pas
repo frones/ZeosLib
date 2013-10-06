@@ -507,7 +507,7 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Value := InParamValues[ParamIndex];
-  if DefVarManager.IsNull(Value) then
+  if ClientVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
       Result := ZPlainString(InParamDefaultValues[ParamIndex])
@@ -541,7 +541,7 @@ begin
           ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
             case InParamTypes[ParamIndex] of
@@ -685,7 +685,7 @@ begin
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
           if TempBlob.IsEmpty then
-            DefVarManager.SetNull(InParamValues[I])
+            ClientVarManager.SetNull(InParamValues[I])
           else
             if InParamTypes[I] = stBinaryStream then
               FParamBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
@@ -1049,7 +1049,7 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Value := InParamValues[ParamIndex];
-  if DefVarManager.IsNull(Value) then
+  if ClientVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
       Result := RawByteString(InParamDefaultValues[ParamIndex])
@@ -1083,7 +1083,7 @@ begin
           ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             case InParamTypes[ParamIndex] of
               stBinaryStream:
@@ -1181,7 +1181,6 @@ end;
 procedure TZMySQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
 var
   ParamIndex, I: Integer;
-  Temp: TZVariant;
   HasRows: Boolean;
 begin
   ResultSet.BeforeFirst;
@@ -1196,43 +1195,42 @@ begin
       Break;
 
     if (not HasRows) or (ResultSet.IsNull(I)) then
-      DefVarManager.SetNull(Temp)
+      OutParamValues[ParamIndex] := NullVariant
     else
       case ResultSet.GetMetadata.GetColumnType(I) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
+        OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
       stByte:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
       stBytes:
-        DefVarManager.SetAsBytes(Temp, ResultSet.GetBytes(I));
+        OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
       stShort:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
       stInteger:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
       stFloat:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetFloat(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
       stDouble:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
       stBigDecimal:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
       stString, stAsciiStream:
-        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       stUnicodeString, stUnicodeStream:
-        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetUnicodeString(I));
+        OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
       stDate:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
+        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
       stTime:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
+        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
       stTimestamp:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
       stBinaryStream:
-        DefVarManager.SetAsInterface(Temp, ResultSet.GetBlob(I));
+        OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
       else
-        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       end;
-    OutParamValues[ParamIndex] := Temp;
     Inc(I);
   end;
   ResultSet.BeforeFirst;

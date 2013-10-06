@@ -2200,7 +2200,7 @@ begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create( SInvalidInputParameterCount);
   for i := 0 to ParamSqlData.GetFieldCount-1 do
-    if DefVarManager.IsNull( InParamValues[i])then
+    if ClientVarManager.IsNull( InParamValues[i])then
       ParamSqlData.UpdateNull( i, True)
     else
       case InParamTypes[i] of
@@ -2245,7 +2245,7 @@ begin
         stUnicodeStream,
         stBinaryStream:
           begin
-            TempBlob := DefVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
+            TempBlob := ClientVarManager.GetAsInterface(InParamValues[I]) as IZBlob;
             if not TempBlob.IsEmpty then
             begin
               if (InParamTypes[i] in [stUnicodeStream, stAsciiStream]) then

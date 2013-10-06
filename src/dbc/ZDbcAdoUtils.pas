@@ -494,7 +494,7 @@ begin
   if not (RetValue.VType = vtNull) and (RetValue.VType = vtInterface) and
     (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
   begin
-    B := DefVarManager.GetAsInterface(Value) as IZBlob;
+    B := SoftVarManager.GetAsInterface(Value) as IZBlob;
     if B.IsEmpty then
       RetValue := NullVariant
     else
@@ -502,7 +502,7 @@ begin
         stAsciiStream, stUnicodeStream:
           if B.IsClob then
           begin
-            DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+            SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
             TmpSQLType := stUnicodeString;
           end
           else
@@ -510,23 +510,23 @@ begin
             if SQLType = stAsciiStream then
             begin
               {$IFDEF UNICODE}
-              DefVarManager.SetAsString(RetValue, String(B.GetString));
+              SoftVarManager.SetAsString(RetValue, String(B.GetString));
               {$ELSE}
-              DefVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
+              SoftVarManager.SetAsString(RetValue, GetValidatedAnsiStringFromBuffer(B.GetBuffer, B.Length, Connection.GetConSettings));
               {$ENDIF}
               TmpSQLType := stString;
             end
             else
             begin
               B := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), zCP_UTF16, Connection.GetConSettings);
-              DefVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
+              SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
               TmpSQLType := stUnicodeString;
             end;
           end;
         stBinaryStream:
           begin
             if Assigned(B) then
-              DefVarManager.SetAsBytes(RetValue, B.GetBytes);
+              SoftVarManager.SetAsBytes(RetValue, B.GetBytes);
             TmpSQLType := stBytes;
           end;
       end;

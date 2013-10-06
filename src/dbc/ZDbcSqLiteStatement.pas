@@ -331,7 +331,7 @@ begin
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Value := InParamValues[ParamIndex];
-  if DefVarManager.IsNull(Value)  then
+  if ClientVarManager.IsNull(Value)  then
     Result := 'NULL'
   else
   begin
@@ -362,7 +362,7 @@ begin
           ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             if InParamTypes[ParamIndex] = stBinaryStream then
               Result := EncodeString(TempBlob.GetBuffer, TempBlob.Length)
@@ -454,7 +454,7 @@ begin
   for i := 1 to InParamCount do
   begin
     Value := InParamValues[i-1];
-    if DefVarManager.IsNull(Value)  then
+    if ClientVarManager.IsNull(Value)  then
       FErrorcode := FPlainDriver.bind_null(FStmtHandle, I)
     else
     begin
@@ -510,7 +510,7 @@ begin
             ClientVarManager.GetAsDateTime(Value));}
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
-            TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+            TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
             if not TempBlob.IsEmpty then
               if InParamTypes[I-1] = stBinaryStream then
               begin

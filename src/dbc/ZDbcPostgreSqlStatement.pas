@@ -937,7 +937,7 @@ begin
   for ParamIndex := 0 to InParamCount -1 do
   begin
     Value := InParamValues[ParamIndex];
-    if DefVarManager.IsNull(Value)  then
+    if ClientVarManager.IsNull(Value)  then
       UpdateNull(ParamIndex)
     else
       case InParamTypes[ParamIndex] of
@@ -966,7 +966,7 @@ begin
             ConSettings^.WriteFormatSettings, False), ParamIndex);
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
-            TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+            TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
             if not TempBlob.IsEmpty then
             begin
               case InParamTypes[ParamIndex] of
@@ -1445,7 +1445,6 @@ end;
 procedure TZPostgreSQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
 var
   ParamIndex, I: Integer;
-  Temp: TZVariant;
   HasRows: Boolean;
 begin
   ResultSet.BeforeFirst;
@@ -1461,39 +1460,42 @@ begin
       Break;
 
     if (not HasRows) or (ResultSet.IsNull(I)) then
-      DefVarManager.SetNull(Temp)
+      OutParamValues[ParamIndex] := NullVariant
     else
       case ResultSet.GetMetadata.GetColumnType(I) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
+        OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
       stByte:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
+      stBytes:
+        OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
       stShort:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
       stInteger:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
       stFloat:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetFloat(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
       stDouble:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
       stBigDecimal:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(I));
-      stString:
-        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
-      stUnicodeString:
-        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetUnicodeString(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+      stString, stAsciiStream:
+        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+      stUnicodeString, stUnicodeStream:
+        OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
       stDate:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
+        OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
       stTime:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
+        OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
       stTimestamp:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+        OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
+      stBinaryStream:
+        OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
       else
-        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       end;
-    OutParamValues[ParamIndex] := Temp;
     Inc(I);
   end;
   ResultSet.BeforeFirst;

@@ -345,7 +345,7 @@ end;
 function TZAbstractFunction.CheckParamsCount(Stack: TZExecutionStack;
   ExpectedCount: Integer): Integer;
 begin
-  Result := DefVarManager.GetAsInteger(Stack.GetParameter(0));
+  Result := SoftVarManager.GetAsInteger(Stack.GetParameter(0));
   if Result <> ExpectedCount then
   begin
     raise TZExpressionError.Create(Format(SParametersError,

@@ -1452,11 +1452,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetBoolean(ParameterIndex: Integer;
   Value: Boolean);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsBoolean(Temp, Value);
-  SetInParam(ParameterIndex, stBoolean, Temp);
+  SetInParam(ParameterIndex, stBoolean, EncodeBoolean(Value));
 end;
 
 {**
@@ -1469,11 +1466,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetByte(ParameterIndex: Integer;
   Value: Byte);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsInteger(Temp, Value);
-  SetInParam(ParameterIndex, stByte, Temp);
+  SetInParam(ParameterIndex, stByte, EncodeInteger(Value));
 end;
 
 {**
@@ -1486,11 +1480,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetShort(ParameterIndex: Integer;
   Value: SmallInt);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsInteger(Temp, Value);
-  SetInParam(ParameterIndex, stShort, Temp);
+  SetInParam(ParameterIndex, stShort, EncodeInteger(Value));
 end;
 
 {**
@@ -1503,11 +1494,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetInt(ParameterIndex: Integer;
   Value: Integer);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsInteger(Temp, Value);
-  SetInParam(ParameterIndex, stInteger, Temp);
+  SetInParam(ParameterIndex, stInteger, EncodeInteger(Value));
 end;
 
 {**
@@ -1520,11 +1508,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetLong(ParameterIndex: Integer;
   Value: Int64);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsInteger(Temp, Value);
-  SetInParam(ParameterIndex, stLong, Temp);
+  SetInParam(ParameterIndex, stLong, EncodeInteger(Value));
 end;
 
 {**
@@ -1537,11 +1522,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetFloat(ParameterIndex: Integer;
   Value: Single);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsFloat(Temp, Value);
-  SetInParam(ParameterIndex, stFloat, Temp);
+  SetInParam(ParameterIndex, stFloat, EncodeFloat(Value));
 end;
 
 {**
@@ -1554,11 +1536,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetDouble(ParameterIndex: Integer;
   Value: Double);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsFloat(Temp, Value);
-  SetInParam(ParameterIndex, stDouble, Temp);
+  SetInParam(ParameterIndex, stDouble, EncodeFloat(Value));
 end;
 
 {**
@@ -1571,11 +1550,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetBigDecimal(
   ParameterIndex: Integer; Value: Extended);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsFloat(Temp, Value);
-  SetInParam(ParameterIndex, stBigDecimal, Temp);
+  SetInParam(ParameterIndex, stBigDecimal, EncodeFloat(Value));
 end;
 
 {**
@@ -1591,11 +1567,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
    Value: PChar);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, Value);
-  SetInParam(ParameterIndex, stString, Temp);
+  SetInParam(ParameterIndex, stString, EncodeString(Value));
 end;
 
 {**
@@ -1611,11 +1584,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetString(ParameterIndex: Integer;
    const Value: String);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsString(Temp, Value);
-  SetInParam(ParameterIndex, stString, Temp);
+  SetInParam(ParameterIndex, stString, EncodeString(Value));
 end;
 
 {**
@@ -1631,11 +1601,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetAnsiString(ParameterIndex: Integer;
    const Value: AnsiString);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsAnsiString(Temp, Value);
-  SetInParam(ParameterIndex, stString, Temp);
+  SetInParam(ParameterIndex, stString, EncodeAnsiString(Value));
 end;
 
 {**
@@ -1651,11 +1618,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetUTF8String(ParameterIndex: Integer;
    const Value: UTF8String);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsUTF8String(Temp, Value);
-  SetInParam(ParameterIndex, stString, Temp);
+  SetInParam(ParameterIndex, stString, EncodeUTF8String(Value));
 end;
 
 {**
@@ -1671,11 +1635,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetRawByteString(ParameterIndex: Integer;
    const Value: RawByteString);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsRawByteString(Temp, Value);
-  SetInParam(ParameterIndex, stString, Temp);
+  SetInParam(ParameterIndex, stString, EncodeRawByteString(Value));
 end;
 
 {**
@@ -1692,11 +1653,8 @@ end;
 
 procedure TZAbstractPreparedStatement.SetUnicodeString(ParameterIndex: Integer;
   const Value: ZWideString);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsUnicodeString(Temp, Value);
-  SetInParam(ParameterIndex, stUnicodeString, Temp);
+  SetInParam(ParameterIndex, stUnicodeString, EncodeUnicodeString(Value));
 end;
 
 {**
@@ -1710,11 +1668,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
   const Value: TByteDynArray);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsBytes(Temp, Value);
-  SetInParam(ParameterIndex, stBytes, Temp);
+  SetInParam(ParameterIndex, stBytes, EncodeBytes(Value));
 end;
 
 {**
@@ -1727,11 +1682,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetDate(ParameterIndex: Integer;
   Value: TDateTime);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsDateTime(Temp, Value);
-  SetInParam(ParameterIndex, stDate, Temp);
+  SetInParam(ParameterIndex, stDate, EncodeDateTime(Value));
 end;
 
 {**
@@ -1744,11 +1696,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetTime(ParameterIndex: Integer;
   Value: TDateTime);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsDateTime(Temp, Value);
-  SetInParam(ParameterIndex, stTime, Temp);
+  SetInParam(ParameterIndex, stTime, EncodeDateTime(Value));
 end;
 
 {**
@@ -1761,11 +1710,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetTimestamp(ParameterIndex: Integer;
   Value: TDateTime);
-var
-  Temp: TZVariant;
 begin
-  DefVarManager.SetAsDateTime(Temp, Value);
-  SetInParam(ParameterIndex, stTimestamp, Temp);
+  SetInParam(ParameterIndex, stTimestamp, EncodeDateTime(Value));
 end;
 
 {**
@@ -1815,7 +1761,7 @@ end;
 procedure TZAbstractPreparedStatement.SetUnicodeStream(
   ParameterIndex: Integer; Value: TStream);
 begin
-  SetBlob(ParameterIndex, stUnicodeStream, TZAbstractClob.CreateWithData(nil, 0, zCP_UTF16, ConSettings));
+  SetBlob(ParameterIndex, stUnicodeStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_UTF16, ConSettings));
 end;
 
 {**
@@ -1846,13 +1792,10 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetBlob(ParameterIndex: Integer;
   SQLType: TZSQLType; Value: IZBlob);
-var
-  Temp: TZVariant;
 begin
   if not (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
     raise EZSQLException.Create(SWrongTypeForBlobParameter);
-  DefVarManager.SetAsInterface(Temp, Value);
-  SetInParam(ParameterIndex, SQLType, Temp);
+  SetInParam(ParameterIndex, SQLType, EncodeInterface(Value));
 end;
 
 {**
@@ -1871,6 +1814,7 @@ begin
     vtFloat: SQLType := stBigDecimal;
     vtUnicodeString: SQLType := stUnicodeString;
     vtDateTime: SQLType := stTimestamp;
+    vtBytes: SQLType := stBytes;
   else
     SQLType := stString;
   end;
@@ -2233,7 +2177,7 @@ begin
   if Assigned(OutParamValues) then
   begin
     Result := OutParamValues[ParameterIndex - 1];
-    FLastWasNull := DefVarManager.IsNull(Result);
+    FLastWasNull := ClientVarManager.IsNull(Result);
   end
   else
   begin

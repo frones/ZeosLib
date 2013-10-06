@@ -491,7 +491,7 @@ begin
   begin
     CurrentVar := @Variables.Variables[I + 1];
     CurrentVar.DupData := CurrentVar.Data;
-    if (high(Values)<I) or DefVarManager.IsNull(Values[I]) then
+    if (high(Values)<I) or ClientVarManager.IsNull(Values[I]) then
     begin
       CurrentVar.Indicator := -1;
       //CurrentVar.Data := nil;
@@ -501,14 +501,14 @@ begin
       CurrentVar.Indicator := 0;
       case CurrentVar.TypeCode of
         SQLT_INT:
-          PLongInt(CurrentVar.Data)^ := DefVarManager.GetAsInteger(Values[I]);
+          PLongInt(CurrentVar.Data)^ := ClientVarManager.GetAsInteger(Values[I]);
         SQLT_FLT:
-          PDouble(CurrentVar.Data)^ := DefVarManager.GetAsFloat(Values[I]);
+          PDouble(CurrentVar.Data)^ := ClientVarManager.GetAsFloat(Values[I]);
         SQLT_STR:
           {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(ClientVarManager.GetAsRawByteString(Values[I])), 1024);
         SQLT_TIMESTAMP:
           begin
-            TempDate := DefVarManager.GetAsDateTime(Values[I]);
+            TempDate := ClientVarManager.GetAsDateTime(Values[I]);
             DecodeDate(TempDate, Year, Month, Day);
             DecodeTime(TempDate, Hour, Min, Sec, MSec);
             Status := PlainDriver.DateTimeConstruct(
@@ -521,7 +521,7 @@ begin
           begin
             if Values[I].VType = vtBytes then
             begin
-              TempBytes := DefVarManager.GetAsBytes(Values[I]);
+              TempBytes := ClientVarManager.GetAsBytes(Values[I]);
               Len := Length(TempBytes);
               if Len > 0 then
                 Buffer := @TempBytes[0]
@@ -530,7 +530,7 @@ begin
             end
             else
             begin
-              TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
+              TempBlob := ClientVarManager.GetAsInterface(Values[I]) as IZBlob;
               if TempBlob.IsEmpty then
               begin
                 Buffer := nil;
@@ -555,7 +555,7 @@ begin
           end;
         SQLT_CLOB:
           try
-            TempBlob := DefVarManager.GetAsInterface(Values[I]) as IZBlob;
+            TempBlob := ClientVarManager.GetAsInterface(Values[I]) as IZBlob;
             if TempBlob.IsClob then
             begin
               WriteTempBlob := TZOracleClob.Create(PlainDriver,
