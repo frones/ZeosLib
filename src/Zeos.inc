@@ -39,7 +39,6 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
- {$DEFINE ZEOS_TEST_ONLY}
  // Compilation directives for Lazarus
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
