@@ -358,6 +358,7 @@ type
 		procedure ClearCache(const Key: string);overload;
 
     function AddEscapeCharToWildcards(const Pattern:string): string;
+    function NormalizePatternCase(Pattern:String): string;
   end;
 
   {**
