@@ -1550,32 +1550,56 @@ end;
 {$ENDIF}
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 begin
-  ZSetString(PAnsiChar(Src), Result);
+  {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
 end;
 
 function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 begin
-  ZSetString(PAnsiChar(Src), Result);
+  {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
 end;
 
 function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
 begin
-  ZSetString(PAnsiChar(Src), Result);
+  {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
 end;
 
 function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
 begin
-  ZSetString(PAnsiChar(Src), Result);
+  {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
 end;
 
 function ZMoveRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
-  ZSetString(PAnsiChar(Src), Result);
+  {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
 end;
 
 function ZMoveUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
 begin
-  ZSetString(PAnsiChar(Src), Result);
+  {$IFDEF WITH_RAWBYTESTRING}
+  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  {$ELSE}
+  Result := Src;
+  {$ENDIF}
 end;
 
 function ZMoveStringToAnsi(Const Src: String; const StringCP: Word): AnsiString;
@@ -1583,7 +1607,11 @@ begin
   {$IFDEF UNICODE}
   Result := AnsiString(Src);
   {$ELSE}
-  ZSetString(PAnsiChar(Src), Result);
+    {$IFDEF WITH_RAWBYTESTRING}
+    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    {$ELSE}
+    Result := Src;
+    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1592,7 +1620,11 @@ begin
   {$IFDEF UNICODE}
   Result := String(Src);
   {$ELSE}
-  ZSetString(PAnsiChar(Src), Result);
+    {$IFDEF WITH_RAWBYTESTRING}
+    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    {$ELSE}
+    Result := Src;
+    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1603,7 +1635,11 @@ begin
   {$IFDEF UNICODE}
   Result := ZRawToUnicode(Src, RawCP);
   {$ELSE}
-  ZSetString(PAnsiChar(Src), Result);
+    {$IFDEF WITH_RAWBYTESTRING}
+    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    {$ELSE}
+    Result := Src;
+    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1613,7 +1649,11 @@ begin
   {$IFDEF UNICODE}
   Result := ZUnicodeToRaw(Src, RawCP);
   {$ELSE}
-  ZSetString(PAnsiChar(Src), Result);
+    {$IFDEF WITH_RAWBYTESTRING}
+    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    {$ELSE}
+    Result := Src;
+    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1622,7 +1662,11 @@ begin
   {$IFDEF UNICODE}
   Result := String(Src);
   {$ELSE}
-  ZSetString(PAnsiChar(Src), Result);
+    {$IFDEF WITH_RAWBYTESTRING}
+    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    {$ELSE}
+    Result := Src;
+    {$ENDIF}
   {$ENDIF}
 end;
 
@@ -1631,7 +1675,11 @@ begin
   {$IFDEF UNICODE}
   Result := UTF8String(Src);
   {$ELSE}
-  ZSetString(PAnsiChar(Src), Result);
+    {$IFDEF WITH_RAWBYTESTRING}
+    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    {$ELSE}
+    Result := Src;
+    {$ENDIF}
   {$ENDIF}
 end;
 

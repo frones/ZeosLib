@@ -244,7 +244,7 @@ type
   IZClientVariantManager = Interface(IZVariantManager)
     ['{73A1A2C7-7C38-4620-B7FE-2426BF839BE5}']
     function GetAsRawByteString(const Value: TZVariant; const RawCP: Word): RawByteString; overload;
-    function GetAsCharRec(Value: TZVariant; const CodePage: Word): TZCharRec; overload;
+    function GetAsCharRec(var Value: TZVariant; const CodePage: Word): TZCharRec; overload;
   End;
 
   {** Implements a variant manager with connection related convertion rules. }
@@ -256,7 +256,7 @@ type
     function Convert(const Value: TZVariant; NewType: TZVariantType): TZVariant;
       override;
     function GetAsRawByteString(const Value: TZVariant; const RawCP: Word): RawByteString; override;
-    function GetAsCharRec(Value: TZVariant; const CodePage: Word): TZCharRec; overload;
+    function GetAsCharRec(var Value: TZVariant; const CodePage: Word): TZCharRec; overload;
   end;
 
 type
@@ -1797,7 +1797,7 @@ begin
         vtInteger:
           Result.VRawByteString := IntToRaw(Value.VInteger);
         vtFloat:
-          Result.VRawByteString := FloatToRaw(Value.VFloat);
+          Result.VRawByteString := FloatToSqlRaw(Value.VFloat);
         vtRawByteString:
           Result.VRawByteString := Value.VRawByteString;
         vtDateTime:
@@ -2284,7 +2284,7 @@ begin
     vtInteger:
       Result := IntToRaw(Value.VInteger);
     vtFloat:
-      Result := FloatToRaw(Value.VFloat);
+      Result := FloatToSqlRaw(Value.VFloat);
     vtString:
       Result := ZConvertStringToRawWithAutoEncode(Value.VString, FConSettings^.CTRL_CP, RawCP);
     vtAnsiString:
@@ -2331,7 +2331,7 @@ begin
   end;
 end;
 
-function TZClientVariantManager.GetAsCharRec(Value: TZVariant; const CodePage: Word): TZCharRec;
+function TZClientVariantManager.GetAsCharRec(var Value: TZVariant; const CodePage: Word): TZCharRec;
 begin
   Result.CP := CodePage;
   case Value.VType of
