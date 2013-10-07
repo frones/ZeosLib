@@ -539,7 +539,9 @@ function TZDefaultVariantManager.Convert(const Value: TZVariant;
   NewType: TZVariantType): TZVariant;
 var
   AnsiRec: TZAnsiRec;
+  {$IFNDEF UNICODE}
   WideRec: TZWideRec;
+  {$ENDIF}
   UniTemp: ZWideString;
 begin
   Result.VType := NewType;
@@ -658,7 +660,7 @@ begin
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
           begin
-            SetString(UniTemp, PChar(Value.VCharRec.P), Value.VCharRec.Len);
+            SetString(UniTemp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len);
             Result.VAnsiString := AnsiString(UniTemp);
           end
           else

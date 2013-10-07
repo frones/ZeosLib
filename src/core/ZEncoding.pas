@@ -408,7 +408,7 @@ function GetValidatedUnicodeStream(const Ansi: RawByteString;
 implementation
 
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
-  ZSysUtils, ZFastCode;
+  ZSysUtils, ZFastCode, Math;
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -443,149 +443,75 @@ function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 begin
   case CP of
     28591: //ISO_8859_1
-      Result := UTF8Decode(ISO_8859_1ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(ISO_8859_1ToUTF8(S));
     28592:  //ISO_8859_2
-      Result := UTF8Decode(ISO_8859_2ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(ISO_8859_2ToUTF8(S));
     1250: //WIN1250
-      Result := UTF8Decode(CP1250ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1250ToUTF8(S));
     1251: //WIN1251
-      Result := UTF8Decode(CP1251ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1251ToUTF8(S));
     1252: //WIN1252
-      Result := UTF8Decode(CP1252ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1252ToUTF8(S));
     1253: //WIN1253
-      Result := UTF8Decode(CP1253ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1253ToUTF8(S));
     1254: //WIN1254
-      Result := UTF8Decode(CP1254ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1254ToUTF8(S));
     1255: //WIN1255
-      Result := UTF8Decode(CP1255ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1255ToUTF8(S));
     1256: //WIN1256
-      Result := UTF8Decode(CP1256ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1256ToUTF8(S));
     1257: //WIN1257
-      Result := UTF8Decode(CP1257ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1257ToUTF8(S));
     1258: //WIN1258
-      Result := UTF8Decode(CP1258ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP1258ToUTF8(S));
     437: //CP437
-      Result := UTF8Decode(CP437ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP437ToUTF8(S));
     850: //CP850
-      Result := UTF8Decode(CP850ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP850ToUTF8(S));
     852: //CP852
-      Result := UTF8Decode(CP852ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP852ToUTF8(S));
     866: //CP866
-      Result := UTF8Decode(CP866ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP866ToUTF8(S));
     874: //CP874
-      Result := UTF8Decode(CP874ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(CP874ToUTF8(S));
     20866: //KOI8 (Russian)
-      Result := UTF8Decode(KOI8ToUTF8(PAnsiChar(S)));
+      Result := UTF8Decode(KOI8ToUTF8(S));
     65001: //UTF8
-      Result := UTF8Decode(PAnsiChar(s));
+      Result := UTF8Decode(S);
     else
       Result := ZWideString(S); //random success!
   end;
 end;
 {$ELSE}
 var
-  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-  wlen, ulen: Integer;
-  {$IFNDEF WITH_UNICODEFROMLOCALECHARS}
-  US: WideString;
-  {$ENDIF}
-  {$IFEND}
+  AnsiRec: TZAnsiRec;
 begin
   Result := '';
-  if CP = zCP_NONE  then
-    Result := ZUnknownRawToUnicode(s, CP)
+  AnsiRec.Len := Length(S);
+  if AnsiRec.Len = 0 then
+    Exit
   else
-    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-    begin
-      ulen := Length(s);
-      if Ulen = 0 then exit;
-      if (Cardinal(Ulen * 2 ) < High(Cardinal) ) then //max 4GB
-      begin
-        wlen := Ulen * 2;     //using oversize speeds up x2 for MBC's and x0,5 for SBC's
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        SetLength(result, wlen);
-        wlen := UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, PWideChar(Result), wlen);
-        SetLength(result, wlen);
-        {$ELSE}
-        SetLength(US, wlen - 1);
-        Wlen := MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]), ulen, PWideChar(@US[1]), wlen); //Convert Ansi to Wide with supported Chars
-        SetLength(US, Wlen);
-        Result := US; //Wide to Unicode
-        {$ENDIF}
-      end
-      else
-      begin
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        wlen := UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
-        if wlen = 0 then exit;
-        SetLength(result, wlen);
-        UnicodeFromLocaleChars(cp, 0, PAnsiChar(S), ulen, PWideChar(Result), wlen);
-        {$ELSE}
-        wlen := MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]), ulen, nil, 0); //Checkout the Result-Lengh
-        if wlen = 0 then Exit;
-        SetLength(US, wlen - 1);
-        MultiByteToWideChar(CP, 0, PAnsiChar(@s[1]),
-          - 1, PWideChar(@US[1]), ulen - 1); //Convert Ansi to Wide with supported Chars
-        Result := US; //Wide to Unicode
-        {$ENDIF}
-      end;
-    end;
+  begin
+    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
+    AnsiRec.P := PAnsiChar(S);
+    Result := ZAnsiRecToUnicode(AnsiRec, CP);
     {$ELSE}
-      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-      WidestringManager.Ansi2UnicodeMoveProc(PAnsiChar(s), CP, Result, Length(s));
-      {$ELSE}
-      if ZCompatibleCodePages(CP, zCP_UTF8) then
-        Result := UTF8Encode(s)
-      else
-        Result := ZWideString(s); //random success
-      {$ENDIF}
+    if ZCompatibleCodePages(CP, zCP_UTF8) then
+      Result := UTF8Encode(s)
+    else
+      Result := ZWideString(s); //random success
     {$IFEND}
+  end;
 end;
 {$ENDIF}
 
 function ZAnsiRecToUnicode(const Value: TZAnsiRec; const CP: Word): ZWideString;
 {$IFDEF WITH_LCONVENCODING}
+var
+  S: String;
 begin
-  case CP of
-    28591: //ISO_8859_1
-      Result := UTF8Decode(ISO_8859_1ToUTF8(Value.P));
-    28592:  //ISO_8859_2
-      Result := UTF8Decode(ISO_8859_2ToUTF8(Value.P));
-    1250: //WIN1250
-      Result := UTF8Decode(CP1250ToUTF8(Value.P));
-    1251: //WIN1251
-      Result := UTF8Decode(CP1251ToUTF8(Value.P));
-    1252: //WIN1252
-      Result := UTF8Decode(CP1252ToUTF8(Value.P));
-    1253: //WIN1253
-      Result := UTF8Decode(CP1253ToUTF8(Value.P));
-    1254: //WIN1254
-      Result := UTF8Decode(CP1254ToUTF8(Value.P));
-    1255: //WIN1255
-      Result := UTF8Decode(CP1255ToUTF8(Value.P));
-    1256: //WIN1256
-      Result := UTF8Decode(CP1256ToUTF8(Value.P));
-    1257: //WIN1257
-      Result := UTF8Decode(CP1257ToUTF8(Value.P));
-    1258: //WIN1258
-      Result := UTF8Decode(CP1258ToUTF8(Value.P));
-    437: //CP437
-      Result := UTF8Decode(CP437ToUTF8(Value.P));
-    850: //CP850
-      Result := UTF8Decode(CP850ToUTF8(Value.P));
-    852: //CP852
-      Result := UTF8Decode(CP852ToUTF8(Value.P));
-    866: //CP866
-      Result := UTF8Decode(CP866ToUTF8(Value.P));
-    874: //CP874
-      Result := UTF8Decode(CP874ToUTF8(Value.P));
-    20866: //KOI8 (Russian)
-      Result := UTF8Decode(KOI8ToUTF8(Value.P));
-    65001: //UTF8
-      Result := UTF8Decode(Value.P);
-    else
-      Result := ZWideString(Value.P); //random success!
-  end;
+  SetString(S, Value.P, Value.Len);
+  Result := ZRawToUnicode(S, CP);
 end;
 {$ELSE}
 var
@@ -594,55 +520,46 @@ var
   {$IFNDEF WITH_UNICODEFROMLOCALECHARS}
   US: WideString;
   {$ENDIF}
+  {$ELSE}
+    {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+    S: RawByteString;
+    {$ENDIF}
   {$IFEND}
 begin
   Result := '';
-  if CP = zCP_NONE  then
-    Result := ZUnknownRawToUnicode(Value.P, CP)
+  if Value.Len = 0 then
+    Exit
   else
-    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-    begin
-      if Value.Len = 0 then exit;
-      if (Cardinal(Value.Len * 2 ) < High(Cardinal) ) then //max 4GB
+    if CP = zCP_NONE  then
+      Result := ZUnknownRawToUnicode(Value.P, CP)
+    else
+      {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
       begin
-        wlen := Value.Len * 2;     //using oversize speeds up x2 for MBC's and x0,5 for SBC's
+        wlen := Min(Value.Len * 2, High(Integer)-1);
         {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        SetLength(result, wlen);
-        wlen := UnicodeFromLocaleChars(cp, 0, Value.P, Value.Len, PWideChar(Result), wlen);
-        SetLength(result, wlen);
+        SetLength(result, wlen); //oversized
+        wlen := UnicodeFromLocaleChars(CP, 0, Value.P, Value.Len, PWideChar(Result), wlen);
+        SetLength(result, wlen); //expected length
         {$ELSE}
-        SetLength(US, wlen - 1);
+        SetLength(US, wlen); //oversized
         Wlen := MultiByteToWideChar(CP, 0, Value.P, Value.Len, PWideChar(US), wlen); //Convert Ansi to Wide with supported Chars
-        SetLength(US, Wlen);
-        Result := US; //Wide to Unicode
-        {$ENDIF}
-      end
-      else
-      begin
-        {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-        wlen := UnicodeFromLocaleChars(cp, 0, Value.P, Value.Len, NIL, 0); // wlen is the number of UCS2 without NULL terminater.
-        if wlen = 0 then exit;
-        SetLength(result, wlen);
-        UnicodeFromLocaleChars(cp, 0, Value.P, Value.Len, PWideChar(Result), wlen);
-        {$ELSE}
-        wlen := MultiByteToWideChar(CP, 0, Value.P, Value.Len, nil, 0); //Checkout the Result-Lengh
-        if wlen = 0 then Exit;
-        SetLength(US, wlen - 1);
-        MultiByteToWideChar(CP, 0, Value.P, Value.Len, PWideChar(US), wlen - 1); //Convert Ansi to Wide with supported Chars
+        SetLength(US, Wlen); //expected length
         Result := US; //Wide to Unicode
         {$ENDIF}
       end;
-    end;
-    {$ELSE}
-      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-      WidestringManager.Ansi2UnicodeMoveProc(Value.P, CP, Result, Value.Len);
       {$ELSE}
-      if ZCompatibleCodePages(CP, zCP_UTF8) then
-        Result := UTF8Encode(Value.P)
-      else
-        Result := ZWideString(Value.P); //random success
-      {$ENDIF}
-    {$IFEND}
+        {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+        WidestringManager.Ansi2UnicodeMoveProc(Value.P, CP, Result, Value.Len);
+        {$ELSE}
+        begin
+          ZSetString(Value.P, Value.Len, S);
+          if ZCompatibleCodePages(CP, zCP_UTF8) then
+            Result := UTF8Encode(S)
+          else
+            Result := ZWideString(S); //random success
+        end;
+        {$ENDIF}
+      {$IFEND}
 end;
 {$ENDIF}
 
@@ -691,107 +608,31 @@ begin
   end;
 end;
 {$ELSE}
-{$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+{$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
 var
-  wlen, ulen: Integer;
-  {$IFNDEF WITH_UNICODEFROMLOCALECHARS}
-  WS: WideString;
-  {$ENDIF}
+  WideRec: TZWideRec;
 {$IFEND}
 begin
-  Result := ''; //speed up setlength *2
-  if CP = zCP_NONE then
-    Result := RawByteString(US) //random success
-  else
-  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-  begin
-    wlen := System.Length(US);
-    if wlen = 0 then Exit;
-    if (Cardinal(wlen * 4 ) < High(Cardinal) ) then //max 4GB
-    begin
-      ulen := wlen*4; //set overlong speeds up x2 instead of testing res len twice
-      setlength(Result, ulen);
-      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      ulen := LocaleCharsFromUnicode(CP, 0, PWideChar(US), wlen, PAnsiChar(Result), ulen, NIL, NIL); // Convert Unicode down to Ansi
-      setlength(Result, ulen); //set proper size
-      {$ELSE}
-      WS := US; //need WideString
-      ulen := WideCharToMultiByte(CP,0, @WS[1], - 1, PAnsiChar(Result), ulen - 1, nil, nil); // Convert Wide down to Ansi
-      SetLength(Result, ulen - 1); //SetResult Length
-      {$ENDIF}
-    end
-    else //too much mem, use check len instead
-    begin
-      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      ulen := LocaleCharsFromUnicode(CP, 0, PWideChar(US), wlen, NIL, 0, NIL, NIL);
-      if ulen = 0 then Exit;
-      setlength(Result, ulen);
-      LocaleCharsFromUnicode(CP, 0, PWideChar(US), wlen, PAnsiChar(Result), ulen, NIL, NIL);
-      {$ELSE}
-      WS := US;
-      ulen := WideCharToMultiByte(CP,0, @WS[1], wlen, nil, 0, nil, nil); //Checkout the result length
-      if ulen = 0 then Exit;
-      SetLength(Result, ulen - 1); //SetResult Length
-      WideCharToMultiByte(CP,0, @WS[1], - 1, PAnsiChar(Result), ulen - 1, nil, nil); // Convert Wide down to Ansi
-      {$ENDIF}
-    end;
-  end;
+  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
+  WideRec.Len := Length(US);
+  WideRec.P := PWideChar(US);
+  Result := ZWideRecToRaw(WideRec, CP);
   {$ELSE}
-    {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-      WidestringManager.Unicode2AnsiMoveProc(PWideChar(US), Result, CP, Length(US));
-    {$ELSE}
-      if ZCompatibleCodePages(CP, zCP_UTF8) then
-        Result := UTF8Encode(US)
-      else
-        Result := RawByteString(US); //random success
-    {$ENDIF}
+    if ZCompatibleCodePages(CP, zCP_UTF8) then
+      Result := UTF8Encode(US)
+    else
+      Result := RawByteString(US); //random success
   {$IFEND}
 end;
 {$ENDIF}
 
 function ZWideRecToRaw(const Value: TZWideRec; const CP: Word): RawByteString;
 {$IFDEF WITH_LCONVENCODING}
+var
+  US: ZWideString;
 begin
-  case CP of
-    28591: //ISO_8859_1
-      Result := UTF8ToISO_8859_1(UTF8Encode(ZWideString(Value.P)));
-    28592:  //ISO_8859_2
-      Result := UTF8ToISO_8859_2(UTF8Encode(ZWideString(Value.P)));
-    1250: //WIN1250
-      Result := UTF8ToCP1250(UTF8Encode(ZWideString(Value.P)));
-    1251: //WIN1251
-      Result := UTF8ToCP1251(UTF8Encode(ZWideString(Value.P)));
-    1252: //WIN1252
-      Result := UTF8ToCP1252(UTF8Encode(ZWideString(Value.P)));
-    1253: //WIN1253
-      Result := UTF8ToCP1253(UTF8Encode(ZWideString(Value.P)));
-    1254: //WIN1254
-      Result := UTF8ToCP1254(UTF8Encode(ZWideString(Value.P)));
-    1255: //WIN1255
-      Result := UTF8ToCP1255(UTF8Encode(ZWideString(Value.P)));
-    1256: //WIN1256
-      Result := UTF8ToCP1256(UTF8Encode(ZWideString(Value.P)));
-    1257: //WIN1257
-      Result := UTF8ToCP1257(UTF8Encode(ZWideString(Value.P)));
-    1258: //WIN1258
-      Result := UTF8ToCP1258(UTF8Encode(ZWideString(Value.P)));
-    437: //CP437
-      Result := UTF8ToCP437(UTF8Encode(ZWideString(Value.P)));
-    850: //CP850
-      Result := UTF8ToCP850(UTF8Encode(ZWideString(Value.P)));
-    852: //CP852
-      Result := UTF8ToCP852(UTF8Encode(ZWideString(Value.P)));
-    866: //CP866
-      Result := UTF8ToCP866(UTF8Encode(ZWideString(Value.P)));
-    874: //CP874
-      Result := UTF8ToCP874(UTF8Encode(ZWideString(Value.P)));
-    20866: //KOI8 (Russian)
-      Result := UTF8ToKOI8(UTF8Encode(ZWideString(Value.P)));
-    65001: //UTF8
-      Result := UTF8Encode(ZWideString(Value.P));
-    else
-      Result := RawByteString(ZWideString(Value.P)); //random success!
-  end;
+  SetString(US, Value.P, Value.Len);
+  Result := ZUnicodeToRaw(US, CP);
 end;
 {$ELSE}
 {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
@@ -803,61 +644,38 @@ var
 {$IFEND}
 begin
   Result := ''; //speed up setlength *2
-  if CP = zCP_NONE then
-    Result := RawByteString(Value.P) //random success
+  if Value.Len = 0 then
+    Exit
   else
-  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
-  begin
-    if Value.Len = 0 then Exit;
-    if (Value.Len * 4 < High(Cardinal) ) then //max 4GB
+    if CP = zCP_NONE then
+      Result := RawByteString(Value.P) //random success
+    else
+    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     begin
-      ulen := Value.Len*4; //set overlong speeds up x2 instead of testing res len twice
-      setlength(Result, ulen);
+      ULen := Min(Value.Len * 4, High(Integer)-1);
+      setlength(Result, ulen); //oversized
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       ulen := LocaleCharsFromUnicode(CP, 0, Value.P, Value.Len, PAnsiChar(Result), ulen, NIL, NIL); // Convert Unicode down to Ansi
       {$ELSE}
         {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
-        ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen - 1, nil, nil); // Convert Wide down to Ansi
+        ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
         {$ELSE}
-        WS := Value.P; //need a real WideString
-        ulen := WideCharToMultiByte(CP,0, @WS[1], Value.Len, PAnsiChar(Result), ulen - 1, nil, nil); // Convert Wide down to Ansi
+        SetString(WS, Value.P, Value.Len); //need a real WideString
+        ulen := WideCharToMultiByte(CP,0, @WS[1], Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
         {$ENDIF}
       {$ENDIF}
-      SetLength(Result, ulen); //SetResult Length
-    end
-    else //too much mem, use check len instead
-    begin
-      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-      ulen := LocaleCharsFromUnicode(CP, 0, Value.P, Value.Len, NIL, 0, NIL, NIL);
-      if ulen = 0 then Exit;
-      setlength(Result, ulen);
-      LocaleCharsFromUnicode(CP, 0, Value.P, Value.Len, PAnsiChar(Result), ulen, NIL, NIL); // Convert Unicode down to Ansi
-      {$ELSE}
-        {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
-        ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, nil, 0, nil, nil); //Checkout the result length
-        if ulen = 0 then Exit;
-        SetLength(Result, ulen); //SetResult Length
-        WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
-        {$ELSE}
-        WS := Value.P; //need a real WideString
-        ulen := WideCharToMultiByte(CP,0, @WS[1], Value.Len, nil, 0, nil, nil); //Checkout the result length
-        if ulen = 0 then Exit;
-        SetLength(Result, ulen); //SetResult Length
-        WideCharToMultiByte(CP,0, @WS[1], Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
-        {$ENDIF}
-      {$ENDIF}
+      SetLength(Result, ulen); //Set expected result length
     end;
-  end;
-  {$ELSE}
-    {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
-      WidestringManager.Unicode2AnsiMoveProc(Value.P, Result, CP, Value.Len);
     {$ELSE}
-      if ZCompatibleCodePages(CP, zCP_UTF8) then
-        Result := UTF8Encode(ZWideString(Value.P))
-      else
-        Result := RawByteString(Value.P); //random success
-    {$ENDIF}
-  {$IFEND}
+      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+        WidestringManager.Unicode2AnsiMoveProc(Value.P, Result, CP, Value.Len);
+      {$ELSE}
+        if ZCompatibleCodePages(CP, zCP_UTF8) then
+          Result := UTF8Encode(ZWideString(Value.P))
+        else
+          Result := RawByteString(Value.P); //random success
+      {$ENDIF}
+    {$IFEND}
 end;
 {$ENDIF}
 
@@ -1334,68 +1152,64 @@ end;
 {$ENDIF}
 function ZConvertRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
-{$IFNDEF UNICODE}
+{$IF not defined(UNICODE) and not defined(WITH_LCONVENCODING)}
 var
-  {$IFDEF WITH_LCONVENCODING}
-  sUTF8: String;
-  {$ELSE}
   US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
-  {$ENDIF}
-{$ENDIF}
+  Raw: RawByteString;
+{$IFEND}
 begin
   if Src = '' then
     Result := ''
   else
   begin
     {$IFDEF WITH_LCONVENCODING}
-    sUTF8 := ''; //Makes Compiler happy
-    ZSetString(PAnsichar(Src), sUTF8);
     case RawCP of
       28591: //ISO_8859_1
-        Result := ISO_8859_1ToUTF8(PAnsiChar(sUTF8));
+        Result := ISO_8859_1ToUTF8(Src);
       28592:  //ISO_8859_2
-        Result := ISO_8859_2ToUTF8(PAnsiChar(sUTF8));
+        Result := ISO_8859_2ToUTF8(Src);
       1250: //WIN1250
-        Result := CP1250ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1250ToUTF8(Src);
       1251: //WIN1251
-        Result := CP1251ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1251ToUTF8(Src);
       1252: //WIN1252
-        Result := CP1252ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1252ToUTF8(Src);
       1253: //WIN1253
-        Result := CP1253ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1253ToUTF8(Src);
       1254: //WIN1254
-        Result := CP1254ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1254ToUTF8(Src);
       1255: //WIN1255
-        Result := CP1255ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1255ToUTF8(Src);
       1256: //WIN1256
-        Result := CP1256ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1256ToUTF8(Src);
       1257: //WIN1257
-        Result := CP1257ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1257ToUTF8(Src);
       1258: //WIN1258
-        Result := CP1258ToUTF8(PAnsiChar(sUTF8));
+        Result := CP1258ToUTF8(Src);
       437: //CP437
-        Result := CP437ToUTF8(PAnsiChar(sUTF8));
+        Result := CP437ToUTF8(Src);
       850: //CP850
-        Result := CP850ToUTF8(PAnsiChar(sUTF8));
+        Result := CP850ToUTF8(Src);
       852: //CP852
-        Result := CP852ToUTF8(PAnsiChar(sUTF8));
+        Result := CP852ToUTF8(Src);
       866: //CP866
-        Result := CP866ToUTF8(PAnsiChar(sUTF8));
+        Result := CP866ToUTF8(Src);
       874: //CP874
-        Result := CP874ToUTF8(PAnsiChar(sUTF8));
+        Result := CP874ToUTF8(Src);
       20866: //KOI8 (Russian)
-        Result := KOI8ToUTF8(PAnsiChar(sUTF8));
+        Result := KOI8ToUTF8(Src);
       65001: //utf8
-        Result := PAnsiChar(sUTF8);
+        Result := Src;
       else
-        Result := PAnsiChar(sUTF8);
+        Result := Src;
     end;
   {$ELSE}
     {$IFDEF UNICODE}
     Result := ZRawToUnicode(Src, RawCP);
     {$ELSE}
     US := ZRawToUnicode(Src, RawCP);
-    ZSetString(PAnsiChar(ZUnicodeToRaw(US, StringCP)), Result);
+    Raw := ZUnicodeToRaw(US, StringCP);
+    ZSetString(PAnsiChar(Raw), Length(Raw), Result);
     {$ENDIF}
   {$ENDIF}
   end;
@@ -1852,7 +1666,7 @@ begin
             Result := PAnsiChar(Bytes)  //should be exact
           else
             {$IFDEF WITH_LCONVENCODING}
-            Result := Consettings.PlainConvertFunc(AnsiToUTF8(PAnsiChar(Bytes)))  //no other possibility
+            Result := Consettings^.PlainConvertFunc(AnsiToUTF8(PAnsiChar(Bytes)))  //no other possibility
             {$ELSE}
             Result := ZUnicodeToRaw(ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
             {$ENDIF}
