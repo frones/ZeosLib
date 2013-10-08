@@ -110,11 +110,10 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Db,
   {$IFDEF WITH_DBTABLES}
   DbTables,
   {$ENDIF}
-  ZAbstractRODataset;
+  Db;
 
 
 { TZAbstractQueryCase }

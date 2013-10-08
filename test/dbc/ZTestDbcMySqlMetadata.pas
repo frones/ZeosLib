@@ -154,7 +154,7 @@ procedure TZTestMySqlMetadataCase.TestGetCatalogs;
 var
   ResultSet: IZResultSet;
   DBFound: boolean;
-  CatalogName: string;
+  TableName: string;
 begin
   DBFound := False;
   ResultSet := Metadata.GetCatalogs;
@@ -162,8 +162,8 @@ begin
 
   while ResultSet.Next do
   begin
-    CatalogName := ResultSet.GetString(1);
-    if CatalogName = Connection.GetMetadata.NormalizePatternCase(ConnectionConfig.Database) then
+    TableName := ResultSet.GetString(1);
+    if TableName = 'zeoslib' then
       DBFound := True;
   end;
   Check(DBFound);

@@ -106,7 +106,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset,
+  DateUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDbcResultSet }

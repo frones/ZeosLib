@@ -97,7 +97,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
+uses ZSysUtils;
 
 { TZASATestDbcMetadata }
 

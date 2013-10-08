@@ -58,8 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
-  ZSqlStrings, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZSqlTestCase;
+  ZGenericSqlToken, ZDataset, ZSqlTestCase;
 
 type
 
@@ -97,7 +96,7 @@ type
 
 implementation
 
-uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
+uses Classes, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
   ZAbstractRODataset, ZCompatibility, ZSysUtils;
 
 const TestRowID = 1000;

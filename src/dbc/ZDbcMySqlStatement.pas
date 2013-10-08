@@ -668,6 +668,7 @@ var
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
   TempAnsi: RawByteString;
+  CharRec: TZCharRec;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
@@ -679,7 +680,7 @@ begin
   begin
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_STRING then
-      InParamValues[I] := ClientVarManager.Convert(InParamValues[I], vtRawByteString);
+      CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
     case MyType of
       FIELD_TYPE_BLOB:
         begin
@@ -692,12 +693,13 @@ begin
             else
             begin
               if TempBlob.IsClob then
-                TempAnsi := TempBlob.GetRawByteString
+                TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP) //set proper encoding if required
               else
+              begin
                 TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                           TempBlob.Length, ConSettings);
-              TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
-              TempBlob.SetString(TempAnsi);
+                TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
+              end;
               InParamValues[I].VInterface  := TempBlob;
               FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
             end;
@@ -709,57 +711,57 @@ begin
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, Length(InParamValues[I].VRawByteString)),false);
+        FParamBindBuffer.AddColumn(MyType,Max(1, CharRec.Len), false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
-    if InParamValues[I].VType=vtNull then
+    if InParamValues[I].VType = vtNull then
       FColumnArray[I].is_null := 1
     else
       FColumnArray[I].is_null := 0;
-      case FParamBindBuffer.GetBufferType(I+1) of
 
-        FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
-        FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
-        FIELD_TYPE_STRING:
-          case MyType of
-            FIELD_TYPE_TINY:
-              if InParamValues[I].VBoolean then
-                PAnsiChar(PBuffer)^ := AnsiChar('Y')
-              else
-                PAnsiChar(PBuffer)^ := AnsiChar('N');
-            FIELD_TYPE_BLOB:
-              begin
-                if TempBlob.Length<=ChunkSize then
-                  {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
-                TempBlob := nil;
-              end;
+    case FParamBindBuffer.GetBufferType(I+1) of
+      FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
+      FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
+      FIELD_TYPE_STRING:
+        case MyType of
+          FIELD_TYPE_TINY:
+            if InParamValues[I].VBoolean then
+              PAnsiChar(PBuffer)^ := AnsiChar('Y')
             else
-              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(InParamValues[I].VRawByteString));
-          end;
-        FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
-        FIELD_TYPE_DATETIME:
-          begin
-            DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
-            PMYSQL_TIME(PBuffer)^.year := year;
-            PMYSQL_TIME(PBuffer)^.month := month;
-            PMYSQL_TIME(PBuffer)^.day := day;
-            PMYSQL_TIME(PBuffer)^.hour := hour;
-            PMYSQL_TIME(PBuffer)^.minute := minute;
-            PMYSQL_TIME(PBuffer)^.second := second;
-            PMYSQL_TIME(PBuffer)^.second_part := millisecond;
-          end;
-          FIELD_TYPE_TINY_BLOB:
-            System.Move(PAnsiChar(InParamValues[i].VBytes)^, PBuffer^, Length(InParamValues[i].VBytes));
-          FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+              PAnsiChar(PBuffer)^ := AnsiChar('N');
           FIELD_TYPE_BLOB:
             begin
               if TempBlob.Length<=ChunkSize then
                 System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
               TempBlob := nil;
             end;
-          FIELD_TYPE_NULL:;
-      end;
+          else
+            System.Move(CharRec.P^, PBuffer^, CharRec.Len+1);
+        end;
+      FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
+      FIELD_TYPE_DATETIME:
+        begin
+          DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
+          PMYSQL_TIME(PBuffer)^.year := year;
+          PMYSQL_TIME(PBuffer)^.month := month;
+          PMYSQL_TIME(PBuffer)^.day := day;
+          PMYSQL_TIME(PBuffer)^.hour := hour;
+          PMYSQL_TIME(PBuffer)^.minute := minute;
+          PMYSQL_TIME(PBuffer)^.second := second;
+          PMYSQL_TIME(PBuffer)^.second_part := millisecond;
+        end;
+        FIELD_TYPE_TINY_BLOB:
+          System.Move(InParamValues[i].VBytes[0], PBuffer^, Length(InParamValues[i].VBytes));
+        FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_BLOB:
+          begin
+            if TempBlob.Length<=ChunkSize then
+              System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
+            TempBlob := nil;
+          end;
+        FIELD_TYPE_NULL:;
+    end;
   end;
 
   if (FPlainDriver.BindParameters(FStmtHandle, FParamBindBuffer.GetBufferAddress) <> 0) then
@@ -771,33 +773,28 @@ begin
 
   // Send large blobs in chuncks
   For I := 0 to InParamCount - 1 do
-  begin
-    if FParamBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
+    if (FParamBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB])
+      and (GetFieldType(InParamValues[I]) = FIELD_TYPE_BLOB) then
+    begin
+      TempBlob := (InParamValues[I].VInterface as IZBlob);
+      if TempBlob.Length>ChunkSize then
       begin
-        MyType := GetFieldType(InParamValues[I]);
-        if MyType = FIELD_TYPE_BLOB then
+        OffSet := 0;
+        PieceSize := ChunkSize;
+        while OffSet < TempBlob.Length do
+        begin
+          if OffSet+PieceSize > TempBlob.Length then
+            PieceSize := TempBlob.Length - OffSet;
+          if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
           begin
-            TempBlob := (InParamValues[I].VInterface as IZBlob);
-            if TempBlob.Length>ChunkSize then
-            begin
-              OffSet := 0;
-              PieceSize := ChunkSize;
-              while OffSet < TempBlob.Length do
-              begin
-                if OffSet+PieceSize > TempBlob.Length then
-                  PieceSize := TempBlob.Length - OffSet;
-                if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
-                begin
-                  checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
-                  exit;
-                end;
-                Inc(OffSet, PieceSize);
-              end;
-            end;
-            TempBlob:=nil;
+            checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+            exit;
           end;
+          Inc(OffSet, PieceSize);
+        end;
       end;
-  end;
+      TempBlob:=nil;
+    end;
 end;
 
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
@@ -1131,9 +1128,11 @@ begin
     begin
       if FDBParamTypes[i] in [1, 3] then //ptInputOutput
         if ExecQuery = '' then
-          ExecQuery := 'SET @'+ZPlainString(FParamNames[i])+' = '+PrepareAnsiSQLParam(I)
+          ExecQuery := 'SET @'+ConSettings^.ConvFuncs.ZStringToRaw(FParamNames[i],
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+' = '+PrepareAnsiSQLParam(I)
         else
-          ExecQuery := ExecQuery + ', @'+ZPlainString(FParamNames[i])+' = '+PrepareAnsiSQLParam(I);
+          ExecQuery := ExecQuery + ', @'+ConSettings^.ConvFuncs.ZStringToRaw(FParamNames[i],
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+' = '+PrepareAnsiSQLParam(I);
       Inc(i);
     end;
   if not (ExecQuery = '') then
