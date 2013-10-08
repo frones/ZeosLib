@@ -538,43 +538,24 @@ begin
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
     vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
-    vtString:
-      {$IFDEF UNICODE}
-      V := SoftVarManager.GetAsString(RetValue);
-      {$ELSE}
-      if ParamDirection = adParamInputOutput then //can't say why but bidirectional params need to be converted first.
-        //On the other hand they where not refreshed after second call! Is there a problem with Variant vs. OleVariant and strings?
-      begin
-        V := WideString(SoftVarManager.GetAsString(RetValue));
-        TmpSQLType := stUnicodeString;
-      end
-      else
-        if SQLType = stAsciiStream then
-          V := SoftVarManager.GetAsString(RetValue)
-        else
-          V := Connection.GetIZPlainDriver.ZPlainString(SoftVarManager.GetAsString(RetValue), Connection.GetConSettings);
-      {$ENDIF}
-    vtUnicodeString: V := WideString(SoftVarManager.GetAsUnicodeString(RetValue));
+    vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
+    begin
+      RetValue.VUnicodeString := Connection.GetClientVariantManager.GetAsUnicodeString(RetValue);
+      V := WideString(RetValue.VUnicodeString);
+    end;
     vtDateTime: V := TDateTime(SoftVarManager.GetAsDateTime(RetValue));
   end;
 
   S := 0; //init val
   case TmpSQLType of
-    stString:
+    stString, stUnicodeString:
       begin
-        S := Length(VarToStr(V));
-        if S = 0 then S := 1;
-        //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
-      end;
-    stUnicodeString:
-      begin
-        S := Length(VarToWideStr(V))*2; //strange! Need size in bytes!!
+        S := Length(RetValue.VUnicodeString)*2; //strange! Need size in bytes!!
         if S = 0 then S := 1;
         //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
       end;
     stBytes:
       begin
-        //V := StrToBytes(VarToStr(V));
         if (VarType(V) and varArray) <> 0 then
           S := VarArrayHighBound(V, 1) + 1;
         if S = 0 then V := Null;

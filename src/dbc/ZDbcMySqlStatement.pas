@@ -725,9 +725,9 @@ begin
           case MyType of
             FIELD_TYPE_TINY:
               if InParamValues[I].VBoolean then
-                PAnsiChar(PBuffer)^ := 'Y'
+                PAnsiChar(PBuffer)^ := AnsiChar('Y')
               else
-                PAnsiChar(PBuffer)^ := 'N';
+                PAnsiChar(PBuffer)^ := AnsiChar('N');
             FIELD_TYPE_BLOB:
               begin
                 if TempBlob.Length<=ChunkSize then
@@ -819,6 +819,7 @@ begin
     vtAnsiString,
     vtUTF8String,
     vtRawByteString,
+    vtCharRec,
     vtUnicodeString:  Result := FIELD_TYPE_STRING;
     vtDateTime:  Result := FIELD_TYPE_DATETIME;
     vtInterface: Result := FIELD_TYPE_BLOB;

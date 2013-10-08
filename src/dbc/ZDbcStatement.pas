@@ -254,6 +254,7 @@ type
     procedure SetDouble(ParameterIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual;
@@ -1569,6 +1570,23 @@ procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
    Value: PChar);
 begin
   SetInParam(ParameterIndex, stString, EncodeString(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>TZCharRec</code> value.
+  The driver converts this
+  to an SQL <code>VARCHAR</code> or <code>LONGVARCHAR</code> value
+  (depending on the argument's
+  size relative to the driver's limits on <code>VARCHAR</code> values)
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetCharRec(ParameterIndex: Integer;
+  const Value: TZCharRec);
+begin
+  SetInParam(ParameterIndex, stString, EncodeCharRec(Value));
 end;
 
 {**

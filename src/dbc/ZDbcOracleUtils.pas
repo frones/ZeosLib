@@ -279,7 +279,7 @@ procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Po
 
 implementation
 
-uses ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
+uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
   ZDbcGenericResolver, ZDbcUtils, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -483,6 +483,7 @@ var
   Buffer: Pointer;
   AnsiTemp: RawByteString;
   ConSettings: PZConSettings;
+  CharRec: TZCharRec;
 begin
   OracleConnection := Connection as IZOracleConnection;
   ClientVarManager := Connection.GetClientVariantManager;
@@ -505,7 +506,12 @@ begin
         SQLT_FLT:
           PDouble(CurrentVar.Data)^ := ClientVarManager.GetAsFloat(Values[I]);
         SQLT_STR:
-          {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data), PAnsiChar(ClientVarManager.GetAsRawByteString(Values[I])), 1024);
+          begin
+            CharRec := ClientVarManager.GetAsCharRec(Values[i], ConSettings^.ClientCodePage^.CP);
+            CharRec.Len := Math.Min(CharRec.Len, 1024);
+            System.Move(CharRec.P^, CurrentVar.Data^, CharRec.Len);
+            (PAnsiChar(CurrentVar.Data)+CharRec.Len)^ := #0; //improve  StrLCopy...
+          end;
         SQLT_TIMESTAMP:
           begin
             TempDate := ClientVarManager.GetAsDateTime(Values[I]);

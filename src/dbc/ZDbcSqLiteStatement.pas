@@ -378,11 +378,11 @@ begin
 end;
 {$ENDIF}
 
-
+(* out of use now...
 procedure BindingDestructor(Value: PAnsiChar); cdecl;
 begin
   {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(Value);
-end;
+end;*)
 
 { TZSQLiteCAPIPreparedStatement }
 
@@ -435,32 +435,22 @@ end;
 
 procedure TZSQLiteCAPIPreparedStatement.BindInParameters;
 var
-  Value: TZVariant;
   TempBlob: IZBlob;
   I: Integer;
   Buffer: PAnsiChar;
-  Bts: TByteDynArray;
-  TempAnsi: RawByteString;
-
-  Function AsPAnsiChar(Const S : RawByteString; Len: Integer) : PAnsiChar;
-  begin
-    Result := {$IFDEF UNICODE}AnsiStrAlloc{$ELSE}StrAlloc{$ENDIF}(Len);
-    System.Move(PAnsiChar(S)^, Result^, Len);
-  end;
-
+  CharRec: TZCharRec;
 begin
   FErrorcode := FPlainDriver.clear_bindings(FStmtHandle);
   CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcBindPrepStmt, SSQL);
   for i := 1 to InParamCount do
   begin
-    Value := InParamValues[i-1];
-    if ClientVarManager.IsNull(Value)  then
+    if ClientVarManager.IsNull(InParamValues[i-1])  then
       FErrorcode := FPlainDriver.bind_null(FStmtHandle, I)
     else
     begin
       case InParamTypes[I-1] of
         stBoolean:
-          if ClientVarManager.GetAsBoolean(Value) then
+          if ClientVarManager.GetAsBoolean(InParamValues[i-1]) then
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
             PAnsiChar(AnsiString('Y')), 1, nil)
           else
@@ -468,49 +458,61 @@ begin
               PAnsichar(AnsiString('N')), 1, nil);
         stByte, stShort, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
-            ClientVarManager.GetAsInteger(Value));
+            ClientVarManager.GetAsInteger(InParamValues[i-1]));
         stLong:
           FErrorcode := FPlainDriver.bind_int64(FStmtHandle, i,
-            ClientVarManager.GetAsInteger(Value));
+            ClientVarManager.GetAsInteger(InParamValues[i-1]));
         stBigDecimal, stFloat, stDouble:
           FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
-            ClientVarManager.GetAsFloat(Value));
+            ClientVarManager.GetAsFloat(InParamValues[i-1]));
         stBytes:
           begin
-            Bts := SoftVarManager.GetAsBytes(Value);
+            InParamValues[i-1].VBytes := SoftVarManager.GetAsBytes(InParamValues[i-1]);
             FErrorcode := FPlainDriver.bind_blob(FStmtHandle, i,
-              @Bts[0], Length(Bts), nil);
+              @InParamValues[i-1].VBytes[0], Length(InParamValues[i-1].VBytes), nil);
           end;
         stString, stUnicodeString:
-          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-            PAnsichar(ClientVarManager.GetAsRawByteString(Value)), -1, nil);
-        stDate: //EH: no idea why, but i can't omit the bindingdestructor for date-values
-          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
-            DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, False))),
-              ConSettings^.WriteFormatSettings.DateFormatLen, @BindingDestructor);
-        stTime: //EH: no idea why, but i can't omit the bindingdestructor for time-values
-          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
-            DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-              ConSettings^.WriteFormatSettings, False))),
-                ConSettings^.WriteFormatSettings.TimeFormatLen, @BindingDestructor);
-        stTimestamp: //EH: no idea why, but i can't omit the bindingdestructor for datetime-values
-          FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-          {$IFDEF WITH_STRNEW_DEPRECATED}AnsiStrings.{$ENDIF}StrNew(PAnsiChar(
-            DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-              ConSettings^.WriteFormatSettings, False))),
-              ConSettings^.WriteFormatSettings.DateTimeFormatLen, @BindingDestructor);
+          begin
+            CharRec := ClientVarManager.GetAsCharRec(InParamValues[i-1], zCP_UTF8);
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              CharRec.P, CharRec.Len, nil);
+          end;
+        stDate:
+          begin
+            InParamValues[i-1].VRawByteString := DateTimeToRawSQLDate(
+              ClientVarManager.GetAsDateTime(InParamValues[i-1]),
+                ConSettings^.WriteFormatSettings, False);
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              PAnsiChar(InParamValues[i-1].VRawByteString),
+              ConSettings^.WriteFormatSettings.DateFormatLen, nil);
+          end;
+        stTime:
+          begin
+            InParamValues[i-1].VRawByteString := DateTimeToRawSQLTime(
+              ClientVarManager.GetAsDateTime(InParamValues[i-1]),
+                ConSettings^.WriteFormatSettings, False);
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              PAnsiChar(InParamValues[i-1].VRawByteString),
+              ConSettings^.WriteFormatSettings.TimeFormatLen, nil);
+          end;
+        stTimestamp:
+          begin
+            InParamValues[i-1].VRawByteString := DateTimeToRawSQLTimeStamp(
+              ClientVarManager.GetAsDateTime(InParamValues[i-1]),
+                ConSettings^.WriteFormatSettings, False);
+            FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
+              PAnsiChar(InParamValues[i-1].VRawByteString),
+              ConSettings^.WriteFormatSettings.DateTimeFormatLen, nil);
+          end;
         { works equal but selects from data which was written in string format
           won't match! e.G. TestQuery etc. On the other hand-> i've prepared
           this case on the resultsets too. JULIAN_DAY_PRECISION?}
         {stDate, stTime, stTimestamp:
           FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
-            ClientVarManager.GetAsDateTime(Value));}
+            ClientVarManager.GetAsDateTime(InParamValues[i-1]));}
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
-            TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
+            TempBlob := ClientVarManager.GetAsInterface(InParamValues[i-1]) as IZBlob;
             if not TempBlob.IsEmpty then
               if InParamTypes[I-1] = stBinaryStream then
               begin
@@ -526,10 +528,11 @@ begin
                 end
                 else
                 begin
-                  TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                  InParamValues[I-1].VRawByteString := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                     TempBlob.Length, ConSettings);
                   FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
-                  PAnsiChar(TempAnsi), Length(TempAnsi), nil);
+                    PAnsiChar(InParamValues[I-1].VRawByteString),
+                    Length(InParamValues[I-1].VRawByteString), nil);
                 end
             else
               FErrorcode := FPlainDriver.bind_null(FStmtHandle, I);

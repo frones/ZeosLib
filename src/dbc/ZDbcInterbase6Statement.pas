@@ -55,10 +55,10 @@ interface
 
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcInterbase6,
-  ZDbcInterbase6Utils, ZDbcInterbase6ResultSet,
-  ZPlainFirebirdInterbaseConstants,
-  ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
+uses Classes, SysUtils, Types,
+  ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
+  ZDbcInterbase6ResultSet, ZPlainFirebirdInterbaseConstants, ZCompatibility,
+  ZDbcLogging, ZVariant, ZMessages;
 
 type
 
@@ -86,6 +86,7 @@ type
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
+    FCodePageArray: TWordDynArray;
 
     Cursor: AnsiString;
     SQLData: IZResultSQLDA;
@@ -118,6 +119,7 @@ type
     FStatementType: TZIbSqlStatementType;
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
+    FCodePageArray: TWordDynArray;
   protected
     procedure CheckInterbase6Error(const Sql: string = '');
     procedure FetchOutParams(Value: IZResultSQLDA);
@@ -138,7 +140,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, Types;
+uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver;
 
 { TZInterbase6Statement }
 
@@ -436,7 +438,7 @@ end;
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
   BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager, InParamValues,
-    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings);
+    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings, FCodePageArray);
   inherited BindInParameters;
 end;
 
@@ -471,6 +473,7 @@ begin
   inherited Create(Connection, SQL, Info);
 
   FIBConnection := Connection as IZInterbase6Connection;
+  FCodePageArray := (FIBConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
   ResultSetType := rtScrollInsensitive;
   StmtHandle := 0;
 
@@ -739,6 +742,7 @@ begin
   inherited Create(Connection, SQL, Info);
 
   FIBConnection := Connection as IZInterbase6Connection;
+  FCodePageArray := (FIBConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
   ResultSetType := rtScrollInsensitive;
   with FIBConnection do
   begin
@@ -765,7 +769,7 @@ end;
 procedure TZInterbase6CallableStatement.BindInParameters;
 begin
   BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager,
-    InParamValues, InParamTypes, InParamCount, FParamSQLData, ConSettings);
+    InParamValues, InParamTypes, InParamCount, FParamSQLData, ConSettings, FCodePageArray);
   inherited BindInParameters;
 end;
 

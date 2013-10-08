@@ -512,7 +512,7 @@ begin
     end;
 
     PrepareOracleStatement(FPlainDriver, ASQL, LogSQL, Handle, ErrorHandle,
-      StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
+      StrToIntDef(Info.Values['prefetch_count'], 1000), ConSettings);
 
     AllocateOracleSQLVars(FInVars, InParamCount);
     InVars^.ActualNum := InParamCount;

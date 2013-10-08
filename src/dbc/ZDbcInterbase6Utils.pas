@@ -126,7 +126,7 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
-    procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
+    procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
     procedure UpdateString(const Index: Integer; Value: RawByteString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -179,7 +179,7 @@ type
   public
     constructor Create(PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-      ConSettings: PZConSettings); virtual;
+      ConSettings: PZConSettings);
     procedure InitFields(Parameters: boolean);
     procedure AllocateSQLDA; virtual;
     procedure FreeParamtersValues;
@@ -207,7 +207,9 @@ type
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
   private
-    procedure EncodeString(Code: Smallint; const Index: Word; const Str: RawByteString);
+    procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString); overload;
+    procedure EncodeString(const Code: Smallint; const Index: Word;
+      const Str: PAnsiChar; const Len: Cardinal); overload;
     procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TByteDynArray);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
@@ -225,7 +227,7 @@ type
     procedure UpdateFloat(const Index: Integer; Value: Single);
     procedure UpdateDouble(const Index: Integer; Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
-    procedure UpdatePChar(const Index: Integer; Value: PAnsiChar);
+    procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
     procedure UpdateString(const Index: Integer; Value: RawByteString);
     procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
@@ -272,68 +274,69 @@ type
     function GetQuad(const Index: Integer): TISC_QUAD;
   end;
 
-  function RandomString(Len: integer): RawByteString;
-  function CreateIBResultSet(SQL: string; Statement: IZStatement;
-    NativeResultSet: IZResultSet): IZResultSet;
+function RandomString(Len: integer): RawByteString;
+function CreateIBResultSet(SQL: string; Statement: IZStatement;
+  NativeResultSet: IZResultSet): IZResultSet;
 
-  {Interbase6 Connection Functions}
-  function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
-  function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
-  function GetInterbase6DatabaseParamNumber(const Value: RawByteString): word;
-  function GetInterbase6TransactionParamNumber(const Value: RawByteString): word;
+{Interbase6 Connection Functions}
+function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
+function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
+function GetInterbase6DatabaseParamNumber(const Value: RawByteString): word;
+function GetInterbase6TransactionParamNumber(const Value: RawByteString): word;
 
-  { Interbase6 errors functions }
-  function GetNameSqlType(Value: Word): RawByteString;
-  function CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
-    StatusVector: TARRAY_ISC_STATUS; LoggingCategory: TZLoggingCategory = lcOther;
-    SQL: string = '') : Integer;
+{ Interbase6 errors functions }
+function GetNameSqlType(Value: Word): RawByteString;
+function CheckInterbase6Error(PlainDriver: IZInterbasePlainDriver;
+  StatusVector: TARRAY_ISC_STATUS; LoggingCategory: TZLoggingCategory = lcOther;
+  SQL: string = '') : Integer;
 
-  { Interbase information functions}
-  function GetVersion(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE): AnsiString;
-  function GetDBImplementationNo(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE): LongInt;
-  function GetDBImplementationClass(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE): LongInt;
-  function GetLongDbInfo(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; DatabaseInfoCommand: Integer): LongInt;
-  function GetStringDbInfo(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; DatabaseInfoCommand: Integer): AnsiString;
-  function GetDBSQLDialect(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE): Integer;
+{ Interbase information functions}
+function GetVersion(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE): AnsiString;
+function GetDBImplementationNo(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE): LongInt;
+function GetDBImplementationClass(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE): LongInt;
+function GetLongDbInfo(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; DatabaseInfoCommand: Integer): LongInt;
+function GetStringDbInfo(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; DatabaseInfoCommand: Integer): AnsiString;
+function GetDBSQLDialect(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE): Integer;
 
-  { Interbase statement functions}
-  function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
-    SQL: RawByteString; LogSQL: String;
-    var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
-  procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; Dialect: Word; LogSQL: string;
-    var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
-  procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
-    Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
-  procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
-    ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
-    InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-    ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
-  procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
-    StatementHandle: TISC_STMT_HANDLE; Options : Word);
-  function GetStatementType(PlainDriver: IZInterbasePlainDriver;
-    StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
-  function GetAffectedRows(PlainDriver: IZInterbasePlainDriver;
-    StmtHandle: TISC_STMT_HANDLE; StatementType: TZIbSqlStatementType): integer;
+{ Interbase statement functions}
+function PrepareStatement(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; TrHandle: PISC_TR_HANDLE; Dialect: Word;
+  SQL: RawByteString; LogSQL: String;
+  var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
+procedure PrepareResultSqlData(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; Dialect: Word; LogSQL: string;
+  var StmtHandle: TISC_STMT_HANDLE; SqlData: IZResultSQLDA);
+procedure PrepareParameters(PlainDriver: IZInterbasePlainDriver; LogSQL: string;
+  Dialect: Word; var StmtHandle: TISC_STMT_HANDLE; ParamSqlData: IZParamsSQLDA);
+procedure BindSQLDAInParameters(const PlainDriver: IZInterbasePlainDriver;
+  const ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
+  const InParamTypes: TZSQLTypeArray; const InParamCount: Integer;
+  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
+  const CodePageArray: TWordDynArray);
+procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
+  StatementHandle: TISC_STMT_HANDLE; Options : Word);
+function GetStatementType(PlainDriver: IZInterbasePlainDriver;
+  StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
+function GetAffectedRows(PlainDriver: IZInterbasePlainDriver;
+  StmtHandle: TISC_STMT_HANDLE; StatementType: TZIbSqlStatementType): integer;
 
-  function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
-    const CtrlsCPType: TZControlsCodePage): TZSqlType;
+function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+  const CtrlsCPType: TZControlsCodePage): TZSqlType;
 
-  { interbase blob routines }
-  procedure GetBlobInfo(PlainDriver: IZInterbasePlainDriver;
-    BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo);
-  procedure ReadBlobBufer(PlainDriver: IZInterbasePlainDriver;
-    Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
-    BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
-    const Binary: Boolean);
-  function GetIBScaleDivisor(Scale: SmallInt): Int64;
+{ interbase blob routines }
+procedure GetBlobInfo(PlainDriver: IZInterbasePlainDriver;
+  BlobHandle: TISC_BLOB_HANDLE; var BlobInfo: TIbBlobInfo);
+procedure ReadBlobBufer(PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
+  BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
+  const Binary: Boolean);
+function GetIBScaleDivisor(Scale: SmallInt): Int64;
 
 
 const
@@ -1043,16 +1046,18 @@ begin
   ParamSqlData.InitFields(True);
 end;
 
-procedure BindSQLDAInParameters(PlainDriver: IZInterbasePlainDriver;
-  ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
-  InParamTypes: TZSQLTypeArray; InParamCount: Integer;
-  ParamSqlData: IZParamsSQLDA; ConSettings: PZConSettings);
+procedure BindSQLDAInParameters(const PlainDriver: IZInterbasePlainDriver;
+  const ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
+  const InParamTypes: TZSQLTypeArray; const InParamCount: Integer;
+  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
+  const CodePageArray: TWordDynArray);
 var
   I: Integer;
   TempBlob: IZBlob;
   Buffer: Pointer;
   Len: Integer;
   RawTemp: RawByteString;
+  CharRec: TZCharRec;
 begin
   if InParamCount <> ParamSqlData.GetFieldCount then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -1090,12 +1095,10 @@ begin
         ParamSqlData.UpdateBigDecimal(I,
           ClientVarManager.GetAsFloat(InParamValues[I]));
       stString, stUnicodeString:
-         if ( ConSettings.ClientCodePage.ID = CS_NONE ) and not
-            (ParamSqlData.GetIbSqlSubType(I) = CS_NONE) then //CharSet 'NONE' writes data 'as is'!
-          ParamSqlData.UpdateString(I, ClientVarManager.GetAsRawByteString(InParamValues[I],
-            PlainDriver.ValidateCharEncoding(ParamSqlData.GetIbSqlSubType(I))^.CP))
-        else
-          ParamSqlData.UpdateString(I, ClientVarManager.GetAsRawByteString(InParamValues[I]));
+        begin
+          CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[ParamSqlData.GetIbSqlSubType(I)]);
+          ParamSqlData.UpdatePAnsiChar(I, CharRec.P, CharRec.Len);
+        end;
       stBytes:
         ParamSqlData.UpdateBytes(I, ClientVarManager.GetAsBytes(InParamValues[I]));
       stDate:
@@ -1855,18 +1858,24 @@ end;
    @param Str the source string
 }
 
-procedure TZParamsSQLDA.EncodeString(Code: Smallint; const Index: Word;
+procedure TZParamsSQLDA.EncodeString(const Code: Smallint; const Index: Word;
   const Str: RawByteString);
 var
   Len: Cardinal;
 begin
   Len := Length(Str);
+  EncodeString(Code, Index, PAnsiChar(Str), Len);
+end;
+
+procedure TZParamsSQLDA.EncodeString(const Code: Smallint; const Index: Word;
+  const Str: PAnsiChar; const Len: Cardinal);
+begin
   {$R-}
    with FXSQLDA.sqlvar[Index] do
     case Code of
       SQL_TEXT :
         begin
-          if (sqllen = 0) and (Str <> '') then //Manits: #0000249/pktfag
+          if (sqllen = 0) and (Len <> 0) then //Manits: #0000249/pktfag
             GetMem(sqldata, Len)
           else
             IbReAlloc(sqldata, 0, Len + 1);
@@ -1876,12 +1885,9 @@ begin
       SQL_VARYING :
         begin
           sqllen := Len + 2;
-          if sqllen = 0 then   //Egonhugeist: Todo: Need test case. Can't believe this line is correct! sqllen is min 2
-            GetMem(sqldata, Len + 2)
-          else
-            IbReAlloc(sqldata, 0, Len + 2);
+          IbReAlloc(sqldata, 0, Len + 2);
           PISC_VARYING(sqldata).strlen :=  Len;
-          Move(PAnsiChar(Str)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          Move(Str^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
     end;
   {$IFOPT D+}
@@ -2447,12 +2453,37 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdatePChar(const Index: Integer; Value: PAnsiChar);
+procedure TZParamsSQLDA.UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
 var
-  TempString: RawByteString;
+ SQLCode: SmallInt;
 begin
-  TempString := Value;
-  UpdateString(Index, TempString);
+  CheckRange(Index);
+  {$R-}
+  with FXSQLDA.sqlvar[Index] do
+  begin
+    if (sqlind <> nil) and (sqlind^ = -1) then
+         Exit;
+    SQLCode := (sqltype and not(1));
+    case SQLCode of
+      SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value, Len);
+      SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value, Len);
+      SQL_LONG      : PInteger (sqldata)^ := Round(SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]); //AVZ
+      SQL_SHORT     : PInteger (sqldata)^ := RawToIntDef(Value, 0);
+      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
+      SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_D_FLOAT,
+      SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale];  //AVZ
+      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_BLOB, SQL_QUAD: WriteLobBuffer(Index, Value, Len);
+    else
+      raise EZIBConvertError.Create(SErrorConvertion);
+    end;
+    if (sqlind <> nil) then
+         sqlind^ := 0; // not null
+  end;
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
 end;
 
 {**
@@ -2543,44 +2574,10 @@ end;
 
 procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: RawByteString);
 var
- SQLCode: SmallInt;
- Stream: TStream;
+  L: Cardinal;
 begin
-  CheckRange(Index);
-  {$R-}
-  with FXSQLDA.sqlvar[Index] do
-  begin
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
-    SQLCode := (sqltype and not(1));
-    case SQLCode of
-      SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
-      SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG      : PInteger (sqldata)^ := Round(SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := RawToIntDef(Value, 0);
-      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
-      SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]; //AVZ
-      SQL_D_FLOAT,
-      SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(SQLStrToFloatDef(PAnsiChar(Value), 0) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
-      SQL_BLOB, SQL_QUAD:
-        begin
-          Stream := TStringStream.Create(Value);
-          try
-            WriteBlob(index, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
-    else
-      raise EZIBConvertError.Create(SErrorConvertion);
-    end;
-    if (sqlind <> nil) then
-         sqlind^ := 0; // not null
-  end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  L := Length(Value);
+  UpdatePAnsiChar(Index, PAnsiChar(Value), L);
 end;
 
 {**

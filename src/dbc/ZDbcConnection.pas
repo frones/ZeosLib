@@ -717,7 +717,7 @@ begin
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
   {$IFDEF WITH_LCONVENCODING}
   SetConvertFunctions(ConSettings.CTRL_CP, ConSettings.ClientCodePage.CP,
-    ConSettings.PlainConvertFunc, ConSettings.DbcConvertFunc);
+    ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
   {$ENDIF}
   ZEncoding.SetConvertFunctions(ConSettings);
   FClientVarManager := TZClientVariantManager.Create(ConSettings);

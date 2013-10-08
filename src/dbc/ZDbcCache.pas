@@ -173,6 +173,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; virtual;
+    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; virtual; abstract;
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; virtual;
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
@@ -248,6 +249,7 @@ type
     //======================================================================
 
     function GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; override;
+    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; override;
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
@@ -280,6 +282,7 @@ type
     //======================================================================
 
     function GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; override;
+    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
     function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; override;
     function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
@@ -3363,6 +3366,15 @@ begin
     IsNull := True;
 end;
 
+function TZRawRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
+var AnsiRec: TZAnsiRec;
+begin
+  AnsiRec := GetAnsiRec(ColumnIndex, IsNull);
+  Result.Len := AnsiRec.Len;
+  Result.P := AnsiRec.P;
+  Result.CP := ConSettings^.ClientCodePage^.CP;
+end;
+
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -3782,6 +3794,14 @@ begin
     IsNull := True;
 end;
 
+function TZUnicodeRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
+var WideRec: TZWideRec;
+begin
+  WideRec := GetWideRec(ColumnIndex, IsNull);
+  Result.Len := WideRec.Len;
+  Result.CP := zCP_UTF16;
+  Result.P := WideRec.P;
+end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -3802,7 +3822,8 @@ begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
         {$IFDEF UNICODE}
-        Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
+        System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
+                          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
         {$ELSE}
         Result := ConSettings^.ConvFuncs.ZUnicodeToString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, ConSettings^.CTRL_CP);
         {$ENDIF}

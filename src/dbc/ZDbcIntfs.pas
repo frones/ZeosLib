@@ -584,6 +584,7 @@ type
     procedure SetDouble(ParameterIndex: Integer; Value: Double);
     procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
     procedure SetPChar(ParameterIndex: Integer; Value: PChar);
+    procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
     procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);

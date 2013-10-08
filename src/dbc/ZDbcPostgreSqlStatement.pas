@@ -160,7 +160,6 @@ type
     FPQparamValues: TPQparamValues;
     FPQparamLengths: TPQparamLengths;
     FPQparamFormats: TPQparamFormats;
-    FPQFreeAllocMem: TBooleanDynArray;
     function ExectuteInternal(const SQL: RawByteString; const LogSQL: String;
       const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
   protected
@@ -867,65 +866,35 @@ begin
     SetLength(FPQparamValues, InParamCount);
     SetLength(FPQparamLengths, InParamCount);
     SetLength(FPQparamFormats, InParamCount);
-    SetLength(FPQFreeAllocMem, InParamCount);
   end;
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.BindInParameters;
 var
-  Value: TZVariant;
   TempBlob: IZBlob;
   WriteTempBlob: IZPostgreSQLOidBlob;
   ParamIndex: Integer;
-  TempBytes: TByteDynArray;
 
   procedure UpdateNull(const Index: Integer);
   begin
-    if FPQFreeAllocMem[Index] then
-    begin
-      FreeMem(FPQparamValues[Index]);
-      FPQFreeAllocMem[Index] := False;
-    end;
-
     FPQparamValues[Index] := nil;
     FPQparamLengths[Index] := 0;
     FPQparamFormats[Index] := 0;
   end;
 
-  procedure UpdateString(Value: RawByteString; const Index: Integer);
-  var L: Integer;
+  procedure UpdatePAnsiChar(const Value: PAnsiChar; Const Index: Integer);
   begin
     UpdateNull(Index);
-
-    L := Length(Value)+1;
-    FPQparamValues[ParamIndex] := AllocMem(L);
-    if L = 1 then
-      FPQparamValues[Index]^ := #0
-    else
-      System.Move(Value[1], FPQparamValues[Index]^, L);
-    FPQFreeAllocMem[Index] := True;
+    FPQparamValues[Index] := Value;
+    {EH: sade.., PG ignores Length settings for string even if it could speed up
+      the speed by having a known size instead of checking for #0 terminator}
   end;
 
-  procedure UpdatePAnsiChar(const Value: PAnsiChar; Const Index: Integer);
+  procedure UpdateBinary(Value: Pointer; const Len, Index: Integer);
   begin
     UpdateNull(Index);
 
     FPQparamValues[Index] := Value;
-    FPQFreeAllocMem[Index] := False;
-  end;
-
-  procedure UpdateBinary(Value: Pointer; const Len, Index: Integer; Const FreeMem: Boolean);
-  begin
-    UpdateNull(Index);
-
-    if FreeMem then
-    begin
-      FPQparamValues[Index] := AllocMem(Len);
-      System.Move(Value^, FPQparamValues[Index]^, Len);
-    end
-    else
-      FPQparamValues[Index] := Value;
-    FPQFreeAllocMem[Index] := FreeMem;
     FPQparamLengths[Index] := Len;
     FPQparamFormats[Index] := 1;
   end;
@@ -936,39 +905,47 @@ begin
 
   for ParamIndex := 0 to InParamCount -1 do
   begin
-    Value := InParamValues[ParamIndex];
-    if ClientVarManager.IsNull(Value)  then
+    if ClientVarManager.IsNull(InParamValues[ParamIndex])  then
       UpdateNull(ParamIndex)
     else
+      {EH: Nice advanteges of the TZVariant:
+        a string(w.Type ever) needs to be localized. So i simply reuse this
+        values as vars and have a constant pointer ((: }
       case InParamTypes[ParamIndex] of
-        stBoolean:
-          if ClientVarManager.GetAsBoolean(Value) then
-            UpdateString(RawByteString('TRUE'), ParamIndex)
-          else
-            UpdateString(RawByteString('FALSE'), ParamIndex);
-        stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-          UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
+        stBoolean,
+        stByte, stShort, stInteger, stLong,
+        stBigDecimal, stFloat, stDouble,
+        stString, stUnicodeString:
+          UpdatePAnsiChar(ClientVarManager.GetAsCharRec(InParamValues[ParamIndex], ConSettings^.ClientCodePage^.CP).P, ParamIndex);
         stBytes:
           begin
-            TempBytes := ClientVarManager.GetAsBytes(Value);
-            UpdateBinary(PAnsiChar(TempBytes), Length(TempBytes), ParamIndex, True);
+            InParamValues[ParamIndex].VBytes := ClientVarManager.GetAsBytes(InParamValues[ParamIndex]);
+            UpdateBinary(Pointer(InParamValues[ParamIndex].VBytes), Length(InParamValues[ParamIndex].VBytes), ParamIndex);
           end;
-        stString, stUnicodeString:
-          UpdateString(ClientVarManager.GetAsRawByteString(Value), ParamIndex);
         stDate:
-          UpdateString(DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, False), ParamIndex);
+          begin
+            InParamValues[ParamIndex].VRawByteString := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(InParamValues[ParamIndex]),
+              ConSettings^.WriteFormatSettings, False);
+            UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
+          end;
         stTime:
-          UpdateString(DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, False), ParamIndex);
+          begin
+            InParamValues[ParamIndex].VRawByteString := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(InParamValues[ParamIndex]),
+              ConSettings^.WriteFormatSettings, False);
+            UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
+          end;
         stTimestamp:
-          UpdateString(DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-            ConSettings^.WriteFormatSettings, False), ParamIndex);
+          begin
+            InParamValues[ParamIndex].VRawByteString := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(InParamValues[ParamIndex]),
+              ConSettings^.WriteFormatSettings, False);
+            UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
+          end;
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
-            TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
-            if not TempBlob.IsEmpty then
-            begin
+            TempBlob := ClientVarManager.GetAsInterface(InParamValues[ParamIndex]) as IZBlob;
+            if TempBlob.IsEmpty then
+              UpdateNull(ParamIndex)
+            else
               case InParamTypes[ParamIndex] of
                 stBinaryStream:
                   if Foidasblob then
@@ -977,28 +954,25 @@ begin
                       WriteTempBlob := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
                         FConnectionHandle, 0, ChunkSize);
                       WriteTempBlob.WriteBuffer(TempBlob.GetBuffer, TempBlob.Length);
-                      //WriteTempBlob.WriteLob;
-                      UpdateString(IntToRaw(WriteTempBlob.GetBlobOid), ParamIndex);
+                      InParamValues[ParamIndex].VRawByteString := IntToRaw(WriteTempBlob.GetBlobOid);
+                      UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
                     finally
                       WriteTempBlob := nil;
                     end;
                   end
                   else
-                    UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex, False);
+                    UpdateBinary(TempBlob.GetBuffer, TempBlob.Length, ParamIndex);
                 stAsciiStream, stUnicodeStream:
                   if TempBlob.IsClob then
                     UpdatePAnsiChar(TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP), ParamIndex)
                   else
                   begin
-                    UpdateString(GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, ConSettings), ParamIndex);
+                    InParamValues[ParamIndex].VRawByteString := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings);
+                    UpdatePAnsiChar(PAnsiChar(InParamValues[ParamIndex].VRawByteString), ParamIndex);
                   end;
               end; {case..}
-              TempBlob := nil;
-            end
-            else
-              UpdateNull(ParamIndex);
-          end; {if not TempBlob.IsEmpty then}
+          end;
       end;
   end;
 end;
@@ -1007,22 +981,13 @@ end;
   Removes eventual structures for binding input parameters.
 }
 procedure TZPostgreSQLCAPIPreparedStatement.UnPrepareInParameters;
-var
-  I: Integer;
 begin
   { release allocated memory }
   if not (Findeterminate_datatype) then
   begin
-    for i := 0 to InParamCount-1 do
-    begin
-      if FPQFreeAllocMem[i] then
-        FreeMem(FPQparamValues[i]);
-      FPQparamValues[i] := nil;
-    end;
     SetLength(FPQparamValues, 0);
     SetLength(FPQparamLengths, 0);
     SetLength(FPQparamFormats, 0);
-    SetLength(FPQFreeAllocMem, 0);
   end;
 end;
 

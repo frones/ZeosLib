@@ -3915,7 +3915,6 @@ begin
     Result.Size := Length;
     System.Move(FBlobData^, TMemoryStream(Result).Memory^, Length)
   end;
-  Result.Position := 0;
 end;
 
 procedure TZAbstractCLob.SetStream(Value: TStream);
