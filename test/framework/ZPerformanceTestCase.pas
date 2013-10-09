@@ -520,6 +520,7 @@ begin
       [TableName, PrimaryKey]);
     Query.Open;
 
+    CommitCount := 0;
     if CurrentCount > RecordCount then
     begin
       Count := CurrentCount - RecordCount;
@@ -540,7 +541,6 @@ begin
       Index := 0;
       Query1.SQL.Text := Format('SELECT * FROM %s', [TableName]);;
       Query1.Open;
-      CommitCount := 0;
       while Count > 0 do
       begin
         Inc(Index);
