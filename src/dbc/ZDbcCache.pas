@@ -780,10 +780,7 @@ begin
             Bts1 := InternalGetBytes(Buffer1, ColumnIndex+1);
             Bts2 := InternalGetBytes(Buffer2, ColumnIndex+1);
             if (Assigned(Bts1) and Assigned(Bts2)) then
-              if MemLCompAnsi(PAnsiChar(Bts1), PAnsiChar(Bts2), Length1) then
-                Result := 0
-              else
-                Result := 1
+              Result := ZMemLComp(Pointer(Bts1), Pointer(Bts2), Length1)
             else if not Assigned(Bts1) and not Assigned(Bts2) then
               Result := 0
             else if Assigned(Bts1) then
@@ -798,7 +795,7 @@ begin
           BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
           Blob2 := GetBlobObject(Buffer2, ColumnIndex + 1);
           BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-          if (BlobEmpty1 = True) and (BlobEmpty2 = True) then
+          if BlobEmpty1 and BlobEmpty2 then
             Continue
           else if (BlobEmpty1 <> BlobEmpty2) then
             if BlobEmpty1 then
@@ -806,17 +803,49 @@ begin
             else
               Result := 1
           else
-          begin
-            Result := Blob1.Length - Blob2.Length;
-            if Result = 0 then
-              if FColumnTypes[ColumnIndex] in [stAsciiStream,stBinaryStream] then
-                Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+            if Blob1.IsUpdated or Blob2.IsUpdated then
+              if FColumnTypes[ColumnIndex] = stBinaryStream then
+              begin
+                Result := Blob1.Length - Blob2.Length;
+                if Result = 0 then //possible same lenngth but data diffs
+                  Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length);
+              end
               else
                 if Blob1.IsClob and Blob2.IsClob then
-                  Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString)
+                  case ConSettings^.CPType of
+                    cCP_UTF16:
+                      begin
+                        {$IFDEF MSWINDOWS}
+                        ValuePtr1 := Blob1.GetPWideChar;
+                        ValuePtr2 := Blob2.GetPWideChar;
+                        SetLastError(0);
+                        Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+                          ValuePtr1, Blob1.Length, ValuePtr2, Blob1.Length) - 2{CSTR_EQUAL};
+                        if GetLastError <> 0 then RaiseLastOSError;
+                        {$ELSE}
+                        WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+                        {$ENDIF}
+                      end;
+                    cCP_UTF8:
+                      begin
+                        ValuePtr1 := Blob1.GetPAnsiChar(zCP_UTF8);
+                        ValuePtr2 := Blob2.GetPAnsiChar(zCP_UTF8);
+                        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+                      end;
+                    else
+                      begin
+                        {$IFDEF MSWINDOWS}
+                        ValuePtr1 := Blob1.GetPAnsiChar(ConSettings^.CTRL_CP);
+                        ValuePtr2 := Blob2.GetPAnsiChar(ConSettings^.CTRL_CP);
+                          Result := CompareStringA(LOCALE_USER_DEFAULT, 0, ValuePtr1, Blob1.Length,
+                            ValuePtr2, Blob2.Length) - 2;
+                        {$ELSE}
+                          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
+                        {$ENDIF}
+                      end;
+                  end
                 else
-                  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
-          end;
+                  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
         end;
     end;
     if Result <> 0 then
@@ -3253,9 +3282,14 @@ end;
 function TZRawRowAccessor.CompareString(ValuePtr1, ValuePtr2: Pointer): Integer;
 begin
   if Assigned(PPAnsichar(ValuePtr1)^) and Assigned(PPAnsiChar(ValuePtr2)^) then
-    Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-      AnsiStrComp(PPAnsiChar(ValuePtr1)^+PAnsiInc,
-                  PPAnsiChar(ValuePtr2)^+PAnsiInc)
+    {$IFDEF MSWINDOWS}
+    Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
+      PAnsiChar(ValuePtr1^)+PAnsiInc, PLongWord(ValuePtr1^)^,
+      PAnsiChar(ValuePtr2^)+PAnsiInc, PLongWord(ValuePtr2^)^) - 2{CSTR_EQUAL}
+    {$ELSE}
+      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+        AnsiStrComp(PPAnsiChar(ValuePtr1)^+PAnsiInc, PPAnsiChar(ValuePtr2)^+PAnsiInc)
+    {$ENDIF}
   else
     if not Assigned(PPAnsichar(ValuePtr1)^) and not Assigned(PPAnsiChar(ValuePtr2)^) then
       Result := 0
@@ -3685,9 +3719,23 @@ end;
 { TZUnicodeRowAccessor }
 
 function TZUnicodeRowAccessor.CompareString(ValuePtr1, ValuePtr2: Pointer): Integer;
+{$IFDEF MSWINDOWS}
 begin
-  Result := WideCompareStr(PWideChar(ValuePtr1^)+PWideInc, PWideChar(ValuePtr2^)+PWideInc);
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+    PWideChar(ValuePtr1^)+PWideInc, PCardinal(ValuePtr1^)^,
+    PWideChar(ValuePtr2^)+PWideInc, PCardinal(ValuePtr2^)^) - 2{CSTR_EQUAL};
+  if GetLastError <> 0 then
+    RaiseLastOSError;
 end;
+{$ELSE}
+var S1, S2: ZWideString;
+begin
+  System.SetString(S1, PWideChar(ValuePtr1^)+PWideInc, PCardinal(ValuePtr1)^);
+  System.SetString(S2, PWideChar(ValuePtr2^)+PWideInc, PCardinal(ValuePtr2)^);
+  Result := WideCompareStr(S1, S2);
+end;
+{$ENDIF}
 
 {**
   Copies the row buffer from source to destination row.
@@ -3812,6 +3860,9 @@ end;
     value returned is <code>null</code>
 }
 function TZUnicodeRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+{$IFNDEF UNICODE}
+var WideRec: TZWideRec;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3825,7 +3876,11 @@ begin
         System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
                           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
         {$ELSE}
-        Result := ConSettings^.ConvFuncs.ZUnicodeToString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, ConSettings^.CTRL_CP);
+        begin
+          WideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
+          WideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          Result := ZWideRecToString(WideRec, ConSettings^.CTRL_CP);
+        end;
         {$ENDIF}
       else Result := Inherited GetString(ColumnIndex, IsNull);
     end;
@@ -3845,6 +3900,7 @@ end;
     value returned is <code>null</code>
 }
 function TZUnicodeRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+var US: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3854,7 +3910,11 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        Result := AnsiString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc);
+        begin
+          System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          Result := AnsiString(US);
+        end;
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;
@@ -3874,6 +3934,7 @@ end;
     value returned is <code>null</code>
 }
 function TZUnicodeRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+var US: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3883,11 +3944,11 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc);
-        {$ELSE}
-        Result := UTF8Encode(ZWideString(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc));
-        {$ENDIF}
+        begin
+          System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
+        end;
       else
         Result := inherited GetUTF8String(ColumnIndex, IsNull);
     end;
@@ -3985,7 +4046,8 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stUnicodeString, stString:
-        Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
+        System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
+          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
       else
         Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;

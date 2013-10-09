@@ -88,6 +88,14 @@ function FirstDelimiter(const Delimiters, Str: string): Integer;
 function LastDelimiter(const Delimiters, Str: string): Integer;
 
 {**
+  Compares two Buffers with fixed length
+  @param P1 first Pointer
+  @param P2 seconds Pointer
+  @return <code>Integer</code> if the memory equals else return PByte(P1)-PByte(B2)
+}
+function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
+
+{**
   Compares two PWideChars without stopping at #0 (Unicode Version)
   @param P1 first PWideChars
   @param P2 seconds PWideChars
@@ -643,13 +651,110 @@ end;
 }
 function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
 begin
-  while (Len > 0) and (P1^ = P2^) do
+  Result := ZMemLComp(P1, P2, Len*2) = 0;
+end;
+
+{**
+  Compares two PAnsiChars without stopping at #0
+  @param P1 first PAnsiChar
+  @param P2 seconds PAnsiChar
+  @return <code>True</code> if the memory at P1 and P2 are equal
+}
+function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
+Label {$IFDEF FPC}Fail8{$ELSE}Fail4{$ENDIF};
+var
+  i, N: Cardinal;
+  P1T, P2T: PAnsiChar;
+begin
+  I := 0;
+  Result := 0;
+  P1T := P1;
+  P2T := P2;
+  {$IFDEF FPC}
+  while Len > SizeOf(QWord)*4 do //compare 32 Bytes per loop
   begin
-    Inc(P1);
-    Inc(P2);
-    Dec(Len);
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    Dec(Len, SizeOf(QWord)*4)
   end;
-  Result := Len = 0;
+  while Len > 16 do //compare 16 Bytes per loop
+  begin
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    Dec(Len, SizeOf(QWord)*2)
+  end;
+  while Len > SizeOf(QWord) do //compare 8 Bytes per loop
+  begin
+    if (PQWord(P1T+I)^ - PQWord(P2T+i)^) <> 0 then goto Fail8;
+    Inc(I, SizeOf(QWord));
+    Dec(Len, SizeOf(QWord))
+  end;
+  while Len > 0 do
+  begin
+    Result := PByte(P1T+I)^ - PByte(P2T+I)^;
+    if Result <> 0 then Exit;
+    Inc(I);
+    Dec(Len)
+  end;
+  Exit;
+  Fail8:
+    for N := 0 to SizeOf(QWord)-1 do
+      if PByte(P1T+I+N)^ - PByte(P2T+I+N)^ <> 0 then
+      begin
+        Result := PByte(P1T+I+N)^ - PByte(P2T+I+N)^;
+        Exit;
+      end;
+  {$ELSE}
+  while Len > SizeOf(LongWord)*4 do //compare 16 Bytes per loop
+  begin
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    Dec(Len, SizeOf(LongWord)*4);
+  end;
+  while Len > 8 do if Len > 8 then //compare 8 Bytes per loop
+  begin
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    Dec(Len, SizeOf(LongWord)*2)
+  end;
+  while Len > SizeOf(LongWord) do //compare 4 Bytes per loop
+  begin
+    if (PLongWord(P1T+I)^ - PLongWord(P2T+i)^) <> 0 then goto Fail4;
+    Inc(I, SizeOf(LongWord));
+    Dec(Len, SizeOf(LongWord))
+  end;
+  while Len > 0 do
+  begin
+    Result := PByte(P1T+I)^ - PByte(P2T+I)^;
+    if Result <> 0 then Exit;
+    Inc(I);
+    Dec(Len)
+  end;
+  Exit;
+  Fail4:
+    for N := 0 to SizeOf(LongWord)-1 do
+      if PByte(P1T+I+N)^ - PByte(P2T+I+N)^ <> 0 then
+      begin
+        Result := PByte(P1T+I+N)^ - PByte(P2T+I+N)^;
+        Exit;
+      end;
+  {$ENDIF FPC}
 end;
 
 {**
@@ -660,13 +765,7 @@ end;
 }
 function MemLCompAnsi(P1, P2: PAnsiChar; Len: Integer): Boolean;
 begin
-  while (Len > 0) and (P1^ = P2^) do
-  begin
-    Inc(P1);
-    Inc(P2);
-    Dec(Len);
-  end;
-  Result := Len = 0;
+  Result := ZMemLComp(P1, P2, Len) = 0;
 end;
 
 {**
@@ -727,8 +826,8 @@ begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
-      Result := MemLCompUnicode(PWideChar(Pointer(Str)) + LenStr - LenSubStr,
-         Pointer(SubStr), LenSubStr)
+      Result := MemLCompUnicode(PWideChar(Str) + LenStr - LenSubStr,
+         PWidechar(SubStr), LenSubStr)
     else
       Result := False;
   end;
@@ -752,8 +851,8 @@ begin
     LenSubStr := Length(SubStr);
     LenStr := Length(Str);
     if LenSubStr <= LenStr then
-      Result := MemLCompAnsi(PAnsiChar(Pointer(Str)) + LenStr - LenSubStr,
-         Pointer(SubStr), LenSubStr)
+      Result := MemLCompAnsi(PAnsiChar(Str) + LenStr - LenSubStr,
+         PAnsiChar(SubStr), LenSubStr)
     else
       Result := False;
   end;

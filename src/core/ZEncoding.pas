@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes,
+  Classes, Math,
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}
@@ -276,10 +276,13 @@ function StringToAnsiEx(const s: String; const {$IFNDEF UNICODE}FromCP,{$ENDIF} 
 function AnsiToStringEx(const s: RawByteString; const FromCP{$IFNDEF UNICODE}, ToCP{$ENDIF}: Word): String; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {$ENDIF}
 
-function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
-function ZAnsiRecToUnicode(const Value: TZAnsiRec; const CP: Word): ZWideString;
-function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString;
-function ZWideRecToRaw(const Value: TZWideRec; const CP: Word): RawByteString;
+function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function ZAnsiRecToUnicode(const Value: TZAnsiRec; const CP: Word): ZWideString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+function ZWideRecToRaw(const Value: TZWideRec; const CP: Word): RawByteString; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+{$IFNDEF UNICODE}
+function ZWideRecToString(const Value: TZWideRec; const CP: Word): String; {$IF defined(WITH_INLINE) and not defined(WITH_LCONVENCODING)}inline; {$IFEND}
+{$ENDIF}
 
 {converter functions for the String-types}
 {$IFDEF WITH_LCONVENCODING}
@@ -408,7 +411,7 @@ function GetValidatedUnicodeStream(const Ansi: RawByteString;
 implementation
 
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
-  ZSysUtils, ZFastCode, Math;
+  ZSysUtils, ZFastCode;
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -678,6 +681,50 @@ begin
     {$IFEND}
 end;
 {$ENDIF}
+
+{$IFNDEF UNICODE}
+function ZWideRecToString(const Value: TZWideRec; const CP: Word): String;
+{$IFDEF WITH_LCONVENCODING}
+var
+  US: ZWideString;
+begin
+  SetString(US, Value.P, Value.Len);
+  Result := ZUnicodeToRaw(US, CP);
+end;
+{$ELSE}
+  {$IFDEF MSWINDOWS}
+  var
+    ulen: Integer;
+    {$IF defined(PWIDECHAR_IS_PUNICODECHAR) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
+    WS: WideString;
+    {$IFEND}
+  {$ENDIF}
+  begin
+    Result := '';
+    {$IFDEF MSWINDOWS}
+      ULen := Min(Value.Len * 4, High(Integer)-1);
+      setlength(Result, ulen); //oversized
+      {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
+      ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
+      {$ELSE}
+      SetString(WS, Value.P, Value.Len); //need a real WideString
+      ulen := WideCharToMultiByte(CP,0, @WS[1], Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
+      {$ENDIF PWIDECHAR_IS_PUNICODECHAR}
+      setlength(Result, ulen); //oversized
+    {$ELSE}
+      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+        WidestringManager.Unicode2AnsiMoveProc(Value.P, Result, CP, Value.Len);
+      {$ELSE} //FPC 2.6 down
+        SetString(WS, Value.P, Value.Len);
+        if ZCompatibleCodePages(CP, zCP_UTF8) then
+          Result := UTF8Encode(WS)
+        else
+          Result := String(WS); //random success according the CP
+      {$ENDIF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+    {$ENDIF MSWINDOWS}
+  end;
+  {$ENDIF WITH_LCONVENCODING}
+{$ENDIF UNICODE}
 
 {$IFNDEF WITH_LCONVENCODING}
 function AnsiToStringEx(const s: RawByteString;
