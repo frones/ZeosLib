@@ -186,6 +186,20 @@
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
+// Compilation directives for Delphi XE5
+{$IFDEF VER260}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in code
+  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE DELPHI19_UP}
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
