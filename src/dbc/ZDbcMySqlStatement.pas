@@ -682,6 +682,8 @@ begin
     if MyType = FIELD_TYPE_STRING then
       CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
     case MyType of
+      FIELD_TYPE_STRING:
+        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, CharRec.Len, False);
       FIELD_TYPE_BLOB:
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
@@ -704,14 +706,12 @@ begin
               FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
             end;
         end;
-      FIELD_TYPE_LONGLONG:
-        FParamBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
       FIELD_TYPE_TINY:
         FParamBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType, CharRec.Len, false);
+        FParamBindBuffer.AddColumn(MyType, getMySQLFieldSize(MyType, 0), false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
