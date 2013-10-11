@@ -688,7 +688,6 @@ begin
       Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed)
     else
       Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
-    LastWasNull := Result = 0;
   end;
 end;
 
