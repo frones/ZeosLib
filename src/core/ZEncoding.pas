@@ -361,12 +361,6 @@ function ZUnknownRawToUnicodeWithAutoEncode(const S: RawByteString;
 function ZUnicodeToUnknownRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {**
-  Get the current system codepage of AnsiString
-  @return current system codepage of AnsiString
-}
-function ZDefaultSystemCodePage: Word;
-
-{**
   Is the codepage equal or compatible?
   @param CP1 word the first codepage to compare
   @param CP2 word the second codepage to compare
@@ -407,6 +401,10 @@ function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
 
 function GetValidatedUnicodeStream(const Ansi: RawByteString;
   ConSettings: PZConSettings; FromDB: Boolean): TStream; overload;
+
+var
+  ZDefaultSystemCodePage: Word;
+
 
 implementation
 
@@ -1058,15 +1056,15 @@ begin
 end;
 {$ENDIF}
 
-function ZDefaultSystemCodePage: Word;
+procedure SetDefaultSystemCodePage;
 begin
   {$IFDEF WITH_DEFAULTSYSTEMCODEPAGE}
-  Result := Word(DefaultSystemCodePage);
+  ZDefaultSystemCodePage := Word(DefaultSystemCodePage);
   {$ELSE}
     {$IFDEF MSWINDOWS}
-    Result := GetACP; //available for Windows and WinCE
+    ZDefaultSystemCodePage := GetACP; //available for Windows and WinCE
     {$ELSE}
-    Result := zCP_UTF8; //how to determine the current OS CP?
+    ZDefaultSystemCodePage := zCP_UTF8; //how to determine the current OS CP?
     {$ENDIF}
   {$ENDIF}
 end;
@@ -2199,6 +2197,9 @@ begin
     Consettings^.ConvFuncs.ZStringToUnicode := @ZConvertStringToUnicodeWithAutoEncode;
   end;
 end;
+
+initialization
+  SetDefaultSystemCodePage;
 
 end.
 

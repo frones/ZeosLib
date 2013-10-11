@@ -250,6 +250,11 @@ var
   StrLen: function(const Str: PAnsiChar): Cardinal;
   {$ENDIF}
 
+{$IFDEF USE_FAST_CHARPOS}
+var
+  CharPos: function(ch: char; const s: String): integer;
+{$ENDIF}
+
 {$IFNDEF WITH_FASTCODE_INTTOSTR}
 function IntToStr(const Value: Integer): String; overload;
 function IntToStr(const Value: Int64): String; overload;
@@ -4980,7 +4985,299 @@ asm
 end;
 {$ENDIF USE_FAST_STRLEN}
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
+{$IFDEF USE_FAST_CHARPOS}
+function CharPos_JOH_SSE2_1_c(Ch : Char; const Str : AnsiString) : Integer;
+asm
+  test      edx, edx
+  jz        @@NullString
+  mov       ecx, [edx-4]
+  push      ebx
+  mov       ebx, eax
+  cmp       ecx, 16
+  jl        @@Small
+@@NotSmall:
+  mov       ah, al           {Fill each Byte of XMM1 with AL}
+  movd      xmm1, eax
+  pshuflw   xmm1, xmm1, 0
+  pshufd    xmm1, xmm1, 0
+@@First16:
+  movups    xmm0, [edx]      {Unaligned}
+  pcmpeqb   xmm0, xmm1       {Compare First 16 Characters}
+  pmovmskb  eax, xmm0
+  test      eax, eax
+  jnz       @@FoundStart     {Exit on any Match}
+  cmp       ecx, 32
+  jl        @@Medium         {If Length(Str) < 32, Check Remainder}
+@@Align:
+  sub       ecx, 16          {Align Block Reads}
+  push      ecx
+  mov       eax, edx
+  neg       eax
+  and       eax, 15
+  add       edx, ecx
+  neg       ecx
+  add       ecx, eax
+@@Loop:
+  movaps    xmm0, [edx+ecx]  {Aligned}
+  pcmpeqb   xmm0, xmm1       {Compare Next 16 Characters}
+  pmovmskb  eax, xmm0
+  test      eax, eax
+  jnz       @@Found          {Exit on any Match}
+  add       ecx, 16
+  jle       @@Loop
+  pop       eax              {Check Remaining Characters}
+  add       edx, 16
+  add       eax, ecx         {Count from Last Loop End Position}
+  jmp       dword ptr [@@JumpTable2-ecx*4]
+  nop
+  nop
+@@NullString:
+  xor       eax, eax         {Result = 0}
+  ret
+  nop
+@@FoundStart:
+  bsf       eax, eax         {Get Set Bit}
+  pop       ebx
+  inc       eax              {Set Result}
+  ret
+  nop
+  nop
+@@Found:
+  pop       edx
+  bsf       eax, eax         {Get Set Bit}
+  add       edx, ecx
+  pop       ebx
+  lea       eax, [eax+edx+1] {Set Result}
+  ret
+@@Medium:
+  add       edx, ecx         {End of String}
+  mov       eax, 16          {Count from 16}
+  jmp       dword ptr [@@JumpTable1-64-ecx*4]
+  nop
+  nop
+@@Small:
+  add       edx, ecx         {End of String}
+  xor       eax, eax         {Count from 0}
+  jmp       dword ptr [@@JumpTable1-ecx*4]
+  nop
+@@JumpTable1:
+  dd        @@NotFound, @@01, @@02, @@03, @@04, @@05, @@06, @@07
+  dd        @@08, @@09, @@10, @@11, @@12, @@13, @@14, @@15, @@16
+@@JumpTable2:
+  dd        @@16, @@15, @@14, @@13, @@12, @@11, @@10, @@09, @@08
+  dd        @@07, @@06, @@05, @@04, @@03, @@02, @@01, @@NotFound
+@@16:
+  add       eax, 1
+  cmp       bl, [edx-16]
+  je        @@Done
+@@15:
+  add       eax, 1
+  cmp       bl, [edx-15]
+  je        @@Done
+@@14:
+  add       eax, 1
+  cmp       bl, [edx-14]
+  je        @@Done
+@@13:
+  add       eax, 1
+  cmp       bl, [edx-13]
+  je        @@Done
+@@12:
+  add       eax, 1
+  cmp       bl, [edx-12]
+  je        @@Done
+@@11:
+  add       eax, 1
+  cmp       bl, [edx-11]
+  je        @@Done
+@@10:
+  add       eax, 1
+  cmp       bl, [edx-10]
+  je        @@Done
+@@09:
+  add       eax, 1
+  cmp       bl, [edx-9]
+  je        @@Done
+@@08:
+  add       eax, 1
+  cmp       bl, [edx-8]
+  je        @@Done
+@@07:
+  add       eax, 1
+  cmp       bl, [edx-7]
+  je        @@Done
+@@06:
+  add       eax, 1
+  cmp       bl, [edx-6]
+  je        @@Done
+@@05:
+  add       eax, 1
+  cmp       bl, [edx-5]
+  je        @@Done
+@@04:
+  add       eax, 1
+  cmp       bl, [edx-4]
+  je        @@Done
+@@03:
+  add       eax, 1
+  cmp       bl, [edx-3]
+  je        @@Done
+@@02:
+  add       eax, 1
+  cmp       bl, [edx-2]
+  je        @@Done
+@@01:
+  add       eax, 1
+  cmp       bl, [edx-1]
+  je        @@Done
+@@NotFound:
+  xor       eax, eax
+  pop       ebx
+  ret
+@@Done:
+  pop       ebx
+end;
+
+function CharPos_Sha_Pas_2_b(ch: char; const s: AnsiString): integer;
+const
+  cMinusOnes = -$01010101;
+  cSignums   =  $80808080;
+var
+  Ndx, Len, c, d, Mask, Sign, Save, SaveEnd: integer;
+label
+  Small, Middle, Large,
+  Found0, Found1, Found2, Found3, NotFound,
+  Matched, MatchedPlus1, MatchedMinus1, NotMatched,
+  Return;
+begin
+  c:=integer(@pchar(integer(s))[-4]);
+  if c=-4 then goto NotFound;
+  Len:=pinteger(c)^;
+  if Len>24 then goto Large;
+  Ndx:=4;
+  if Ndx>Len then goto Small;
+
+Middle:
+  if pchar(c)[Ndx+0]=ch then goto Found0;
+  if pchar(c)[Ndx+1]=ch then goto Found1;
+  if pchar(c)[Ndx+2]=ch then goto Found2;
+  if pchar(c)[Ndx+3]=ch then goto Found3;
+  inc(Ndx,4);
+  if Ndx<=Len then goto Middle;
+
+  Ndx:=Len+1;
+  if pchar(c)[Len+1]=ch then goto Found0;
+  if pchar(c)[Len+2]=ch then goto Found1;
+  if pchar(c)[Len+3]<>ch then goto NotFound;
+  Result:=integer(@pchar(Ndx)[-1]); exit;
+  goto Return; //drop Ndx
+
+Small:
+  if Len=0 then goto NotFound; if pchar(c)[Ndx+0]=ch then goto Found0;
+  if Len=1 then goto NotFound; if pchar(c)[Ndx+1]=ch then goto Found1;
+  if Len=2 then goto NotFound; if pchar(c)[Ndx+2]<>ch then goto NotFound;
+
+Found2: Result:=integer(@pchar(Ndx)[-1]); exit;
+Found1: Result:=integer(@pchar(Ndx)[-2]); exit;
+Found0: Result:=integer(@pchar(Ndx)[-3]); exit;
+NotFound: Result:=0; exit;
+  goto NotFound; //kill warning 'Ndx might not have been initialized'
+Found3: Result:=integer(@pchar(Ndx)[0]); exit;
+  goto Return; //drop Ndx
+
+Large:
+  Save:=c;
+    Mask:=ord(ch);
+  Ndx:=integer(@pchar(c)[+4]);
+
+    d:=Mask;
+  inc(Len,c);
+  SaveEnd:=Len;
+    Mask:=(Mask shl 8);
+  inc(Len,+4-16+3);
+
+    Mask:=Mask or d;
+  Len:=Len and (-4);
+    d:=Mask;
+  cardinal(Sign):=cSignums;
+
+    Mask:=Mask shl 16;
+  c:=pintegerArray(Ndx)[0];
+    Mask:=Mask or d;
+  inc(Ndx,4);
+
+    c:=c xor Mask;
+    d:=integer(@pchar(c)[cMinusOnes]);
+    c:=c xor (-1);
+    c:=c and d;
+    d:=Mask;
+
+    if c and Sign<>0 then goto MatchedMinus1;
+    Ndx:=Ndx and (-4);
+    d:=d xor pintegerArray(Ndx)[0];
+
+    if cardinal(Ndx)<cardinal(Len) then repeat;
+      c:=integer(@pchar(d)[cMinusOnes]);
+      d:=d xor (-1);
+      c:=c and d;
+      d:=Mask;
+
+      d:=d xor pintegerArray(Ndx)[1];
+      if c and Sign<>0 then goto Matched;
+      c:=integer(@pchar(d)[cMinusOnes]);
+      d:=d xor (-1);
+      c:=c and d;
+      d:=pintegerArray(Ndx)[2];
+      if c and Sign<>0 then goto MatchedPlus1;
+      d:=d xor Mask;
+
+      c:=integer(@pchar(d)[cMinusOnes]);
+      d:=d xor (-1);
+      inc(Ndx,12);
+      c:=c and d;
+
+      //if c and Sign<>0 then goto MatchedMinus1;
+      d:=Mask;
+      if c and Sign<>0 then goto MatchedMinus1;
+      d:=d xor pintegerArray(Ndx)[0];
+      until cardinal(Ndx)>=cardinal(Len);
+
+    Len:=SaveEnd;
+    while true do begin;
+      c:=integer(@pchar(d)[cMinusOnes]);
+      d:=d xor (-1);
+      c:=c and d;
+      inc(Ndx,4);
+      if c and Sign<>0 then goto MatchedMinus1;
+      d:=Mask;
+      if cardinal(Ndx)<=cardinal(Len)
+      then d:=d xor pintegerArray(Ndx)[0]
+      else begin;
+        if Len=0 then goto NotMatched;
+        d:=d xor pintegerArray(Len)[0];
+        Ndx:=Len;
+        Len:=0;
+        end
+      end;
+
+NotMatched:
+  Result:=0; exit;
+
+MatchedPlus1:   inc(Ndx,8);
+MatchedMinus1:  dec(Ndx,4);
+Matched:
+    c:=c and Sign;
+    dec(Ndx,integer(Save)+2);
+    if word(c)=0 then begin;
+      c:=c shr 16; inc(Ndx,2);
+      end;
+    if byte(c)<>0 then dec(Ndx);
+    Result:=Ndx;
+Return:
+  end;
+{$ENDIF USE_FAST_CHARPOS}
+
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
 type
   TRegisters = record
     EAX,
@@ -5448,19 +5745,12 @@ begin
       end;
   end;
 
- {$IFDEF FastcodePascal}
-   FastCodeTarget := fctPascal;
- {$ENDIF}
- {$IFDEF FastcodePascalSizePenalty}
-   FastCodeTarget := fctPascalSizePenalty;
- {$ENDIF}
-
 end;
 {$IFEND}
 
 initialization
 
-{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
+{$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
   GetCPUInfo;
   GetFastCodeTarget;
 {$IFEND}
@@ -5514,5 +5804,12 @@ initialization
     StrLen := {$IFDEF FPC}System.{$ELSE}SysUtils.{$ENDIF}StrLen;
   {$ENDIF WITH_STRLEN_DEPRECATED}
 {$ENDIF USE_FAST_STRLEN}
+
+{$IFDEF USE_FAST_CHARPOS}
+if isSSE2 in CPU.InstructionSupport then
+  CharPos := CharPos_JOH_SSE2_1_c {Processor Supports SSE2}
+else
+  CharPos := CharPos_Sha_Pas_2_b;
+{$ENDIF}
 
 end.

@@ -660,6 +660,14 @@ end;
   @param P2 seconds PAnsiChar
   @return <code>True</code> if the memory at P1 and P2 are equal
 }
+{$ifopt Q+}
+  {$define OverflowCheckEnabled}
+  {$Q-}
+{$endif}
+{$ifopt R+}
+  {$define RangeCheckEnabled}
+  {$R-}
+{$endif}
 function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
 Label {$IFDEF FPC}Fail8{$ELSE}Fail4{$ENDIF};
 var
@@ -756,6 +764,12 @@ begin
       end;
   {$ENDIF FPC}
 end;
+{$IFDEF OverflowCheckEnabled}
+  {$Q+}
+{$endif}
+{$IFDEF RangeCheckEnabled}
+  {$R+}
+{$endif}
 
 {**
   Compares two PAnsiChars without stopping at #0
