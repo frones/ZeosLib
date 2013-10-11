@@ -200,6 +200,8 @@ type
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
+  TZAnsiRecToString = function (const Value: TZAnsiRec; const StringCP: Word): String;
+  TZWideRecToString = function (const Value: TZWideRec; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -241,6 +243,8 @@ type
     ZRawToUnicode: TZRawToUnicode;
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
+    ZAnsiRecToString: TZAnsiRecToString;
+    ZWideRecToString: TZWideRecToString;
   end;
 
   TZFormatSettings = Record

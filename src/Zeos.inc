@@ -61,6 +61,7 @@
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
  {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
+ {$DEFINE USE_FAST_CHARPOS}     // use Fascode CharPos function
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -213,6 +214,7 @@
   {$DEFINE WITH_TENCODING_CLASS}        // Have class TEncoding
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
+  {$UNDEF USE_FAST_CHARPOS}
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}

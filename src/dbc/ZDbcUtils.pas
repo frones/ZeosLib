@@ -165,7 +165,8 @@ function TokenizeSQLQueryUni(const SQL: String; Const ConSettings: PZConSettings
 
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZMatchPattern;
+uses ZMessages, ZSysUtils, ZEncoding, ZMatchPattern
+  {$IFDEF USE_FAST_CHARPOS},ZFastCode{$ENDIF};
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -542,9 +543,10 @@ function TokenizeSQLQueryRaw(const SQL: String; Const ConSettings: PZConSettings
   const NeedNCharDetection: Boolean = False): TRawDynArray;
 var
   I: Integer;
-  Tokens: TStrings;
   Temp: RawByteString;
   NextIsNChar: Boolean;
+  Tokens: TZTokenDynArray;
+
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
   begin
     SetLength(Result, Length(Result)+1);
@@ -561,36 +563,46 @@ var
       IsNCharIndex[High(IsNCharIndex)] := False;
   end;
 begin
-  if (Pos('?', SQL) > 0) then
+  if ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0) then
   begin
-    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
-    try
-      Temp := '';
-      NextIsNChar := False;
-      for I := 0 to Tokens.Count - 1 do
+    Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
+    Temp := '';
+    NextIsNChar := False;
+    for I := 0 to High(Tokens) do
+    begin
+      if Tokens[I].Value = '?' then
       begin
-        if Tokens[I] = '?' then
+        Add(Temp);
+        Add('?', True);
+        Temp := '';
+      end
+      else
+        if NeedNCharDetection and (Tokens[I].Value = 'N') and (Length(Tokens) > i) and (Tokens[i+1].Value = '?') then
         begin
           Add(Temp);
-          Add('?', True);
+          Add('N');
           Temp := '';
+          NextIsNChar := True;
         end
         else
-          if NeedNCharDetection and (Tokens[I] = 'N') and (Tokens.Count > i) and (Tokens[i+1] = '?') then
-          begin
-            Add(Temp);
-            Add(ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-            Temp := '';
-            NextIsNChar := True;
-          end
-          else
-            Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-      end;
-      if Temp <> '' then
-        Add(Temp);
-    finally
-      Tokens.Free;
+          case (Tokens[i].TokenType) of
+            ttEscape:
+              Temp := Temp +
+                {$IFDEF UNICODE}
+                ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value,
+                  ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+                {$ELSE}
+                Tokens[i].Value;
+                {$ENDIF}
+            ttQuoted, ttComment,
+            ttWord, ttQuotedIdentifier, ttKeyword:
+              Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+            else
+              Temp := Temp + {$IFDEF UNICODE}PosEmptyStringToASCII7{$ENDIF}(Tokens[i].Value);
+          end;
     end;
+    if Temp <> '' then
+      Add(Temp);
   end
   else
     Add(ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));

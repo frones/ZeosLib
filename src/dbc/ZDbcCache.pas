@@ -3419,6 +3419,9 @@ end;
     value returned is <code>null</code>
 }
 function TZRawRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+{$IFDEF UNICODE}
+var AnsiRec: TZAnsiRec;
+{$ENDIF}
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3428,9 +3431,21 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        Result := ConSettings^.ConvFuncs.ZRawToString(
-          PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+        {$IFDEF UNICODE}
+        begin
+          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
+          Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+        end;
+        {$ELSE}
+        if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode then
+          System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+        else
+          Result := ConSettings^.ConvFuncs.ZRawToString(
+            PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
+            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+        {$ENDIF}
       else
         Result := inherited GetString(ColumnIndex, IsNull);
     end;
@@ -3450,6 +3465,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRawRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+var AnsiRec: TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3459,9 +3475,18 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        Result := ConSettings^.ConvFuncs.ZRawToAnsi(
-          PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          ConSettings^.ClientCodePage^.CP);
+        begin
+          if ZCompatibleCodePages(ZDefaultsystemCodePage, ConSettings^.ClientCodePage^.CP) then
+            System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
+              PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+          else
+          begin
+            AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+            AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
+            FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+            Result := AnsiString(FUniTemp);
+          end;
+        end;
       else
         Result := inherited GetAnsiString(ColumnIndex, IsNull);
     end;
@@ -3481,6 +3506,7 @@ end;
     value returned is <code>null</code>
 }
 function TZRawRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+var AnsiRec: TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3490,9 +3516,24 @@ begin
   begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
-        Result := ConSettings^.ConvFuncs.ZRawToUTF8(
-          PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          ConSettings^.ClientCodePage^.CP);
+        if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
+        {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+        begin
+          SetLength(Result, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          System.Move((PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
+            PAnsiChar(Result)^, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+        end
+        {$ELSE}
+          System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+        {$ENDIF}
+        else
+        begin
+          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
+          FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP); //localize the vals to avoid buffer overrun for WideStrings
+          Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
+        end;
       else
         Result := inherited GetUTF8String(ColumnIndex, IsNull);
     end;

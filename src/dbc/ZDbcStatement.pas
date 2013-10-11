@@ -731,7 +731,7 @@ begin
   if GetConnection.AutoEncodeStrings then
   begin
     Result := ''; //init for FPC
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
     begin
       case (SQLTokens[i].TokenType) of

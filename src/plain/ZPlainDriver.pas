@@ -227,7 +227,7 @@ begin
   Result := '';
   if ConSettings.AutoEncode then
   begin
-    SQLTokens := FTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+    SQLTokens := FTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
     begin
       case (SQLTokens[i].TokenType) of

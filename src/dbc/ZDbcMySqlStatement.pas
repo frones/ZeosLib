@@ -711,7 +711,7 @@ begin
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, CharRec.Len), false);
+        FParamBindBuffer.AddColumn(MyType, CharRec.Len, false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
@@ -737,7 +737,7 @@ begin
               TempBlob := nil;
             end;
           else
-            System.Move(CharRec.P^, PBuffer^, CharRec.Len+1);
+            System.Move(CharRec.P^, PBuffer^, CharRec.Len);
         end;
       FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
       FIELD_TYPE_DATETIME:
