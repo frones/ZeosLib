@@ -113,17 +113,20 @@ type
 
     function GetColumnSize(ColumnInfo: TZColumnInfo): Integer;
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
-    procedure SetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: IZBlob);
-    function InternalGetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer): TByteDynArray; {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: TByteDynArray; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetString(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: RawByteString; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
-    procedure InternalSetUnicodeString(Buffer: PZRowBuffer; ColumnIndex: Integer;
-      Value: ZWideString; NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure SetBlobObject(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
+      const Value: IZBlob);
+    function InternalGetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer): TByteDynArray; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
+      const Value: TByteDynArray; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetString(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
+      const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetUnicodeString(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
+      const Value: ZWideString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetPAnsiChar(const Buffer: PZRowBuffer;
       const ColumnIndex: Integer; const Value: PAnsiChar;
+      Const Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+    procedure InternalSetPWideChar(const Buffer: PZRowBuffer;
+      const ColumnIndex: Integer; const Value: PWideChar;
       Const Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
     procedure CheckColumnIndex(ColumnIndex: Integer);
@@ -214,8 +217,9 @@ type
     procedure SetDouble(ColumnIndex: Integer; Value: Double); virtual;
     procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure SetString(ColumnIndex: Integer; Value: String); virtual;
-    procedure SetPAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);virtual;
+    procedure SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);virtual;
     procedure SetPAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); virtual;
+    procedure SetWideRec(ColumnIndex: Integer; const Value: TZWideRec);virtual;
     procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); virtual;
     procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); virtual;
     procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); virtual;
@@ -262,7 +266,8 @@ type
     //---------------------------------------------------------------------
 
     procedure SetString(ColumnIndex: Integer; Value: String); override;
-    procedure SetPAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure SetWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
     //procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); override;
     //procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); override;
     procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); override;
@@ -295,7 +300,8 @@ type
     //---------------------------------------------------------------------
 
     procedure SetString(ColumnIndex: Integer; Value: String); override;
-    procedure SetPAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure SetWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
     //procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); override;
     //procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); override;
     procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); override;
@@ -480,8 +486,8 @@ end;
   @param ColumnIndex an index of the column.
   @param Value a stream object to be set.
 }
-procedure TZRowAccessor.SetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer;
-  Value: IZBlob);
+procedure TZRowAccessor.SetBlobObject(const Buffer: PZRowBuffer;
+  const ColumnIndex: Integer; const Value: IZBlob);
 var
   BlobPtr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
@@ -512,8 +518,8 @@ begin
   {$ENDIF}
 end;
 
-function TZRowAccessor.InternalGetBytes(Buffer: PZRowBuffer;
-  ColumnIndex: Integer): TByteDynArray;
+function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
+  const ColumnIndex: Integer): TByteDynArray;
 var
   P: PPointer;
   L: SmallInt;
@@ -531,8 +537,9 @@ begin
   end;
 end;
 
-procedure TZRowAccessor.InternalSetBytes(Buffer: PZRowBuffer; ColumnIndex: Integer;
-  Value: TByteDynArray; NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
+  const ColumnIndex: Integer; const Value: TByteDynArray;
+  const NewPointer: Boolean = False);
 var
   P: PPointer;
   L: SmallInt;
@@ -558,8 +565,9 @@ begin
   end;
 end;
 
-procedure TZRowAccessor.InternalSetString(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; Value: RawByteString; NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetString(const Buffer: PZRowBuffer;
+  const ColumnIndex: Integer; const Value: RawByteString;
+  const NewPointer: Boolean = False);
 var
   C: PPAnsiChar;
   L: Cardinal;
@@ -577,8 +585,9 @@ begin
   end;
 end;
 
-procedure TZRowAccessor.InternalSetUnicodeString(Buffer: PZRowBuffer;
-  ColumnIndex: Integer; Value: ZWideString; NewPointer: Boolean = False);
+procedure TZRowAccessor.InternalSetUnicodeString(const Buffer: PZRowBuffer;
+  const ColumnIndex: Integer; const Value: ZWideString;
+  const NewPointer: Boolean = False);
 var
   W: ZPPWideChar;
   LStr, LMem: Cardinal;
@@ -596,6 +605,27 @@ begin
     (W^+PWideInc+LStr)^ := WideChar(#0);
   end;
 end;
+
+procedure TZRowAccessor.InternalSetPWideChar(const Buffer: PZRowBuffer;
+  const ColumnIndex: Integer; const Value: PWideChar; const Len: Cardinal;
+  const NewPointer: Boolean = False);
+var
+  W: ZPPWideChar;
+  LMem: Cardinal;
+begin
+  if Buffer <> nil then
+  begin
+    if NewPointer then
+      PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := 0;
+    W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
+    LMem := Len * 2;
+    ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
+    System.Move(Value^, (W^+PWideInc)^, LMem);
+    PCardinal(W^)^ := Len;
+    (W^+PWideInc+Len)^ := WideChar(#0);
+  end;
+end;
+
 
 procedure TZRowAccessor.InternalSetPAnsiChar(const Buffer: PZRowBuffer;
   const ColumnIndex: Integer; const Value: PAnsiChar; const Len: Cardinal;
@@ -2760,21 +2790,16 @@ end;
   @param Value the new column value
   @param Len the length of the String
 }
-procedure TZRowAccessor.SetPAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
+procedure TZRowAccessor.SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
 var
-  TempStr: RawByteString;
   IsNull: Boolean;
   GUID: TGUID;
   Bts: TByteDynArray;
   Blob: IZBlob;
+  Failed: Boolean;
 begin
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean:
-      begin
-        TempStr := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(Value.P);
-        SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
-          or (TempStr = 'YES') or (TempStr = 'TRUE'));
-      end;
+    stBoolean: SetBoolean(ColumnIndex, StrToBoolEx(Value.P, False));
     stByte: SetByte(ColumnIndex, RawToIntDef(Value.P, 0));
     stShort: SetShort(ColumnIndex, RawToIntDef(Value.P, 0));
     stInteger: SetInt(ColumnIndex, RawToIntDef(Value.P, 0));
@@ -2803,9 +2828,9 @@ begin
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
       end;
-    stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.P)));
-    stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.P)));
-    stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value.P)));
+    stDate: SetDate(ColumnIndex, RawSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    stTime: SetTime(ColumnIndex, RawSQLTimeToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    stTimestamp: SetTimestamp(ColumnIndex, RawSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
     stUnicodeStream, stAsciiStream:
       begin
         Blob := GetBlob(ColumnIndex, IsNull);
@@ -2834,7 +2859,63 @@ var AnsiRec: TZAnsiRec;
 begin
   AnsiRec.P := Value;
   AnsiRec.Len := ZFastCode.StrLen(Value);
-  SetPAnsiRec(ColumnIndex, AnsiRec);
+  SetAnsiRec(ColumnIndex, AnsiRec);
+end;
+
+{**
+  Sets the designated column with a <code>TZWideRec</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the new column value
+}
+procedure TZRowAccessor.SetWideRec(ColumnIndex: Integer; const Value: TZWideRec);
+var
+  IsNull: Boolean;
+  GUID: TGUID;
+  Bts: TByteDynArray;
+  Blob: IZBlob;
+  Failed: Boolean;
+begin
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: SetBoolean(ColumnIndex, StrToBoolEx(Value.P, False));
+    stByte: SetByte(ColumnIndex, UnicodeToIntDef(Value.P, 0));
+    stShort: SetShort(ColumnIndex, UnicodeToIntDef(Value.P, 0));
+    stInteger: SetInt(ColumnIndex, UnicodeToIntDef(Value.P, 0));
+    stLong: SetLong(ColumnIndex, UnicodeToInt64Def(Value.P, 0));
+    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value.P, 0));
+    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value.P, 0));
+    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value.P, 0));
+    //stUnicodeString, stString: do not handle here
+    stAsciiStream, stUnicodeStream:
+      begin
+        Blob := GetBlob(ColumnIndex, IsNull);
+        if Blob.IsClob then
+          Blob.SetPWideChar(Value.P, Value.Len)
+        else
+          Blob.SetBuffer(Value.P, Value.Len);
+      end;
+    stBytes:
+      SetBytes(ColumnIndex, StrToBytes(Value.P));
+    stGUID:
+      if Value.P = nil  then
+        SetNull(ColumnIndex)
+      else
+      begin
+        GUID := StringToGUID({$IFDEF UNICODE}Value.P{$ELSE}NotEmptyUnicodeStringToASCII7(Value.P, Value.Len){$ENDIF});
+        SetLength(Bts, 16);
+        System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
+        SetBytes(ColumnIndex, Bts);
+      end;
+    stDate: SetDate(ColumnIndex, UnicodeSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    stTime: SetTime(ColumnIndex, UnicodeSQLTimeToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    stTimestamp: SetTimestamp(ColumnIndex, UnicodeSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    else
+      SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value.P, ConSettings^.CTRL_CP));
+  end;
 end;
 
 {**
@@ -3397,7 +3478,11 @@ begin
     IsNull := False;
   end
   else
+  begin
+    Result.Len := 0;
+    Result.P := nil;
     IsNull := True;
+  end;
 end;
 
 function TZRawRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
@@ -3594,8 +3679,6 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result.P := nil;
-  Result.Len := 0;
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
@@ -3613,7 +3696,11 @@ begin
     IsNull := False;
   end
   else
+  begin
+    Result.P := nil;
+    Result.Len := 0;
     IsNull := True;
+  end;
 end;
 
 {**
@@ -3688,7 +3775,7 @@ end;
   @param Value the new column value
   @param Len the Length of the new column value
 }
-procedure TZRawRowAccessor.SetPAnsiRec(ColumnIndex: Integer;
+procedure TZRawRowAccessor.SetAnsiRec(ColumnIndex: Integer;
   const Value: TZAnsiRec);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3703,7 +3790,35 @@ begin
           InternalSetPAnsiChar(FBuffer, ColumnIndex, Value.P, Value.Len);
           FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         end;
-      else inherited SetPAnsiRec(ColumnIndex, Value)
+      else inherited SetAnsiRec(ColumnIndex, Value)
+    end;
+end;
+
+{**
+  Sets the designated column with a <code>TZWideRec</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRawRowAccessor.SetWideRec(ColumnIndex: Integer; const Value: TZWideRec);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  if Value.P = nil then
+    SetNull(ColumnIndex)
+  else
+    case FColumnTypes[ColumnIndex - 1] of
+      stString, stUnicodeString:
+        begin
+          InternalSetString(FBuffer, ColumnIndex, ZWideRecToRaw(Value, ConSettings^.ClientCodePage^.CP));
+          FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+        end;
+      else inherited SetWideRec(ColumnIndex, Value)
     end;
 end;
 
@@ -3804,8 +3919,10 @@ begin
           end;
       stString, stUnicodeString:
         if (Columns[FColumnOffsets[I]] = 0) then
-          InternalSetUnicodeString(DestBuffer, I +1,
-            ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc, True);
+          InternalSetPWideChar(DestBuffer, I +1,
+            ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc,
+            PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^,
+            True);
       stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
     end;
   end;
@@ -3841,8 +3958,10 @@ begin
           end;
         stString, stUnicodeString:
           if (Columns[FColumnOffsets[I]] = 0) then
-            InternalSetUnicodeString(DestBuffer, I +1,
-              ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc, True);
+            InternalSetPWideChar(DestBuffer, I +1,
+              ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc,
+              PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^,
+              True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -3880,7 +3999,11 @@ begin
     IsNull := False;
   end
   else
+  begin
+    Result.P := nil;
+    Result.Len := 0;
     IsNull := True;
+  end;
 end;
 
 function TZUnicodeRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
@@ -4048,8 +4171,6 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
 {$ENDIF}
-  Result.P := nil;
-  Result.Len := 0;
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
@@ -4064,7 +4185,11 @@ begin
     IsNull := False;
   end
   else
+  begin
+    Result.P := nil;
+    Result.Len := 0;
     IsNull := True;
+  end;
 end;
 
 {**
@@ -4128,7 +4253,7 @@ begin
 end;
 
 {**
-  Sets the designated column with a <code>PAnsiChar</code> value.
+  Sets the designated column with a <code>TZAnsiRec</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
@@ -4136,9 +4261,8 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
-  @param Len the Length of the new column value
 }
-procedure TZUnicodeRowAccessor.SetPAnsiRec(ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetAnsiRec(ColumnIndex: Integer;
   const Value: TZAnsiRec);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4153,7 +4277,36 @@ begin
           InternalSetUnicodeString(FBuffer, ColumnIndex, ZAnsiRecToUnicode(Value, ConSettings^.ClientCodePage^.CP));
           FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
         end;
-      else inherited SetPAnsiRec(ColumnIndex, Value)
+      else inherited SetAnsiRec(ColumnIndex, Value)
+    end;
+end;
+
+{**
+  Sets the designated column with a <code>TZWideRec</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Value the new column value
+}
+procedure TZUnicodeRowAccessor.SetWideRec(ColumnIndex: Integer;
+  const Value: TZWideRec);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stString);
+{$ENDIF}
+  if Value.P = nil then
+    SetNull(ColumnIndex)
+  else
+    case FColumnTypes[ColumnIndex - 1] of
+      stString, stUnicodeString:
+        begin
+          InternalSetPWideChar(FBuffer, ColumnIndex, Value.P, Value.Len);
+          FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+        end;
+      else inherited SetWideRec(ColumnIndex, Value)
     end;
 end;
 
@@ -4208,4 +4361,5 @@ begin
 end;
 
 end.
+
 

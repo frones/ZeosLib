@@ -90,7 +90,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -134,7 +134,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -376,7 +376,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
   Result.P := GetBuffer(ColumnIndex, Result.Len);
 end;
@@ -1023,7 +1023,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZMySQLPreparedResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
   LastWasNull := FColumnArray[ColumnIndex-1].is_null =1;
   if LastWasNull then

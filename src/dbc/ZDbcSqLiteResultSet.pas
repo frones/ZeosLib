@@ -93,7 +93,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -336,7 +336,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZSQLiteResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
   Result.P := FPlainDriver.column_text(FStmtHandle, ColumnIndex -1);
   Result.Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex -1);

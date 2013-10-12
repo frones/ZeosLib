@@ -1554,6 +1554,7 @@ begin
         ftBytes: { Processes binary array fields. }
           RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
         ftWideString: { Processes widestring fields. }
+          //EH: Using the WideRec setter doesn't perform better. Don't know why but it seems like the IDE's are faster by setting the UnicodeStrings directly
           {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
           {$ELSE}

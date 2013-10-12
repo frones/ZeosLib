@@ -85,7 +85,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -391,7 +391,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZPostgreSQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
   Result.P := GetBuffer(ColumnIndex, Result.Len);
 end;

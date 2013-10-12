@@ -669,7 +669,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
     function GetString(ColumnIndex: Integer): String;
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
@@ -677,7 +677,7 @@ type
     function GetBinaryString(ColumnIndex: Integer): RawByteString; deprecated;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString;
     function GetPWideChar(ColumnIndex: Integer): PWideChar;
-    function GetPWideRec(ColumnIndex: Integer): TZWideRec;
+    function GetWideRec(ColumnIndex: Integer): TZWideRec;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): SmallInt;
@@ -704,12 +704,16 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PChar;
+    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar;
+    function GetAnsiRecByName(const ColumnName: string): TZAnsiRec;
     function GetStringByName(const ColumnName: string): String;
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
     function GetRawByteStringByName(const ColumnName: string): RawByteString;
     function GetBinaryStringByName(const ColumnName: string): RawByteString; deprecated;
     function GetUnicodeStringByName(const ColumnName: string): ZWideString;
+    function GetPWideCharByName(const ColumnName: string): PWideChar;
+    function GetWideRecByName(const ColumnName: string): TZWideRec;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
     function GetShortByName(const ColumnName: string): SmallInt;
@@ -791,6 +795,10 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double);
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar);
+    procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
+    procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar);
+    procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString);
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String);
@@ -935,27 +943,6 @@ type
     function GetPWideChar: PWideChar;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
   end;
-
-  (*IZCLob = interface(IZBlob)
-    ['{191B8627-198F-4572-82D3-A083CD184DD3}']
-    function GetRawByteString: RawByteString;
-    procedure SetRawByteString(Const Value: RawByteString; const CodePage: Word);
-    function GetAnsiString: AnsiString;
-    procedure SetAnsiString(Const Value: AnsiString);
-    function GetUTF8String: UTF8String;
-    procedure SetUTF8String(Const Value: UTF8String);
-    procedure SetUnicodeString(const Value: ZWideString);
-    function GetUnicodeString: ZWideString;
-    procedure SetStream(Value: TStream; CodePage: Word); overload;
-    function GetRawByteStream: TStream;
-    function GetAnsiStream: TStream;
-    function GetUTF8Stream: TStream;
-    function GetUnicodeStream: TStream;
-    function GetPAnsiChar(const CodePage: Word): PAnsiChar;
-    procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
-    function GetPWideChar: PWideChar;
-    procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
-  end;*)
 
   {** Database notification interface. }
   IZNotification = interface(IZInterface)

@@ -215,6 +215,10 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); override;
+    procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); override;
+    procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
@@ -299,22 +303,17 @@ implementation
 
 uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding;
 
-procedure ZStringFieldAssignFromResultSet_RawEncoded(RowAccessor: TZRowAccessor;
+procedure ZStringFieldAssignFromResultSet_AnsiRec(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
 begin
-  RowAccessor.SetRawByteString(ColumnIndex, ResultSet.GetRawByteString(ColumnIndex));
+  RowAccessor.SetAnsiRec(ColumnIndex, ResultSet.GetAnsiRec(ColumnIndex));
 end;
 
-procedure ZStringFieldAssignFromResultSet_PAnsiChar(RowAccessor: TZRowAccessor;
-    ResultSet: IZResultSet; const ColumnIndex: Integer);
-begin
-  RowAccessor.SetPAnsiRec(ColumnIndex, ResultSet.GetPAnsiRec(ColumnIndex));
-end;
-
-procedure ZStringFieldAssignFromResultSet_UnicodeEncoded(RowAccessor: TZRowAccessor;
+procedure ZStringFieldAssignFromResultSet_Unicode(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
 begin
   RowAccessor.SetUnicodeString(ColumnIndex, ResultSet.GetUnicodeString(ColumnIndex));
+  //EH: Hint using the TZWideRecs doesn't perform better here
 end;
 
 { TZAbstractCachedResultSet }
@@ -1356,6 +1355,94 @@ begin
 end;
 
 {**
+  Updates the designated column with a <code>PAnsiChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
+  const Value: PAnsiChar);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetPAnsiChar(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>TZAnsiRec</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateAnsiRec(ColumnIndex: Integer;
+  const Value: TZAnsiRec);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetAnsiRec(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>PWideChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdatePWideChar(ColumnIndex: Integer;
+  const Value: PWideChar);
+var
+  WideRec: TZWideRec;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  WideRec.P := Value;
+  if Value = nil then
+    WideRec.Len := 0
+  else
+    WideRec.Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(Value);
+  FRowAccessor.SetWideRec(ColumnIndex, WideRec);
+end;
+
+{**
+  Updates the designated column with a <code>TZWideRec</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateWideRec(ColumnIndex: Integer;
+  const Value: TZWideRec);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetWideRec(ColumnIndex, Value);
+end;
+
+
+{**
   Updates the designated column with a <code>String</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -1962,10 +2049,9 @@ begin
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   if Statement.GetConnection.GetIZPlainDriver.IsAnsiDriver and
     ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_PAnsiChar
-      //FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_RawEncoded
+      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_AnsiRec
     else
-      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_UnicodeEncoded;
+      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_Unicode;
   Open;
 end;
 

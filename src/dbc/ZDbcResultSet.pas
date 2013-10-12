@@ -134,10 +134,10 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; virtual;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; virtual;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; virtual;
     function GetPWideChar(ColumnIndex: Integer): PWidechar; virtual;
-    function GetPWideRec(ColumnIndex: Integer): TZWideRec; virtual;
+    function GetWideRec(ColumnIndex: Integer): TZWideRec; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
@@ -170,6 +170,10 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PChar; virtual;
+    function GetAnsiRecByName(const ColumnName: string): TZAnsiRec; virtual;
+    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; virtual;
+    function GetPWideCharByName(const ColumnName: string): PWidechar; virtual;
+    function GetWideRecByName(const ColumnName: string): TZWideRec; virtual;
     function GetStringByName(const ColumnName: string): String; virtual;
     function GetAnsiStringByName(const ColumnName: string): AnsiString; virtual;
     function GetUTF8StringByName(const ColumnName: string): UTF8String; virtual;
@@ -257,6 +261,10 @@ type
     procedure UpdateDouble(ColumnIndex: Integer; Value: Double); virtual;
     procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); virtual;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); virtual;
+    procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); virtual;
+    procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); virtual;
+    procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec); virtual;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); virtual;
@@ -764,7 +772,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
   Result.P := GetPAnsiChar(ColumnIndex);
   if LastWasNull then
@@ -812,7 +820,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPWideRec(ColumnIndex: Integer): TZWideRec;
+function TZAbstractResultSet.GetWideRec(ColumnIndex: Integer): TZWideRec;
 begin
   FUniTemp := GetUnicodeString(ColumnIndex);
   Result.P := PWideChar(FUniTemp);
@@ -1382,6 +1390,62 @@ end;
 function TZAbstractResultSet.GetPCharByName(const ColumnName: string): PChar;
 begin
   Result := GetPChar(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetAnsiRecByName(const ColumnName: string): TZAnsiRec;
+begin
+  Result := GetAnsiRec(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the Delphi programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string): PAnsiChar;
+begin
+  Result := GetPAnsiChar(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>TZWideRec</code> in the Delphi programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetWideRecByName(const ColumnName: string): TZWideRec;
+begin
+  Result := GetWideRec(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PWideChar</code> in the Delphi programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string): PWideChar;
+begin
+  Result := GetPWideChar(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2357,7 +2421,7 @@ begin
 end;
 
 {**
-  Updates the designated column with a <code>String</code> value.
+  Updates the designated column with a <code>PChar</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
   update the underlying database; instead the <code>updateRow</code> or
@@ -2369,6 +2433,66 @@ end;
 procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
 begin
   UpdateString(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>PAnsiChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
+  Updates the designated column with a <code>TZAnsiRec</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
+  Updates the designated column with a <code>TZAnsiRec</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
+  Updates the designated column with a <code>TZAnsiRec</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec);
+begin
+  RaiseReadOnlyException;
 end;
 
 {**

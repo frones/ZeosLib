@@ -88,7 +88,7 @@ type
     function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
@@ -567,7 +567,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6ResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZInterbase6ResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -580,7 +580,7 @@ begin
   end
   else
   begin
-    Result := FSqlData.GetPAnsiRec(ColumnIndex -1);
+    Result := FSqlData.GetAnsiRec(ColumnIndex -1);
   end;
 end;
 
@@ -595,7 +595,7 @@ end;
 }
 function TZInterbase6ResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
-  Result := GetPAnsiRec(ColumnIndex).P;
+  Result := GetAnsiRec(ColumnIndex).P;
 end;
 
 {**
@@ -616,8 +616,13 @@ begin
   if LastWasNull then
     Result := ''
   else
+    {$IFDEF UNICODE}
+    Result := ZAnsiRecToUnicode(FSqlData.GetAnsiRec(ColumnIndex -1),
+      FCodePageArray[FSqlData.GetIbSqlSubType(ColumnIndex -1)]);
+    {$ELSE}
     Result := ConSettings^.ConvFuncs.ZRawToString(FSqlData.GetString(ColumnIndex - 1),
       FCodePageArray[FSqlData.GetIbSqlSubType(ColumnIndex -1)], ConSettings^.CTRL_CP);
+    {$ENDIF}
 end;
 
 {**
@@ -638,7 +643,7 @@ begin
   if LastWasNull then
     Result := ''
   else
-    Result := ConSettings^.ConvFuncs.ZRawToUnicode(FSqlData.GetString(ColumnIndex - 1),
+    Result := ZAnsiRecToUnicode(FSqlData.GetAnsiRec(ColumnIndex -1),
       FCodePageArray[FSqlData.GetIbSqlSubType(ColumnIndex -1)]);
 end;
 

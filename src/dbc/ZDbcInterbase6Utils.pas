@@ -144,7 +144,7 @@ type
 
     function IsNull(const Index: Integer): Boolean;
     function GetPChar(const Index: Integer): PChar;
-    function GetPAnsiRec(const Index: Integer): TZAnsiRec;
+    function GetAnsiRec(const Index: Integer): TZAnsiRec;
     function GetPAnsiChar(const Index: Integer): PAnsiChar;
     function GetString(const Index: Integer): RawByteString;
     function GetBoolean(const Index: Integer): Boolean;
@@ -255,7 +255,7 @@ type
 
     function IsNull(const Index: Integer): Boolean;
     function GetPChar(const Index: Integer): PChar;
-    function GetPAnsiRec(const Index: Integer): TZAnsiRec;
+    function GetAnsiRec(const Index: Integer): TZAnsiRec;
     function GetPAnsiChar(const Index: Integer): PAnsiChar;
     function GetString(const Index: Integer): RawByteString;
     function GetBoolean(const Index: Integer): Boolean;
@@ -3069,7 +3069,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZResultSQLDA.GetPAnsiRec(const Index: Integer): TZAnsiRec;
+function TZResultSQLDA.GetAnsiRec(const Index: Integer): TZAnsiRec;
 var
   SQLCode: SmallInt;
 begin
@@ -3156,7 +3156,7 @@ end;
 }
 function TZResultSQLDA.GetPAnsiChar(Const Index: Integer): PAnsiChar;
 begin
-  Result := GetPAnsiRec(Index).P;
+  Result := GetAnsiRec(Index).P;
 end;
 
 {**

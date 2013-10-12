@@ -92,7 +92,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): SmallInt; override;
@@ -265,7 +265,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet.GetPAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZOracleAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 var
   Blob: IZBlob;
   SQLVarHolder: PZSQLVar;
