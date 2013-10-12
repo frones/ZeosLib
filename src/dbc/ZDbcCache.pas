@@ -2899,7 +2899,7 @@ begin
           Blob.SetBuffer(Value.P, Value.Len);
       end;
     stBytes:
-      SetBytes(ColumnIndex, StrToBytes(Value.P));
+      SetBytes(ColumnIndex, StrToBytes(ZWideString(Value.P)));
     stGUID:
       if Value.P = nil  then
         SetNull(ColumnIndex)
@@ -3605,7 +3605,7 @@ begin
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         begin
           SetLength(Result, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
-          System.Move((PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
+          System.Move(PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
             PAnsiChar(Result)^, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
         end
         {$ELSE}
