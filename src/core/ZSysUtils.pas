@@ -581,9 +581,9 @@ function PosEmptyStringToASCII7(const Src: string): RawByteString; overload;
 function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
 
 function NotEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
-function NotEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString; overload;
+function NotEmptyASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString; overload;
 function NotEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
-function NotEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
+function NotEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
 
 function PosEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
 function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString; overload;
@@ -3358,7 +3358,7 @@ begin
     PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
 end;
 
-function NotEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString;
+function NotEmptyASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString;
 var i: integer;
 begin
   System.SetString(result, nil, Len);
@@ -3381,17 +3381,16 @@ begin
 end;
 
 
-function NotEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString;
-var i, l: integer;
+function NotEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
+var i: integer;
 begin
-  L := System.Length(Src); //temp l speeds x2
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Result := ''; //speeds up SetLength x2
-  SetLength(Result, l);
+  SetLength(Result, len);
   {$ELSE}
-  System.SetString(Result,nil, l);
+  System.SetString(Result,nil, len);
   {$ENDIF}
-  for i := 0 to l-1 do
+  for i := 0 to len-1 do
     PByteArray(Result)[i] := PWordArray(Src)[i];
 end;
 
