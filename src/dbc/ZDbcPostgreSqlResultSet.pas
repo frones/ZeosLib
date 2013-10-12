@@ -57,8 +57,9 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcResultSet,
-  ZPlainPostgreSqlDriver, ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
+  ZDbcResultSetMetadata, ZCompatibility;
 
 type
   {** Implements PostgreSQL ResultSet. }

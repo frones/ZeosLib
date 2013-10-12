@@ -60,7 +60,8 @@ uses
   Windows,
 {$ENDIF}
   Variants,
-  Types, SysUtils, DB, Classes, ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
+  Types, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, Classes,
+  ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 

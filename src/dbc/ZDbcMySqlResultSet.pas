@@ -56,10 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZDbcIntfs,
-  Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
-  ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZDbcMySqlStatement, ZPlainMySqlDriver, ZPlainMySqlConstants;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
+  ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
+  ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
+  ZPlainMySqlDriver, ZPlainMySqlConstants;
 
 type
   {** Implements MySQL ResultSet Metadata. }

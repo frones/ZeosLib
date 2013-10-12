@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses SysUtils, classes, Types,
+uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   ZClasses, ZCompatibility, ZPlainDriver;
 
 const

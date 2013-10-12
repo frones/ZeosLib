@@ -56,9 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  SysUtils, Classes, Types, ZDbcIntfs, ZDbcStatement,
-  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants,ZCompatibility,
-  ZDbcCachedResultSet, ZDbcLogging, ZMessages, ZVariant, ZTokenizer;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
+  ZDbcIntfs, ZDbcStatement, ZPlainFirebirdDriver, ZCompatibility,
+  ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
+  ZVariant, ZTokenizer;
 
 type
   { Interbase Statement Type }

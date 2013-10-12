@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes, Math,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Math,
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}

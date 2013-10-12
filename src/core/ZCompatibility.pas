@@ -71,7 +71,7 @@ uses
   {$If defined(MSWINDOWS) and not defined(FPC)}
   Windows,
   {$IFEND}
-  Classes, SysUtils;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils;
 
 type
 {$IFDEF FPC}

@@ -58,16 +58,10 @@ uses
 {$IFNDEF UNIX}
   Windows,
 {$ENDIF}
-  Classes, Contnrs, DateUtils, SysUtils, Types,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils, Types,
   SyncObjs,
-  ZCompatibility,
-  ZClasses,
-  ZURL,
-  ZDbcConnection,
-  ZDbcIntfs,
-  ZPlainDriver,
-  ZMessages,
-  ZVariant;
+  ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
+  ZMessages, ZVariant;
 
 type
   TConnectionPool = class;

@@ -52,7 +52,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils;
 
 type

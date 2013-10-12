@@ -55,7 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
-uses Classes, Contnrs, ZClasses, ZTokenizer, ZSelectSchema, ZCompatibility;
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs,
+  ZClasses, ZTokenizer, ZSelectSchema, ZCompatibility;
 
 type
 

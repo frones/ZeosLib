@@ -57,9 +57,10 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
-  ZPlainFirebirdInterbaseConstants, ZPlainFirebirdDriver,
-  ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
+  ZDbcInterbase6Utils;
 
 type
 

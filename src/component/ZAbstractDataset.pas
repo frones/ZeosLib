@@ -57,9 +57,9 @@ interface
 
 uses
   Variants,
-  SysUtils, DB, Classes, ZSqlUpdate, ZDbcIntfs, ZVariant,
-  ZDbcCache, ZDbcCachedResultSet, ZAbstractRODataset,
-  ZCompatibility, ZSequence;
+  SysUtils, {$IFDEF MSEgui}mdb{$ELSE}DB{$ENDIF}, Classes,
+  ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
+  ZAbstractRODataset, ZCompatibility, ZSequence;
 
 type
   {$IFDEF oldFPC} // added in 2006, probably pre 2.2.4

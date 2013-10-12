@@ -57,8 +57,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging,
-  ZCompatibility, ZDbcASA, ZDbcStatement, ZVariant, ZPlainASAConstants;   // SQLTimSt, FmtBCD,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  ZSysUtils, ZDbcIntfs, ZPlainASADriver, ZDbcLogging, ZCompatibility, ZDbcASA,
+  ZDbcStatement, ZVariant, ZPlainASAConstants;
 
 const
   StdVars = 20;

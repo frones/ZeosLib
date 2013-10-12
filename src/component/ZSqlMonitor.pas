@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, Contnrs, ZClasses, ZCompatibility, ZDbcIntfs, ZDbcLogging;
+  SysUtils, Classes, Contnrs, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZClasses, ZCompatibility, ZDbcIntfs, ZDbcLogging;
 
 type
 

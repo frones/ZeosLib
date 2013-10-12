@@ -55,7 +55,8 @@ interface
 
 {$I ZComponent.inc}
 
-uses Classes, SysUtils {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}, DB,
+uses Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
   ZDbcIntfs, ZCompatibility;
 
 type

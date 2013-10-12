@@ -56,7 +56,8 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, ZTokenizer, ZGenericSqlToken;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZTokenizer, ZGenericSqlToken;
 
 type
 

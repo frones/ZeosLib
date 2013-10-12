@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {       String tokenizing classes for Generic SQL         }
 {                                                         }
-{       Originally written by Sergey Seroukhov                  }
+{       Originally written by Sergey Seroukhov            }
 {                                                         }
 {*********************************************************}
 
@@ -56,7 +56,8 @@ interface
 {$I ZParseSql.inc}
 
 uses
-  Classes, SysUtils, ZTokenizer, ZCompatibility;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZTokenizer, ZCompatibility;
 
 type
 

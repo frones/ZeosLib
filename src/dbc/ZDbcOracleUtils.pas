@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver,
-  ZDbcLogging, ZCompatibility, ZPlainOracleConstants;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
+  ZCompatibility, ZPlainOracleConstants;
 
 const
   MAX_SQLVAR_LIMIT = 1024;

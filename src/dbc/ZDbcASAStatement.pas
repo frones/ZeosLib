@@ -55,9 +55,9 @@ interface
 
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils,
-  ZDbcASAResultSet, ZPlainASADriver, ZCompatibility, ZDbcLogging, ZVariant,
-  ZMessages;
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils, ZDbcASAResultSet,
+  ZPlainASADriver, ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
 
 type
 
