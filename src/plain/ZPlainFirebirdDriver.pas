@@ -602,7 +602,7 @@ begin
   Self.AddCodePage('CYRL', CS_CYRL, ceAnsi, zCP_WIN1251, '', 2);  {Russian}
   Self.AddCodePage('DOS437', CS_DOS437, ceAnsi, zCP_DOS437); {English (USA)}
   Self.AddCodePage('DOS850', CS_DOS850, ceAnsi, zCP_DOS850); {Latin I (no Euro symbol)}
-  Self.AddCodePage('DOS852', CS_DOS852, ceAnsi, zCP_DOS852); {Latin II}
+  Self.AddCodePage('DOS852', CS_DOS852, ceAnsi, {$IFDEF MSWINDOWS}zCP_L2_ISO_8859_2{$ELSE}zCP_DOS852{$ENDIF}); {Latin II} //need a crack for windows. Don't know why but it seems Win converts cp852 false see: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=4779&sid=a143d302f1f967b844bea2bee9eb39b8
   Self.AddCodePage('DOS857', CS_DOS857, ceAnsi, zCP_DOS857); {Turkish}
   Self.AddCodePage('DOS860', CS_DOS860, ceAnsi, zCP_DOS860); {Portuguese}
   Self.AddCodePage('DOS861', CS_DOS861, ceAnsi, zCP_DOS861); {Icelandic}

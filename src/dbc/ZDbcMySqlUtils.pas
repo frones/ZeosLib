@@ -187,7 +187,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
 begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
-      if not Signed and (PlainDriver.GetFieldLength(FieldHandle)=1) then
+      if not Signed {and (PlainDriver.GetFieldLength(FieldHandle)=1)} then
          Result := stByte
       else
          Result := stShort;
