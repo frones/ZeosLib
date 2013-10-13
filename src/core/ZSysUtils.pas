@@ -56,7 +56,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Variants, {$IFDEF MSEgui}mclasses,{$ENDIF}Classes, SysUtils, Types,
+  Variants, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZMessages, ZCompatibility;
 
 type

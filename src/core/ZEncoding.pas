@@ -85,7 +85,7 @@ const
   zCP_DOS775 = 775; {MS-DOS Codepage 775 (BaltRim)}
   zCP_DOS850 = 850;	{MS-DOS Codepage 850 (Multilingual Latin 1)}
   zCP_DOS851 = 851; {MS-DOS Codepage 851 (Greece) - obsolete}
-  zCP_DOS852 = 852; {ibm852	852	Osteuropäisch (DOS)}
+  zCP_DOS852 = 852; {ibm852 852 east european(DOS)}
   zCP_DOS853 = 853;	{MS-DOS Codepage 853 (Multilingual Latin 3)}
   zCP_DOS855 = 855;	{MS-DOS Codepage 855 (Russia) - obsolete}
   zCP_DOS856 = 856;
@@ -193,11 +193,11 @@ const
   zCP_cp1025 = 21025;	{IBM EBCDIC Cyrillic Serbian-Bulgarian}
   //21027 (deprecated)}}
   zCP_KOI8U = 21866; {KOI8-U is an 8-bit character encoding, designed to cover Ukrainian, which uses the Cyrillic alphabet.}
-  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets — Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
-  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets — Part 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets - Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets × Part 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
   zCP_L3_ISO_8859_3 = 28593; {ISO 8859-3 Latin 3}
   zCP_L4_ISO_8859_4 = 28594; {ISO 8859-4 Baltic}
-  zCP_L5_ISO_8859_5 = 28595; {-bit single-byte coded graphic character sets — Part 5: Latin/Cyrillic alphabet, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L5_ISO_8859_5 = 28595; {-bit single-byte coded graphic character sets - Part 5: Latin/Cyrillic alphabet, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
   zCP_L6_ISO_8859_6 = 28596; {ISO 8859-6 Arabic}
   zCP_L7_ISO_8859_7 = 28597; {ISO 8859-7 Greek}
   zCP_L8_ISO_8859_8 = 28598; {ISO 8859-8 Hebrew; Hebrew (ISO-Visual)}
@@ -696,6 +696,11 @@ end;
     {$IF defined(PWIDECHAR_IS_PUNICODECHAR) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
     WS: WideString;
     {$IFEND}
+  {$ELSE}             //2013-10-13 mse
+  var
+    {$IF defined(PWIDECHAR_IS_PUNICODECHAR) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
+    WS: UnicodeString;
+    {$ENDIF}    
   {$ENDIF}
   begin
     Result := '';

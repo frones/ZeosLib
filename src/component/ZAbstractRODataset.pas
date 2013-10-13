@@ -60,7 +60,7 @@ uses
   Windows,
 {$ENDIF}
   Variants,
-  Types, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF}, Classes,
+  Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
@@ -397,7 +397,7 @@ type
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
-    // Silvio Clécio
+    // Silvio Clecio
     {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     function PSGetQuoteCharW: WideString; override;
@@ -3501,7 +3501,7 @@ end;
   Defines a list of query primary key fields.
   @returns a semicolon delimited list of query key fields.
 }
-// Silvio Clécio
+// Silvio Clecio
 {$IFDEF WITH_IPROVIDERWIDE}
 {$WARNINGS OFF}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;

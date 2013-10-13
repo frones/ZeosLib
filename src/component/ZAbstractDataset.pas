@@ -57,7 +57,7 @@ interface
 
 uses
   Variants,
-  SysUtils, {$IFDEF MSEgui}mdb{$ELSE}DB{$ENDIF}, Classes,
+  SysUtils,  Classes, {$IFDEF MSEgui}mdb, mclasses{$ELSE}DB{$ENDIF},
   ZSqlUpdate, ZDbcIntfs, ZVariant, ZDbcCache, ZDbcCachedResultSet,
   ZAbstractRODataset, ZCompatibility, ZSequence;
 
