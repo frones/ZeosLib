@@ -1,4 +1,4 @@
-﻿{*********************************************************}
+{*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {         PostgreSQL Database Connectivity Classes        }
@@ -193,8 +193,8 @@ const
   zCP_cp1025 = 21025;	{IBM EBCDIC Cyrillic Serbian-Bulgarian}
   //21027 (deprecated)}}
   zCP_KOI8U = 21866; {KOI8-U is an 8-bit character encoding, designed to cover Ukrainian, which uses the Cyrillic alphabet.}
-  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets - Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
-  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets נPart 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets — Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets - Part 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
   zCP_L3_ISO_8859_3 = 28593; {ISO 8859-3 Latin 3}
   zCP_L4_ISO_8859_4 = 28594; {ISO 8859-4 Baltic}
   zCP_L5_ISO_8859_5 = 28595; {-bit single-byte coded graphic character sets - Part 5: Latin/Cyrillic alphabet, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
