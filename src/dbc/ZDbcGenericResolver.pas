@@ -100,6 +100,10 @@ type
     FUpdateColumns: TObjectList;
     FWhereColumns: TObjectList;
 
+    FInsertParams: TObjectList;
+    FUpdateParams: TObjectList;
+    FDeleteParams: TObjectList;
+
     FCalcDefaults: Boolean;
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
@@ -107,7 +111,6 @@ type
     InsertStatement            : IZPreparedStatement;
     UpdateStatement            : IZPreparedStatement;
     DeleteStatement            : IZPreparedStatement;
-
   protected
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
     function ComposeFullTableName(Catalog, Schema, Table: string): string;
@@ -213,6 +216,10 @@ begin
   FWhereColumns := TObjectList.Create(True);
   FUpdateColumns := TObjectList.Create(True);
 
+  FInsertParams := TObjectList.Create(True);
+  FUpdateParams := TObjectList.Create(True);
+  FDeleteParams := TObjectList.Create(True);
+
   FCalcDefaults := StrToBoolEx(DefineStatementParameter(Statement,
     'defaults', 'true'));
   FUpdateAll := UpperCase(DefineStatementParameter(Statement,
@@ -237,6 +244,10 @@ begin
   FreeAndNil(FInsertColumns);
   FreeAndNil(FUpdateColumns);
   FreeAndNil(FWhereColumns);
+
+  FreeAndNil(FInsertParams);
+  FreeAndNil(FUpdateParams);
+  FreeAndNil(FDeleteParams);
 
   inherited Destroy;
 end;
@@ -335,17 +346,13 @@ var
 begin
   { Precache insert parameters. }
   if InsertColumns.Count = 0 then
-  begin
     for I := 1 to Metadata.GetColumnCount do
-    begin
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) then
       begin
         InsertColumns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I), True, ''));
       end;
-    end;
-  end;
   { Use cached insert parameters }
   CopyResolveParameters(InsertColumns, Columns);
 end;
@@ -819,61 +826,71 @@ var
   lValidateUpdateCount : Boolean;
 
 begin
-  if (UpdateType = utDeleted)
-    and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
+  if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
 
-  SQLParams := TObjectList.Create(True);
-  try
-    case UpdateType of
-      utInserted:
+  case UpdateType of
+    utInserted:
+      begin
+        if InsertStatement = nil then
+        begin
+          SQL := FormInsertStatement(FInsertParams, NewRowAccessor);
+          InsertStatement := CreateResolverStatement(SQL);
+          Statement := InsertStatement;
+        end
+        else
+        begin
+          Statement := InsertStatement;
+          SQL := InsertStatement.GetSQL;
+        end;
+        SQLParams := FInsertParams;
+      end;
+    utDeleted:
+      begin
+        if DeleteStatement = nil then
           begin
-        SQL := FormInsertStatement(SQLParams, NewRowAccessor);
-            If Assigned(InsertStatement) and (SQL <> InsertStatement.GetSQL) then
-              InsertStatement := nil;
-            If not Assigned(InsertStatement) then
-              InsertStatement := CreateResolverStatement(SQL);
-            Statement := InsertStatement;
-          end;
-      utDeleted:
-          begin
-        SQL := FormDeleteStatement(SQLParams, OldRowAccessor);
+          SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
             If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
               DeleteStatement := nil;
             If not Assigned(DeleteStatement) then
               DeleteStatement := CreateResolverStatement(SQL);
             Statement := DeleteStatement;
-          end;
-      utModified:
+          end
+          else
           begin
-        SQL := FormUpdateStatement(SQLParams, OldRowAccessor, NewRowAccessor);
-            If SQL =''then // no fields have been changed
-               exit;
-            If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
-              UpdateStatement := nil;
-            If not Assigned(UpdateStatement) then
-              UpdateStatement := CreateResolverStatement(SQL);
-            Statement := UpdateStatement;
+            Statement := DeleteStatement;
+            SQL := DeleteStatement.GetSQL;
           end;
-      else
-        Exit;
-    end;
+        SQLParams := FDeleteParams;
+      end;
+    utModified:
+      begin
+        SQL := FormUpdateStatement(FUpdateParams, OldRowAccessor, NewRowAccessor);
+        If SQL =''then // no fields have been changed
+           exit;
+        If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
+          UpdateStatement := nil;
+        If not Assigned(UpdateStatement) then
+          UpdateStatement := CreateResolverStatement(SQL);
+        Statement := UpdateStatement;
+        SQLParams := FUpdateParams;
+      end;
+    else
+      Exit;
+  end;
 
-    if SQL <> '' then
-    begin
-      FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-      // if Property ValidateUpdateCount isn't set : assume it's true
-      lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
-                            or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
+  if SQL <> '' then
+  begin
+    FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
+    // if Property ValidateUpdateCount isn't set : assume it's true
+    lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
+                          or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
-      lUpdateCount := Statement.ExecuteUpdatePrepared;
-      {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
-      if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
-        raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
-      {$ENDIF}
-    end;
-  finally
-    FreeAndNil(SQLParams);
+    lUpdateCount := Statement.ExecuteUpdatePrepared;
+    {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+    if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
+      raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+    {$ENDIF}
   end;
 end;
 
