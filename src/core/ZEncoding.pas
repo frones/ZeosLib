@@ -1,4 +1,4 @@
-{*********************************************************}
+﻿{*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
 {         PostgreSQL Database Connectivity Classes        }
@@ -700,7 +700,7 @@ end;
   var
     {$IF defined(PWIDECHAR_IS_PUNICODECHAR) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
     WS: UnicodeString;
-    {$ENDIF}    
+    {$IFEND}
   {$ENDIF}
   begin
     Result := '';
