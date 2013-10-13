@@ -109,7 +109,6 @@ type
 
   TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
   private
-    FPlanName: String;
     FRawPlanName: RawByteString;
     FPostgreSQLConnection: IZPostgreSQLConnection;
     FPlainDriver: IZPostgreSQLPlainDriver;
@@ -548,8 +547,7 @@ end;
 
 procedure TZPostgreSQLClassicPreparedStatement.SetPlanNames;
 begin
-  FPlanName := '"'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle))+'"';
-  FRawPlanName := {$IFDEF UNICODE}RawByteString{$ENDIF}(FPlanName);
+  FRawPlanName := '"'+IntToRaw(Int64(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle)))+'"';
 end;
 
 function TZPostgreSQLClassicPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer;
@@ -575,7 +573,7 @@ begin
 
   if Length(FCachedQueryRaw) > 1 then //params found
   begin
-    TempSQL := 'PREPARE '+NotEmptyStringToAscii7(FPlanName)+' AS ';
+    TempSQL := 'PREPARE '+FRawPlanName+' AS ';
     N := 0;
     for I := 0 to High(FCachedQueryRaw) do
     begin
@@ -814,18 +812,18 @@ begin
   case LoggingCategory of
     lcPrepStmt:
       begin
-        Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(RawByteString(FPlanName)),
+        Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(FRawPlanName),
           PAnsiChar(SQL), InParamCount, nil);
         Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
           FConnectionHandle, LoggingCategory, LogSQL, Result) = '42P18');
         DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
         if not Findeterminate_datatype then
-          FPostgreSQLConnection.RegisterPreparedStmtName(FPlanName);
+          FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         Exit;
       end;
     lcExecPrepStmt:
       Result := FPlainDriver.ExecPrepared(FConnectionHandle,
-        PAnsiChar(RawByteString(FPlanName)), InParamCount, FPQparamValues,
+        PAnsiChar(FRawPlanName), InParamCount, FPQparamValues,
         FPQparamLengths, FPQparamFormats, 0);
     lcUnprepStmt:
       if Assigned(FConnectionHandle) then
@@ -841,20 +839,19 @@ begin
 end;
 procedure TZPostgreSQLCAPIPreparedStatement.SetPlanNames;
 begin
-  FPlanName := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Int64(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle)));
-  FRawPlanName := NotEmptyStringToASCII7(FPlanName);
+  FRawPlanName := IntToRaw(Int64(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle)));
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetASQL(const Value: RawByteString);
 begin
-  if ( ASQL <> Value ) and Prepared then
+  if Prepared and ( ASQL <> Value ) then
     Unprepare;
   inherited SetASQL(Value);
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.SetWSQL(const Value: ZWideString);
 begin
-  if ( WSQL <> Value ) and Prepared then
+  if Prepared and ( WSQL <> Value ) then
     Unprepare;
   inherited SetWSQL(Value);
 end;
@@ -1023,37 +1020,27 @@ end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;
 var
-  Tokens: TStrings;
-  TempSQL: String;
+  TempSQL: RawByteString;
   N, I: Integer;
 begin
   if not Prepared then
   begin
     N := 0;
-    if Pos('?', SSQL) > 0 then
-    begin
-      TempSQL := ''; //init
-      Tokens := Connection.GetDriver.GetTokenizer.
-        TokenizeBufferToList(SSQL, [toUnifyWhitespaces]);
-      try
-        for I := 0 to Tokens.Count - 1 do
-        begin
-          if Tokens[I] = '?' then
-          begin
-            Inc(N);
-            TempSQL := TempSQL + '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
-          end else
-            TempSQL := TempSQL + Tokens[I];
-        end;
-      finally
-        Tokens.Free;
-      end;
-    end
-    else TempSQL := SSQL;
+    if Length(FCachedQueryRaw) = 0 then
+      FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
+        Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
+
+    for I := 0 to High(FCachedQueryRaw) do
+      if FParamIndex[i] then
+      begin
+        Inc(N);
+        TempSQL := TempSQL + '$' + IntToRaw(N);
+      end else
+        TempSQL := TempSQL + FCachedQueryRaw[i];
 
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
     begin
-      QueryHandle := ExectuteInternal(GetEncodedSQL(TempSQL), 'PREPARE '#39+TempSQL+#39, lcPrepStmt);
+      QueryHandle := ExectuteInternal(TempSQL, 'PREPARE '#39+SSQL+#39, lcPrepStmt);
       if not (Findeterminate_datatype) then
         FPlainDriver.Clear(QueryHandle);
       inherited Prepare;
@@ -1063,17 +1050,17 @@ end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Unprepare;
 var
-  TempSQL: String;
+  TempSQL: RawByteString;
 begin
   if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
     inherited Unprepare;
     if (not Findeterminate_datatype)  then
     begin
-      TempSQL := 'DEALLOCATE "'+FPlanName+'";';
-      QueryHandle := ExectuteInternal(RawByteString(TempSQL), TempSQL, lcUnprepStmt);
+      TempSQL := 'DEALLOCATE "'+FRawPlanName+'";';
+      QueryHandle := ExectuteInternal(TempSQL, {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(TempSQL), lcUnprepStmt);
       FPlainDriver.Clear(QueryHandle);
-      FPostgreSQLConnection.UnregisterPreparedStmtName(FPlanName);
+      FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
     end;
   end;
 end;
