@@ -544,7 +544,7 @@ function TokenizeSQLQueryRaw(const SQL: String; Const ConSettings: PZConSettings
 var
   I: Integer;
   Temp: RawByteString;
-  NextIsNChar: Boolean;
+  NextIsNChar, ParamFound: Boolean;
   Tokens: TZTokenDynArray;
 
   procedure Add(const Value: RawByteString; const Param: Boolean = False);
@@ -563,21 +563,24 @@ var
       IsNCharIndex[High(IsNCharIndex)] := False;
   end;
 begin
-  if ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0) then
+  ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
+  if ParamFound or ConSettings^.AutoEncode then
   begin
     Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
     Temp := '';
     NextIsNChar := False;
+
     for I := 0 to High(Tokens) do
     begin
-      if Tokens[I].Value = '?' then
+      if ParamFound and (Tokens[I].Value = '?') then
       begin
         Add(Temp);
         Add('?', True);
         Temp := '';
       end
       else
-        if NeedNCharDetection and (Tokens[I].Value = 'N') and (Length(Tokens) > i) and (Tokens[i+1].Value = '?') then
+        if ParamFound and NeedNCharDetection and (Tokens[I].Value = 'N') and
+          (Length(Tokens) > i) and (Tokens[i+1].Value = '?') then
         begin
           Add(Temp);
           Add('N');
@@ -601,7 +604,7 @@ begin
               Temp := Temp + {$IFDEF UNICODE}PosEmptyStringToASCII7{$ENDIF}(Tokens[i].Value);
           end;
     end;
-    if Temp <> '' then
+    if (Temp <> '') then
       Add(Temp);
   end
   else
@@ -617,9 +620,9 @@ function TokenizeSQLQueryUni(const SQL: String; Const ConSettings: PZConSettings
   const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 var
   I: Integer;
-  Tokens: TStrings;
+  Tokens: TZTokenDynArray;
   Temp: ZWideString;
-  NextIsNChar: Boolean;
+  NextIsNChar, ParamFound: Boolean;
   procedure Add(const Value: ZWideString; Const Param: Boolean = False);
   begin
     SetLength(Result, Length(Result)+1);
@@ -636,41 +639,53 @@ var
       IsNCharIndex[High(IsNCharIndex)] := False;
   end;
 begin
-  if (Pos('?', SQL) > 0) then
+  ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
+  if ParamFound or ConSettings^.AutoEncode then
   begin
-    Tokens := Tokenizer.TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
-    try
-      Temp := '';
-      NextIsNChar := False;
-      for I := 0 to Tokens.Count - 1 do
+    Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
+
+    Temp := '';
+    NextIsNChar := False;
+    for I := 0 to High(Tokens) do
+    begin
+      if ParamFound and (Tokens[I].Value = '?') then
       begin
-        if Tokens[I] = '?' then
+        Add(Temp);
+        Add('?', True);
+        Temp := '';
+      end
+      else
+        if ParamFound and NeedNCharDetection and (Tokens[I].Value = 'N') and
+          (Length(Tokens) > i) and (Tokens[i+1].Value = '?') then
         begin
           Add(Temp);
-          Add('?', True);
+          Add('N');
           Temp := '';
+          NextIsNChar := True;
         end
         else
-          if NeedNCharDetection and (Tokens[I] = 'N') and (Tokens.Count > i) and (Tokens[i+1] = '?') then
-          begin
-            Add(Temp);
-            Add(ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i], ConSettings^.CTRL_CP));
-            Temp := '';
-            NextIsNChar := True;
-          end
-          else
-            Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i], ConSettings^.CTRL_CP);
-      end;
-      if Temp <> '' then
-        Add(Temp);
-    finally
-      Tokens.Free;
+          {$IFDEF UNICODE}
+          Temp := Temp + Tokens[i].Value;
+          {$ELSE}
+          case (Tokens[i].TokenType) of
+            ttEscape, ttQuoted, ttComment,
+            ttWord, ttQuotedIdentifier, ttKeyword:
+              Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i].Value, ConSettings^.CTRL_CP)
+            else
+              Temp := Temp + PosEmptyASCII7ToUnicodeString(Tokens[i].Value);
+          end;
+          {$ENDIF}
     end;
+    if (Temp <> '') then
+      Add(Temp);
   end
   else
+    {$IFDEF UNICDE}
+    Add(SQL);
+    {$ELSE}
     Add(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings^.CTRL_CP));
+    {$ENDIF}
 end;
-
 
 end.
 

@@ -3888,8 +3888,8 @@ end;
 {$ELSE}
 var S1, S2: ZWideString;
 begin
-  System.SetString(S1, PWideChar(ValuePtr1^)+PWideInc, PCardinal(ValuePtr1)^);
-  System.SetString(S2, PWideChar(ValuePtr2^)+PWideInc, PCardinal(ValuePtr2)^);
+  System.SetString(S1, PWideChar(ValuePtr1^)+PWideInc, PCardinal(ValuePtr1^)^);
+  System.SetString(S2, PWideChar(ValuePtr2^)+PWideInc, PCardinal(ValuePtr2^)^);
   Result := WideCompareStr(S1, S2);
 end;
 {$ENDIF}

@@ -118,8 +118,6 @@ type
     Findeterminate_datatype: Boolean;
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
   protected
-    FCachedQueryRaw: TRawDynArray;
-    FParamIndex, FNCharDetected: TBooleanDynArray;
     procedure SetPlanNames; virtual; abstract;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
@@ -131,8 +129,6 @@ type
   TZPostgreSQLClassicPreparedStatement = class(TZPostgreSQLPreparedStatement)
   private
     FExecSQL: RawByteString;
-    FCachedQueryRaw: TRawDynArray;
-    FParamIndex, FNCharDetected: TBooleanDynArray;
     function GetAnsiSQLQuery: RawByteString;
   protected
     procedure SetPlanNames; override;
@@ -531,18 +527,14 @@ var
 begin
   ParamIndex := 0;
   Result := '';
-  if Length(FCachedQueryRaw) = 0 then
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
-      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
-
-  for I := 0 to High(FCachedQueryRaw) do
-    if FParamIndex[I] then
+  for I := 0 to High(CachedQueryRaw) do
+    if IsParamIndex[I] then
     begin
       Result := Result + PrepareAnsiSQLParam(ParamIndex, True);
       Inc(ParamIndex);
     end
     else
-      Result := Result + FCachedQueryRaw[i];
+      Result := Result + CachedQueryRaw[i];
 end;
 
 procedure TZPostgreSQLClassicPreparedStatement.SetPlanNames;
@@ -567,24 +559,18 @@ var
   TempSQL: RawByteString;
   QueryHandle: PZPostgreSQLResult;
 begin
-  if Length(FCachedQueryRaw) = 0 then
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
-      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
-
-  if Length(FCachedQueryRaw) > 1 then //params found
+  if Length(CachedQueryRaw) > 1 then //params found
   begin
     TempSQL := 'PREPARE '+FRawPlanName+' AS ';
     N := 0;
-    for I := 0 to High(FCachedQueryRaw) do
-    begin
-      if FParamIndex[i] then
+    for I := 0 to High(CachedQueryRaw) do
+      if IsParamIndex[i] then
       begin
         Inc(N);
         TempSQL := TempSQL + '$' + IntToRaw(N);
       end
       else
-        TempSQL := TempSQL + FCachedQueryRaw[i];
-    end;
+        TempSQL := TempSQL + CachedQueryRaw[i];
     {$IFNDEF UNICODE}
     if ConSettings^.AutoEncode then
        TempSQL := GetConnection.GetDriver.GetTokenizer.GetEscapeString(TempSQL);
@@ -999,13 +985,8 @@ var
 begin
   ParamIndex := 0;
   Result := '';
-
-  if Length(FCachedQueryRaw) = 0 then
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
-      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
-
-  for I := 0 to High(FCachedQueryRaw) do
-    if FParamIndex[I] then
+  for I := 0 to High(CachedQueryRaw) do
+    if IsParamIndex[I] then
     begin
       if InParamCount <= ParamIndex then
         raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -1015,7 +996,7 @@ begin
       Inc(ParamIndex);
     end
     else
-      Result := Result + FCachedQueryRaw[i];
+      Result := Result + CachedQueryRaw[i];
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;
@@ -1026,17 +1007,14 @@ begin
   if not Prepared then
   begin
     N := 0;
-    if Length(FCachedQueryRaw) = 0 then
-      FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
-        Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected);
 
-    for I := 0 to High(FCachedQueryRaw) do
-      if FParamIndex[i] then
+    for I := 0 to High(CachedQueryRaw) do
+      if IsParamIndex[i] then
       begin
         Inc(N);
         TempSQL := TempSQL + '$' + IntToRaw(N);
       end else
-        TempSQL := TempSQL + FCachedQueryRaw[i];
+        TempSQL := TempSQL + CachedQueryRaw[i];
 
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
     begin
@@ -1344,7 +1322,7 @@ begin
     end;
   end
   else
-    Result := GetEncodedSQL(ASql);
+    Result := GetRawEncodedSQL(ASql);
 end;
 
 {**

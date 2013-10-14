@@ -558,8 +558,6 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
-
-    function GetEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
   end;
 
   {** Prepared SQL statement interface. }

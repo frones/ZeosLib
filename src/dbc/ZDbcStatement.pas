@@ -181,7 +181,8 @@ type
 
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
-    function GetEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -198,6 +199,10 @@ type
     FPrepared : Boolean;
     FExecCount: Integer;
     FClientVariantManger: IZClientVariantManager;
+    FCachedQueryRaw: TRawDynArray;
+    FCachedQueryUni: TUnicodeDynArray;
+    FNCharDetected: TBooleanDynArray;
+    FIsParamIndex: TBooleanDynArray;
   protected
     FStatementId : Integer;
     function GetClientVariantManger: IZClientVariantManager;
@@ -221,6 +226,10 @@ type
       read FInParamDefaultValues write FInParamDefaultValues;
     property InParamCount: Integer read FInParamCount write FInParamCount;
     property ClientVarManager: IZClientVariantManager read FClientVariantManger;
+    property CachedQueryRaw: TRawDynArray read FCachedQueryRaw;
+    property CachedQueryUni: TUnicodeDynArray read FCachedQueryUni;
+    property IsParamIndex: TBooleanDynArray read FIsParamIndex;
+    property IsNCharIndex: TBooleanDynArray read FNCharDetected;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -275,6 +284,8 @@ type
 
     procedure AddBatchPrepared; virtual;
     function GetMetaData: IZResultSetMetaData; virtual;
+    function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
+    function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
   end;
 
   {** Implements Abstract Callable SQL statement. }
@@ -367,19 +378,11 @@ type
   TZEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FExecStatement: IZStatement;
-    FCachedQueryRaw: TRawDynArray;
-    FCachedQueryUni: TUnicodeDynArray;
-    FNCharDetected: TBooleanDynArray;
-    FParamIndex: TBooleanDynArray;
     FLastStatement: IZStatement;
     procedure SetLastStatement(LastStatement: IZStatement);
   protected
     FNeedNCharDetection: Boolean;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
-    property CachedQueryRaw: TRawDynArray read FCachedQueryRaw write FCachedQueryRaw;
-    property CachedQueryUni: TUnicodeDynArray read FCachedQueryUni write FCachedQueryUni;
-    property IsParamIndex: TBooleanDynArray read FParamIndex write FParamIndex;
-    property IsNCharIndex: TBooleanDynArray read FNCharDetected write FNCharDetected;
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
 
     function CreateExecStatement: IZStatement; virtual; abstract;
@@ -474,27 +477,34 @@ end;
 procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
   if FWSQL <> Value then
-  begin
     {$IFDEF UNICODE}
-    FaSQL := GetEncodedSQL(Value);
-    {$ELSE}
-    FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
-    {$ENDIF}
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);;
-  end;
+    if FConnection.GetIZPlainDriver.IsAnsiDriver then
+    begin
+      FASQL := GetRawEncodedSQL(Value);
+      FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for sql logging
+    end
+    else
+      FWSQL := GetUnicodeEncodedSQL(Value);
+    {$ELSE !UNICODE}
+    begin
+      FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for sql logging
+      FWSQL := Value;
+    end;
+    {$ENDIF UNICODE}
 end;
 
 procedure TZAbstractStatement.SetASQL(const Value: RawByteString);
 begin
   if FASQL <> Value then
   begin
-    {$IFNDEF UNICODE}
-    FASQL := GetEncodedSQL(Value);
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
-    {$else}
+    {$IFDEF UNICODE}
     FASQL := Value;
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
-    {$ENDIF}
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for sql logging
+    {$ELSE !UNICODE}
+    FASQL := GetRawEncodedSQL(Value);
+    if not FConnection.GetIZPlainDriver.IsAnsiDriver then
+      FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
+    {$ENDIF UNICODE}
   end;
 end;
 
@@ -724,7 +734,7 @@ procedure TZAbstractStatement.ClearWarnings;
 begin
 end;
 
-function TZAbstractStatement.GetEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+function TZAbstractStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
 var
   SQLTokens: TZTokenDynArray;
   i: Integer;
@@ -754,6 +764,38 @@ begin
     {$ENDIF}
 end;
 
+function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+var
+  SQLTokens: TZTokenDynArray;
+  i: Integer;
+begin
+  if GetConnection.AutoEncodeStrings then
+  begin
+    Result := ''; //init for FPC
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
+    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
+    {$IFDEF UNICODE}
+      Result := Result + SQLTokens[i].Value;
+    {$ELSE !UNICODE}
+    begin
+      case (SQLTokens[i].TokenType) of
+        ttEscape,
+        ttQuoted, ttComment,
+        ttWord, ttQuotedIdentifier, ttKeyword:
+          Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
+        else
+          Result := Result + PosEmptyASCII7ToUnicodeString(SQLTokens[i].Value);
+      end;
+    end;
+    {$ENDIF UNICODE}
+  end
+  else
+    {$IFDEF UNICODE}
+    Result := SQL;
+    {$ELSE !UNICODE}
+    Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
+    {$ENDIF UNICODE}
+end;
 {**
   Defines the SQL cursor name that will be used by
   subsequent <code>Statement</code> object <code>execute</code> methods.
@@ -1892,6 +1934,8 @@ procedure TZAbstractPreparedStatement.Unprepare;
 begin
   UnPrepareInParameters;
   FPrepared := False;
+  SetLength(FCachedQueryRaw, 0);
+  SetLength(FCachedQueryUni, 0);
 end;
 
 function TZAbstractPreparedStatement.IsPrepared: Boolean;
@@ -1917,6 +1961,38 @@ function TZAbstractPreparedStatement.GetMetaData: IZResultSetMetaData;
 begin
   Result := nil;
   RaiseUnsupportedException;
+end;
+
+function TZAbstractPreparedStatement.GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString;
+var I: Integer;
+begin
+  if Length(FCachedQueryRaw) = 0 then
+  begin
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
+
+    Result := ''; //init Result
+    for I := 0 to High(FCachedQueryRaw) do
+      Result := Result + FCachedQueryRaw[i];
+  end
+  else
+    Result := Inherited GetRawEncodedSQL(SQL);
+end;
+
+function TZAbstractPreparedStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
+var I: Integer;
+begin
+  if Length(FCachedQueryUni) = 0 then
+  begin
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SQL, ConSettings,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
+
+    //init Result
+    for I := 0 to High(FCachedQueryUni) do
+      Result := Result + FCachedQueryUni[i];
+  end
+  else
+    Result := inherited GetUnicodeEncodedSQL(SQL);
 end;
 
 { TZAbstractCallableStatement }
@@ -2688,7 +2764,7 @@ procedure TZEmulatedPreparedStatement.TokenizeSQLQueryRaw;
 begin
   if Length(FCachedQueryRaw) = 0 then
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
-      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       FNeedNCharDetection);
 end;
 
@@ -2700,7 +2776,7 @@ procedure TZEmulatedPreparedStatement.TokenizeSQLQueryUni;
 begin
   if Length(FCachedQueryUni) = 0 then
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SSQL, ConSettings,
-      Connection.GetDriver.GetTokenizer, FParamIndex, FNCharDetected,
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       FNeedNCharDetection);
 end;
 
@@ -2718,15 +2794,13 @@ begin
   TokenizeSQLQueryUni;
 
   for I := 0 to High(FCachedQueryUni) do
-  begin
-    if FParamIndex[i] then
+    if FIsParamIndex[i] then
     begin
       Result := Result + PrepareWideSQLParam(ParamIndex);
       Inc(ParamIndex);
     end
     else
       Result := Result + FCachedQueryUni[I];
-  end;
   {$IFDEF UNICODE}
   if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
@@ -2748,7 +2822,7 @@ begin
 
   for I := 0 to High(FCachedQueryRaw) do
   begin
-    if FParamIndex[i] then
+    if IsParamIndex[i] then
     begin
       Result := Result + PrepareAnsiSQLParam(ParamIndex);
       Inc(ParamIndex);

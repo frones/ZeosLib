@@ -74,8 +74,6 @@ type
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
     function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): RawByteString; overload;
-    function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-    ConSettings: PZConSettings; out LogSQL: String): RawByteString;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
@@ -99,8 +97,6 @@ type
     function GetUnicodeCodePageName: String; virtual;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function GetPrepreparedSQL(Handle: Pointer; const SQL: String;
-      ConSettings: PZConSettings; out LogSQL: String): RawByteString; virtual;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
@@ -216,44 +212,6 @@ begin
 
   if (DoArrange) and (Result^.ZAlias <> '' ) then
     ValidateCharEncoding(Result^.ZAlias); //recalls em selves
-end;
-
-function TZAbstractPlainDriver.GetPrepreparedSQL(Handle: Pointer;
-  const SQL: String; ConSettings: PZConSettings; out LogSQL: String): RawByteString;
-var
-  SQLTokens: TZTokenDynArray;
-  i: Integer;
-begin
-  Result := '';
-  if ConSettings.AutoEncode then
-  begin
-    SQLTokens := FTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
-    for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-    begin
-      case (SQLTokens[i].TokenType) of
-        ttEscape:
-          Result := Result +
-            {$IFDEF UNICODE}
-            ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-              ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-            {$ELSE}
-            SQLTokens[i].Value
-            {$ENDIF};
-        ttQuoted,  ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
-        else
-          Result := Result + RawByteString(SQLTokens[i].Value);
-      end;
-    end;
-  end
-  else
-    {$IFDEF UNICODE}
-    Result := ConSettings^.ConvFuncs.ZStringToRaw(SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-    {$ELSE}
-    Result := SQL;
-    {$ENDIF}
-  LogSQL := String(Result);
 end;
 
 {$IFDEF FPC}

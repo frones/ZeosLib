@@ -99,7 +99,7 @@ type
 
     procedure SetLastStatement(LastStatement: IZStatement);
     function GetExecStatement: IZStatement;
-    function ConvertToOracleSQLQuery(SQL: string): RawByteString;
+    function ConvertToOracleSQLQuery: RawByteString;
 
   protected
     property Prepared: Boolean read FPrepared write FPrepared;
@@ -338,7 +338,7 @@ begin
   inherited Create(Connection, SQL, Info);
   FPlainDriver := PlainDriver;
   ResultSetType := rtForwardOnly;
-  ASQL := ConvertToOracleSQLQuery(SQL);
+  ASQL := ConvertToOracleSQLQuery;
   FPrepared := False;
 end;
 
@@ -392,31 +392,23 @@ end;
   @param SQL a query with parameters defined with '?'
   @returns a query with parameters in Oracle format ':pN'.
 }
-function TZOraclePreparedStatement.ConvertToOracleSQLQuery(SQL: string): RawByteString;
+function TZOraclePreparedStatement.ConvertToOracleSQLQuery: RawByteString;
 var
   I, N: Integer;
-  Tokens: TStrings;
 begin
-  if Pos('?', SQL) > 0 then
-  begin
-    Tokens := Connection.GetDriver.GetTokenizer.
-      TokenizeBufferToList(SQL, [toUnifyWhitespaces]);
-    try
-      Result := '';
-      N := 0;
-      for I := 0 to Tokens.Count - 1 do
-        if Tokens[I] = '?' then
-        begin
-          Inc(N);
-          Result := Result + ':P' + IntToRaw(N);
-        end else
-          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[I],
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
-    finally
-      Tokens.Free;
-    end;
-  end else
-    Result := GetEncodedSQL(SQL);
+  N := 0;
+  Result := '';
+  for I := 0 to High(CachedQueryRaw) do
+    if IsParamIndex[i] then
+    begin
+      Inc(N);
+      Result := Result + ':P' + IntToRaw(N);
+    end else
+      Result := Result + CachedQueryRaw[i];
+  {$IFNDEF UNICODE}
+  if ConSettings^.AutoEncode then
+     Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
 end;
 
 {**
