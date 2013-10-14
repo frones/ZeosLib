@@ -111,7 +111,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts, ZSysUtils, ZDbcResultSet, ZDbcUtils, Math;
+uses ZTestCase, ZSysUtils, ZDbcResultSet, ZDbcUtils, Math;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -214,8 +214,8 @@ begin
     for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
       case ConnectionConfig.PerformanceResultSetTypes[N-1] of
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
-        stByte:    Statement.SetByte(N, Ord(Random(255)));
-        stShort,
+        stByte,
+        stShort: Statement.SetByte(N, Ord(Random(255)));
         stInteger,
         stLong:    Statement.SetInt(N, I);
         stFloat,

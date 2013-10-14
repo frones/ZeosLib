@@ -187,7 +187,7 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
 begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
-      if not Signed and (PlainDriver.GetFieldLength(FieldHandle)=1) then
+      if not Signed {and (PlainDriver.GetFieldLength(FieldHandle)=1)} then
          Result := stByte
       else
          Result := stShort;
@@ -610,12 +610,12 @@ begin
       FIELD_TYPE_VAR_STRING] then
       begin
       if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
-        Result.MaxLenghtBytes:=Result.Precision
+        Result.MaxLenghtBytes := Result.Precision
       else
-        Result.MaxLenghtBytes:=PlainDriver.GetFieldMaxLength(FieldHandle);
+        Result.MaxLenghtBytes := PlainDriver.GetFieldMaxLength(FieldHandle);
       end
     else
-      Result.MaxLenghtBytes:=FieldLength;
+      Result.MaxLenghtBytes := FieldLength;
     Result.Scale := PlainDriver.GetFieldDecimals(FieldHandle);
     if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
       or (TIMESTAMP_FLAG and FieldFlags <> 0) then

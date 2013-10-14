@@ -420,7 +420,6 @@ end;
 function TZPerformanceSQLTestCase.RandomStr(Length: Integer): string;
 var
   I: Integer;
-  //C: Char;
   PResult: PChar;
 begin
 
@@ -432,13 +431,7 @@ begin
   SetLength(Result, Length);
   PResult := PChar(Result);
   for I := 0 to Length-1 do
-  //begin
     (PResult+i)^ := Chr(Random(CharRange)+32{min Space});
-    //C := Chr((Random(Ord('z') - Ord('A') + 1)) + Ord('A'));
-    //if not CharInSet(C, ['A'..'Z', 'a'..'z']) then
-      //C := ' ';
-    //Result := Result + C;
-  //end;
 end;
 
 {**

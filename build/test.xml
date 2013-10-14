@@ -278,7 +278,7 @@
    <echo message="Testing ... ${test.suite} ..."/>
     <exec dir="${test.dir}" executable="${test.dir}/ztestall.exe"
        output="${log.file}" append="true">
-	<env key="HEAPTRC" value="disabled"/>
+	<!--env key="HEAPTRC" value="disabled"/-->
    <arg line="--batch -a -p --format=plain --suite=${test.suite} --monitor=${log.file}.${compiler}.${test.suite} ${test.norebuild}" />
     </exec>
   </target>

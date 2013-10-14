@@ -160,6 +160,7 @@ procedure TMyTestRunner.DoRun;
     //run the tests
     if CommandLineSwitches.runall or (DefaultRunAllTests and Not CommandLineSwitches.list) then
       DoTestRun(tempTestSuite) ;
+    tempTestSuite.Free;
     Terminate;
   end;
 
