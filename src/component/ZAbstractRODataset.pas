@@ -3073,16 +3073,9 @@ begin
 
     if Mode = bmRead then
     begin
-      case Field.DataType of
-      ftMemo, ftFmtMemo:
-        Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull);
-      {$IFDEF WITH_WIDEMEMO}
-      ftWideMemo:
-        Result := RowAccessor.GetUnicodeStream(ColumnIndex, WasNull)
-      {$ENDIF}
-      else
-        Result := RowAccessor.GetBinaryStream(ColumnIndex, WasNull);
-      end;
+      Blob := RowAccessor.GetBlob(ColumnIndex, WasNull);
+      Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
+        FConnection.DbcConnection.GetConSettings);
     end
     else
     begin

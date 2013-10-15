@@ -81,7 +81,7 @@ type
 
 implementation
 
-uses ZFastCode, ZSysUtils;
+uses ZFastCode, ZSysUtils, ZEncoding;
 
 { TZBlobStream }
 
@@ -102,15 +102,31 @@ begin
   FConSettings := ConSettings;
   if (Mode in [bmRead, bmReadWrite]) and not Blob.IsEmpty then
   begin
-    TempStream := Blob.GetStream;
-    try
-      TempStream.Position := 0;
-      CopyFrom(TempStream, TempStream.Size);
-      Position := 0;
-    finally
-      TempStream.Free;
+    if Blob.IsClob then
+      case Field.DataType of
+        ftMemo, ftFmtMemo:
+          if FConSettings^.AutoEncode then
+            Buffer := Blob.GetPAnsiChar(FConSettings^.CTRL_CP)
+          else
+            Buffer := Blob.GetPAnsiChar(FConSettings^.ClientCodePage^.CP);
+        {$IFDEF WITH_WIDEMEMO}
+        ftWideMemo:
+          Buffer := Blob.GetPWideChar;
+        {$ENDIF}
+        else
+          Buffer := Blob.GetBuffer;
+      end
+    else
+      Buffer := Blob.GetBuffer;
+    ASize := Blob.Length;
+    if Mode = bmRead then  //set Streambuffer from Blob
+      SetPointer(Buffer, ASize)
+    else
+    begin //TestEncoding fails if external buffer
+      Self.SetSize(ASize);
+      System.Move(Buffer^, Memory^, ASize);
     end;
-  end
+  end;
 end;
 
 type THackedDataset = class(TDataset);
@@ -168,7 +184,10 @@ begin
     except
         ApplicationHandleException(Self);
     end;
-  end;
+  end
+  else
+    SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
+
   inherited Destroy;
 end;
 
@@ -177,7 +196,8 @@ function TZBlobStream.TestEncoding: TZCharEncoding;
 begin
   Result := ceDefault;
   Self.SetSize(Size+2);
-  (PWideChar(Memory)+(Size div 2)-1)^ := WideChar(#0);
+  (PAnsiChar(Memory)+(Size-1))^ := #0;
+  (PAnsiChar(Memory)+(Size-2))^ := #0;
   {EgonHugeist:
     Step one: Findout, wat's comming in! To avoid User-Bugs as good as possible
       it is possible that a PAnsiChar OR a PWideChar was written into
@@ -187,7 +207,7 @@ begin
     step two: detect the encoding }
 
   if ( ZFastCode.StrLen(PAnsiChar(Memory)) < Size-2 ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
-    result := ceUTF16
+    result := ceUTF16 //exact
   else
     if FConSettings.AutoEncode then
       case DetectUTF8Encoding(PAnsichar(Memory)) of
@@ -197,7 +217,7 @@ begin
             Two/four byte WideChars causing the same result!
             Leads to pain! Is there a way to get a better test?
             I've to start from the premise the function which calls this func
-            should decide wether ansi or unicode}
+            should decide if ansi or unicode}
           Result := ceAnsi;
         etUTF8: Result := ceUTF8; //Exact!
       end
