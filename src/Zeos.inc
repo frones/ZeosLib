@@ -230,6 +230,7 @@
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
   {$UNDEF USE_FAST_CHARPOS}
+  {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //Memorymanager can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}

@@ -484,7 +484,10 @@ begin
       FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for sql logging
     end
     else
-      FWSQL := GetUnicodeEncodedSQL(Value);
+      if ConSettings^.AutoEncode then
+        FWSQL := GetUnicodeEncodedSQL(Value)
+      else
+        FWSQL := Value;
     {$ELSE !UNICODE}
     begin
       FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for sql logging

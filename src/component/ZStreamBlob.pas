@@ -67,9 +67,7 @@ type
     FBlob: IZBlob;
     FMode: TBlobStreamMode;
     FConSettings: PZConSettings;
-    {$IFDEF WITH_WIDEMEMO}
     function TestEncoding: TZCharEncoding;
-    {$ENDIF}
   protected
     property Blob: IZBlob read FBlob write FBlob;
     property Mode: TBlobStreamMode read FMode write FMode;
@@ -101,7 +99,8 @@ begin
   FMode := Mode;
   FField := Field;
   FConSettings := ConSettings;
-  if (Mode in [bmRead, bmReadWrite]) and not Blob.IsEmpty then
+
+  if (Mode in [bmRead, bmReadWrite] ) and not Blob.IsEmpty then
   begin
     if Blob.IsClob then
       case Field.DataType of
@@ -118,15 +117,9 @@ begin
           Buffer := Blob.GetBuffer;
       end
     else
-      Buffer := Blob.GetBuffer;
+    Buffer := Blob.GetBuffer;
     ASize := Blob.Length;
-    if Mode = bmRead then  //set Streambuffer from Blob
-      SetPointer(Buffer, ASize)
-    else
-    begin //TestEncoding fails if external buffer
-      Self.SetSize(ASize);
-      System.Move(Buffer^, Memory^, ASize);
-    end;
+    SetPointer(Buffer, ASize);
   end;
 end;
 
@@ -136,49 +129,107 @@ type THackedDataset = class(TDataset);
   Destroys this object and cleanups the memory.
 }
 destructor TZBlobStream.Destroy;
-{$IFDEF WITH_WIDEMEMO}
-Label DataReady;
-var
-  US: ZWideString;
-  {$ENDIF}
+//var Buffer: Pointer;
 begin
   if Mode in [bmWrite, bmReadWrite] then
   begin
+    Self.Position := 0;
+    {EH: speed upgrade:
+     instead of moving mem from A to B i set the mem-pointer to the lobs instead.
+     But we have to validate the mem if required.. }
+
     if Assigned(Self.Memory) then
     begin
-    {$IFDEF WITH_WIDEMEMO}
-      if FField.DataType = ftWideMemo then
-      begin
-        {EH: not happy about this part. TBlobStream.LoadFromFile loads single encoded strings
-        but if the Data is set by a Memo than we've got two-byte encoded strings.
-        So there is NO way around to test this encoding. Acutally i've no idea about a more exact way
-        than going this route...}
-        case TestEncoding of  //testencoding adds two leadin null bytes
-          ceDefault: //us ascii found, use faster conversion
-            US := NotEmptyASCII7ToUnicodeString(Memory, Size-2);
-          ceAnsi, ceUTF16: //We've to start from the premisse we've got a Unicode string in there
-            begin
-              if Blob.IsClob then
-                Blob.SetPWideChar(Memory, (Size div 2)-1)
+      case FField.DataType of
+        {$IFDEF WITH_WIDEMEMO}ftWideMemo, {$ENDIF} ftMemo:
+          if Blob.IsClob then
+            {EH: not happy about this part. TBlobStream.LoadFromFile loads single encoded strings
+            but if the Data is set by a Memo than we've got two-byte encoded strings.
+            So there is NO way around to test this encoding. Acutally i've no idea about a more exact way
+            than going this route...}
+            {$IFDEF WITH_WIDEMEMO}
+            if FField.DataType = ftWideMemo then
+              case TestEncoding of  //testencoding adds two leadin null bytes
+                ceDefault: //us ascii found, use faster conversion
+                  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                  Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_us_ascii); //use only one #0 terminator
+                  {$ELSE} //need to move data
+                  Blob.SetPAnsiChar(Memory, ZEncoding.zCP_us_ascii, Size -2);
+                  {$ENDIF}
+                ceAnsi, ceUTF16: //We've to start from the premisse we've got a Unicode string in there
+                  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                  Blob.SetBlobData(Memory, Size, ZEncoding.zCP_UTF16); //use the #0#0 terminator
+                  {$ELSE} //need to move data
+                  Blob.SetPWideChar(Memory, (Size -2) div 2);
+                  {$ENDIF}
+                ceUTF8:
+                  {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                  Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_UTF8); //use only one #0 terminator
+                  {$ELSE} //need to move data
+                  Blob.SetPAnsiChar(Memory, ZEncoding.zCP_UTF8, Size -2);
+                  {$ENDIF}
+              end
+            else
+            {$ENDIF}
+              if FConSettings^.AutoEncode then
+                case TestEncoding of  //testencoding adds two leadin null bytes
+                  ceDefault: //us ascii found, use faster conversion
+                    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                    Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_us_ascii); //use only one #0 terminator
+                    {$ELSE} //need to move data
+                    Blob.SetPAnsiChar(Memory, ZEncoding.zCP_us_ascii, Size -2);
+                    {$ENDIF}
+                  ceUTF16: //We've to start from the premisse we've got a Unicode string in there
+                    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                    Blob.SetBlobData(Memory, Size, ZEncoding.zCP_UTF16); //use the #0#0 terminator
+                    {$ELSE} //need to move data
+                    Blob.SetPWideChar(Memory, (Size -2) div 2);
+                    {$ENDIF}
+                  ceAnsi:
+                    if (ZCompatibleCodePages(FConSettings^.ClientCodePage^.CP, zCP_UTF8)) then
+                      {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                      Blob.SetBlobData(Memory, Size -1, FConSettings^.CTRL_CP) //use only one #0 terminator
+                      {$ELSE} //need to move data
+                      Blob.SetPAnsiChar(Memory, FConSettings^.CTRL_CP, Size -2)
+                      {$ENDIF}
+                    else
+                      {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                      Blob.SetBlobData(Memory, Size -1, FConSettings^.ClientCodePage^.CP); //use only one #0 terminator
+                      {$ELSE} //need to move data
+                      Blob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size -2);
+                      {$ENDIF}
+                  ceUTF8:
+                    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                    Blob.SetBlobData(Memory, Size -1, ZEncoding.zCP_UTF8); //use only one #0 terminator
+                    {$ELSE} //need to move data
+                    Blob.SetPAnsiChar(Memory, ZEncoding.zCP_UTF8, Size -2);
+                    {$ENDIF}
+                end
               else
-                Blob.SetBuffer(PWideChar(US), Size-2);
-              goto DataReady; //this avoids extra moving to UnicodeString and stream
-            end;
-          ceUTF8: US := UTF8ToString(PAnsiChar(Memory));
-        end;
-        if Blob.isClob then
-          Blob.SetUnicodeString(US)
+                {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+                Blob.SetBlobData(Memory, Size, FConSettings^.ClientCodePage^.CP) //use only one #0 terminator
+                {$ELSE} //need to move data
+                Blob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size)
+                {$ENDIF}
+          else
+            {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+            Blob.SetBlobData(Memory, Size);
+            {$ELSE} //need to move data
+            Blob.SetBuffer(Memory, Size);
+            {$ENDIF}
         else
-          Blob.SetBuffer(PWideChar(US), Length(US)*2);
-        DataReady:
-        SetSize(Size-2);
-      end
-      else
-    {$ENDIF}
-        Blob.SetStream(Self)
+          {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+          Blob.SetBlobData(Memory, Size);
+          {$ELSE} //need to move data
+          Blob.SetBuffer(Memory, Size);
+          {$ENDIF}
+      end;
+      {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
+      SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
+      {$ENDIF}
     end
     else
-      Blob.SetStream(nil);
+      Blob.Clear;
     try
       if Assigned(FField.Dataset) then
         THackedDataset(FField.DataSet).DataEvent(deFieldChange, ULong(FField));
@@ -192,7 +243,6 @@ begin
   inherited Destroy;
 end;
 
-{$IFDEF WITH_WIDEMEMO}
 function TZBlobStream.TestEncoding: TZCharEncoding;
 begin
   Result := ceDefault;
@@ -225,7 +275,6 @@ begin
     else
       Result := ceDefault;
 end;
-{$ENDIF}
 
 end.
 

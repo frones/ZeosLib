@@ -813,6 +813,7 @@ type
     procedure UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
+    procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
 
     //======================================================================
     // Methods for accessing results by column name
@@ -915,9 +916,12 @@ type
     function GetBytes: TByteDynArray;
     procedure SetBytes(const Value: TByteDynArray);
     function GetStream: TStream;
-    procedure SetStream(Value: TStream); overload;
+    procedure SetStream(const Value: TStream); overload;
     function GetBuffer: Pointer;
-    procedure SetBuffer(Buffer: Pointer; Length: Integer);
+    procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
+    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal); overload;
+    {$ENDIF}
 
     procedure Clear;
     function Clone: IZBlob;
@@ -931,7 +935,7 @@ type
     procedure SetUTF8String(Const Value: UTF8String);
     procedure SetUnicodeString(const Value: ZWideString);
     function GetUnicodeString: ZWideString;
-    procedure SetStream(Value: TStream; CodePage: Word); overload;
+    procedure SetStream(const Value: TStream; const CodePage: Word); overload;
     function GetRawByteStream: TStream;
     function GetAnsiStream: TStream;
     function GetUTF8Stream: TStream;
@@ -940,6 +944,9 @@ type
     procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
     function GetPWideChar: PWideChar;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
+    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
+    {$ENDIF}
   end;
 
   {** Database notification interface. }

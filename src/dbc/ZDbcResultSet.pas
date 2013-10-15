@@ -278,6 +278,7 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); virtual;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); virtual;
+    procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob); virtual;
     procedure UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet); virtual;
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); virtual;
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); virtual;
@@ -358,9 +359,12 @@ type
     function GetBytes: TByteDynArray; virtual;
     procedure SetBytes(const Value: TByteDynArray); virtual;
     function GetStream: TStream; virtual;
-    procedure SetStream(Value: TStream); overload; virtual;
+    procedure SetStream(const Value: TStream); overload; virtual;
     function GetBuffer: Pointer; virtual;
-    procedure SetBuffer(Buffer: Pointer; Length: Integer);
+    procedure SetBuffer(const Buffer: Pointer; const Length: Integer);
+    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal); overload;
+    {$ENDIF}
 
     procedure Clear; virtual;
     function Clone: IZBlob; virtual;
@@ -375,7 +379,7 @@ type
     procedure SetUTF8String(Const Value: UTF8String); virtual;
     procedure SetUnicodeString(const Value: ZWideString); virtual;
     function GetUnicodeString: ZWideString; virtual;
-    procedure SetStream(Value: TStream; CodePage: Word); overload; virtual;
+    procedure SetStream(const Value: TStream; const CodePage: Word); overload; virtual;
     function GetRawByteStream: TStream; virtual;
     function GetAnsiStream: TStream; virtual;
     function GetUTF8Stream: TStream; virtual;
@@ -384,6 +388,9 @@ type
     procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal); virtual;
     function GetPWideChar: PWideChar; virtual;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal); virtual;
+    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload; virtual;
+    {$ENDIF}
   end;
 
   TZAbstractUnCachedBlob = class(TZAbstractBlob)
@@ -435,8 +442,8 @@ type
     function GetUnicodeString: ZWideString; override;
     procedure SetUnicodeString(const Value: ZWideString); override;
     function GetStream: TStream; override;
-    procedure SetStream(Value: TStream); overload; override;
-    procedure SetStream(Value: TStream; CodePage: Word); reintroduce; overload; override;
+    procedure SetStream(const Value: TStream); overload; override;
+    procedure SetStream(const Value: TStream; const CodePage: Word); reintroduce; overload; override;
     function GetRawByteStream: TStream; override;
     function GetAnsiStream: TStream; override;
     function GetUTF8Stream: TStream; override;
@@ -445,6 +452,9 @@ type
     procedure SetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal); override;
     function GetPWideChar: PWideChar; override;
     procedure SetPWideChar(const Buffer: PWideChar; const Len: Cardinal); override;
+    {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); override;
+    {$ENDIF}
 
     function Clone: IZBLob; override;
     function IsClob: Boolean; override;
@@ -2691,6 +2701,11 @@ begin
   RaiseReadOnlyException;
 end;
 
+procedure TZAbstractResultSet.UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
+begin
+  RaiseReadOnlyException;
+end;
+
 procedure TZAbstractResultSet.UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet);
 begin
   RaiseReadOnlyException;
@@ -3484,7 +3499,7 @@ begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-procedure TZAbstractBlob.SetStream(Value: TStream; CodePage: Word);
+procedure TZAbstractBlob.SetStream(const Value: TStream; const CodePage: Word);
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
@@ -3528,6 +3543,24 @@ procedure TZAbstractBlob.SetPWideChar(const Buffer: PWideChar; const Len: Cardin
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
+
+{$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+procedure TZAbstractBlob.SetBlobData(const Buffer: Pointer; const Len: Cardinal);
+begin
+  if Buffer <> FBlobData then
+    Clear;
+  Self.FBlobData := Buffer;
+  Self.FBlobSize := Len;
+  Self.FUpdated := True;
+end;
+
+procedure TZAbstractBlob.SetBlobData(const Buffer: Pointer; const Len: Cardinal;
+  Const CodePage: Word);
+begin
+  raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
+end;
+{$ENDIF}
+
 
 {**
   Checks if this blob has an empty content.
@@ -3638,7 +3671,7 @@ end;
   Sets a data from the specified stream into this blob.
   @param Value a stream object to be stored into this blob.
 }
-procedure TZAbstractBlob.SetStream(Value: TStream);
+procedure TZAbstractBlob.SetStream(const Value: TStream);
 begin
   Clear;
   if Assigned(Value) then
@@ -3664,19 +3697,14 @@ begin
   Result := FBlobData;
 end;
 
-procedure TZAbstractBlob.SetBuffer(Buffer: Pointer; Length: Integer);
+procedure TZAbstractBlob.SetBuffer(const Buffer: Pointer; const Length: Integer);
 begin
+  InternalClear;
   FBlobSize := Length;
   if Assigned(Buffer) and ( Length > 0 ) then
   begin
-    FBlobData := nil;
     GetMem(FBlobData, Length);
     Move(Buffer^, FBlobData^, Length);
-  end
-  else
-  begin
-    FBlobSize := -1;
-    FBlobData := nil;
   end;
   FUpdated := True;
 end;
@@ -4041,25 +4069,21 @@ begin
   end;
 end;
 
-procedure TZAbstractCLob.SetStream(Value: TStream);
+procedure TZAbstractCLob.SetStream(const Value: TStream);
 begin
   SetStream(Value, zCP_NONE); //because we don't know the codepage here
 end;
 
-procedure TZAbstractCLob.SetStream(Value: TStream; CodePage: Word);
+procedure TZAbstractCLob.SetStream(const Value: TStream; const CodePage: Word);
 begin
-  if Assigned(Value) then
+  if Value = nil then
+    InternalClear
+  else
   begin
     if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
       SetPWideChar(TMemoryStream(Value).Memory, Value.Size div 2)
     else
       SetPAnsiChar(TMemoryStream(Value).Memory, CodePage, Value.Size)
-  end
-  else
-  begin
-    Clear;
-    FBlobSize := -1;
-    FBlobData := nil;
   end;
   FUpdated := True;
 end;
@@ -4204,6 +4228,19 @@ begin
   InternalSetPWideChar(Buffer, Len);
   FUpdated := True;
 end;
+
+{$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+procedure TZAbstractCLob.SetBlobData(const Buffer: Pointer; const Len: Cardinal;
+  const CodePage: Word);
+begin
+  if Buffer <> FBlobData then
+    InternalClear;
+  FBlobData := Buffer;
+  FBlobSize := Len;
+  FCurrentCodePage := CodePage;
+  FUpdated := True;
+end;
+{$ENDIF}
 
 {**
   Clones this blob object.

@@ -231,6 +231,7 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); override;
     procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); override;
+    procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob); override;
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); override;
 
     procedure InsertRow; override;
@@ -1662,6 +1663,15 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetBinaryStream(ColumnIndex, Value);
+end;
+
+procedure TZAbstractCachedResultSet.UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetBlob(ColumnIndex, Value);
 end;
 
 {**

@@ -57,6 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
   ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants;
 

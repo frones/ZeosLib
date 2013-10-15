@@ -58,6 +58,7 @@ interface
 uses
   Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}Db{$ENDIF},
   Contnrs, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  {$IFDEF MSWINDOWS}Windows, {$ENDIF}
   ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
 
 {**
@@ -291,7 +292,7 @@ implementation
 
 uses
   ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZDbcUtils, ZSysUtils {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
+  ZDbcUtils, ZSysUtils;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -511,7 +512,7 @@ var
   Current: TField;
   WasNull: Boolean;
   ColumnIndex, ColumnCount: Integer;
-  Stream: TStream;
+  Blob: IZBlob;
 begin
   WasNull := False;
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
@@ -560,34 +561,14 @@ begin
       ftDateTime:
         ResultSet.UpdateTimestamp(ColumnIndex,
           RowAccessor.GetTimestamp(FieldIndex, WasNull));
-      ftMemo:
-        begin
-          Stream := RowAccessor.GetAsciiStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateAsciiStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
       {$IFDEF WITH_WIDEMEMO}
-      ftWideMemo:
-        begin
-          Stream := RowAccessor.GetUnicodeStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateUnicodeStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
+      ftWideMemo,
       {$ENDIF}
-      ftBlob:
+      ftMemo, ftBlob:
         begin
-          Stream := RowAccessor.GetBinaryStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateBinaryStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
+          Blob := RowAccessor.GetBlob(FieldIndex, WasNull);
+          WasNull := (Blob = nil) or (Blob.IsEmpty); //need a check for IsEmpty too
+          ResultSet.UpdateLob(ColumnIndex, Blob);
         end;
       {$IFDEF WITH_FTDATASETSUPPORT}
       ftDataSet:
@@ -870,12 +851,17 @@ begin
             WValue2 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
             if PartialKey then
             begin
-              {$IFDEF UNICODE}
-              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$IFDEF MSWINDOWS}
+                Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+                  PWideChar(WValue2), Length(WValue1), PWideChar(WValue1), Length(WValue1)) - 2{CSTR_EQUAL} = 0;
               {$ELSE}
-              Value1 := AnsiString(WValue1);
-              Value2 := AnsiString(WValue2);
-              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$IFDEF UNICODE}
+                Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+                {$ELSE}
+                Value1 := AnsiString(WValue1);
+                Value2 := AnsiString(WValue2);
+                Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$ENDIF}
               {$ENDIF}
             end
             else
@@ -887,12 +873,17 @@ begin
             WValue1 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
             if PartialKey then
             begin
-              {$IFDEF UNICODE}
-              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$IFDEF MSWINDOWS}
+                Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+                  PWideChar(WValue2), Length(WValue1), PWideChar(WValue1), Length(WValue1)) - 2{CSTR_EQUAL} = 0;
               {$ELSE}
-              Value1 := AnsiString(WValue1);
-              Value2 := AnsiString(WValue2);
-              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$IFDEF UNICODE}
+                Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+                {$ELSE}
+                Value1 := AnsiString(WValue1);
+                Value2 := AnsiString(WValue2);
+                Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$ENDIF}
               {$ENDIF}
             end
             else
