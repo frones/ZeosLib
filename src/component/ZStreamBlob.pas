@@ -92,7 +92,8 @@ uses ZFastCode, ZSysUtils, ZEncoding;
 constructor TZBlobStream.Create(Field: TBlobField; Blob: IZBlob;
   Mode: TBlobStreamMode; ConSettings: PZConSettings);
 var
-  TempStream: TStream;
+  Buffer: Pointer;
+  ASize: Integer;
 begin
   inherited Create;
 
