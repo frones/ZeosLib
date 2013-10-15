@@ -3671,7 +3671,7 @@ begin
   begin
     FBlobData := nil;
     GetMem(FBlobData, Length);
-    Move(FBlobData^, Buffer^, Length);
+    Move(Buffer^, FBlobData^, Length);
   end
   else
   begin
