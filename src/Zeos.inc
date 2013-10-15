@@ -134,6 +134,7 @@
   {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
+  {$DEFINE WITH_URW1111_ISSUE} //D2010 can't compile for some strange reasons with inlined code.
 {$ENDIF}
 
 // Compilation directives for Delphi XE
