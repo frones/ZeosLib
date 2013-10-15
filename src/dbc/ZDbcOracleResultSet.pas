@@ -1612,6 +1612,7 @@ begin
         CheckOracleError(FPlainDriver, FErrorHandle,
           Status, lcOther, 'Read Large Object');
         BlobSize := OffSet+1; //oracle includes #0 terminator
+        if OffSet = 0 then ReallocMem(FBlobData, 1);
         (PAnsiChar(FBlobData)+NativeUInt(OffSet))^ := #0;
       except
         FreeMem(Buf);
