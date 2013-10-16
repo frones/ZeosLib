@@ -93,6 +93,7 @@ type
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
     procedure TestDoubleFloatParams;
+    procedure TestClobEmptyString;
   end;
 
   TZGenericTestDbcResultSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1531,6 +1532,72 @@ begin
       CheckEquals(3.14159265358979323846, FieldByName('n_float').AsFloat,0.00001);
       CheckEquals(3.14159265358979323846, FieldByName('n_dprecission').AsFloat,0.0000000000001);
       Close;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestClobEmptyString;
+var
+  Query: TZQuery;
+  TextLob: String;
+begin
+  Query := CreateQuery;
+  try
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      ExecSQL;
+      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+      begin
+        Sql.Text := 'INSERT INTO blob_values (b_id, b_clob)'
+          + ' VALUES (:b_id, EMPTY_CLOB())';
+        CheckEquals(1, Params.Count);
+        Params[0].DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID-2;
+        TextLob := 'b_clob';
+      end
+      else
+      begin
+        if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+          TextLob := 'b_text'
+        else
+          TextLob := 'b_text';
+        Sql.Text := 'INSERT INTO blob_values (b_id,'+TextLob+')'
+          + ' VALUES (:b_id,:b_text)';
+        CheckEquals(2, Params.Count);
+        ParamByName('b_id').DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID-2;
+        {$IFDEF WITH_WIDEMEMO}
+        if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 then
+        begin
+          ParamByName('b_text').DataType := ftWideMemo;
+          Params[1].AsWideString := '';
+        end
+        else
+        {$ENDIF}
+        begin
+          ParamByName('b_text').DataType := ftMemo;
+          Params[1].AsString := '';
+        end;
+      end;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(TEST_ROW_ID-2, FieldByName('b_id').AsInteger);
+      CheckEquals(False, FieldByName(TextLob).IsNull, 'Memo is not empty.');
+      CheckEquals('', FieldByName(TextLob).AsString, 'Empty but not null String');
+      Close;
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      ExecSQL;
     end;
   finally
     Query.Free;
