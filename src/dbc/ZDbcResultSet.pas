@@ -3776,7 +3776,7 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := CodePage;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(Value[1], FBlobData^, FBlobSize);
+  System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetAnsiString(Const Value: AnsiString);
@@ -3784,7 +3784,7 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := ZDefaultSystemCodePage;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(Value[1], FBlobData^, FBlobSize);
+  System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUTF8String(Const Value: UTF8String);
@@ -3792,7 +3792,7 @@ begin
   FBlobSize := System.Length(Value)+1;
   FCurrentCodePage := zCP_UTF8;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(Value[1], FBlobData^, FBlobSize);
+  System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetUnicodeString(const Value: ZWideString);
@@ -3800,7 +3800,7 @@ begin
   FBlobSize := (System.Length(Value)+1)*2;
   FCurrentCodePage := zCP_UTF16;
   ReallocMem(FBlobData, FBlobSize);
-  System.Move(Value[1], FBlobData^, FBlobSize);
+  System.Move(PWideChar(Value)^, FBlobData^, FBlobSize);
 end;
 
 procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
@@ -3967,8 +3967,7 @@ begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
       begin
-        SetLength(UniTemp, (FBlobSize div 2) -1);
-        System.Move(FBlobData^, PWideChar(UniTemp)^, FBlobSize - 2);
+        System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize div 2) -1);
         Result := AnsiString(UniTemp)
       end
       else
@@ -3990,6 +3989,7 @@ end;
 function TZAbstractCLob.GetUTF8String: UTF8String;
 var
   AnsiRec: TZAnsiRec;
+  Uni: ZWideString;
 begin
   Result := '';
   if FBlobSize > 0 then
@@ -3999,11 +3999,14 @@ begin
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
+      begin
+        System.SetString(Uni, PWidechar(FBlobData), (FBlobSize div 2) -1);
         {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(PWideChar(FBlobData))
+        Result := UTF8String(Uni)
         {$ELSE}
-        Result := UTF8Encode(ZWideString(PWideChar(FBlobData)))
+        Result := UTF8Encode(Uni)
         {$ENDIF}
+      end
       else
       begin
         AnsiRec.P := FBlobData;

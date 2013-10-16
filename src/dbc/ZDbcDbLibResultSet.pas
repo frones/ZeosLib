@@ -833,7 +833,7 @@ begin
         Result := TZAbstractBlob.CreateWithData(Data, DL);
       stAsciiStream, stUnicodeStream:
         begin
-          if (DL = 1) and (PAnsiChar(Data)^ = ' ') then DL := DL -1; //improve empty lobs, where len = 1 but string should be ''
+          if (DL = 1) and (PAnsiChar(Data)^ = ' ') then DL := 0; //improve empty lobs, where len = 1 but string should be ''
           Result := TZAbstractClob.CreateWithData(Data, DL,
             ConSettings^.ClientCodePage^.CP, ConSettings);
         end;
