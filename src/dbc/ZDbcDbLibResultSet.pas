@@ -832,8 +832,11 @@ begin
       stBytes, stBinaryStream:
         Result := TZAbstractBlob.CreateWithData(Data, DL);
       stAsciiStream, stUnicodeStream:
-        Result := TZAbstractClob.CreateWithData(Data, DL,
-          ConSettings^.ClientCodePage^.CP, ConSettings);
+        begin
+          if (DL = 1) and ((PAnsiChar(Data)+DL-1)^ = ' ') then DL := DL -1; //improve empty lobs, where len = 1 but string should be ''
+          Result := TZAbstractClob.CreateWithData(Data, DL,
+            ConSettings^.ClientCodePage^.CP, ConSettings);
+        end;
       stString, stUnicodeString:
         begin
           US := GetUnicodeString(ColumnIndex);
