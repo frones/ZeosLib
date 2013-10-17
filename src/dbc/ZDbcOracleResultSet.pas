@@ -166,7 +166,7 @@ type
     procedure WriteLob; override;
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
 
-    function Clone: IZBlob; override;
+    function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
   {** Implements external blob wrapper object for Oracle. }
@@ -193,7 +193,7 @@ type
     procedure WriteLob; override;
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
 
-    function Clone: IZBlob; override;
+    function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
 implementation
@@ -1518,10 +1518,14 @@ end;
   Clones this blob object.
   @return a clonned blob object.
 }
-function TZOracleBlob.Clone: IZBlob;
+function TZOracleBlob.Clone(Empty: Boolean = False): IZBlob;
 begin
-  Result := TZOracleBlob.Create(FPlainDriver, BlobData, Length, FContextHandle,
-    FErrorHandle, FLobLocator, FChunkSize);
+  if Empty then
+    Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FContextHandle,
+      FErrorHandle, FLobLocator, FChunkSize)
+  else
+    Result := TZOracleBlob.Create(FPlainDriver, BlobData, Length, FContextHandle,
+      FErrorHandle, FLobLocator, FChunkSize);
 end;
 
 { TZOracleClob }
@@ -1644,11 +1648,16 @@ begin
       FChunkSize, Len+1, False, FConSettings);
 end;
 
-function TZOracleClob.Clone: IZBlob;
+function TZOracleClob.Clone(Empty: Boolean = False): IZBlob;
 begin
-  Result := TZOracleClob.Create(FPlainDriver, BlobData, Length, FConnectionHandle,
-    FContextHandle, FErrorHandle, FLobLocator, FChunkSize, FConSettings,
-    CurrentCodePage);
+  if Empty then
+    Result := TZOracleClob.Create(FPlainDriver, nil, 0,
+      FConnectionHandle, FContextHandle, FErrorHandle, FLobLocator, FChunkSize,
+      FConSettings, CurrentCodePage)
+  else
+    Result := TZOracleClob.Create(FPlainDriver, BlobData, Length,
+      FConnectionHandle, FContextHandle, FErrorHandle, FLobLocator, FChunkSize,
+      FConSettings, CurrentCodePage);
 end;
 
 end.

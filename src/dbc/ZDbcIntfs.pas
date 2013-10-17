@@ -924,7 +924,7 @@ type
     {$ENDIF}
 
     procedure Clear;
-    function Clone: IZBlob;
+    function Clone(Empty: Boolean = False): IZBlob;
 
     {Clob operations}
     function GetRawByteString: RawByteString;

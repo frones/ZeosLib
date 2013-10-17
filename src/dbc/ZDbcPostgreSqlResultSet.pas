@@ -130,7 +130,7 @@ type
     procedure WriteLob; override;
     procedure WriteBuffer(const Buffer: Pointer; const Len: integer);
 
-    function Clone: IZBlob; override;
+    function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
   TZPostgreSQLUnCachedBLob = class(TZAbstractUnCachedBLob)
@@ -943,10 +943,14 @@ end;
   Clones this blob object.
   @return a clonned blob object.
 }
-function TZPostgreSQLOidBlob.Clone: IZBlob;
+function TZPostgreSQLOidBlob.Clone(Empty: Boolean = False): IZBlob;
 begin
-  Result := TZPostgreSQLOidBlob.Create(FPlainDriver, BlobData, BlobSize,
-    FHandle, FBlobOid, FChunk_Size);
+  if Empty then
+    Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0,
+      FHandle, FBlobOid, FChunk_Size)
+  else
+    Result := TZPostgreSQLOidBlob.Create(FPlainDriver, BlobData, BlobSize,
+      FHandle, FBlobOid, FChunk_Size);
 end;
 
 { TZPostgreSQLUnCachedCLob }

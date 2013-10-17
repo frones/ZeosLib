@@ -3081,8 +3081,8 @@ begin
     begin
       Blob := RowAccessor.GetBlob(ColumnIndex, WasNull);
       if Blob <> nil then
-        Blob := Blob.Clone;
-      RowAccessor.SetBlob(ColumnIndex, Blob);
+        Blob := Blob.Clone(Mode =  bmWrite);
+        RowAccessor.SetBlob(ColumnIndex, Blob);
       Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
         FConnection.DbcConnection.GetConSettings);
     end;

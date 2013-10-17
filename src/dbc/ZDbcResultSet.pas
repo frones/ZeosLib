@@ -367,7 +367,7 @@ type
     {$ENDIF}
 
     procedure Clear; virtual;
-    function Clone: IZBlob; virtual;
+    function Clone(Empty: Boolean = False): IZBlob; virtual;
     function IsClob: Boolean; virtual;
 
     {clob operations}
@@ -456,7 +456,7 @@ type
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); override;
     {$ENDIF}
 
-    function Clone: IZBLob; override;
+    function Clone(Empty: Boolean = False): IZBLob; override;
     function IsClob: Boolean; override;
   end;
 
@@ -482,7 +482,7 @@ type
     function GetPAnsiChar(const CodePage: Word): PAnsiChar; override;
     function GetPWideChar: PWideChar; override;
     function GetBuffer: Pointer; override;
-    function Clone: IZBLob; override;
+    function Clone(Empty: Boolean = False): IZBLob; override;
   End;
 
   implementation
@@ -3449,9 +3449,12 @@ end;
   Clones this blob object.
   @return a clonned blob object.
 }
-function TZAbstractBlob.Clone: IZBlob;
+function TZAbstractBlob.Clone(Empty: Boolean = False): IZBlob;
 begin
-  Result := TZAbstractBlob.CreateWithData(FBlobData, FBlobSize);
+  if Empty then
+    Result := TZAbstractBlob.CreateWithData(nil, 0)
+  else
+    Result := TZAbstractBlob.CreateWithData(FBlobData, FBlobSize);
 end;
 
 function TZAbstractBlob.IsClob: Boolean;
@@ -4249,13 +4252,19 @@ end;
   Clones this blob object.
   @return a clonned blob object.
 }
-function TZAbstractCLob.Clone: IZBLob;
+function TZAbstractCLob.Clone(Empty: Boolean = False): IZBLob;
 begin
   if (FCurrentCodePage = zCP_UTF16) or
      (FCurrentCodePage = zCP_UTF16BE) then
-    Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize div 2)-1, FConSettings)
+    if Empty then
+      Result := TZAbstractCLob.CreateWithData(nil, 0, FConSettings)
+    else
+      Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize div 2)-1, FConSettings)
   else
-    Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize-1, FCurrentCodePage, FConSettings);
+    if Empty then
+      Result := TZAbstractCLob.CreateWithData(nil, 0, FCurrentCodePage, FConSettings)
+    else
+      Result := TZAbstractCLob.CreateWithData(FBlobData, FBlobSize-1, FCurrentCodePage, FConSettings);
 end;
 
 function TZAbstractCLob.IsClob: Boolean;
@@ -4374,10 +4383,10 @@ end;
   Clones this blob object.
   @return a clonned blob object.
 }
-function TZAbstractUnCachedCLob.Clone: IZBLob;
+function TZAbstractUnCachedCLob.Clone(Empty: Boolean = False): IZBLob;
 begin
-  if not Loaded then ReadLob;
-  Result := inherited Clone;
+  if not Empty and not Loaded then ReadLob;
+  Result := inherited Clone(Empty);
 end;
 
 end.
