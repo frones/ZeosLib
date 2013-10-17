@@ -2468,8 +2468,8 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value, Len);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value, Len);
-      SQL_LONG      : PInteger (sqldata)^ := Round(SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := RawToIntDef(Value, 0);
+      SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
+      SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,

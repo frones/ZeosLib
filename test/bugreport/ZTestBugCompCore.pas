@@ -115,6 +115,7 @@ type
     procedure Test1045500;
     procedure Test1036916;
     procedure Test1004584;
+    procedure TestParamUx;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1715,6 +1716,55 @@ begin
     // Ignore.
   end;
   Connection.Disconnect;
+end;
+
+procedure ZTestCompCoreBugReport.TestParamUx;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    // Query.RequestLive := True;
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
+    Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'INSERT INTO equipment (eq_id, eq_name) VALUES (:u, :u1)';
+    Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID - 2);
+    Query.ParamByName('u1').AsString := 'ab''cd''ef';
+    Query.ExecSQL;
+    Query.ParamByName('u').AsInteger := TEST_ROW_ID - 1;
+    Query.ParamByName('u1').AsString := 'ab\cd\ef';
+    Query.ExecSQL;
+    Query.ParamByName('u').AsInteger := TEST_ROW_ID;
+    Query.ParamByName('u1').AsString := 'ab\''cd\''ef';
+    Query.ExecSQL;
+
+    { Opens a result set. }
+    Query.SQL.Text := 'SELECT * FROM equipment WHERE eq_id = :u or eq_id = :u +1 or eq_id = :u +2  ORDER BY eq_id';
+    Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID-2);
+    Query.Open;
+    CheckEquals(TEST_ROW_ID - 2, Query.FieldByName('eq_id').AsInteger);
+    CheckEquals('ab''cd''ef', Query.FieldByName('eq_name').AsString);
+    Query.Next;
+    CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('eq_id').AsInteger);
+    CheckEquals('ab\cd\ef', Query.FieldByName('eq_name').AsString);
+    Query.Next;
+    CheckEquals(TEST_ROW_ID, Query.FieldByName('eq_id').AsInteger);
+    CheckEquals('ab\''cd\''ef', Query.FieldByName('eq_name').AsString);
+
+    { Remove newly created record }
+    Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
+    Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
+    Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
 end;
 
 const {Test Strings}

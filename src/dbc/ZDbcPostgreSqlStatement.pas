@@ -958,6 +958,7 @@ begin
           end;
       end;
   end;
+  inherited BindInParameters;
 end;
 
 {**
