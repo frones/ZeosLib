@@ -1,0 +1,51 @@
+package ZDbc;
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$DESCRIPTION 'Zeos Low Level Database API'}
+{$LIBSUFFIX '190'}
+{$RUNONLY}
+{$IMPLICITBUILD OFF}
+
+requires
+  ZParseSql,
+  ZPlain,
+  rtl,
+  dbrtl;
+
+contains
+  ZDbcUtils in '..\..\src\dbc\ZDbcUtils.pas',
+  ZDbcCachedResultSet in '..\..\src\dbc\ZDbcCachedResultSet.pas',
+  ZDbcConnection in '..\..\src\dbc\ZDbcConnection.pas',
+  ZDbcGenericResolver in '..\..\src\dbc\ZDbcGenericResolver.pas',
+  ZDbcIntfs in '..\..\src\dbc\ZDbcIntfs.pas',
+  ZDbcMetadata in '..\..\src\dbc\ZDbcMetadata.pas',
+  ZDbcResultSet in '..\..\src\dbc\ZDbcResultSet.pas',
+  ZDbcResultSetMetadata in '..\..\src\dbc\ZDbcResultSetMetadata.pas',
+  ZDbcStatement in '..\..\src\dbc\ZDbcStatement.pas',
+  ZDbcCache in '..\..\src\dbc\ZDbcCache.pas',
+  ZDbcLogging in '..\..\src\dbc\ZDbcLogging.pas';
+
+end.
