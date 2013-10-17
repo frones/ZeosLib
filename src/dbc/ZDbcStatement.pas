@@ -1330,7 +1330,7 @@ var
   I : integer;
   LogString : String;
 begin
-  LogString := ''; //init for FPC
+  LogString := '';
   if InParamCount = 0 then
      exit;
     { Prepare Log Output}
@@ -1402,6 +1402,11 @@ end;
 
 
 function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
+var
+  Uni: ZWideString;
+  {$IFDEF UNICODE}
+  AnsiRec: TZAnsiRec;
+  {$ENDIF}
 begin
   With Value do
     case VType of
@@ -1419,6 +1424,29 @@ begin
       vtUTF8String: result := '''' + ConSettings^.ConvFuncs.ZUTF8ToString(VUTF8String, ConSettings^.CTRL_CP)+'''';
       vtRawByteString: result := '''' + ConSettings^.ConvFuncs.ZRawToString(VRawByteString, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)+'''';
       vtUnicodeString : result := '''' + ConSettings^.ConvFuncs.ZUnicodeToString(VUnicodeString, ConSettings^.CTRL_CP) + '''';
+      vtCharRec:
+        case Value.VCharRec.CP of
+          zCP_UTF16, zCP_UTF16BE:
+            begin
+              System.SetString(Uni, PWideChar(Value.VCharRec.P), Value.VCharRec.Len);
+              {$IFDEF UNICODE}
+              Result := #39 + Uni + #39;
+              {$ELSE}
+              result := '''' + ConSettings^.ConvFuncs.ZUnicodeToString(Uni, ConSettings^.CTRL_CP) + '''';
+              {$ENDIF}
+            end;
+          else
+          begin
+            {$IFDEF UNICODE}
+            AnsiRec.P := Value.VCharRec.P;
+            AnsiRec.Len := Value.VCharRec.Len;
+            result := '''' + ZAnsiRecToUnicode(AnsiRec, Value.VCharRec.CP) + '''';
+            {$ELSE}
+            System.SetString(Result, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len);
+            Result := '''' + Result + '''';
+            {$ENDIF}
+          end;
+        end;
       vtDateTime : result := DateTimeToStr(VDateTime);
       vtPointer : result := '(POINTER)';
       vtInterface : result := '(INTERFACE)';
