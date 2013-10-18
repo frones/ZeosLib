@@ -182,12 +182,12 @@ begin
   SetHeapTraceOutput('heaptrc.log');
   TestGroup := COMMON_GROUP;
 
-  If CommandLineSwitches.sqlmonitor then
-    EnableZSQLMonitor;
-
   If Not CommandLineSwitches.help and
      Not CommandLineSwitches.norebuild then
     RebuildTestDatabases;
+
+  If CommandLineSwitches.sqlmonitor then
+    EnableZSQLMonitor;
 
   If CommandLineSwitches.batch then
   begin
