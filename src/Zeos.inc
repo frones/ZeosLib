@@ -210,6 +210,7 @@
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
   {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
+  {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
 {$ENDIF}
 
 {$IFDEF DELPHI12_UP}
@@ -230,7 +231,6 @@
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
   {$UNDEF USE_FAST_CHARPOS}
-  {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //Memorymanager can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}

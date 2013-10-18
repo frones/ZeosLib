@@ -271,6 +271,7 @@ type
     DbcConvertFunc: TConvertEncodingFunction;
     {$ENDIF}
     DataBaseSettings: Pointer;
+    Protocol: RawByteString;
   end;
 
   TZCodePagedObject = Class(TInterfacedObject)
