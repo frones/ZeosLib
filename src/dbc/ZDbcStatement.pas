@@ -396,6 +396,7 @@ type
   public
     procedure Close; override;
 
+    procedure Prepare; override;
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZWideString): Integer; override;
@@ -1957,6 +1958,7 @@ end;
 
 procedure TZAbstractPreparedStatement.Prepare;
 begin
+  LogPrepStmtMessage(lcPrepStmt, SQL);
   PrepareInParameters;
   FPrepared := True;
 end;
@@ -2880,6 +2882,15 @@ begin
   end;
 end;
 
+{**
+  .
+}
+procedure TZEmulatedPreparedStatement.Prepare;
+begin
+  //don't log
+  PrepareInParameters;
+  FPrepared := True;
+end;
 {**
   Executes an SQL statement that may return multiple results.
   Under some (uncommon) situations a single SQL statement may return

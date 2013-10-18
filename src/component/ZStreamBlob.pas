@@ -129,7 +129,6 @@ type THackedDataset = class(TDataset);
   Destroys this object and cleanups the memory.
 }
 destructor TZBlobStream.Destroy;
-//var Buffer: Pointer;
 begin
   if Mode in [bmWrite, bmReadWrite] then
   begin
@@ -207,7 +206,11 @@ begin
                 end
               else
                 {$IFDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //set data directly -> no move
-                Blob.SetBlobData(Memory, Size, FConSettings^.ClientCodePage^.CP) //use only one #0 terminator
+                begin
+                  Self.SetSize(Size+1);
+                  (PAnsiChar(Memory)+Size-1)^ := #0; //add leading terminator
+                  Blob.SetBlobData(Memory, Size, FConSettings^.ClientCodePage^.CP); //use only one #0 terminator
+                end
                 {$ELSE} //need to move data
                 Blob.SetPAnsiChar(Memory, FConSettings^.ClientCodePage^.CP, Size)
                 {$ENDIF}

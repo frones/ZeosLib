@@ -611,7 +611,6 @@ begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
       exit;
     end;
-  LogPrepStmtMessage(lcPrepStmt, SQL);
   inherited Prepare;
 end;
 

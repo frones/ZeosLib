@@ -502,7 +502,6 @@ begin
     end;
   end;
   CheckInterbase6Error(SQL);
-  LogPrepStmtMessage(lcPrepStmt, SQL);
   inherited Prepare;
 end;
 

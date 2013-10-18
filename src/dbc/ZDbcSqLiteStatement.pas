@@ -542,6 +542,7 @@ begin
     end;
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcBindPrepStmt, SSQL);
   end;
+  inherited BindInParameters;
 end;
 
 constructor TZSQLiteCAPIPreparedStatement.Create(PlainDriver: IZSQLitePlainDriver;
@@ -584,6 +585,7 @@ begin
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, SCanNotRetrieveResultsetData);
     if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE)then
       Result := CreateResultSet(SSQL, FStmtHandle, FErrorCode);
+    inherited ExecuteQueryPrepared;
   except
     raise;
   end;
@@ -600,6 +602,7 @@ begin
     FErrorCode := FPlainDriver.Step(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, SSQL);
     Result := FPlainDriver.Changes(FHandle);
+    inherited ExecuteUpdatePrepared;
   finally
     FErrorCode := FPlainDriver.reset(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
@@ -635,6 +638,7 @@ begin
     FErrorCode := FPlainDriver.reset(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
   end;
+  inherited ExecutePrepared;
 end;
 
 end.

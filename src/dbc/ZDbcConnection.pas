@@ -806,6 +806,7 @@ begin
   FUseMetadata := True;
   InternalCreate;
   SetDateTimeFormatProperties;
+  ConSettings^.Protocol := NotEmptyStringToASCII7(FIZPlainDriver.GetProtocol);
 
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;
