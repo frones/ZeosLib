@@ -378,7 +378,7 @@ begin
     Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
     Result := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
     if (Len > 0) and (FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042) then
-      while (Result+Len)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
+      while (Result+Len-1)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
   end;
 end;
 
