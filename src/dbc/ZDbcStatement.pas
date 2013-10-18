@@ -189,7 +189,7 @@ type
 
   { TZAbstractPreparedStatement }
 
-  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
+  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement, IZLoggingObject)
   private
     FSQL: string;
     FInParamValues: TZVariantDynArray;
@@ -213,7 +213,6 @@ type
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
-    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: string = '');
     function GetInParamLogValue(Value: TZVariant): String;
 
     property ExecCount: Integer read FExecCount;
@@ -286,6 +285,7 @@ type
     function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; virtual;
   end;
 
   {** Implements Abstract Callable SQL statement. }
@@ -375,6 +375,9 @@ type
   end;
 
   {** Implements an Emulated Prepared SQL Statement. }
+
+  { TZEmulatedPreparedStatement }
+
   TZEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FExecStatement: IZStatement;
@@ -396,7 +399,6 @@ type
   public
     procedure Close; override;
 
-    procedure Prepare; override;
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZWideString): Integer; override;
@@ -407,6 +409,7 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
 implementation
@@ -1327,19 +1330,8 @@ end;
   Binds the input parameters
 }
 procedure TZAbstractPreparedStatement.BindInParameters;
-var
-  I : integer;
-  LogString : String;
 begin
-  LogString := '';
-  if InParamCount = 0 then
-     exit;
-    { Prepare Log Output}
-  For I := 0 to InParamCount - 1 do
-  begin
-    LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
-  end;
-  LogPrepStmtMessage(lcBindPrepStmt, LogString);
+  DriverManager.LogMessage(lcBindPrepStmt,Self);
 end;
 
 {**
@@ -1385,22 +1377,6 @@ begin
   FInParamTypes[ParameterIndex - 1] := SQLType;
   FInParamValues[ParameterIndex - 1] := Value;
 end;
-
-{**
-  Logs a message about prepared statement event with normal result code.
-  @param Category a category of the message.
-  @param Protocol a name of the protocol.
-  @param Msg a description message.
-}
-procedure TZAbstractPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
-  const Msg: string = '');
-begin
-  if msg <> '' then
-    DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d : %s', [FStatementId, Msg]))
-  else
-    DriverManager.LogMessage(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d', [FStatementId]));
-end;
-
 
 function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
 var
@@ -1467,7 +1443,7 @@ end;
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
-  LogPrepStmtMessage(lcExecPrepStmt);
+  DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount);
 end;
 {$WARNINGS ON}
@@ -1485,7 +1461,7 @@ end;
 function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
-  LogPrepStmtMessage(lcExecPrepStmt);
+  DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount);
 end;
 {$WARNINGS ON}
@@ -1946,7 +1922,7 @@ end;
 function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   { Logging Execution }
-  LogPrepStmtMessage(lcExecPrepStmt, '');
+  DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount);
 end;
 {$WARNINGS ON}
@@ -1958,7 +1934,7 @@ end;
 
 procedure TZAbstractPreparedStatement.Prepare;
 begin
-  LogPrepStmtMessage(lcPrepStmt, SQL);
+  DriverManager.LogMessage(lcPrepStmt,Self);
   PrepareInParameters;
   FPrepared := True;
 end;
@@ -2026,6 +2002,40 @@ begin
   end
   else
     Result := inherited GetUnicodeEncodedSQL(SQL);
+end;
+
+function TZAbstractPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
+  ): TZLoggingEvent;
+var
+  I : integer;
+  LogString : String;
+  function CreatePrepStmtLogEvent(Category: TZLoggingCategory;
+    const Msg: string = ''): TZLoggingEvent;
+  begin
+    if msg <> '' then
+      result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d : %s', [FStatementId, Msg]), 0, '')
+    else
+      result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d', [FStatementId]), 0, '');
+    end;
+begin
+  LogString := '';
+  case Category of
+    lcBindPrepStmt:
+        if InParamCount = 0 then
+          result := nil
+        else
+          begin { Prepare Log Output}
+            For I := 0 to InParamCount - 1 do
+              LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+            result := CreatePrepStmtLogEvent(Category, Logstring);
+          end;
+    lcPrepStmt:
+      result := CreatePrepStmtLogEvent(Category, SQL);
+    lcExecPrepStmt, lcUnprepStmt:
+      result := CreatePrepStmtLogEvent(Category);
+  else
+    result := nil;
+  end;
 end;
 
 { TZAbstractCallableStatement }
@@ -2883,15 +2893,6 @@ begin
 end;
 
 {**
-  .
-}
-procedure TZEmulatedPreparedStatement.Prepare;
-begin
-  //don't log
-  PrepareInParameters;
-  FPrepared := True;
-end;
-{**
   Executes an SQL statement that may return multiple results.
   Under some (uncommon) situations a single SQL statement may return
   multiple result sets and/or update counts.  Normally you can ignore
@@ -3020,6 +3021,12 @@ begin
     Result := Execute(PrepareAnsiSQLQuery)
   else
     Result := Execute(PrepareWideSQLQuery);
+end;
+
+function TZEmulatedPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
+  ): TZLoggingEvent;
+begin
+  Result:=nil; // All logic happens using non-prepared statements, so we don't need to log the 'empty' prepare, unprepare, ...
 end;
 
 {**

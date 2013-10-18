@@ -583,7 +583,6 @@ begin
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcPrepStmt,
     SSQL, QueryHandle);
-//  DriverManager.LogMessage(lcPrepStmt, FPlainDriver.GetProtocol, SSQL);
   FPlainDriver.Clear(QueryHandle);
 end;
 
@@ -802,7 +801,6 @@ begin
           PAnsiChar(SQL), InParamCount, nil);
         Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
           FConnectionHandle, LoggingCategory, LogSQL, Result) = '42P18');
-//        DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
         if not Findeterminate_datatype then
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         Exit;
@@ -821,7 +819,6 @@ begin
   if Assigned(FConnectionHandle) then
     CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
       LoggingCategory, LogSQL, Result);
-//  DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
 end;
 procedure TZPostgreSQLCAPIPreparedStatement.SetPlanNames;
 begin

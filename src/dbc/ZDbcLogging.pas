@@ -110,6 +110,13 @@ type
     procedure LogEvent(Event: TZLoggingEvent);
   end;
 
+  IZLoggingObject = interface (IZInterface)
+    ['{67681CC9-53D4-4350-B6C0-423ECFD88B48}']
+
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent;
+  end;
+
+
 implementation
 
 uses ZFastCode;
