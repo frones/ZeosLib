@@ -1536,7 +1536,10 @@ constructor TZOracleClob.Create(const PlainDriver: IZOraclePlainDriver;
   const LobLocator: POCILobLocator; const ChunkSize: Integer;
   const ConSettings: PZConSettings; const CodePage: Word);
 begin
-  inherited CreateWithData(Data, Size, CodePage, ConSettings);
+  if ZCompatibleCodePages(CodePage, zCP_UTF16) then
+    inherited CreateWithData(Data, Size div 2, ConSettings)
+  else
+    inherited CreateWithData(Data, Size, CodePage, ConSettings);
   FContextHandle := ContextHandle;
   FConnectionHandle := ConnectionHandle;
   FErrorHandle := ErrorHandle;
