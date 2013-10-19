@@ -151,7 +151,6 @@ type
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
-    property ConSettings: PZConSettings read FConSettings write FConSettings;
     property IC: IZIdentifierConvertor read FIC;
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
@@ -297,6 +296,7 @@ type
       const TypeNamePattern: string; const Types: TIntegerDynArray): string;
 
     procedure GetCacheKeys(List: TStrings);
+    property ConSettings: PZConSettings Read FConSettings write FConSettings;
     // <-- technobot 2008-06-14
   end;
 

@@ -247,8 +247,6 @@ type
     function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
-  public
-    property ConSettings;
   end;
 
 implementation

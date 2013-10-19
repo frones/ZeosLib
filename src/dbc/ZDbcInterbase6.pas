@@ -99,7 +99,6 @@ type
     FTrHandle: TISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FHardCommit: boolean;
-    FDisposeClientCodePage: Boolean;
   private
     procedure StartTransaction; virtual;
   protected
@@ -333,7 +332,6 @@ var
   UserSetDialect: string;
   ConnectTimeout : integer;
 begin
-  FDisposeClientCodePage := False;
   Self.FMetadata := TZInterbase6DatabaseMetadata.Create(Self, Url);
 
   FHardCommit := StrToBoolEx(URL.Properties.Values['hard_commit']);
@@ -400,7 +398,6 @@ destructor TZInterbase6Connection.Destroy;
 begin
   if not Closed then
     Close;
-  if FDisposeClientCodePage then Dispose(ConSettings^.ClientCodePage); //FreeMem for own created ClientCodePage rec
   inherited Destroy;
 end;
 
@@ -452,7 +449,6 @@ var
   DPB: PAnsiChar;
   FDPBLength: Word;
   DBName: array[0..512] of AnsiChar;
-  TmpClientCodePageOld, TmpClientCodePageNew: PZCodePage;
 begin
   if not Closed then
      Exit;
@@ -514,17 +510,24 @@ begin
         if FCLientCodePage = '' then
         begin
           FCLientCodePage := GetString(6);
-          CheckCharEncoding(FClientCodePage);
+          if URL.Properties.Values['ResetCodePage'] <> '' then
+          begin
+            ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
+            ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+          end
+          else
+            CheckCharEncoding(FClientCodePage);
         end
         else
           if GetString(6) = sCS_NONE then
+          begin
             if not ( FClientCodePage = sCS_NONE ) then
             begin
               URL.Properties.Values['isc_dpb_lc_ctype'] := sCS_NONE;
-              FClientCodePage := sCS_NONE;
               {save the user wanted CodePage-Informations}
-              TmpClientCodePageOld := ConSettings.ClientCodePage;
-              { charset 'NONE' can't converty anything and write 'Data as is'!
+              URL.Properties.Values['ResetCodePage'] := FClientCodePage;
+              FClientCodePage := sCS_NONE;
+              { charset 'NONE' can't convert anything and write 'Data as is'!
                 If another charset was set on attaching the Server then all
                 column collations are retrieved with newly choosen collation.
                 BUT NO string convertations where done! So we need a
@@ -535,23 +538,21 @@ begin
               Self.Close;
               Self.Open;
               { Create a new PZCodePage for the new environment-variables }
-              TmpClientCodePageNew := New(PZCodePage);
-              TmpClientCodePageNew.Name := sCS_NONE;
-              TmpClientCodePageNew.ID := CS_NONE;
-              TmpClientCodePageNew.CharWidth := 1;
-              TmpClientCodePageNew.Encoding := TmpClientCodePageOld.Encoding;
-              TmpClientCodePageNew.CP := TmpClientCodePageOld.CP;
-              TmpClientCodePageNew.ZAlias := '';
-              TmpClientCodePageNew.IsStringFieldCPConsistent := False;
-              ConSettings.ClientCodePage := TmpClientCodePageNew;
-              SetConvertFunctions(ConSettings); //now let's the converters again
-              FDisposeClientCodePage := True;
-              {Also reset the MetaData ConSettings}
-              (FMetadata as TZInterbase6DatabaseMetadata).ConSettings := ConSettings;
-              { now we're able to read and write strings for columns without a
-                spezial declared collation for charset 'NONE' with the user
-                choosen CodePage and Encoding }
+            end
+            else
+            begin
+              if URL.Properties.Values['ResetCodePage'] <> '' then
+              begin
+                ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(sCS_NONE);
+                ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
+              end
+              else
+                CheckCharEncoding(sCS_NONE);
             end;
+          end
+          else
+            if URL.Properties.Values['ResetCodePage'] <> '' then
+              ResetCurrentClientCodePage(URL.Properties.Values['ResetCodePage']);
       Close;
     end;
     if FClientCodePage = sCS_NONE then

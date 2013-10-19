@@ -122,6 +122,7 @@ type
     FURL: TZURL;
     FUseMetadata: Boolean;
     FClientVarManager: IZClientVariantManager;
+    FDisposeCodePage: Boolean;
     function GetHostName: string;
     procedure SetHostName(const Value: String);
     function GetPort: Integer;
@@ -142,6 +143,7 @@ type
     {$ENDIF}
     procedure InternalCreate; virtual; abstract;
     procedure SetDateTimeFormatProperties(DetermineFromInfo: Boolean = True);
+    procedure ResetCurrentClientCodePage(const Name: String);
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
@@ -684,6 +686,30 @@ begin
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
+procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
+var NewCP, tmp: PZCodePage;
+begin
+  FDisposeCodePage := True;
+  Tmp := ConSettings^.ClientCodePage;
+  ConSettings^.ClientCodePage := New(PZCodePage);
+  NewCP := GetIZPlainDriver.ValidateCharEncoding(Name);
+  ConSettings^.ClientCodePage^.Name := Tmp^.Name;
+  ConSettings^.ClientCodePage^.ID := Tmp^.ID;
+  ConSettings^.ClientCodePage^.CharWidth := Tmp^.CharWidth;
+  ConSettings^.ClientCodePage^.Encoding := NewCP^.Encoding;
+  ConSettings^.ClientCodePage^.CP := NewCP^.CP;
+  ConSettings^.ClientCodePage^.ZAlias := '';
+  ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := Tmp^.IsStringFieldCPConsistent;
+  {Also reset the MetaData ConSettings}
+  (FMetadata as TZAbstractDatabaseMetadata).ConSettings := ConSettings;
+  {$IFDEF WITH_LCONVENCODING}
+  SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
+    ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
+  {$ENDIF}
+  ZEncoding.SetConvertFunctions(ConSettings);
+  FClientVarManager := TZClientVariantManager.Create(ConSettings);
+end;
+
 function TZAbstractConnection.GetEncoding: TZCharEncoding;
 begin
   Result := ConSettings.ClientCodePage^.Encoding;
@@ -716,7 +742,7 @@ begin
   ConSettings.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(CharSet, DoArrange);
   FClientCodePage := ConSettings.ClientCodePage^.Name; //resets the developer choosen ClientCodePage
   {$IFDEF WITH_LCONVENCODING}
-  SetConvertFunctions(ConSettings.CTRL_CP, ConSettings.ClientCodePage.CP,
+  SetConvertFunctions(ConSettings^.CTRL_CP, ConSettings^.ClientCodePage.CP,
     ConSettings^.PlainConvertFunc, ConSettings^.DbcConvertFunc);
   {$ENDIF}
   ZEncoding.SetConvertFunctions(ConSettings);
@@ -784,6 +810,7 @@ end;
 constructor TZAbstractConnection.Create(const ZUrl: TZURL);
 begin
   FClosed := True;
+  FDisposeCodePage := False;
   if not assigned(ZUrl) then
     raise Exception.Create('ZUrl is not assigned!')
   else
@@ -807,6 +834,8 @@ begin
   InternalCreate;
   SetDateTimeFormatProperties;
   ConSettings^.Protocol := NotEmptyStringToASCII7(FIZPlainDriver.GetProtocol);
+  ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
 
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;
@@ -824,6 +853,11 @@ begin
   FURL.Free;
   FIZPlainDriver := nil;
   FDriver := nil;
+  if FDisposeCodePage then
+  begin
+    Dispose(ConSettings^.ClientCodePage);
+    ConSettings^.ClientCodePage := nil;
+  end;
   if Assigned(ConSettings) then
     Dispose(ConSettings);
   FClientVarManager := nil;
