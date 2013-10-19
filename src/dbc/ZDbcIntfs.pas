@@ -518,6 +518,9 @@ type
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload;
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload;
     function Execute(const SQL: RawByteString): Boolean; overload;
+
+    function GetSQL : String;
+
     procedure Close;
 
     function GetMaxFieldSize: Integer;
@@ -568,8 +571,6 @@ type
     function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
-
-    function GetSQL : String;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 

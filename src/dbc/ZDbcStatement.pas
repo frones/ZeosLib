@@ -93,6 +93,7 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
+    FStatementId : Integer;
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -128,6 +129,8 @@ type
     property ChunkSize: Integer read FChunkSize;
     property IsAnsiDriver: Boolean read FIsAnsiDriver;
     property CachedLob: Boolean read FCachedLob;
+    function CreateStmtLogEvent(Category: TZLoggingCategory; const Msg: string=
+      ''): TZLoggingEvent;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -139,6 +142,8 @@ type
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload; virtual;
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload; virtual;
     function Execute(const SQL: RawByteString): Boolean; overload; virtual;
+
+    function GetSQL : String;
 
     procedure Close; virtual;
 
@@ -183,6 +188,7 @@ type
     procedure ClearWarnings; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -204,7 +210,6 @@ type
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
   protected
-    FStatementId : Integer;
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -285,7 +290,7 @@ type
     function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
-    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; virtual;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
   {** Implements Abstract Callable SQL statement. }
@@ -457,6 +462,7 @@ begin
   FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
   FIsAnsiDriver := Connection.GetIZPlainDriver.IsAnsiDriver;
   FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'true'));
+  FStatementId := Self.GetNextStatementId;
 end;
 
 {**
@@ -803,6 +809,33 @@ begin
     Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
     {$ENDIF UNICODE}
 end;
+
+function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
+  const Msg: string = ''): TZLoggingEvent;
+begin
+  if msg <> '' then
+    result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d : %s', [FStatementId, Msg]), 0, '')
+  else
+    result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d', [FStatementId]), 0, '');
+  end;
+
+function TZAbstractStatement.CreateLogEvent(Category: TZLoggingCategory
+  ): TZLoggingEvent;
+var
+  I : integer;
+  LogString : String;
+begin
+  LogString := '';
+  case Category of
+    lcPrepStmt:
+      result := CreateStmtLogEvent(Category, GetSQL);
+    lcExecPrepStmt, lcUnprepStmt:
+      result := CreateStmtLogEvent(Category);
+  else
+    result := nil;
+  end;
+end;
+
 {**
   Defines the SQL cursor name that will be used by
   subsequent <code>Statement</code> object <code>execute</code> methods.
@@ -861,6 +894,11 @@ begin
   Result := False;
   LastResultSet := nil;
   LastUpdateCount := -1;
+end;
+
+function TZAbstractStatement.GetSQL: String;
+begin
+  GetSQL := SSQL;
 end;
 
 {**
@@ -1180,7 +1218,6 @@ begin
   SetInParamCount(0);
   FPrepared := False;
   FExecCount := 0;
-  FStatementId := Self.GetNextStatementId;
 end;
 
 {**
@@ -2009,14 +2046,6 @@ function TZAbstractPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
 var
   I : integer;
   LogString : String;
-  function CreatePrepStmtLogEvent(Category: TZLoggingCategory;
-    const Msg: string = ''): TZLoggingEvent;
-  begin
-    if msg <> '' then
-      result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d : %s', [FStatementId, Msg]), 0, '')
-    else
-      result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d', [FStatementId]), 0, '');
-    end;
 begin
   LogString := '';
   case Category of
@@ -2027,14 +2056,10 @@ begin
           begin { Prepare Log Output}
             For I := 0 to InParamCount - 1 do
               LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
-            result := CreatePrepStmtLogEvent(Category, Logstring);
+            result := CreateStmtLogEvent(Category, Logstring);
           end;
-    lcPrepStmt:
-      result := CreatePrepStmtLogEvent(Category, SQL);
-    lcExecPrepStmt, lcUnprepStmt:
-      result := CreatePrepStmtLogEvent(Category);
   else
-    result := nil;
+    result := inherited CreatelogEvent(Category);
   end;
 end;
 
