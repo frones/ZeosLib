@@ -76,7 +76,7 @@ type
   IZAdoConnection = interface (IZConnection)
     ['{50D1AF76-0174-41CD-B90B-4FB770EFB14F}']
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(const SQL: string);
+    procedure InternalExecuteStatement(const SQL: ZWideString);
     procedure CheckAdoError;
   end;
 
@@ -87,7 +87,7 @@ type
   protected
     FAdoConnection: ZPlainAdo.Connection;
     function GetAdoConnection: ZPlainAdo.Connection;
-    procedure InternalExecuteStatement(const SQL: string);
+    procedure InternalExecuteStatement(const SQL: ZWideString);
     procedure CheckAdoError;
     procedure StartTransaction;
     procedure InternalCreate; override;
@@ -129,9 +129,9 @@ var
 implementation
 
 uses
-  Variants,
-  SysUtils, ActiveX, ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils,
-  ZDbcAdoStatement, ZDbcAdoMetaData;
+  Variants, SysUtils, ActiveX,
+  ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
+  ZDbcAdoStatement, ZDbcAdoMetaData, ZEncoding;
 
 const                                                //adXactUnspecified
   IL: array[TZTransactIsolationLevel] of TOleEnum = (adXactChaos, adXactReadUncommitted, adXactReadCommitted, adXactRepeatableRead, adXactSerializable);
@@ -213,17 +213,18 @@ end;
 {**
   Executes simple statements internally.
 }
-procedure TZAdoConnection.InternalExecuteStatement(const SQL: string);
+procedure TZAdoConnection.InternalExecuteStatement(const SQL: ZWideString);
 var
   RowsAffected: OleVariant;
 begin
   try
     FAdoConnection.Execute(SQL, RowsAffected, adExecuteNoRecords);
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ZDefaultSystemCodePage));
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, SQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ZDefaultSystemCodePage), 0,
+        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
@@ -249,11 +250,11 @@ end;
 }
 procedure TZAdoConnection.Open;
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
 begin
   if not Closed then Exit;
 
-  LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
+  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
   try
     if ReadOnly then
       FAdoConnection.Set_Mode(adModeRead)
@@ -261,12 +262,13 @@ begin
       FAdoConnection.Set_Mode(adModeUnknown);
     FAdoConnection.Open(Database, User, Password, -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
-    DriverManager.LogMessage(lcConnect, PLainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     if FClientCodePage <> 'CP_ADO' then CheckCharEncoding('CP_ADO', True)
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcConnect, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage, 0,
+        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
@@ -423,7 +425,7 @@ begin
        (GetTransactionIsolation <> tiNone) then
       begin
         FAdoConnection.CommitTrans;
-        DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'COMMIT');
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
       end;
   end;
   inherited;
@@ -450,7 +452,7 @@ begin
   if not Closed and not AutoCommit and (GetTransactionIsolation <> tiNone) then
   begin
     FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'COMMIT');
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
   end;
 
   inherited;
@@ -466,16 +468,17 @@ end;
 }
 procedure TZAdoConnection.StartTransaction;
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
 begin
   LogMessage := 'BEGIN TRANSACTION';
   try
     FAdoConnection.BeginTrans;
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
@@ -490,18 +493,19 @@ end;
 }
 procedure TZAdoConnection.Commit;
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
 begin
   LogMessage := 'COMMIT';
   if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
   try
     FAdoConnection.CommitTrans;
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
     StartTransaction;
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
@@ -516,18 +520,19 @@ end;
 }
 procedure TZAdoConnection.Rollback;
 var
-  LogMessage: string;
+  LogMessage: RawbyteString;
 begin
   LogMessage := 'ROLLBACK';
   if not (AutoCommit or (GetTransactionIsolation = tiNone)) then
   try
     FAdoConnection.RollbackTrans;
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
     StartTransaction;
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
@@ -544,22 +549,23 @@ end;
 }
 procedure TZAdoConnection.Close;
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
 begin
   if Closed or (not Assigned(PlainDriver)) then
     Exit;
 
   SetAutoCommit(True);
 
-  LogMessage := Format('CLOSE CONNECTION TO "%s"', [Database]);
+  LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.Database+'"';
   try
     if FAdoConnection.State = adStateOpen then
       FAdoConnection.Close;
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;
@@ -590,18 +596,19 @@ end;
 }
 procedure TZAdoConnection.SetCatalog(const Catalog: string);
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
 begin
   if Closed then Exit;
 
-  LogMessage := Format('SET CATALOG %s', [Catalog]);
+  LogMessage := 'SET CATALOG '+ConSettings^.ConvFuncs.ZStringToRaw(Catalog, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   try
     FAdoConnection.DefaultDatabase := Catalog;
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, PlainDriver.GetProtocol, LogMessage, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, LogMessage, 0,
+       ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end;

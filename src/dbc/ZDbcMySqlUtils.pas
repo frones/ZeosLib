@@ -94,10 +94,12 @@ function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
-procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; Const ConSettings: PZConSettings);
+procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ConSettings: PZConSettings);
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
 
@@ -153,7 +155,8 @@ procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
 
 implementation
 
-uses ZMessages, Math, ZDbcUtils;
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
+  ZMessages, ZDbcUtils;
 
 threadvar
   SilentMySQLError: Integer;
@@ -415,42 +418,47 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; Const ConSettings: PZConSettings);
 var
-  ErrorMessage: string;
+  ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(String(PlainDriver.GetLastError(Handle)));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastError(Handle));
   ErrorCode := PlainDriver.GetLastErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
       raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
 
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+    DriverManager.LogError(LogCategory, ConSettings.Protocol, LogMessage,
       ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
+      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 
-procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ConSettings: PZConSettings);
 var
-  ErrorMessage: string;
+  ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(String(PlainDriver.GetLastPreparedError(Handle)));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastPreparedError(Handle));
   ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
       raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
 
-    DriverManager.LogError(LogCategory,PlainDriver.GetProtocol,LogMessage,ErrorCode, ErrorMessage);
+    DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
+      ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
+      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 

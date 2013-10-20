@@ -67,7 +67,6 @@ type
     AdoRecordSet: ZPlainAdo.RecordSet;
     FPlainDriver: IZPlainDriver;
     FAdoConnection: IZAdoConnection;
-    SQL: String;
     function IsSelect(const SQL: string): Boolean;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string; Info: TStrings);
@@ -141,7 +140,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   {$IFNDEF UNICODE}ZEncoding,{$ENDIF}
   ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils;
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
 constructor TZAdoStatement.Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string;
   Info: TStrings);
@@ -176,7 +175,7 @@ begin
   Result := nil;
   LastResultSet := nil;
   LastUpdateCount := -1;
-  if not Execute(LogSql) then
+  if not Execute(WSQL) then
     while (not GetMoreResults) and (LastUpdateCount > -1) do ;
   Result := LastResultSet
 end;
@@ -191,14 +190,14 @@ begin
     {$IFDEF UNICODE}
     WSQL := SQL;
     {$ENDIF}
-    if IsSelect(LogSQL) then
+    if IsSelect(Self.SQL) then
     begin
       AdoRecordSet := CoRecordSet.Create;
       AdoRecordSet.MaxRecords := MaxRows;
       AdoRecordSet.Open(SQL, FAdoConnection.GetAdoConnection,
         adOpenStatic, adLockOptimistic, adAsyncFetch);
       LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
-        LogSQL, ConSettings, ResultSetConcurrency);
+        Self.SQL, ConSettings, ResultSetConcurrency);
       LastUpdateCount := RC;
       AdoRecordSet.Close;
       AdoRecordSet := nil;
@@ -207,11 +206,11 @@ begin
       AdoRecordSet := FAdoConnection.GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
     Result := RC;
     LastUpdateCount := Result;
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogSQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -227,8 +226,7 @@ begin
     {$ENDIF}
     LastResultSet := nil;
     LastUpdateCount := -1;
-    Self.SQL := sql;
-    if IsSelect(SSQL) then
+    if IsSelect(Self.SQL) then
     begin
       AdoRecordSet := CoRecordSet.Create;
       AdoRecordSet.MaxRecords := MaxRows;
@@ -238,14 +236,14 @@ begin
     else
       AdoRecordSet := FAdoConnection.GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
     LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
-      LogSQL, ConSettings, ResultSetConcurrency);
+      Self.SQL, ConSettings, ResultSetConcurrency);
     Result := Assigned(LastResultSet);
     LastUpdateCount := RC;
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogSQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -396,11 +394,11 @@ begin
       SQL, ConSettings, ResultSetConcurrency);
     LastUpdateCount := RC;
     Result := Assigned(LastResultSet);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -597,11 +595,12 @@ begin
       SQL, ConSettings, ResultSetConcurrency);
     LastUpdateCount := RC;
     Result := Assigned(LastResultSet);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0,
+        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end

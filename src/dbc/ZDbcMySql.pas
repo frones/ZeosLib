@@ -295,7 +295,7 @@ end;
 }
 procedure TZMySQLConnection.Open;
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
   OldLevel: TZTransactIsolationLevel;
   OldAutoCommit: Boolean;
   ConnectTimeout: Integer;
@@ -306,12 +306,12 @@ var
   my_client_Opt:TMYSQL_CLIENT_OPTIONS;
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
-  SQL: PAnsiChar;
+  SQL: RawByteString;
 begin
   if not Closed then
     Exit;
 
-  LogMessage := Format('CONNECT TO "%s" AS USER "%s"', [Database, User]);
+  LogMessage := 'CONNECT TO "'+NotEmptyStringToAscii7(Database)+'" AS USER "'+PosEmptyStringToAscii7(User)+'"';
 
   GetPlainDriver.Init(FHandle);
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
@@ -383,7 +383,7 @@ begin
           SslCypher := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CYPHER'], ceUTF8));
        GetPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath,
           SslCypher);
-       DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
+       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
           'SSL options set');
     end;
 
@@ -394,12 +394,12 @@ begin
                               ClientFlag) = nil then
 
     begin
-      CheckMySQLError(GetPlainDriver, FHandle, lcConnect, LogMessage);
-      DriverManager.LogError(lcConnect, PlainDriver.GetProtocol, LogMessage,
-        0, SUnknownError);
+      CheckMySQLError(GetPlainDriver, FHandle, lcConnect, LogMessage, ConSettings);
+      DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
+        0, ZPlainString(SUnknownError));
       raise EZSQLException.Create(SCanNotConnectToServer);
     end;
-    DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol, LogMessage);
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
     if StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']) then
@@ -415,9 +415,9 @@ begin
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
       SQL := PAnsiChar(ZPlainString(Format('SET NAMES %s', [FClientCodePage])));
-      GetPlainDriver.ExecQuery(FHandle, SQL);
-      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, String(SQL));
-      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
+      GetPlainDriver.ExecQuery(FHandle, PAnsichar(SQL));
+      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;
     Self.CheckCharEncoding(FClientCodePage);
 
@@ -589,8 +589,8 @@ begin
     and not Closed then
   begin
     If not GEtPlaindriver.Commit(FHandle) then
-      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native Commit call');
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'Native Commit call');
+      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native Commit call', ConSettings);
+    DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Commit call');
   end;
 end;
 
@@ -607,8 +607,8 @@ begin
     and not Closed then
   begin
     If not GetPlaindriver.Rollback(FHandle) then
-      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native Rollback call');
-    DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'Native Rollback call');
+      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native Rollback call', ConSettings);
+    DriverManager.LogMessage(lcExecute, ConSettings.Protocol, 'Native Rollback call');
   end;
 end;
 
@@ -623,7 +623,7 @@ end;
 }
 procedure TZMySQLConnection.Close;
 var
-  LogMessage: string;
+  LogMessage: RawByteString;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
@@ -631,8 +631,8 @@ begin
   GetPlainDriver.Close(FHandle);
   GetPlainDriver.Despose(FHandle);
   FHandle := nil;
-  LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
-  DriverManager.LogMessage(lcDisconnect, GetPlainDriver.GetProtocol, LogMessage);
+  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   inherited Close;
 end;
 
@@ -661,7 +661,7 @@ end;
 procedure TZMySQLConnection.SetTransactionIsolation(
   Level: TZTransactIsolationLevel);
 var
-  SQL: PAnsiChar;
+  SQL: RawByteString;
   testResult: Integer;
 begin
   if TransactIsolationLevel <> Level then
@@ -674,30 +674,30 @@ begin
         tiNone, tiReadUncommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED';
-            testResult := GetPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
           end;
         tiReadCommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED';
-            testResult := GetPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
           end;
         tiRepeatableRead:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ';
-            testResult := GetPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
           end;
         tiSerializable:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-            testResult := GetPlainDriver.ExecQuery(FHandle, SQL);
+            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
           end;
         else
           SQL := '';
       end;
       if (testResult <> 0) then
-          CheckMySQLError(GetPlainDriver, FHandle, lcExecute, String(SQL));
+          CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       if SQL <> '' then
-        DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, String(SQL));
+        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;
   end;
 end;
@@ -731,8 +731,8 @@ begin
     if not Closed then
     begin
       if not GetPlaindriver.SetAutocommit(FHandle, AutoCommit) then
-        CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToStrEx(AutoCommit)+'call');
-      DriverManager.LogMessage(lcExecute, PlainDriver.GetProtocol, 'Native SetAutoCommit '+BoolToStrEx(AutoCommit)+'call');
+        CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', ConSettings);
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call');
     end;
   end;
 end;
@@ -761,7 +761,7 @@ end;
 function TZMySQLConnection.GetHostVersion: Integer;
 begin
  Result := ConvertMySQLVersionToSQLVersion( GetPlainDriver.GetServerVersion(FHandle) );
- CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'mysql_get_server_version()');
+ CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'mysql_get_server_version()', ConSettings);
 end;
 
 {**

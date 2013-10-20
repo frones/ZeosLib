@@ -155,10 +155,10 @@ function GetFieldSize(const SQLType: TZSQLType;ConSettings: PZConSettings;
 
 function WideStringStream(const AString: WideString): TStream;
 
-function TokenizeSQLQueryRaw(const SQL: String; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   const NeedNCharDetection: Boolean = False): TRawDynArray;
-function TokenizeSQLQueryUni(const SQL: String; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 
@@ -538,7 +538,7 @@ end;
   Splits a SQL query into a list of sections.
   @returns a list of splitted sections.
 }
-function TokenizeSQLQueryRaw(const SQL: String; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   const NeedNCharDetection: Boolean = False): TRawDynArray;
 var
@@ -568,10 +568,12 @@ begin
   begin
     Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
     Temp := '';
+    SQL := '';
     NextIsNChar := False;
 
     for I := 0 to High(Tokens) do
     begin
+      SQL := SQL + Tokens[I].Value;
       if ParamFound and (Tokens[I].Value = '?') then
       begin
         Add(Temp);
@@ -615,7 +617,7 @@ end;
   Splits a SQL query into a list of sections.
   @returns a list of splitted sections.
 }
-function TokenizeSQLQueryUni(const SQL: String; Const ConSettings: PZConSettings;
+function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 var
@@ -645,9 +647,11 @@ begin
     Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
 
     Temp := '';
+    SQL := '';
     NextIsNChar := False;
     for I := 0 to High(Tokens) do
     begin
+      SQL := SQL + Tokens[I].Value;
       if ParamFound and (Tokens[I].Value = '?') then
       begin
         Add(Temp);

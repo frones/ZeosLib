@@ -216,14 +216,14 @@ begin
   FHandle := FDBLibConnection.GetConnectionHandle;
   FPlainDriver := FDBLibConnection.GetPlainDriver;
   if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbcmd(FHandle, PAnsiChar(Ansi)) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
-    FDBLibConnection.CheckDBLibError(lcExecute, LogSQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    FDBLibConnection.CheckDBLibError(lcExecute, SQL);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 end;
 
 {**
@@ -288,10 +288,10 @@ begin
   begin
     if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then
     begin
-      NativeResultSet := TZDBLibResultSet.Create(Self, LogSQL);
+      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL);
       NativeResultSet.SetConcurrency(rcReadOnly);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
-        LogSQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
+        Self.SQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
       CachedResultSet.SetType(rtScrollInsensitive);//!!!Cached resultsets are allways this
       CachedResultSet.Last;
       CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
@@ -990,8 +990,7 @@ begin
 //after reading the output parameters
   FetchRowCount;
 
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol,
-    Format('EXEC %s', [SQL]));
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'EXEC '+ ASQL);
 end;
 
 procedure TZDBLibCallableStatement.SetInParamCount(NewParamCount: Integer);

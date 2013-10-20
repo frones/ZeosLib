@@ -585,7 +585,7 @@ begin
   FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
     PAnsiChar(FCursorName), CUR_ABSOLUTE, Row, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, lcOther);
+    FASAConnection.GetDBHandle, lcOther, ConSettings);
 
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
   begin
@@ -612,7 +612,7 @@ begin
   FASAConnection.GetPlainDriver.db_fetch( FASAConnection.GetDBHandle,
     PAnsiChar( FCursorName), CUR_RELATIVE, Rows, FSqlData.GetData, BlockSize, CUR_FORREGULAR);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
+      FASAConnection.GetDBHandle, lcOther, ConSettings, '', SQLE_CURSOR_NOT_OPEN); //handle a known null resultset issue (cursor not open)
   if FASAConnection.GetDBHandle.sqlCode = SQLE_CURSOR_NOT_OPEN then Exit;
   if FASAConnection.GetDBHandle.sqlCode <> SQLE_NOTFOUND then
   begin
@@ -676,7 +676,7 @@ begin
     with ColumnInfo, FSqlData  do
     begin
       FieldSqlType := GetFieldSqlType(I);
-      ColumnName := GetFieldName(I);
+      ColumnName := ConSettings^.ConvFuncs.ZRawToString(GetFieldName(I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 //      TableName := GetFieldRelationName(I);
       ColumnLabel := ColumnName;
       ColumnType := FieldSqlType;
@@ -884,7 +884,7 @@ begin
     FASAConnection.GetPlainDriver.db_put_into( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData, FSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, 'Insert row');
+      FASAConnection.GetDBHandle, lcOther, ConSettings, 'Insert row');
 
     FInsert := false;
     FUpdateSQLData.FreeSQLDA;
@@ -898,7 +898,7 @@ begin
     FASAConnection.GetPlainDriver.db_update( FASAConnection.GetDBHandle,
       PAnsiChar(FCursorName), FUpdateSQLData.GetData);
     ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-      FASAConnection.GetDBHandle, lcOther, 'Update row:' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( RowNo));
+      FASAConnection.GetDBHandle, lcOther, ConSettings, 'Update row:' + IntToRaw( RowNo));
 
     FUpdate := false;
     FUpdateSQLData.FreeSQLDA;
@@ -910,7 +910,7 @@ begin
   FASAConnection.GetPlainDriver.db_delete( FASAConnection.GetDBHandle,
     PAnsiChar(FCursorName));
   ZDbcASAUtils.CheckASAError( FASAConnection.GetPlainDriver,
-    FASAConnection.GetDBHandle, lcOther, 'Delete row:' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( RowNo));
+    FASAConnection.GetDBHandle, lcOther, ConSettings, 'Delete row:' + IntToRaw( RowNo));
 
   FDelete := True;
   if LastRowNo <> MaxInt then

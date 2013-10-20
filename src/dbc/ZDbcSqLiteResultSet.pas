@@ -284,12 +284,12 @@ begin
       ErrorCode := SQLITE_OK;
     FStmtHandle := nil;
     CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil,
-      lcOther, 'FINALIZE SQLite VM');
+      lcOther, 'FINALIZE SQLite VM', ConSettings);
   end
   else
   begin
     ErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
+    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
     FErrorCode := SQLITE_DONE;
   end;
 end;
@@ -852,7 +852,7 @@ begin
   if Assigned(FStmtHandle) and not FFirstRow then
   begin
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'FETCH');
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'FETCH', ConSettings);
   end;
 
   if FFirstRow then //avoid incrementing issue on fetching since the first row is allready fetched by stmt

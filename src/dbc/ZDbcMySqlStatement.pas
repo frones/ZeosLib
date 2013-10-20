@@ -319,13 +319,13 @@ begin
   Result := nil;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(LogSQL);
+    Result := CreateResultSet(Self.SQL);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -348,7 +348,7 @@ begin
   Result := -1;
   if FPlainDriver.ExecQuery(FHandle, PAnsichar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -375,7 +375,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
   LastUpdateCount := Result;
 end;
 
@@ -407,13 +407,13 @@ begin
   Result := False;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
     begin
       Result := True;
-      LastResultSet := CreateResultSet(LogSQL);
+      LastResultSet := CreateResultSet(Self.SQL);
     end
     { Processes regular query. }
     else
@@ -423,7 +423,7 @@ begin
     end;
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -450,7 +450,7 @@ begin
   begin
     AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
     if AStatus > 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL)
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings)
     else
       Result := (AStatus = 0);
 
@@ -459,7 +459,7 @@ begin
     LastResultSet := nil;
     LastUpdateCount := -1;
     if FPlainDriver.ResultSetExists(FHandle) then
-      LastResultSet := CreateResultSet(SSQL)
+      LastResultSet := CreateResultSet(Self.SQL)
     else
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
   end;
@@ -602,15 +602,16 @@ procedure TZMySQLPreparedStatement.Prepare;
 begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
-    begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
-      exit;
-    end;
+  begin
+    CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoInitPrepStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
+    exit;
+  end;
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(ASQL), length(ASQL)) <> 0) then
     begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoPrepareStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
       exit;
     end;
+  LogPrepStmtMessage(lcPrepStmt, ASQL);
   inherited Prepare;
 end;
 
@@ -766,7 +767,7 @@ begin
 
   if (FPlainDriver.BindParameters(FStmtHandle, FParamBindBuffer.GetBufferAddress) <> 0) then
   begin
-    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SBindingFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
   end;
   inherited BindInParameters;
@@ -787,7 +788,7 @@ begin
             PieceSize := TempBlob.Length - OffSet;
           if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
           begin
-            checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+            checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SBindingFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
             exit;
           end;
           Inc(OffSet, PieceSize);
@@ -838,7 +839,8 @@ begin
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer);
@@ -869,7 +871,9 @@ begin
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP),
+        ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer); //MemLeak closed
@@ -912,7 +916,7 @@ begin
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer); //MemLeak closed
@@ -1137,9 +1141,9 @@ begin
     end;
   if not (ExecQuery = '') then
     if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
-      DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, String(ExecQuery))
+      DriverManager.LogMessage(lcBindPrepStmt, ConSettings^.Protocol, ExecQuery)
     else
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(ExecQuery));
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ExecQuery, ConSettings);
 end;
 
 {**
@@ -1290,25 +1294,25 @@ begin
   ASQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     if IsFunction then
       ClearResultSets;
-    FResultSets.Add(CreateResultSet(SSQL));
+    FResultSets.Add(CreateResultSet(Self.SQL));
     if FPlainDriver.CheckAnotherRowset(FHandle) then
     begin
       while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
         if FPlainDriver.CheckAnotherRowset(FHandle) then
-          FResultSets.Add(CreateResultSet(SSQL))
+          FResultSets.Add(CreateResultSet(Self.SQL))
         else break;
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
     end;
     FActiveResultset := FResultSets.Count-1;
     Result := IZResultSet(FResultSets[FActiveResultset]);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -1333,18 +1337,18 @@ begin
     begin
       ClearResultSets;
       FActiveResultset := 0;
-      FResultSets.Add(CreateResultSet(LogSQL));
+      FResultSets.Add(CreateResultSet(Self.SQL));
       if FPlainDriver.CheckAnotherRowset(FHandle) then
       begin
         Result := LastUpdateCount;
         while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
           if FPlainDriver.CheckAnotherRowset(FHandle) then
           begin
-            FResultSets.Add(CreateResultSet(SSQL));
+            FResultSets.Add(CreateResultSet(Self.SQL));
             inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
           end
           else break;
-        CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+        CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
       end
       else
         Result := LastUpdateCount;
@@ -1355,7 +1359,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
   LastUpdateCount := Result;
 end;
 
@@ -1384,16 +1388,16 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  {$IFNDEF UNICODE}ASQL := SQL;{$ENDIF}
+  ASQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
     begin
       Result := True;
-      LastResultSet := CreateResultSet(LogSQL);
+      LastResultSet := CreateResultSet(Self.SQL);
     end
     { Processes regular query. }
     else
@@ -1403,7 +1407,7 @@ begin
     end;
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**

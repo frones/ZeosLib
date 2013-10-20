@@ -85,7 +85,7 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
-    procedure CreateNewDatabase(const SQL: String);
+    procedure CreateNewDatabase(const SQL: RawByteString);
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -110,7 +110,7 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
-    procedure CreateNewDatabase(const SQL: String);
+    procedure CreateNewDatabase(const SQL: RawByteString);
 
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
@@ -273,28 +273,28 @@ begin
     if AutoCommit then
     begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-      DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
-        Format('COMMIT TRANSACTION "%s"', [Database]));
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
+        'COMMIT TRANSACTION "'+ConSettings^.DataBase+'"');
     end
     else
     begin
       GetPlainDriver.isc_rollback_transaction(@FStatusVector, @FTrHandle);
-      DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
-        Format('ROLLBACK TRANSACTION "%s"', [Database]));
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
+        'ROLLBACK TRANSACTION "'+ConSettings^.DataBase+'"');
     end;
     FTrHandle := 0;
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
   end;
 
   if FHandle <> 0 then
   begin
     GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
     FHandle := 0;
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcDisconnect);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
   end;
 
-  DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
-      Format('DISCONNECT FROM "%s"', [Database]));
+  DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+      'DISCONNECT FROM "'+ConSettings^.DataBase+'"');
 
   inherited Close;
 end;
@@ -317,9 +317,9 @@ begin
     else
       GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
 
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcTransaction);
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
     DriverManager.LogMessage(lcTransaction,
-      PlainDriver.GetProtocol, 'TRANSACTION COMMIT');
+      ConSettings^.Protocol, 'TRANSACTION COMMIT');
   end;
 end;
 
@@ -449,6 +449,7 @@ var
   DPB: PAnsiChar;
   FDPBLength: Word;
   DBName: array[0..512] of AnsiChar;
+  NewDB: RawByteString;
 begin
   if not Closed then
      Exit;
@@ -472,10 +473,12 @@ begin
     { Create new db if needed }
     if Info.Values['createNewDatabase'] <> '' then
     begin
-      CreateNewDatabase(Info.Values['createNewDatabase']);
+      NewDB := ConSettings^.ConvFuncs.ZStringToRaw(Info.Values['createNewDatabase'],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+      CreateNewDatabase(NewDB);
       { Logging connection action }
-      DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
-        Format('CREATE DATABASE "%s" AS USER "%s"', [Info.Values['createNewDatabase'], User]));
+      DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+        'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
       URL.Properties.Values['createNewDatabase'] := '';
       //Allready Connected now if successfully created
     end
@@ -488,12 +491,12 @@ begin
           @FHandle, FDPBLength, DPB);
 
       { Check connection error }
-      CheckInterbase6Error(GetPlainDriver, FStatusVector, lcConnect);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
     end;
 
     { Logging connection action }
-    DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
-      Format('CONNECT TO "%s" AS USER "%s"', [Database, User]));
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+      'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
 
     { Start transaction }
     if not FHardCommit then
@@ -649,8 +652,8 @@ begin
     end
     else
       GetPlainDriver.isc_rollback_retaining(@FStatusVector, @FTrHandle);
-    CheckInterbase6Error(GetPlainDriver, FStatusVector);
-    DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -723,8 +726,8 @@ begin
       transaction }
     PTEB := GenerateTPB(Params, FHandle);
     GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
-    CheckInterbase6Error(GetPlainDriver, FStatusVector, lcTransaction);
-    DriverManager.LogMessage(lcTransaction, PlainDriver.GetProtocol,
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+    DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
       'TRANSACTION STARTED.');
   finally
     FreeAndNil(Params);
@@ -737,14 +740,14 @@ end;
   Creates new database
   @param SQL a sql strinf for creation database
 }
-procedure TZInterbase6Connection.CreateNewDatabase(const SQL: String);
+procedure TZInterbase6Connection.CreateNewDatabase(const SQL: RawByteString);
 var
   TrHandle: TISC_TR_HANDLE;
 begin
   TrHandle := 0;
   GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
-    0, PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(sql)), FDialect, nil);
-  CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);
+    0, PAnsiChar(sql), FDialect, nil);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;

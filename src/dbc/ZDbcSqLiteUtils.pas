@@ -78,10 +78,10 @@ function ConvertSQLiteTypeToSQLType(TypeName: RawByteString;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
-  Handle: PSqlite;
-  ErrorCode: Integer; ErrorMessage: PAnsiChar;
-  LogCategory: TZLoggingCategory; LogMessage: string);
+procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
+  const Handle: PSqlite; const ErrorCode: Integer; const ErrorMessage: PAnsiChar;
+  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  const ConSettings: PZConSettings);
 
 {**
   Converts an string into escape PostgreSQL format.
@@ -240,24 +240,16 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckSQLiteError(PlainDriver: IZSQLitePlainDriver;
-  Handle: PSqlite;
-  ErrorCode: Integer; ErrorMessage: PAnsiChar;
-  LogCategory: TZLoggingCategory; LogMessage: string);
+procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
+  const Handle: PSqlite; const ErrorCode: Integer; const ErrorMessage: PAnsiChar;
+  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  const ConSettings: PZConSettings);
 var
-  Error: string;
+  Error: RawByteString;
 begin
   if ErrorMessage <> nil then
   begin
-  {$IFDEF UNICODE}
-    Error := trim(UTF8ToUnicodeString(ErrorMessage));
-  {$ELSE}
-    {$IFNDEF FPC}
-    Error := Trim(UTF8ToAnsi(StrPas(ErrorMessage)));
-    {$ELSE}
-    Error := Trim(StrPas(ErrorMessage));
-    {$ENDIF}
-  {$ENDIF}
+    Error := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(ErrorMessage);
     PlainDriver.FreeMem(ErrorMessage);
   end
   else
@@ -266,9 +258,10 @@ begin
   begin
     if Error = '' then
       Error := PlainDriver.ErrorString(Handle, ErrorCode);
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+    DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
       ErrorCode, Error);
-    raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1, [Error]));
+    raise EZSQLException.CreateWithCode(ErrorCode, Format(SSQLError1,
+      [ConSettings.ConvFuncs.ZRawToString(Error, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 

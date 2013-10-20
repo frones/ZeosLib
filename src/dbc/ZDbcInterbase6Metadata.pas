@@ -314,8 +314,8 @@ begin
   if FServerVersion = '' then
   begin
     FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
-    FServerVersion := String(GetVersion(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle));
+    FServerVersion := GetVersion(FIBConnection.GetPlainDriver,
+      FIBConnection.GetDBHandle, Metadata.GetConnection.GetConSettings);
   end;
   Result := FServerVersion;
 end;

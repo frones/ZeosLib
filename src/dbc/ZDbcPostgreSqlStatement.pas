@@ -155,7 +155,7 @@ type
     FPQparamValues: TPQparamValues;
     FPQparamLengths: TPQparamLengths;
     FPQparamFormats: TPQparamFormats;
-    function ExecuteInternal(const SQL: RawByteString; const LogSQL: String;
+    function ExecuteInternal(const SQL: RawByteString;
       const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
   protected
     procedure SetPlanNames; override;
@@ -295,10 +295,10 @@ begin
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    SSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if QueryHandle <> nil then
-    Result := CreateResultSet(LogSQL, QueryHandle)
+    Result := CreateResultSet(Self.SQL, QueryHandle)
   else
     Result := nil;
 end;
@@ -325,8 +325,8 @@ begin
   ASQL := SQL; //Prepares SQL if needed
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    LogSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   if QueryHandle <> nil then
   begin
@@ -369,8 +369,8 @@ begin
   ConnectionHandle := GetConnectionHandle();
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
-    LogSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   { Process queries with result sets }
   ResultStatus := FPlainDriver.GetResultStatus(QueryHandle);
@@ -378,7 +378,7 @@ begin
     PGRES_TUPLES_OK:
       begin
         Result := True;
-        LastResultSet := CreateResultSet(LogSQL, QueryHandle);
+        LastResultSet := CreateResultSet(Self.SQL, QueryHandle);
       end;
     PGRES_COMMAND_OK:
       begin
@@ -582,8 +582,8 @@ begin
   QueryHandle := FPlainDriver.ExecuteQuery(FConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcPrepStmt,
-    SSQL, QueryHandle);
-//  DriverManager.LogMessage(lcPrepStmt, FPlainDriver.GetProtocol, SSQL);
+    ASQL, QueryHandle);
+//  DriverManager.LogMessage(lcPrepStmt, ConSettings^.Protocol, ASQL);
   FPlainDriver.Clear(QueryHandle);
 end;
 
@@ -642,8 +642,8 @@ begin
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver,
-    FConnectionHandle, lcExecute, SSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, Self.SSQL);
+    FConnectionHandle, lcExecute, ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if QueryHandle <> nil then
     Result := CreateResultSet(QueryHandle)
   else
@@ -669,8 +669,8 @@ begin
   ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcExecute,
-    SSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   if QueryHandle <> nil then
   begin
@@ -712,8 +712,8 @@ begin
   QueryHandle := FPlainDriver.ExecuteQuery(FConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle, lcExecute,
-    SSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   { Process queries with result sets }
   ResultStatus := FPlainDriver.GetResultStatus(QueryHandle);
@@ -793,7 +793,7 @@ end;
 { TZPostgreSQLCAPIPreparedStatement }
 
 function TZPostgreSQLCAPIPreparedStatement.ExecuteInternal(const SQL: RawByteString;
-  const LogSQL: String; const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
+  const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
 begin
   case LoggingCategory of
     lcPrepStmt:
@@ -801,8 +801,8 @@ begin
         Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(FRawPlanName),
           PAnsiChar(SQL), InParamCount, nil);
         Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
-          FConnectionHandle, LoggingCategory, LogSQL, Result) = '42P18');
-//        DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
+          FConnectionHandle, LoggingCategory, ASQL, Result) = '42P18');
+//        DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
         if not Findeterminate_datatype then
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         Exit;
@@ -820,8 +820,8 @@ begin
   end;
   if Assigned(FConnectionHandle) then
     CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-      LoggingCategory, LogSQL, Result);
-//  DriverManager.LogMessage(LoggingCategory, FPlainDriver.GetProtocol, LogSQL);
+      LoggingCategory, ASQL, Result);
+//  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 procedure TZPostgreSQLCAPIPreparedStatement.SetPlanNames;
 begin
@@ -1019,7 +1019,7 @@ begin
 
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
     begin
-      QueryHandle := ExecuteInternal(TempSQL, 'PREPARE '#39+SSQL+#39, lcPrepStmt);
+      QueryHandle := ExecuteInternal(TempSQL, lcPrepStmt);
       if not (Findeterminate_datatype) then
         FPlainDriver.Clear(QueryHandle);
       inherited Prepare;
@@ -1037,7 +1037,7 @@ begin
     if (not Findeterminate_datatype)  then
     begin
       TempSQL := 'DEALLOCATE "'+FRawPlanName+'";';
-      QueryHandle := ExecuteInternal(TempSQL, {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(TempSQL), lcUnprepStmt);
+      QueryHandle := ExecuteInternal(TempSQL, lcUnprepStmt);
       FPlainDriver.Clear(QueryHandle);
       FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
     end;
@@ -1051,14 +1051,14 @@ begin
   Prepare;
   if Prepared  then
     if Findeterminate_datatype then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, SSQL, lcExecute)
+      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, lcExecute)
     else
     begin
       BindInParameters;
-      QueryHandle := ExecuteInternal(ASQL, SSQL, lcExecPrepStmt);
+      QueryHandle := ExecuteInternal(ASQL, lcExecPrepStmt);
     end
   else
-    QueryHandle := ExecuteInternal(ASQL, SSQL, lcExecute);
+    QueryHandle := ExecuteInternal(ASQL, lcExecute);
   if QueryHandle <> nil then
     Result := CreateResultSet(QueryHandle)
   else
@@ -1073,14 +1073,14 @@ begin
 
   if Prepared  then
     if Findeterminate_datatype then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, SSQL, lcExecute)
+      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, lcExecute)
     else
     begin
       BindInParameters;
-      QueryHandle := ExecuteInternal(ASQL, SSQL, lcExecPrepStmt);
+      QueryHandle := ExecuteInternal(ASQL, lcExecPrepStmt);
     end
   else
-    QueryHandle := ExecuteInternal(ASQL, SSQL, lcExecute);
+    QueryHandle := ExecuteInternal(ASQL, lcExecute);
 
   if QueryHandle <> nil then
   begin
@@ -1103,14 +1103,14 @@ begin
 
   if Prepared  then
     if Findeterminate_datatype then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, SSQL, lcExecPrepStmt)
+      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, lcExecPrepStmt)
     else
     begin
       BindInParameters;
-      QueryHandle := ExecuteInternal(ASQL, SSQL, lcExecPrepStmt);
+      QueryHandle := ExecuteInternal(ASQL, lcExecPrepStmt);
     end
   else
-    QueryHandle := ExecuteInternal(ASQL, SSQL, lcExecute);
+    QueryHandle := ExecuteInternal(ASQL, lcExecute);
 
   { Process queries with result sets }
   ResultStatus := FPlainDriver.GetResultStatus(QueryHandle);
@@ -1248,11 +1248,11 @@ begin
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
-    LogSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, LogSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if QueryHandle <> nil then
   begin
-    Result := CreateResultSet(SSQL, QueryHandle);
+    Result := CreateResultSet(Self.SQL, QueryHandle);
     FetchOutParams(Result);
   end
   else
@@ -1275,7 +1275,6 @@ end;
    @return a Stored Procedure SQL string
 }
 function TZPostgreSQLCallableStatement.GetProcedureSql: string;
-
   function GenerateParamsStr(Count: integer): string;
   var
     I: integer;
@@ -1292,8 +1291,13 @@ function TZPostgreSQLCallableStatement.GetProcedureSql: string;
 var
   InParams: string;
 begin
-  InParams := GenerateParamsStr(Length(InParamValues));
-  Result := Format('SELECT * FROM %s(%s)', [SQL, InParams]);
+  if Length(CachedQueryRaw) = 1 then  //only name in there?
+  begin
+    Unprepare; //reset cached query
+    InParams := GenerateParamsStr(InParamCount);
+    Result := Format('SELECT * FROM %s(%s)', [SQL, InParams]);
+    {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := Result; //sets the cached queries again
+  end;
 end;
 
 {**
@@ -1302,25 +1306,20 @@ end;
 }
 function TZPostgreSQLCallableStatement.FillParams(const ASql: String): RawByteString;
 var I: Integer;
-  Tokens: TStrings;
   ParamIndex: Integer;
 begin
-  if Pos('?', ASql) > 0 then
+  if InParamCount > 0 then
   begin
-    Tokens := Connection.GetDriver.GetTokenizer.TokenizeBufferToList(ASql, [toUnifyWhitespaces]);
-    try
-      ParamIndex := 0;
-      for I := 0 to Tokens.Count - 1 do
-        if Tokens[I] = '?' then
-        begin
-          Result := Result + PrepareAnsiSQLParam(ParamIndex);
-          Inc(ParamIndex);
-        end
-        else
-          Result := Result + ZPlainString(Tokens[i]);
-    finally
-      Tokens.Free;
-    end;
+    Result := '';
+    ParamIndex := 0;
+    for I := 0 to High(CachedQueryRaw) do
+      if IsParamIndex[i] then
+      begin
+        Result := Result + PrepareAnsiSQLParam(ParamIndex);
+        Inc(ParamIndex);
+      end
+      else
+        Result := Result + CachedQueryRaw[i];
   end
   else
     Result := GetRawEncodedSQL(ASql);
@@ -1348,13 +1347,13 @@ begin
   QueryHandle := GetPlainDriver.ExecuteQuery(ConnectionHandle,
     PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, GetPlainDriver, ConnectionHandle, lcExecute,
-    SSQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, GetPlainDriver.GetProtocol, SSQL);
+    ASQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   if QueryHandle <> nil then
   begin
     Result := RawToIntDef(GetPlainDriver.GetCommandTuples(QueryHandle), 0);
-    FetchOutParams(CreateResultSet(SSQL, QueryHandle));
+    FetchOutParams(CreateResultSet(Self.SQL, QueryHandle));
   end;
 
   { Autocommit statement. }

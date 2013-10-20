@@ -2026,7 +2026,7 @@ begin
               Result.VString := {$IFNDEF UNICODE}String{$ENDIF}(ZAnsiRecToUnicode(AnsiRec, Value.VCharRec.CP));
             end;
         vtDateTime:
-          Result.VString := DateTimeToAnsiSQLDate(Value.VDateTime);
+          Result.VString := ZSysUtils.{$IFDEF UNICODE}DateTimeToUnicodeSQLTimeStamp{$ELSE}DateTimeToRawSQLTimeStamp{$ENDIF}(Value.VDateTime, FConSettings^.WriteFormatSettings, False);
         else
           RaiseTypeMismatchError;
       end;
@@ -2069,7 +2069,7 @@ begin
               Result.VAnsiString := AnsiString(ZAnsiRecToUnicode(AnsiRec, Value.VCharRec.CP));
             end;
         vtDateTime:
-          Result.VAnsiString := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VAnsiString := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FConSettings^.WriteFormatSettings, False);
         else
           RaiseTypeMismatchError;
       end;
@@ -2116,7 +2116,7 @@ begin
               Result.VUTF8String := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(ZAnsiRecToUnicode(AnsiRec, Value.VCharRec.CP));
             end;
         vtDateTime:
-          Result.VUTF8String := UTF8String(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VUTF8String := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FConSettings^.WriteFormatSettings, False);
         else
           RaiseTypeMismatchError;
       end;
@@ -2144,7 +2144,7 @@ begin
         vtUnicodeString:
           Result.VRawByteString := FConSettings^.ConvFuncs.ZUnicodeToRaw(Value.VUnicodeString, FConSettings^.ClientCodePage^.CP);
         vtDateTime:
-          Result.VRawByteString := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VRawByteString := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FConSettings^.WriteFormatSettings, False);
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
           begin
@@ -2189,7 +2189,7 @@ begin
         vtUnicodeString:
           Result.VUnicodeString := Value.VUnicodeString;
         vtDateTime:
-          Result.VUnicodeString := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
+          Result.VUnicodeString := ZSysUtils.DateTimeToUnicodeSQLTimeStamp(Value.VDateTime, FConSettings^.WriteFormatSettings, False);
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
             SetString(Result.VUnicodeString, PWideChar(Value.VCharRec.P), Value.VCharRec.Len)
@@ -2325,7 +2325,7 @@ begin
           Result := ZUnicodeToRaw(US, RawCP);
         end;
     vtDateTime:
-      Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(DateTimeToAnsiSQLDate(Value.VDateTime));
+      Result := ZSysUtils.DateTimeToRawSQLTimeStamp(Value.VDateTime, FConSettings^.WriteFormatSettings, False);
     else
       RaiseTypeMismatchError;
   end;
