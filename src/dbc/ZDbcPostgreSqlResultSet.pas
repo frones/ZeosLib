@@ -423,9 +423,13 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
-var Len: Cardinal;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
-  Result := GetBuffer(ColumnIndex, Len);
+  Result := '';
+  Buffer := GetBuffer(ColumnIndex, Len);
+  ZSetString(Buffer, Len, Result);
 end;
 
 {**
