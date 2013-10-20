@@ -714,7 +714,7 @@ end;
 procedure TZAbstractSQLTestCase.LogEvent(Event: TZLoggingEvent);
 begin
   if Event.Message <> '' then
-    FTraceList.Append(Event.Message);
+    FTraceList.Append(String(Event.Message));
 end;
 
 {**

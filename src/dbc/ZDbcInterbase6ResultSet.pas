@@ -119,12 +119,13 @@ type
     FDBHandle: PISC_DB_HANDLE;
     FTrHandle: PISC_TR_HANDLE;
     FPlainDriver: IZInterbasePlainDriver;
+    FConSettings: PZConSettings;
   protected
     procedure ReadLob; override;
   public
     constructor Create(const DBHandle: PISC_DB_HANDLE;
       const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
-      var BlobId: TISC_QUAD);
+      var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
   end;
 
   TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob)
@@ -202,6 +203,7 @@ begin
   ResultSetType := rtForwardOnly;
   ResultSetConcurrency := rcReadOnly;
   FCodePageArray := (Statement.GetConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
+  FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
 
   Open;
 end;
@@ -277,7 +279,8 @@ begin
     try
       with FIBConnection do
         ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
-          BlobId, Size, Buffer, Self.GetMetaData.GetColumnType(ColumnIndex) = stBinaryStream);
+          BlobId, Size, Buffer, Self.GetMetaData.GetColumnType(ColumnIndex) = stBinaryStream,
+          ConSettings);
       case GetMetaData.GetColumnType(ColumnIndex) of
         stBinaryStream:
           Result := TZAbstractBlob.CreateWithData(Buffer, Size);
@@ -292,7 +295,8 @@ begin
     case GetMetaData.GetColumnType(ColumnIndex) of
       stBinaryStream:
         Result := TZInterbase6UnCachedBlob.Create(FIBConnection.GetDBHandle,
-          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId);
+          FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
+          ConSettings);
       stAsciiStream, stUnicodeStream:
         Result := TZInterbase6UnCachedClob.Create(FIBConnection.GetDBHandle,
           FIBConnection.GetTrHandle, FIBConnection.GetPlainDriver, BlobId,
@@ -812,12 +816,13 @@ end;
 }
 constructor TZInterbase6UnCachedBlob.Create(const DBHandle: PISC_DB_HANDLE;
   const TrHandle: PISC_TR_HANDLE; const PlainDriver: IZInterbasePlainDriver;
-  var BlobId: TISC_QUAD);
+  var BlobId: TISC_QUAD;Const ConSettings: PZConSettings);
 begin
   FBlobId := BlobId;
   FDBHandle := DBHandle;
   FTrHandle := TrHandle;
   FPlainDriver := PlainDriver;
+  FConSettings := ConSettings;
 end;
 
 {$IFDEF FPC}
@@ -829,7 +834,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, True);
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, True, FConSettings);
   BlobSize := Size;
   BlobData := Buffer;
   inherited ReadLob;
@@ -865,7 +870,7 @@ var
   Buffer: Pointer;
 begin
   InternalClear;
-  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, False);
+  ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, False, FConSettings);
   (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
   FBlobSize := Size+1;
   BlobData := Buffer;

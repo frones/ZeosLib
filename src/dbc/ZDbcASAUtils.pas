@@ -87,7 +87,7 @@ type
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
-    function GetFieldName(const Index: Word): string;
+    function GetFieldName(const Index: Word): RawByteString;
     function GetFieldIndex(const Name: String): Word;
     function GetFieldScale(const Index: Word): integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
@@ -168,7 +168,7 @@ type
     function IsNullable(const Index: Word): boolean;
 
     function GetFieldCount: Integer;
-    function GetFieldName(const Index: Word): string;
+    function GetFieldName(const Index: Word): RawByteString;
     function GetFieldIndex(const Name: String): Word;
     function GetFieldScale(const Index: Word): Integer;
     function GetFieldSqlType(const Index: Word): TZSQLType;
@@ -244,18 +244,19 @@ function ASADateTimeToSQLTimeStamp( ASADT: PZASASQLDateTime): TSQLTimeStamp;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckASAError(PlainDriver: IZASAPlainDriver;
-  Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '';
-  SupressExceptionID: Integer = 0);
+procedure CheckASAError(const PlainDriver: IZASAPlainDriver;
+  const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
+  const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
+  const SupressExceptionID: Integer = 0);
 
 function GetCachedResultSet(SQL: string;
   Statement: IZStatement; NativeResultSet: IZResultSet): IZResultSet;
 
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor: AnsiString; SQL: String);
+  Cursor: AnsiString; SQL: RawByteString);
 
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
-   const SQL: RawByteString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+   const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 
 procedure PrepareParameters( ClientVarManager: IZClientVariantManager;
   InParamValues: TZVariantDynArray; InParamTypes: TZSQLTypeArray;
@@ -273,7 +274,7 @@ uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
 
 procedure TZASASQLDA.CreateException( Msg: string);
 begin
-  DriverManager.LogError( lcOther, FPlainDriver.GetProtocol, '', -1, Msg);
+  DriverManager.LogError( lcOther, FConSettings^.Protocol, '', -1, ConvertEMsgToRaw(Msg, FConSettings^.ClientCodePage^.CP));
   raise EZSQLException.Create( Format( SSQLError1, [ Msg]));
 end;
 
@@ -502,16 +503,12 @@ end;
    @param Index the index fields
    @return the name
 }
-function TZASASQLDA.GetFieldName(const Index: Word): string;
-{$IFDEF WITH_RAWBYTESTRING}
-var Temp: RawByteString;
-{$ENDIF}
+function TZASASQLDA.GetFieldName(const Index: Word): RawByteString;
 begin
   CheckIndex(Index);
   {$IFDEF WITH_RAWBYTESTRING}
-  SetLength(Temp, FSQLDA.sqlvar[Index].sqlname.length-1);
-  Move(FSQLDA.sqlvar[Index].sqlname.data, PAnsiChar(Temp)^, FSQLDA.sqlvar[Index].sqlname.length-1);
-  Result := FConSettings^.ConvFuncs.ZRawToString(Temp, FConSettings^.ClientCodePage^.CP, FConSettings^.CTRL_CP);
+  Result := '';
+  ZSetString(FSQLDA.sqlvar[Index].sqlname.data, FSQLDA.sqlvar[Index].sqlname.length-1, Result);
   {$ELSE}
   SetString( Result, FSQLDA.sqlvar[Index].sqlname.data,
     FSQLDA.sqlvar[Index].sqlname.length-1);
@@ -1721,7 +1718,7 @@ begin
           while True do
           begin
             FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
-            CheckASAError( FPlainDriver, FHandle, lcOther);
+            CheckASAError( FPlainDriver, FHandle, lcOther, FConSettings);
             if ( sqlind^ < 0 ) then
               break;
             Inc( Rd, PZASABlobStruct( sqlData)^.stored_len);
@@ -1735,8 +1732,8 @@ begin
           if Rd <> Length then
             CreateException( 'Could''nt complete BLOB-Read');
 
-          DriverManager.LogMessage( lcExecute, FPlainDriver.GetProtocol,
-            Format( 'GET DATA for Column: %s', [ GetFieldName(Index)]));
+          DriverManager.LogMessage( lcExecute, FConSettings^.Protocol,
+            'GET DATA for Column: '+ GetFieldName(Index));
           FreeMem(sqlData, SizeOf(TZASABlobStruct)+Min( BlockSize, Length));
           FPlainDriver.db_free_sqlda( TempSQLDA);
           TempSQLDA := nil;
@@ -2061,24 +2058,25 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckASAError( PlainDriver: IZASAPlainDriver;
-  Handle: PZASASQLCA; LogCategory: TZLoggingCategory; LogMessage: string = '';
-  SupressExceptionID: Integer = 0);
+procedure CheckASAError(const PlainDriver: IZASAPlainDriver;
+  const Handle: PZASASQLCA; const LogCategory: TZLoggingCategory;
+  const ConSettings: PZConSettings; const LogMessage: RawByteString = '';
+  const SupressExceptionID: Integer = 0);
 var
   ErrorBuf: array[0..1024] of AnsiChar;
-  ErrorMessage: string;
+  ErrorMessage: RawByteString;
 begin
   if Handle.SqlCode < SQLE_NOERROR then
   begin
-    ErrorMessage := String(PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf)));
+    ErrorMessage := PlainDriver.sqlError_Message( Handle, ErrorBuf, SizeOf( ErrorBuf));
     //SyntaxError Position in SQLCount
     if not (SupressExceptionID = Handle.SqlCode ) then
     begin
-      DriverManager.LogError( LogCategory, PlainDriver.GetProtocol, LogMessage,
+      DriverManager.LogError( LogCategory, ConSettings^.Protocol, LogMessage,
         Handle.SqlCode, ErrorMessage);
 
       raise EZSQLException.CreateWithCode( Handle.SqlCode,
-        Format(SSQLError1, [ErrorMessage]));
+        Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
     end;
   end;
 end;
@@ -2110,27 +2108,27 @@ begin
 end;
 
 procedure DescribeCursor( FASAConnection: IZASAConnection; FSQLData: IZASASQLDA;
-  Cursor: AnsiString; SQL: String);
+  Cursor: AnsiString; SQL: RawByteString);
 begin
   FSQLData.AllocateSQLDA( StdVars);
   with FASAConnection do
   begin
     GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, SQL);
+    ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, FASAConnection.GetConSettings, SQL);
     if FSQLData.GetData^.sqld <= 0 then
       raise EZSQLException.Create( SCanNotRetrieveResultSetData)
     else if ( FSQLData.GetData^.sqld > FSQLData.GetData^.sqln) then
     begin
       FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
       GetPlainDriver.db_describe_cursor(GetDBHandle, PAnsiChar(Cursor), FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, SQL);
+       ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, FASAConnection.GetConSettings, SQL);
     end;
     FSQLData.InitFields;
   end;
 end;
 
 procedure ASAPrepare( FASAConnection: IZASAConnection; FSQLData, FParamsSQLData: IZASASQLDA;
-   const SQL: RawByteString; const LogSQL: String; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
+   const SQL: RawByteString; StmtNum: PSmallInt; var FPrepared, FMoreResults: Boolean);
 begin
   with FASAConnection do
   begin
@@ -2148,7 +2146,7 @@ begin
       GetPlainDriver.db_prepare_describe( GetDBHandle, nil, StmtNum,
             PAnsiChar(SQL), FParamsSQLData.GetData, SQL_PREPARE_DESCRIBE_STMTNUM +
             SQL_PREPARE_DESCRIBE_INPUT + SQL_PREPARE_DESCRIBE_VARRESULT, 0);
-      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, LogSQL);
+      ZDbcASAUtils.CheckASAError(GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
 
       FMoreResults := GetDBHandle.sqlerrd[2] = 0;
 
@@ -2157,28 +2155,28 @@ begin
         FParamsSQLData.AllocateSQLDA( FParamsSQLData.GetData^.sqld);
         GetPlainDriver.db_describe( GetDBHandle, nil, StmtNum,
           FParamsSQLData.GetData, SQL_DESCRIBE_INPUT);
-        ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, LogSQL);
+        ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
       end;
 
       if not FMoreResults then
       begin
         GetPlainDriver.db_describe( GetDBHandle, nil, StmtNum,
           FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-        ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, LogSQL);
+        ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
         if FSQLData.GetData^.sqld > FSQLData.GetData^.sqln then
         begin
           FSQLData.AllocateSQLDA( FSQLData.GetData^.sqld);
           GetPlainDriver.db_describe( GetDBHandle, nil, StmtNum,
             FSQLData.GetData, SQL_DESCRIBE_OUTPUT);
-          ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, LogSQL);
+          ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, GetConSettings, SQL);
         end;
         FSQLData.InitFields;
       end;
 
       FPrepared := true;
       { Logging SQL Command }
-      DriverManager.LogMessage( lcExecute, GetPlainDriver.GetProtocol,
-        'Prepare: '+ LogSQL);
+      DriverManager.LogMessage( lcExecute, GetConSettings.Protocol,
+        'Prepare: '+ SQL);
     except
       on E: Exception do
       begin

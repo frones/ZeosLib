@@ -182,11 +182,11 @@ type
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
 
-    procedure LogMessage(Category: TZLoggingCategory; const Protocol: string;
-      const Msg: string); overload;
+    procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
+      const Msg: RawByteString); overload;
     procedure LogMessage(Category: TZLoggingCategory; Sender: IZLoggingObject); overload;
-    procedure LogError(Category: TZLoggingCategory; const Protocol: string;
-      const Msg: string; ErrorCode: Integer; const Error: string);
+    procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
+      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
       const Properties: TStrings = nil; const LibLocation: String = ''): String;
@@ -1021,11 +1021,11 @@ type
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
 
-    procedure LogMessage(Category: TZLoggingCategory; const Protocol: string;
-      const Msg: string); overload;
+    procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
+      const Msg: RawByteString); overload;
     procedure LogMessage(Category: TZLoggingCategory; Sender: IZLoggingObject); overload;
-    procedure LogError(Category: TZLoggingCategory; const Protocol: string;
-      const Msg: string; ErrorCode: Integer; const Error: string);
+    procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
+      const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
 
     function ConstructURL(const Protocol, HostName, Database,
       UserName, Password: String; const Port: Integer;
@@ -1219,7 +1219,8 @@ end;
   @param Error an error message.
 }
 procedure TZDriverManager.LogError(Category: TZLoggingCategory;
-  const Protocol: string; const Msg: string; ErrorCode: Integer; const Error: string);
+  const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer;
+  const Error: RawByteString);
 var
   Event: TZLoggingEvent;
 begin
@@ -1265,7 +1266,7 @@ end;
   @param Msg a description message.
 }
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
-  const Protocol: string; const Msg: string);
+  const Protocol: RawByteString; const Msg: RawByteString);
 begin
   if FLoggingListeners.Count = 0 then
       Exit;

@@ -196,13 +196,13 @@ begin
   Result := nil;
   ErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL),
     StmtHandle, nil);
-  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcExecute, LogSQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcExecute, ASQL, ConSettings);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   try
     ErrorCode := FPlainDriver.Step(StmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther, 'FETCH');
+    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther, 'FETCH', ConSettings);
     if FPlainDriver.column_count(StmtHandle) > 0 then
-      Result := CreateResultSet(SSQL, StmtHandle, ErrorCode);
+      Result := CreateResultSet(Self.SQL, StmtHandle, ErrorCode);
   except
     FPlainDriver.Finalize(StmtHandle);
     raise;
@@ -227,8 +227,8 @@ var
 begin
   ASQL := SQL; //preprepares SQL
   ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage);
-  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, LogSQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, ASQL, ConSettings);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   Result := FPlainDriver.Changes(FHandle);
   LastUpdateCount := Result;
 end;
@@ -261,11 +261,11 @@ begin
   ASQL := SQL; //preprepares SQL
   ErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL),
     StmtHandle, nil);
-  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcExecute, SSQL);
-  DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+  CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcExecute, ASQL, ConSettings);
+  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   try
     ErrorCode := FPlainDriver.Step(StmtHandle);
-    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther, 'FETCH');
+    CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther, 'FETCH', ConSettings);
   except
     FPlainDriver.Finalize(StmtHandle);
     raise;
@@ -275,7 +275,7 @@ begin
   if FPlainDriver.column_count(StmtHandle) <> 0 then
   begin
     Result := True;
-    LastResultSet := CreateResultSet(SSQL, StmtHandle, ErrorCode);
+    LastResultSet := CreateResultSet(Self.SQL, StmtHandle, ErrorCode);
   end
   else { Processes regular query. }
   begin
@@ -283,7 +283,7 @@ begin
     LastUpdateCount := FPlainDriver.Changes(FHandle);
     ErrorCode := FPlainDriver.Finalize(StmtHandle);
     CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther,
-      'Finalize SQLite VM');
+      'Finalize SQLite VM', ConSettings);
   end;
 end;
 
@@ -442,7 +442,7 @@ var
   CharRec: TZCharRec;
 begin
   FErrorcode := FPlainDriver.clear_bindings(FStmtHandle);
-  CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcBindPrepStmt, SSQL);
+  CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcBindPrepStmt, ASQL, ConSettings);
   for i := 1 to InParamCount do
   begin
     if ClientVarManager.IsNull(InParamValues[i-1])  then
@@ -540,7 +540,7 @@ begin
           end;
       end;
     end;
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcBindPrepStmt, SSQL);
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcBindPrepStmt, ASQL, ConSettings);
   end;
   inherited BindInParameters;
 end;
@@ -557,7 +557,7 @@ end;
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
 begin
   FErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL), FStmtHandle, nil);
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, SSQL);
+  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, ASQL, ConSettings);
   inherited Prepare;
 end;
 
@@ -570,7 +570,7 @@ begin
     FErrorCode := SQLITE_OK;
   FStmtHandle := nil;
   CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil,
-    lcUnprepStmt, 'Unprepare SQLite Statement');
+    lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   inherited UnPrepare;
 end;
 
@@ -582,9 +582,11 @@ begin
   try
     BindInParameters;
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, SCanNotRetrieveResultsetData);
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther,
+      ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),
+      ConSettings);
     if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE)then
-      Result := CreateResultSet(SSQL, FStmtHandle, FErrorCode);
+      Result := CreateResultSet(Self.SQL, FStmtHandle, FErrorCode);
     inherited ExecuteQueryPrepared;
   except
     raise;
@@ -600,12 +602,12 @@ begin
   Result := 0;
   try
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, SSQL);
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, ASQL, ConSettings);
     Result := FPlainDriver.Changes(FHandle);
     inherited ExecuteUpdatePrepared;
   finally
     FErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset', ConSettings);
     LastUpdateCount := Result;
   end;
 end;
@@ -619,7 +621,7 @@ begin
     BindInParameters;
 
     FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, 'Step');
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, 'Step', ConSettings);
   except
     raise;
   end;
@@ -628,7 +630,7 @@ begin
   if FPlainDriver.column_count(FStmtHandle) <> 0 then
   begin
     Result := True;
-    LastResultSet := CreateResultSet(SSQL, FStmtHandle, FErrorCode);
+    LastResultSet := CreateResultSet(Self.SQL, FStmtHandle, FErrorCode);
   end
   { Processes regular query. }
   else
@@ -636,7 +638,7 @@ begin
     Result := False;
     LastUpdateCount := FPlainDriver.Changes(FHandle);
     FErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset', ConSettings);
   end;
   inherited ExecutePrepared;
 end;

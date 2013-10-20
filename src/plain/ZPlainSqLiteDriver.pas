@@ -432,7 +432,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(db: Psqlite; code: Integer): String;
+    function ErrorString(db: Psqlite; code: Integer): RawByteString;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -561,7 +561,7 @@ type
     function LastInsertRowId(db: Psqlite): Integer;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
-    function ErrorString(db: Psqlite; code: Integer): String;
+    function ErrorString(db: Psqlite; code: Integer): RawByteString;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
 
@@ -685,7 +685,7 @@ type
 
 implementation
 
-uses ZPlainLoader, ZEncoding;
+uses ZPlainLoader, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteBaseDriver }
 
@@ -767,11 +767,10 @@ begin
   Result := SQLITE_MISUSE;
 end;
 
-function TZSQLiteBaseDriver.ErrorString(db: Psqlite; code: Integer): String;
+function TZSQLiteBaseDriver.ErrorString(db: Psqlite; code: Integer): RawByteString;
 var
-  ErrorMessagePointer: PAnsiChar;
-  ErrorMessage: String;
-  ErrorString: String;
+  ErrorMessage: RawByteString;
+  ErrorString: RawByteString;
 begin
   if code = SQLITE_OK then
   begin
@@ -823,28 +822,7 @@ begin
   end
   else
   begin
-    ErrorMessagePointer := Self.SQLite_API.sqlite_errstr(code);
-    {$IFDEF UNICODE}
-    ErrorString := Trim(UTF8ToUnicodeString(ErrorMessagePointer));
-    {$ELSE}
-      {$IFNDEF FPC}
-      ErrorString := Trim(UTF8ToAnsi(StrPas(ErrorMessagePointer)));
-      {$ELSE}
-      ErrorString := Trim(ErrorMessagePointer);
-      {$ENDIF}
-    {$ENDIF}
-
-    ErrorMessagePointer := Self.SQLite_API.sqlite_errmsg(db);
-    {$IFDEF UNICODE}
-    ErrorMessage := Trim(UTF8ToUnicodeString(ErrorMessagePointer));
-    {$ELSE}
-      {$IFNDEF FPC}
-      ErrorMessage := Trim(UTF8ToAnsi(ErrorMessagePointer));
-      {$ELSE}
-      ErrorMessage := Trim(ErrorMessagePointer);
-      {$ENDIF}
-    {$ENDIF}
-
+    ErrorString := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(SQLite_API.sqlite_errstr(code));
     Result := ErrorString + ': ' + ErrorMessage;
   end;
 end;

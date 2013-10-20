@@ -132,12 +132,10 @@ function DecodeString(const Value: AnsiString): AnsiString;
   @param LogMessage a logging message.
   @param ResultHandle the Handle to the Result
 }
-
-function CheckPostgreSQLError(Connection: IZConnection;
-  PlainDriver: IZPostgreSQLPlainDriver;
-  Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
-  const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult): String;
+function CheckPostgreSQLError(const Connection: IZConnection;
+  const PlainDriver: IZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
+  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  const ResultHandle: PZPostgreSQLResult): String;
 
 
 {**
@@ -648,17 +646,16 @@ end;
   //FirmOS 22.02.06
   @param ResultHandle the Handle to the Result
 }
-function CheckPostgreSQLError(Connection: IZConnection;
-  PlainDriver: IZPostgreSQLPlainDriver;
-  Handle: PZPostgreSQLConnect; LogCategory: TZLoggingCategory;
-  const LogMessage: string;
-  ResultHandle: PZPostgreSQLResult): String;
+function CheckPostgreSQLError(const Connection: IZConnection;
+  const PlainDriver: IZPostgreSQLPlainDriver; const Handle: PZPostgreSQLConnect;
+  const LogCategory: TZLoggingCategory; const LogMessage: RawByteString;
+  const ResultHandle: PZPostgreSQLResult): String;
 var
-   ErrorMessage: string;
+   ErrorMessage: RawbyteString;
 //FirmOS
    ConnectionLost: boolean;
 
-   function GetMessage(AMessage: PAnsiChar): String;
+   function GetMessage(AMessage: RawByteString): String;
    begin
     if Assigned(Connection) then
       Result := Trim(Connection.GetConSettings^.ConvFuncs.ZRawToString(AMessage,
@@ -676,7 +673,7 @@ var
    end;
 begin
   if Assigned(Handle) then
-    ErrorMessage := GetMessage(PlainDriver.GetErrorMessage(Handle))
+    ErrorMessage := PlainDriver.GetErrorMessage(Handle)
   else
     ErrorMessage := '';
 
@@ -696,14 +693,14 @@ begin
                             and not ConnectionLost then
       Connection.Rollback;
 
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+    DriverManager.LogError(LogCategory, Connection.GetConSettings^.Protocol, LogMessage,
       0, ErrorMessage);
 
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 
     if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
       if not (Result = '42P18') then
-        raise EZSQLException.CreateWithStatus(Result,Format(SSQLError1, [ErrorMessage]));
+        raise EZSQLException.CreateWithStatus(Result,Format(SSQLError1, [GetMessage(ErrorMessage)]));
   end;
 end;
 

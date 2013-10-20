@@ -254,7 +254,7 @@ begin
 
     for i := 0 to SQLMonitor.TraceCount -1 do
       if SQLMonitor.TraceList[i].Category = lcTransaction then
-        if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
+        if Pos('COMMIT', UpperCase(String(SQLMonitor.TraceList[i].Message))) > 0 then
           Inc(CommitCount);
 
     CheckEquals(CommitCount{fix it 1}, CommitCount, 'CommitCount');

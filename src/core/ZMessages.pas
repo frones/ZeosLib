@@ -59,8 +59,48 @@ interface
 
 {$I ZCore.inc}
 
+uses ZEncoding, ZCompatibility;
+
 procedure loadmessages();
 
+const
+{$IFDEF PORTUGUESE}
+  cCodePage = ZEncoding.zCP_WIN1252;
+{$ELSE !PORTUGUESE}
+{$IFDEF DUTCH}
+  cCodePage = ZEncoding.zCP_WIN1252;
+{$ELSE !DUTCH}
+{$IFDEF GERMAN}
+  cCodePage = ZEncoding.zCP_WIN1252;
+{$ELSE !GERMAN}
+{$IFDEF SPANISH}
+  cCodePage = ZEncoding.zCP_WIN1252;
+{$ELSE !SPANISH}
+{$IFDEF ROMANA}
+  cCodePage = ZEncoding.zCP_WIN1252;
+{$ELSE !ROMANA}
+{$IFDEF INDONESIAN}
+  cCodePage = ZEncoding.zCP_us_ascii;
+{$ELSE !INDONESIAN}
+{$IFDEF RUSSIAN}
+  cCodePage = ZEncoding.zCP_WIN1251;
+{$ELSE !RUSSIAN}
+{$IFDEF CZECH}
+  cCodePage = ZEncoding.zCP_WIN1250;
+{$ELSE !CZECH}
+{$IFDEF POLISH}
+  cCodePage = ZEncoding.zCP_WIN1250;
+{$ELSE !POLISH}
+cCodePage = ZEncoding.zCP_us_ascii;
+{$ENDIF POLISH} // POLISH
+{$ENDIF CZECH} // CZECH
+{$ENDIF RUSSIAN}
+{$ENDIF INDONESIAN}
+{$ENDIF ROMANA}
+{$ENDIF SPANISH}
+{$ENDIF GERMAN}
+{$ENDIF DUTCH}
+{$ENDIF PORTUGUESE}
 resourcestring
 
 // -> ms, 09/05/2005
@@ -216,7 +256,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Índice de texto "%s" da variável de limite não existe';
   cSBindVarOutOfRange      = 'Índice da variável de limite fora de alcance: %d';
   cSFailedToBindResults    = 'A Aplicação falhou ao tratar o result set';
-  
+
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'O método RefreshRow somente é suportado com um update object';
   cSMustBeInBrowseMode = 'A Operação é permitida somente no modo dsBrowse';
@@ -725,8 +765,7 @@ resourcestring
 
 {$IFDEF ROMANA}
 
-
- SSQLError1 = 'SQL Eroare: %s';
+  SSQLError1 = 'SQL Eroare: %s';
   cSSQLError2 = 'SQL Eroare: %s Cod: %d';
   cSSQLError3 = 'SQL Eroare: %s Cod: %d SQL: %s';
   cSSQLError4 = 'SQL Eroare: %s Cod: %d Mesaj: %s';
@@ -1387,7 +1426,6 @@ resourcestring
 
 //--- added by pawelsel --------------------------------------------------------
 {$IFDEF POLISH}
-
   cSSQLError1 = 'B³¹d SQL: %s';
   cSSQLError2 = 'B³¹d SQL: %s Kod: %d';
   cSSQLError3 = 'B³¹d SQL: %s Kod: %d SQL: %s';
@@ -1552,7 +1590,6 @@ resourcestring
   cSRowBufferWidthExceeded ='Translate: Row buffer width exceeded. Try using fewer or longer columns in SQL query.';
 
 {$ELSE} // default: ENGLISH
-
 
   cSSQLError1 = 'SQL Error: %s';
   cSSQLError2 = 'SQL Error: %s Code: %d';
@@ -1734,8 +1771,11 @@ resourcestring
 {$ENDIF} // DUTCH
 
 {$ENDIF} // PORTUGUESE
+type
+  TMessageToRaw = function(const AMessage: String; Const RawCP: Word): RawByteString;
 
 var
+  MessageCodePage: Word;
   SSQLError1: String;
   SSQLError2: String;
   SSQLError3: String;
@@ -1898,10 +1938,77 @@ var
 
   SRowBufferWidthExceeded: String;
 
+  function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
+  function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
+
 implementation
+
+uses ZSysUtils;
+
+{$IFDEF UNICODE}
+function ConvertZMsgToRaw(const AMessage: String; Const RawCP: Word): RawByteString;
+begin
+  ZUnicodeToRaw(AMessage, RawCP);
+end;
+
+function ConvertEMsgToRaw(const AMessage: String; Const RawCP: Word): RawByteString;
+begin
+  ZUnicodeToRaw(AMessage, RawCP);
+end;
+{$ELSE !UNICODE}
+function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
+var
+  AnsiRec: TZAnsiRec;
+begin
+  {$IFDEF LCL}
+  RawCP := zCP_UTF8;
+  {$ENDIF}
+  if ZCompatibleCodePages(RawCP, MessageCodePage) then
+  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
+  begin
+    Result := ''; //satisfy compiler
+    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
+  end
+  {$ELSE !WITH_RAWBYTESTRING}
+  Result := AMessage
+  {$ENDIF WITH_RAWBYTESTRING}
+  else
+  begin
+    AnsiRec.Len := Length(AMessage);
+    AnsiRec.P := PAnsiChar(AMessage);
+    Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, MessageCodePage), RawCP);
+  end;
+end;
+
+function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
+var
+  AnsiRec: TZAnsiRec;
+begin
+  {$IFDEF LCL}
+  RawCP := zCP_UTF8;
+  {$ENDIF}
+  if ZCompatibleCodePages(RawCP, ZDefaultSystemCodePage) then
+  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
+  begin
+    Result := ''; //satisfy compiler
+    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
+  end
+  {$ELSE !WITH_RAWBYTESTRING}
+  Result := AMessage
+  {$ENDIF WITH_RAWBYTESTRING}
+  else
+  begin
+    AnsiRec.Len := Length(AMessage);
+    AnsiRec.P := PAnsiChar(AMessage);
+    Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, ZDefaultSystemCodePage), RawCP);
+  end;
+end;
+{$ENDIF UNICODE}
 
 procedure loadmessages();
 begin
+  MessageCodePage := cCodePage;
+
   SSQLError1 := cSSQLError1;
   SSQLError2 := cSSQLError2;
   SSQLError3 := cSSQLError3;

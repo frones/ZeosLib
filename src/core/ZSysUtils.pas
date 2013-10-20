@@ -227,6 +227,13 @@ function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean;
 function BoolToStrEx(Bool: Boolean): String;
 
 {**
+  Converts a boolean into RawByteString value.
+  @param Bool a boolean value.
+  @return <code>"True"</code> or <code>"False"</code>
+}
+function BoolToRawEx(Bool: Boolean): RawByteString;
+
+{**
   Checks if the specified string can represent an IP address.
   @param Str a string value.
   @return <code>True</code> if the string can represent an IP address
@@ -1172,6 +1179,19 @@ end;
   @return <code>"True"</code> or <code>"False"</code>
 }
 function BoolToStrEx(Bool: Boolean): String;
+begin
+  if Bool then
+    Result := 'True'
+  else
+    Result := 'False';
+end;
+
+{**
+  Converts a boolean into string value.
+  @param Bool a boolean value.
+  @return <code>"True"</code> or <code>"False"</code>
+}
+function BoolToRawEx(Bool: Boolean): RawByteString;
 begin
   if Bool then
     Result := 'True'

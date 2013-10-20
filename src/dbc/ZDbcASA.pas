@@ -238,19 +238,19 @@ begin
     Rollback;
 
   GetPlainDriver.db_string_disconnect( FHandle, nil);
-  CheckASAError( GetPlainDriver, FHandle, lcDisconnect);
+  CheckASAError( GetPlainDriver, FHandle, lcDisconnect, ConSettings);
 
   FHandle := nil;
   if GetPlainDriver.db_fini( @FSQLCA) = 0 then
   begin
-    DriverManager.LogError( lcConnect, PlainDriver.GetProtocol, 'Inititalizing SQLCA',
+    DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
       0, 'Error closing SQLCA');
     raise EZSQLException.CreateWithCode( 0,
       'Error closing SQLCA');
   end;
 
-  DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol,
-      Format('DISCONNECT FROM "%s"', [Database]));
+  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,
+      'DISCONNECT FROM "'+ConSettings^.Database+'"');
 
   inherited Close;
 end;
@@ -266,9 +266,9 @@ begin
   if FHandle <> nil then
   begin
     GetPlainDriver.db_commit( FHandle, 0);
-    CheckASAError( GetPlainDriver, FHandle, lcTransaction);
+    CheckASAError(GetPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
-      PlainDriver.GetProtocol, 'TRANSACTION COMMIT');
+      ConSettings^.Protocol, 'TRANSACTION COMMIT');
   end;
 end;
 
@@ -415,7 +415,7 @@ begin
   try
     if GetPlainDriver.db_init( @FSQLCA) = 0 then
     begin
-      DriverManager.LogError( lcConnect, PlainDriver.GetProtocol, 'Inititalizing SQLCA',
+      DriverManager.LogError( lcConnect, ConSettings^.Protocol, 'Inititalizing SQLCA',
         0, 'Error initializing SQLCA');
       raise EZSQLException.CreateWithCode( 0,
         'Error initializing SQLCA');
@@ -447,15 +447,15 @@ begin
       then ConnectionString := ConnectionString + Links + '; ';
 
     GetPlainDriver.db_string_connect(FHandle, PAnsiChar(AnsiString(ConnectionString)));
-    CheckASAError( GetPlainDriver, FHandle, lcConnect);
+    CheckASAError( GetPlainDriver, FHandle, lcConnect, ConSettings);
 
-    DriverManager.LogMessage(lcConnect, PlainDriver.GetProtocol,
-      Format('CONNECT TO "%s" AS USER "%s"', [Database, User]));
+    DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
+      'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
 
     if ( FClientCodePage <> '' ) then
       if ( GetPlainDriver.db_change_char_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) or
          ( GetPlainDriver.db_change_nchar_charset(FHandle, PAnsiChar(AnsiString(FClientCodePage))) = 0 ) then
-        CheckASAError( GetPlainDriver, FHandle, lcOther, 'Set client CharacterSet failed.');
+        CheckASAError( GetPlainDriver, FHandle, lcOther, ConSettings, 'Set client CharacterSet failed.');
 
     StartTransaction;
 
@@ -492,9 +492,9 @@ begin
   if Assigned( FHandle) then
   begin
     GetPlainDriver.db_rollback( FHandle, 0);
-    CheckASAError( GetPlainDriver, FHandle, lcTransaction);
+    CheckASAError( GetPlainDriver, FHandle, lcTransaction, ConSettings);
     DriverManager.LogMessage(lcTransaction,
-      PlainDriver.GetProtocol, 'TRANSACTION ROLLBACK');
+      ConSettings^.Protocol, 'TRANSACTION ROLLBACK');
   end;
 end;
 
@@ -503,10 +503,13 @@ procedure TZASAConnection.SetOption(Temporary: Integer; User: PAnsiChar;
 var
   SQLDA: PASASQLDA;
   Sz: Integer;
-  S: string;
+  RawOpt: RawbyteString;
+  RawVal: RawByteString;
 begin
   if Assigned( FHandle) then
   begin
+    RawOpt := conSettings^.ConvFuncs.ZStringToRaw(Option, ConSettings^.CTRL_CP, Consettings^.ClientCodePage^.CP);
+    RawVal := conSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, Consettings^.ClientCodePage^.CP);
     Sz := SizeOf( TASASQLDA) - 32767 * SizeOf( TZASASQLVAR);
     SQLDA := AllocMem( Sz);
     try
@@ -515,14 +518,13 @@ begin
       SQLDA.sqln := 1;
       SQLDA.sqld := 1;
       SQLDA.sqlVar[0].sqlType := DT_STRING;
-      SQLDA.sqlVar[0].sqlLen := Length( Value)+1;
-      SQLDA.sqlVar[0].sqlData := PAnsiChar(AnsiString(Value));
-      GetPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(AnsiString(Option)), SQLDA);
+      SQLDA.sqlVar[0].sqlLen := Length(RawVal)+1;
+      SQLDA.sqlVar[0].sqlData := PAnsiChar(RawVal);
+      GetPlainDriver.db_setoption(FHandle, Temporary, User, PAnsiChar(RawOpt), SQLDA);
 
-      CheckASAError( GetPlainDriver, FHandle, lcOther);
-      S := String(User);
-      DriverManager.LogMessage( lcOther, PlainDriver.GetProtocol,
-        Format( 'SET OPTION %s.%s = %s', [ S, Option, Value]));
+      CheckASAError( GetPlainDriver, FHandle, lcOther, ConSettings);
+      DriverManager.LogMessage( lcOther, ConSettings^.Protocol,
+        'SET OPTION '+ConSettings.User+'.'+RawOpt+' = '+RawVal);
     finally
       FreeMem( SQLDA);
     end;

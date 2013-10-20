@@ -121,16 +121,14 @@ type
     property Info: TStrings read FInfo;
     property Closed: Boolean read FClosed write FClosed;
 
-    {EgonHugeist SSQL only because of compatibility to the old code available}
-    property SSQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND} read {$IFDEF UNICODE}FWSQL{$ELSE}FaSQL{$ENDIF} write {$IFDEF UNICODE}SetWSQL{$ELSE}SetASQL{$ENDIF};
+    property SQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: RawByteString read FaSQL write SetASQL;
-    property LogSQL: String read {$IFDEF UNICODE}FWSQL{$ELSE}FaSQL{$ENDIF};
     property ChunkSize: Integer read FChunkSize;
     property IsAnsiDriver: Boolean read FIsAnsiDriver;
     property CachedLob: Boolean read FCachedLob;
-    function CreateStmtLogEvent(Category: TZLoggingCategory; const Msg: string=
-      ''): TZLoggingEvent;
+    function CreateStmtLogEvent(Category: TZLoggingCategory;
+      const Msg: RawByteString=''): TZLoggingEvent;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -197,7 +195,6 @@ type
 
   TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement, IZLoggingObject)
   private
-    FSQL: string;
     FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
@@ -218,10 +215,10 @@ type
     procedure SetInParamCount(NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
-    function GetInParamLogValue(Value: TZVariant): String;
+    procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
+    function GetInParamLogValue(Value: TZVariant): RawByteString;
 
     property ExecCount: Integer read FExecCount;
-    property SQL: string read FSQL write FSQL;
     property InParamValues: TZVariantDynArray
       read FInParamValues write FInParamValues;
     property InParamTypes: TZSQLTypeArray
@@ -302,7 +299,8 @@ type
     FOutParamCount: Integer;
     FLastWasNull: Boolean;
     FTemp: String;
-    FProcSql: String;
+    FSQL: String;
+    FProcSql: RawByteString;
     FIsFunction: Boolean;
     FHasOutParameter: Boolean;
   protected
@@ -313,7 +311,7 @@ type
     procedure TrimInParameters; virtual;
     procedure SetOutParamCount(NewParamCount: Integer); virtual;
     function GetOutParam(ParameterIndex: Integer): TZVariant; virtual;
-    procedure SetProcSQL(const Value: String); virtual;
+    procedure SetProcSQL(const Value: RawByteString); virtual;
 
     property OutParamValues: TZVariantDynArray
       read FOutParamValues write FOutParamValues;
@@ -321,7 +319,8 @@ type
       read FOutParamTypes write FOutParamTypes;
     property OutParamCount: Integer read FOutParamCount write FOutParamCount;
     property LastWasNull: Boolean read FLastWasNull write FLastWasNull;
-    property ProcSql: String read FProcSQL write SetProcSQL;
+    property ProcSql: RawByteString read FProcSQL write SetProcSQL;
+    property SQL: String read FSQL;
   public
     constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     procedure ClearParameters; override;
@@ -369,7 +368,7 @@ type
   {** Implements a real Prepared Callable SQL Statement. }
   TZAbstractPreparedCallableStatement = CLass(TZAbstractCallableStatement)
   protected
-    procedure SetProcSQL(const Value: String); override;
+    procedure SetProcSQL(const Value: RawByteString); override;
   public
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
@@ -489,10 +488,7 @@ begin
   if FWSQL <> Value then
     {$IFDEF UNICODE}
     if FConnection.GetIZPlainDriver.IsAnsiDriver then
-    begin
-      FASQL := GetRawEncodedSQL(Value);
-      FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for sql logging
-    end
+      FASQL := GetRawEncodedSQL(Value)
     else
       if ConSettings^.AutoEncode then
         FWSQL := GetUnicodeEncodedSQL(Value)
@@ -500,7 +496,7 @@ begin
         FWSQL := Value;
     {$ELSE !UNICODE}
     begin
-      FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for sql logging
+      FaSQL := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP); //required for the resultsets
       FWSQL := Value;
     end;
     {$ENDIF UNICODE}
@@ -512,7 +508,7 @@ begin
   begin
     {$IFDEF UNICODE}
     FASQL := Value;
-    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for sql logging
+    FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
     {$ELSE !UNICODE}
     FASQL := GetRawEncodedSQL(Value);
     if not FConnection.GetIZPlainDriver.IsAnsiDriver then
@@ -752,12 +748,14 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if GetConnection.AutoEncodeStrings then
+  if ConSettings^.AutoEncode then
   begin
     Result := ''; //init for FPC
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
     begin
+      {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
       case (SQLTokens[i].TokenType) of
         ttEscape:
           Result := Result + {$IFDEF UNICODE}ZPlainString{$ENDIF}(SQLTokens[i].Value);
@@ -770,11 +768,14 @@ begin
     end;
   end
   else
+  begin
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
     Result := ZPlainString(SQL);
     {$ELSE}
     Result := SQL;
     {$ENDIF}
+  end;
 end;
 
 function TZAbstractStatement.GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString;
@@ -782,15 +783,18 @@ var
   SQLTokens: TZTokenDynArray;
   i: Integer;
 begin
-  if GetConnection.AutoEncodeStrings then
+  if ConSettings^.AutoEncode then
   begin
     Result := ''; //init for FPC
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := '';
     SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
-    {$IFDEF UNICODE}
-      Result := Result + SQLTokens[i].Value;
-    {$ELSE !UNICODE}
     begin
+      {$IFDEF UNICODE}
+      FWSQL := SQLTokens[i].Value;
+      Result := Result + SQLTokens[i].Value;
+      {$ELSE !UNICODE}
+      FASQL := FASQL + SQLTokens[i].Value;
       case (SQLTokens[i].TokenType) of
         ttEscape,
         ttQuoted, ttComment,
@@ -799,36 +803,38 @@ begin
         else
           Result := Result + PosEmptyASCII7ToUnicodeString(SQLTokens[i].Value);
       end;
+      {$ENDIF UNICODE}
     end;
-    {$ENDIF UNICODE}
   end
   else
+  begin
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
     Result := SQL;
     {$ELSE !UNICODE}
     Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
     {$ENDIF UNICODE}
+  end;
 end;
 
 function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
-  const Msg: string = ''): TZLoggingEvent;
+  const Msg: RawByteString = ''): TZLoggingEvent;
 begin
   if msg <> '' then
-    result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d : %s', [FStatementId, Msg]), 0, '')
+    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, '')
   else
-    result := TZLoggingEvent.Create(Category, Connection.GetIZPlainDriver.GetProtocol, Format('Statement %d', [FStatementId]), 0, '');
+    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, '');
   end;
 
 function TZAbstractStatement.CreateLogEvent(Category: TZLoggingCategory
   ): TZLoggingEvent;
 var
-  I : integer;
-  LogString : String;
+  LogString : RawByteString;
 begin
   LogString := '';
   case Category of
     lcPrepStmt:
-      result := CreateStmtLogEvent(Category, GetSQL);
+      result := CreateStmtLogEvent(Category, ASQL);
     lcExecPrepStmt, lcUnprepStmt:
       result := CreateStmtLogEvent(Category);
   else
@@ -898,7 +904,7 @@ end;
 
 function TZAbstractStatement.GetSQL: String;
 begin
-  GetSQL := SSQL;
+  Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
 end;
 
 {**
@@ -1212,7 +1218,6 @@ constructor TZAbstractPreparedStatement.Create(Connection: IZConnection;
 begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
-  FSQL := SQL;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
   FInParamCount := 0;
   SetInParamCount(0);
@@ -1415,53 +1420,57 @@ begin
   FInParamValues[ParameterIndex - 1] := Value;
 end;
 
-function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): String;
+{**
+  Logs a message about prepared statement event with normal result code.
+  @param Category a category of the message.
+  @param Protocol a name of the protocol.
+  @param Msg a description message.
+}
+procedure TZAbstractPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
+  const Msg: RawByteString = '');
+begin
+  if msg <> '' then
+    DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
+  else
+    DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId));
+end;
+
+
+function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): RawByteString;
 var
-  Uni: ZWideString;
-  {$IFDEF UNICODE}
-  AnsiRec: TZAnsiRec;
-  {$ENDIF}
+  WideRec: TZWideRec;
 begin
   With Value do
     case VType of
       vtNull : result := '(NULL)';
-      vtBoolean : If VBoolean then result := '(TRUE)' else result := '(FALSE)';
+      vtBoolean : if VBoolean then result := '(TRUE)' else result := '(FALSE)';
       vtBytes:
         begin
           SetLength(Result, Length(VBytes)*2);
-          BinToHex(PAnsiChar(VBytes), PChar(Result), Length(VBytes));
+          BinToHex(PAnsiChar(VBytes), PAnsiChar(Result), Length(VBytes));
         end;
-      vtInteger : result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(VInteger);
-      vtFloat : result := FloatToStr(VFloat);
-      vtString : result := '''' + VString + '''';
-      vtAnsiString: result := '''' + ConSettings^.ConvFuncs.ZAnsiToString(VAnsiString, ConSettings^.CTRL_CP)+'''';
-      vtUTF8String: result := '''' + ConSettings^.ConvFuncs.ZUTF8ToString(VUTF8String, ConSettings^.CTRL_CP)+'''';
-      vtRawByteString: result := '''' + ConSettings^.ConvFuncs.ZRawToString(VRawByteString, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)+'''';
-      vtUnicodeString : result := '''' + ConSettings^.ConvFuncs.ZUnicodeToString(VUnicodeString, ConSettings^.CTRL_CP) + '''';
+      vtInteger : result := IntToRaw(VInteger);
+      vtFloat : result := FloatToRaw(VFloat);
+      vtString,
+      vtAnsiString,
+      vtUTF8String,
+      vtRawByteString,
+      vtUnicodeString: result := #39 + ClientVarManager.GetAsRawByteString(Value) + #39;
       vtCharRec:
         case Value.VCharRec.CP of
           zCP_UTF16, zCP_UTF16BE:
             begin
-              System.SetString(Uni, PWideChar(Value.VCharRec.P), Value.VCharRec.Len);
-              {$IFDEF UNICODE}
-              Result := #39 + Uni + #39;
-              {$ELSE}
-              result := '''' + ConSettings^.ConvFuncs.ZUnicodeToString(Uni, ConSettings^.CTRL_CP) + '''';
-              {$ENDIF}
+              WideRec.Len := Value.VCharRec.Len;
+              Widerec.P := Value.VCharRec.P;
+              Result := #39+ ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP)+#39;
             end;
           else
           begin
-            {$IFDEF UNICODE}
-            AnsiRec.P := Value.VCharRec.P;
-            AnsiRec.Len := Value.VCharRec.Len;
-            result := '''' + ZAnsiRecToUnicode(AnsiRec, Value.VCharRec.CP) + '''';
-            {$ELSE}
-            System.SetString(Result, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len);
-            Result := '''' + Result + '''';
-            {$ENDIF}
+            ZSetString(Value.VCharRec.p, Value.VCharRec.Len, Result);
+            Result := #39 + Result + #39;
           end;
         end;
-      vtDateTime : result := DateTimeToStr(VDateTime);
+      vtDateTime : result := ZSysUtils.DateTimeToRawSQLTimeStamp(VDateTime, ConSettings^.DisplayFormatSettings, False);
       vtPointer : result := '(POINTER)';
       vtInterface : result := '(INTERFACE)';
     else
@@ -1966,7 +1975,7 @@ end;
 
 function TZAbstractPreparedStatement.GetSQL: String;
 begin
-  Result := FSQL;
+  Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
 end;
 
 procedure TZAbstractPreparedStatement.Prepare;
@@ -2014,7 +2023,8 @@ var I: Integer;
 begin
   if Length(FCachedQueryRaw) = 0 then
   begin
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SQL, ConSettings,
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
 
     Result := ''; //init Result
@@ -2030,7 +2040,8 @@ var I: Integer;
 begin
   if Length(FCachedQueryUni) = 0 then
   begin
-    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SQL, ConSettings,
+    {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
 
     //init Result
@@ -2045,7 +2056,7 @@ function TZAbstractPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
   ): TZLoggingEvent;
 var
   I : integer;
-  LogString : String;
+  LogString : RawByteString;
 begin
   LogString := '';
   case Category of
@@ -2075,6 +2086,7 @@ constructor TZAbstractCallableStatement.Create(Connection: IZConnection;
   SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
+  FSQL := SQL;
   FOutParamCount := 0;
   SetOutParamCount(0);
   FProcSql := ''; //Init -> FPC
@@ -2349,7 +2361,7 @@ begin
   end;
 end;
 
-procedure TZAbstractCallableStatement.SetProcSQL(const Value: String);
+procedure TZAbstractCallableStatement.SetProcSQL(const Value: RawByteString);
 begin
   FProcSql := Value;
 end;
@@ -2685,7 +2697,7 @@ end;
 
 { TZAbstractPreparedCallableStatement }
 
-procedure TZAbstractPreparedCallableStatement.SetProcSQL(const Value: String);
+procedure TZAbstractPreparedCallableStatement.SetProcSQL(const Value: RawByteString);
 begin
   if Value <> ProcSQL then Unprepare;
   inherited SetProcSQL(Value);
@@ -2831,7 +2843,7 @@ end;
 procedure TZEmulatedPreparedStatement.TokenizeSQLQueryRaw;
 begin
   if Length(FCachedQueryRaw) = 0 then
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(SSQL, ConSettings,
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       FNeedNCharDetection);
 end;
@@ -2843,7 +2855,7 @@ end;
 procedure TZEmulatedPreparedStatement.TokenizeSQLQueryUni;
 begin
   if Length(FCachedQueryUni) = 0 then
-    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(SSQL, ConSettings,
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
       FNeedNCharDetection);
 end;
