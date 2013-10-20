@@ -865,6 +865,7 @@ begin
       end;
     utModified:
       begin
+        FUpdateParams.Clear;
         SQL := FormUpdateStatement(FUpdateParams, OldRowAccessor, NewRowAccessor);
         If SQL =''then // no fields have been changed
            exit;
