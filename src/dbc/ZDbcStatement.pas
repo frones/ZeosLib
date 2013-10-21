@@ -1340,9 +1340,10 @@ begin
      exit;
     { Prepare Log Output}
   For I := 0 to InParamCount - 1 do
-  begin
-    LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
-  end;
+    if I > 0 then
+      LogString := LogString + ','+GetInParamLogValue(InParamValues[I])
+    else
+      LogString := GetInParamLogValue(InParamValues[I]);
   LogPrepStmtMessage(lcBindPrepStmt, LogString);
 end;
 
@@ -1407,8 +1408,6 @@ end;
 
 
 function TZAbstractPreparedStatement.GetInParamLogValue(Value: TZVariant): RawByteString;
-var
-  WideRec: TZWideRec;
 begin
   With Value do
     case VType of
@@ -1425,22 +1424,9 @@ begin
       vtAnsiString,
       vtUTF8String,
       vtRawByteString,
-      vtUnicodeString: result := #39 + ClientVarManager.GetAsRawByteString(Value) + #39;
-      vtCharRec:
-        case Value.VCharRec.CP of
-          zCP_UTF16, zCP_UTF16BE:
-            begin
-              WideRec.Len := Value.VCharRec.Len;
-              Widerec.P := Value.VCharRec.P;
-              Result := #39+ ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP)+#39;
-            end;
-          else
-          begin
-            ZSetString(Value.VCharRec.p, Value.VCharRec.Len, Result);
-            Result := #39 + Result + #39;
-          end;
-        end;
-      vtDateTime : result := ZSysUtils.DateTimeToRawSQLTimeStamp(VDateTime, ConSettings^.DisplayFormatSettings, False);
+      vtUnicodeString,
+      vtCharRec: result := #39 + ClientVarManager.GetAsRawByteString(Value) + #39;
+      vtDateTime : result := ClientVarManager.GetAsRawByteString(Value);
       vtPointer : result := '(POINTER)';
       vtInterface : result := '(INTERFACE)';
     else
