@@ -58,7 +58,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
-  ZSelectSchema;
+  ZSelectSchema, ZClasses, ZCollections;
 
 type
 
@@ -108,9 +108,11 @@ type
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
-    InsertStatement            : IZPreparedStatement;
-    UpdateStatement            : IZPreparedStatement;
-    DeleteStatement            : IZPreparedStatement;
+    InsertStatement   : IZPreparedStatement;
+    UpdateStatement   : IZPreparedStatement;
+    DeleteStatement   : IZPreparedStatement;
+
+    FUpdateStatements : TZHashMap;
   protected
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
     function ComposeFullTableName(Catalog, Schema, Table: string): string;
@@ -228,7 +230,7 @@ begin
     'where', 'keyonly')) = 'ALL';
 
   InsertStatement := nil;
-  UpdateStatement := nil;
+  FUpdateStatements := TZHashMap.Create;
   DeleteStatement := nil;
 
 end;
@@ -249,6 +251,7 @@ begin
   FreeAndNil(FUpdateParams);
   FreeAndNil(FDeleteParams);
 
+  FreeAndNil(FUpdateStatements);
   inherited Destroy;
 end;
 
@@ -824,7 +827,7 @@ var
   SQLParams            : TObjectList;
   lUpdateCount         : Integer;
   lValidateUpdateCount : Boolean;
-
+  TempKey              : IZAnyValue;
 begin
   if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
@@ -848,31 +851,35 @@ begin
     utDeleted:
       begin
         if DeleteStatement = nil then
-          begin
-          SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
-            If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
-              DeleteStatement := nil;
-            If not Assigned(DeleteStatement) then
-              DeleteStatement := CreateResolverStatement(SQL);
-            Statement := DeleteStatement;
-          end
-          else
-          begin
-            Statement := DeleteStatement;
-            SQL := DeleteStatement.GetSQL;
-          end;
+        begin
+        SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+          If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
+            DeleteStatement := nil;
+          If not Assigned(DeleteStatement) then
+            DeleteStatement := CreateResolverStatement(SQL);
+          Statement := DeleteStatement;
+        end
+        else
+        begin
+          Statement := DeleteStatement;
+          SQL := DeleteStatement.GetSQL;
+        end;
         SQLParams := FDeleteParams;
       end;
     utModified:
       begin
-        FUpdateParams.Clear;
+        FUpdateParams.Clear;  //EH: where columns propably are cached after 1. call
+        //now what's faster?: caching stmts too by using a hashmap or recreate always
+        //first of all: we need the new command-stmt
         SQL := FormUpdateStatement(FUpdateParams, OldRowAccessor, NewRowAccessor);
-        If SQL =''then // no fields have been changed
-           exit;
-        If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
-          UpdateStatement := nil;
-        If not Assigned(UpdateStatement) then
+        If SQL = '' then exit;// no fields have been changed
+        TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+        UpdateStatement := FUpdateStatements.Get(TempKey) as IZPreparedStatement;
+        If UpdateStatement = nil then
+        begin
           UpdateStatement := CreateResolverStatement(SQL);
+          FUpdateStatements.Put(TempKey, UpdateStatement);
+        end;
         Statement := UpdateStatement;
         SQLParams := FUpdateParams;
       end;

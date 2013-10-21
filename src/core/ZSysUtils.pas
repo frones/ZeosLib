@@ -3171,11 +3171,11 @@ var Len: Integer;
 begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
-  Len := StrLen(Src);
+  Len := ZFastCode.StrLen(Src);
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
   {$ENDIF}
 end;
 
@@ -3210,11 +3210,11 @@ var Len: Integer;
 begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
-  Len := StrLen(Src);
+  Len := ZFastCode.StrLen(Src);
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
   {$ENDIF}
 end;
 
