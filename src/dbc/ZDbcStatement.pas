@@ -67,7 +67,7 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TZCodePagedObject, IZStatement)
+  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -193,7 +193,7 @@ type
 
   { TZAbstractPreparedStatement }
 
-  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement, IZLoggingObject)
+  TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
   private
     FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
@@ -557,8 +557,9 @@ end;
 
 function TZAbstractStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
+  ASQL := SQL;
   Result := nil;
-  RaiseUnsupportedException;
+  DriverManager.LogMessage(lcExecute,Self);
 end;
 
 {**
@@ -580,8 +581,9 @@ end;
 
 function TZAbstractStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
-  Result := 0;
-  RaiseUnsupportedException;
+  ASQL := SQL;
+  Result := -1;
+  DriverManager.LogMessage(lcExecute,Self);
 end;
 
 {**
@@ -828,12 +830,9 @@ begin
 
 function TZAbstractStatement.CreateLogEvent(Category: TZLoggingCategory
   ): TZLoggingEvent;
-var
-  LogString : RawByteString;
 begin
-  LogString := '';
   case Category of
-    lcPrepStmt:
+    lcPrepStmt, lcExecute:
       result := CreateStmtLogEvent(Category, ASQL);
     lcExecPrepStmt, lcUnprepStmt:
       result := CreateStmtLogEvent(Category);
@@ -897,9 +896,11 @@ end;
 
 function TZAbstractStatement.Execute(const SQL: RawByteString): Boolean;
 begin
+  ASQL := SQL;
   Result := False;
   LastResultSet := nil;
   LastUpdateCount := -1;
+  DriverManager.LogMessage(lcExecute,Self);
 end;
 
 function TZAbstractStatement.GetSQL: String;

@@ -290,13 +290,11 @@ var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
-  Result := nil;
+  Result := inherited ExecuteQuery(SQL);
   ConnectionHandle := GetConnectionHandle();
-  ASQL := SQL; //Preprepares the SQL and Sets the AnsiSQL
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     ASQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   if QueryHandle <> nil then
     Result := CreateResultSet(Self.SQL, QueryHandle)
   else
@@ -319,14 +317,12 @@ var
   QueryHandle: PZPostgreSQLResult;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
-  Result := -1;
+  Result := inherited ExecuteUpdate(SQL);
   ConnectionHandle := GetConnectionHandle();
 
-  ASQL := SQL; //Prepares SQL if needed
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     ASQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   if QueryHandle <> nil then
   begin
@@ -365,12 +361,11 @@ var
   ResultStatus: TZPostgreSQLExecStatusType;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
-  ASQL := SQL;
+  result := inherited Execute(SQL);
   ConnectionHandle := GetConnectionHandle();
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
     ASQL, QueryHandle);
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
   { Process queries with result sets }
   ResultStatus := FPlainDriver.GetResultStatus(QueryHandle);

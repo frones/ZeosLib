@@ -193,7 +193,7 @@ var
 begin
   StmtHandle := 0;
   iError := 0;
-  ASQL := SQL;//preprepares SQL and sets AnsiSQL(ASQL)
+  result := inherited ExecuteQuery(SQL);
   with FIBConnection do
   begin
     SQLData := TZResultSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
@@ -204,7 +204,6 @@ begin
       PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
           ASQL, StmtHandle, SQLData, ConSettings);
 
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, SQLData.GetData);
@@ -255,16 +254,13 @@ var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
 begin
-  Result := -1;
+  Result := inherited ExecuteUpdate(SQL);
   StmtHandle := 0;
   with FIBConnection do
   begin
     try
-      ASQL := SQL; //preprepares SQL and sets AnsiSQL(ASQL)
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, StmtHandle);
-
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
         @StmtHandle, GetDialect, nil, nil);
@@ -321,18 +317,13 @@ var
   StmtHandle: TISC_STMT_HANDLE;
   StatementType: TZIbSqlStatementType;
 begin
+  Result := inherited Execute(SQL);
   StmtHandle := 0;
   with FIBConnection do
   begin
     try
-      Result := False;
-      ASQL := SQL; //preprepares SQL and sets AnsiSQL(ASQL)
       StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
         GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, StmtHandle);
-
-      { Check statement type }
-//      if not (StatementType in [stExecProc]) then
-//        raise EZSQLException.Create(SStatementIsNotAllowed);
 
       { Create Result SQLData if statement returns result }
       if StatementType in [stSelect, stExecProc] then
@@ -342,7 +333,6 @@ begin
           StmtHandle, SQLData, ConSettings);
       end;
 
-      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
       { Execute prepared statement }
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
               @StmtHandle, GetDialect, nil);
