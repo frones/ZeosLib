@@ -468,19 +468,8 @@ begin
   Query := CreateQuery;
   try
     Query.Connection := Connection;
-    if StartsWith(Self.Protocol, 'mysql') or StartsWith(Self.Protocol, 'Maria') then //improve connection lost because of timeout for a huge number of rows
-    begin
-      Query.SQL.Text := 'SELECT '+Self.FPerformancePrimaryKey+ ' FROM '+ Self.FPerformanceTable;
-      Query.Open;
-      repeat
-        Query.Delete;
-      until (Query.Eof);
-    end
-    else
-    begin
-      Query.SQL.Text := Format('DELETE FROM %s', [TableName]);
-      Query.ExecSQL;
-    end;
+    Query.SQL.Text := Format('DELETE FROM %s', [TableName]);
+    Query.ExecSQL;
     if not SkipPerformanceTransactionMode then Connection.Commit;
   finally
     Query.Free;
