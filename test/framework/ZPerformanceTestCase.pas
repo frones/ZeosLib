@@ -278,7 +278,7 @@ const
 implementation
 
 uses
-  {$IFDEF WITH_FTGUID}ComObj, ActiveX{$ENDIF}, Math, SysUtils,
+  {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math, SysUtils,
   ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses, ZDbcUtils;
 
 { TZPerformanceSQLTestCase }
