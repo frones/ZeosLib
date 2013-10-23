@@ -2016,12 +2016,14 @@ var
   procedure CheckFailAndEncode;
   begin
     if ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
-    try
-      Result := EncodeDate(Year, Month, Day);
-    except
-      Result := 0;
-      Failed := True;
-    end;
+      try
+        Result := EncodeDate(Year, Month, Day);
+      except
+        Result := 0;
+        Failed := True;
+      end
+    else
+      Failed := (Hour or Minute or Sec or MSec) = 0;;
     if not Failed then
       try
         if Result >= 0 then
