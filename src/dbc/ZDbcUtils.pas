@@ -433,10 +433,31 @@ end;
 }
 
 function GetSQLHexWideString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): ZWideString;
-var RawTemp: RawByteString;
+var P: PWideChar;
 begin
-  RawTemp := GetSQLHexAnsiString(Value, Len, ODBC);
-  Result := NotEmptyASCII7ToUnicodeString(RawTemp);
+  Result := ''; //init speeds setlength x2
+  if ODBC then
+  begin
+    SetLength(Result,(Len * 2)+2);
+    P := PWideChar(Result);
+    P^ := '0';
+    Inc(P);
+    P^ := 'x';
+    Inc(P);
+    ZBinToHexUnicode(Value, P, Len);
+  end
+  else
+  begin
+    SetLength(Result, (Len * 2)+3);
+    P := PWideChar(Result);
+    P^ := 'x';
+    Inc(P);
+    P^ := #39;
+    Inc(P);
+    ZBinToHexUnicode(Value, P, Len);
+    Inc(P, Len*2);
+    P^ := #39;
+  end;
 end;
 
 function GetSQLHexAnsiString(Value: PAnsiChar; Len: Integer; ODBC: Boolean = False): RawByteString;
@@ -451,7 +472,7 @@ begin
     Inc(P);
     P^ := 'x';
     Inc(P);
-    BinToHex(Value, P, Len);
+    ZBinToHexRaw(Value, P, Len);
   end
   else
   begin
@@ -461,7 +482,7 @@ begin
     Inc(P);
     P^ := #39;
     Inc(P);
-    BinToHex(Value, P, Len);
+    ZBinToHexRaw(Value, P, Len);
     Inc(P, Len*2);
     P^ := #39;
   end;
