@@ -249,29 +249,7 @@ begin
 
   if not ( Result.TokenType in [ttQuoted, ttWord] ) then
     Exit;
-  
-  //No System-defaults found, Check for SQL format;
-  {AStamp := TimestampStrToDateTime(DecodeString(Result.Value, FirstChar)); //minimize the handling
-  if AStamp = 0 then
-    Exit
-  else
-    if ( TDate(AStamp) <> EmptyDate ) then
-      if ( TTime(AStamp) <> EmptyTime ) then
-      begin
-        Result.Value := DateTimeToStr(AStamp);
-        Result.TokenType := ttDateTime;
-      end
-      else
-      begin
-        Result.Value := DateToStr(AStamp);
-        Result.TokenType := ttDate;
-      end
-    else
-      if ( TTime(AStamp) <> EmptyTime ) then
-      begin
-        Result.Value := TimeToStr(AStamp);
-        Result.TokenType := ttTime;
-      end;}
+
 end;
 {$IFDEF FPC}
   {$HINTS ON}
