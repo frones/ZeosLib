@@ -2099,7 +2099,10 @@ var
                     if Failed then
                       Exit
                     else
+                    begin
+                      Msec := Msec div 10; //align result again
                       Break;
+                    end;
                   end;
                 end;
             end;
