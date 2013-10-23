@@ -693,7 +693,7 @@ begin
                             and not ConnectionLost then
       Connection.Rollback;
 
-    DriverManager.LogError(LogCategory, Connection.GetConSettings^.Protocol, LogMessage,
+    DriverManager.LogError(LogCategory, NotEmptyStringToASCII7(PlainDriver.GetProtocol), LogMessage,
       0, ErrorMessage);
 
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);

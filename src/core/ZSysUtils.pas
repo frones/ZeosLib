@@ -489,13 +489,6 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 
 {**
-  Converts Timestamp String to TDateTime
-  @param Value a timestamp string.
-  @return a decoded TDateTime value.
-}
-function TimestampStrToDateTime(const Value: string): TDateTime;
-
-{**
   Converts TDateTime to Ansi SQL Date/Time
   @param Value an encoded TDateTime value.
   @return a  date and time string.
@@ -2023,14 +2016,14 @@ var
   procedure CheckFailAndEncode;
   begin
     if ( (Year <> 0) and (Month <> 0) and (Day <> 0) ) then
-    try
-      Result := EncodeDate(Year, Month, Day);
-    except
-      Result := 0;
-      Failed := True;
-    end
+      try
+        Result := EncodeDate(Year, Month, Day);
+      except
+        Result := 0;
+        Failed := True;
+      end
     else
-      Failed := (Hour or Minute or Sec or MSec) = 0;
+      Failed := (Hour or Minute or Sec or MSec) = 0;;
     if not Failed then
       try
         if Result >= 0 then
@@ -2100,7 +2093,17 @@ var
               'Z', 'z':
                 begin
                   MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
+                  if Failed then
+                  begin
+                    Failed := not ((Value+i)^ in ['+', '-']); //postgres 2013-10-23 12:31:52.48+02 f.e.
+                    if Failed then
+                      Exit
+                    else
+                    begin
+                      Msec := Msec div 10; //align result again
+                      Break;
+                    end;
+                  end;
                 end;
             end;
             Inc(TimeStampFormat);
@@ -2818,76 +2821,6 @@ end;
 
 
 {**
-  Converts Timestamp String to TDateTime
-  @param Value a timestamp string.
-  @return a decoded TDateTime value.
-}
-function TimestampStrToDateTime(const Value: string): TDateTime;
-var
-  Year, Month, Day, Hour, Min, Sec: Integer;
-  StrLength, StrPos, StrPosPrev: Integer;
-  //
-  function CharMatch( matchchars: string ): boolean;
-  // try to match as much characters as possible
-  begin
-    StrPosPrev:= StrPos;
-    Result:= false;
-    while StrPos<=StrLength do
-       if pos(Value[StrPos], matchchars) > 0 then
-         begin
-            inc(StrPos);
-            Result := true;
-         end
-       else
-         break;
-  end;
-begin
-  Result := 0;
-  StrPos:= 1;
-  StrLength := Length(Value);
-
-  if not CharMatch('1234567890') then
-     exit; // year
-  Year := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
-  if not CharMatch('-/\') then
-     exit;
-  if not CharMatch('1234567890') then
-     exit; // month
-  Month:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
-  if not CharMatch('-/\') then
-     exit;
-  if not CharMatch('1234567890') then
-     exit; // day
-  Day:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
-  try
-    Result := EncodeDate(Year, Month, Day);
-  except
-  end;
-  //
-  if not CharMatch(' ') then
-     exit;
-  if not CharMatch('1234567890') then
-     exit; // hour
-  Hour := StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
-  if not CharMatch('-/\') then
-     exit;
-  if not CharMatch('1234567890') then
-     exit; // minute
-  Min:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
-  if not CharMatch('-/\') then
-     exit;
-  if not CharMatch('1234567890') then
-     exit; // second
-  Sec:= StrToIntDef(Copy(Value, StrPosPrev, StrPos-StrPosPrev), 0);
-  try
-    Result := REsult + EncodeTime(Hour, Min, Sec,0);
-  except
-  end;
-
-end;
-
-
-{**
   Converts TDateTime to Ansi SQL Date/Time
   @param Value an encoded TDateTime value.
   @return a  date and time string.
@@ -3171,11 +3104,11 @@ var Len: Integer;
 begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
-  Len := StrLen(Src);
+  Len := ZFastCode.StrLen(Src);
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
   {$ENDIF}
 end;
 
@@ -3210,11 +3143,11 @@ var Len: Integer;
 begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
-  Len := StrLen(Src);
+  Len := ZFastCode.StrLen(Src);
   SetLength(Dest, Len);
   Move(Src^, PAnsiChar(Dest)^, Len);
   {$ELSE}
-  SetString(Dest, Src, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src));
+  SetString(Dest, Src, ZFastCode.StrLen(Src));
   {$ENDIF}
 end;
 

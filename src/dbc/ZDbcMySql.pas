@@ -295,7 +295,7 @@ end;
 }
 procedure TZMySQLConnection.Open;
 var
-  LogMessage: RawByteString;
+  ConnectTimeoutRaw, LogMessage: RawByteString;
   OldLevel: TZTransactIsolationLevel;
   OldAutoCommit: Boolean;
   ConnectTimeout: Integer;
@@ -337,16 +337,17 @@ begin
     { Sets connection timeout. }
     ConnectTimeout := StrToIntDef(Info.Values['timeout'], 0);
     if ConnectTimeout >= 0 then
-      GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT, PAnsiChar(@ConnectTimeout));
+    begin
+      ConnectTimeoutRaw := IntToRaw(ConnectTimeout);
+      GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT, PAnsiChar(ConnectTimeoutRaw));
+    end;
 
    (*Added lines to handle option parameters 21 november 2007 marco cotroneo*)
     for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
       sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
       if Info.Values[sMyOpt] <> '' then
-      begin
         GetPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(AnsiString(Info.Values[sMyOpt])));
-      end;
     end;
 
     { Set ClientFlag }

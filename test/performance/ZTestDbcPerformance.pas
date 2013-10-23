@@ -102,7 +102,6 @@ type
 
     procedure SetUpTestInsert; override;
     procedure RunTestInsert; override;
-    procedure TearDownTestInsert; override;
     procedure SetUpTestUpdate; override;
     procedure RunTestUpdate; override;
     procedure TearDownTestUpdate; override;
@@ -111,7 +110,7 @@ type
 
 implementation
 
-uses ZTestCase, ZSysUtils, ZDbcResultSet, ZDbcUtils, Math;
+uses ZTestCase, ZSysUtils, ZDbcResultSet, ZDbcUtils, ZEncoding;
 
 { TZNativeDbcPerformanceTestCase }
 
@@ -202,9 +201,6 @@ procedure TZNativeDbcPerformanceTestCase.RunTestInsert;
 var
   I,N: Integer;
   Statement: IZPreparedStatement;
-  Ansi: RawByteString;
-  Uni: ZWideString;
-  Bts: TByteDynArray;
   ConSettings: PZConSettings;
 begin
   if SkipForReason(srNoPerformance) then Exit;
@@ -230,21 +226,9 @@ begin
         stTimestamp: Statement.SetTimestamp(N, now);
         stGUID: Statement.SetBytes(N, RandomGUIDBytes);
         stBytes: Statement.SetBytes(N, RandomBts(ConnectionConfig.PerformanceFieldSizes[N-1]));
-        stAsciiStream:
-          begin
-            Ansi := RawByteString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithData(PAnsiChar(Ansi), Length(Ansi), ConSettings^.ClientCodePage^.CP, Consettings));
-          end;
-        stUnicodeStream:
-          begin
-            Uni := ZWideString(RandomStr(GetRecordCount*100));
-            Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithData(PWideChar(Uni), Length(Uni), ConSettings));
-          end;
-        stBinaryStream:
-          begin
-            Bts := RandomBts(GetRecordCount*100);
-            Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), Length(Bts)));
-          end;
+        stAsciiStream: Statement.SetBlob(N, stAsciiStream, TZAbstractClob.CreateWithStream(FAsciiStream, ConSettings^.ClientCodePage^.CP, Consettings));
+        stUnicodeStream: Statement.SetBlob(N, stUnicodeStream, TZAbstractClob.CreateWithStream(FUnicodeStream, zCP_UTF16, ConSettings));
+        stBinaryStream: Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithStream(FBinaryStream));
       end;
     Statement.ExecuteUpdatePrepared;
   end;
@@ -293,7 +277,11 @@ begin
         stTime:    FResultSet.GetTime(I);
         stTimestamp: FResultSet.GetTimestamp(I);
         stBytes, stGUID: FResultSet.GetBytes(I);
-        stAsciiStream, stUnicodeStream, stBinaryStream: FResultSet.GetBlob(I);
+        stAsciiStream, stUnicodeStream, stBinaryStream:
+          if LoadLobs then
+            FResultSet.GetBlob(I).Length
+          else
+            FResultSet.GetBlob(I);
       end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
 end;
@@ -540,18 +528,8 @@ end;
   Performs an insert test.
 }
 procedure TZCachedDbcPerformanceTestCase.SetUpTestInsert;
-var
-  Bts: TByteDynArray;
-  Count: Integer;
 begin
   inherited;
-  Count := Min(MaxPerformanceLobSize, GetRecordCount);
-  FAsciiStream := TStringStream.Create(RawByteString(RandomStr(Count)));
-  FUnicodeStream := WideStringStream(ZWideString(RandomStr(Count)));
-  FBinaryStream := TMemoryStream.Create;
-  Bts := RandomBts(Count);
-  TMemoryStream(FBinaryStream).Write(Bts, Count);
-  FBinaryStream.Position := 0;
   FResultSet := CreateResultSet('SELECT * FROM '+PerformanceTable);
 end;
 
@@ -588,14 +566,6 @@ begin
     FResultSet.InsertRow;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
-end;
-
-procedure TZCachedDbcPerformanceTestCase.TearDownTestInsert;
-begin
-  FAsciiStream.Free;
-  FUnicodeStream.Free;
-  FBinaryStream.Free;
-  inherited;
 end;
 
 procedure TZCachedDbcPerformanceTestCase.SetUpTestUpdate;

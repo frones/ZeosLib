@@ -140,7 +140,7 @@ const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
-function Hash(S : AnsiString) : LongWord;
+function Hash(S : AnsiString) : LongWord; overload;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
@@ -308,14 +308,18 @@ function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType;
 {$IFEND}
 
 {$IFNDEF WITH_CHARINSET}
-function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
-function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 {$IF not Declared(UTF8ToString)}
 {$DEFINE ZUTF8ToString}
 function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
+
+{$IFDEF UNICODE}
+function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
+{$ENDIF}
 
 procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
 
@@ -792,6 +796,20 @@ end;
   {$ENDIF}
 {$ENDIF}
 
+{$IFDEF UNICODE}
+function Hash(const key: ZWideString): Cardinal;
+var
+  I: integer;
+begin
+  Result := 0;
+  for I := 1 to length(key) do
+  begin
+    Result := (Result shl 5) or (Result shr 27);
+    Result := Result xor Cardinal(key[I]);
+  end;
+end; { Hash }
+{$ENDIF}
+
 {$IFNDEF FPC}
 function Hash(S : AnsiString) : LongWord;
 Var
@@ -836,12 +854,12 @@ end;
 {$ENDIF}
 
 {$IFNDEF WITH_CHARINSET}
-function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
+function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := C in Charset;
 end;
 
-function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean;
+function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := Char(C) in Charset;
 end;
