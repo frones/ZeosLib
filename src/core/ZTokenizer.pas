@@ -447,7 +447,6 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
-    function AnsiGetEscapeString(const Ansi: RawByteString): String;
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
     function GetEscapeString(const EscapeString: RawByteString): RawByteString;
     {$ELSE}
@@ -473,7 +472,6 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function AnsiGetEscapeString(const EscapeString: RawByteString): String; virtual;
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
     function GetEscapeString(const EscapeString: RawByteString): RawByteString;
     {$ELSE}
@@ -1425,18 +1423,6 @@ begin
   finally
     Stream.Free;
   end;
-end;
-
-function TZTokenizer.AnsiGetEscapeString(const EscapeString: RawByteString): String;
-var
-  Temp: String;
-begin
-  Temp := EscapeMarkSequence+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
-
-  if Length(EscapeString) > 0 then
-    Result := Temp+String(EscapeString)+Temp
-  else
-    Result := 'NULL';
 end;
 
 {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}

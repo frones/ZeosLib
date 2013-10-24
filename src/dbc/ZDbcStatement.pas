@@ -1446,7 +1446,7 @@ begin
       vtBytes:
         begin
           SetLength(Result, Length(VBytes)*2);
-          BinToHex(PAnsiChar(VBytes), PAnsiChar(Result), Length(VBytes));
+          ZBinToHex(PAnsiChar(VBytes), PAnsiChar(Result), Length(VBytes));
         end;
       vtInteger : result := IntToRaw(VInteger);
       vtFloat : result := FloatToRaw(VFloat);

@@ -1458,18 +1458,18 @@ end;
 }
 function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 begin
-  if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
-    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))
+  if ConSettings^.AutoEncode then
+    Result := GetDriver.GetTokenizer.GetEscapeString({$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value)))
   else
-    Result := GetSQLHexString(PAnsiChar(Value), Length(Value));
+    Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
 end;
 
 function TZAbstractConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
 begin
-  if GetAutoEncodeStrings then //Set detect-sequence only if Prepreparing should be done else it's not server-understandable.
-    Result := Self.GetDriver.GetTokenizer.AnsiGetEscapeString(GetSQLHexString(PAnsiChar(Value), Length(Value)))
+  if ConSettings^.AutoEncode then
+    Result := GetDriver.GetTokenizer.GetEscapeString({$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value)))
   else
-    Result := GetSQLHexString(PAnsiChar(Value), Length(Value));
+    Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
 end;
 
 function TZAbstractConnection.GetEscapeString(const Value: ZWideString): ZWideString;

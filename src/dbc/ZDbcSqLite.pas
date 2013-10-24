@@ -79,7 +79,6 @@ type
   {** Represents a SQLite specific connection interface. }
   IZSQLiteConnection = interface (IZConnection)
     ['{A4B797A9-7CF7-4DE9-A5BB-693DD32D07D2}']
-    function UseOldBlobEncoding: Boolean;
     function GetPlainDriver: IZSQLitePlainDriver;
     function GetConnectionHandle: Psqlite;
     function GetUndefinedVarcharAsStringLength: Integer;
@@ -93,7 +92,6 @@ type
   private
     FCatalog: string;
     FHandle: Psqlite;
-    function UseOldBlobEncoding: Boolean;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -124,8 +122,6 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
-    function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
     {$IFDEF ZEOS_TEST_ONLY}
     constructor Create(const ZUrl: TZURL);
     {$ENDIF}
@@ -245,11 +241,6 @@ end;
 destructor TZSQLiteConnection.Destroy;
 begin
   inherited Destroy;
-end;
-
-function TZSQLiteConnection.UseOldBlobEncoding: Boolean;
-begin
-  Result := Url.Properties.Values['OldBlobEncoding'] = 'True';
 end;
 
 {**
@@ -602,38 +593,6 @@ end;
 function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
   Result := PlainDriver as IZSQLitePlainDriver;
-end;
-
-{**
-  EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result := BinaryString
-  @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
-  @result the detectable Binary String
-}
-function TZSQLiteConnection.GetBinaryEscapeString(const Value: RawByteString): String;
-begin
-  if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(PAnsiChar(Value), Length(Value)))
-  else
-    Result := String(ZDbcSqLiteUtils.EncodeString(PAnsiChar(Value), Length(Value)));
-end;
-
-{**
-  EgonHugeist:
-  Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result := BinaryString
-  @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
-  @result the detectable Binary String
-}
-function TZSQLiteConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
-begin
-  if GetAutoEncodeStrings then
-    Result := GetDriver.GetTokenizer.AnsiGetEscapeString(ZDbcSqLiteUtils.EncodeString(PAnsiChar(Value), Length(Value)))
-  else
-    Result := String(ZDbcSqLiteUtils.EncodeString(PAnsiChar(Value), Length(Value)));
 end;
 
 {$IFDEF ZEOS_TEST_ONLY}

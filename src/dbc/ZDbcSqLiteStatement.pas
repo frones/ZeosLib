@@ -126,8 +126,9 @@ type
 implementation
 
 uses
-  Types, ZDbcSqLiteUtils, ZDbcSqLiteResultSet, ZSysUtils, ZEncoding,
-  ZMessages, ZDbcCachedResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  Types{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, ZDbcSqLiteUtils,
+  ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
+  ZDbcUtils;
 
 { TZSQLiteStatement }
 
@@ -347,7 +348,7 @@ begin
       stBytes:
         begin
           TempBytes := ClientVarManager.GetAsBytes(Value);
-          Result := EncodeString(@TempBytes, Length(TempBytes));
+          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
       stString, stUnicodeString:
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}
@@ -366,7 +367,7 @@ begin
           TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             if InParamTypes[ParamIndex] = stBinaryStream then
-              Result := EncodeString(TempBlob.GetBuffer, TempBlob.Length)
+              Result := GetSQLHexAnsiString(TempBlob.GetBuffer, TempBlob.Length)
             else
               Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
                 GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,

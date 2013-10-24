@@ -84,21 +84,6 @@ procedure CheckSQLiteError(const PlainDriver: IZSQLitePlainDriver;
   const ConSettings: PZConSettings);
 
 {**
-  Converts an string into escape PostgreSQL format.
-  @param Value a regular string.
-  @return a string in PostgreSQL escape format.
-}
-function EncodeString(Buffer: PAnsiChar; Len: Integer): RawByteString; overload;
-function EncodeString(Value: RawByteString): RawByteString; overload;
-
-{**
-  Converts an string from escape PostgreSQL format.
-  @param Value a string in PostgreSQL escape format.
-  @return a regular string.
-}
-function DecodeString(Value: RawByteString): RawByteString;
-
-{**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:
    (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
   into separated major, minor and subversion values
@@ -266,105 +251,6 @@ begin
 end;
 
 
-function NewEncodeString(Buffer: PAnsiChar; Len: Integer): RawByteString; overload;
-var
-  I: Integer;
-  ihx : integer;
-  shx : ansistring;
-begin
-  SetLength( Result,3 + Len * 2 );
-  Result[1] := 'x'; // set x
-  Result[2] := ''''; // set Open Quote
-  ihx := 3; // set 1st hex location
-  for I := 1 to Len do
-  begin
-    shx := AnsiString(IntToHex( ord(Buffer^),2 )); // eg. '3E'
-    result[ihx] := shx[1]; Inc( ihx,1 ); // copy '3'
-    result[ihx] := shx[2]; Inc( ihx,1 ); // copy 'E'
-    Inc( Buffer,1 ); // next byte source location
-  end;
-  result[ihx] := ''''; // set Close Quote
-end;
-
-function NewEncodeString(Value: RawByteString): RawByteString; overload;
-begin
-  Result := NewEncodeString(PAnsiChar(Value), Length(Value));
-end;
-
-function NewDecodeString(Value:ansistring):ansistring;
-var
-  i : integer;
-  srcbuffer : PAnsichar;
-begin
-  value := copy(value,3,length(value)-4);
-  value := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowercase(value);
-  i := length(value) div 2;
-  srcbuffer := PAnsiChar(value);
-  setlength(result,i);
-  HexToBin(PAnsiChar(srcbuffer),PAnsiChar(result),i);
-end;
-
-{**
-  Converts an string into escape PostgreSQL format.
-  @param Value a regular string.
-  @return a string in PostgreSQL escape format.
-}
-
-function EncodeString(Buffer: PAnsiChar; Len: Integer): RawByteString; overload;
-begin
-  result := NewEncodeString(Buffer, Len);
-end;
-
-function EncodeString(Value: RawByteString): RawByteString; overload;
-begin
-  result := NewEncodeString(Value);
-end;
-
-{**
-  Converts an string from escape PostgreSQL format.
-  @param Value a string in PostgreSQL escape format.
-  @return a regular string.
-}
-function DecodeString(Value: RawByteString): RawByteString;
-var
-  SrcLength, DestLength: Integer;
-  SrcBuffer, DestBuffer: PAnsiChar;
-begin
-  if pos('x''',String(value))= 1 then
-    result := NewDecodeString(value)
-  else
-  begin
-    Result := '';
-    SrcLength := Length(Value);
-    SrcBuffer := PAnsiChar(Value);
-    SetLength(Result, SrcLength);
-    DestLength := 0;
-    DestBuffer := PAnsiChar(Result);
-
-    while SrcLength > 0 do
-    begin
-      if SrcBuffer^ = '%' then
-      begin
-        Inc(SrcBuffer);
-        if SrcBuffer^ <> '0' then
-          DestBuffer^ := SrcBuffer^
-        else
-          DestBuffer^ := #0;
-        Inc(SrcBuffer);
-        Dec(SrcLength, 2);
-      end
-      else
-      begin
-        DestBuffer^ := SrcBuffer^;
-        Inc(SrcBuffer);
-        Dec(SrcLength);
-      end;
-      Inc(DestBuffer);
-      Inc(DestLength);
-    end;
-    SetLength(Result, DestLength);
-  end;
-end;
 
 {**
   Decodes a SQLite Version Value and Encodes it to a Zeos SQL Version format:

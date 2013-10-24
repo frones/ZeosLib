@@ -72,6 +72,10 @@ type
     procedure Sort(Compare: TZListSortCompare);
   end;
 
+var
+  TwoDigitLookupHexW: packed array[0..255] of Word;
+  TwoDigitLookupHexLW: packed array[0..255] of Cardinal;
+
 {**
   Determines a position of a first delimiter.
   @param Delimiters a string with possible delimiters.
@@ -596,6 +600,9 @@ function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal
 
 function FloatToRaw(const Value: Extended): RawByteString;
 function FloatToSqlRaw(const Value: Extended): RawByteString;
+
+procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal); overload;
+procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal); overload;
 
 implementation
 
@@ -3458,6 +3465,51 @@ begin
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
+
+procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal);
+var I: Cardinal;
+begin
+  for i := 0 to Len do
+  begin
+    PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
+    Inc(Buffer);
+    Inc(Text, 2);
+  end;
+end;
+
+procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal);
+var I: Cardinal;
+begin
+  for i := 0 to Len do
+  begin
+    PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
+    Inc(Buffer);
+    Inc(Text, 2);
+  end;
+end;
+
+procedure HexFiller;
+var
+  I: Integer;
+  Hex: String;
+begin
+  for i := 0 to 255 do
+  begin
+    Hex := IntToHex(I, 2);
+    {$IFDEF UNICODE}
+    TwoDigitLookupHexLW[i] := PCardinal(PWideChar(Hex))^;
+    TwoDigitLookupHexW[i] := PWord(PAnsiChar(AnsiString(Hex)))^;
+    {$ELSE}
+    TwoDigitLookupHexW[i] := PWord(PChar(Hex))^;
+    TwoDigitLookupHexLW[i] := PCardinal(PWideChar(ZWideString(Hex)))^;
+    {$ENDIF}
+  end;
+end;
+
+initialization
+
+HexFiller;  //build up lookup table
+
 
 end.
 
