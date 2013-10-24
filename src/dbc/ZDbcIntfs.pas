@@ -181,6 +181,7 @@ type
 
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString); overload;
@@ -996,6 +997,7 @@ type
     FDrivers: IZCollection;
     FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
+    FHasLoggingListener: Boolean;
     FURL: TZURL;
     procedure LogEvent(Event: TZLoggingEvent);
   public
@@ -1020,6 +1022,7 @@ type
 
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString); overload;
@@ -1046,6 +1049,7 @@ begin
   FDrivers := TZCollection.Create;
   FLoginTimeout := 0;
   FLoggingListeners := TZCollection.Create;
+  FHasLoggingListener := False;
   FURL := TZURL.Create;
 end;
 
@@ -1199,6 +1203,7 @@ end;
 procedure TZDriverManager.AddLoggingListener(Listener: IZLoggingListener);
 begin
   FLoggingListeners.Add(Listener);
+  FHasLoggingListener := false;//True;
 end;
 
 {**
@@ -1208,6 +1213,12 @@ end;
 procedure TZDriverManager.RemoveLoggingListener(Listener: IZLoggingListener);
 begin
   FLoggingListeners.Remove(Listener);
+  FHasLoggingListener := false;//(FLoggingListeners.Count>0);
+end;
+
+function TZDriverManager.HasLoggingListener: Boolean;
+begin
+  result := FHasLoggingListener;
 end;
 
 {**
@@ -1224,7 +1235,7 @@ procedure TZDriverManager.LogError(Category: TZLoggingCategory;
 var
   Event: TZLoggingEvent;
 begin
-  if FLoggingListeners.Count = 0 then
+  if not FHasLoggingListener then
     Exit;
   Event := TZLoggingEvent.Create(Category, Protocol, Msg, ErrorCode, Error);
   try
@@ -1247,7 +1258,7 @@ var
   I: Integer;
   Listener: IZLoggingListener;
 begin
-  if FLoggingListeners.Count = 0 then
+  if not FHasLoggingListener then
     Exit;
   for I := 0 to FLoggingListeners.Count - 1 do
   begin
@@ -1268,7 +1279,7 @@ end;
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString);
 begin
-  if FLoggingListeners.Count = 0 then
+  if not FHasLoggingListener then
       Exit;
   LogError(Category, Protocol, Msg, 0, '');
 end;
@@ -1278,7 +1289,7 @@ procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
 var
   Event: TZLoggingEvent;
 begin
-  if FLoggingListeners.Count = 0 then
+  if not FHasLoggingListener then
     Exit;
   Event := Sender.CreateLogEvent(Category);
   If Assigned(Event) then
