@@ -764,25 +764,32 @@ end;
 
 function TZOracleConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
 var
-  tmp: RawByteString;
   L: Integer;
+  P: PChar;
 begin
   L := Length(Value);
-  SetLength(tmp, L*2);
-  BinToHex(PAnsiChar(Value), PAnsiChar(tmp), L);
-  Result := #39+String(tmp)+#39;
+  SetLength(Result, L*2+2);
+  P := PChar(Result);
+  P^ := #39;
+  Inc(p);
+  ZBinToHex(PAnsiChar(Value), P, L);
+  (P+L)^ := #39;
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
 function TZOracleConnection.GetBinaryEscapeString(const Value: RawByteString): String;
 var
-  tmp: RawByteString;
   L: Integer;
+  P: PChar;
 begin
   L := Length(Value);
-  SetLength(tmp, L*2);
-  BinToHex(PAnsiChar(Value), PAnsiChar(tmp), L);
+  SetLength(Result, L*2+2);
+  P := PChar(Result);
+  P^ := #39;
+  Inc(p);
+  ZBinToHex(PAnsiChar(Value), P, L);
+  (P+L)^ := #39;
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;

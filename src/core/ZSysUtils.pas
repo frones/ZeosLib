@@ -601,8 +601,8 @@ function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal
 function FloatToRaw(const Value: Extended): RawByteString;
 function FloatToSqlRaw(const Value: Extended): RawByteString;
 
-procedure ZBinToHexRaw(Buffer, Text: PAnsiChar; const Len: Cardinal);
-procedure ZBinToHexUnicode(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal);
+procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal); overload;
+procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal); overload;
 
 implementation
 
@@ -3466,18 +3466,26 @@ begin
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
 end;
 
-procedure ZBinToHexRaw(Buffer, Text: PAnsiChar; const Len: Cardinal);
+procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal);
 var I: Cardinal;
 begin
   for i := 0 to Len do
-    PWord(Text+i*2)^ := TwoDigitLookupHexW[Ord((Buffer+i)^)];
+  begin
+    PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
+    Inc(Buffer);
+    Inc(Text, 2);
+  end;
 end;
 
-procedure ZBinToHexUnicode(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal);
+procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal);
 var I: Cardinal;
 begin
   for i := 0 to Len do
-    PLongWord(Text+i)^ := TwoDigitLookupHexLW[Ord((Buffer+i)^)];
+  begin
+    PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
+    Inc(Buffer);
+    Inc(Text, 2);
+  end;
 end;
 
 procedure HexFiller;

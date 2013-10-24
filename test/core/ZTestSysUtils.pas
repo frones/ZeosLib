@@ -109,12 +109,14 @@ type
     procedure BenchTestDateTimeToUnicodeSQLTime;
     procedure BenchTestDateTimeToRawSQLTimeStamp;
     procedure BenchTestDateTimeToUnicodeSQLTimeStamp;
+    procedure BenchBinToHexUnicode;
+    procedure BenchBinToHexRaw;
     {$ENDIF}
   end;
 
 implementation
 
-uses ZEncoding {$IFDEF BENCHMARK},ZFastCode{$ENDIF};
+uses ZEncoding {$IFDEF BENCHMARK},ZFastCode, Types, Classes{$ENDIF};
 
 { TZTestSysUtilsCase }
 
@@ -2042,6 +2044,110 @@ begin
   system.WriteLn(Format('Benchmarking(x %d): DateTimeToUnicodeSQLTimeStamp', [2500000*4]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.FormatDateTime: %d ms', [Between1, Between2]));
 end;
+
+procedure TZTestSysUtilsCase.BenchBinToHexUnicode;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  Bin: TByteDynArray;
+  I, L: Cardinal;
+
+  function TZBinToHex: ZWideString;
+  var
+    I: Integer;
+    P: PWideChar;
+  begin
+    Result := '';
+    SetLength(Result, L*2);
+    P := PWideChar(Result);
+    for i := 0 to 1000000 do
+      ZBinToHex(PAnsiChar(Bin), P, L);
+  end;
+
+  function TBinToHex: ZWideString;
+  var
+    I: Integer;
+    Tmp: RawByteString;
+  begin
+    Tmp := '';
+    SetLength(Tmp, L*2);
+    for i := 0 to 1000000 do
+    begin
+      BinToHex(PAnsiChar(Bin), PAnsiChar(Tmp), L);
+      Result := ZWideString(Tmp);
+    end;
+
+  end;
+begin
+  L := 10000;
+  SetLength(Bin, L);
+  for i := 0 to L do
+    Bin[i] := Ord(Random(255));
+  Start := GetTickCount;
+  S1 := TZBinToHex;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TBinToHex;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of ZBinToHex VS. BinToHex(10000 Bytes)');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): ZBinToHex', [1000000]));
+  system.WriteLn(Format('Zeos: %d ms VS. ZWideString(SysUtils.BinToHex): %d ms', [Between1, Between2]));
+end;
+
+procedure TZTestSysUtilsCase.BenchBinToHexRaw;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: RawByteString;
+  Bin: TByteDynArray;
+  I, L: Cardinal;
+
+  function TZBinToHex: RawByteString;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    SetLength(Result, L*2);
+    for i := 0 to 1000000 do
+      ZBinToHex(PAnsiChar(Bin), PAnsiChar(Result), L);
+  end;
+
+  function TBinToHex: RawByteString;
+  var
+    I: Integer;
+  begin
+    Result := '';
+    SetLength(Result, L*2);
+    for i := 0 to 1000000 do
+      BinToHex(PAnsiChar(Bin), PAnsiChar(Result), L);
+  end;
+begin
+  L := 10000;
+  SetLength(Bin, L);
+  for i := 0 to L do
+    Bin[i] := Ord(Random(255));
+  Start := GetTickCount;
+  S1 := TZBinToHex;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TBinToHex;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of ZBinToHex VS. BinToHex(10000 Bytes)');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): ZBinToHex', [1000000]));
+  system.WriteLn(Format('Zeos: %d ms VS. RawByteString(SysUtils.BinToHex): %d ms', [Between1, Between2]));
+end;
+
 {$ENDIF}
 
 initialization

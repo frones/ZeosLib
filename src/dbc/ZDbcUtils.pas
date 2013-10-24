@@ -444,7 +444,7 @@ begin
     Inc(P);
     P^ := 'x';
     Inc(P);
-    ZBinToHexUnicode(Value, P, Len);
+    ZBinToHex(Value, P, Len);
   end
   else
   begin
@@ -454,7 +454,7 @@ begin
     Inc(P);
     P^ := #39;
     Inc(P);
-    ZBinToHexUnicode(Value, P, Len);
+    ZBinToHex(Value, P, Len);
     Inc(P, Len*2);
     P^ := #39;
   end;
@@ -472,7 +472,7 @@ begin
     Inc(P);
     P^ := 'x';
     Inc(P);
-    ZBinToHexRaw(Value, P, Len);
+    ZBinToHex(Value, P, Len);
   end
   else
   begin
@@ -482,7 +482,7 @@ begin
     Inc(P);
     P^ := #39;
     Inc(P);
-    ZBinToHexRaw(Value, P, Len);
+    ZBinToHex(Value, P, Len);
     Inc(P, Len*2);
     P^ := #39;
   end;

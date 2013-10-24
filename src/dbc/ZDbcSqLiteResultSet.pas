@@ -781,7 +781,6 @@ end;
 }
 function TZSQLiteResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  RawTemp: RawByteString;
   ColType: Integer;
 begin
   Result := nil;
@@ -803,16 +802,7 @@ begin
             FPlainDriver.column_bytes(FStmtHandle, ColumnIndex),
             zCP_UTF8, ConSettings);
         stBinaryStream:
-          begin
-            {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
-            if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then
-            begin
-              RawTemp := DecodeString(InternalGetString(ColumnIndex+1));
-              Result := TZAbstractBlob.CreateWithData(PAnsiChar(RawTemp), Length(RawTemp));
-            end
-            else
-              Result := TZAbstractBlob.CreateWithData(FPlaindriver.column_blob(FStmtHandle,ColumnIndex), FPlainDriver.column_bytes(FStmtHandle, ColumnIndex));
-          end;
+           Result := TZAbstractBlob.CreateWithData(FPlaindriver.column_blob(FStmtHandle,ColumnIndex), FPlainDriver.column_bytes(FStmtHandle, ColumnIndex));
         else
           Result := TZAbstractBlob.CreateWithStream(nil);
       end;
