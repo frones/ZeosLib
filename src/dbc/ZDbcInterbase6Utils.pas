@@ -2067,7 +2067,7 @@ var
 begin
   CheckRange(Index);
   SetFieldType(Index, sizeof(Smallint), SQL_SHORT + 1, 0);
-  //{$R-}
+  {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
     if (sqlind <> nil) and (sqlind^ = -1) then
