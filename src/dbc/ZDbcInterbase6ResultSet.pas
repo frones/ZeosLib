@@ -1416,7 +1416,7 @@ begin
         CP := GetIbSqlSubType(I);
         if CP > High(FCodePageArray) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
           //see test Bug#886194, we retrieve 565 as CP...
-          ColumnCodePage := FCodePageArray[ConSettings^.ClientCodePage^.CP]
+          ColumnCodePage := ConSettings^.ClientCodePage^.CP
         else
           ColumnCodePage := FCodePageArray[CP];
       end

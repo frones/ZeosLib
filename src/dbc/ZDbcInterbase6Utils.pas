@@ -995,7 +995,7 @@ procedure BindSQLDAInParameters(const PlainDriver: IZInterbasePlainDriver;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
   const CodePageArray: TWordDynArray);
 var
-  I: Integer;
+  I, CP: Integer;
   TempBlob: IZBlob;
   Buffer: Pointer;
   Len: Integer;
@@ -1039,7 +1039,11 @@ begin
           ClientVarManager.GetAsFloat(InParamValues[I]));
       stString, stUnicodeString:
         begin
-          CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[ParamSqlData.GetIbSqlSubType(I)]);
+          CP := ParamSqlData.GetIbSqlSubType(I);
+          if CP > High(CodePageArray) then
+            CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
+          else
+            CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[CP]);
           ParamSqlData.UpdatePAnsiChar(I, CharRec.P, CharRec.Len);
         end;
       stBytes:
