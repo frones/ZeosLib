@@ -450,7 +450,7 @@ begin
     FInfo.AddStrings(Info);
   FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
   FIsAnsiDriver := Connection.GetIZPlainDriver.IsAnsiDriver;
-  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'true'));
+  FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'false'));
 end;
 
 {**
