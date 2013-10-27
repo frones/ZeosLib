@@ -323,7 +323,7 @@ end;
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
 end;
 
 {**
