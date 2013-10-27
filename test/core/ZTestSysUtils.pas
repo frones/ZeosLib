@@ -384,11 +384,6 @@ begin
   TestRawSQLDateToDateTime(Date4_2, 0, True, 'YYYY-MM-DD');
   TestRawSQLDateToDateTime(Date5_2, 0, True, 'YYYYMMDD');
 
-  TestRawSQLDateToDateTime(Date1_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
-  TestRawSQLDateToDateTime(Date2_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
-  TestRawSQLDateToDateTime(Date3_3, 0, True, 'FLOAT');
-  TestRawSQLDateToDateTime(Date4_3, 0, True, 'FLOAT');
-
   TestRawSQLDateToDateTime(Date1_0, EncodeDate(1999, 12, 31), False);
   TestRawSQLDateToDateTime(Date2_0, EncodeDate(1999, 12, 31), False);
   TestRawSQLDateToDateTime(Date3_0, EncodeDate(1999, 12, 31), False);
@@ -471,12 +466,6 @@ begin
   TestRawSQLTimeToDateTime(Time3_2, 0, True, 'HH-NN-SS.ZZZ');
   TestRawSQLTimeToDateTime(Time4_2, 0, True, 'HH-NN-SS.ZZZ');
   TestRawSQLTimeToDateTime(Time5_2, 0, True, 'HHNNSSZZZ');
-
-  TestRawSQLTimeToDateTime(Time1_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
-  TestRawSQLTimeToDateTime(Time2_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
-  TestRawSQLTimeToDateTime(Time3_3, 0, True, 'FLOAT');
-  TestRawSQLTimeToDateTime(Time4_3, 0, True, 'FLOAT');
-  TestRawSQLTimeToDateTime(Time5_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
 
   TestRawSQLTimeToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False);
   TestRawSQLTimeToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False);
@@ -611,11 +600,6 @@ begin
   TestRawSQLTimeStampToDateTime(Date4_2, 0, True, 'YYYY-MM-DD');
   TestRawSQLTimeStampToDateTime(Date5_2, 0, True, 'YYYYMMDD');
 
-  TestRawSQLTimeStampToDateTime(Date1_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Date2_3, EncodeDate(1999, 12, 31), False, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Date3_3, 0, True, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Date4_3, 0, True, 'FLOAT');
-
   TestRawSQLTimeStampToDateTime(Date1_0, EncodeDate(1999, 12, 31), False);
   TestRawSQLTimeStampToDateTime(Date2_0, EncodeDate(1999, 12, 31), False);
   TestRawSQLTimeStampToDateTime(Date3_0, EncodeDate(1999, 12, 31), False);
@@ -656,12 +640,6 @@ begin
   TestRawSQLTimeStampToDateTime(Time3_2, 0, True, 'HH-NN-SS.ZZZ');
   TestRawSQLTimeStampToDateTime(Time4_2, 0, True, 'HH-NN-SS.ZZZ');
   TestRawSQLTimeStampToDateTime(Time5_2, 0, True, 'HHNNSSZZZ');
-
-  TestRawSQLTimeStampToDateTime(Time1_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Time2_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Time3_3, 0, True, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Time4_3, 0, True, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(Time5_3, EncodeTime(23, 59, 59, 999), False, 'FLOAT');
 
   TestRawSQLTimeStampToDateTime(Time1_0, EncodeTime(23, 59, 59, 999), False);
   TestRawSQLTimeStampToDateTime(Time2_0, EncodeTime(23, 59, 59, 999), False);
@@ -704,11 +682,6 @@ begin
   TestRawSQLTimeStampToDateTime(TimeStamp3_2, 0, True, 'YYYY-MM-DD HH:NN:SS.ZZZ');
   TestRawSQLTimeStampToDateTime(TimeStamp4_2, 0, True, 'YYYY-MM-DD HH:NN:SS.ZZZ');
   TestRawSQLTimeStampToDateTime(TimeStamp5_2, 0, True, 'YYYYMMDDHHNNSSZZZ');
-
-  TestRawSQLTimeStampToDateTime(TimeStamp1_3, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(TimeStamp2_3, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(TimeStamp3_3, 0, True, 'FLOAT');
-  TestRawSQLTimeStampToDateTime(TimeStamp4_3, 0, True, 'FLOAT');
 
   TestRawSQLTimeStampToDateTime(TimeStamp1_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);
   TestRawSQLTimeStampToDateTime(TimeStamp2_0, EncodeDate(1999, 12, 31)+EncodeTime(23, 59, 59, 999), False);

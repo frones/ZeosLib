@@ -880,39 +880,6 @@ begin
   end;
 end;
 
-function ConvertMoneyToFloat(MoneyString: ZWideString): ZWideString; overload;
-var
-  I: Integer;
-begin
-  if MoneyString = '' then
-    Result := ''
-  else
-  begin
-    if CharInSet(Char(MoneyString[1]), ['0'..'9', '-']) then
-      Result := MoneyString
-    else
-      for i := 1 to Length(MoneyString) do
-        if CharInSet(Char(MoneyString[I]), ['0'..'9', '-']) then
-        begin
-          if I > 1 then
-          begin //Money type
-            Result := Copy(MoneyString, I, Length(MoneyString)-i+1);
-            if Pos(',', Result) > 0 then
-              if Pos('.', Result) > 0  then
-              begin
-                Result := Copy(Result, 1, Pos(',', Result)-1);
-                while Pos('.', Result) > 0  do
-                  Result := Copy(Result, 1, Pos('.', Result)-1)+Copy(Result, Pos('.', Result)+1, Length(Result)); //remove ThousandSeparator
-                Result := Result + '.'+Copy(MoneyString, Pos(',', MoneyString)+1, Length(MoneyString));
-              end
-              else
-                Result[Pos(',', Result)] := '.';
-          end;
-          Break;
-        end;
-  end;
-end;
-
 {**
   Converts SQL AnsiString/RawByteString into float value.
   Possible is Hex, Money+Suffix and ThousandSeparators
@@ -1665,49 +1632,42 @@ var
 
   procedure TryExtractDateFromFormat;
   var
-    I, Code: Integer;
+    I: Integer;
   begin
     Result := 0;
     Failed := ZFormatSettings.DateFormatLen = 0;
     if not Failed then
-      if DateFormat = 'FLOAT' then
+    begin
+      Year := 0; Month := 0; Day := 0;
+      for i := 0 to ZFormatSettings.DateFormatLen-1 do
       begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
-        Failed := Code <> 0;
-        if Failed then Result := 0;
-      end
-      else
-      begin
-        Year := 0; Month := 0; Day := 0;
-        for i := 0 to ZFormatSettings.DateFormatLen-1 do
-        begin
-          case DateFormat^ of
-            'Y', 'y':
-              begin
-                Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
-                if Failed then Exit;
-              end;
-            'M', 'm':
-              begin
-                Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
-                if Failed then Exit;
-              end;
-            'D', 'd':
-              begin
-                Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
-                if Failed then Exit;
-              end;
-          end;
-          Inc(DateFormat);
-          if Cardinal(I+1) = vallen then Break;
+        case DateFormat^ of
+          'Y', 'y':
+            begin
+              Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
+              if Failed then Exit;
+            end;
+          'M', 'm':
+            begin
+              Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
+              if Failed then Exit;
+            end;
+          'D', 'd':
+            begin
+              Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
+              if Failed then Exit;
+            end;
         end;
-        Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
-        if not Failed then
-          try
-            Result := EncodeDate(Year, Month, Day);
-          except
-          end;
+        Inc(DateFormat);
+        if Cardinal(I+1) = vallen then Break;
       end;
+      Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
+      if not Failed then
+        try
+          Result := EncodeDate(Year, Month, Day);
+        except
+        end;
+    end;
   end;
 
   procedure TryExtractDateFromUnknownSize;
@@ -1835,50 +1795,41 @@ var
     Failed := ( ZFormatSettings.TimeFormatLen = 0 );
     if not Failed then
     begin
-      if TimeFormat = 'FLOAT' then
+      Hour := 0; Minute := 0; Sec := 0; MSec := 0;
+      Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= ZFormatSettings.TimeFormatLen-4);
+      if not Failed then
       begin
-        Result := Frac(ValRawExt(Value, '.', Code));
-        Failed := Code <> 0;
-        if Failed then Result := 0;
-      end
-      else
-      begin
-        Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-        Failed := ( ZFormatSettings.TimeFormatLen = 0 ) and not (ValLen <= ZFormatSettings.TimeFormatLen-4);
-        if not Failed then
+        for i := 0 to ZFormatSettings.TimeFormatLen-1 do
         begin
-          for i := 0 to ZFormatSettings.TimeFormatLen-1 do
-          begin
-            case TimeFormat^ of
-              'H', 'h':
-                begin
-                  Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'N', 'n':
-                begin
-                  Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'S', 's':
-                begin
-                  Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'Z', 'z':
-                begin
-                  MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-            end;
-            Inc(TimeFormat);
-            if i+1 = ValLen then Break;
+          case TimeFormat^ of
+            'H', 'h':
+              begin
+                Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'N', 'n':
+              begin
+                Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'S', 's':
+              begin
+                Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'Z', 'z':
+              begin
+                MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
           end;
-          try
-            Result := EncodeTime(Hour, Minute, Sec, MSec);
-          except
-            Failed := True;
-          end;
+          Inc(TimeFormat);
+          if i+1 = ValLen then Break;
+        end;
+        try
+          Result := EncodeTime(Hour, Minute, Sec, MSec);
+        except
+          Failed := True;
         end;
       end;
     end;
@@ -2017,7 +1968,7 @@ function RawSQLTimeStampToDateTime(Value: PAnsiChar; const ValLen: Cardinal;
 var
   Year, Month: Int64;
   Day, Hour, Minute, Sec, MSec: Word;
-  YPos, MPos, HPos, Code: Integer;
+  YPos, MPos, HPos: Integer;
   TimeStampFormat: PAnsiChar;
 
   procedure CheckFailAndEncode;
@@ -2051,74 +2002,67 @@ var
   begin
     Failed := ZFormatSettings.DateTimeFormatLen = 0;
     if not Failed then
-      if TimeStampFormat = 'FLOAT' then
+    begin
+      Failed  := (ValLen <= ZFormatSettings.DateTimeFormatLen-4);
+      if not Failed then
       begin
-        Result := ValRawExt(Value, '.', Code);
-        Failed := Code <> 0;
-        if Failed then Result := 0;
-      end
-      else
-      begin
-        Failed  := (ValLen <= ZFormatSettings.DateTimeFormatLen-4);
-        if not Failed then
+        Year := 0; Month := 0; Day := 0;
+        Hour := 0; Minute := 0; Sec := 0; MSec := 0;
+        for i := 0 to ZFormatSettings.DateTimeFormatLen -1 do
         begin
-          Year := 0; Month := 0; Day := 0;
-          Hour := 0; Minute := 0; Sec := 0; MSec := 0;
-          for i := 0 to ZFormatSettings.DateTimeFormatLen -1 do
-          begin
-            case TimeStampFormat^ of
-              'Y', 'y':
+          case TimeStampFormat^ of
+            'Y', 'y':
+              begin
+                Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'M', 'm':
+              begin
+                Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'D', 'd':
+              begin
+                Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'H', 'h':
+              begin
+                Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'N', 'n':
+              begin
+                Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'S', 's':
+              begin
+                Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then Exit;
+              end;
+            'Z', 'z':
+              begin
+                MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                if Failed then
                 begin
-                  Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'M', 'm':
-                begin
-                  Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'D', 'd':
-                begin
-                  Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'H', 'h':
-                begin
-                  Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'N', 'n':
-                begin
-                  Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'S', 's':
-                begin
-                  Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
-                  if Failed then Exit;
-                end;
-              'Z', 'z':
-                begin
-                  MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                  Failed := not ((Value+i)^ in ['+', '-']); //postgres 2013-10-23 12:31:52.48+02 f.e.
                   if Failed then
+                    Exit
+                  else
                   begin
-                    Failed := not ((Value+i)^ in ['+', '-']); //postgres 2013-10-23 12:31:52.48+02 f.e.
-                    if Failed then
-                      Exit
-                    else
-                    begin
-                      Msec := Msec div 10; //align result again
-                      Break;
-                    end;
+                    Msec := Msec div 10; //align result again
+                    Break;
                   end;
                 end;
-            end;
-            Inc(TimeStampFormat);
-            if (i+1) = ValLen then Break;
+              end;
           end;
-          CheckFailAndEncode;
+          Inc(TimeStampFormat);
+          if (i+1) = ValLen then Break;
         end;
+        CheckFailAndEncode;
       end;
+    end;
   end;
 
   procedure TryExtractTimeStampFromVaryingSize;
