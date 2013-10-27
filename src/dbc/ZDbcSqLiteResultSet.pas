@@ -62,7 +62,6 @@ uses
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
 type
-
   {** Implements SQLite ResultSet Metadata. }
   TZSQLiteResultSetMetadata = class(TZAbstractResultSetMetadata)
   public
@@ -134,7 +133,8 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode
+  ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
+  ZVariant
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZSQLiteResultSetMetadata }
@@ -323,7 +323,7 @@ end;
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
 end;
 
 {**
@@ -713,7 +713,7 @@ begin
   else
     case ColType of
       SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex);
+        Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
       else
         begin
           Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
@@ -849,6 +849,7 @@ begin
   begin
     FFirstRow := False;
     Result := (FErrorCode = SQLITE_ROW);
+    RowNo := 1;
   end
   else
     if (FErrorCode = SQLITE_ROW) then

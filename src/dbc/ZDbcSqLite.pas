@@ -58,7 +58,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZPlainDriver, ZCompatibility;
+  ZGenericSqlAnalyser, ZURL, ZCompatibility;
 
 type
 
@@ -134,7 +134,7 @@ var
 implementation
 
 uses
-  ZSysUtils, ZDbcUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode,
+  ZSysUtils, ZDbcSqLiteStatement, ZSqLiteToken, ZFastCode,
   ZDbcSqLiteUtils, ZDbcSqLiteMetadata, ZSqLiteAnalyser
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 

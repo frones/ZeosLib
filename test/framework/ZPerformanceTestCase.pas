@@ -506,11 +506,23 @@ begin
 
     Query1.Connection := Connection;
 
-    Query1.SQL.Text := Format('SELECT COUNT(*), MAX(%s) FROM %s', [PrimaryKey, TableName]);
-    Query1.Open;
-    CurrentCount := Query1.Fields[0].AsInteger;
-    Index := Query1.Fields[1].AsInteger;
-    Query1.Close;
+    if StartsWith(Protocol, 'sqlite') then
+    begin
+      Query1.SQL.Text := Format('SELECT COUNT(*), %s FROM %s', [PrimaryKey, TableName]);
+      Query1.Open;
+      Query1.Last;
+      CurrentCount := Query1.Fields[0].AsInteger;
+      Index := Query1.Fields[1].AsInteger;
+      Query1.Close;
+    end
+    else
+    begin
+      Query1.SQL.Text := Format('SELECT COUNT(*), MAX(%s) FROM %s', [PrimaryKey, TableName]);
+      Query1.Open;
+      CurrentCount := Query1.Fields[0].AsInteger;
+      Index := Query1.Fields[1].AsInteger;
+      Query1.Close;
+    end;
 
     if RecordCount = CurrentCount then
       Exit;

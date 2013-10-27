@@ -1786,7 +1786,7 @@ end;
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
-  @param Url a database connection url string.
+  @param Url a database connection url class.
 }
 constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractConnection;
   const Url: TZURL);

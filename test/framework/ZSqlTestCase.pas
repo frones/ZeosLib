@@ -405,7 +405,10 @@ end;
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);
 begin
   Create;
-  FName := TemplateConfig.Name+'_'+Suffix;
+  if Suffix <> '' then
+    FName := TemplateConfig.Name+'_'+Suffix
+  else
+    FName := TemplateConfig.Name;
   FAlias := TemplateConfig.Alias;
   FProtocol := TemplateConfig.Protocol;
   FHostName := TemplateConfig.HostName;

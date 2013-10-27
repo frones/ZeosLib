@@ -67,7 +67,10 @@ const
   FLOAT_COMPARE_PRECISION_SINGLE = 1.5e-5;
 
   {FPC - Compatibility for SQLite (currently) }
-  JULIAN_DAY_DISTANCE = 2415018.5; //distance from "julian day 0" (January 1, 4713 BC 12:00AM) to "1899-12-30 00:00AM"}
+  {$IF NOT DECLARED(JulianEpoch)} // sysutils/datih.inc
+  const
+    JulianEpoch = -2415018.5; // "julian day 0" is January 1, 4713 BC 12:00AM
+  {$IFEND}
 
 type
   {** Defines variant types. }

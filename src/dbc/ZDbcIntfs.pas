@@ -1203,7 +1203,7 @@ end;
 procedure TZDriverManager.AddLoggingListener(Listener: IZLoggingListener);
 begin
   FLoggingListeners.Add(Listener);
-  FHasLoggingListener := false;//True;
+  FHasLoggingListener := True;
 end;
 
 {**
@@ -1213,7 +1213,7 @@ end;
 procedure TZDriverManager.RemoveLoggingListener(Listener: IZLoggingListener);
 begin
   FLoggingListeners.Remove(Listener);
-  FHasLoggingListener := false;//(FLoggingListeners.Count>0);
+  FHasLoggingListener := (FLoggingListeners.Count>0);
 end;
 
 function TZDriverManager.HasLoggingListener: Boolean;
