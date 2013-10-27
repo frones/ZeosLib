@@ -67,7 +67,9 @@ type
   published
     procedure TestBufferToStr;
     procedure TestFirstDelimiter;
+    {$IFDEF ENABLE_POSTGRESQL}
     procedure TestIsIpAddr;
+    {$ENDIF}
     procedure TestSqlStrToFloatDef;
     procedure TestStrToBoolEx;
     procedure TestObjectComparison;
@@ -155,6 +157,7 @@ begin
   CheckEquals(0, FirstDelimiter(DelimiterStr, SourceStr), 'FirstDelimiter 3');
 end;
 
+{$IFDEF ENABLE_POSTGRESQL}
 {**
   Runs a test for IsIpAddr function.
 }
@@ -194,6 +197,7 @@ begin
  IP := 'abcd.ddns.com.br';
  Check(not IsIpAddr(IP), 'abcd.ddns.com.br');
 end;
+{$ENDIF}
 
 {**
   Runs a test for object and interface comparison.
