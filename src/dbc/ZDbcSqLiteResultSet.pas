@@ -61,8 +61,11 @@ uses
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
+{$IF NOT DECLARED(JulianEpoch)} // sysutils/datih.inc
+const
+  JulianEpoch = -2415018.5; // "julian day 0" is January 1, 4713 BC 12:00AM
+{$IFEND}
 type
-
   {** Implements SQLite ResultSet Metadata. }
   TZSQLiteResultSetMetadata = class(TZAbstractResultSetMetadata)
   public
