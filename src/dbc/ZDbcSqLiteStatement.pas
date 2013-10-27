@@ -68,8 +68,9 @@ type
   private
     FHandle: Psqlite;
     FPlainDriver: IZSQLitePlainDriver;
+    FForceNativeResultSet: Boolean;
 
-    function CreateResultSet(const SQL: string; const StmtHandle: Psqlite_vm;
+    function CreateResultSet(const StmtHandle: Psqlite_vm;
       const ErrorCode: Integer): IZResultSet;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver;
@@ -86,6 +87,7 @@ type
   private
     FHandle: Psqlite;
     FPlainDriver: IZSQLitePlainDriver;
+    FBindDoubleDateTimeValues: Boolean;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
@@ -103,7 +105,9 @@ type
     FHandle: Psqlite;
     FStmtHandle: Psqlite3_stmt;
     FPlainDriver: IZSQLitePlainDriver;
-    function CreateResultSet(const SQL: string; const StmtHandle: Psqlite_vm;
+    FForceNativeResultSet: Boolean;
+    FBindDoubleDateTimeValues: Boolean;
+    function CreateResultSet(const StmtHandle: Psqlite_vm;
       const ErrorCode: Integer): IZResultSet;
   protected
     procedure SetASQL(const Value: RawByteString); override;
@@ -146,6 +150,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FForceNativeResultSet :=  StrToBoolEx(DefineStatementParameter(Self, 'ForceNativeResultSet', 'false'));
 end;
 
 {**
@@ -155,31 +160,36 @@ end;
   @return a created result set object.
 }
 
-function TZSQLiteStatement.CreateResultSet(const SQL: string;
-  const StmtHandle: Psqlite_vm; const ErrorCode: Integer): IZResultSet;
+function TZSQLiteStatement.CreateResultSet(const StmtHandle: Psqlite_vm;
+  const ErrorCode: Integer): IZResultSet;
 var
   CachedResolver: TZSQLiteCachedResolver;
   NativeResultSet: TZSQLiteResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
-  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SQL, FHandle,
+  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
     StmtHandle, ErrorCode);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
-  { Creates a cached result set. }
-  CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
-    NativeResultSet.GetMetaData);
-  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-    CachedResolver,GetConnection.GetConSettings);
+  if not FForceNativeResultSet then
+  begin
+    { Creates a cached result set. }
+    CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
+      NativeResultSet.GetMetaData);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL,
+      CachedResolver,GetConnection.GetConSettings);
 
-  { Fetches all rows to prevent blocking. }
-  CachedResultSet.SetType(rtScrollInsensitive);
-  CachedResultSet.Last;
-  CachedResultSet.BeforeFirst;
-  CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    { Fetches all rows to prevent blocking (DataBase is locked).}
+    CachedResultSet.Last;
+    CachedResultSet.BeforeFirst;
 
-  Result := CachedResultSet;
+    CachedResultSet.SetType(rtScrollInsensitive);
+    CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    Result := CachedResultSet;
+  end
+  else
+    Result := NativeResultSet;
 end;
 
 {**
@@ -203,7 +213,7 @@ begin
     ErrorCode := FPlainDriver.Step(StmtHandle);
     CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther, 'FETCH', ConSettings);
     if FPlainDriver.column_count(StmtHandle) > 0 then
-      Result := CreateResultSet(Self.SQL, StmtHandle, ErrorCode);
+      Result := CreateResultSet(StmtHandle, ErrorCode);
   except
     FPlainDriver.Finalize(StmtHandle);
     raise;
@@ -276,7 +286,7 @@ begin
   if FPlainDriver.column_count(StmtHandle) <> 0 then
   begin
     Result := True;
-    LastResultSet := CreateResultSet(Self.SQL, StmtHandle, ErrorCode);
+    LastResultSet := CreateResultSet(StmtHandle, ErrorCode);
   end
   else { Processes regular query. }
   begin
@@ -305,6 +315,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtForwardOnly;
+  FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, 'BindDoubleDateTimeValues', 'false'));
   Prepare;
 end;
 
@@ -354,14 +365,23 @@ begin
         Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}
           AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
       stDate:
-        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
+        if FBindDoubleDateTimeValues then
+          Result := FloatToRaw(ClientVarManager.GetAsDateTime(Value)-JulianEpoch)
+        else
+          Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+            ConSettings^.WriteFormatSettings, True);
       stTime:
-        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
+        if FBindDoubleDateTimeValues then
+          Result := FloatToRaw(ClientVarManager.GetAsDateTime(Value)-JulianEpoch)
+        else
+          Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+            ConSettings^.WriteFormatSettings, True);
       stTimestamp:
-        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
-          ConSettings^.WriteFormatSettings, True);
+        if FBindDoubleDateTimeValues then
+          Result := FloatToRaw(ClientVarManager.GetAsDateTime(Value)-JulianEpoch)
+        else
+          Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+            ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
           TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
@@ -388,31 +408,37 @@ end;*)
 
 { TZSQLiteCAPIPreparedStatement }
 
-function TZSQLiteCAPIPreparedStatement.CreateResultSet(const SQL: string;
-  const StmtHandle: Psqlite_vm; const ErrorCode: Integer): IZResultSet;
+function TZSQLiteCAPIPreparedStatement.CreateResultSet(const StmtHandle: Psqlite_vm;
+  const ErrorCode: Integer): IZResultSet;
 var
   CachedResolver: TZSQLiteCachedResolver;
   NativeResultSet: TZSQLiteResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   { Creates a native result set. }
-  NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, SQL, FHandle,
-    StmtHandle, ErrorCode, False);
-  NativeResultSet.SetConcurrency(rcReadOnly);
+    NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
+      StmtHandle, ErrorCode, False);
+    NativeResultSet.SetConcurrency(rcReadOnly);
 
-  { Creates a cached result set. }
-  CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
-    NativeResultSet.GetMetaData);
-  CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
-    CachedResolver,GetConnection.GetConSettings);
+  if not FForceNativeResultSet then
+  begin
+    { Creates a cached result set. }
+    CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
+      NativeResultSet.GetMetaData);
+    CachedResultSet := TZCachedResultSet.Create(NativeResultSet, Self.SQL,
+      CachedResolver,GetConnection.GetConSettings);
 
-  { Fetches all rows to prevent blocking. }
-  CachedResultSet.SetType(rtScrollInsensitive);
-  CachedResultSet.Last;
-  CachedResultSet.BeforeFirst;
-  CachedResultSet.SetConcurrency(GetResultSetConcurrency);
+    { Fetches all rows to prevent blocking (DataBase is locked).}
+    CachedResultSet.Last;
+    CachedResultSet.BeforeFirst;
+    
+    CachedResultSet.SetType(rtScrollInsensitive);
+    CachedResultSet.SetConcurrency(GetResultSetConcurrency);
 
-  Result := CachedResultSet;
+    Result := CachedResultSet;
+  end
+  else
+    Result := NativeResultSet;
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.SetASQL(const Value: RawByteString);
@@ -480,6 +506,10 @@ begin
               CharRec.P, CharRec.Len, nil);
           end;
         stDate:
+          if FBindDoubleDateTimeValues then
+            FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
+                ClientVarManager.GetAsDateTime(InParamValues[i-1])-JulianEpoch)
+          else
           begin
             InParamValues[i-1].VRawByteString := DateTimeToRawSQLDate(
               ClientVarManager.GetAsDateTime(InParamValues[i-1]),
@@ -489,6 +519,10 @@ begin
               ConSettings^.WriteFormatSettings.DateFormatLen, nil);
           end;
         stTime:
+          if FBindDoubleDateTimeValues then
+            FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
+                ClientVarManager.GetAsDateTime(InParamValues[i-1])-JulianEpoch)
+          else
           begin
             InParamValues[i-1].VRawByteString := DateTimeToRawSQLTime(
               ClientVarManager.GetAsDateTime(InParamValues[i-1]),
@@ -498,6 +532,10 @@ begin
               ConSettings^.WriteFormatSettings.TimeFormatLen, nil);
           end;
         stTimestamp:
+          if FBindDoubleDateTimeValues then
+            FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
+                ClientVarManager.GetAsDateTime(InParamValues[i-1])-JulianEpoch)
+          else
           begin
             InParamValues[i-1].VRawByteString := DateTimeToRawSQLTimeStamp(
               ClientVarManager.GetAsDateTime(InParamValues[i-1]),
@@ -506,12 +544,6 @@ begin
               PAnsiChar(InParamValues[i-1].VRawByteString),
               ConSettings^.WriteFormatSettings.DateTimeFormatLen, nil);
           end;
-        { works equal but selects from data which was written in string format
-          won't match! e.G. TestQuery etc. On the other hand-> i've prepared
-          this case on the resultsets too. JULIAN_DAY_PRECISION?}
-        {stDate, stTime, stTimestamp:
-          FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
-            ClientVarManager.GetAsDateTime(InParamValues[i-1]));}
         stAsciiStream, stUnicodeStream, stBinaryStream:
           begin
             TempBlob := ClientVarManager.GetAsInterface(InParamValues[i-1]) as IZBlob;
@@ -553,6 +585,8 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtForwardOnly;
+  FForceNativeResultSet :=  StrToBoolEx(DefineStatementParameter(Self, 'ForceNativeResultSet', 'false'));
+  FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, 'BindDoubleDateTimeValues', 'false'));
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
@@ -587,7 +621,7 @@ begin
       ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),
       ConSettings);
     if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE)then
-      Result := CreateResultSet(Self.SQL, FStmtHandle, FErrorCode);
+      Result := CreateResultSet(FStmtHandle, FErrorCode);
     inherited ExecuteQueryPrepared;
   except
     raise;
@@ -631,7 +665,7 @@ begin
   if FPlainDriver.column_count(FStmtHandle) <> 0 then
   begin
     Result := True;
-    LastResultSet := CreateResultSet(Self.SQL, FStmtHandle, FErrorCode);
+    LastResultSet := CreateResultSet(FStmtHandle, FErrorCode);
   end
   { Processes regular query. }
   else

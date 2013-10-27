@@ -132,8 +132,17 @@ function TZNativeDbcPerformanceTestCase.CreateResultSet(
   Query: string): IZResultSet;
 var
   Statement: IZStatement;
+  Info: TStrings;
 begin
-  Statement := Connection.CreateStatement;
+  if StartsWith(Protocol, 'sqlite') then
+  begin
+    Info := TStringList.Create;
+    Info.Add('ForceNativeResultSet=true');
+    Statement := Connection.CreateStatementWithParams(Info);
+    Info.Free;
+  end
+  else
+    Statement := Connection.CreateStatement;
   Statement.SetFetchDirection(fdForward);
   Statement.SetResultSetConcurrency(rcReadOnly);
   Statement.SetResultSetType(rtForwardOnly);

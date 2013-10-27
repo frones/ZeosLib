@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcSQLiteUtils, ZDbcConnection;
+  ZCompatibility, ZDbcSQLiteUtils, ZDbcConnection, ZURL;
 
 type
 
@@ -203,6 +203,8 @@ type
 
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
+  private
+    FInfo: TStrings;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
@@ -240,6 +242,7 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
+    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
     destructor Destroy; override;
   end;
 
@@ -1130,10 +1133,24 @@ end;
 { TZSQLiteDatabaseMetadata }
 
 {**
+  Constructs this object and assignes the main properties.
+  @param Connection a database connection object.
+  @param Url a database connection url class.
+}
+constructor TZSQLiteDatabaseMetadata.Create(Connection: TZAbstractConnection;
+  const Url: TZURL);
+begin
+  inherited Create(Connection, Url);
+  FInfo := TStringList.Create;
+  FInfo.Add('ForceNativeResultSet=True');
+end;
+
+{**
   Destroys this object and cleanups the memory.
 }
 destructor TZSQLiteDatabaseMetadata.Destroy;
 begin
+  FInfo.Free;
   inherited Destroy;
 end;
 
@@ -1212,7 +1229,7 @@ begin
       + ' AND TBL_NAME LIKE ''' + ToLikeString(TableNamePattern) + '''';
 
     Result := CopyToVirtualResultSet(
-      GetConnection.CreateStatement.ExecuteQuery(SQL),
+      GetConnection.CreateStatementWithParams(Finfo).ExecuteQuery(SQL),
       ConstructVirtualResultSet(TableColumnsDynArray));
 end;
 
@@ -1316,7 +1333,7 @@ begin
 
   UndefinedVarcharAsStringLength := (GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
 
-  with GetConnection.CreateStatement.ExecuteQuery(
+  with GetConnection.CreateStatementWithParams(Finfo).ExecuteQuery(
     Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern])) do
   begin
     while Next do
@@ -1412,7 +1429,7 @@ begin
     else
       Temp_scheme := Schema +'.';
 
-    with GetConnection.CreateStatement.ExecuteQuery(
+    with GetConnection.CreateStatementWithParams(Finfo).ExecuteQuery(
       Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
     begin
       Index := 1;
@@ -1609,7 +1626,7 @@ begin
     else
       Temp_scheme := Schema +'.';
 
-    with GetConnection.CreateStatement.ExecuteQuery(
+    with GetConnection.CreateStatementWithParams(Finfo).ExecuteQuery(
       Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table])) do
     begin
       while Next do
@@ -1617,7 +1634,7 @@ begin
         if (Pos(' autoindex ', String(GetString(2))) = 0)
           and ((Unique = False) or (GetInt(3) = 0)) then
         begin
-          ResultSet := GetConnection.CreateStatement.ExecuteQuery(
+          ResultSet := GetConnection.CreateStatementWithParams(Finfo).ExecuteQuery(
             Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,GetString(2)]));
           while ResultSet.Next do
           begin
