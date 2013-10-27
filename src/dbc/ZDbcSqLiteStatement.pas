@@ -641,6 +641,10 @@ begin
     FErrorCode := FPlainDriver.reset(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset', ConSettings);
   end;
+  { Autocommit statement. }
+  if Connection.GetAutoCommit then
+    Connection.Commit;
+
   inherited ExecutePrepared;
 end;
 
