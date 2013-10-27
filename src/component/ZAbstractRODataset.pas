@@ -60,7 +60,8 @@ uses
   Windows,
 {$ENDIF}
   Variants,
-  Types, SysUtils, DB, Classes, ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
+  Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
@@ -76,7 +77,8 @@ type
 
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
-    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst);
+    doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
+    doCachedLobs);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -108,6 +110,9 @@ type
   public
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
   end;
+
+  TStringFieldSetter = procedure(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar);
+  TStringFieldGetter = function(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
 
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
@@ -168,6 +173,9 @@ type
     FPrepared: Boolean;
     FDoNotCloseResultset: Boolean;
     FUseCurrentStatment: Boolean;
+    FStringFieldSetter: TStringFieldSetter;
+    FStringFieldGetter: TStringFieldGetter;
+    procedure SetStringFieldSetterAndSetter;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -290,10 +298,11 @@ type
     procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
     procedure InternalDelete; override;
     procedure InternalPost; override;
-
+    {$IFNDEF FPC}
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean); override;
     procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
+    {$ENDIF}
     procedure DefineProperties(Filer: TFiler); override;
 
 {$IFDEF WITH_TRECORDBUFFER}
@@ -388,7 +397,7 @@ type
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
-    // Silvio Clécio
+    // Silvio Clecio
     {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     function PSGetQuoteCharW: WideString; override;
@@ -441,6 +450,11 @@ type
     function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean; override;
     function GetFieldData(Field: TField; {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
       NativeFormat: Boolean): Boolean; override;
+    {$IFDEF FPC}
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
+      NativeFormat: Boolean); override;
+    procedure SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}); override;
+    {$ENDIF}
     function CreateBlobStream(Field: TField; Mode: TBlobStreamMode): TStream;
       override;
     function UpdateStatus: TUpdateStatus; override;
@@ -478,11 +492,97 @@ type
 
 implementation
 
-uses Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
-  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset
+uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
+  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset, ZEncoding
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+
+{$IFNDEF UNICODE}
+procedure RowAccessorStringFieldSetterFromRawAutoEncode(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  case DetectUTF8Encoding(Buffer) of
+    etUSASCII: RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+    etAnsi: RowAccessor.SetAnsiString(ColumnIndex, Buffer);
+    etUTF8: RowAccessor.SetUTF8String(ColumnIndex, Buffer);
+  end;
+end;
+{$ENDIF}
+
+procedure RowAccessorStringFieldSetterFromUTF8(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+var
+  Tmp: UTF8String;
+begin
+  ZSetString(Buffer, Tmp);
+  RowAccessor.SetUTF8String(ColumnIndex, Tmp);
+end;
+
+procedure RowAccessorStringFieldSetterFromAnsi(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+var Tmp: AnsiString;
+begin
+  ZSetString(Buffer, Tmp);
+  RowAccessor.SetAnsiString(ColumnIndex, Tmp);
+end;
+
+procedure RowAccessorStringFieldSetterFromRaw(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+end;
+
+function RowAccessorStringFieldGetterFromUTF8(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  UTF8: UTF8String;
+  L: Integer;
+begin
+  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(Length(UTF8), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(UTF8[1], Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
+end;
+
+function RowAccessorStringFieldGetterFromAnsi(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  L: Integer;
+  Ansi: AnsiString;
+begin
+  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(Length(Ansi), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(Ansi[1], Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
+end;
+
+function RowAccessorStringFieldGetterFromAnsiRec(RowAccessor: TZRowAccessor;
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  Ansirec: TZAnsiRec;
+  L: Integer;
+begin
+  Ansirec := RowAccessor.GetAnsiRec(ColumnIndex, Result);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(AnsiRec.Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(AnsiRec.P^, Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
+end;
 
 { EZDatabaseError }
 
@@ -647,6 +747,38 @@ end;
 function TZAbstractRODataset.GetUniDirectional: boolean;
 begin
   Result := inherited IsUniDirectional;
+end;
+
+
+procedure TZAbstractRODataset.SetStringFieldSetterAndSetter;
+begin
+  {$IFNDEF UNICODE}
+  //Hint: the UnicodeIDE's do return allways a AnsiString casted UnicodeString
+  //So it's impossible to retrieve a UTF8 encoded string SAFELY
+  //It might be possible a user did Assign such a casted value. But that's
+  //not Unicode-Save since the AnsiString(AUnicodeString) cast.
+  //Known issues: Simplified chinese or Persian f.e. have some equal UTF8
+  //two/four byte sequense wich lead to data loss. So success is randomly!!
+  if Connection.AutoEncodeStrings then
+  begin
+    FStringFieldSetter := @RowAccessorStringFieldSetterFromRawAutoEncode;
+    if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
+      FStringFieldGetter := @RowAccessorStringFieldGetterFromUTF8
+    else
+      FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
+  end
+  else
+  begin
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsiRec;
+    FStringFieldSetter := @RowAccessorStringFieldSetterFromRaw;
+  end;
+  {$ELSE}
+  if ZCompatibleCodePages(ZDefaultSystemCodePage, Connection.DbcConnection.GetConSettings^.ClientCodePage^.CP) then
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsiRec
+  else
+    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
+  FStringFieldSetter := @RowAccessorStringFieldSetterFromAnsi;
+  {$ENDIF}
 end;
 
 {**
@@ -1273,13 +1405,11 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
     {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
-  ColumnIndex: Integer;
+  ColumnIndex, Len: Integer;
   RowBuffer: PZRowBuffer;
   ACurrency: Currency;
   Bts: TByteDynArray;
-  {$IFNDEF WITH_WIDESTRUTILS}
-  WS: WideString;
-  {$ENDIF}
+  WideRec: TZWideRec;
 begin
   if GetActiveBuffer(RowBuffer) then
   begin
@@ -1312,21 +1442,27 @@ begin
           Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         ftWideString:
           begin
-            {$IFDEF WITH_WIDESTRUTILS}
-            WStrCopy(PWideChar(Buffer), PWideChar(RowAccessor.GetUnicodeString(ColumnIndex, Result)));
-            {$ELSE}
-            //FPC: WideStrings are COM managed fields
-            WS:=RowAccessor.GetUnicodeString(ColumnIndex, Result);
-            //include null terminator in copy
-            System.Move(PWideChar(WS)^,buffer^,(length(WS)+1)*sizeof(WideChar));
-            {$ENDIF}
+            WideRec := RowAccessor.GetWideRec(ColumnIndex, Result);
+            if Result then
+              PWideChar(Buffer)^ := WideChar(#0)
+            else
+            begin //instead of WStrCopy()
+              Len := Min(WideRec.Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+              System.Move(WideRec.P^, PWideChar(Buffer)^, Len*2);
+              (PWideChar(Buffer)+Len)^ := WideChar(#0);
+            end;
             Result := not Result;
           end;
-        ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}:
+        {$IFDEF WITH_FTGUID}
+        ftGUID:
           begin
-            {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(Buffer), PAnsiChar({$IFDEF UNICODE}AnsiString{$ENDIF}(RowAccessor.GetString(ColumnIndex, Result))));
+            {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(
+              PAnsiChar(Buffer), RowAccessor.GetAnsiString(ColumnIndex, Result), 38);
             Result := not Result;
           end;
+        {$ENDIF}
+        ftString:
+            Result := not FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTDATASETSUPPORT}
         ftDataSet:
           Result := not RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
@@ -1386,10 +1522,6 @@ var
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
   Curr: Currency;
-  {$IFNDEF UNICODE}
-  L: Cardinal;
-  Temp: String;
-  {$ENDIF}
 begin
   WasNull := False;
   if not Active then
@@ -1423,22 +1555,14 @@ begin
         ftBytes: { Processes binary array fields. }
           RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
         ftWideString: { Processes widestring fields. }
+          //EH: Using the WideRec setter doesn't perform better. Don't know why but it seems like the IDE's are faster by setting the UnicodeStrings directly
           {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
           {$ELSE}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
         ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}: { Processes string fields. }
-          {$IFDEF UNICODE}
-          RowAccessor.SetString(ColumnIndex, String(PAnsichar(Buffer)));
-          {$ELSE}
-          begin
-            L := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(Buffer));
-            SetLength(Temp, L);
-            Move(PAnsiChar(Buffer)^, PAnsiChar(Temp)^, L);
-            RowAccessor.SetString(ColumnIndex, Temp);
-          end;
-          {$ENDIF}
+          FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
         ftCurrency:
           begin
             {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
@@ -1679,6 +1803,10 @@ begin
       Temp.Values['preferprepared'] := 'true'
     else
       Temp.Values['preferprepared'] := 'false';
+    if doCachedLobs in FOptions then
+      Temp.Values['cachedlob'] := 'true'
+    else
+      Temp.Values['cachedlob'] := 'false';
 
     Result := FConnection.DbcConnection.PrepareStatementWithParams(SQL, Temp);
   finally
@@ -1784,12 +1912,17 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      RowAccessor := TZRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
+      if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
+      else
+        RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
     finally
       ColumnList.Free;
     end;
     FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
     FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+
+    SetStringFieldSetterAndSetter;
 
     FieldsLookupTable := CreateFieldsLookupTable(Fields);
     InitFilterFields := False;
@@ -2088,7 +2221,7 @@ begin
           if DetailField is TLargeIntField then
             TLargeIntField(DetailField).{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Temp
           else
-            DetailField.AsString := IntToStr(Temp);
+            DetailField.AsString := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Temp);
         end
         // Processes all other fields.
         else
@@ -2874,7 +3007,7 @@ function TZAbstractRODataset.Translate(Src, Dest: PAnsiChar; ToOem: Boolean):
 begin
   if (Src <> nil) then
   begin
-    Result := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Src);
+    Result := ZFastCode.StrLen(Src);
   {$IFNDEF UNIX}
     if doOemTranslate in FOptions then
     begin
@@ -2940,23 +3073,16 @@ begin
 
     if Mode = bmRead then
     begin
-      case Field.DataType of
-      ftMemo, ftFmtMemo:
-        Result := RowAccessor.GetAsciiStream(ColumnIndex, WasNull);
-      {$IFDEF WITH_WIDEMEMO}
-      ftWideMemo:
-        Result := RowAccessor.GetUnicodeStream(ColumnIndex, WasNull)
-      {$ENDIF}
-      else
-        Result := RowAccessor.GetBinaryStream(ColumnIndex, WasNull);
-      end;
+      Blob := RowAccessor.GetBlob(ColumnIndex, WasNull);
+      Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
+        FConnection.DbcConnection.GetConSettings);
     end
     else
     begin
       Blob := RowAccessor.GetBlob(ColumnIndex, WasNull);
       if Blob <> nil then
-        Blob := Blob.Clone;
-      RowAccessor.SetBlob(ColumnIndex, Blob);
+        Blob := Blob.Clone(Mode =  bmWrite);
+        RowAccessor.SetBlob(ColumnIndex, Blob);
       Result := TZBlobStream.Create(Field as TBlobField, Blob, Mode,
         FConnection.DbcConnection.GetConSettings);
     end;
@@ -3368,7 +3494,7 @@ end;
   Defines a list of query primary key fields.
   @returns a semicolon delimited list of query key fields.
 }
-// Silvio Clécio
+// Silvio Clecio
 {$IFDEF WITH_IPROVIDERWIDE}
 {$WARNINGS OFF}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
@@ -3434,24 +3560,24 @@ const
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp,
     ftFMTBcd , ftString, ftBlob);
 {$ELSE}
-  {$IFDEF VER180} //D2006
-  BaseFieldTypes: array[TFieldType] of TFieldType = (
-    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
-    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
-    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
-    ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
- {$ELSE}
-  {$IFDEF VER185} //D2007
-  BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
-    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
-    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
-    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
-    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
-    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
-    ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval); // 38..41
- {$ELSE}
+{$IFDEF VER180} //D2006
+BaseFieldTypes: array[TFieldType] of TFieldType = (
+  ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
+  ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+  ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
+  ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
+  ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
+  ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
+{$ELSE !VER180}
+{$IFDEF VER185} //D2007
+BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
+  ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
+  ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
+  ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
+  ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
+  ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
+  ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval); // 38..41
+{$ELSE !VER185}
 {$IFDEF VER200}
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
@@ -3462,7 +3588,7 @@ const
       ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd,
       ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream);
-{$ELSE}
+{$ELSE !VER200}
 {$IFDEF VER210}
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
@@ -3474,7 +3600,7 @@ const
       ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
       ftTimeStampOffset, ftObject, ftSingle);
-{$ELSE}
+{$ELSE !VER210}
 {$IFDEF VER220}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,  // 0..6
@@ -3485,7 +3611,7 @@ const
     ftWideString, ftBlob, ftOraTimeStamp, ftOraInterval, //38..41
     ftLongWord, ftInteger, ftInteger, ftExtended, ftConnection, ftParams, ftStream, //42..48
     ftTimeStampOffset, ftObject, ftSingle); // 49..51
-{$ELSE}
+{$ELSE !VER220}
 {$IFDEF VER230}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
@@ -3496,7 +3622,7 @@ const
     ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
-{$ELSE}
+{$ELSE !VER230}
 {$IFDEF VER240}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
@@ -3507,7 +3633,7 @@ const
     ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
-{$ELSE}
+{$ELSE !VER240}
 {$IFDEF VER250}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
@@ -3518,7 +3644,18 @@ const
     ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
-{$ELSE}
+{$ELSE !VER250}
+{$IFDEF VER260}
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
+    ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
+    ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftParadoxOle, ftDBaseOle, ftTypedBinary,
+    ftCursor, ftFixedChar, ftWideString, ftLargeint, ftADT, ftArray, ftReference,
+    ftDataSet, ftOraBlob, ftOraClob, ftVariant, ftInterface, ftIDispatch, ftGuid,
+    ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
+    ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
+    ftTimeStampOffset, ftObject, ftSingle );
+{$ELSE !VER260} //>= D2005
   BaseFieldTypes: array[TFieldType] of TFieldType =
    (ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
     ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
@@ -3526,15 +3663,16 @@ const
     ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString,
     ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
     ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd);
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
+{$ENDIF VER260}
+{$ENDIF VER250}
+{$ENDIF VER240}
+{$ENDIF VER230}
+{$ENDIF VER220}
+{$ENDIF VER210}
+{$ENDIF VER200}
+{$ENDIF VER185}
+{$ENDIF VER180}
+{$ENDIF FPC}
 
 
   CheckTypeSizes = [ftBytes, ftVarBytes, ftBCD, ftReference];

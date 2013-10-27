@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
-  ZGenericSqlToken, ZConnection, ZSqlTestCase, ZStoredProcedure;
+  ZGenericSqlToken, ZSqlTestCase, ZStoredProcedure;
 
 type
   {** Implements a generic test case for class TZStoredProc. }
@@ -150,8 +150,8 @@ type
 
 implementation
 
-uses Classes, ZSysUtils, ZDbcIntfs, ZAbstractDataset,
-  ZTestCase, ZCompatibility, ZVariant, Types;
+uses Classes, ZSysUtils, ZDbcIntfs,
+  ZCompatibility, ZVariant, Types;
 
 
 { TZTestStoredProcedure }

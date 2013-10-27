@@ -58,8 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
-  ZSqlStrings, ZTokenizer, ZGenericSqlToken,
-  ZConnection, ZDataset, ZSqlTestCase;
+  ZGenericSqlToken, ZDataset, ZSqlTestCase;
 
 type
 
@@ -97,7 +96,7 @@ type
 
 implementation
 
-uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
+uses Classes, ZDbcIntfs, ZSqlMonitor, ZdbcLogging,
   ZAbstractRODataset, ZCompatibility, ZSysUtils;
 
 const TestRowID = 1000;
@@ -255,7 +254,7 @@ begin
 
     for i := 0 to SQLMonitor.TraceCount -1 do
       if SQLMonitor.TraceList[i].Category = lcTransaction then
-        if Pos('COMMIT', UpperCase(SQLMonitor.TraceList[i].Message)) > 0 then
+        if Pos('COMMIT', UpperCase(String(SQLMonitor.TraceList[i].Message))) > 0 then
           Inc(CommitCount);
 
     CheckEquals(CommitCount{fix it 1}, CommitCount, 'CommitCount');

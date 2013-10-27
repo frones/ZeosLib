@@ -39,7 +39,7 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
-// Compilation directives for Lazarus
+ // Compilation directives for Lazarus
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
 {$ELSE}
@@ -60,6 +60,8 @@
  {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
+ {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
+ {$DEFINE USE_FAST_CHARPOS}     // use Fascode CharPos function
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -83,16 +85,21 @@
 // Compilation directives for Delphi 7
 {$IFDEF VER150}
   {$DEFINE VER150BELOW} // Used in zeos.inc only
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$DEFINE Use_FastCodeFillChar}
 {$ENDIF}
 
 // Compilation directives for Delphi 8
 {$IFDEF VER160}
   {$DEFINE VER150BELOW} // Used in zeos.inc only
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$DEFINE Use_FastCodeFillChar}
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
 {$IFDEF VER170}
-// No directives needed
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$DEFINE Use_FastCodeFillChar}
   {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE VER170BELOW} // Used in Zeos.inc only
 {$ENDIF}
@@ -100,12 +107,15 @@
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
 {$IFDEF VER180}
   {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {EH since D2006 FastCode proc FillChar is already included}
 {$ENDIF}
 
 // Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
-{$IFDEF VER185}
+{$IF defined(VER185) or defined(VER190)}
   {$DEFINE BDS4_UP} // Used in code
-{$ENDIF}
+  {EH: Since D2007 the fast move Procs of FastCode-project are allready included}
+{$IFEND}
 
 // Compilation directives for Delphi 2009
 {$IFDEF VER200}
@@ -114,6 +124,7 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_INLINE_ANSISTRLCOMP}
+  {$DEFINE WITH_URW1135_ISSUE} //D2009 can't compile for some strange reasons with inlined code.
 {$ENDIF}
 
 // Compilation directives for Delphi 2010
@@ -123,6 +134,7 @@
   {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
+  {$DEFINE WITH_URW1111_ISSUE} //D2010 can't compile for some strange reasons with inlined code.
 {$ENDIF}
 
 // Compilation directives for Delphi XE
@@ -147,6 +159,7 @@
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
+  {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
 {$ENDIF}
 
 // Compilation directives for Delphi XE3
@@ -174,6 +187,20 @@
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
+// Compilation directives for Delphi XE5
+{$IFDEF VER260}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in code
+  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE DELPHI19_UP}
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
@@ -183,6 +210,7 @@
   {$DEFINE WITH_IPROVIDERWIDE}          // IProvider -W widestring using interface
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
   {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
+  {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
 {$ENDIF}
 
 {$IFDEF DELPHI12_UP}
@@ -202,10 +230,12 @@
   {$DEFINE WITH_TENCODING_CLASS}        // Have class TEncoding
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
+  {$UNDEF USE_FAST_CHARPOS}
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
+  {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
   {$DEFINE WITH_UINT64}                 // D2010 has virtually UInt64
   {$DEFINE WITH_PUINT64}                // D2010 has virtually PUInt64
 {$ENDIF}
@@ -213,8 +243,11 @@
 {$IFDEF DELPHI15_UP}
   {$DEFINE WITH_FORMATSETTINGS}
   {$DEFINE WITH_UNICODEFROMLOCALECHARS}
-  {$IFDEF WIN64}
+  {$IFNDEF WIN32}
     {$UNDEF WITH_DBTABLES} //BDE unit DBTables (TestSuites) isn't supported on CPU64
+    {$IFNDEF PUREPASCAL}
+      {$DEFINE PUREPASCAL}
+    {$ENDIF}
   {$ENDIF}
 {$ENDIF}
 
@@ -233,6 +266,7 @@
   {$DEFINE WITH_SYSTEMCLASSES}          //Need System.Classes
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
+  {$DEFINE WITH_SYSTEM_PREFIX}
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
@@ -245,6 +279,7 @@
 
 {$IFDEF DELPHI18_UP}
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
+  {$DEFINE WITH_FASTCODE_INTTOSTR}      //using fastcode StrToInt implementations of http://fastcode.sourceforge.net/
   {$DEFINE WITH_BUFFERS_IS_TRECBUF} //Buffers[index] is TRecBuf type NativeInt
   {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings
@@ -260,9 +295,12 @@
   {$DEFINE WITH_STRLICOPY_DEPRECATED} //StrLICopy is deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLICOMP_DEPRECATED} //StrLIComp is deprecated moved to AnsiStrings
   {$DEFINE WITH_GETCALCFIELDS_TRECBUF} //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
+  {$DEFINE WITH_FLOATTOTEXT_DEPRECATED} //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
 {$ENDIF}
 
-
+{$IFNDEF WIN32} //global undefines
+  {$UNDEF USE_FAST_TRUNC}
+{$ENDIF}
 // Debug/release compiler options
 {$D+}
 
@@ -419,3 +457,7 @@
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
 {.$DEFINE USE_SYNEDIT}
+
+//run ZSysUtils benchmarks
+{.$DEFINE BENCHMARK}
+

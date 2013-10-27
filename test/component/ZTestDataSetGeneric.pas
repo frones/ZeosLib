@@ -93,6 +93,8 @@ type
     procedure TestTimeLocateExpression;
     procedure TestDateTimeLocateExpression;
     procedure TestDoubleFloatParams;
+    procedure TestClobEmptyString;
+    procedure TestLobModes;
   end;
 
   TZGenericTestDbcResultSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -106,7 +108,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZTestCase, ZAbstractRODataset,
+  DateUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZGenericTestDbcResultSet }
@@ -1533,6 +1535,240 @@ begin
       Close;
     end;
   finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestClobEmptyString;
+var
+  Query: TZQuery;
+  TextLob: String;
+begin
+  Query := CreateQuery;
+  try
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      ExecSQL;
+      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+      begin
+        Sql.Text := 'INSERT INTO blob_values (b_id, b_clob)'
+          + ' VALUES (:b_id, EMPTY_CLOB())';
+        CheckEquals(1, Params.Count);
+        Params[0].DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID-2;
+        TextLob := 'b_clob';
+      end
+      else
+      begin
+        if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+          TextLob := 'b_text'
+        else
+          TextLob := 'b_text';
+        Sql.Text := 'INSERT INTO blob_values (b_id,'+TextLob+')'
+          + ' VALUES (:b_id,:b_text)';
+        CheckEquals(2, Params.Count);
+        ParamByName('b_id').DataType := ftInteger;
+        Params[0].AsInteger := TEST_ROW_ID-2;
+        {$IFDEF WITH_WIDEMEMO}
+        if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 then
+        begin
+          ParamByName('b_text').DataType := ftWideMemo;
+          Params[1].AsWideString := '';
+        end
+        else
+        {$ENDIF}
+        begin
+          ParamByName('b_text').DataType := ftMemo;
+          Params[1].AsString := '';
+        end;
+      end;
+      ExecSQL;
+
+      CheckEquals(1, RowsAffected);
+
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-2);
+      CheckEquals(0, Query.Params.Count);
+
+      Open;
+      CheckEquals(1, RecordCount);
+      CheckEquals(False, IsEmpty);
+      CheckEquals(TEST_ROW_ID-2, FieldByName('b_id').AsInteger);
+      CheckEquals(False, FieldByName(TextLob).IsNull, 'Memo is not empty.');
+      CheckEquals('', FieldByName(TextLob).AsString, 'Empty but not null String');
+      Close;
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      ExecSQL;
+    end;
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestLobModes;
+const teststring = RawByteString('abcdefghijklmnopqrstuvwxyz');
+var
+  Query: TZQuery;
+  BinStreamA, TextStreamA: TStream;
+  BinStreamE, TextStreamE: TMemoryStream;
+  TempA: RawByteString;
+  TempU: ZWideString;
+
+  TextLob, BinLob: String;
+  TempConnection: TZConnection;
+begin
+  TempConnection := nil;
+  BinStreamA:=nil;
+  BinStreamE:=nil;
+  TextStreamA:=nil;
+  TextStreamE:=nil;
+
+  Query := CreateQuery;
+  try
+    if StartsWith(LowerCase(Connection.Protocol), 'postgre') then
+    begin
+      TempConnection := TZConnection.Create(nil);
+      TempConnection.HostName := Connection.HostName;
+      TempConnection.Port     := Connection.Port;
+      TempConnection.Database := Connection.Database;
+      TempConnection.User     := Connection.User;
+      TempConnection.Password := Connection.Password;
+      TempConnection.Protocol := Connection.Protocol;
+      TempConnection.Catalog  := Connection.Catalog;
+      TempConnection.Properties.Text := Connection.Properties.Text;
+      TempConnection.Properties.Add('oidasblob=true');
+      TempConnection.TransactIsolationLevel := tiReadCommitted;
+      TempConnection.Connect;
+      Query.Connection := TempConnection;
+      Connection.TransactIsolationLevel:=tiReadCommitted;
+    end;
+    with Query do
+    begin
+      SQL.Text := 'DELETE FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      ExecSQL;
+      if StartsWith(LowerCase(Connection.Protocol), 'oracle') then
+      begin
+        TextLob := 'b_clob';
+        BinLob := 'b_blob';
+      end
+      else if StartsWith(LowerCase(Connection.Protocol), 'sqlite') then
+      begin
+        TextLob := 'b_text';
+        BinLob := 'b_blob';
+      end
+      else
+      begin
+        TextLob := 'b_text';
+        BinLob := 'b_image';
+      end;
+      BinStreamE := TMemoryStream.Create;
+      BinStreamE.LoadFromFile('../../../database/images/horse.jpg');
+      BinStreamE.Position := 0;
+
+      TextStreamE := TMemoryStream.Create;
+      {$IFDEF WITH_WIDEMEMO}
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+        TextStreamE.Write(WideString(teststring)[1], Length(teststring)*2)
+      else
+      {$ENDIF}
+        TextStreamE.Write(teststring[1], Length(teststring));
+      TextStreamE.Position := 0;
+      SQL.Text := 'SELECT * FROM blob_values';
+
+      Open;
+      Insert;
+      FieldByName('b_id').AsInteger := TEST_ROW_ID-1;
+      TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmWrite);
+      TextStreamA.Write(teststring[1],length(teststring));
+      TextStreamA.Free;
+      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmWrite);
+      TMemoryStream(BinStreamA).LoadFromFile('../../../database/images/horse.jpg');
+      BinStreamA.Free;
+      Post;
+
+      SQL.Text := 'SELECT * FROM blob_values where b_id = '+ IntToStr(TEST_ROW_ID-1);
+      Open;
+      TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmRead);
+      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmRead);
+
+      CheckEquals(TextStreamE, TextStreamA, 'Text-Stream');
+      CheckEquals(BinStreamE, BinStreamA, 'Bin-Stream');
+
+      FreeAndNil(TextStreamA);
+      FreeAndNil(BinStreamA);
+
+      Edit;
+
+      TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmReadWrite);
+      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmReadWrite);
+
+      {$IFDEF WITH_WIDEMEMO}
+      TextStreamA.Position := 0;
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      begin
+        SetLength(TempU, Length(TestString));
+        TextStreamA.Read(PWideChar(TempU)^, Length(teststring)*2);
+        CheckEquals(TempU, ZWideString(TestString));
+      end
+      else
+      {$ENDIF}
+      begin
+        SetLength(TempA, Length(TestString));
+        TextStreamA.Read(PAnsiChar(TempA)^, Length(teststring));
+        CheckEquals(TempA, TestString);
+      end;
+      CheckEquals(BinStreamE, BinStreamA);
+      CheckEquals(TextStreamE, TextStreamA);
+
+      TextStreamE.Size := TextStreamE.Size div 2;
+      BinStreamE.Size := 1024;
+
+      TMemoryStream(TextStreamA).LoadFromStream(TextStreamE);
+      TMemoryStream(BinStreamA).LoadFromStream(BinStreamE);
+      FreeAndNil(TextStreamA);
+      FreeAndnil(BinStreamA);
+
+      Post;
+
+      Close;
+      Open;
+
+      TextStreamA := Query.CreateBlobStream(Query.FieldByName(TextLob), bmRead);
+      BinStreamA := Query.CreateBlobStream(Query.FieldByName(BinLob), bmRead);
+
+      CheckEquals(TextStreamE, TextStreamA, 'Text-Stream');
+      CheckEquals(BinStreamE, BinStreamA, 'Bin-Stream');
+
+      {$IFDEF WITH_WIDEMEMO}
+      if ( Connection.DbcConnection.GetConSettings.CPType = cCP_UTF16 ) then
+      begin
+        SetLength(TempU, TextStreamA.Size div 2);
+        TextStreamE.Read(PWideChar(TempU)^, TextStreamA.Size);
+        CheckEquals(Copy(ZWideString(TestString), 1, Length(teststring) div 2), TempU);
+      end
+      else
+      {$ENDIF}
+      begin
+        SetLength(TempA, TextStreamA.Size);
+        TextStreamE.Read(PAnsiChar(TempA)^, TextStreamA.Size);
+        CheckEquals(Copy(TestString, 1, Length(teststring) div 2), TempA);
+      end;
+
+      FreeAndNil(TextStreamA);
+      FreeAndNil(BinStreamA);
+      Close;
+    end;
+  finally
+    if assigned(BinStreamA) then
+      BinStreamA.Free;
+    if assigned(BinStreamE) then
+      BinStreamE.Free;
+    if assigned(TextStreamA) then
+      TextStreamA.Free;
+    if assigned(TextStreamE) then
+      TextStreamE.Free;
+    if Assigned(TempConnection) then
+      TempConnection.Free;
     Query.Free;
   end;
 end;

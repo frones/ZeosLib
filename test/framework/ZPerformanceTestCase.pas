@@ -74,6 +74,7 @@ type
     FSelectedTests: TStrings;
     FRecordCount: Integer;
     FRepeatCount: Cardinal;
+    FLoadLobs: Boolean;
     FSkipFlag: Boolean;
     FSkipPerformance: Boolean;
     FSkipPerformanceTransactionMode: Boolean;
@@ -84,6 +85,7 @@ type
       RunTestMethod: TZTestMethod; TearDownMethod: TZTestMethod);
     procedure DetermineFieldsProperties(ConnectionConfig: TZConnectionConfig);
   protected
+    FAsciiStream, FUnicodeStream, FBinaryStream: TStream;
     FDirectSQLTypes: TResultSetTypesDynArray;
     FDirectFieldTypes: TDataSetTypesDynArray;
     FDirectFieldNames: TStringDynArray;
@@ -166,6 +168,7 @@ type
     property SkipPerformanceTransactionMode: Boolean read FSkipPerformanceTransactionMode;
     property PerformanceTable: String read FPerformanceTable;
     property PerformancePrimaryKey: String read FPerformancePrimaryKey;
+    property LoadLobs: Boolean read FLoadLobs;
   public
     function CreateDatasetConnection: TZConnection; override;
     function CreateDbcConnection: IZConnection; override;
@@ -274,8 +277,9 @@ const
 
 implementation
 
-uses SysUtils, ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses
-  {$IFDEF WITH_FTGUID},ComObj, ActiveX{$ENDIF}, Math;
+uses
+  {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math, SysUtils,
+  ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses, ZDbcUtils;
 
 { TZPerformanceSQLTestCase }
 
@@ -327,6 +331,7 @@ begin
   FSkipPerformanceTransactionMode := StrToBoolEx(ReadInheritProperty(SKIP_PERFORMANCE_TRANS_KEY, FALSE_VALUE));
   FPerformanceTable := ReadInheritProperty(PERFORMANCE_TABLE_NAME_KEY, PERFORMANCE_TABLE_NAME);
   FPerformancePrimaryKey := ReadInheritProperty(PERFORMANCE_PRIMARYKEY_KEY, PERFORMANCE_PRIMARY_KEY);
+  FLoadLobs := StrToBoolEx(ReadInheritProperty(PERFORMANCE_LOADLOBS_KEY, TRUE_VALUE));
 end;
 
 procedure TZPerformanceSQLTestCase.SetUp;
@@ -501,10 +506,23 @@ begin
 
     Query1.Connection := Connection;
 
-    Query1.SQL.Text := Format('SELECT COUNT(*) FROM %s', [TableName]);
-    Query1.Open;
-    CurrentCount := Query1.Fields[0].AsInteger;
-    Query1.Close;
+    if StartsWith(Protocol, 'sqlite') then
+    begin
+      Query1.SQL.Text := Format('SELECT COUNT(*), %s FROM %s', [PrimaryKey, TableName]);
+      Query1.Open;
+      Query1.Last;
+      CurrentCount := Query1.Fields[0].AsInteger;
+      Index := Query1.Fields[1].AsInteger;
+      Query1.Close;
+    end
+    else
+    begin
+      Query1.SQL.Text := Format('SELECT COUNT(*), MAX(%s) FROM %s', [PrimaryKey, TableName]);
+      Query1.Open;
+      CurrentCount := Query1.Fields[0].AsInteger;
+      Index := Query1.Fields[1].AsInteger;
+      Query1.Close;
+    end;
 
     if RecordCount = CurrentCount then
       Exit;
@@ -531,16 +549,11 @@ begin
     begin
       Count := RecordCount - CurrentCount;
       Query.First;
-      Index := 0;
-      Query1.SQL.Text := Format('SELECT * FROM %s', [TableName]);;
+      Query1.SQL.Text := Format('SELECT * FROM %s WHERE %s > %d', [TableName, PrimaryKey, Index]);
       Query1.Open;
       while Count > 0 do
       begin
         Inc(Index);
-
-        if not Query.Eof and (Query.FieldByName(PrimaryKey).AsInteger = Index) then
-          Query.Next;
-
         Query1.Insert;
         for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
         begin
@@ -587,10 +600,7 @@ begin
         Query1.Post;
         Inc(CommitCount);
         if CommitCount mod 1000 = 0 then
-        begin
           Connection.Commit;
-          Connection.StartTransaction;
-        end;
         Dec(Count);
       end;
     end;
@@ -672,7 +682,10 @@ begin
   SetLength(FieldNames, Query.Fields.Count);
   for i := 0 to Query.Fields.Count -1 do
   begin
-    DataSetTypes[i] := Query.Fields[i].DataType;
+    if UpperCase(Query.Fields[i].FieldName) = UpperCase(FPerformancePrimaryKey) then
+      DataSetTypes[i] := ftInteger //improve oracle to avoid primary key violation
+    else
+      DataSetTypes[i] := Query.Fields[i].DataType; //improve oracle to avoid primary key violation
     ResultSetTypes[i] := ConvertDatasetToDbcType(DataSetTypes[i]);
     if ResultSetTypes[i] = stBytes then
       FieldSizes[i] := Query.Fields[i].Size
@@ -841,9 +854,20 @@ end;
   The empty Set Up method for insert test.
 }
 procedure TZPerformanceSQLTestCase.SetUpTestInsert;
+var
+  Bts: TByteDynArray;
+  Count: Integer;
 begin
   CleanupTable(FPerformanceTable);
   DefaultSetUpTest;
+
+  Count := Min(MaxPerformanceLobSize, GetRecordCount);
+  FAsciiStream := TStringStream.Create(RawByteString(RandomStr(Count)));
+  FUnicodeStream := WideStringStream(ZWideString(RandomStr(Count)));
+  FBinaryStream := TMemoryStream.Create;
+  Bts := RandomBts(Count);
+  TMemoryStream(FBinaryStream).Write(Bts, Count);
+  FBinaryStream.Position := 0;
 end;
 
 {**
@@ -943,6 +967,9 @@ end;
 }
 procedure TZPerformanceSQLTestCase.TearDownTestInsert;
 begin
+  FreeAndNil(FAsciiStream);
+  FreeAndNil(FUnicodeStream);
+  FreeAndNil(FBinaryStream);
   DefaultTearDownTest;
 end;
 

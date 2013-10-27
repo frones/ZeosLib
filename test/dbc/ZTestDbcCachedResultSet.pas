@@ -79,7 +79,7 @@ type
     FUnicodeStream: TStream;
     FBinaryStream: TStream;
     FByteArray: TByteDynArray;
-    FAsciiStreamData: string;
+    FAsciiStreamData: AnsiString;
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
     FResultSet: IZCachedResultSet;
@@ -237,7 +237,7 @@ end;
 }
 procedure TZTestCachedResultSetCase.SetUp;
 var
-  BufferChar: PChar;
+  BufferChar: PAnsiChar;
   BufferWideChar: PWideChar;
 begin
   FDate := SysUtils.Date;
@@ -246,7 +246,7 @@ begin
 
   FAsciiStream := TMemoryStream.Create;
   FAsciiStreamData := 'Test Ascii Stream Data';
-  BufferChar := PChar(FAsciiStreamData);
+  BufferChar := PAnsiChar(FAsciiStreamData);
   FAsciiStream.Write(BufferChar^, Length(FAsciiStreamData));
 
   FUnicodeStream := TMemoryStream.Create;

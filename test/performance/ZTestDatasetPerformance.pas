@@ -56,7 +56,7 @@ interface
 {$I ZPerformance.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils, Classes,
-  ZPerformanceTestCase, ZAbstractRODataset, ZDataset, ZDbcIntfs, DB;
+  ZPerformanceTestCase, ZDataset, ZDbcIntfs, DB;
 
 type
 
@@ -194,12 +194,12 @@ begin
           ftString, ftFixedChar:
             Fields[i].AsString := RandomStr(ConnectionConfig.PerformanceFieldSizes[i]);
           ftMemo, ftFmtMemo:
-            Fields[i].AsString := RandomStr(RecordCount*100);
+            (Fields[i] as TBlobField).LoadFromStream(FAsciiStream);
           {$IFDEF WITH_WIDEFIELDS}
           ftWideString{$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
             Fields[i].AsWideString := WideString(RandomStr(ConnectionConfig.PerformanceFieldSizes[i]));
           ftWideMemo:
-            Fields[i].AsWideString := WideString(RandomStr(RecordCount*100));
+            (Fields[i] as TBlobField).LoadFromStream(FUnicodeStream);
           {$ENDIF}
           ftSmallint:
             Fields[i].AsInteger := Random(255);
@@ -214,7 +214,7 @@ begin
           ftVarBytes, ftBytes:
             Fields[i].Value := RandomBts(ConnectionConfig.PerformanceFieldSizes[i]);
           ftBlob:
-            Fields[i].Value := RandomBts(RecordCount*100);
+            (Fields[i] as TBlobField).LoadFromStream(FBinaryStream);
           {$IFDEF WITH_FTGUID}
           ftGuid:
             Fields[i].AsString := RandomGUIDString;
@@ -270,8 +270,9 @@ begin
           {$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
             Fields[i].AsString;
           {$IFDEF WITH_WIDEFIELDS}
-          ftWideString,
-          ftWideMemo
+          ftWideMemo:
+            if LoadLobs then Fields[i].AsWideString;
+          ftWideString
           {$IFNDEF FPC}, ftFixedWideChar{$ENDIF}:
             Fields[i].AsWideString;
           {$ENDIF}
@@ -283,7 +284,9 @@ begin
             Fields[i].AsFloat;
           ftDate, ftTime, ftDateTime, ftTimeStamp:
             Fields[i].AsDateTime;
-          ftVarBytes, ftBytes, ftBlob:
+          ftBlob:
+            if LoadLobs then Fields[i].Value;
+          ftVarBytes, ftBytes:
             Fields[i].Value;
           {ftAutoInc, ftGraphic,
           ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor,

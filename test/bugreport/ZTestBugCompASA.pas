@@ -79,10 +79,7 @@ type
 implementation
 
 uses
-{$IFNDEF VER130BELOW}
-  Variants,
-{$ENDIF}
-  ZTestCase;
+  Variants;
 
 { ZTestCompASABugReport }
 

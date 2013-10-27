@@ -71,8 +71,6 @@ type
 
 implementation
 
-uses ZTestCase;
-
 { TZTestDbcASABugReport }
 
 function TZTestDbcASABugReport.GetSupportedProtocols: string;

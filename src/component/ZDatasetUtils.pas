@@ -56,9 +56,10 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, Db, ZDbcIntfs, ZDbcCache,
-  Contnrs, ZCompatibility, ZExpression, ZVariant, ZTokenizer
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}Db{$ENDIF},
+  Contnrs, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  {$IFDEF MSWINDOWS}Windows, {$ENDIF}
+  ZDbcIntfs, ZDbcCache, ZCompatibility, ZExpression, ZVariant, ZTokenizer;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -290,10 +291,8 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
-  ZDbcUtils
-  {$IFNDEF WITHOUT_VARBYTESASSTRING}, ZSysUtils{$ENDIF}
-  {$IFDEF WITH_INLINE_ANSISTRLCOMP}, Windows{$ENDIF};
+  ZFastCode, ZMessages, ZGenericSqlToken, ZDbcResultSetMetadata, ZAbstractRODataset,
+  ZDbcUtils, ZSysUtils;
 
 {**
   Converts DBC Field Type to TDataset Field Type.
@@ -472,12 +471,11 @@ begin
         RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
       ftCurrency:
         RowAccessor.SetBigDecimal(FieldIndex, ResultSet.GetBigDecimal(ColumnIndex));
-      ftString:
-        // gto: do we need PChar here?
-        //RowAccessor.SetPChar(FieldIndex, ResultSet.GetPChar(ColumnIndex));
-        RowAccessor.SetString(FieldIndex, ResultSet.GetString(ColumnIndex));
-      ftWidestring:
-        RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
+      ftString, ftWideString:
+        if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          RowAccessor.SetRawByteString(FieldIndex, ResultSet.GetRawByteString(ColumnIndex))
+        else
+          RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
@@ -514,7 +512,7 @@ var
   Current: TField;
   WasNull: Boolean;
   ColumnIndex, ColumnCount: Integer;
-  Stream: TStream;
+  Blob: IZBlob;
 begin
   WasNull := False;
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
@@ -547,11 +545,13 @@ begin
       ftCurrency:
         ResultSet.UpdateBigDecimal(ColumnIndex,
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
-      ftString:
-        ResultSet.UpdateString(ColumnIndex, RowAccessor.GetString(FieldIndex, WasNull));
-      ftWidestring:
-        ResultSet.UpdateUnicodeString(ColumnIndex,
-          RowAccessor.GetUnicodeString(FieldIndex, WasNull));
+      ftString, ftWidestring:
+        if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          ResultSet.UpdateRawByteString(ColumnIndex,
+            RowAccessor.GetRawByteString(FieldIndex, WasNull))
+        else
+          ResultSet.UpdateUnicodeString(ColumnIndex,
+            RowAccessor.GetUnicodeString(FieldIndex, WasNull));
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
@@ -561,34 +561,14 @@ begin
       ftDateTime:
         ResultSet.UpdateTimestamp(ColumnIndex,
           RowAccessor.GetTimestamp(FieldIndex, WasNull));
-      ftMemo:
-        begin
-          Stream := RowAccessor.GetAsciiStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateAsciiStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
       {$IFDEF WITH_WIDEMEMO}
-      ftWideMemo:
-        begin
-          Stream := RowAccessor.GetUnicodeStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateUnicodeStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
+      ftWideMemo,
       {$ENDIF}
-      ftBlob:
+      ftMemo, ftBlob:
         begin
-          Stream := RowAccessor.GetBinaryStream(FieldIndex, WasNull);
-          try
-            ResultSet.UpdateBinaryStream(ColumnIndex, Stream);
-          finally
-            Stream.Free;
-          end;
+          Blob := RowAccessor.GetBlob(FieldIndex, WasNull);
+          WasNull := (Blob = nil) or (Blob.IsEmpty); //need a check for IsEmpty too
+          ResultSet.UpdateLob(ColumnIndex, Blob);
         end;
       {$IFDEF WITH_FTDATASETSUPPORT}
       ftDataSet:
@@ -713,32 +693,24 @@ begin
     begin
       case TField(FieldRefs[I]).DataType of
         ftString:
-          DefVarManager.SetAsString(ResultValues[I],
-            ResultSet.GetString(ColumnIndex));
+          ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
         ftBoolean:
-          DefVarManager.SetAsBoolean(ResultValues[I],
-            ResultSet.GetBoolean(ColumnIndex));
+          ResultValues[I] := EncodeBoolean(ResultSet.GetBoolean(ColumnIndex));
+        {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
         ftSmallInt, ftInteger, ftAutoInc:
-          DefVarManager.SetAsInteger(ResultValues[I],
-            ResultSet.GetInt(ColumnIndex));
-        ftFloat:
-          DefVarManager.SetAsFloat(ResultValues[I],
-            ResultSet.GetDouble(ColumnIndex));
+          ResultValues[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
+        ftFloat, ftCurrency:
+          ResultValues[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
         ftLargeInt:
-          DefVarManager.SetAsInteger(ResultValues[I],
-            ResultSet.GetLong(ColumnIndex));
-        ftCurrency:
-          DefVarManager.SetAsFloat(ResultValues[I],
-            ResultSet.GetBigDecimal(ColumnIndex));
+          ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftDate, ftTime, ftDateTime:
-          DefVarManager.SetAsDateTime(ResultValues[I],
-            ResultSet.GetTimestamp(ColumnIndex));
-        ftWidestring:
-          DefVarManager.SetAsUnicodeString(ResultValues[I],
-            ResultSet.GetUnicodeString(ColumnIndex));
+          ResultValues[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
+        ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
+          ResultValues[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
+        ftBytes, ftBlob:
+          ResultValues[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
         else
-          DefVarManager.SetAsString(ResultValues[I],
-            ResultSet.GetString(ColumnIndex));
+          ResultValues[I] := EncodeString(ResultSet.GetString(ColumnIndex));
       end;
       if ResultSet.WasNull then
         ResultValues[I] := NullVariant;
@@ -769,33 +741,25 @@ begin
   begin
     ColumnIndex := FieldIndices[I];
     case TField(FieldRefs[I]).DataType of
-      ftString:
-        DefVarManager.SetAsString(ResultValues[I],
-          RowAccessor.GetString(ColumnIndex, WasNull));
+      ftString, ftMemo:
+        ResultValues[I] := EncodeString(RowAccessor.GetString(ColumnIndex, WasNull));
       ftBoolean:
-        DefVarManager.SetAsBoolean(ResultValues[I],
-          RowAccessor.GetBoolean(ColumnIndex, WasNull));
+        ResultValues[I] := EncodeBoolean(RowAccessor.GetBoolean(ColumnIndex, WasNull));
+      {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
       ftSmallInt, ftInteger, ftAutoInc:
-        DefVarManager.SetAsInteger(ResultValues[I],
-          RowAccessor.GetInt(ColumnIndex, WasNull));
-      ftFloat:
-        DefVarManager.SetAsFloat(ResultValues[I],
-          RowAccessor.GetDouble(ColumnIndex, WasNull));
+        ResultValues[I] := EncodeInteger(RowAccessor.GetInt(ColumnIndex, WasNull));
+      ftFloat, ftCurrency:
+        ResultValues[I] := EncodeFloat(RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
       ftLargeInt:
-        DefVarManager.SetAsInteger(ResultValues[I],
-          RowAccessor.GetLong(ColumnIndex, WasNull));
-      ftCurrency:
-        DefVarManager.SetAsFloat(ResultValues[I],
-          RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
+        ResultValues[I] := EncodeInteger(RowAccessor.GetLong(ColumnIndex, WasNull));
       ftDate, ftTime, ftDateTime:
-        DefVarManager.SetAsDateTime(ResultValues[I],
-          RowAccessor.GetTimestamp(ColumnIndex, WasNull));
-      ftWidestring:
-        DefVarManager.SetAsUnicodeString(ResultValues[I],
-          RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
+        ResultValues[I] := EncodeDateTime(RowAccessor.GetTimestamp(ColumnIndex, WasNull));
+      ftWidestring{$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}:
+        ResultValues[I] := EncodeUnicodeString(RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
+      ftBytes:
+        ResultValues[I] := EncodeBytes(RowAccessor.GetBytes(ColumnIndex, WasNull));
       else
-        DefVarManager.SetAsString(ResultValues[I],
-          RowAccessor.GetString(ColumnIndex, WasNull));
+        ResultValues[I] := EncodeString(RowAccessor.GetString(ColumnIndex, WasNull));
     end;
     if WasNull then
       ResultValues[I] := NullVariant;
@@ -815,7 +779,6 @@ procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
   ResultSet: IZResultSet; Variables: IZVariablesList);
 var
   I, ColumnIndex: Integer;
-  Temp: TZVariant;
 begin
   for I := 0 to Length(Fields) - 1 do
   begin
@@ -827,34 +790,34 @@ begin
     begin
       case TField(Fields[I]).DataType of
         ftBoolean:
-          DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(ColumnIndex));
+          Variables.Values[I] := EncodeBoolean(ResultSet.GetBoolean(ColumnIndex));
+        {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
         ftSmallInt, ftInteger, ftAutoInc:
-          DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(ColumnIndex));
+          Variables.Values[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
         ftFloat:
-          DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(ColumnIndex));
+          Variables.Values[I] := EncodeFloat(ResultSet.GetDouble(ColumnIndex));
         ftLargeInt:
-          DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(ColumnIndex));
+          Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftCurrency:
-          DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(ColumnIndex));
+          Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
         ftDate:
-          DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(ColumnIndex));
+          Variables.Values[I] := EncodeDateTime(ResultSet.GetDate(ColumnIndex));
         ftTime:
-          DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(ColumnIndex));
+          Variables.Values[I] := EncodeDateTime(ResultSet.GetTime(ColumnIndex));
         ftDateTime:
-          DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(ColumnIndex));
-        ftWidestring:
-          DefVarManager.SetAsUnicodeString(Temp,
-            ResultSet.GetUnicodeString(ColumnIndex));
+          Variables.Values[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
+        ftString, ftMemo:
+          Variables.Values[I] := EncodeString(ResultSet.GetString(ColumnIndex));
+        ftWidestring{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}:
+          Variables.Values[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
+        ftBytes:
+          Variables.Values[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
         else
-          DefVarManager.SetAsString(Temp, ResultSet.GetString(ColumnIndex));
+          Variables.Values[I] := EncodeString(ResultSet.GetString(ColumnIndex));
       end;
-      Variables.Values[I] := Temp;
     end
     else
-    begin
-      DefVarManager.SetNull(Temp);
-      Variables.Values[I] := Temp;
-    end;
+      Variables.Values[I] := NullVariant;
   end;
 end;
 {$IFDEF FPC}
@@ -888,12 +851,17 @@ begin
             WValue2 := WideUpperCase(SoftVarManager.GetAsUnicodeString(RowValues[I]));
             if PartialKey then
             begin
-              {$IFDEF UNICODE}
-              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$IFDEF MSWINDOWS}
+                Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+                  PWideChar(WValue2), Length(WValue1), PWideChar(WValue1), Length(WValue1)) - 2{CSTR_EQUAL} = 0;
               {$ELSE}
-              Value1 := AnsiString(WValue1);
-              Value2 := AnsiString(WValue2);
-              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$IFDEF UNICODE}
+                Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+                {$ELSE}
+                Value1 := AnsiString(WValue1);
+                Value2 := AnsiString(WValue2);
+                Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$ENDIF}
               {$ENDIF}
             end
             else
@@ -905,12 +873,17 @@ begin
             WValue1 := SoftVarManager.GetAsUnicodeString(RowValues[I]);
             if PartialKey then
             begin
-              {$IFDEF UNICODE}
-              Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+              {$IFDEF MSWINDOWS}
+                Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+                  PWideChar(WValue2), Length(WValue1), PWideChar(WValue1), Length(WValue1)) - 2{CSTR_EQUAL} = 0;
               {$ELSE}
-              Value1 := AnsiString(WValue1);
-              Value2 := AnsiString(WValue2);
-              Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$IFDEF UNICODE}
+                Result := SysUtils.AnsiStrLComp(PWideChar(WValue2), PWideChar(WValue1), Length(WValue1)) = 0;
+                {$ELSE}
+                Value1 := AnsiString(WValue1);
+                Value2 := AnsiString(WValue2);
+                Result := AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0;
+                {$ENDIF}
               {$ENDIF}
             end
             else
@@ -921,8 +894,8 @@ begin
       begin
         if CaseInsensitive then
         begin
-          Value1 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(KeyValues[I])));
-          Value2 := AnsiString(AnsiUpperCase(SoftVarManager.GetAsString(RowValues[I])));
+          Value1 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(SoftVarManager.GetAsAnsiString(KeyValues[I]));
+          Value2 := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiUpperCase(SoftVarManager.GetAsAnsiString(RowValues[I]));
           if PartialKey then
 
             Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
@@ -931,8 +904,8 @@ begin
         end
         else
         begin
-          Value1 := AnsiString(SoftVarManager.GetAsString(KeyValues[I]));
-          Value2 := AnsiString(SoftVarManager.GetAsString(RowValues[I]));
+          Value1 := SoftVarManager.GetAsAnsiString(KeyValues[I]);
+          Value2 := SoftVarManager.GetAsAnsiString(RowValues[I]);
           if PartialKey then
             Result := {$IFDEF WITH_ANSISTRLCOMP_DEPRECATED}AnsiStrings.{$ENDIF}AnsiStrLComp(PAnsiChar(Value2), PAnsiChar(Value1), Length(Value1)) = 0
           else
@@ -969,7 +942,6 @@ begin
 
     if DecodedKeyValues[I].VType = vtNull then
       Continue;
-
     CurrentType := ResultSet.GetMetadata.GetColumnType(Current.FieldNo);
 
     if PartialKey then
@@ -1055,7 +1027,7 @@ begin
                     // true in this point, or should that be converted higher up?
             DecodedKeyValues[I].VString :=
               WideUpperCase(UTF8Decode (DecodedKeyValues[I].VString));
-            {$ELSE} 
+            {$ELSE}
             DecodedKeyValues[I].VString := 
               AnsiUpperCase(DecodedKeyValues[I].VString); 
             {$ENDIF} 
@@ -1148,26 +1120,18 @@ begin
         stShort,
         stInteger,
         stLong:
-          begin
-            Result := KeyValues[I].VInteger =
-              ResultSet.GetLong(ColumnIndex);
-          end;
+          Result := KeyValues[I].VInteger = ResultSet.GetLong(ColumnIndex);
         stFloat:
-            Result := Abs(KeyValues[I].VFloat -
-              ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
+          Result := Abs(KeyValues[I].VFloat -
+            ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
         stDouble,
         stBigDecimal:
-          begin
-            Result := Abs(KeyValues[I].VFloat -
-              ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
-          end;
+          Result := Abs(KeyValues[I].VFloat -
+            ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
         stDate,
         stTime,
         stTimestamp:
-          begin
-            Result := KeyValues[I].VDateTime =
-              ResultSet.GetTimestamp(ColumnIndex);
-          end;
+          Result := KeyValues[I].VDateTime = ResultSet.GetTimestamp(ColumnIndex);
         stUnicodeString:
           begin
             if CaseInsensitive then
@@ -1185,12 +1149,12 @@ begin
           if CaseInsensitive then
           begin
             {$IFDEF LAZARUSUTF8HACK}
-            Result := KeyValues[I].VString = 
-              AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex))); 
-            {$ELSE} 
-            Result := KeyValues[I].VString = 
-              AnsiUpperCase(ResultSet.GetString(ColumnIndex)); 
-            {$ENDIF} 
+            Result := KeyValues[I].VString =
+              AnsiUpperCase (Utf8ToAnsi(ResultSet.GetString(ColumnIndex)));
+            {$ELSE}
+            Result := KeyValues[I].VString =
+              AnsiUpperCase(ResultSet.GetString(ColumnIndex));
+            {$ENDIF}
           end
           else
           begin
@@ -1786,7 +1750,7 @@ begin
           end;
         end;
       else
-        raise EZDatabaseError.Create(SUnKnownParamDataType + IntToStr(Ord(Param.DataType)));
+        raise EZDatabaseError.Create(SUnKnownParamDataType + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(Param.DataType)));
     end;
   end;
 end;

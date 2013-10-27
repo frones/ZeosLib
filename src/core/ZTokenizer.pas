@@ -56,7 +56,8 @@ interface
 {$I ZCore.inc}
 
 uses
-   Classes, SysUtils, ZClasses, ZCompatibility;
+   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+   ZClasses, ZCompatibility;
 
 type
 
@@ -446,13 +447,11 @@ type
     function GetWhitespaceState: TZWhitespaceState;
     function GetWordState: TZWordState;
     function GetCharacterState(StartChar: Char): TZTokenizerState;
-    function AnsiGetEscapeString(const Ansi: RawByteString): String;
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
     function GetEscapeString(const EscapeString: RawByteString): RawByteString;
     {$ELSE}
     function GetEscapeString(const EscapeString: String): String;
     {$IFEND}
-    function TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray;
   end;
 
   {** Implements a default tokenizer object. }
@@ -473,13 +472,11 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function AnsiGetEscapeString(const EscapeString: RawByteString): String; virtual;
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
     function GetEscapeString(const EscapeString: RawByteString): RawByteString;
     {$ELSE}
     function GetEscapeString(const EscapeString: String): String;
     {$IFEND}
-    function TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray; virtual;
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
       TStrings;
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions):
@@ -518,7 +515,7 @@ const
 implementation
 
 uses
-  Math, StrUtils;
+  ZFastCode, Math, StrUtils, ZSysUtils;
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -1428,18 +1425,6 @@ begin
   end;
 end;
 
-function TZTokenizer.AnsiGetEscapeString(const EscapeString: RawByteString): String;
-var
-  Temp: String;
-begin
-  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
-
-  if Length(EscapeString) > 0 then
-    Result := Temp+String(EscapeString)+Temp
-  else
-    Result := 'NULL';
-end;
-
 {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
 function TZTokenizer.GetEscapeString(const EscapeString: RawByteString): RawByteString;
 {$ELSE}
@@ -1448,7 +1433,7 @@ function TZTokenizer.GetEscapeString(const EscapeString: String): String;
 var
   Temp: String;
 begin
-  Temp := EscapeMarkSequence+IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
@@ -1458,18 +1443,6 @@ begin
     {$IFEND}
   else
     Result := '';
-end;
-
-{**
-  Tokenizes a string buffer into a dynamic array of tokens and informs
-  the Tokenizer and EscapeState about the used sequence
-  @param SQL a string buffer to be tokenized.
-  @param EscapeMarkSequence to detect preprepared data
-  @returns a dynamic array of tokens
-}
-function TZTokenizer.TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray;
-begin
-  Result := TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
 end;
 
 {**

@@ -81,6 +81,7 @@ type
     procedure Test1014416;
     procedure Test_Mantis0000148;
     procedure Test_Mantis0000229;
+    procedure Test_TrailingSpaces;
   end;
 
   TZTestDbcPostgreSQLBugReportMBCs = class(TZAbstractDbcSQLTestCaseMBCs)
@@ -633,14 +634,13 @@ procedure TZTestDbcPostgreSQLBugReport.Test_Mantis0000148;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
-  Blob: IZBlob;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
 
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
   ///
-  Blob := ResultSet.GetBlob(1);
+  ResultSet.GetBlob(1);
   Statement.Close;
 end;
 
@@ -662,6 +662,27 @@ begin
       CheckEquals(Ord(stUnicodeStream), Ord(ResultSet.GetMetadata.GetColumnType(1)))
     else
       CheckEquals(Ord(stAsciiStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+    ResultSet := nil;
+    Close;
+  end;
+end;
+
+procedure TZTestDbcPostgreSQLBugReport.Test_TrailingSpaces;
+var
+  ResultSet: IZResultSet;
+begin
+  with Connection.PrepareStatement('select s_char from string_values') do
+  begin
+    ResultSet := ExecuteQueryPrepared;
+    if Connection.GetConSettings.CPType = cCP_UTF16 then
+      CheckEquals(Ord(stUnicodeString), Ord(ResultSet.GetMetadata.GetColumnType(1)))
+    else
+      CheckEquals(Ord(stString), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+    ResultSet.Next;
+    CheckEquals('', ResultSet.GetString(1));
+    ResultSet.Next;
+    CheckEquals('Test string', ResultSet.GetString(1));
+
     ResultSet := nil;
     Close;
   end;

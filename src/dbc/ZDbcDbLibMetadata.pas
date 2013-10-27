@@ -301,7 +301,7 @@ type
 
 implementation
 
-uses ZDbcUtils, ZDbcDbLibUtils;
+uses ZFastCode, ZDbcUtils, ZDbcDbLibUtils;
 
 { TZDbLibDatabaseInfo }
 
@@ -3871,7 +3871,7 @@ begin
     begin
       if Length(UDTypes) > 0 then
         UDTypes := UDTypes + ',';
-      UDTypes := UDTypes + AnsiQuotedStr(IntToStr(Types[I]), '''');
+      UDTypes := UDTypes + AnsiQuotedStr({$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Types[I]), '''');
     end;
 
     with GetStatement.ExecuteQuery(

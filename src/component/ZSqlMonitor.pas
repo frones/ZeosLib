@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, Contnrs, ZClasses, ZCompatibility, ZDbcIntfs, ZDbcLogging;
+  SysUtils, Classes, Contnrs, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZClasses, ZCompatibility, ZDbcIntfs, ZDbcLogging;
 
 type
 
@@ -119,9 +120,6 @@ type
 
 implementation
 
-{$IFDEF WITH_UNITANSISTRINGS}
-uses AnsiStrings;
-{$ENDIF}
 
 { TZSQLMonitor }
 
@@ -245,8 +243,7 @@ procedure TZSQLMonitor.SaveToFile(const FileName: string);
 var
   I: Integer;
   Stream: TFileStream;
-Temp: Ansistring; 
-Buffer: PAnsiChar; 
+  Temp: RawByteString;
 begin
   if not FileExists(FileName) then
     Stream := TFileStream.Create(FileName, fmCreate)
@@ -256,8 +253,7 @@ begin
     for I := 0 to FTraceList.Count - 1 do
     begin
       Temp := AnsiString(TZLoggingEvent(FTraceList[I]).AsString + LineEnding);
-      Buffer := PAnsiChar(Temp);
-      Stream.Write(Buffer^, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer) * sizeof(Ansichar));
+      Stream.Write(PAnsiChar(Temp)^, Length(Temp));
     end;
   finally
     Stream.Free;
@@ -272,8 +268,7 @@ procedure TZSQLMonitor.LogEvent(Event: TZLoggingEvent);
 var
   LogTrace: Boolean;
   Stream: TFileStream;
-Temp: Ansistring; 
-Buffer: PAnsiChar; 
+  Temp: RawbyteString;
 begin
   LogTrace := True;
   DoTrace(Event, LogTrace);
@@ -297,9 +292,8 @@ begin
       Stream := TFileStream.Create(FFileName, fmOpenReadWrite or fmShareDenyWrite);
     try
       Stream.Seek(0, soFromEnd);
-      Temp := AnsiString(Event.AsString(FLoggingFormatter) + LineEnding);
-      Buffer := PAnsiChar(Temp);
-      Stream.Write(Buffer^, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Buffer)*sizeof(Ansichar));
+      Temp := Event.AsString(FLoggingFormatter) + LineEnding;
+      Stream.Write(PAnsiChar(Temp)^, Length(Temp));
     finally
       Stream.Free;
     end;

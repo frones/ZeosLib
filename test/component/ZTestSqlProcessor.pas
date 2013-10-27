@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
-  ZSqlStrings, ZTokenizer, ZConnection, ZSqlProcessor, ZSqlTestCase, ZScriptParser;
+  ZSqlProcessor, ZSqlTestCase, ZScriptParser;
 
 type
 
@@ -100,7 +100,7 @@ type
 implementation
 
 uses Classes,
-  ZCompatibility, ZDbcUtils, ZSysUtils;
+  ZCompatibility, ZSysUtils;
 
 { TZTestSQLProcessorCase }
 

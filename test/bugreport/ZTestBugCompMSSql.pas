@@ -81,7 +81,7 @@ type
 
 implementation
 
-uses SysUtils, Types, ZStoredProcedure, ZTestCase, ZSysUtils;
+uses SysUtils, Types, ZStoredProcedure, ZTestCase;
 
 { TZTestCompMSSqlBugReport }
 

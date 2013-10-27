@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant,
-  ZPlainMySqlDriver, ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
+  ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
 
 type
 
@@ -230,7 +231,7 @@ type
 implementation
 
 uses
-  Types, Math, DateUtils, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
+  Types, Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
   ZDbcResultSetMetadata, ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZEncoding,
   ZDbcResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -318,13 +319,13 @@ begin
   Result := nil;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
-    Result := CreateResultSet(LogSQL);
+    Result := CreateResultSet(Self.SQL);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -347,7 +348,7 @@ begin
   Result := -1;
   if FPlainDriver.ExecQuery(FHandle, PAnsichar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -374,7 +375,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
   LastUpdateCount := Result;
 end;
 
@@ -406,13 +407,13 @@ begin
   Result := False;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
     begin
       Result := True;
-      LastResultSet := CreateResultSet(LogSQL);
+      LastResultSet := CreateResultSet(Self.SQL);
     end
     { Processes regular query. }
     else
@@ -422,7 +423,7 @@ begin
     end;
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -449,7 +450,7 @@ begin
   begin
     AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
     if AStatus > 0 then
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL)
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings)
     else
       Result := (AStatus = 0);
 
@@ -458,7 +459,7 @@ begin
     LastResultSet := nil;
     LastUpdateCount := -1;
     if FPlainDriver.ResultSetExists(FHandle) then
-      LastResultSet := CreateResultSet(SSQL)
+      LastResultSet := CreateResultSet(Self.SQL)
     else
       LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
   end;
@@ -502,14 +503,12 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
-  TempBytes := nil;
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Value := InParamValues[ParamIndex];
-  if DefVarManager.IsNull(Value) then
+  if ClientVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
       Result := ZPlainString(InParamDefaultValues[ParamIndex])
@@ -519,55 +518,44 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
            Result := '''Y'''
         else
            Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
-          TempBytes := SoftVarManager.GetAsBytes(Value);
+          TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
-      stString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value)), ConSettings, True);
-      stUnicodeString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+      stString, stUnicodeString: 
+        Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-        begin
-          DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d',
-            [AYear, AMonth, ADay]) + '''');
-        end;
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
       stTime:
-        begin
-          DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := RawByteString('''' + Format('%0.2d:%0.2d:%0.2d',
-            [AHour, AMinute, ASecond]) + '''');
-        end;
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
       stTimestamp:
-        begin
-          DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-            AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-          Result := RawByteString('''' + Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
-            [AYear, AMonth, ADay, AHour, AMinute, ASecond]) + '''');
-        end;
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
           begin
             case InParamTypes[ParamIndex] of
               stBinaryStream:
                 Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
               else
-                Result := FPlainDriver.EscapeString(FHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                    ConSettings, True);
+                if TempBlob.IsClob then
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    TempBlob.GetRawByteString, ConSettings, True)
+                else
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings), ConSettings, True);
             end;
           end
           else
@@ -614,16 +602,16 @@ procedure TZMySQLPreparedStatement.Prepare;
 begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
-    begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
-      exit;
-    end;
+  begin
+    CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoInitPrepStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
+    exit;
+  end;
   if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(ASQL), length(ASQL)) <> 0) then
     begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoPrepareStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
       exit;
     end;
-  LogPrepStmtMessage(lcPrepStmt, SQL);
+  LogPrepStmtMessage(lcPrepStmt, ASQL);
   inherited Prepare;
 end;
 
@@ -681,6 +669,7 @@ var
   I, OffSet, PieceSize: integer;
   TempBlob: IZBlob;
   TempAnsi: RawByteString;
+  CharRec: TZCharRec;
 begin
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
   if InParamCount = 0 then
@@ -691,125 +680,122 @@ begin
   For I := 0 to InParamCount - 1 do
   begin
     MyType := GetFieldType(InParamValues[I]);
+    if MyType = FIELD_TYPE_STRING then
+      CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
     case MyType of
-      FIELD_TYPE_VARCHAR:
-        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
+      FIELD_TYPE_STRING:
+        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, CharRec.Len, False);
       FIELD_TYPE_BLOB:
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
           if TempBlob.IsEmpty then
-            DefVarManager.SetNull(InParamValues[I])
+            ClientVarManager.SetNull(InParamValues[I])
           else
             if InParamTypes[I] = stBinaryStream then
               FParamBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
             else
             begin
-              TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                        TempBlob.Length, TempBlob.WasDecoded, ConSettings);
-              TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
-              TempBlob.SetString(TempAnsi);
+              if TempBlob.IsClob then
+                TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP) //set proper encoding if required
+              else
+              begin
+                TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                          TempBlob.Length, ConSettings);
+                TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
+              end;
               InParamValues[I].VInterface  := TempBlob;
               FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
             end;
         end;
-      FIELD_TYPE_LONGLONG:
-        FParamBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
       FIELD_TYPE_TINY:
         FParamBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
+        FParamBindBuffer.AddColumn(MyType, getMySQLFieldSize(MyType, 0), false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
-    if InParamValues[I].VType=vtNull then
+    if InParamValues[I].VType = vtNull then
       FColumnArray[I].is_null := 1
     else
       FColumnArray[I].is_null := 0;
-      case FParamBindBuffer.GetBufferType(I+1) of
 
-        FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
-        FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
-        FIELD_TYPE_STRING:
-          case MyType of
-            FIELD_TYPE_TINY:
-              if InParamValues[I].VBoolean then
-                PAnsiChar(PBuffer)^ := 'Y'
-              else
-                PAnsiChar(PBuffer)^ := 'N';
-            FIELD_TYPE_VARCHAR:
-              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)));
-            FIELD_TYPE_BLOB:
-              begin
-                if TempBlob.Length<=ChunkSize then
-                  {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
-                TempBlob := nil;
-              end;
+    case FParamBindBuffer.GetBufferType(I+1) of
+      FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
+      FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
+      FIELD_TYPE_STRING:
+        case MyType of
+          FIELD_TYPE_TINY:
+            if InParamValues[I].VBoolean then
+              PAnsiChar(PBuffer)^ := AnsiChar('Y')
             else
-              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
-          end;
-        FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
-        FIELD_TYPE_DATETIME:
-          begin
-            DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
-            PMYSQL_TIME(PBuffer)^.year := year;
-            PMYSQL_TIME(PBuffer)^.month := month;
-            PMYSQL_TIME(PBuffer)^.day := day;
-            PMYSQL_TIME(PBuffer)^.hour := hour;
-            PMYSQL_TIME(PBuffer)^.minute := minute;
-            PMYSQL_TIME(PBuffer)^.second := second;
-            PMYSQL_TIME(PBuffer)^.second_part := millisecond;
-          end;
-          FIELD_TYPE_TINY_BLOB:
-            System.Move(PAnsiChar(InParamValues[i].VBytes)^, PBuffer^, Length(InParamValues[i].VBytes));
-          FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+              PAnsiChar(PBuffer)^ := AnsiChar('N');
           FIELD_TYPE_BLOB:
             begin
               if TempBlob.Length<=ChunkSize then
                 System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
               TempBlob := nil;
             end;
-          FIELD_TYPE_NULL:;
-      end;
+          else
+            System.Move(CharRec.P^, PBuffer^, CharRec.Len);
+        end;
+      FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
+      FIELD_TYPE_DATETIME:
+        begin
+          DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
+          PMYSQL_TIME(PBuffer)^.year := year;
+          PMYSQL_TIME(PBuffer)^.month := month;
+          PMYSQL_TIME(PBuffer)^.day := day;
+          PMYSQL_TIME(PBuffer)^.hour := hour;
+          PMYSQL_TIME(PBuffer)^.minute := minute;
+          PMYSQL_TIME(PBuffer)^.second := second;
+          PMYSQL_TIME(PBuffer)^.second_part := millisecond;
+        end;
+        FIELD_TYPE_TINY_BLOB:
+          System.Move(InParamValues[i].VBytes[0], PBuffer^, Length(InParamValues[i].VBytes));
+        FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
+        FIELD_TYPE_BLOB:
+          begin
+            if TempBlob.Length<=ChunkSize then
+              System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
+            TempBlob := nil;
+          end;
+        FIELD_TYPE_NULL:;
+    end;
   end;
 
   if (FPlainDriver.BindParameters(FStmtHandle, FParamBindBuffer.GetBufferAddress) <> 0) then
   begin
-    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
+    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SBindingFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
   end;
   inherited BindInParameters;
 
   // Send large blobs in chuncks
   For I := 0 to InParamCount - 1 do
-  begin
-    if FParamBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB] then
+    if (FParamBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB])
+      and (GetFieldType(InParamValues[I]) = FIELD_TYPE_BLOB) then
+    begin
+      TempBlob := (InParamValues[I].VInterface as IZBlob);
+      if TempBlob.Length>ChunkSize then
       begin
-        MyType := GetFieldType(InParamValues[I]);
-        if MyType = FIELD_TYPE_BLOB then
+        OffSet := 0;
+        PieceSize := ChunkSize;
+        while OffSet < TempBlob.Length do
+        begin
+          if OffSet+PieceSize > TempBlob.Length then
+            PieceSize := TempBlob.Length - OffSet;
+          if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
           begin
-            TempBlob := (InParamValues[I].VInterface as IZBlob);
-            if TempBlob.Length>ChunkSize then
-            begin
-              OffSet := 0;
-              PieceSize := ChunkSize;
-              while OffSet < TempBlob.Length do
-              begin
-                if OffSet+PieceSize > TempBlob.Length then
-                  PieceSize := TempBlob.Length - OffSet;
-                if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
-                begin
-                  checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, SBindingFailure);
-                  exit;
-                end;
-                Inc(OffSet, PieceSize);
-              end;
-            end;
-            TempBlob:=nil;
+            checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SBindingFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
+            exit;
           end;
+          Inc(OffSet, PieceSize);
+        end;
       end;
-  end;
+      TempBlob:=nil;
+    end;
 end;
 
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
@@ -827,9 +813,13 @@ begin
     vtBytes:     Result := FIELD_TYPE_TINY_BLOB;
     vtInteger:   Result := FIELD_TYPE_LONGLONG;
     vtFloat:     Result := FIELD_TYPE_DOUBLE;
-    vtString:    Result := FIELD_TYPE_STRING;
+    vtString,
+    vtAnsiString,
+    vtUTF8String,
+    vtRawByteString,
+    vtCharRec,
+    vtUnicodeString:  Result := FIELD_TYPE_STRING;
     vtDateTime:  Result := FIELD_TYPE_DATETIME;
-    vtUnicodeString: Result := FIELD_TYPE_VARCHAR;
     vtInterface: Result := FIELD_TYPE_BLOB;
   else
     raise EZSQLException.Create(SUnsupportedDataType);
@@ -849,7 +839,8 @@ begin
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer);
@@ -880,7 +871,9 @@ begin
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP),
+        ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer); //MemLeak closed
@@ -923,7 +916,7 @@ begin
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, SPreparedStmtExecFailure);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer); //MemLeak closed
@@ -1052,14 +1045,13 @@ var
   Value: TZVariant;
   TempBytes: TByteDynArray;
   TempBlob: IZBlob;
-  AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
 begin
   TempBytes := nil;
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   Value := InParamValues[ParamIndex];
-  if DefVarManager.IsNull(Value) then
+  if ClientVarManager.IsNull(Value) then
     if (InParamDefaultValues[ParamIndex] <> '') and
       StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
       Result := RawByteString(InParamDefaultValues[ParamIndex])
@@ -1069,54 +1061,43 @@ begin
   begin
     case InParamTypes[ParamIndex] of
       stBoolean:
-        if SoftVarManager.GetAsBoolean(Value) then
+        if ClientVarManager.GetAsBoolean(Value) then
           Result := '''Y'''
         else
           Result := '''N''';
       stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
-        Result := RawByteString(SoftVarManager.GetAsString(Value));
+        Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
-          TempBytes := SoftVarManager.GetAsBytes(Value);
+          TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
-      stString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
-      stUnicodeString:
-        Result := FPlainDriver.EscapeString(FHandle, ZPlainString(SoftVarManager.GetAsUnicodeString(Value)), ConSettings, True);
+      stString, stUnicodeString:
+        Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
-      begin
-        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d',
-          [AYear, AMonth, ADay])) + '''';
-      end;
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
       stTime:
-      begin
-        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + RawByteString(Format('%0.2d:%0.2d:%0.2d',
-          [AHour, AMinute, ASecond])) + '''';
-      end;
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
       stTimestamp:
-      begin
-        DecodeDateTime(SoftVarManager.GetAsDateTime(Value),
-          AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-        Result := '''' + RawByteString(Format('%0.4d-%0.2d-%0.2d %0.2d:%0.2d:%0.2d',
-          [AYear, AMonth, ADay, AHour, AMinute, ASecond])) + '''';
-      end;
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
       stAsciiStream, stUnicodeStream, stBinaryStream:
         begin
-          TempBlob := DefVarManager.GetAsInterface(Value) as IZBlob;
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
           if not TempBlob.IsEmpty then
             case InParamTypes[ParamIndex] of
               stBinaryStream:
-                Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
+                Result := GetSQLHexAnsiString(TempBlob.GetBuffer, TempBlob.Length);
               else
-                Result := FPlainDriver.EscapeString(FHandle,
-                  GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                  TempBlob.Length, TempBlob.WasDecoded, ConSettings),
-                  ConSettings, True);
+                if TempBlob.IsClob then
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    TempBlob.GetRawByteString, ConSettings, True)
+                else
+                  Result := FPlainDriver.EscapeString(FHandle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                    TempBlob.Length, ConSettings), ConSettings, True);
             end
           else
             Result := 'NULL';
@@ -1151,16 +1132,18 @@ begin
     begin
       if FDBParamTypes[i] in [1, 3] then //ptInputOutput
         if ExecQuery = '' then
-          ExecQuery := 'SET @'+ZPlainString(FParamNames[i])+' = '+PrepareAnsiSQLParam(I)
+          ExecQuery := 'SET @'+ConSettings^.ConvFuncs.ZStringToRaw(FParamNames[i],
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+' = '+PrepareAnsiSQLParam(I)
         else
-          ExecQuery := ExecQuery + ', @'+ZPlainString(FParamNames[i])+' = '+PrepareAnsiSQLParam(I);
+          ExecQuery := ExecQuery + ', @'+ConSettings^.ConvFuncs.ZStringToRaw(FParamNames[i],
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+' = '+PrepareAnsiSQLParam(I);
       Inc(i);
     end;
   if not (ExecQuery = '') then
     if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
-      DriverManager.LogMessage(lcBindPrepStmt, FPlainDriver.GetProtocol, String(ExecQuery))
+      DriverManager.LogMessage(lcBindPrepStmt, ConSettings^.Protocol, ExecQuery)
     else
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, String(ExecQuery));
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ExecQuery, ConSettings);
 end;
 
 {**
@@ -1202,7 +1185,6 @@ end;
 procedure TZMySQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
 var
   ParamIndex, I: Integer;
-  Temp: TZVariant;
   HasRows: Boolean;
 begin
   ResultSet.BeforeFirst;
@@ -1217,43 +1199,42 @@ begin
       Break;
 
     if (not HasRows) or (ResultSet.IsNull(I)) then
-      DefVarManager.SetNull(Temp)
+      OutParamValues[ParamIndex] := NullVariant
     else
       case ResultSet.GetMetadata.GetColumnType(I) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Temp, ResultSet.GetBoolean(I));
+        OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
       stByte:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetByte(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
       stBytes:
-        DefVarManager.SetAsBytes(Temp, ResultSet.GetBytes(I));
+        OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
       stShort:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetShort(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
       stInteger:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetInt(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:
-        DefVarManager.SetAsInteger(Temp, ResultSet.GetLong(I));
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
       stFloat:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetFloat(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
       stDouble:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetDouble(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
       stBigDecimal:
-        DefVarManager.SetAsFloat(Temp, ResultSet.GetBigDecimal(I));
+        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
       stString, stAsciiStream:
-        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       stUnicodeString, stUnicodeStream:
-        DefVarManager.SetAsUnicodeString(Temp, ResultSet.GetUnicodeString(I));
+        OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
       stDate:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetDate(I));
+        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
       stTime:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTime(I));
+        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
       stTimestamp:
-        DefVarManager.SetAsDateTime(Temp, ResultSet.GetTimestamp(I));
+        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
       stBinaryStream:
-        DefVarManager.SetAsInterface(Temp, ResultSet.GetBlob(I));
+        OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
       else
-        DefVarManager.SetAsString(Temp, ResultSet.GetString(I));
+        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       end;
-    OutParamValues[ParamIndex] := Temp;
     Inc(I);
   end;
   ResultSet.BeforeFirst;
@@ -1265,10 +1246,10 @@ begin
   FParamNames[ParameterIndex] := ParamName;
   if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
      ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-    FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+    FParamTypeNames[ParameterIndex] := 'CHAR('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
   else
     if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-      FParamTypeNames[ParameterIndex] := 'CHAR('+IntToStr(ColumnSize)+')'
+      FParamTypeNames[ParameterIndex] := 'CHAR('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
     else
       if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
          ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
@@ -1285,7 +1266,7 @@ begin
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
               if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
-                FParamTypeNames[ParameterIndex] := 'BINARY('+IntToStr(ColumnSize)+')'
+                FParamTypeNames[ParameterIndex] := 'BINARY('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
 end;
@@ -1313,25 +1294,25 @@ begin
   ASQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     if IsFunction then
       ClearResultSets;
-    FResultSets.Add(CreateResultSet(SSQL));
+    FResultSets.Add(CreateResultSet(Self.SQL));
     if FPlainDriver.CheckAnotherRowset(FHandle) then
     begin
       while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
         if FPlainDriver.CheckAnotherRowset(FHandle) then
-          FResultSets.Add(CreateResultSet(SSQL))
+          FResultSets.Add(CreateResultSet(Self.SQL))
         else break;
-      CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
     end;
     FActiveResultset := FResultSets.Count-1;
     Result := IZResultSet(FResultSets[FActiveResultset]);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -1356,18 +1337,18 @@ begin
     begin
       ClearResultSets;
       FActiveResultset := 0;
-      FResultSets.Add(CreateResultSet(LogSQL));
+      FResultSets.Add(CreateResultSet(Self.SQL));
       if FPlainDriver.CheckAnotherRowset(FHandle) then
       begin
         Result := LastUpdateCount;
         while FPlainDriver.RetrieveNextRowset(FHandle) = 0 do
           if FPlainDriver.CheckAnotherRowset(FHandle) then
           begin
-            FResultSets.Add(CreateResultSet(SSQL));
+            FResultSets.Add(CreateResultSet(Self.SQL));
             inc(Result, LastUpdateCount); //LastUpdateCount will be returned from ResultSet.Open
           end
           else break;
-        CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+        CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
       end
       else
         Result := LastUpdateCount;
@@ -1378,7 +1359,7 @@ begin
       Result := FPlainDriver.GetAffectedRows(FHandle);
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, SSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
   LastUpdateCount := Result;
 end;
 
@@ -1407,16 +1388,16 @@ var
   HasResultset : Boolean;
 begin
   Result := False;
-  {$IFNDEF UNICODE}ASQL := SQL;{$ENDIF}
+  ASQL := SQL;
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
     begin
       Result := True;
-      LastResultSet := CreateResultSet(LogSQL);
+      LastResultSet := CreateResultSet(Self.SQL);
     end
     { Processes regular query. }
     else
@@ -1426,7 +1407,7 @@ begin
     end;
   end
   else
-    CheckMySQLError(FPlainDriver, FHandle, lcExecute, LogSQL);
+    CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings);
 end;
 
 {**
@@ -1627,7 +1608,7 @@ begin
   inherited Create;
   FBindOffsets := PlainDriver.GetBindOffsets;
   if FBindOffsets.buffer_type=0 then
-    raise EZSQLException.Create('Unknown dll version : '+IntToStr(PlainDriver.GetClientVersion));
+    raise EZSQLException.Create('Unknown dll version : '+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
   setlength(FBindArray,0);
   setlength(ColumnArray,BindCount);
@@ -1666,30 +1647,30 @@ begin
   Inc(FAddedColumnCount);
   With FPColumnArray^[FAddedColumnCount-1] do
   begin
-      case buffertype of
-        FIELD_TYPE_DATE:        Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TIME:        Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_DATETIME:    Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TIMESTAMP:   Length := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TINY:        Length := 1;
-        FIELD_TYPE_SHORT:       Length := 2;
-        FIELD_TYPE_LONG:        Length := 4;
-        FIELD_TYPE_LONGLONG:    Length := 8;
-        FIELD_TYPE_FLOAT:       Length := 4;
-        FIELD_TYPE_DOUBLE:      Length := 8;
-        FIELD_TYPE_NEWDECIMAL:  Length := 11;
-        FIELD_TYPE_BLOB,
-        FIELD_TYPE_MEDIUM_BLOB,
-        FIELD_TYPE_LONG_BLOB,
-        FIELD_TYPE_GEOMETRY:
-          Length := PlainDriver.GetFieldMaxLength(FieldHandle)+1;
-        FIELD_TYPE_VARCHAR,
-        FIELD_TYPE_VAR_STRING,
-        FIELD_TYPE_STRING:
-            Length := Min(MaxBlobSize, Max(PlainDriver.GetFieldLength(FieldHandle), PlainDriver.GetFieldMaxLength(FieldHandle)))+1;
-      else
-        Length := PlainDriver.GetFieldLength(FieldHandle);
-      end;
+    case buffertype of
+      FIELD_TYPE_DATE:        Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_TIME:        Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_DATETIME:    Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_TIMESTAMP:   Length := sizeOf(MYSQL_TIME);
+      FIELD_TYPE_TINY:        Length := 1;
+      FIELD_TYPE_SHORT:       Length := 2;
+      FIELD_TYPE_LONG:        Length := 4;
+      FIELD_TYPE_LONGLONG:    Length := 8;
+      FIELD_TYPE_FLOAT:       Length := 4;
+      FIELD_TYPE_DOUBLE:      Length := 8;
+      //FIELD_TYPE_NEWDECIMAL:  Length := 11;
+      FIELD_TYPE_BLOB,
+      FIELD_TYPE_MEDIUM_BLOB,
+      FIELD_TYPE_LONG_BLOB,
+      FIELD_TYPE_GEOMETRY:
+        Length := PlainDriver.GetFieldMaxLength(FieldHandle)+1;
+      FIELD_TYPE_VARCHAR,
+      FIELD_TYPE_VAR_STRING,
+      FIELD_TYPE_STRING:
+          Length := Min(MaxBlobSize, Max(PlainDriver.GetFieldLength(FieldHandle), PlainDriver.GetFieldMaxLength(FieldHandle)))+1;
+    else
+      Length := PlainDriver.GetFieldLength(FieldHandle);
+    end;
     SetLength(Buffer, Length);
   end;
   ColOffset := NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);

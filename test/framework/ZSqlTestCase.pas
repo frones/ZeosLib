@@ -405,7 +405,10 @@ end;
 constructor TZConnectionConfig.Create(TemplateConfig: TZConnectionConfig; Suffix: String);
 begin
   Create;
-  FName := TemplateConfig.Name+'_'+Suffix;
+  if Suffix <> '' then
+    FName := TemplateConfig.Name+'_'+Suffix
+  else
+    FName := TemplateConfig.Name;
   FAlias := TemplateConfig.Alias;
   FProtocol := TemplateConfig.Protocol;
   FHostName := TemplateConfig.HostName;
@@ -714,7 +717,7 @@ end;
 procedure TZAbstractSQLTestCase.LogEvent(Event: TZLoggingEvent);
 begin
   if Event.Message <> '' then
-    FTraceList.Append(Event.Message);
+    FTraceList.Append(String(Event.Message));
 end;
 
 {**

@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, Contnrs, ZVariant, ZDbcIntfs,
-  ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZSelectSchema;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
+  ZSelectSchema, ZClasses, ZCollections;
 
 type
 
@@ -99,14 +100,19 @@ type
     FUpdateColumns: TObjectList;
     FWhereColumns: TObjectList;
 
+    FInsertParams: TObjectList;
+    FUpdateParams: TObjectList;
+    FDeleteParams: TObjectList;
+
     FCalcDefaults: Boolean;
     FWhereAll: Boolean;
     FUpdateAll: Boolean;
 
-    InsertStatement            : IZPreparedStatement;
-    UpdateStatement            : IZPreparedStatement;
-    DeleteStatement            : IZPreparedStatement;
+    InsertStatement   : IZPreparedStatement;
+    UpdateStatement   : IZPreparedStatement;
+    DeleteStatement   : IZPreparedStatement;
 
+    FUpdateStatements : TZHashMap;
   protected
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
     function ComposeFullTableName(Catalog, Schema, Table: string): string;
@@ -212,6 +218,10 @@ begin
   FWhereColumns := TObjectList.Create(True);
   FUpdateColumns := TObjectList.Create(True);
 
+  FInsertParams := TObjectList.Create(True);
+  FUpdateParams := TObjectList.Create(True);
+  FDeleteParams := TObjectList.Create(True);
+
   FCalcDefaults := StrToBoolEx(DefineStatementParameter(Statement,
     'defaults', 'true'));
   FUpdateAll := UpperCase(DefineStatementParameter(Statement,
@@ -220,7 +230,7 @@ begin
     'where', 'keyonly')) = 'ALL';
 
   InsertStatement := nil;
-  UpdateStatement := nil;
+  FUpdateStatements := TZHashMap.Create;
   DeleteStatement := nil;
 
 end;
@@ -237,6 +247,11 @@ begin
   FreeAndNil(FUpdateColumns);
   FreeAndNil(FWhereColumns);
 
+  FreeAndNil(FInsertParams);
+  FreeAndNil(FUpdateParams);
+  FreeAndNil(FDeleteParams);
+
+  FreeAndNil(FUpdateStatements);
   inherited Destroy;
 end;
 
@@ -334,17 +349,13 @@ var
 begin
   { Precache insert parameters. }
   if InsertColumns.Count = 0 then
-  begin
     for I := 1 to Metadata.GetColumnCount do
-    begin
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) then
       begin
         InsertColumns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I), True, ''));
       end;
-    end;
-  end;
   { Use cached insert parameters }
   CopyResolveParameters(InsertColumns, Columns);
 end;
@@ -594,11 +605,9 @@ begin
       stBigDecimal:
         Statement.SetBigDecimal(I + 1,
           RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
-      stString:
-        Statement.SetString(I + 1, RowAccessor.GetString(ColumnIndex, WasNull));
-      stUnicodeString:
-        Statement.SetUnicodeString(I + 1,
-          RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
+      stString, stUnicodeString:
+        Statement.SetCharRec(I +1,
+          RowAccessor.GetCharRec(ColumnIndex, WasNull));
       stBytes, stGUID:
         Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stDate:
@@ -818,64 +827,78 @@ var
   SQLParams            : TObjectList;
   lUpdateCount         : Integer;
   lValidateUpdateCount : Boolean;
-
+  TempKey              : IZAnyValue;
 begin
-  if (UpdateType = utDeleted)
-    and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
+  if (UpdateType = utDeleted) and (OldRowAccessor.RowBuffer.UpdateType = utInserted) then
     Exit;
 
-  SQLParams := TObjectList.Create(True);
-  try
-    case UpdateType of
-      utInserted:
-          begin
-        SQL := FormInsertStatement(SQLParams, NewRowAccessor);
-            If Assigned(InsertStatement) and (SQL <> InsertStatement.GetSQL) then
-              InsertStatement := nil;
-            If not Assigned(InsertStatement) then
-              InsertStatement := CreateResolverStatement(SQL);
-            Statement := InsertStatement;
-          end;
-      utDeleted:
-          begin
-        SQL := FormDeleteStatement(SQLParams, OldRowAccessor);
-            If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
-              DeleteStatement := nil;
-            If not Assigned(DeleteStatement) then
-              DeleteStatement := CreateResolverStatement(SQL);
-            Statement := DeleteStatement;
-          end;
-      utModified:
-          begin
-        SQL := FormUpdateStatement(SQLParams, OldRowAccessor, NewRowAccessor);
-            If SQL =''then // no fields have been changed
-               exit;
-            If Assigned(UpdateStatement) and (SQL <> UpdateStatement.GetSQL) then
-              UpdateStatement := nil;
-            If not Assigned(UpdateStatement) then
-              UpdateStatement := CreateResolverStatement(SQL);
-            Statement := UpdateStatement;
-          end;
-      else
-        Exit;
-    end;
+  case UpdateType of
+    utInserted:
+      begin
+        if InsertStatement = nil then
+        begin
+          SQL := FormInsertStatement(FInsertParams, NewRowAccessor);
+          InsertStatement := CreateResolverStatement(SQL);
+          Statement := InsertStatement;
+        end
+        else
+        begin
+          Statement := InsertStatement;
+          SQL := InsertStatement.GetSQL;
+        end;
+        SQLParams := FInsertParams;
+      end;
+    utDeleted:
+      begin
+        if DeleteStatement = nil then
+        begin
+        SQL := FormDeleteStatement(FDeleteParams, OldRowAccessor);
+          If Assigned(DeleteStatement) and (SQL <> DeleteStatement.GetSQL) then
+            DeleteStatement := nil;
+          If not Assigned(DeleteStatement) then
+            DeleteStatement := CreateResolverStatement(SQL);
+          Statement := DeleteStatement;
+        end
+        else
+        begin
+          Statement := DeleteStatement;
+          SQL := DeleteStatement.GetSQL;
+        end;
+        SQLParams := FDeleteParams;
+      end;
+    utModified:
+      begin
+        FUpdateParams.Clear;  //EH: where columns propably are cached after 1. call
+        //now what's faster?: caching stmts too by using a hashmap or recreate always
+        //first of all: we need the new command-stmt
+        SQL := FormUpdateStatement(FUpdateParams, OldRowAccessor, NewRowAccessor);
+        If SQL = '' then exit;// no fields have been changed
+        TempKey := TZAnyValue.CreateWithInteger(Hash(SQL));
+        UpdateStatement := FUpdateStatements.Get(TempKey) as IZPreparedStatement;
+        If UpdateStatement = nil then
+        begin
+          UpdateStatement := CreateResolverStatement(SQL);
+          FUpdateStatements.Put(TempKey, UpdateStatement);
+        end;
+        Statement := UpdateStatement;
+        SQLParams := FUpdateParams;
+      end;
+    else
+      Exit;
+  end;
 
-    if SQL <> '' then
-    begin
+  if SQL <> '' then
+  begin
+    FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
+    // if Property ValidateUpdateCount isn't set : assume it's true
+    lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
+                          or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
-      FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-      // if Property ValidateUpdateCount isn't set : assume it's true
-      lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
-                            or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
-
-      lUpdateCount := Statement.ExecuteUpdatePrepared;
-      {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
-      if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
-        raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
-      {$ENDIF}
-    end;
-  finally
-    FreeAndNil(SQLParams);
+    lUpdateCount := Statement.ExecuteUpdatePrepared;
+    {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+    if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
+      raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+    {$ENDIF}
   end;
 end;
 
@@ -939,10 +962,11 @@ begin
                 RowAccessor.SetDouble(Current.ColumnIndex, ResultSet.GetDouble(I));
               stBigDecimal:
                 RowAccessor.SetBigDecimal(Current.ColumnIndex, ResultSet.GetBigDecimal(I));
-              stString, stAsciiStream:
-                RowAccessor.SetString(Current.ColumnIndex, ResultSet.GetString(I));
-              stUnicodeString, stUnicodeStream:
-                RowAccessor.SetUnicodeString(Current.ColumnIndex, ResultSet.GetUnicodeString(I));
+              stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+                if FConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+                  RowAccessor.SetRawByteString(Current.ColumnIndex, ResultSet.GetRawByteString(I))
+                else
+                  RowAccessor.SetUnicodeString(Current.ColumnIndex, ResultSet.GetUnicodeString(I));
               stBytes, stGUID:
                 RowAccessor.SetBytes(Current.ColumnIndex, ResultSet.GetBytes(I));
               stDate:
@@ -950,8 +974,7 @@ begin
               stTime:
                 RowAccessor.SetTime(Current.ColumnIndex, ResultSet.GetTime(I));
               stTimestamp:
-                RowAccessor.SetTimestamp(Current.ColumnIndex,
-                  ResultSet.GetTimestamp(I));
+                RowAccessor.SetTimestamp(Current.ColumnIndex, ResultSet.GetTimestamp(I));
             end;
 
             if ResultSet.WasNull then

@@ -193,7 +193,7 @@ var
 }
 procedure TZTestVariantCase.SetUp;
 begin
-  Manager := DefVarManager;
+  Manager := {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF};
 end;
 
 {**
@@ -417,7 +417,7 @@ end;
 
 procedure TZDefVarManagerConvertCase.SetUp;
 begin
-  Manager := DefVarManager;
+  Manager := {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF};
   ConSettings := TestConSettings;
   ConSettings^.CTRL_CP := ZDefaultSystemCodePage;
   ConSettings^.AutoEncode := False;

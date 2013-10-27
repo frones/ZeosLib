@@ -54,8 +54,8 @@ unit ZTestDbcResultSet;
 interface
 {$I ZDbc.inc}
 uses
-  Classes, SysUtils, Types, ZDbcIntfs, ZClasses, ZCollections,
-  ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestCase,{$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF};
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, Types,
+  ZDbcIntfs, ZClasses, ZCollections, ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestCase;
 
 type
 

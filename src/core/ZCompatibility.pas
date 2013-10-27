@@ -71,7 +71,7 @@ uses
   {$If defined(MSWINDOWS) and not defined(FPC)}
   Windows,
   {$IFEND}
-  Classes, SysUtils;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils;
 
 type
 {$IFDEF FPC}
@@ -99,6 +99,22 @@ type
   PUInt                 = ^UInt;
   ZPPWideChar            = ^PWideChar;//BCB issue: PPWideChar is not part of system
 
+  TZAnsiRec = Record
+    Len: Cardinal;
+    P: PAnsiChar;
+  end;
+
+  TZWideRec = Record
+    Len: Cardinal;
+    P: PWideChar;
+  end;
+
+  TZCharRec = Record
+    Len: Cardinal; //Length of String
+    CP: Word;      //CodePage of the String
+    P: Pointer;    //Allocated Mem of String including #0 terminator
+  end;
+
   TObjectDynArray       = array of TObject;
 {$IFDEF FPC}
 type
@@ -124,7 +140,7 @@ const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
-function Hash(S : AnsiString) : LongWord;
+function Hash(S : AnsiString) : LongWord; overload;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
@@ -184,6 +200,8 @@ type
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
+  TZAnsiRecToString = function (const Value: TZAnsiRec; const StringCP: Word): String;
+  TZWideRecToString = function (const Value: TZWideRec; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -225,7 +243,18 @@ type
     ZRawToUnicode: TZRawToUnicode;
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
+    ZAnsiRecToString: TZAnsiRecToString;
+    ZWideRecToString: TZWideRecToString;
   end;
+
+  TZFormatSettings = Record
+    DateFormat: RawByteString;
+    DateFormatLen: Cardinal;
+    TimeFormat: RawByteString;
+    TimeFormatLen: Cardinal;
+    DateTimeFormat: RawByteString;
+    DateTimeFormatLen: Cardinal;
+  End;
 
   PZConSettings = ^TZConSettings;
   TZConSettings = record
@@ -234,26 +263,21 @@ type
     CTRL_CP: Word;              //Target CP of string conversion (CP_ACP/CP_UPF8)
     ConvFuncs: TConvertEncodingFunctions; //a rec for the Convert functions used by the objects
     ClientCodePage: PZCodePage; //The codepage informations of the current characterset
-    DateFormat: String;
+    DisplayFormatSettings: TZFormatSettings;
+    ReadFormatSettings: TZFormatSettings;
+    WriteFormatSettings: TZFormatSettings;
     {$IFDEF WITH_LCONVENCODING}
     PlainConvertFunc: TConvertEncodingFunction;
     DbcConvertFunc: TConvertEncodingFunction;
     {$ENDIF}
+    DataBaseSettings: Pointer;
+    Protocol, Database, User: RawByteString;
   end;
 
   TZCodePagedObject = Class(TInterfacedObject)
   private
     FConSettings: PZConSettings;
   protected
-    function ZDbcString(const Ansi: RawByteString; ConSettings: PZConSettings): String; overload;
-    function ZDbcString(const Ansi: RawByteString; FromCP: Word): String; overload;
-    function ZDbcString(const Ansi: RawByteString; const Encoding: TZCharEncoding = ceDefault): String; overload;
-    function ZDbcString(const AStr: ZWideString; const Encoding: TZCharEncoding = ceDefault): String; overload;
-    function ZDbcUnicodeString(const AStr: RawByteString): ZWideString; overload;
-    function ZDbcUnicodeString(const AStr: RawByteString; const FromCP: Word): ZWideString; overload;
-    {$IFDEF WITH_RAWBYTESTRING}
-    function ZDbcUnicodeString(const AStr: String; const FromCP: Word): ZWideString; overload;
-    {$ENDIF}
     function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
     function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
     function ZPlainString(const AStr: String; const Encoding: TZCharEncoding = ceDefault): RawByteString; overload;
@@ -266,6 +290,9 @@ type
   public
     destructor Destroy; override;
   end;
+
+  TRawDynArray = array of RawByteString;
+  TUnicodeDynArray = array of ZWideString;
 
   {$IFDEF WITH_LCONVENCODING}
   function NoConvert(const s: string): string;
@@ -281,14 +308,20 @@ function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType;
 {$IFEND}
 
 {$IFNDEF WITH_CHARINSET}
-function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload;
-function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean; overload;
+function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 {$IF not Declared(UTF8ToString)}
 {$DEFINE ZUTF8ToString}
 function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
+
+{$IFDEF UNICODE}
+function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
+{$ENDIF}
+
+procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
 
 var
   ClientCodePageDummy: TZCodepage =
@@ -299,6 +332,27 @@ var
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
       ClientCodePage: @ClientCodePageDummy;
+      DisplayFormatSettings:
+        (DateFormat: 'DD-MM-YYYY';
+          DateFormatLen: 10;
+          TimeFormat: 'HH:NN:SS.ZZZ';
+          TimeFormatLen: 12;
+          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS';
+          DateTimeFormatLen: 23);
+      ReadFormatSettings:
+          (DateFormat: 'DD-MM-YYYY';
+          DateFormatLen: 10;
+          TimeFormat: 'HH:NN:SS.ZZZ';
+          TimeFormatLen: 12;
+          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
+          DateTimeFormatLen: 23);
+      WriteFormatSettings:
+          (DateFormat: 'DD-MM-YYYY';
+          DateFormatLen: 10;
+          TimeFormat: 'HH:NN:SS.ZZZ';
+          TimeFormatLen: 12;
+          DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
+          DateTimeFormatLen: 23);
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
@@ -410,255 +464,15 @@ begin
 end;
 {$ENDIF}
 
-{**
-  EgonHugeist:
-  Now use the new Functions to get encoded Strings instead of
-  hard-coded Compiler-Directives or UTF8Encode/Decode:
-
-  function ZDbcString(const Ansi: AnsiString; const Encoding: TZCharEncoding = ceDefault): String;
-  function ZPlainString(const Str: String; const Encoding: TZCharEncoding = ceDefault): AnsiString;
-
-  These functions do auto arrange the in/out-coming AnsiStrings in
-  dependency of the used CharacterSet and the used Compiler whithout
-  String-DataLoss!!.
-  So my thouths where use only these two function for all
-  String/Ansi/Unicode-handlings of DBC-layer. Which means in full effect
-  no more directives in Zeos Source-Code then here to do this handling.
-  @param Ansi: the String which has to be handled.
-  @param Encoding is set to Default-Character-Set we've choosen bevor (on conecting)
-    Change this if you need some Transtations to a specified Encoding.
-    Example: CharacterSet was set to Latin1 and some "special"-String MUST BE
-     UTF8 instead of Latin1. (SSL-Keys eventualy)
-  @param Convert ignored for Delphi means if the Chararacters should be propper
-    to the specified codepage
-
-
-  IS there a need for it? AnsiEncoded adaps automaticaly to WideString
-  So what about coming UTF16/32????
-}
-function TZCodePagedObject.ZDbcString(const Ansi: RawByteString;
-  ConSettings: PZConSettings): String;
-{$IFDEF WITH_FPC_STRING_CONVERSATION}
-var TempAnsi: RawByteString;
-{$ENDIF}
+procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
 begin
-  {$IFNDEF UNICODE}
-  if not ConSettings^.AutoEncode then
-    Result := Ansi
-  else
-  {$ENDIF}
-    case ConSettings^.ClientCodePage^.Encoding of
-      ceUTF8:
-        {$IFDEF UNICODE}
-          Result := UTF8ToString(Ansi);
-        {$ELSE}
-          if ( ConSettings^.CPType in [cCP_UTF8, cCP_UTF16] ) then
-            Result := Ansi
-          else
-            {$IFDEF WITH_LCONVENCODING}
-            Result := ConSettings.DbcConvertFunc(Ansi);
-            {$ELSE}
-              {$IFDEF WITH_FPC_STRING_CONVERSATION}
-              begin
-                //avoid string conversion -> move memory
-                TempAnsi := AnsiToStringEx(Ansi, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-                SetLength(Result, Length(TempAnsi));
-                Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-              end;
-              {$ELSE}
-              Result := AnsiToStringEx(Ansi, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-              {$ENDIF}
-            {$ENDIF}
-        {$ENDIF}
-      else
-        {$IFDEF UNICODE}
-        Result := AnsiToStringEx(Ansi, ConSettings^.ClientCodePage^.CP);
-        {$ELSE}
-          if ConSettings.AutoEncode then
-            if ConSettings^.ClientCodePage^.CP = zCP_NONE then //that's not nice it slows down the incoming strings! Find a way to determine allways the current server CP
-              case DetectUTF8Encoding(Ansi) of
-                etUSASCII: Result := Ansi;
-                etAnsi:
-                  if ConSettings^.CTRL_CP = zCP_UTF8 then
-                    {$IFDEF WITH_FPC_STRING_CONVERSATION}
-                    begin
-                      //avoid string conversion -> move memory
-                      TempAnsi := AnsiToUTF8(Ansi); //hope we've compatible results ))):
-                      SetLength(Result, Length(TempAnsi));
-                      Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-                    end
-                    {$ELSE}
-                    Result := AnsiToUTF8(Ansi) //hope we've compatible results ))):
-                    {$ENDIF}
-                  else
-                    Result := Ansi;
-                else
-                  if ConSettings^.CTRL_CP = zCP_UTF8 then
-                    Result := Ansi
-                  else
-                    {$IFDEF WITH_FPC_STRING_CONVERSATION}
-                    begin
-                      //avoid string conversion -> move memory
-                      TempAnsi := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
-                      SetLength(Result, Length(TempAnsi));
-                      Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-                    end;
-                    {$ELSE}
-                      {$IFDEF WITH_LCONVENCODING}
-                      Result := Ansi;
-                      {$ELSE}
-                      Result := AnsiToStringEx(Ansi, zCP_UTF8, ConSettings.CTRL_CP);
-                      {$ENDIF}
-                    {$ENDIF}
-              end
-            else
-              {$IFDEF WITH_LCONVENCODING}
-              Result := ConSettings.DbcConvertFunc(Ansi)
-              {$ELSE}
-                {$IFDEF WITH_FPC_STRING_CONVERSATION}
-                begin
-                  //avoid string conversion -> move memory
-                  TempAnsi := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP);
-                  SetLength(Result, Length(TempAnsi));
-                  Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-                end
-                {$ELSE}
-                Result := AnsiToStringEx(Ansi, ConSettings.ClientCodePage.CP, ConSettings.CTRL_CP)
-                {$ENDIF}
-              {$ENDIF}
-          else
-            Result := Ansi;
-        {$ENDIF}
-      end;
+  Dest.DateFormat := Source.DateFormat;
+  Dest.DateFormatLen := Source.DateFormatLen;
+  Dest.TimeFormat := Source.TimeFormat;
+  Dest.TimeFormatLen := Source.TimeFormatLen;
+  Dest.DateTimeFormat := Source.DateTimeFormat;
+  Dest.DateTimeFormatLen := Source.DateTimeFormatLen;
 end;
-
-function TZCodePagedObject.ZDbcString(const Ansi: RawByteString; FromCP: Word): String;
-var
-  CurrentCP: Word;
-  CurrentEncoding: TZCharEncoding;
-begin
-  if FromCP = FConsettings.ClientCodePage.CP then
-    Result := ZDbcString(Ansi, ConSettings)
-  else
-  begin
-    CurrentCP := FConsettings.ClientCodePage.CP;
-    CurrentEncoding := FConSettings.ClientCodePage.Encoding;
-    if ( FromCP = zCP_UTF8 ) then
-      FConSettings.ClientCodePage.Encoding := ceUTF8
-    else
-      FConSettings.ClientCodePage.Encoding := ceAnsi;
-    FConsettings.ClientCodePage.CP := FromCP;
-    Result := ZDbcString(Ansi, FConSettings);
-    FConsettings.ClientCodePage.CP := CurrentCP;
-    FConSettings.ClientCodePage.Encoding := CurrentEncoding;
-  end;
-end;
-
-function TZCodePagedObject.ZDbcString(const Ansi: RawByteString;
-  const Encoding: TZCharEncoding = ceDefault): String;
-var
-  TempEncoding, UseEncoding: TZCharEncoding;
-begin
-  if Encoding = ceDefault then
-    if not Assigned(FConSettings.ClientCodePage) then
-      raise Exception.Create('CodePage-Informations not Assigned!')
-    else
-      UseEncoding := FConSettings.ClientCodePage^.Encoding
-  else
-    UseEncoding := Encoding;
-
-  {$IFNDEF UNICODE}
-  if not FConSettings.AutoEncode and ( FConSettings.ClientCodePage^.Encoding = UseEncoding ) then
-    Result := Ansi
-  else
-  {$ENDIF}
-  begin
-    TempEncoding := FConSettings^.ClientCodePage^.Encoding;
-    FConSettings.ClientCodePage^.Encoding := UseEncoding;
-    Result := ZDbcString(Ansi, FConSettings);
-    FConSettings^.ClientCodePage^.Encoding := TempEncoding;
-  end;
-end;
-
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString): ZWideString;
-begin
-  {$IFNDEF WITH_LCONVENCODING}
-  Result := ZRawToUnicode(AStr, FConSettings.ClientCodePage.CP);
-  {$ELSE}
-    case Consettings.ClientCodePage.Encoding of
-      ceAnsi:
-        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr)); //!!!!SLOW, Job down twice (Ansi up to wide to UTF8 to Wide)
-      else
-        Result := UTF8ToString(AStr)
-    end;
-  {$ENDIF}
-end;
-
-function TZCodePagedObject.ZDbcString(const AStr: ZWideString; const Encoding: TZCharEncoding = ceDefault): String;
-{$IFDEF WITH_FPC_STRING_CONVERSATION}
-var
-  TempAnsi: RawByteString;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  Result := AStr;
-  {$ELSE}
-    if not ConSettings.AutoEncode then
-      Result := String(AStr)
-    else
-    {$IFDEF WITH_LCONVENCODING}
-    Result := UTF8Encode(AStr);
-    {$ELSE}
-      {$IFDEF WITH_FPC_STRING_CONVERSATION}
-      begin
-        //avoid string conversion -> move memory
-        TempAnsi := ZUnicodeToRaw(AStr, FConSettings.CTRL_CP);
-        SetLength(Result, Length(TempAnsi));
-        Move(PAnsiChar(TempAnsi)^, PAnsiChar(Result)^, Length(TempAnsi));
-      end
-      {$ELSE}
-      Result := ZUnicodeToRaw(AStr, FConSettings.CTRL_CP);
-      {$ENDIF}
-    {$ENDIF}
-  {$ENDIF}
-end;
-
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: RawByteString;
-  const FromCP: Word): ZWideString;
-begin
-  {$IFNDEF WITH_LCONVENCODING}
-  Result := ZRawToUnicode(AStr, FromCP);
-  {$ELSE}
-  if FromCP = zCP_UTF8 then
-    Result := UTF8Decode(AStr)
-  else
-    if FromCP = ConSettings.ClientCodePage.CP then
-      Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr))
-    else
-      Result := WideString(AStr); //default WideString cast, can't convert
-  {$ENDIF}
-end;
-
-{$IFDEF WITH_RAWBYTESTRING}
-function TZCodePagedObject.ZDbcUnicodeString(const AStr: String; const FromCP: Word): ZWideString;
-begin
-  {$IFDEF UNICODE}
-  Result := AStr;
-  {$ELSE}
-    {$IFNDEF WITH_LCONVENCODING}
-    Result := ZRawToUnicode(AStr, FromCP);
-    {$ELSE}
-    if FromCP = zCP_UTF8 then
-      Result := UTF8Decode(AStr)
-    else
-      if FromCP = ConSettings.ClientCodePage.CP then
-        Result := UTF8Decode(ConSettings.DbcConvertFunc(AStr))
-      else
-        Result := WideString(AStr); //default WideString cast, can't convert
-    {$ENDIF}
-  {$ENDIF}
-end;
-{$ENDIF}
 
 {**
 EgonHugeist:
@@ -982,6 +796,20 @@ end;
   {$ENDIF}
 {$ENDIF}
 
+{$IFDEF UNICODE}
+function Hash(const key: ZWideString): Cardinal;
+var
+  I: integer;
+begin
+  Result := 0;
+  for I := 1 to length(key) do
+  begin
+    Result := (Result shl 5) or (Result shr 27);
+    Result := Result xor Cardinal(key[I]);
+  end;
+end; { Hash }
+{$ENDIF}
+
 {$IFNDEF FPC}
 function Hash(S : AnsiString) : LongWord;
 Var
@@ -1026,12 +854,12 @@ end;
 {$ENDIF}
 
 {$IFNDEF WITH_CHARINSET}
-function CharInSet(C: AnsiChar; const CharSet: TSysCharSet): Boolean;
+function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := C in Charset;
 end;
 
-function CharInSet(C: WideChar; const CharSet: TSysCharSet): Boolean;
+function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean;
 begin
   result := Char(C) in Charset;
 end;

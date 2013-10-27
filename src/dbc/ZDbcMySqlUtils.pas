@@ -57,8 +57,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, StrUtils,
-  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants,  ZDbcLogging,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, StrUtils,
+  ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
   ZCompatibility, ZDbcResultSetMetadata;
 
 const
@@ -94,10 +94,12 @@ function ConvertMySQLTypeToSQLType(TypeName, TypeNameFull: string;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
-procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; Const ConSettings: PZConSettings);
+procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ConSettings: PZConSettings);
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
 
@@ -153,7 +155,8 @@ procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
 
 implementation
 
-uses ZMessages, Math, ZDbcUtils;
+uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
+  ZMessages, ZDbcUtils;
 
 threadvar
   SilentMySQLError: Integer;
@@ -415,42 +418,47 @@ end;
   @param LogCategory a logging category.
   @param LogMessage a logging message.
 }
-procedure CheckMySQLError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; Const ConSettings: PZConSettings);
 var
-  ErrorMessage: string;
+  ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(String(PlainDriver.GetLastError(Handle)));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastError(Handle));
   ErrorCode := PlainDriver.GetLastErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
       raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
 
-    DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
+    DriverManager.LogError(LogCategory, ConSettings.Protocol, LogMessage,
       ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
+      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 
-procedure CheckMySQLPrepStmtError(PlainDriver: IZMySQLPlainDriver;
-  Handle: PZMySQLConnect; LogCategory: TZLoggingCategory; const LogMessage: string);
+procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
+  const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
+  const LogMessage: RawByteString; const ConSettings: PZConSettings);
 var
-  ErrorMessage: string;
+  ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := Trim(String(PlainDriver.GetLastPreparedError(Handle)));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastPreparedError(Handle));
   ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
       raise EZMySQLSilentException.CreateFmt(SSQLError1, [ErrorMessage]);
 
-    DriverManager.LogError(LogCategory,PlainDriver.GetProtocol,LogMessage,ErrorCode, ErrorMessage);
+    DriverManager.LogError(LogCategory, ConSettings^.Protocol, LogMessage,
+      ErrorCode, ErrorMessage);
     raise EZSQLException.CreateWithCode(ErrorCode,
-      Format(SSQLError1, [ErrorMessage]));
+      Format(SSQLError1, [ConSettings^.ConvFuncs.ZRawToString(
+        ErrorMessage, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)]));
   end;
 end;
 
@@ -548,15 +556,21 @@ begin
     Result := TZColumnInfo.Create;
     FieldFlags := PlainDriver.GetFieldFlags(FieldHandle);
 
-    Result.ColumnLabel := PlainDriver.ZDbcString(PlainDriver.GetFieldName(FieldHandle), ConSettings);
-    Result.ColumnName := PlainDriver.ZDbcString(PlainDriver.GetFieldOrigName(FieldHandle), ConSettings);
-    Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), ConSettings);
+    Result.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(PlainDriver.GetFieldName(FieldHandle), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    Result.ColumnName := ConSettings^.ConvFuncs.ZRawToString(PlainDriver.GetFieldOrigName(FieldHandle), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    Result.TableName := ConSettings^.ConvFuncs.ZRawToString(PlainDriver.GetFieldTable(FieldHandle), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
     Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
     Result.Writable := not Result.ReadOnly;
     Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
         FieldHandle, FieldFlags, ConSettings.CPType);
     FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
+
+    if Result.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+      Result.ColumnCodePage := ConSettings^.ClientCodePage^.CP
+    else
+      Result.ColumnCodePage := High(Word);
+
     if Result.ColumnType in [stString, stUnicodeString] then
        case PlainDriver.GetFieldCharsetNr(FieldHandle) of
         1, 84, {Big5}

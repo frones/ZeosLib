@@ -61,9 +61,9 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Types, Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
-  ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcCache, ZCompatibility,
-  ZSelectSchema, ZURL, ZDbcConnection;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
+  ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
 
 const
   procedureColumnUnknown = 0;
@@ -151,7 +151,6 @@ type
     property Info: TStrings read GetInfo;
     property CachedResultSets: IZHashMap read FCachedResultSets
       write FCachedResultSets;
-    property ConSettings: PZConSettings read FConSettings write FConSettings;
     property IC: IZIdentifierConvertor read FIC;
   protected
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
@@ -297,6 +296,7 @@ type
       const TypeNamePattern: string; const Types: TIntegerDynArray): string;
 
     procedure GetCacheKeys(List: TStrings);
+    property ConSettings: PZConSettings Read FConSettings write FConSettings;
     // <-- technobot 2008-06-14
   end;
 
@@ -391,6 +391,7 @@ type
       Concurrency: TZResultSetConcurrency): Boolean; virtual;
     function SupportsBatchUpdates: Boolean; virtual;
     function SupportsNonEscapedSearchStrings: Boolean; virtual;
+    function SupportsMilliSeconds: Boolean; virtual;
     function SupportsUpdateAutoIncrementFields: Boolean; virtual;
 
     // maxima:
@@ -504,7 +505,7 @@ var
 
 implementation
 
-uses ZVariant, ZCollections, ZMessages;
+uses ZFastCode, ZVariant, ZCollections, ZMessages;
 
 { TZAbstractDatabaseInfo }
 
@@ -1766,6 +1767,11 @@ begin
   Result := False;
 end;
 
+function TZAbstractDatabaseInfo.SupportsMilliSeconds: Boolean;
+begin
+  Result := True;
+end;
+
 {**
   Does the Database support updating auto incremental fields?
   @return <code>true</code> if the DataBase allows it.
@@ -1780,7 +1786,7 @@ end;
 {**
   Constructs this object and assignes the main properties.
   @param Connection a database connection object.
-  @param Url a database connection url string.
+  @param Url a database connection url class.
 }
 constructor TZAbstractDatabaseMetadata.Create(Connection: TZAbstractConnection;
   const Url: TZURL);
@@ -2052,11 +2058,12 @@ begin
           DestResultSet.UpdateDouble(I, SrcResultSet.GetDouble(I));
         stBigDecimal:
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
-        stString:
-          DestResultSet.UpdateString(I, SrcResultSet.GetString(I));
-        stUnicodeString:
-          DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
-        stBytes:
+        stString, stUnicodeString, stAsciiStream, stUnicodeStream:
+          if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+            DestResultSet.UpdateAnsiRec(I, SrcResultSet.GetAnsiRec(I))
+          else
+            DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
+        stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:
           DestResultSet.UpdateDate(I, SrcResultSet.GetDate(I));
@@ -2064,10 +2071,6 @@ begin
           DestResultSet.UpdateTime(I, SrcResultSet.GetTime(I));
         stTimestamp:
           DestResultSet.UpdateTimestamp(I, SrcResultSet.GetTimestamp(I));
-        stAsciiStream,
-        stUnicodeStream,
-        stBinaryStream:
-          DestResultSet.UpdateString(I, SrcResultSet.GetString(I));
       end;
       if SrcResultSet.WasNull then
         DestResultSet.UpdateNull(I);
@@ -4590,7 +4593,7 @@ var
 begin
   Result := '';
   for I := Low(Types) to High(Types) do
-    Result := Result + ':' + IntToStr(Types[I]);
+    Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Types[I]);
   Result := Format('get-udts:%s:%s:%s%s',
     [Catalog, SchemaPattern, TypeNamePattern, Result]);
 end;

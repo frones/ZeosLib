@@ -9,7 +9,7 @@ interface
 uses
   ZClasses, ZCollections, ZCompatibility, ZExpression, ZExprParser, 
   ZExprToken, ZFunctions, ZMatchPattern, ZMessages, ZSysUtils, ZTokenizer, 
-  ZVariables, ZVariant, ZURL, ZEncoding;
+  ZVariables, ZVariant, ZURL, ZEncoding, ZFastCode;
 
 implementation
 

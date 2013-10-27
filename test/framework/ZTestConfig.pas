@@ -114,6 +114,7 @@ const
   SKIP_PERFORMANCE_TRANS_KEY   = 'skip.performance.transaction.mode';
   PERFORMANCE_TABLE_NAME_KEY   = 'performance.table.name';
   PERFORMANCE_PRIMARYKEY_KEY   = 'performance.primary.key.name';
+  PERFORMANCE_LOADLOBS_KEY     = 'performance.loadlobs';
   ACTIVE_CONNECTIONS_KEY       = 'connections';
   EXTENDED_TEST_KEY            = 'extended.test';
   EXTENDED_CGET_ACP_KEY        = 'extended.cget_acp';
@@ -235,7 +236,7 @@ procedure EnableZSQLMonitor;
 
 implementation
 
-uses ZSysUtils,
+uses ZSysUtils, ZFastCode,
   {$IFDEF WITH_VCL_PREFIX}Vcl.Forms{$ELSE}Forms{$ENDIF}
   {$IFDEF FPC}, testregistry{$ENDIF}, ZSqlMonitor, ZDbcLogging;
 type
@@ -246,7 +247,7 @@ type
   private
     FCounter: Integer;
   public
-    function Format(LoggingEvent: TZLoggingEvent) : string;
+    function Format(LoggingEvent: TZLoggingEvent) : RawByteString;
   end;
 
 
@@ -277,10 +278,10 @@ end;
 
 { TZTestLoggingFormatter }
 
-function TZTestLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): string;
+function TZTestLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): RawByteString;
 begin
   Inc(FCounter);
-  Result := SysUtils.Format('[%10d]', [FCounter]) + ' cat: ';
+  Result := RawByteString(SysUtils.Format('[%10d]', [FCounter])) + ' cat: ';
   case LoggingEvent.Category of
     lcConnect: Result := Result + 'Connect';
     lcDisconnect: Result := Result + 'Disconnect';
@@ -298,7 +299,7 @@ begin
   Result := Result + ', msg: ' + LoggingEvent.Message;
   if (LoggingEvent.ErrorCode <> 0) or (LoggingEvent.Error <> '') then
   begin
-    Result := Result + ', errcode: ' + IntToStr(LoggingEvent.ErrorCode)
+    Result := Result + ', errcode: ' + IntToRaw(LoggingEvent.ErrorCode)
       + ', error: ' + LoggingEvent.Error;
   end;
 end;

@@ -85,7 +85,7 @@ type
     FUnicodeStream: TStream;
     FBinaryStream: TStream;
     FByteArray: TByteDynArray;
-    FAsciiStreamData: string;
+    FAsciiStreamData: Ansistring;
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
   protected
@@ -219,7 +219,7 @@ var
 begin
   ColumnsInfo := GetColumnsInfoCollection;
   try
-    Result := TZRowAccessor.Create(ColumnsInfo, @ConSettingsDummy);
+    Result := TZUnicodeRowAccessor.Create(ColumnsInfo, @ConSettingsDummy);  //dummy cp: Stringfield cp is inconsistent
     Result.Alloc;
   finally
     ColumnsInfo.Free;
@@ -231,7 +231,7 @@ end;
 }
 procedure TZTestRowAccessorCase.SetUp;
 var
-  BufferChar: PChar;
+  BufferChar: PAnsiChar;
   BufferWideChar: PWideChar;
 begin
   FDate := SysUtils.Date;
@@ -240,8 +240,8 @@ begin
 
   FAsciiStreamData := 'Test Ascii Stream Data';
   FAsciiStream := TMemoryStream.Create;
-  BufferChar := PChar(FAsciiStreamData);
-  FAsciiStream.Write(BufferChar^, Length(FAsciiStreamData)* SizeOf(Char));
+  BufferChar := PAnsiChar(FAsciiStreamData);
+  FAsciiStream.Write(BufferChar^, Length(FAsciiStreamData));
 
   FUnicodeStreamData := 'Test Unicode Stream Data';
   FUnicodeStream := TMemoryStream.Create;
@@ -563,7 +563,7 @@ procedure TZTestRowAccessorCase.TestRowAccessorAsciiStream;
 var
   Stream: TStream;
   ReadNum: Integer;
-  BufferChar: array[0..100] of Char;
+  BufferChar: array[0..100] of AnsiChar;
   WasNull: Boolean;
 begin
   with RowAccessor do
@@ -573,9 +573,9 @@ begin
       CheckNotNull(Stream, 'AsciiStream');
       Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
       Stream.Position := 0;
-      ReadNum := Stream.Read(BufferChar, 101*SizeOf(Char));
+      ReadNum := Stream.Read(BufferChar, 101);
       Stream.Free;
-      CheckEquals(FAsciiStreamData, BufferToStr(BufferChar, ReadNum));
+      CheckEquals(String(FAsciiStreamData), BufferToStr(BufferChar, ReadNum));
     except
       Fail('Incorrect GetAsciiStream method behavior');
     end;
@@ -829,7 +829,7 @@ var
 begin
   Collection := GetColumnsInfoCollection;
   try
-    RowAccessor := TZRowAccessor.Create(Collection, @ConSettingsDummy);
+    RowAccessor := TZUnicodeRowAccessor.Create(Collection, @ConSettingsDummy); //dummy cp: Stringfield cp is inconsistent
     try
       RowAccessor.Dispose;
     finally

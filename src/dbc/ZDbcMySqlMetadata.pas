@@ -57,9 +57,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata, ZURL,
-   ZCompatibility, ZDbcConnection{$IFDEF MS_WINDOWS}, Windows{$ENDIF};
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZDbcConnection,
+  ZDbcCachedResultSet, ZDbcResultSetMetadata, ZURL, ZCompatibility;
 
 type
 
@@ -146,6 +146,7 @@ type
 //    function SupportsResultSetConcurrency(_Type: TZResultSetType;
 //      Concurrency: TZResultSetConcurrency): Boolean; override; -> Not implemented
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsMilliSeconds: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -255,7 +256,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZCollections, ZDbcMySqlUtils;
+  ZFastCode, Math, ZMessages, ZDbcUtils, ZCollections, ZDbcMySqlUtils;
 
 { TZMySQLDatabaseInfo }
 
@@ -847,6 +848,10 @@ begin
   end;
 end;
 
+function TZMySQLDatabaseInfo.SupportsMilliSeconds: Boolean;
+begin
+  Result := False;
+end;
 {**
   Gets the MySQL version info.
   @param MajorVesion the major version of MySQL server.
@@ -2272,7 +2277,7 @@ begin
   SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2, '+
       'NULL AS RESERVED3, p.comment AS REMARKS, '+
-      IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
+      {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE  from  mysql.proc p '+
       'WHERE 1=1' + SchemaCondition + ProcedureNameCondition+
       ' ORDER BY p.db, p.name';
     Result := CopyToVirtualResultSet(
@@ -2356,10 +2361,10 @@ var
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(AName+IntToStr(N)) = -1 then
+        if Names.IndexOf(AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N)) = -1 then
         begin
-          Names.Add(AName+IntToStr(N));
-          Result := AName+IntToStr(N);
+          Names.Add(AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N));
+          Result := AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
           Break;
         end;
   end;
@@ -2433,7 +2438,7 @@ begin
 
   SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
-    IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
+    {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult)+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
     ' from  mysql.proc p where 1 = 1'+SchemaCondition+ProcedureNameCondition+
     ' ORDER BY p.db, p.name';
 

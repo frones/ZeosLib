@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZTestConsts, ZTestCase;
+uses ZSysUtils, ZTestConsts;
 
 { TZGenericTestDbcResultSet }
 {**

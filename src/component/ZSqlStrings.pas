@@ -56,8 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZGenericSqlToken,
-  Contnrs, ZCompatibility;
+  Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses,{$ENDIF}Contnrs,
+  ZDbcIntfs, ZTokenizer, ZGenericSqlToken, ZCompatibility;
 
 type
   {** Represents a SQL statement description object. }

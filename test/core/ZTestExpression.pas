@@ -156,14 +156,14 @@ begin
   with Expression do
   begin
     Expression := 'VAL(''  -011'')';
-    CheckEquals(-11, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(-11, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
     Expression := 'VAL(''  -023.25'')';
-    CheckEquals(-23.25, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(-23.25, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
     Expression := 'DTOS(ENCODEDATE(2009,07,13))';
     CheckEquals('20090713', SoftVarManager.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CTOD(''' + DateToStr(Date) + ''')';
-    CheckEquals(Date, DefVarManager.GetAsDateTime(Evaluate),Expression+' failed, ');
+    CheckEquals(Date, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsDateTime(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -212,9 +212,9 @@ begin
     CheckEquals('1899-12-30 13:07:03', SoftVarManager.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'ISLEAPYEAR(2008)';
-    CheckEquals(True,DefVarManager.GetAsBoolean(Evaluate),Expression+' failed, ');
+    CheckEquals(True,{$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate),Expression+' failed, ');
     Expression := 'ISLEAPYEAR(2009)';
-    CheckEquals(False,DefVarManager.GetAsBoolean(Evaluate),Expression+' failed, ');
+    CheckEquals(False,{$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate),Expression+' failed, ');
 
     Expression := 'YEAROF(V3)';
     CheckEquals(2009, SoftVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
@@ -305,28 +305,28 @@ begin
 //  V3 = 2009-07-13 13:07:03.00
     Expression := 'YEARSBETWEEN(V2,V3)';
     i := 9;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'MONTHSBETWEEN(V2,V3)';
     i := i*12+5;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'WEEKSBETWEEN(V2,V3)';
     i := 492;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'DAYSBETWEEN(V2,V3)';
     i := i*7+2;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'HOURSBETWEEN(V2,V3)';
     i := i*24+14;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'MINUTESBETWEEN(V2,V3)';
     i := i*60+35;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'SECONDSBETWEEN(V2,V3)';
     i := i*60+19;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'MILLISECONDSBETWEEN(V2,V3)';
     i := (i+1)*1000-20;
-    CheckEquals(i, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(i, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -341,53 +341,53 @@ begin
   with Expression do
   begin
 //    Expression := 'E()';
-//    CheckEquals(2.7182818284590451, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(2.7182818284590451, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'PI()';
-//    CheckEquals(3.1415926535897931, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(3.1415926535897931, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
 //    Expression := 'EXP(2)';
-//    CheckEquals(7.3890560989306504, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(7.3890560989306504, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'LOG(0.5)';
-//    CheckEquals(-0.69314718055994529, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(-0.69314718055994529, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'LOG10(0.9)';
-//    CheckEquals(-0.045757490560675122, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(-0.045757490560675122, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
 //    Expression := 'COS(0.5)';
-//    CheckEquals(0.87758256189037276, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(0.87758256189037276, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'SIN(0.5)';
-//    CheckEquals(0.47942553860420301, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(0.47942553860420301, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'TAN(0.5)';
-//    CheckEquals(0.54630248984379048, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(0.54630248984379048, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'COT(0.5)';
-//    CheckEquals(1.830487721712452, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(1.830487721712452, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
 //    Expression := 'ACOS(0.5)';
-//    CheckEquals(1.0471975511965979, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(1.0471975511965979, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'ASIN(0.5)';
-//    CheckEquals(0.52359877559829893, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(0.52359877559829893, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 //    Expression := 'ATAN(0.5)';
-//    CheckEquals(0.46364760900080609, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+//    CheckEquals(0.46364760900080609, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
     Expression := 'CEIL(0.4)';
-    CheckEquals(1, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(1, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'FLOOR(-0.5)';
-    CheckEquals(-1, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(-1, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'ROUND(0.4)';
-    CheckEquals(0, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'ROUND(0.6)';
-    CheckEquals(1, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(1, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'TRUNC(0.6)';
-    CheckEquals(0, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
 
     Expression := 'INT(1.5)';
-    CheckEquals(1.0, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(1.0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
     Expression := 'FRAC(1.5)';
-    CheckEquals(0.5, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(0.5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
     Expression := 'SQR(16)';
-    CheckEquals(4, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
     Expression := 'SQRT(25)';
-    CheckEquals(5, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -402,31 +402,31 @@ begin
   with Expression do
   begin
     Expression := 'MIN(2,5,1,10,8)';
-    CheckEquals(1, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(1, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
 
     Expression := 'MAX(2.1,5.3,1.0,10.4,8.9)';
-    CheckEquals(10.4, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(10.4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
 
     Expression := 'Sum(''A'',''B'',3)';
-    CheckEquals('AB3', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('AB3', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'Sum(''A'',''B'',''3'') + (28 + 2)';
-    CheckEquals('AB330', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('AB330', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'Sum(''A'',''B'',''3'') + (Max(10, -33, 28) + Min(2, 100, 5))';
-    CheckEquals('AB330', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('AB330', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'IIF(TRUE,20,33)';
-    CheckEquals(20, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(20, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'IIF(FALSE,20,33)';
-    CheckEquals(33, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(33, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
 
     Expression := 'CASEF(0,''V0'',33,22.5)';
-    CheckEquals('V0', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('V0', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CASEF(1,''V0'',33,22.5)';
-    CheckEquals(33, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(33, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'CASEF(2,''V0'',33,22.5)';
-    CheckEquals(22.5, DefVarManager.GetAsFloat(Evaluate),Expression+' failed, ');
+    CheckEquals(22.5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsFloat(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -438,63 +438,63 @@ begin
   with Expression do
   begin
     Expression := 'CONCAT(''ABC'',''DEF'',''geh'')';
-    CheckEquals('ABCDEFgeh', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('ABCDEFgeh', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CONCAT(''ABC'',123,45.67)';
-    CheckEquals('ABC12345.67', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('ABC12345.67', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'SUBSTR(''ABCDEFGH'',3,4)';
-    CheckEquals('CDEF', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('CDEF', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'LEFT(''ABCDEFGH'',3)';
-    CheckEquals('ABC', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('ABC', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'RIGHT(''ABCDEFGH'',3)';
-    CheckEquals('FGH', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('FGH', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'STRPOS(''CDE'',''ABCDEFGH'')';
-    CheckEquals(3, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(3, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LENGTH(''ABCDEFGH'')';
-    CheckEquals(8, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(8, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LENGTH('''')';
-    CheckEquals(0, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
 
     Expression := 'UPPER(''abcdefgh'')';
-    CheckEquals('ABCDEFGH', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('ABCDEFGH', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'LOWER(''ABCDEFGH'')';
-    CheckEquals('abcdefgh', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('abcdefgh', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CAPITALIZE(''abc def,gh'')';
-    CheckEquals('Abc Def,Gh', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('Abc Def,Gh', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CAPITALIZE(''ABC;DEF [GH]'')';
-    CheckEquals('Abc;Def [Gh]', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('Abc;Def [Gh]', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CAPITALIZE(''ABC;DEF [GH],ijk'','' ,'')';
-    CheckEquals('Abc;def [gh],Ijk', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('Abc;def [gh],Ijk', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'CAP(''ABC;DEF [GH],ijk'','' ,'')';
-    CheckEquals('Abc;def [gh],Ijk', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('Abc;def [gh],Ijk', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'TRIM('' more spaces  '')';
-    CheckEquals('more spaces', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('more spaces', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'LTRIM('' more spaces  '')';
-    CheckEquals('more spaces  ', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('more spaces  ', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'RTRIM('' more spaces  '')';
-    CheckEquals(' more spaces', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals(' more spaces', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'SOUNDEX(''Smith'')';
-    CheckEquals('S530', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('S530', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     Expression := 'SOUNDEX(''Smith'',6)';
-    CheckEquals('S53000', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    CheckEquals('S53000', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
     //Expression := 'SOUNDEX(''Schmittchen'',6)';
-    //CheckEquals('S25325', DefVarManager.GetAsString(Evaluate),Expression+' failed, ');
+    //CheckEquals('S25325', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate),Expression+' failed, ');
 
     Expression := 'LEVENSHTEINDISTANCE(''Smith'',''Smith'')';
-    CheckEquals(0, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(0, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LEVENSHTEINDISTANCE(''smith'',''SMITH'',FALSE)';
-    CheckEquals(5, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(5, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LEVDIST(''Smith'',''Shmid'')';
-    CheckEquals(3, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(3, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LEVDIST(''Smither'',''Shmider'')';
-    CheckEquals(3, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(3, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LEVDIST(''Billy the Kid'',''The big brown fox'')';
-    CheckEquals(14, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(14, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
     Expression := 'LEVDIST(''Billy the kid'',''Billy and the young kid'')';
-    CheckEquals(10, DefVarManager.GetAsInteger(Evaluate),Expression+' failed, ');
+    CheckEquals(10, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate),Expression+' failed, ');
   end;
 end;
 
@@ -508,32 +508,32 @@ begin
   Expression := TZExpression.Create;
 
   Expression.Expression := '2+2';
-  CheckEquals(4, DefVarManager.GetAsInteger(Expression.Evaluate));
-  CheckEquals(4, DefVarManager.GetAsInteger(Expression.Evaluate));
+  CheckEquals(4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
+  CheckEquals(4, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
 
   Expression.Expression := '3-1';
-  CheckEquals(2, DefVarManager.GetAsInteger(Expression.Evaluate));
-  CheckEquals(2, DefVarManager.GetAsInteger(Expression.Evaluate));
+  CheckEquals(2, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
+  CheckEquals(2, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
 
   Expression.Expression := '2+2*2+2';
-  CheckEquals(8, DefVarManager.GetAsInteger(Expression.Evaluate));
-  CheckEquals(8, DefVarManager.GetAsInteger(Expression.Evaluate));
+  CheckEquals(8, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
+  CheckEquals(8, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
 
   Expression.Expression := '(2+2)*(2+2)';
-  CheckEquals(16, DefVarManager.GetAsInteger(Expression.Evaluate));
-  CheckEquals(16, DefVarManager.GetAsInteger(Expression.Evaluate));
+  CheckEquals(16, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
+  CheckEquals(16, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Expression.Evaluate));
 
   Expression.Expression := '''ABBA'' LIKE ''A*B?''';
-  CheckEquals(True, DefVarManager.GetAsBoolean(Expression.Evaluate));
+  CheckEquals(True, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Expression.Evaluate));
 
   Expression.Expression := '''ABC'' + 123';
-  CheckEquals('ABC123', DefVarManager.GetAsString(Expression.Evaluate));
+  CheckEquals('ABC123', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Expression.Evaluate));
 
   Expression.Expression := '''ABC'' + (100 + 23)';
-  CheckEquals('ABC123', DefVarManager.GetAsString(Expression.Evaluate));
+  CheckEquals('ABC123', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Expression.Evaluate));
 
   Expression.Expression := '''Result='' + (23.5 + 11 / 23 * 2^2 - 3) + True';
-  CheckEquals('Result=20.5TRUE', DefVarManager.GetAsString(Expression.Evaluate));
+  CheckEquals('Result=20.5TRUE', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Expression.Evaluate));
 end;
 
 {**
@@ -551,24 +551,24 @@ begin
     DefaultVariables.Add('a', EncodeInteger(100));
     DefaultVariables.Add('B C', EncodeInteger(23));
     Expression := 'A + "B C"';
-    CheckEquals(123, DefVarManager.GetAsInteger(Evaluate), Expression+' failed, ');
+    CheckEquals(123, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate), Expression+' failed, ');
 
     Expression := '"B C" LIKE ''2*''';
-    Check(DefVarManager.GetAsBoolean(Evaluate), Expression+' failed, ');
+    Check({$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate), Expression+' failed, ');
 
     Expression := '"B C" NOT LIKE ''2*''';
-    CheckEquals(False, DefVarManager.GetAsBoolean(Evaluate), Expression+' failed, ');
+    CheckEquals(False, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate), Expression+' failed, ');
 
     DefaultVariables.Add('A_B', EncodeInteger(123));
     Expression := 'A_B + 321';
-    CheckEquals(444, DefVarManager.GetAsInteger(Evaluate), Expression+' failed, ');
+    CheckEquals(444, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate), Expression+' failed, ');
 
     Clear;
     AutoVariables := True;
     Expression := 'A = 123';
     CheckEquals(0, DefaultVariables.FindByName('a'), Expression+' failed, ');
     DefaultVariables.Values[0] := EncodeInteger(123);
-    Check(DefVarManager.GetAsBoolean(Evaluate), Expression+' failed, ');
+    Check({$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate), Expression+' failed, ');
 
     try
       AutoVariables := False;
@@ -583,47 +583,47 @@ begin
     Variables := TZVariablesList.Create;
     Variables.Add('a', EncodeInteger(123));
     Variables.Add('B', EncodeString('321'));
-    CheckEquals(444, DefVarManager.GetAsInteger(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(444, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate2(Variables)), Expression+' failed, ');
 
     Expression := 'A=1 OR A=2';
     Variables := TZVariablesList.Create;
     Variables.Add('a', EncodeInteger(3));
-    CheckEquals(False, DefVarManager.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(False, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
 
     Variables := TZVariablesList.Create;
     Variables.Add('a', EncodeNull);
 
     Expression := 'A IS NULL';
-    CheckEquals(True, DefVarManager.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(True, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
 
     Expression := 'A IS NOT NULL';
-    CheckEquals(False, DefVarManager.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(False, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
 
     Expression := 'A Is Null Or a Not Like ''AB*''';
-    CheckEquals(True, DefVarManager.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(True, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
 
     Expression := 'A Is Not Null or a Like ''C?''';
-    CheckEquals(False, DefVarManager.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(False, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
 
     Expression := 'Upper(''Abc'')';
-    CheckEquals('ABC', DefVarManager.GetAsString(Evaluate), Expression+' failed, ');
+    CheckEquals('ABC', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate), Expression+' failed, ');
 
     Expression := 'Lower(''Abc'')';
-    CheckEquals('abc', DefVarManager.GetAsString(Evaluate), Expression+' failed, ');
+    CheckEquals('abc', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate), Expression+' failed, ');
 
     Expression := 'Concat(''Ab'', ''cd'', ''efG'')';
-    CheckEquals('AbcdefG', DefVarManager.GetAsString(Evaluate), Expression+' failed, ');
+    CheckEquals('AbcdefG', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate), Expression+' failed, ');
 
     Expression := 'SubStr(''AbcdefG'', 3, 3)';
-    CheckEquals('cde', DefVarManager.GetAsString(Evaluate), Expression+' failed, ');
+    CheckEquals('cde', {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsString(Evaluate), Expression+' failed, ');
 
     Expression := 'StrPos(''cde'',''AbcdefG'')';
-    CheckEquals(3, DefVarManager.GetAsInteger(Evaluate), Expression+' failed, ');
+    CheckEquals(3, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsInteger(Evaluate), Expression+' failed, ');
 
     Variables := TZVariablesList.Create;
     Variables.Add('a', EncodeString(''));
     Expression := 'A = ''''';
-    CheckEquals(True, DefVarManager.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
+    CheckEquals(True, {$IFDEF ZEOS_TEST_ONLY}DefVarManager{$ELSE}SoftVarManager{$ENDIF}.GetAsBoolean(Evaluate2(Variables)), Expression+' failed, ');
   end;
   Expression.Destroy;
 end;

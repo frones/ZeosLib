@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, ZDbcIntfs, ZConnection;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZDbcIntfs, ZConnection;
 
 type
   {** Represents a component which wraps a sequence to database. }

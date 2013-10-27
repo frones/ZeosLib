@@ -55,8 +55,8 @@ interface
 
 {$I ZComponent.inc}
 
-uses ZCompatibility, Classes, SysUtils, DB, ZDbcIntfs, ZConnection,
-  ZScriptParser, ZSqlStrings, Types;
+uses Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  ZDbcIntfs, ZConnection, ZScriptParser, ZSqlStrings, ZCompatibility;
 
 type
 

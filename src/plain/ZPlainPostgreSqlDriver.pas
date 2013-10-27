@@ -559,7 +559,10 @@ type
     function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): RawByteString;
     function DecodeBYTEA(const value: RawByteString; const Is_bytea_output_hex: Boolean;
-      Handle: PZPostgreSQLConnect): RawByteString;
+      Handle: PZPostgreSQLConnect): RawByteString; overload;
+    function DecodeBYTEA(const RowNo, ColumnIndex: Integer; const Is_bytea_output_hex: Boolean;
+      const Handle: PZPostgreSQLConnect; const QueryHandle: PZPostgreSQLResult;
+      Var Buffer: Pointer): Cardinal; overload;
     function SupportsEncodeBYTEA: Boolean;
     function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
     function SupportsStringEscaping(const ClientDependend: Boolean): Boolean;
@@ -700,7 +703,10 @@ type
     function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): RawByteString;
     function DecodeBYTEA(const value: RawByteString; const Is_bytea_output_hex: Boolean;
-      Handle: PZPostgreSQLConnect): RawByteString;
+      Handle: PZPostgreSQLConnect): RawByteString; overload;
+    function DecodeBYTEA(const RowNo, ColumnIndex: Integer;
+      const Is_bytea_output_hex: Boolean; const Handle: PZPostgreSQLConnect;
+      const QueryHandle: PZPostgreSQLResult; Var Buffer: Pointer): Cardinal; overload;
 
     function SupportsEncodeBYTEA: Boolean;
     function SupportsDecodeBYTEA(const Handle: PZPostgreSQLConnect): Boolean;
@@ -1094,15 +1100,16 @@ function TZPostgreSQLBaseDriver.DecodeBYTEA(const value: RawByteString;
   const Is_bytea_output_hex: Boolean; Handle: PZPostgreSQLConnect): RawByteString;
 var
   decoded: PAnsiChar;
-  Ansi: AnsiString;
   len: Longword;
+  L, Xpos: Integer;
 begin
+  Result := ''; //speeds up SetLength *2
   if ( Is_bytea_output_hex ) then
   begin
-    Len := (Length(value)-{$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)) div 2; //GetLength of binary result
-    Ansi := AnsiString(Copy(value, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.AnsiPos{$ELSE}Pos{$ENDIF}('x', value)+1, Length(value))); //remove the first 'x'sign-byte
-    SetLength(Result, Len); //Set length of binary-result
-    HexToBin(PAnsiChar(Ansi), PAnsichar(Result), Len); //convert hex to binary
+    Xpos := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiPos('x', Value); //get pos of 'x'
+    L := (Length(value)-Xpos) div 2;
+    SetLength(Result, L); //Set length of binary-result
+    HexToBin(PAnsiChar(Value)+Xpos{inc pointer ove '\x'}, PAnsichar(Result), L); //convert hex to binary
   end
   else
     if Assigned(POSTGRESQL_API.PQUnescapeBytea) then
@@ -1116,6 +1123,41 @@ begin
     end
     else
       Result := Value;
+
+end;
+
+function TZPostgreSQLBaseDriver.DecodeBYTEA(const RowNo, ColumnIndex: Integer;
+  const Is_bytea_output_hex: Boolean; const Handle: PZPostgreSQLConnect;
+  const QueryHandle: PZPostgreSQLResult; Var Buffer: Pointer): Cardinal;
+var
+  decoded: PAnsiChar;
+  //Xpos: Integer;
+  ColBuffer: PAnsiChar;
+begin
+  Buffer := nil;
+  Result := 0;
+  ColBuffer := GetValue(QueryHandle, RowNo, ColumnIndex);
+  if ( Is_bytea_output_hex ) then
+  begin
+    {if ColBuffer^ = 'x' then
+      xPos := 1
+    else
+      xPos := 2;}
+    Result := GetLength(QueryHandle, Rowno, ColumnIndex);
+    Result := (Result-2) div 2;
+    ReallocMem(Buffer, Result);
+    HexToBin(ColBuffer+2{Xpos{inc pointer over '\x'}, Buffer, Result); //convert hex to binary
+  end
+  else
+    if Assigned(POSTGRESQL_API.PQUnescapeBytea) then
+    begin
+      decoded := POSTGRESQL_API.PQUnescapeBytea(ColBuffer, @Result);
+      ReallocMem(Buffer, Result);
+      if (Result > 0) then
+         Move(decoded^, Buffer^, Result);
+      if Assigned(POSTGRESQL_API.PQFreemem) then
+        POSTGRESQL_API.PQFreemem(decoded);
+    end;
 end;
 
 function TZPostgreSQLBaseDriver.SupportsEncodeBYTEA: Boolean;
@@ -1808,4 +1850,5 @@ begin
 end;
 
 end.
+
 

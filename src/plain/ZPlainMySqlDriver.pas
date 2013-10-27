@@ -60,8 +60,8 @@ interface
 
 {$I ZPlain.inc}
 
-uses Classes, ZPlainDriver, ZCompatibility, ZPlainMySqlConstants,
-  ZTokenizer;
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZPlainDriver, ZCompatibility, ZPlainMySqlConstants, ZTokenizer;
 
 const
   MARIADB_LOCATION = 'libmariadb'+ SharedSuffix;

@@ -86,12 +86,12 @@ type
     FTableName: string;
     FCatalogName: string;
     FColumnType: TZSQLType;
-    FInternalColumnType: TZSQLType;
     FReadOnly: Boolean;
     FWritable: Boolean;
     FDefinitelyWritable: Boolean;
     FDefaultValue: string;
     FDefaultExpression : string;
+    FColumnCodePage: Word;
   public
     constructor Create;
     function GetColumnTypeName: string;
@@ -115,13 +115,13 @@ type
     property TableName: string read FTableName write FTableName;
     property CatalogName: string read FCatalogName write FCatalogName;
     property ColumnType: TZSQLType read FColumnType write FColumnType;
-    property InternalColumnType: TZSQLType read FInternalColumnType write FInternalColumnType;
     property ReadOnly: Boolean read FReadOnly write FReadOnly;
     property Writable: Boolean read FWritable write FWritable;
     property DefinitelyWritable: Boolean read FDefinitelyWritable
       write FDefinitelyWritable;
     property DefaultValue: string read FDefaultValue write FDefaultValue;
     property DefaultExpression: string read FDefaultExpression write FDefaultExpression;
+    property ColumnCodePage: Word read FColumnCodePage write FColumnCodePage;
   end;
 
   {** Implements Abstract ResultSet Metadata. }
@@ -134,6 +134,7 @@ type
     FTableColumns: TZHashMap;
     FIdentifierConvertor: IZIdentifierConvertor;
     FResultSet: TZAbstractResultSet;
+    FConSettings: PZConSettings;
     procedure SetMetadata(const Value: IZDatabaseMetadata);
   protected
     procedure LoadColumn(ColumnIndex: Integer; ColumnInfo: TZColumnInfo;
@@ -171,6 +172,7 @@ type
     function GetColumnDisplaySize(Column: Integer): Integer; virtual;
     function GetColumnLabel(Column: Integer): string; virtual;
     function GetColumnName(Column: Integer): string; virtual;
+    function GetColumnCodePage(const Column: Integer): Word;
     function GetSchemaName(Column: Integer): string; virtual;
     function GetPrecision(Column: Integer): Integer; virtual;
     function GetScale(Column: Integer): Integer; virtual;
@@ -187,7 +189,7 @@ type
 
 implementation
 
-uses ZVariant, ZDbcUtils, ZDbcMetadata;
+uses ZFastCode, ZVariant, ZDbcUtils, ZDbcMetadata, ZSysUtils, ZEncoding;
 
 { TZColumnInfo }
 
@@ -212,10 +214,10 @@ begin
   FCatalogName := '';
   FDefaultValue := '';
   FColumnType := stUnknown;
-  FInternalColumnType := stUnknown;
   FReadOnly := True;
   FWritable := False;
   FDefinitelyWritable := False;
+  FColumnCodePage := zCP_NONE;
 end;
 
 {**
@@ -246,6 +248,8 @@ begin
   FLoaded := not (FMetadata <> nil);
   FTableColumns := TZHashMap.Create;
   FResultSet := ParentResultSet;
+
+  FConSettings := FResultSet.GetConSettings;
 end;
 
 {**
@@ -386,7 +390,7 @@ begin
       if ColumnName = '' then
         ColumnName := 'Column';
       if N > 0 then
-        ColumnName := ColumnName + '_' + IntToStr(N);
+        ColumnName := ColumnName + '_' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
       FColumnsLabels.Add(ColumnName);
     end;
   end;
@@ -405,6 +409,16 @@ begin
   if not Loaded then
      LoadColumns;
   Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnName;
+end;
+
+{**
+  Get the designated column's codepage.
+  @param column the first column is 1, the second is 2, ...
+  @return schema name or "" if not applicable
+}
+function TZAbstractResultSetMetadata.GetColumnCodePage(const Column: Integer): Word;
+begin
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnCodePage;
 end;
 
 {**
@@ -639,19 +653,38 @@ begin
     //stByte, stString, stUnicoeString first. If this type is returned from the
     //ResultSet-Metadata we do NOT overwrite the column-type
     //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
-    tempColType := TZSQLType(TableColumns.GetInt(5));
+    tempColType := TZSQLType(TableColumns.GetShort(5));
     if not (( tempColType in [stBinaryStream, stAsciiStream, stUnicodeStream] )
       and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] )) then
     ColumnInfo.ColumnType := tempColType;
   end;
+  if FConSettings = nil then //fix if on creation nil was assigned
+    FConSettings := ResultSet.GetStatement.GetConnection.GetConSettings;
+
+  {Assign ColumnCodePages}
+  if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
+    if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then //all except ADO and DBLib (currently)
+      ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
+    else
+      if ResultSet.GetStatement.GetConnection.GetIZPlainDriver.IsAnsiDriver then //this excludes ADO which is allways 2Byte-String based
+        if (UpperCase(TableColumns.GetString(6)) = 'NVARCHAR') or (UpperCase(TableColumns.GetString(6)) = 'NCHAR') then
+          ColumnInfo.ColumnCodePage := zCP_UTF8
+        else
+          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume lacale codepage
+  else
+    ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
+  {nullable}
   if not TableColumns.IsNull(11) then
     ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(11));
+  {auto increment field}
   if not TableColumns.IsNull(19) then
     ColumnInfo.AutoIncrement := TableColumns.GetBoolean(19);
+  {Case sensitive}
   if not TableColumns.IsNull(20) then
     ColumnInfo.CaseSensitive := TableColumns.GetBoolean(20);
   if not TableColumns.IsNull(21) then
     ColumnInfo.Searchable := TableColumns.GetBoolean(21);
+  {Writable}
   if not TableColumns.IsNull(22) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
@@ -660,6 +693,7 @@ begin
         ColumnInfo.Writable := False
     else
       ColumnInfo.Writable := TableColumns.GetBoolean(22);
+  {DefinitelyWritable}
   if not TableColumns.IsNull(23) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
@@ -668,6 +702,7 @@ begin
         ColumnInfo.DefinitelyWritable := False
     else
       ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23);
+  {readonly}
   if not TableColumns.IsNull(24) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
@@ -676,6 +711,7 @@ begin
         ColumnInfo.ReadOnly := True
     else
       ColumnInfo.ReadOnly := TableColumns.GetBoolean(24);
+  {default value}
   if not TableColumns.IsNull(13) then
     ColumnInfo.DefaultValue := TableColumns.GetString(13);
 end;

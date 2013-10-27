@@ -57,8 +57,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection, ZSelectSchema;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility, ZDbcPostgreSqlUtils,
+  ZDbcConnection, ZSelectSchema;
 
 type
   {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. } 
@@ -290,7 +291,7 @@ type
 implementation
 
 uses
-  ZMessages, ZDbcUtils, ZDbcPostgreSql;
+  ZFastCode, ZMessages, ZDbcUtils, ZDbcPostgreSql;
 
 { TZPostgreSQLDatabaseInfo }
 
@@ -1405,7 +1406,7 @@ begin
     SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
       + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
       + ' NULL AS RESERVED3, d.description AS REMARKS, '
-      + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
+      + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
       + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
       + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
       + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
@@ -1423,7 +1424,7 @@ begin
     SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
       + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
       + ' NULL AS RESERVED3, NULL AS REMARKS, '
-      + IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
+      + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
       + ' FROM pg_proc p';
     if ProcedureCondition <> '' then
       SQL := SQL + ' WHERE ' + ProcedureCondition;
@@ -1582,7 +1583,7 @@ begin
     begin
       while Next do
       begin
-        ReturnType := StrToInt(GetStringByName('prorettype'));
+        ReturnType := RawToInt(GetRawByteStringByName('prorettype'));
         ReturnTypeType := GetStringByName('typtype');
 
         ArgTypes.Clear;
@@ -1616,7 +1617,7 @@ begin
           if ArgNames.Count > I then
             ColumnName := ArgNames.Strings[I]
           else
-            ColumnName := '$' + IntToStr(I + 1);
+            ColumnName := '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(I + 1);
 
           // column type
           if IsInParam then
@@ -2060,9 +2061,9 @@ begin
 
       Result.MoveToInsertRow;
       Result.UpdateNull(1);
-      Result.UpdateString(2, GetString(1 {nspname}));
-      Result.UpdateString(3, GetString(2 {relname}));
-      Result.UpdateString(4, GetString(3 {attname}));
+      Result.UpdateRawByteString(2, GetRawByteString(1 {nspname}));
+      Result.UpdateRawByteString(3, GetRawByteString(2 {relname}));
+      Result.UpdateRawByteString(4, GetRawByteString(3 {attname}));
       SQLType := GetSQLTypeByOid(TypeOid);
       Result.UpdateInt(5, Ord(SQLType));
       Result.UpdateString(6, PgType);
@@ -2114,7 +2115,7 @@ begin
         Result.UpdateInt(11, Ord(ntNullable));
       end;
 
-      Result.UpdateString(12, GetString(10 {description}));
+      Result.UpdateRawByteString(12, GetRawByteString(10 {description}));
       Result.UpdateString(13, GetString(9 {adsrc}));
       Result.UpdateNull(14);
       Result.UpdateNull(15);
@@ -3217,9 +3218,9 @@ begin
 
     SQL := Select + ' ct.relname AS TABLE_NAME, NOT i.indisunique'
       + ' AS NON_UNIQUE, NULL AS INDEX_QUALIFIER, ci.relname AS INDEX_NAME,'
-      + ' CASE i.indisclustered WHEN true THEN ' + IntToStr(Ord(tiClustered))
-      + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + IntToStr(Ord(tiHashed))
-      + ' ELSE ' + IntToStr(Ord(tiOther)) + ' END END AS TYPE,'
+      + ' CASE i.indisclustered WHEN true THEN ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiClustered))
+      + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiHashed))
+      + ' ELSE ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiOther)) + ' END END AS TYPE,'
       + ' a.attnum AS ORDINAL_POSITION, a.attname AS COLUMN_NAME,'
       + ' NULL AS ASC_OR_DESC, ci.reltuples AS CARDINALITY,'
       + ' ci.relpages AS PAGES, NULL AS FILTER_CONDITION'

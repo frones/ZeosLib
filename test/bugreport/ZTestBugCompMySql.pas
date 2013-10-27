@@ -59,7 +59,7 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZConnection, ZDbcIntfs,
+  Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDataset, ZDbcIntfs,
   ZSqlTestCase, ZCompatibility, ZTestConsts, ZSqlUpdate, ZSqlProcessor,
   ZAbstractRODataset;
 
@@ -870,7 +870,7 @@ begin
     // Query.RequestLive := True;
     Query.Open;
     CheckEquals(1, Query.RecordCount);
-    CheckEquals(True, Query.Fields[0].IsNull);
+    CheckEquals(False, Query.Fields[0].IsNull);
     CheckEquals(0, Query.Fields[0].AsDateTime, 0);
     CheckEquals('abc', Query.Fields[1].AsString);
 
@@ -880,7 +880,7 @@ begin
 
     Query.Refresh;
     CheckEquals(1, Query.RecordCount);
-    CheckEquals(True, Query.Fields[0].IsNull);
+    CheckEquals(False, Query.Fields[0].IsNull);
     CheckEquals(0, Query.Fields[0].AsDateTime, 0);
     CheckEquals('xyz', Query.Fields[1].AsString);
     Query.Close;

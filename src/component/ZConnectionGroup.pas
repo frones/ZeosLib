@@ -54,8 +54,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, ZDbcIntfs, Forms,
-  ZCompatibility, Dialogs;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Forms, Dialogs,
+  ZDbcIntfs,ZCompatibility;
 
 const
   mask = 'æææ#2ææ0#ææ39æ-V„–FFVæææ';  { define your own mask  }

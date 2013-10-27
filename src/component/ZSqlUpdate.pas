@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, DB, ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings;
 
 type
   {ADDED BY fduenas}
@@ -127,7 +128,8 @@ type
 
 
   protected
-    procedure Apply_RefreshResultSet(const Sender:IZCachedResultSet;const RefreshResultSet: IZResultSet;const RefreshRowAccessor:TZRowAccessor);
+    procedure Apply_RefreshResultSet(const Sender: IZCachedResultSet;
+      const RefreshResultSet: IZResultSet;const RefreshRowAccessor: TZRowAccessor);
 
     procedure DefineProperties(Filer: TFiler); override;
     procedure CalculateDefaults(Sender: IZCachedResultSet;
@@ -220,7 +222,7 @@ type
 implementation
 
 uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
-  ZSysUtils, ZDbcUtils,ZMessages;
+  ZSysUtils, ZDbcUtils, ZMessages;
 
 { TZUpdateSQL }
 

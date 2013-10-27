@@ -58,8 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
-  ZSqlStrings, ZTokenizer, ZGenericSqlToken, ZConnection, ZDataset,
-  ZSqlTestCase, ZCompatibility;
+  ZGenericSqlToken, ZDataset, ZSqlTestCase, ZCompatibility;
 
 type
 
@@ -76,7 +75,7 @@ type
 
 implementation
 
-uses Classes, ZDbcUtils, ZTestConsts, ZDbcIntfs;
+uses Classes, ZDbcIntfs;
 
 { TZTestSortingCase }
 

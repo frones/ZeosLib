@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
-  ZDbcConnection, ZDbcInterbase6, ZURL;
+  ZDbcInterbase6;
 
 type
 
@@ -247,13 +247,11 @@ type
     function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
-  public
-    property ConSettings;
   end;
 
 implementation
 
-uses ZMessages, ZDbcInterbase6Utils, ZDbcUtils;
+uses ZMessages, ZDbcInterbase6Utils;
 
 { TZInterbase6DatabaseInfo }
 
@@ -316,8 +314,8 @@ begin
   if FServerVersion = '' then
   begin
     FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
-    FServerVersion := String(GetVersion(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle));
+    FServerVersion := GetVersion(FIBConnection.GetPlainDriver,
+      FIBConnection.GetDBHandle, Metadata.GetConnection.GetConSettings);
   end;
   Result := FServerVersion;
 end;

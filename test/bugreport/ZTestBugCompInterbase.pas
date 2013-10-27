@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, SysUtils, DB, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
-  ZDataset, ZConnection, ZDbcIntfs, ZSqlTestCase, ZCompatibility
+  ZDataset, ZDbcIntfs, ZSqlTestCase, ZCompatibility
   {$IFNDEF LINUX}
     {$IFDEF WITH_VCL_PREFIX}
     , Vcl.DBCtrls

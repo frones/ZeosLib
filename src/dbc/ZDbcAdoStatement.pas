@@ -67,7 +67,6 @@ type
     AdoRecordSet: ZPlainAdo.RecordSet;
     FPlainDriver: IZPlainDriver;
     FAdoConnection: IZAdoConnection;
-    SQL: String;
     function IsSelect(const SQL: string): Boolean;
   public
     constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string; Info: TStrings);
@@ -141,7 +140,7 @@ uses
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   {$IFNDEF UNICODE}ZEncoding,{$ENDIF}
   ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
-  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils;
+  ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
 constructor TZAdoStatement.Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string;
   Info: TStrings);
@@ -176,7 +175,7 @@ begin
   Result := nil;
   LastResultSet := nil;
   LastUpdateCount := -1;
-  if not Execute(LogSql) then
+  if not Execute(WSQL) then
     while (not GetMoreResults) and (LastUpdateCount > -1) do ;
   Result := LastResultSet
 end;
@@ -191,14 +190,14 @@ begin
     {$IFDEF UNICODE}
     WSQL := SQL;
     {$ENDIF}
-    if IsSelect(LogSQL) then
+    if IsSelect(Self.SQL) then
     begin
       AdoRecordSet := CoRecordSet.Create;
       AdoRecordSet.MaxRecords := MaxRows;
       AdoRecordSet.Open(SQL, FAdoConnection.GetAdoConnection,
         adOpenStatic, adLockOptimistic, adAsyncFetch);
       LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
-        LogSQL, ConSettings, ResultSetConcurrency);
+        Self.SQL, ConSettings, ResultSetConcurrency);
       LastUpdateCount := RC;
       AdoRecordSet.Close;
       AdoRecordSet := nil;
@@ -207,11 +206,11 @@ begin
       AdoRecordSet := FAdoConnection.GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
     Result := RC;
     LastUpdateCount := Result;
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogSQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -227,8 +226,7 @@ begin
     {$ENDIF}
     LastResultSet := nil;
     LastUpdateCount := -1;
-    Self.SQL := sql;
-    if IsSelect(SSQL) then
+    if IsSelect(Self.SQL) then
     begin
       AdoRecordSet := CoRecordSet.Create;
       AdoRecordSet.MaxRecords := MaxRows;
@@ -238,14 +236,14 @@ begin
     else
       AdoRecordSet := FAdoConnection.GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
     LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
-      LogSQL, ConSettings, ResultSetConcurrency);
+      Self.SQL, ConSettings, ResultSetConcurrency);
     Result := Assigned(LastResultSet);
     LastUpdateCount := RC;
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, LogSQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, LogSQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -322,11 +320,11 @@ begin
     Exit
   else
     for i := 0 to InParamCount-1 do
-      if DefVarManager.IsNull(InParamValues[i]) then
+      if ClientVarManager.IsNull(InParamValues[i]) then
         if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
           StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
         begin
-          DefVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+          ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
           ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
         end
         else
@@ -396,11 +394,11 @@ begin
       SQL, ConSettings, ResultSetConcurrency);
     LastUpdateCount := RC;
     Result := Assigned(LastResultSet);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -597,11 +595,12 @@ begin
       SQL, ConSettings, ResultSetConcurrency);
     LastUpdateCount := RC;
     Result := Assigned(LastResultSet);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
     begin
-      DriverManager.LogError(lcExecute, FPlainDriver.GetProtocol, SQL, 0, E.Message);
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0,
+        ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
       raise;
     end;
   end
@@ -670,24 +669,24 @@ begin
     case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_,
       ConSettings.CPType) of
       stBoolean:
-        DefVarManager.SetAsBoolean(Result, Temp);
+        ClientVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stInteger, stLong:
-        DefVarManager.SetAsInteger(Result, Temp);
+        ClientVarManager.SetAsInteger(Result, Temp);
       stFloat, stDouble, stBigDecimal:
-        DefVarManager.SetAsFloat(Result, Temp);
+        ClientVarManager.SetAsFloat(Result, Temp);
       stString, stAsciiStream:
-        DefVarManager.SetAsString(Result, Temp);
+        ClientVarManager.SetAsString(Result, Temp);
       stUnicodeString, stUnicodeStream:
-        DefVarManager.SetAsUnicodeString(Result, Temp);
+        ClientVarManager.SetAsUnicodeString(Result, Temp);
       stBytes:
-        DefVarManager.SetAsBytes(Result, VarToBytes(Temp));
+        ClientVarManager.SetAsBytes(Result, VarToBytes(Temp));
       stDate, stTime, stTimestamp:
-        DefVarManager.SetAsDateTime(Result, Temp);
+        ClientVarManager.SetAsDateTime(Result, Temp);
       stBinaryStream:
         begin
           if VarIsStr(V) then
           begin
-            TempBlob := TZAbstractBlob.CreateWithStream(nil, GetConnection);
+            TempBlob := TZAbstractBlob.CreateWithStream(nil);
             TempBlob.SetString(AnsiString(V));
           end
           else
@@ -695,20 +694,20 @@ begin
             begin
               P := VarArrayLock(V);
               try
-                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1, GetConnection);
+                TempBlob := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
               finally
                 VarArrayUnLock(V);
               end;
             end;
-          DefVarManager.SetAsInterface(Result, TempBlob);
+          ClientVarManager.SetAsInterface(Result, TempBlob);
           TempBlob := nil;
         end
       else
-        DefVarManager.SetNull(Result);
+        ClientVarManager.SetNull(Result);
     end;
   end;
 
-  LastWasNull := DefVarManager.IsNull(Result) or VarIsNull(Temp) or VarIsClear(Temp);
+  LastWasNull := ClientVarManager.IsNull(Result) or VarIsNull(Temp) or VarIsClear(Temp);
 end;
 
 procedure TZAdoCallableStatement.PrepareInParameters;
@@ -727,11 +726,11 @@ begin
   else
     for i := 0 to InParamCount-1 do
       if FDBParamTypes[i] in [1,3] then //ptInput, ptInputOutput
-        if DefVarManager.IsNull(InParamValues[i]) then
+        if ClientVarManager.IsNull(InParamValues[i]) then
           if (InParamDefaultValues[i] <> '') and (UpperCase(InParamDefaultValues[i]) <> 'NULL') and
             StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
           begin
-            DefVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
+            ClientVarManager.SetAsString(InParamValues[i], InParamDefaultValues[i]);
             ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput)
           end
           else

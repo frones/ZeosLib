@@ -52,7 +52,7 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   SysUtils;
 
 type
@@ -119,7 +119,7 @@ type
 
 implementation
 
-uses ZCompatibility, StrUtils;
+uses ZCompatibility, StrUtils, ZFastCode;
 
 {TZURLStringList}
 function TZURLStringList.GetTextStr: string;
@@ -282,7 +282,7 @@ begin
   begin
     Result := Result + HostName;
     if Port <> 0 then
-      Result := Result + ':' + IntToStr(Port);
+      Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port);
   end;
 
   // Database
