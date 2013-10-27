@@ -82,7 +82,7 @@ type
     FDialect: Word;
     FCodePageArray: TWordDynArray;
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE} inline; {$ENDIF}
-    function GetIbSqlSubType(const Index: Word): Smallint; {$IFDEF WITH_INLINE} inline; {$ENDIF}
+    function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function DecodeString(const IsText: Boolean; const Index: Word): RawByteString; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function GetQuad(const Index: Integer): TISC_QUAD;
   protected
