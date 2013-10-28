@@ -1163,7 +1163,7 @@ var
   ps: IZPreparedStatement;
 begin
   if assigned(FOutVars) then // else no statement anyways
-    FreeOracleSQLVars(FPlainDriver, FOutVars, (GetStatement.GetConnection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
+    FreeOracleSQLVars(FPlainDriver, FOutVars, FConnection.GetConnectionHandle, FErrorHandle, ConSettings);
   { prepared statement own handles, so dont free them }
   if not Supports(GetStatement, IZPreparedStatement, ps) then
      FreeOracleStatementHandles(FPlainDriver, FStmtHandle, FErrorHandle);
@@ -1188,7 +1188,6 @@ end;
 function TZOracleResultSet.Next: Boolean;
 var
   Status: Integer;
-  Connection: IZOracleConnection;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -1196,16 +1195,11 @@ begin
     Exit;
 
   if RowNo = 0 then
-  begin
-    Connection := GetStatement.GetConnection as IZOracleConnection;
-    Status := FPlainDriver.StmtExecute(Connection.GetContextHandle, FStmtHandle,
-      FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
-  end
+    Status := FPlainDriver.StmtExecute(FConnection.GetContextHandle, FStmtHandle,
+      FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT)
   else
-  begin
     Status := FPlainDriver.StmtFetch(FStmtHandle, FErrorHandle,
       1, OCI_FETCH_NEXT, OCI_DEFAULT);
-  end;
   if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW', ConSettings);
 

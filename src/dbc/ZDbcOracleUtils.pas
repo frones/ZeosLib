@@ -141,8 +141,9 @@ procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
   @param PlainDriver an Oracle plain driver.
   @param Variables a pointer to array of variables.
 }
-procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars; Handle: POCIEnv; ErrorHandle: POCIError);
+procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
+  var Variables: PZSQLVars; const Handle: POCIEnv; const ErrorHandle: POCIError;
+  const ConSettings: PZConSettings);
 
 {**
   Allocates in memory and initializes the Oracle variable.
@@ -319,8 +320,9 @@ end;
   @param PlainDriver an Oracle plain driver.
   @param Variables a pointer to array of variables.
 }
-procedure FreeOracleSQLVars(PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars; Handle: POCIEnv; ErrorHandle: POCIError);
+procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
+  var Variables: PZSQLVars; const Handle: POCIEnv; const ErrorHandle: POCIError;
+  const ConSettings: PZConSettings);
 var
   I: Integer;
   CurrentVar: PZSQLVar;
@@ -342,6 +344,14 @@ var
       DisposeObject(Obj.next_subtype);
       Obj.next_subtype := nil;
     end;
+    //CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.tdo, 0), lcOther, 'OCIObjectFree', ConSettings);;
+    if Obj.Level = 0 then
+    begin
+      {Unpin tdo}
+      CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar._Obj.tdo), lcOther, 'OCIObjectUnpin', ConSettings);
+      CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.tdo, 0), lcOther, 'OCIObjectFree', ConSettings);;
+    end;
+
     Dispose(Obj);
   end;
 
@@ -355,8 +365,8 @@ begin
       if Assigned(CurrentVar._Obj) then
       begin
         DisposeObject(CurrentVar._Obj);
-        PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar._Obj.obj_type);
-        PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.obj_value, 0);
+        //PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar._Obj.obj_type);
+        //PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.obj_value, 0);
         CurrentVar._Obj := nil;
       end;
       if CurrentVar.Data <> nil then

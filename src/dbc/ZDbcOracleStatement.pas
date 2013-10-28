@@ -426,7 +426,7 @@ begin
     FLastStatement := nil;
   end;
   FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
-  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
+  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
 end;
 
 {**
@@ -712,7 +712,7 @@ begin
     PrepareOracleStatement(FPlainDriver, ASQL, FHandle, FErrorHandle,
       StrToIntDef(Info.Values['prefetch_count'], 100), ConSettings);
     //make sure eventual old buffers are cleaned
-    FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
+    FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
     AllocateOracleSQLVars(FInVars, FOracleParamsCount);
     FInVars^.ActualNum := FOracleParamsCount;
 
@@ -1045,7 +1045,7 @@ end;
 
 destructor TZOracleCallableStatement.Destroy;
 begin
-  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
+  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
   PackageIncludedList.Free;
   inherited;
 end;
