@@ -91,7 +91,7 @@ type
   {** Implements Prepared SQL Statement. }
   TZOraclePreparedStatement = class(TZAbstractPreparedStatement)
   private
-    FPrepared: Boolean;
+    //FPrepared: Boolean;
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
     FPlainDriver: IZOraclePlainDriver;
@@ -104,7 +104,7 @@ type
     function ConvertToOracleSQLQuery: RawByteString;
 
   protected
-    property Prepared: Boolean read FPrepared write FPrepared;
+    //property Prepared: Boolean read FPrepared write FPrepared;
     property Handle: POCIStmt read FHandle write FHandle;
     property ErrorHandle: POCIError read FErrorHandle write FErrorHandle;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
@@ -113,7 +113,6 @@ type
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings);
-    destructor Destroy; override;
 
     procedure Close; override;
     procedure Prepare; override;
@@ -342,15 +341,7 @@ begin
   ResultSetType := rtForwardOnly;
   ASQL := ConvertToOracleSQLQuery;
   FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
-  FPrepared := False;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOraclePreparedStatement.Destroy;
-begin
-  inherited Destroy;
+  //Prepare;
 end;
 
 {**
@@ -529,6 +520,12 @@ begin
       InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
         InParamTypes[I], TypeCode, 1024);
 
+        if InParamTypes[I] in [stString, stUnicodeString] then
+      Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
+        FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
+        CurrentVar.TypeCode, @CurrentVar.Indicator, @CurrentVar.DataSize, nil, 0, nil,
+        OCI_DEFAULT)
+      else
       Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
         FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
         CurrentVar.TypeCode, @CurrentVar.Indicator, nil, nil, 0, nil,
@@ -537,7 +534,7 @@ begin
     end;
 
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-    Prepared := True;
+    inherited Prepare;
   end;
 end;
 
@@ -732,10 +729,17 @@ begin
       InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
         SQLType, TypeCode, 1024);
 
-      CheckOracleError(FPlainDriver, FErrorHandle, FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
-        FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
-        CurrentVar.TypeCode, @CurrentVar.Indicator, nil, nil, 0, nil,
-        OCI_DEFAULT), lcExecute, 'OCIBindByPos', ConSettings);
+      if SQLType in [stString, stUnicodeString] then
+        CheckOracleError(FPlainDriver, FErrorHandle, FPlainDriver.BindByPos(
+          FHandle, CurrentVar.BindHandle, FErrorHandle, I + 1, CurrentVar.Data,
+          CurrentVar.Length, CurrentVar.TypeCode, @CurrentVar.Indicator,
+          @CurrentVar.DataSize, nil, 0, nil, OCI_DEFAULT), lcExecute,
+          'OCIBindByPos', ConSettings)
+      else
+        CheckOracleError(FPlainDriver, FErrorHandle, FPlainDriver.BindByPos(
+          FHandle, CurrentVar.BindHandle, FErrorHandle, I + 1, CurrentVar.Data,
+          CurrentVar.Length, CurrentVar.TypeCode, @CurrentVar.Indicator, nil,
+          nil, 0, nil, OCI_DEFAULT), lcExecute, 'OCIBindByPos', ConSettings);
     end;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   end;

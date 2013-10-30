@@ -167,7 +167,7 @@ procedure InitializeOracleVar(PlainDriver: IZOraclePlainDriver;
 }
 procedure LoadOracleVars(const PlainDriver: IZOraclePlainDriver;
   const Connection: IZConnection; const ErrorHandle: POCIError;
-  Variables: PZSQLVars; Values: TZVariantDynArray; const ChunkSize: Integer);
+  Variables: PZSQLVars; const Values: TZVariantDynArray; const ChunkSize: Integer);
 
 {**
   Unloads Oracle variables binded to SQL statement with data.
@@ -479,7 +479,7 @@ end;
 }
 procedure LoadOracleVars(const PlainDriver: IZOraclePlainDriver;
   const Connection: IZConnection; const ErrorHandle: POCIError;
-  Variables: PZSQLVars; Values: TZVariantDynArray; const ChunkSize: Integer);
+  Variables: PZSQLVars; const Values: TZVariantDynArray; const ChunkSize: Integer);
 var
   I, Len: Integer;
   Status: Integer;
@@ -520,9 +520,9 @@ begin
         SQLT_STR:
           begin
             CharRec := ClientVarManager.GetAsCharRec(Values[i], ConSettings^.ClientCodePage^.CP);
-            CharRec.Len := Math.Min(CharRec.Len, 1024);
-            System.Move(CharRec.P^, CurrentVar.Data^, CharRec.Len);
-            (PAnsiChar(CurrentVar.Data)+CharRec.Len)^ := #0; //improve  StrLCopy...
+            CurrentVar.DataSize := Math.Min(CharRec.Len, 1024)+1; //need the leading $0, because oracle expects it
+            System.Move(CharRec.P^, CurrentVar.Data^, CurrentVar.DataSize);
+            (PAnsiChar(CurrentVar.Data)+CurrentVar.DataSize-1)^ := #0; //improve  StrLCopy...
           end;
         SQLT_TIMESTAMP:
           begin
