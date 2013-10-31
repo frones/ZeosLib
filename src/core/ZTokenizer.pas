@@ -56,7 +56,8 @@ interface
 {$I ZCore.inc}
 
 uses
-   Classes, SysUtils, ZClasses, ZCompatibility;
+   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+   ZClasses, ZCompatibility;
 
 type
 
@@ -452,7 +453,6 @@ type
     {$ELSE}
     function GetEscapeString(const EscapeString: String): String;
     {$IFEND}
-    function TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray;
   end;
 
   {** Implements a default tokenizer object. }
@@ -479,7 +479,6 @@ type
     {$ELSE}
     function GetEscapeString(const EscapeString: String): String;
     {$IFEND}
-    function TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray; virtual;
     function TokenizeBufferToList(const Buffer: string; Options: TZTokenOptions):
       TStrings;
     function TokenizeStreamToList(Stream: TStream; Options: TZTokenOptions):
@@ -1458,18 +1457,6 @@ begin
     {$IFEND}
   else
     Result := '';
-end;
-
-{**
-  Tokenizes a string buffer into a dynamic array of tokens and informs
-  the Tokenizer and EscapeState about the used sequence
-  @param SQL a string buffer to be tokenized.
-  @param EscapeMarkSequence to detect preprepared data
-  @returns a dynamic array of tokens
-}
-function TZTokenizer.TokenizeEscapeBufferToList(const SQL: String): TZTokenDynArray;
-begin
-  Result := TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
 end;
 
 {**

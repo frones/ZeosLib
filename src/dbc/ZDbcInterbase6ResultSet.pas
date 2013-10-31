@@ -57,9 +57,10 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6,
-  ZPlainFirebirdInterbaseConstants,
-  ZCompatibility, ZDbcResultSetMetadata, ZDbcInterbase6Utils, ZMessages;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
+  ZDbcInterbase6Utils;
 
 type
 
@@ -258,7 +259,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
       Exit;
-
+  TempStream := nil;
   if FCachedBlob then
   begin
     try
@@ -267,6 +268,12 @@ begin
         ReadBlobBufer(GetPlainDriver, GetDBHandle, GetTrHandle,
           BlobId, Size, Buffer);
 
+      if Size = 0 then
+      begin
+        TempStream := TMemoryStream.Create;
+        Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection, GetMetaData.GetColumnType(ColumnIndex) = stUnicodeStream);
+      end
+      else
       case GetMetaData.GetColumnType(ColumnIndex) of
         stBinaryStream:
           Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
@@ -274,21 +281,16 @@ begin
           begin
             Result := TZAbstractBlob.CreateWithData(Buffer, Size, FIBConnection);
             TempStream := TStringStream.Create(GetValidatedAnsiString(Result.GetString, Consettings, True));
-            if Assigned(TempStream) then
-            begin
-              Result.SetStream(TempStream);
-              TempStream.Free;
-            end;
+            Result.SetStream(TempStream);
           end;
         else
           begin
             TempStream := GetValidatedUnicodeStream(Buffer, Size, ConSettings, True);
             Result := TZAbstractBlob.CreateWithStream(TempStream, FIBConnection, True);
-            if Assigned(TempStream) then
-              TempStream.Free;
           end;
       end;
     finally
+      if Assigned(TempStream) then FreeAndNil(TempStream);
       FreeMem(Buffer, Size);
     end;
   end

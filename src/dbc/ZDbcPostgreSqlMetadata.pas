@@ -57,8 +57,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcPostgreSqlUtils, ZDbcConnection, ZSelectSchema;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility, ZDbcPostgreSqlUtils,
+  ZDbcConnection, ZSelectSchema;
 
 type
   {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. } 

@@ -55,7 +55,8 @@ interface
 
 {$I ZParseSql.inc}
 
-uses Classes, SysUtils, ZTokenizer;
+uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZTokenizer;
 
 type
   {** Defines a SQL delimiter type. }

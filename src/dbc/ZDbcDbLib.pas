@@ -61,9 +61,9 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Types, Classes, ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging,
-  ZPlainDbLibDriver, ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser,
-  ZURL, ZPlainDriver;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
+  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
 
 type
   TDBLibProvider = (dpMsSQL, dpSybase);

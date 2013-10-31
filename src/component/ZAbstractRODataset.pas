@@ -60,7 +60,8 @@ uses
   Windows,
 {$ENDIF}
   Variants,
-  Types, SysUtils, DB, Classes, ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
+  Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  ZSysUtils, ZAbstractConnection, ZDbcIntfs, ZSqlStrings,
   Contnrs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZExpression
   {$IFDEF WITH_GENERIC_TLISTTFIELD}, Generics.Collections{$ENDIF};
 
@@ -388,7 +389,7 @@ type
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
     procedure PSEndTransaction(Commit: Boolean); override;
-    // Silvio Clécio
+    // Silvio Clecio
     {$IFDEF WITH_IPROVIDERWIDE}
     function PSGetTableNameW: WideString; override;
     function PSGetQuoteCharW: WideString; override;
@@ -3368,7 +3369,7 @@ end;
   Defines a list of query primary key fields.
   @returns a semicolon delimited list of query key fields.
 }
-// Silvio Clécio
+// Silvio Clecio
 {$IFDEF WITH_IPROVIDERWIDE}
 {$WARNINGS OFF}
 function TZAbstractRODataset.PSGetKeyFieldsW: WideString;
@@ -3434,24 +3435,24 @@ const
     ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp,
     ftFMTBcd , ftString, ftBlob);
 {$ELSE}
-  {$IFDEF VER180} //D2006
-  BaseFieldTypes: array[TFieldType] of TFieldType = (
-    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
-    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
-    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
-    ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
- {$ELSE}
-  {$IFDEF VER185} //D2007
-  BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
-    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
-    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
-    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
-    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
-    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
-    ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval); // 38..41
- {$ELSE}
+{$IFDEF VER180} //D2006
+BaseFieldTypes: array[TFieldType] of TFieldType = (
+  ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
+  ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
+  ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
+  ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
+  ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
+  ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
+{$ELSE !VER180}
+{$IFDEF VER185} //D2007
+BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
+  ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
+  ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
+  ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
+  ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
+  ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
+  ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval); // 38..41
+{$ELSE !VER185}
 {$IFDEF VER200}
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
@@ -3462,7 +3463,7 @@ const
       ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd,
       ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream);
-{$ELSE}
+{$ELSE !VER200}
 {$IFDEF VER210}
    BaseFieldTypes: array[TFieldType] of TFieldType = (
       ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
@@ -3474,7 +3475,7 @@ const
       ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
       ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
       ftTimeStampOffset, ftObject, ftSingle);
-{$ELSE}
+{$ELSE !VER210}
 {$IFDEF VER220}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,  // 0..6
@@ -3485,7 +3486,7 @@ const
     ftWideString, ftBlob, ftOraTimeStamp, ftOraInterval, //38..41
     ftLongWord, ftInteger, ftInteger, ftExtended, ftConnection, ftParams, ftStream, //42..48
     ftTimeStampOffset, ftObject, ftSingle); // 49..51
-{$ELSE}
+{$ELSE !VER220}
 {$IFDEF VER230}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
@@ -3496,7 +3497,7 @@ const
     ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
-{$ELSE}
+{$ELSE !VER230}
 {$IFDEF VER240}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
@@ -3507,7 +3508,7 @@ const
     ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
-{$ELSE}
+{$ELSE !VER240}
 {$IFDEF VER250}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
@@ -3518,7 +3519,18 @@ const
     ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
     ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
     ftTimeStampOffset, ftObject, ftSingle );
-{$ELSE}
+{$ELSE !VER250}
+{$IFDEF VER260}
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftSmallint, ftInteger, ftWord, ftBoolean, ftFloat,
+    ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, ftBytes, ftVarBytes, ftAutoInc,
+    ftBlob, ftMemo, ftGraphic, ftFmtMemo, ftParadoxOle, ftDBaseOle, ftTypedBinary,
+    ftCursor, ftFixedChar, ftWideString, ftLargeint, ftADT, ftArray, ftReference,
+    ftDataSet, ftOraBlob, ftOraClob, ftVariant, ftInterface, ftIDispatch, ftGuid,
+    ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval,
+    ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream,
+    ftTimeStampOffset, ftObject, ftSingle );
+{$ELSE !VER260} //>= D2005
   BaseFieldTypes: array[TFieldType] of TFieldType =
    (ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
     ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,
@@ -3526,15 +3538,16 @@ const
     ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString,
     ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob,
     ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd);
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
+{$ENDIF VER260}
+{$ENDIF VER250}
+{$ENDIF VER240}
+{$ENDIF VER230}
+{$ENDIF VER220}
+{$ENDIF VER210}
+{$ENDIF VER200}
+{$ENDIF VER185}
+{$ENDIF VER180}
+{$ENDIF FPC}
 
 
   CheckTypeSizes = [ftBytes, ftVarBytes, ftBCD, ftReference];

@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, DB, ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  ZDbcIntfs, ZDbcCachedResultSet, ZDbcCache, ZSqlStrings;
 
 type
   {ADDED BY fduenas}

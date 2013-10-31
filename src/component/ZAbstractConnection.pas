@@ -87,7 +87,8 @@ uses
   ZDbcPooled,
 {$ENDIF}
 
-  SysUtils, Classes, ZDbcIntfs, DB, ZCompatibility, ZURL;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  ZDbcIntfs, ZCompatibility, ZURL;
 
 
 type

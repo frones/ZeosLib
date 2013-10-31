@@ -57,8 +57,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZDbcIntfs, ZPlainPostgreSqlDriver,
-  ZDbcPostgreSql, ZDbcLogging, ZCompatibility, ZVariant;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZDbcIntfs, ZPlainPostgreSqlDriver, ZDbcPostgreSql, ZDbcLogging,
+  ZCompatibility, ZVariant;
 
 {**
   Indicate what field type is a number (integer, float and etc.)

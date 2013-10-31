@@ -96,7 +96,7 @@
     {$DEFINE WITH_INLINE}           // compiler supports inline methodes
   {$IFEND}
   {$IF FPC_FULLVERSION>20603}       // will be introduced in 2.6.4? is don on 2.7up
-    {DEFINE WITH_TRECORDBUFFER}
+    {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
   {$IFEND}
   {$IF FPC_FULLVERSION>20700}

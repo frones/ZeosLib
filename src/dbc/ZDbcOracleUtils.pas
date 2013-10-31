@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver,
-  ZDbcLogging, ZCompatibility, ZPlainOracleConstants;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
+  ZCompatibility, ZPlainOracleConstants;
 
 const
   MAX_SQLVAR_LIMIT = 1024;
@@ -501,12 +502,12 @@ begin
         SQLT_STR:
           begin
             case Values[i].VType of
-              vtString:
-                {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
-                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
               vtUnicodeString:
                 {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
-                  PAnsiChar(PlainDriver.ZPlainString(DefVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
+                  PAnsiChar(PlainDriver.ZPlainString(SoftVarManager.GetAsUnicodeString(Values[I]), Connection.GetConSettings)), 1024);
+              else
+                {$IFDEF WITH_STRLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrLCopy(PAnsiChar(CurrentVar.Data),
+                  PAnsiChar(PlainDriver.ZPlainString(SoftVarManager.GetAsString(Values[I]), Connection.GetConSettings)), 1024);
             end;
           end;
         SQLT_VST:

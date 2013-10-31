@@ -60,8 +60,9 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Types, ZCompatibility, Classes, SysUtils, Contnrs, ZClasses, ZDbcIntfs,
-  ZDbcResultSet, ZDbcResultSetMetadata, ZVariant;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZVariant,
+  ZCompatibility;
 
 type
 

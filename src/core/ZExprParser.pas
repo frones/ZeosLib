@@ -55,8 +55,8 @@ interface
 
 {$I ZCore.inc}
 
-uses SysUtils, Classes, Contnrs, ZCompatibility, ZVariant,
-  ZTokenizer;
+uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs,
+  ZCompatibility, ZVariant, ZTokenizer;
 
 type
   {** Define types of expression tokens. }

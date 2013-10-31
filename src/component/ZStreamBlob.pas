@@ -55,7 +55,9 @@ interface
 
 {$I ZComponent.inc}
 
-uses Classes, SysUtils, ZDbcIntfs, DB, ZCompatibility;
+uses Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
+  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
+  ZDbcIntfs, ZCompatibility;
 
 type
   {** Implements a class for blobs stream. }

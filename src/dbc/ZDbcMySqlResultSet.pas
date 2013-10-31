@@ -56,10 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, Types, ZSysUtils, ZDbcIntfs,
-  Contnrs, ZDbcResultSet, ZDbcResultSetMetadata,
-  ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver,
-  ZDbcMySqlStatement, ZPlainMySqlDriver, ZPlainMySqlConstants;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types, Contnrs,
+  ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZCompatibility, ZDbcCache,
+  ZDbcCachedResultSet, ZDbcGenericResolver, ZDbcMySqlStatement,
+  ZPlainMySqlDriver, ZPlainMySqlConstants;
 
 type
   {** Implements MySQL ResultSet Metadata. }
@@ -181,7 +181,7 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding;
+  Math, ZMessages, ZDbcMySqlUtils, ZMatchPattern, ZDbcMysql, ZEncoding, ZSysUtils;
 
 { TZMySQLResultSetMetadata }
 
@@ -613,7 +613,6 @@ begin
 {$ENDIF}
   Value := String(InternalGetString(ColumnIndex));
 
-  LastWasNull := (LastWasNull or (Copy(Value, 1, 8)='00:00:00'));
   if LastWasNull then
   begin
     Result := 0;

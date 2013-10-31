@@ -115,6 +115,7 @@ type
     procedure Test1045500;
     procedure Test1036916;
     procedure Test1004584;
+    procedure TestParamUx;
   end;
 
   {** Implements a bug report test case for core components with MBCs. }
@@ -1717,6 +1718,55 @@ begin
   Connection.Disconnect;
 end;
 
+procedure ZTestCompCoreBugReport.TestParamUx;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    // Query.RequestLive := True;
+    Query.CachedUpdates := False;
+
+    { Remove previously created record }
+    Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
+    Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'INSERT INTO equipment (eq_id, eq_name) VALUES (:u, :u1)';
+    Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID - 2);
+    Query.ParamByName('u1').AsString := 'ab''cd''ef';
+    Query.ExecSQL;
+    Query.ParamByName('u').AsInteger := TEST_ROW_ID - 1;
+    Query.ParamByName('u1').AsString := 'ab\cd\ef';
+    Query.ExecSQL;
+    Query.ParamByName('u').AsInteger := TEST_ROW_ID;
+    Query.ParamByName('u1').AsString := 'ab\''cd\''ef';
+    Query.ExecSQL;
+
+    { Opens a result set. }
+    Query.SQL.Text := 'SELECT * FROM equipment WHERE eq_id = :u or eq_id = :u +1 or eq_id = :u +2  ORDER BY eq_id';
+    Query.ParamByName('u').AsString := IntToStr(TEST_ROW_ID-2);
+    Query.Open;
+    CheckEquals(TEST_ROW_ID - 2, Query.FieldByName('eq_id').AsInteger);
+    CheckEquals('ab''cd''ef', Query.FieldByName('eq_name').AsString);
+    Query.Next;
+    CheckEquals(TEST_ROW_ID - 1, Query.FieldByName('eq_id').AsInteger);
+    CheckEquals('ab\cd\ef', Query.FieldByName('eq_name').AsString);
+    Query.Next;
+    CheckEquals(TEST_ROW_ID, Query.FieldByName('eq_id').AsInteger);
+    CheckEquals('ab\''cd\''ef', Query.FieldByName('eq_name').AsString);
+
+    { Remove newly created record }
+    Query.SQL.Text := 'DELETE FROM equipment WHERE eq_id>=:id';
+    Query.ParamByName('id').AsInteger := TEST_ROW_ID - 2;
+    Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
+
 const {Test Strings}
   Str1 = 'This license, the Lesser General Public License, applies to some specially designated software packages--typically libraries--of the Free Software Foundation and other authors who decide to use it.  You can use it too, but we suggest you first think ...';
   Str2 = 'ќдной из наиболее тривиальных задач, решаемых многими коллективами программистов, €вл€етс€ построение информационной системы дл€ автоматизации бизнес-де€тельности предпри€ти€. ¬се архитектурные компоненты (базы данных, сервера приложений, клиентское ...';
@@ -1809,7 +1859,9 @@ begin
     RowCounter := 0;
     Query.SQL.Text := 'Insert into string_values (s_id, s_char, s_varchar, s_nchar, s_nvarchar)'+
       ' values (:s_id, :s_char, :s_varchar, :s_nchar, :s_nvarchar)';
-    if StartsWith(Connection.Protocol, 'oracle') then
+    if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
+      ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
+        and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
       InsertValues(str1, Copy(str2, 1, Length(Str2) div 2), str1, Copy(str2, 1, Length(Str2) div 2))
     else
       InsertValues(str1, str2, str1, str2);
@@ -1824,7 +1876,9 @@ begin
     if StartsWith(Connection.Protocol, 'ASA') then //ASA has a limitation of 125chars for like statements
       Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings , False, 125)+'%'''
     else
-      if StartsWith(Connection.Protocol, 'oracle') then
+      if StartsWith(Connection.Protocol, 'oracle') or //oracle asumes one char = one byte except for varchar2
+        ((StartsWith(Connection.Protocol, 'firebird') or StartsWith(Connection.Protocol, 'interbase'))
+          and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.ID = 0)) then //avoid CS_NONE string right truncation for UTF8-Data
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Copy(str2, 1, Length(Str2) div 2), Connection.DbcConnection.GetConSettings)+'%'''
       else
         Query.SQL.Text := 'select * from string_values where s_varchar like ''%'+GetDBTestString(Str2, Connection.DbcConnection.GetConSettings)+'%''';

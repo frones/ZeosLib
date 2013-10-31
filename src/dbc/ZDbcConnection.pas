@@ -64,9 +64,9 @@ uses
 {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
 {$ENDIF}
-  Types, Classes, SysUtils, ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility,
-  ZGenericSqlToken, ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections,
-  ZVariant;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZClasses, ZDbcIntfs, ZTokenizer, ZCompatibility, ZGenericSqlToken,
+  ZGenericSqlAnalyser, ZPlainDriver, ZURL, ZCollections, ZVariant;
 
 type
 

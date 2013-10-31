@@ -61,9 +61,9 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Types, Classes, SysUtils, Contnrs, ZSysUtils, ZClasses, ZDbcIntfs,
-  ZDbcResultSetMetadata, ZDbcCachedResultSet, ZDbcCache, ZCompatibility,
-  ZSelectSchema, ZURL, ZDbcConnection;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  ZSysUtils, ZClasses, ZDbcIntfs, ZDbcResultSetMetadata, ZDbcCachedResultSet,
+  ZDbcCache, ZCompatibility, ZSelectSchema, ZURL, ZDbcConnection;
 
 const
   procedureColumnUnknown = 0;

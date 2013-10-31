@@ -56,9 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging,
-  ZPlainPostgreSqlDriver, ZCompatibility, ZVariant, ZDbcGenericResolver,
-  ZDbcCachedResultSet, ZDbcPostgreSql;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
+  ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
+  ZDbcPostgreSql;
 
 type
 
@@ -210,7 +211,7 @@ type
 implementation
 
 uses
-  Types, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
+  ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils, ZTokenizer,
   ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZPostgreSQLStatement }
@@ -1003,6 +1004,7 @@ begin
           end; {if not TempBlob.IsEmpty then}
       end;
   end;
+  inherited BindInParameters;
 end;
 
 {**

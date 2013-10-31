@@ -58,15 +58,10 @@ uses
 {$IFNDEF UNIX}
   Windows,
 {$ENDIF}
-  Classes, Contnrs, DateUtils, SysUtils, Types,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils, Types,
   SyncObjs,
-  ZCompatibility,
-  ZClasses,
-  ZURL,
-  ZDbcConnection,
-  ZDbcIntfs,
-  ZPlainDriver,
-  ZMessages;
+  ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
+  ZMessages, ZVariant;
 
 type
   TConnectionPool = class;
@@ -285,7 +280,7 @@ begin
         begin
           try
             // Test for dead connections
-            FConnections[I].Rollback; // PingServer didn´t work (tested with FB)
+            FConnections[I].Rollback; // PingServer did not work (tested with FB)
             FSlotsInUse[I] := True;
             Break;
           except
@@ -338,7 +333,9 @@ begin
     if FWait then
       Sleep(100)
     else
-      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'O pool de conexões atingiu o limite máximo');
+      raise Exception.Create(ClassName + '.Acquire'+LineEnding+'O pool de conexatingiu o limite maximo');
+            //2013-10-13 mse: please replace non ASCII characters (>127) by the 
+            //#nnn notation in order to have encoding independent sources
   end;
 
   //
@@ -786,7 +783,7 @@ begin
     //
     // Search for an existing pool for the URL.
     // There is room to improve the algorithm used to decide when a pool is
-    // compatible with a given URL. For now, i´m just comparing the URL strings.
+    // compatible with a given URL. For now, i am just comparing the URL strings.
     //
     for I := 0 to PoolList.Count - 1 do
       if URLList[I] = TempURL.URL then

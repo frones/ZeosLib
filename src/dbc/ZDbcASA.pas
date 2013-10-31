@@ -56,9 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  ZCompatibility, Classes, Contnrs, SysUtils, ZDbcIntfs, ZDbcConnection,
-  ZPlainASADriver, ZTokenizer, ZDbcGenericResolver, ZURL,
-  ZPlainDriver, ZGenericSqlAnalyser, ZPlainASAConstants;
+  ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, SysUtils,
+  ZDbcIntfs, ZDbcConnection, ZPlainASADriver, ZTokenizer, ZDbcGenericResolver,
+  ZURL, ZPlainDriver, ZGenericSqlAnalyser, ZPlainASAConstants;
 
 type
   {** Implements a ASA Database Driver. }

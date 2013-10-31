@@ -57,9 +57,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultSetMetadata, ZURL,
-   ZCompatibility, ZDbcConnection{$IFDEF MS_WINDOWS}, Windows{$ENDIF};
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZDbcConnection,
+  ZDbcCachedResultSet, ZDbcResultSetMetadata, ZURL, ZCompatibility;
 
 type
 

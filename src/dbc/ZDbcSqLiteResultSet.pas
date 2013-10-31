@@ -57,8 +57,8 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types, Contnrs{$ENDIF},
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs,
-  ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
 
 type
@@ -660,6 +660,7 @@ end;
 function TZSQLiteResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Stream: TStream;
+  AnsiTemp: RawByteString;
 begin
   Result := nil;
 {$IFNDEF DISABLE_CHECKING}
@@ -679,7 +680,14 @@ begin
             Stream := TStringStream.Create(GetValidatedAnsiString(InternalGetString(ColumnIndex), ConSettings, True))
           else
             Stream := TStringStream.Create(InternalGetString(ColumnIndex));
-        stUnicodeStream: Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
+        stUnicodeStream:
+          begin
+            AnsiTemp := InternalGetString(ColumnIndex);
+            if Length(AnsiTemp) = 0 then
+              Stream := TMemoryStream.Create
+            else
+              Stream := GetValidatedUnicodeStream(InternalGetString(ColumnIndex), ConSettings, True);
+          end;
         stBinaryStream:
           {introduced the old Zeos6 blob-encoding cause of compatibility reasons}
           if (Statement.GetConnection as IZSQLiteConnection).UseOldBlobEncoding then

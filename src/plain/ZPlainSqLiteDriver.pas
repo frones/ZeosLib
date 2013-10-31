@@ -55,7 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZCompatibility, ZPlainDriver, SysUtils, classes;
+uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
+  ZClasses, ZCompatibility, ZPlainDriver;
 
 const
   WINDOWS_DLL_LOCATION = 'sqlite.dll';

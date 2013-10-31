@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant,
-  ZPlainMySqlDriver, ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
+  ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
 
 type
 
@@ -693,7 +694,15 @@ begin
     MyType := GetFieldType(InParamValues[I]);
     case MyType of
       FIELD_TYPE_VARCHAR:
-        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)))),false);
+        begin
+          TempAnsi := ZPlainString(InParamValues[I].VUnicodeString);
+          FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Length(TempAnsi),false);
+        end;
+      FIELD_TYPE_STRING:
+        begin
+          TempAnsi := ZPlainString(InParamValues[I].VString);
+          FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, Length(TempAnsi),false);
+        end;
       FIELD_TYPE_BLOB:
         begin
           TempBlob := (InParamValues[I].VInterface as IZBlob);
@@ -712,14 +721,12 @@ begin
               FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
             end;
         end;
-      FIELD_TYPE_LONGLONG:
-        FParamBindBuffer.AddColumn(MyType,SizeOf(Int64),false);
       FIELD_TYPE_TINY:
         FParamBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
       FIELD_TYPE_TINY_BLOB:
         FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
       else
-        FParamBindBuffer.AddColumn(MyType,Max(1, {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(ZPlainString(InParamValues[I].VString)))),false);
+        FParamBindBuffer.AddColumn(MyType,getMySQLFieldSize(MyType, 0),false);
     end;
     PBuffer := @FColumnArray[I].buffer[0];
 
@@ -739,15 +746,12 @@ begin
               else
                 PAnsiChar(PBuffer)^ := 'N';
             FIELD_TYPE_VARCHAR:
-              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VUnicodeString)));
+              System.Move(PAnsiChar(TempAnsi)^, PBuffer^, Length(TempAnsi));
             FIELD_TYPE_BLOB:
-              begin
-                if TempBlob.Length<=ChunkSize then
-                  {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(TempBlob.GetString));
-                TempBlob := nil;
-              end;
+              if not (Length(TempAnsi) > ChunkSize ) then
+                System.Move(PAnsiChar(TempAnsi)^, PBuffer^, Length(TempAnsi));
             else
-              {$IFDEF WITH_STRCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrCopy(PAnsiChar(PBuffer), PAnsiChar(ZPlainString(InParamValues[I].VString)));
+              System.Move(PAnsiChar(TempAnsi)^, PBuffer^, Length(TempAnsi));
           end;
         FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
         FIELD_TYPE_DATETIME:

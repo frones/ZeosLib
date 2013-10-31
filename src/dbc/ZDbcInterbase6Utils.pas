@@ -56,9 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  SysUtils, Classes, Types, ZDbcIntfs, ZDbcStatement,
-  ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants,ZCompatibility,
-  ZDbcCachedResultSet, ZDbcLogging, ZMessages, ZVariant, ZTokenizer;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
+  ZDbcIntfs, ZDbcStatement, ZPlainFirebirdDriver, ZCompatibility,
+  ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
+  ZVariant, ZTokenizer;
 
 type
   { Interbase Statement Type }
@@ -2540,8 +2541,8 @@ begin
     case SQLCode of
       SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value);
       SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value);
-      SQL_LONG      : PInteger (sqldata)^ := Round(ZStrToFloat(Value) * IBScaleDivisor[sqlscale]); //AVZ
-      SQL_SHORT     : PInteger (sqldata)^ := StrToInt(String(Value));
+      SQL_LONG      : PInteger (sqldata)^ := StrToInt(String(Value)); //AVZ
+      SQL_SHORT     : PSmallInt (sqldata)^ := StrToInt(String(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := ZStrToFloat(Value) * IBScaleDivisor[sqlscale]; //AVZ
       SQL_D_FLOAT,

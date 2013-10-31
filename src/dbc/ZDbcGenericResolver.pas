@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, Contnrs, ZVariant, ZDbcIntfs,
-  ZDbcCache, ZDbcCachedResultSet, ZCompatibility, ZSelectSchema;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
+  ZSelectSchema;
 
 type
 

@@ -56,8 +56,9 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant,
-  ZDbcLogging, ZClasses, ZPlainDriver;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
+  ZPlainDriver;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -716,7 +717,7 @@ begin
   if GetConnection.AutoEncodeStrings then
   begin
     Result := ''; //init for FPC
-    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeEscapeBufferToList(SQL); //Disassembles the Query
+    SQLTokens := GetConnection.GetDriver.GetTokenizer.TokenizeBuffer(SQL, [toSkipEOF]); //Disassembles the Query
     for i := Low(SQLTokens) to high(SQLTokens) do  //Assembles the Query
     begin
       case (SQLTokens[i].TokenType) of

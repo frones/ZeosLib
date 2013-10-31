@@ -60,7 +60,7 @@ uses
   DateUtils,
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
   ZPlainDbLibConstants, ZPlainDBLibDriver;
@@ -779,12 +779,18 @@ begin
   if (GetMetaData.GetColumnType(ColumnIndex) in [stAsciiStream, stUnicodeStream]) then
   begin
     TempAnsi := Result.GetString;
-    TempAnsi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempAnsi, #0, '', [rfReplaceAll]);
+    if ( Length(TempAnsi) = 1) and (TempAnsi[1] = ' ') then
+      TempAnsi := ''
+    else
+      TempAnsi := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}StringReplace(TempAnsi, #0, '', [rfReplaceAll]);
     if (GetMetaData.GetColumnType(ColumnIndex) = stAsciiStream ) then
       Result.SetString(ZEncoding.GetValidatedAnsiString(TempAnsi, ConSettings, True))
     else
     begin
-      TempStream := ZEncoding.GetValidatedUnicodeStream(TempAnsi, ConSettings, True);
+      if TempAnsi = '' then
+        TempStream := TMemoryStream.Create
+      else
+        TempStream := ZEncoding.GetValidatedUnicodeStream(TempAnsi, ConSettings, True);
       Result.SetStream(TempStream, True);
       TempStream.Free;
     end;

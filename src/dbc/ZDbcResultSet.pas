@@ -59,13 +59,13 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ENDIF}
-  Types, Classes, SysUtils, Contnrs, ZDbcIntfs, ZClasses, ZCollections, ZSysUtils,
 {$IFDEF FPC}
   {$IFDEF WIN32}
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  ZCompatibility, ZVariant;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  ZDbcIntfs, ZClasses, ZCollections, ZSysUtils, ZCompatibility, ZVariant;
 
 {$IFDEF FPC}
   {$HINTS OFF} //suppress not used params

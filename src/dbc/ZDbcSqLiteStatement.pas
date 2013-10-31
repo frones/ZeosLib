@@ -56,9 +56,10 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, SysUtils, ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver,
-  ZCompatibility, ZDbcLogging, ZVariant
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF};
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF WITH_WIDESTRUTILS}WideStrUtils, {$ENDIF}
+  ZDbcIntfs, ZDbcStatement, ZPlainSqLiteDriver, ZCompatibility, ZDbcLogging,
+  ZVariant;
 
 type
 

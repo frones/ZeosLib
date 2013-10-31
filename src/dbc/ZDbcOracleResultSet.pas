@@ -57,9 +57,10 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcOracle,
-  ZDbcResultSet, ZPlainOracleDriver, ZDbcResultSetMetadata, ZDbcLogging,
-  ZCompatibility, ZDbcOracleUtils, ZPlainOracleConstants;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, ZDbcIntfs, ZDbcOracle, ZDbcResultSet, ZPlainOracleDriver,
+  ZDbcResultSetMetadata, ZDbcLogging, ZCompatibility, ZDbcOracleUtils,
+  ZPlainOracleConstants;
 
 type
 
@@ -1393,7 +1394,10 @@ begin
             CheckOracleError(FPlainDriver, Connection.GetErrorHandle,
               Status, lcOther, 'Read Large Object');
             if FBlobType = stUnicodeStream then
-              Stream := ZEncoding.GetValidatedUnicodeStream(AnsiTemp, Connection.GetConSettings, True)
+              if OffSet = 0 then
+                Stream := TMemoryStream.Create
+              else
+                Stream := ZEncoding.GetValidatedUnicodeStream(AnsiTemp, Connection.GetConSettings, True)
             else
               Stream := TStringStream.Create(GetValidatedAnsiString(AnsiTemp, Connection.GetConSettings, True));
             ReallocMem(Buf, Stream.Size);
