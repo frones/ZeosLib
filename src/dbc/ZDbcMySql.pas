@@ -344,9 +344,7 @@ begin
     begin
       sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
       if Info.Values[sMyOpt] <> '' then
-      begin
         GetPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(AnsiString(Info.Values[sMyOpt])));
-      end;
     end;
 
     { Set ClientFlag }
