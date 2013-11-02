@@ -70,6 +70,7 @@ type
     function IsOidAsBlob: Boolean;
   end;
 
+  TEICategory = (eicExecute, eicPrepStmt, eicExecPrepStmt, eicUnprepStmt);
   {** Implements Generic PostgreSQL Statement. }
   TZPostgreSQLStatement = class(TZAbstractStatement, IZPostgreSQLStatement)
   private
@@ -156,7 +157,7 @@ type
     FPQparamLengths: TPQparamLengths;
     FPQparamFormats: TPQparamFormats;
     function ExecuteInternal(const SQL: RawByteString;
-      const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
+      const Category: TEICategory): PZPostgreSQLResult;
   protected
     procedure SetPlanNames; override;
     procedure SetASQL(const Value: RawByteString); override;
@@ -788,35 +789,42 @@ end;
 { TZPostgreSQLCAPIPreparedStatement }
 
 function TZPostgreSQLCAPIPreparedStatement.ExecuteInternal(const SQL: RawByteString;
-  const LoggingCategory: TZLoggingCategory): PZPostgreSQLResult;
+  const Category: TEICategory): PZPostgreSQLResult;
 begin
-  case LoggingCategory of
-    lcPrepStmt:
+  case Category of
+    eicPrepStmt:
       begin
         Result := FPlainDriver.Prepare(FConnectionHandle, PAnsiChar(FRawPlanName),
           PAnsiChar(SQL), InParamCount, nil);
         Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
-          FConnectionHandle, LoggingCategory, ASQL, Result) = '42P18');
-//        DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
+          FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
         if not Findeterminate_datatype then
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         Exit;
       end;
-    lcExecPrepStmt:
-      Result := FPlainDriver.ExecPrepared(FConnectionHandle,
-        PAnsiChar(FRawPlanName), InParamCount, FPQparamValues,
-        FPQparamLengths, FPQparamFormats, 0);
-    lcUnprepStmt:
+    eicExecPrepStmt:
+      begin
+        Result := FPlainDriver.ExecPrepared(FConnectionHandle,
+          PAnsiChar(FRawPlanName), InParamCount, FPQparamValues,
+          FPQparamLengths, FPQparamFormats, 0);
+        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
+          lcExecPrepStmt, ASQL, Result);
+      end;
+    eicUnprepStmt:
       if Assigned(FConnectionHandle) then
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL))
+        begin
+          Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+          CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
+            lcUnprepStmt, ASQL, Result);
+        end
       else Result := nil;
     else
-      Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+      begin
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
+          lcExecute, ASQL, Result);
+      end;
   end;
-  if Assigned(FConnectionHandle) then
-    CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-      LoggingCategory, ASQL, Result);
-//  DriverManager.LogMessage(LoggingCategory, ConSettings^.Protocol, SQL);
 end;
 procedure TZPostgreSQLCAPIPreparedStatement.SetPlanNames;
 begin
@@ -1014,7 +1022,7 @@ begin
 
     if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
     begin
-      QueryHandle := ExecuteInternal(TempSQL, lcPrepStmt);
+      QueryHandle := ExecuteInternal(TempSQL, eicPrepStmt);
       if not (Findeterminate_datatype) then
         FPlainDriver.Clear(QueryHandle);
       inherited Prepare;
@@ -1032,7 +1040,7 @@ begin
     if (not Findeterminate_datatype)  then
     begin
       TempSQL := 'DEALLOCATE "'+FRawPlanName+'";';
-      QueryHandle := ExecuteInternal(TempSQL, lcUnprepStmt);
+      QueryHandle := ExecuteInternal(TempSQL, eicUnprepStmt);
       FPlainDriver.Clear(QueryHandle);
       FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
     end;
@@ -1046,14 +1054,14 @@ begin
   Prepare;
   if Prepared  then
     if Findeterminate_datatype then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, lcExecute)
+      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
     else
     begin
       BindInParameters;
-      QueryHandle := ExecuteInternal(ASQL, lcExecPrepStmt);
+      QueryHandle := ExecuteInternal(ASQL, eicExecPrepStmt);
     end
   else
-    QueryHandle := ExecuteInternal(ASQL, lcExecute);
+    QueryHandle := ExecuteInternal(ASQL, eicExecute);
   if QueryHandle <> nil then
     Result := CreateResultSet(QueryHandle)
   else
@@ -1068,14 +1076,14 @@ begin
 
   if Prepared  then
     if Findeterminate_datatype then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, lcExecute)
+      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
     else
     begin
       BindInParameters;
-      QueryHandle := ExecuteInternal(ASQL, lcExecPrepStmt);
+      QueryHandle := ExecuteInternal(ASQL, eicExecPrepStmt);
     end
   else
-    QueryHandle := ExecuteInternal(ASQL, lcExecute);
+    QueryHandle := ExecuteInternal(ASQL, eicExecute);
 
   if QueryHandle <> nil then
   begin
@@ -1098,14 +1106,14 @@ begin
 
   if Prepared  then
     if Findeterminate_datatype then
-      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, lcExecPrepStmt)
+      QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecPrepStmt)
     else
     begin
       BindInParameters;
-      QueryHandle := ExecuteInternal(ASQL, lcExecPrepStmt);
+      QueryHandle := ExecuteInternal(ASQL, eicExecPrepStmt);
     end
   else
-    QueryHandle := ExecuteInternal(ASQL, lcExecute);
+    QueryHandle := ExecuteInternal(ASQL, eicExecute);
 
   { Process queries with result sets }
   ResultStatus := FPlainDriver.GetResultStatus(QueryHandle);
