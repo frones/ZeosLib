@@ -291,7 +291,7 @@ begin
       SQLT_STR:
         begin
           Result.P := PAnsiChar(SQLVarHolder.Data);
-          Result.Len := ZFastCode.StrLen(Result.P);
+          Result.Len := SQLVarHolder.DataSize;
         end;
       SQLT_LVB, SQLT_LVC, SQLT_BIN:
         begin
@@ -324,42 +324,8 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var
-  Blob: IZBlob;
-  SQLVarHolder: PZSQLVar;
 begin
-  SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  Result := nil;
-  if not LastWasNull then
-    case SQLVarHolder.TypeCode of
-      SQLT_INT:
-        begin
-          FRawTemp := IntToRaw(PLongInt(SQLVarHolder.Data)^);
-          Result := PAnsiChar(FRawTemp);
-        end;
-      SQLT_FLT:
-        begin
-          FRawTemp := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
-          Result := PAnsiChar(FRawTemp);
-        end;
-      SQLT_STR:
-        Result := PAnsiChar(SQLVarHolder.Data);
-      SQLT_LVB, SQLT_LVC, SQLT_BIN:
-        begin
-          Result := PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer);
-        end;
-      SQLT_DAT, SQLT_TIMESTAMP:
-        begin
-          FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
-            ConSettings^.ReadFormatSettings, False);
-          Result := PAnsiChar(FRawTemp);
-        end;
-      SQLT_BLOB, SQLT_CLOB:
-        begin
-          Blob := GetBlob(ColumnIndex);
-          Result := Blob.GetBuffer;
-        end;
-    end;
+  Result := GetAnsiRec(ColumnIndex).P;
 end;
 
 {**
@@ -509,6 +475,8 @@ var
   Hour, Minute, Second: Byte;
   Millis: Integer;
   Connection: IZOracleConnection;
+  AnsiRec: TZAnsiRec;
+  Failed: Boolean;
 begin
   if SQLVarHolder = nil then
     SQLVarHolder := GetSQLVarHolder(ColumnIndex);
@@ -554,8 +522,9 @@ begin
         end;
       else
       begin
-        Result := AnsiSQLDateToDateTime(
-          String(GetAsStringValue(ColumnIndex, SQLVarHolder)));
+        AnsiRec := GetAnsiRec(ColumnIndex);
+        Result := ZSysUtils.RawSQLTimeStampToDateTime(AnsiRec.P,
+          AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed);
       end;
     end;
   end
@@ -1083,10 +1052,16 @@ begin
     InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
-      FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
-      @CurrentVar.Indicator, nil, nil, OCI_DEFAULT), lcExecute, 'OCIDefineByPos', ConSettings);
+    if CurrentVar.ColType in [stString, stUnicodeString] then
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
+        FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
+        @CurrentVar.Indicator, @CurrentVar.DataSize, nil, OCI_DEFAULT), lcExecute, 'OCIDefineByPos', ConSettings)
+    else
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
+        FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
+        @CurrentVar.Indicator, nil, nil, OCI_DEFAULT), lcExecute, 'OCIDefineByPos', ConSettings);
     if CurrentVar.DataType=SQLT_NTY then
     begin
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
@@ -1163,7 +1138,7 @@ var
   ps: IZPreparedStatement;
 begin
   if assigned(FOutVars) then // else no statement anyways
-    FreeOracleSQLVars(FPlainDriver, FOutVars, (GetStatement.GetConnection as IZOracleConnection).GetConnectionHandle, FErrorHandle);
+    FreeOracleSQLVars(FPlainDriver, FOutVars, FConnection.GetConnectionHandle, FErrorHandle, ConSettings);
   { prepared statement own handles, so dont free them }
   if not Supports(GetStatement, IZPreparedStatement, ps) then
      FreeOracleStatementHandles(FPlainDriver, FStmtHandle, FErrorHandle);
@@ -1188,7 +1163,6 @@ end;
 function TZOracleResultSet.Next: Boolean;
 var
   Status: Integer;
-  Connection: IZOracleConnection;
 begin
   { Checks for maximum row. }
   Result := False;
@@ -1196,16 +1170,11 @@ begin
     Exit;
 
   if RowNo = 0 then
-  begin
-    Connection := GetStatement.GetConnection as IZOracleConnection;
-    Status := FPlainDriver.StmtExecute(Connection.GetContextHandle, FStmtHandle,
-      FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
-  end
+    Status := FPlainDriver.StmtExecute(FConnection.GetContextHandle, FStmtHandle,
+      FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT)
   else
-  begin
     Status := FPlainDriver.StmtFetch(FStmtHandle, FErrorHandle,
       1, OCI_FETCH_NEXT, OCI_DEFAULT);
-  end;
   if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW', ConSettings);
 

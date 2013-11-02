@@ -847,7 +847,11 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 begin
+  {$IFDEF UNICODE}
+  Result := ZAnsiRecToUnicode(GetAnsiRec(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
   Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  {$ENDIF}
 end;
 
 {**
