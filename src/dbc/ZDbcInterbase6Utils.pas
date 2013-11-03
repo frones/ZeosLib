@@ -153,6 +153,7 @@ type
     constructor Create(PlainDriver: IZInterbasePlainDriver;
       Handle: PISC_DB_HANDLE; TransactionHandle: PISC_TR_HANDLE;
       ConSettings: PZConSettings);
+    destructor Destroy; override;
     procedure InitFields(Parameters: boolean);
     procedure AllocateSQLDA; virtual;
     procedure FreeParamtersValues;
@@ -186,8 +187,6 @@ type
     procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TByteDynArray);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
-    destructor Destroy; override;
-
     procedure WriteBlob(const Index: Integer; Stream: TStream);
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
 
@@ -1374,6 +1373,16 @@ begin
 
   FXSQLDA.version := SQLDA_VERSION1;
 end;
+
+{**
+   Free allocated memory and free object
+}
+destructor TZSQLDA.Destroy;
+begin
+  FreeParamtersValues;
+  FreeMem(FXSQLDA);
+  inherited Destroy;
+end;
 {**
    Allocate memory for SQLVar in SQLDA structure for every
    fields by it length.
@@ -1790,16 +1799,6 @@ begin
 end;
 
 { TParamsSQLDA }
-
-{**
-   Free allocated memory and free object
-}
-destructor TZParamsSQLDA.Destroy;
-begin
-  FreeParamtersValues;
-  FreeMem(FXSQLDA);
-  inherited Destroy;
-end;
 
 {**
    Encode pascal string to Interbase paramter buffer
