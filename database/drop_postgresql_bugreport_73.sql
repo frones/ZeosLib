@@ -5,11 +5,11 @@
 /*==============================================================*/
 
 
-drop table test815852;
-drop table xyz.test824780;
-drop table test824780;
-drop schema xyz;
+drop table if exists test815852;
+drop table if exists xyz.test824780;
+drop table if exists test824780;
+drop schema if exists xyz;
 
-drop domain tinteger;
-drop domain tstring;
-drop table test1014416;
+drop domain if exists tinteger;
+drop domain if exists tstring;
+drop table if exists test1014416;
