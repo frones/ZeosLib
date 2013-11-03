@@ -1184,6 +1184,7 @@ end;
     or <code>False</code> otherwise.
 }
 function IsIpAddr(const Str: string): Boolean;
+LAbel LExit;
 var
   I, N: Integer;
   Splited: TStrings;
@@ -1191,15 +1192,16 @@ begin
   Result := False;
   Splited := SplitString(Str, '.');
   if Splited.Count <> 4 then
-    Exit
+    goto LExit
   else
     for i := 0 to 3 do
     begin
       N := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Splited[i], -1);
       if (N < 0) or (N > 255) then
-        Exit;
+        goto LExit;
     end;
   Result := True;
+  LExit: Splited.Free;
 end;
 {$ENDIF}
 
