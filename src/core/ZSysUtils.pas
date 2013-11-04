@@ -2050,7 +2050,7 @@ var
                 MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
                 if Failed then
                 begin
-                  Failed := not ((Value+i)^ in ['+', '-']); //postgres 2013-10-23 12:31:52.48+02 f.e.
+                  Failed := not ((Value+i)^ = '+'); //postgres 2013-10-23 12:31:52.48+02 f.e.
                   if Failed then
                     Exit
                   else
@@ -2060,6 +2060,8 @@ var
                   end;
                 end;
               end;
+            '.':
+              if ((Value+i)^ = '+') then Break; //postgres 1997-02-25 00:00:00+01 f.e.
           end;
           Inc(TimeStampFormat);
           if (i+1) = ValLen then Break;
