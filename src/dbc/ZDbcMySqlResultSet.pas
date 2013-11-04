@@ -77,14 +77,17 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
     FIgnoreUseResult: Boolean;
+    FCachedLob: Boolean;
     function GetBuffer(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
-    constructor Create(PlainDriver: IZMySQLPlainDriver; Statement: IZStatement;
-      SQL: string; Handle: PZMySQLConnect; UseResult: Boolean;
-      AffectedRows: PInteger; IgnoreUseResult: Boolean = False);
+    constructor Create(const PlainDriver: IZMySQLPlainDriver;
+      const Statement: IZStatement; const SQL: string;
+      const Handle: PZMySQLConnect; const UseResult: Boolean;
+      AffectedRows: PInteger; const CachedLob: Boolean;
+      const IgnoreUseResult: Boolean = False);
     destructor Destroy; override;
 
     procedure Close; override;
@@ -180,6 +183,35 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
+  TZMySQLUncachedBlob = class(TZAbstractUnCachedBlob)
+  private
+    FPlainDriver: IZMySQLPlainDriver;
+    FColumnIndex: Integer;
+    FRowNo: Integer;
+    FQueryHandle: PZMySQLResult;
+    FSize: ULong;
+  protected
+    procedure ReadLob; override;
+  public
+    constructor Create(const PlainDriver: IZMySQLPlainDriver; const Size: ULong;
+      const ColumnIndex, RowNo: Integer; const QueryHandle: PZMySQLResult);
+  end;
+
+  TZMySQLUncachedClob = class(TZAbstractUnCachedClob)
+  private
+    FPlainDriver: IZMySQLPlainDriver;
+    FColumnIndex: Integer;
+    FRowNo: Integer;
+    FQueryHandle: PZMySQLResult;
+    FSize: ULong;
+  protected
+    procedure ReadLob; override;
+  public
+    constructor Create(const PlainDriver: IZMySQLPlainDriver; const Size: ULong;
+      const ColumnIndex, RowNo: Integer; const QueryHandle: PZMySQLResult;
+      Const ConSettings: PZConSettings);
+  end;
+
 implementation
 
 uses
@@ -211,9 +243,11 @@ end;
   @param UseResult <code>True</code> to use results,
     <code>False</code> to store result.
 }
-constructor TZMySQLResultSet.Create(PlainDriver: IZMySQLPlainDriver;
-  Statement: IZStatement; SQL: string; Handle: PZMySQLConnect;
-  UseResult: Boolean; AffectedRows: PInteger; IgnoreUseResult: Boolean = False);
+constructor TZMySQLResultSet.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Statement: IZStatement; const SQL: string;
+  const Handle: PZMySQLConnect; const UseResult: Boolean;
+  AffectedRows: PInteger; const CachedLob: Boolean;
+  const IgnoreUseResult: Boolean = False);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -226,6 +260,7 @@ begin
   ResultSetConcurrency := rcReadOnly;
   FUseResult := UseResult;
   FIgnoreUseResult := IgnoreUseResult;
+  FCachedLob := CachedLob;
 
   Open;
   if Assigned(AffectedRows) then
@@ -743,19 +778,23 @@ begin
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
   Result := nil;
-  try
-    if not IsNull(ColumnIndex) then
-    begin
-      Buffer := GetBuffer(ColumnIndex, Len);
-      case GetMetaData.GetColumnType(ColumnIndex) of
-        stBytes, stBinaryStream:
-          Result := TZAbstractBlob.CreateWithData(Buffer, Len);
+  Buffer := GetBuffer(ColumnIndex, Len);
+  if not LastWasNull then
+    case GetMetaData.GetColumnType(ColumnIndex) of
+      stBytes, stBinaryStream:
+        if FCachedLob then
+          Result := TZAbstractBlob.CreateWithData(Buffer, Len)
         else
-          Result := TZAbstractClob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
-      end;
+          Result := TZMySQLUncachedBlob.Create(FPlainDriver, Len,
+            ColumnIndex -1, Rowno-1, FQueryHandle);
+      else
+        if FCachedLob then
+          Result := TZAbstractClob.CreateWithData(Buffer, Len,
+            ConSettings^.ClientCodePage^.CP, ConSettings)
+        else
+          Result := TZMySQLUncachedClob.Create(FPlainDriver, Len, ColumnIndex -1,
+            Rowno-1, FQueryHandle, ConSettings);
     end;
-  finally
-  end;
 end;
 
 {**
@@ -1240,11 +1279,14 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  SetLength(Result,FColumnArray[ColumnIndex - 1].length);
   if FColumnArray[ColumnIndex-1].is_null = 1 then
-    LastWasNull := True
+  begin
+    LastWasNull := True;
+    Result := nil;
+  end
   else
   begin
+    SetLength(Result,FColumnArray[ColumnIndex - 1].length);
     System.Move(Pointer(FColumnArray[ColumnIndex - 1].buffer), Pointer(Result)^,  FColumnArray[ColumnIndex - 1].length);
     LastWasNull := False;
   end;
@@ -1443,27 +1485,22 @@ begin
 {$ENDIF}
 
   LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-      Exit;
-  try
-    if not LastWasNull then
-    begin
-      case GetMetadata.GetColumnType(ColumnIndex) of
-        stBinaryStream, stBytes:
-          Result := TZAbstractBlob.CreateWithData(Pointer(FColumnArray[ColumnIndex - 1].buffer),
-            FColumnArray[ColumnIndex - 1].length);
-        stAsciiStream, stUnicodeStream, stString, stUnicodeString:
-          Result := TZAbstractClob.CreateWithData(PAnsichar(FColumnArray[ColumnIndex - 1].buffer),
-            FColumnArray[ColumnIndex - 1].length, ConSettings^.ClientCodePage^.CP, ConSettings);
-      else
-        begin
-          RawTemp := InternalGetString(ColumnIndex);
-          Result := TZAbstractClob.CreateWithData(PAnsiChar(RawTemp), Length(RawTemp),
-            ConSettings^.ClientCodePage^.CP, ConSettings);
-        end;
+  if not LastWasNull then
+  begin
+    case GetMetadata.GetColumnType(ColumnIndex) of
+      stBinaryStream, stBytes:
+        Result := TZAbstractBlob.CreateWithData(Pointer(FColumnArray[ColumnIndex - 1].buffer),
+          FColumnArray[ColumnIndex - 1].length);
+      stAsciiStream, stUnicodeStream, stString, stUnicodeString:
+        Result := TZAbstractClob.CreateWithData(PAnsichar(FColumnArray[ColumnIndex - 1].buffer),
+          FColumnArray[ColumnIndex - 1].length, ConSettings^.ClientCodePage^.CP, ConSettings);
+    else
+      begin
+        RawTemp := InternalGetString(ColumnIndex);
+        Result := TZAbstractClob.CreateWithData(PAnsiChar(RawTemp), Length(RawTemp),
+          ConSettings^.ClientCodePage^.CP, ConSettings);
       end;
     end;
-  finally
   end;
 end;
 
@@ -1746,6 +1783,74 @@ begin
       Result := Result + 'NULL';
   end;
   Result := 'SELECT ' + Result;
+end;
+
+{ TZMySQLUncachedBlob }
+
+procedure TZMySQLUncachedBlob.ReadLob;
+var
+  RowHandle: PZMySQLRow;
+  Buffer, Data: Pointer;
+begin
+  FPlainDriver.SeekData(FQueryHandle, FRowNo);
+  RowHandle := FPlainDriver.FetchRow(FQueryHandle);
+  Data := FPlainDriver.GetFieldData(RowHandle, FColumnIndex);
+  FBlobSize  := FSize;
+  Buffer := AllocMem(FBlobSize);
+  System.Move(Data^, Buffer^, FBlobSize);
+  FBlobData := Buffer;
+  inherited ReadLob;
+end;
+
+{**
+  Constructs this class and assignes the main properties.
+  @param MySQL plaindriver.
+  @ColumnIndex the ColumnIndex.
+  @param RowNo the RowNo of the Lob.
+  @param QueryHandle the PZMySQLResult.
+}
+constructor TZMySQLUncachedBlob.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Size: ULong; const ColumnIndex, RowNo: Integer;
+  const QueryHandle: PZMySQLResult);
+begin
+  FPlainDriver := PlainDriver;
+  FColumnIndex := ColumnIndex;
+  FSize := Size;
+  FRowNo := RowNo;
+  FQueryHandle := QueryHandle;
+end;
+
+{ TZMySQLUncachedClob }
+
+procedure TZMySQLUncachedClob.ReadLob;
+var
+  RowHandle: PZMySQLRow;
+  Buffer: PAnsiChar;
+begin
+  FPlainDriver.SeekData(FQueryHandle, FRowNo);
+  RowHandle := FPlainDriver.FetchRow(FQueryHandle);
+  Buffer := FPlainDriver.GetFieldData(RowHandle, FColumnIndex);
+  InternalSetPAnsiChar(Buffer, FConSettings^.ClientCodePage^.CP, FSize);
+  inherited ReadLob;
+end;
+
+{**
+  Constructs this class and assignes the main properties.
+  @param MySQL plaindriver.
+  @ColumnIndex the ColumnIndex.
+  @param RowNo the RowNo of the Lob.
+  @param QueryHandle the PZMySQLResult.
+}
+constructor TZMySQLUncachedClob.Create(const PlainDriver: IZMySQLPlainDriver;
+  const Size: ULong; const ColumnIndex, RowNo: Integer;
+  const QueryHandle: PZMySQLResult; const ConSettings: PZConSettings);
+begin
+  FPlainDriver := PlainDriver;
+  FColumnIndex := ColumnIndex;
+  FRowNo := RowNo;
+  FQueryHandle := QueryHandle;
+  FConSettings := ConSettings;
+  FSize := Size;
 end;
 
 end.

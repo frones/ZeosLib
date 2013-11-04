@@ -80,8 +80,7 @@ type
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-      QueryHandle: PZPostgreSQLResult; CachedLob: Boolean; Chunk_Size: Integer);
-    destructor Destroy; override;
+      QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean; const Chunk_Size: Integer);
 
     procedure Close; override;
 
@@ -181,7 +180,7 @@ uses
 }
 constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-  QueryHandle: PZPostgreSQLResult; CachedLob: Boolean; Chunk_Size: Integer);
+  QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean; const Chunk_Size: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
 
@@ -195,14 +194,6 @@ begin
   FCachedLob := CachedLob;
 
   Open;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZPostgreSQLResultSet.Destroy;
-begin
-  inherited Destroy;
 end;
 
 {**
