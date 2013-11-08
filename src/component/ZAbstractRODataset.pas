@@ -4017,7 +4017,7 @@ end;
 function TZStringField.GetAsString: string;
 var IsNull: Boolean;
 begin
-  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUnicodeString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), IsNull);
+  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), IsNull);
 end;
 
 function TZStringField.GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
