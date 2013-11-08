@@ -40,6 +40,8 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
  // Compilation directives for Lazarus
+{$DEFINE ZEOS}
+{.$DEFINE WITH_ZSTRINGFIELDS}
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
 {$ELSE}
@@ -102,6 +104,7 @@
   {$DEFINE Use_FastCodeFillChar}
   {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE VER170BELOW} // Used in Zeos.inc only
+  {$DEFINE WITH_C11389_ERROR} //D2005 has some inline problems
 {$ENDIF}
 
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
@@ -231,6 +234,7 @@
   {$UNDEF WITH_IPROVIDERWIDE}           // IProvider -W widestring using interface is deprecated since UNICODE and wo't be called anymore
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
   {$UNDEF USE_FAST_CHARPOS}
+  {$DEFINE WITH_ASANSISTRING}           // T(Wide)StringField supports AsAnsiString property
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
@@ -238,6 +242,9 @@
   {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
   {$DEFINE WITH_UINT64}                 // D2010 has virtually UInt64
   {$DEFINE WITH_PUINT64}                // D2010 has virtually PUInt64
+  {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
+  {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
+  {$DEFInE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
 {$ENDIF}
 
 {$IFDEF DELPHI15_UP}

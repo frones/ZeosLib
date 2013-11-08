@@ -547,11 +547,11 @@ begin
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString, ftWidestring:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          ResultSet.UpdateRawByteString(ColumnIndex,
-            RowAccessor.GetRawByteString(FieldIndex, WasNull))
+          ResultSet.UpdateAnsiRec(ColumnIndex,
+            RowAccessor.GetAnsiRec(FieldIndex, WasNull))
         else
-          ResultSet.UpdateUnicodeString(ColumnIndex,
-            RowAccessor.GetUnicodeString(FieldIndex, WasNull));
+          ResultSet.UpdateWideRec(ColumnIndex,
+            RowAccessor.GetWideRec(FieldIndex, WasNull));
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:

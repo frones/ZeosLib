@@ -567,13 +567,10 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
-procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
-procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
 {$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
 {$ENDIF}
 
@@ -3044,29 +3041,9 @@ begin
            {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(SubVersion);
 end;
 
-procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
-begin
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
-end;
-
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
   SetString(Dest, Src, Len);
-end;
-
-procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String);
-{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-var Len: Integer;
-{$ENDIF}
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  Len := ZFastCode.StrLen(Src);
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
-  {$ENDIF}
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
@@ -3093,21 +3070,6 @@ begin
 end;
 
 {$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString);
-{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-var Len: Integer;
-{$ENDIF}
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  Len := ZFastCode.StrLen(Src);
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
-  {$ENDIF}
-end;
-
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}

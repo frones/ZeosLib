@@ -83,6 +83,7 @@ uses
   Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor,
   ZStoredProcedure, ZGroupedConnection, ZConnectionGroup ,
   ZSqlMonitor, ZSqlMetadata, ZSequence
+  {$IFDEF WITH_ZSTRINGFIELDS}, ZAbstractRODataset{$ENDIF}
   {$IFDEF ENABLE_INTERBASE}, ZIBEventAlerter {$ENDIF}
   {$IFDEF ENABLE_POSTGRESQL}, ZPgEventAlerter {$ENDIF};
 
@@ -97,6 +98,10 @@ begin
     TZStoredProc, TZSQLMetadata, TZSQLProcessor, TZSQLMonitor, TZSequence
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
     {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter{$ENDIF}]) ;
+
+  {$IFDEF WITH_ZSTRINGFIELDS}
+  RegisterClasses([TZWideStringField, TZStringField]);
+  {$ENDIF}
 
 {$IFDEF WITH_PROPERTY_EDITOR}
 
