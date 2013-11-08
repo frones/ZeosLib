@@ -264,11 +264,12 @@ begin
       for I := 0 to High(ConnectionConfig.PerformanceDataSetTypes) do
         case ConnectionConfig.PerformanceDataSetTypes[i] of
           ftString,
-          ftFixedChar,
-          ftMemo,
-          ftFmtMemo
+          ftFixedChar
           {$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
             Fields[i].AsString;
+          ftMemo,
+          ftFmtMemo:
+            if LoadLobs then Fields[i].AsString;
           {$IFDEF WITH_WIDEFIELDS}
           ftWideMemo:
             if LoadLobs then Fields[i].AsWideString;
