@@ -501,9 +501,8 @@ type
   TZStringField = Class(TStringField)
   private
     FEmptyAsNull: Boolean;
-    FDataSet: TZAbstractRODataSet;
+    FFieldIndex: Integer;
   protected
-    FConSettings: PZConSettings;
     function GetAsString: string; override;
     function GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
@@ -512,8 +511,8 @@ type
     procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
     procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
     procedure SetAsUTF8String(const Value: UTF8String);
+    property FieldIndex: Integer read FFieldIndex write FFieldIndex;
   public
-    constructor Create(AOwner: TComponent); override;
     property AsBCD;
     property AsBoolean;
     property AsCurrency;
@@ -4008,34 +4007,28 @@ end;
 
 {$IFDEF WITH_ZSTRINGFIELDS}
 
-constructor TZStringField.Create(AOwner: TComponent);
-begin
-  Inherited Create(AOwner);
-  FDataSet := DataSet as TZAbstractRODataset;
-end;
-
 function TZStringField.GetAsString: string;
 var IsNull: Boolean;
 begin
-  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), IsNull);
+  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull);
 end;
 
 function TZStringField.GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
 var IsNull: Boolean;
 begin
-  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUnicodeString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), IsNull);
+  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUnicodeString(FFieldIndex, IsNull);
 end;
 
 function TZStringField.GetAsAnsiString: AnsiString;
 var IsNull: Boolean;
 begin
-  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetAnsiString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), IsNull);
+  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetAnsiString(FFieldIndex, IsNull);
 end;
 
 function TZStringField.GetAsUTF8String: UTF8String;
 var IsNull: Boolean;
 begin
-  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUTF8String(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), IsNull);
+  Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUTF8String(FFieldIndex, IsNull);
 end;
 
 procedure TZStringField.SetAsString(const Value: string);
@@ -4043,7 +4036,7 @@ begin
   if FEmptyAsNull and (Value = '') then
     SetData(nil, True)
   else
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Value);
 end;
 
 procedure TZStringField.SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF});
@@ -4051,7 +4044,7 @@ begin
   if FEmptyAsNull and (Value = '') then
     SetData(nil, True)
   else
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Value);
 end;
 
 procedure TZStringField.SetAsAnsiString(const Value: AnsiString);
@@ -4059,7 +4052,7 @@ begin
   if FEmptyAsNull and (Value = '') then
     SetData(nil, True)
   else
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetAnsiString(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetAnsiString(FFieldIndex, Value);
 end;
 
 procedure TZStringField.SetAsUTF8String(const Value: UTF8String);
@@ -4067,7 +4060,7 @@ begin
   if FEmptyAsNull and (Value = '') then
     SetData(nil, True)
   else
-    (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(DefineFieldIndex((DataSet as TZAbstractRODataset).FieldsLookupTable, Self), Value);
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Value);
 end;
 
 { TZWideStringField }

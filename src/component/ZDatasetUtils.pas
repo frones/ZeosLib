@@ -1387,13 +1387,21 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
+type
+  TZHackStringField = Class(TZStringField); //access protected proprty
 function CreateFieldsLookupTable(Fields: TFields): TIntegerDynArray;
 var
   I: Integer;
 begin
   SetLength(Result, Fields.Count);
   for I := 0 to Fields.Count - 1 do
+  begin
     Result[I] := Integer(Fields[I]);
+    {$IFDEF WITH_ZSTRINGFIELDS}
+    if Fields[i] is TZStringField then
+      TZHackStringField(Fields[i]).FieldIndex := I+1;
+    {$ENDIF WITH_ZSTRINGFIELDS}
+  end;
 end;
 
 {**
