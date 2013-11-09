@@ -2419,10 +2419,10 @@ begin
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
-      SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]; //AVZ
+      SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0);
       SQL_D_FLOAT,
-      SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale];  //AVZ
-      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(SQLStrToFloatDef(Value, 0) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
+      SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(Value, 0);
+      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(SQLStrToFloatDef(Value, 0, Len) * GetIBScaleDivisor(sqlscale)); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD: WriteLobBuffer(Index, Value, Len);
     else
       raise EZIBConvertError.Create(SErrorConvertion);
