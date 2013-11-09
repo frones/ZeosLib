@@ -639,9 +639,6 @@ end;
 {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
 var
   ulen: Integer;
-  {$IF not defined(WITH_UNICODEFROMLOCALECHARS) and defined(PWIDECHAR_IS_PUNICODECHAR)}
-  WS: WideString;
-  {$IFEND}
 {$IFEND}
 begin
   Result := ''; //speed up setlength *2
@@ -658,12 +655,7 @@ begin
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       ulen := LocaleCharsFromUnicode(CP, 0, Value.P, Value.Len, PAnsiChar(Result), ulen, NIL, NIL); // Convert Unicode down to Ansi
       {$ELSE}
-        {$IFNDEF PWIDECHAR_IS_PUNICODECHAR}
-        ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
-        {$ELSE}
-        SetString(WS, Value.P, Value.Len); //need a real WideString
-        ulen := WideCharToMultiByte(CP,0, @WS[1], Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
-        {$ENDIF}
+      ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
       {$ENDIF}
       SetLength(Result, ulen); //Set expected result length
     end;
@@ -700,24 +692,29 @@ end;
     {$IFEND}
   {$ENDIF}
   begin
-    Result := '';
-    {$IFDEF MSWINDOWS}
+    if CP = zCP_NONE then
+      Result := String(Value.P) //random success
+    else
+    begin
+      Result := '';
+      {$IFDEF MSWINDOWS}
       if Value.Len = 0 then Exit;
       ULen := Min(Value.Len * 4, High(Integer)-1);
       setlength(Result, ulen); //oversized
       ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
-      setlength(Result, ulen); //oversized
-    {$ELSE}
-      {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+      setlength(Result, ulen); //expected size
+      {$ELSE}
+        {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
         WidestringManager.Unicode2AnsiMoveProc(Value.P, Result, CP, Value.Len);
-      {$ELSE} //FPC 2.6 down
+        {$ELSE} //FPC 2.6 down
         SetString(WS, Value.P, Value.Len);
         if ZCompatibleCodePages(CP, zCP_UTF8) then
           Result := UTF8Encode(WS)
         else
           Result := String(WS); //random success according the CP
-      {$ENDIF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
-    {$ENDIF MSWINDOWS}
+        {$ENDIF FPC_HAS_BUILTIN_WIDESTR_MANAGER}
+      {$ENDIF MSWINDOWS}
+    end;
   end;
   {$ENDIF WITH_LCONVENCODING}
 {$ENDIF UNICODE}

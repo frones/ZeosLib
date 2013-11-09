@@ -4044,7 +4044,10 @@ begin
         begin
           WideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
           WideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
-          Result := ZWideRecToString(WideRec, ConSettings^.CTRL_CP);
+          if ConSettings^.AutoEncode then
+            Result := ZWideRecToString(WideRec, ConSettings^.CTRL_CP)
+          else
+            Result := ZWideRecToString(WideRec, ConSettings^.ClientCodePage^.CP)
         end;
         {$ENDIF}
       else Result := Inherited GetString(ColumnIndex, IsNull);
