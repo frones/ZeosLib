@@ -1387,8 +1387,10 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
+{$IFDEF WITH_ZSTRINGFIELDS}
 type
   TZHackStringField = Class(TZStringField); //access protected proprty
+{$ENDIF WITH_ZSTRINGFIELDS}
 function CreateFieldsLookupTable(Fields: TFields): TIntegerDynArray;
 var
   I: Integer;
