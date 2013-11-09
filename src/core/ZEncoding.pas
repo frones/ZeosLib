@@ -1329,7 +1329,7 @@ begin
   Result := ZUnicodeToRaw(Src, RawCP);
   {$ELSE !UNICODE}
   Result := ''; //init for FPC
-  case ZCompatibility.DetectUTF8Encoding(Src) of
+  case DetectUTF8Encoding(Src) of
     etUSASCII:
       {$IFDEF WITH_RAWBYTESTRING}
       ZSetString(PAnsiChar(Src), Length(Src), Result);
