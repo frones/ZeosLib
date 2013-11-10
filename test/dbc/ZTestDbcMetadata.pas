@@ -199,7 +199,7 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetColumns;
     CheckEquals(Schema, ResultSet.GetStringByName('TABLE_SCHEM'));
     CheckEquals(UpperCase(TableName), UpperCase(ResultSet.GetStringByName('TABLE_NAME')));
     CheckEquals(UpperCase(ColumnName), UpperCase(ResultSet.GetStringByName('COLUMN_NAME')));
-//    CheckEquals(DataType, ResultSet.GetShortByName('DATA_TYPE'));
+//    CheckEquals(DataType, ResultSet.GetSmallByName('DATA_TYPE'));
 //    CheckEquals(TypeName, ResultSet.GetStringByName('TYPE_NAME'));
 //    CheckEquals(ColumnSize, ResultSet.GetIntByName('COLUMN_SIZE'));
 //    CheckEquals(BufferLength, ResultSet.GetIntByName('BUFFER_LENGTH'));
@@ -308,7 +308,7 @@ begin
   CheckEquals(Schema, Resultset.GetStringByName('TABLE_SCHEM'));
   CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('TABLE_NAME')));
   CheckEquals('P_ID', UpperCase(Resultset.GetStringByName('COLUMN_NAME')));
-  CheckEquals(1, Resultset.GetShortByName('KEY_SEQ'));
+  CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   CheckEquals(6, Resultset.FindColumn('PK_NAME'));
   ResultSet.Close;
 end;
@@ -329,12 +329,12 @@ begin
   CheckEquals(Schema, Resultset.GetStringByName('FKTABLE_SCHEM'));
   CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
   CheckEquals('P_DEP_ID', UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
-  CheckEquals(1, Resultset.GetShortByName('KEY_SEQ'));
+  CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
   if not (Protocol = 'ado') then
   begin
-    CheckEquals(1, Resultset.GetShortByName('UPDATE_RULE'));
-    CheckEquals(1, Resultset.GetShortByName('DELETE_RULE'));
+    CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
+    CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
   end;
   CheckEquals(12, Resultset.FindColumn('FK_NAME'));
   CheckEquals(13, Resultset.FindColumn('PK_NAME'));
@@ -358,14 +358,14 @@ procedure TZGenericTestDbcMetadata.TestMetadataGetExportedKeys;
     if StartsWith(Protocol, 'firebird') or
        StartsWith(Protocol, 'interbase') or
        StartsWith(Protocol, 'ado') then
-      CheckEquals(1, Resultset.GetShortByName('KEY_SEQ'))
+      CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'))
     else
-      CheckEquals(KeySeq, Resultset.GetShortByName('KEY_SEQ'));
+      CheckEquals(KeySeq, Resultset.GetSmallByName('KEY_SEQ'));
     {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
     if not (Protocol = 'ado') then
     begin
-      CheckEquals(UpdateRule, Resultset.GetShortByName('UPDATE_RULE'));
-      CheckEquals(DeleteRule, Resultset.GetShortByName('DELETE_RULE'));
+      CheckEquals(UpdateRule, Resultset.GetSmallByName('UPDATE_RULE'));
+      CheckEquals(DeleteRule, Resultset.GetSmallByName('DELETE_RULE'));
     end;
     CheckEquals(12, Resultset.FindColumn('FK_NAME'));
     CheckEquals(13, Resultset.FindColumn('PK_NAME'));
@@ -404,12 +404,12 @@ begin
   CheckEquals(Schema, Resultset.GetStringByName('FKTABLE_SCHEM'));
   CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('FKTABLE_NAME')));
   CheckEquals('P_DEP_ID', UpperCase(Resultset.GetStringByName('FKCOLUMN_NAME')));
-  CheckEquals(1, Resultset.GetShortByName('KEY_SEQ'));
+  CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   {had two testdatabases with ADO both did allways return 'NO ACTION' as DELETE/UPDATE_RULE so test will be fixed}
   if not (Protocol = 'ado') then
   begin
-    CheckEquals(1, Resultset.GetShortByName('UPDATE_RULE'));
-    CheckEquals(1, Resultset.GetShortByName('DELETE_RULE'));
+    CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
+    CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
   end;
   CheckEquals(12, Resultset.FindColumn('FK_NAME'));
   CheckEquals(13, Resultset.FindColumn('PK_NAME'));

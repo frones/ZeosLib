@@ -183,7 +183,7 @@ begin
     CheckEquals(True, Next);
     CheckEquals(2, GetIntByName('SCOPE'));
     CheckEquals('p_id', GetStringByName('COLUMN_NAME'));
-    CheckEquals(4, GetIntByName('DATA_TYPE'));
+    CheckEquals(Ord(stInteger), GetIntByName('DATA_TYPE'));
     CheckEquals('int4', GetStringByName('TYPE_NAME'));
     CheckEquals(4, GetIntByName('COLUMN_SIZE'));
     CheckEquals(0, GetIntByName('BUFFER_LENGTH'));
@@ -308,7 +308,7 @@ begin
 //    CheckEquals('public', GetStringByName('TABLE_SCHEM'));
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('p_redundant', GetStringByName('COLUMN_NAME'));
-    CheckEquals(ord(stShort), GetIntByName('DATA_TYPE'));
+    CheckEquals(ord(stSmall), GetIntByName('DATA_TYPE'));
     CheckEquals('INT2', UpperCase(GetStringByName('TYPE_NAME')));
     CheckEquals(2, GetIntByName('COLUMN_SIZE'));
     CheckEquals(0, GetIntByName('BUFFER_LENGTH'));
@@ -358,7 +358,7 @@ begin
     CheckEquals('procedure1', GetStringByName('PROCEDURE_NAME'));
     CheckEquals('$1', GetStringByName('COLUMN_NAME'));
     CheckEquals('1', GetStringByName('COLUMN_TYPE'));
-    CheckEquals('4', GetStringByName('DATA_TYPE'));
+    CheckEquals(IntToStr(Ord(stInteger)), GetStringByName('DATA_TYPE'));
     CheckEquals('int4', GetStringByName('TYPE_NAME'));
     CheckEquals('', GetStringByName('PRECISION'));
     CheckEquals('', GetStringByName('LENGTH'));
@@ -373,7 +373,7 @@ begin
     CheckEquals('procedure1', GetStringByName('PROCEDURE_NAME'));
     CheckEquals('returnValue', GetStringByName('COLUMN_NAME'));
     CheckEquals('4', GetStringByName('COLUMN_TYPE'));
-    CheckEquals('4', GetStringByName('DATA_TYPE'));
+    CheckEquals(IntToStr(Ord(stInteger)), GetStringByName('DATA_TYPE'));
     CheckEquals('int4', GetStringByName('TYPE_NAME'));
     CheckEquals('', GetStringByName('PRECISION'));
     CheckEquals('', GetStringByName('LENGTH'));

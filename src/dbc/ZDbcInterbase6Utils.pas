@@ -118,21 +118,20 @@ type
     ['{D2C3D5E1-F3A6-4223-9A6E-3048B99A06C4}']
     procedure WriteBlob(const Index: Integer; Stream: TStream);
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
-    procedure UpdateNull(const Index: Integer; Value: boolean);
-    procedure UpdateBoolean(const Index: Integer; Value: boolean);
-    procedure UpdateByte(const Index: Integer; Value: ShortInt);
-    procedure UpdateShort(const Index: Integer; Value: SmallInt);
-    procedure UpdateInt(const Index: Integer; Value: Integer);
-    procedure UpdateLong(const Index: Integer; Value: Int64);
-    procedure UpdateFloat(const Index: Integer; Value: Single);
-    procedure UpdateDouble(const Index: Integer; Value: Double);
-    procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
+    procedure UpdateNull(const Index: Integer; const Value: boolean);
+    procedure UpdateBoolean(const Index: Integer; const Value: boolean);
+    procedure UpdateSmall(const Index: Integer; const Value: SmallInt);
+    procedure UpdateInt(const Index: Integer; const Value: Integer);
+    procedure UpdateLong(const Index: Integer; const Value: Int64);
+    procedure UpdateFloat(const Index: Integer; const Value: Single);
+    procedure UpdateDouble(const Index: Integer; const Value: Double);
+    procedure UpdateBigDecimal(const Index: Integer; const Value: Extended);
     procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
-    procedure UpdateString(const Index: Integer; Value: RawByteString);
-    procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
-    procedure UpdateDate(const Index: Integer; Value: TDateTime);
-    procedure UpdateTime(const Index: Integer; Value: TDateTime);
-    procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
+    procedure UpdateString(const Index: Integer; const Value: RawByteString);
+    procedure UpdateBytes(const Index: Integer; const Value: TByteDynArray);
+    procedure UpdateDate(const Index: Integer; const Value: TDateTime);
+    procedure UpdateTime(const Index: Integer; const Value: TDateTime);
+    procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
   end;
 
@@ -190,21 +189,20 @@ type
     procedure WriteBlob(const Index: Integer; Stream: TStream);
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
 
-    procedure UpdateNull(const Index: Integer; Value: boolean);
-    procedure UpdateBoolean(const Index: Integer; Value: boolean);
-    procedure UpdateByte(const Index: Integer; Value: ShortInt);
-    procedure UpdateShort(const Index: Integer; Value: SmallInt);
-    procedure UpdateInt(const Index: Integer; Value: Integer);
-    procedure UpdateLong(const Index: Integer; Value: Int64);
-    procedure UpdateFloat(const Index: Integer; Value: Single);
-    procedure UpdateDouble(const Index: Integer; Value: Double);
-    procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
+    procedure UpdateNull(const Index: Integer; const Value: boolean);
+    procedure UpdateBoolean(const Index: Integer; const Value: boolean);
+    procedure UpdateSmall(const Index: Integer; const Value: SmallInt);
+    procedure UpdateInt(const Index: Integer; const Value: Integer);
+    procedure UpdateLong(const Index: Integer; const Value: Int64);
+    procedure UpdateFloat(const Index: Integer; const Value: Single);
+    procedure UpdateDouble(const Index: Integer; const Value: Double);
+    procedure UpdateBigDecimal(const Index: Integer; const Value: Extended);
     procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
-    procedure UpdateString(const Index: Integer; Value: RawByteString);
-    procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
-    procedure UpdateDate(const Index: Integer; Value: TDateTime);
-    procedure UpdateTime(const Index: Integer; Value: TDateTime);
-    procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
+    procedure UpdateString(const Index: Integer; const Value: RawByteString);
+    procedure UpdateBytes(const Index: Integer; const Value: TByteDynArray);
+    procedure UpdateDate(const Index: Integer; const Value: TDateTime);
+    procedure UpdateTime(const Index: Integer; const Value: TDateTime);
+    procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
   end;
 
@@ -676,7 +674,7 @@ begin
     blr_short:
       begin
         case SqlSubType of
-          RDB_NUMBERS_NONE: Result := stShort;
+          RDB_NUMBERS_NONE: Result := stSmall;
           RDB_NUMBERS_NUMERIC: Result := stDouble;
           RDB_NUMBERS_DECIMAL: Result := stDouble;
         end;
@@ -1015,11 +1013,8 @@ begin
       stBoolean:
         ParamSqlData.UpdateBoolean(I,
           ClientVarManager.GetAsBoolean(InParamValues[I]));
-      stByte:
-        ParamSqlData.UpdateByte(I,
-          ClientVarManager.GetAsInteger(InParamValues[I]));
-      stShort:
-        ParamSqlData.UpdateShort(I,
+      stByte, stShort, stSmall:
+        ParamSqlData.UpdateSmall(I,
           ClientVarManager.GetAsInteger(InParamValues[I]));
       stInteger:
         ParamSqlData.UpdateInt(I,
@@ -1577,7 +1572,7 @@ begin
     SQL_SHORT:
       begin
         if SqlScale = 0 then
-          Result := stShort
+          Result := stSmall
         else
           Result := stFloat; //Numeric with low precision
        end;
@@ -1890,7 +1885,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; Value: Extended);
+procedure TZParamsSQLDA.UpdateBigDecimal(const Index: Integer; const Value: Extended);
 var
   SQLCode: SmallInt;
 begin
@@ -1947,7 +1942,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateBoolean(const Index: Integer; Value: boolean);
+procedure TZParamsSQLDA.UpdateBoolean(const Index: Integer; const Value: boolean);
 var
   SQLCode: SmallInt;
 begin
@@ -1994,68 +1989,11 @@ begin
 end;
 
 {**
-   Set up parameter Byte value
-   @param Index the target parameter index
-   @param Value the source value
-}
-procedure TZParamsSQLDA.UpdateByte(const Index: Integer; Value: ShortInt);
-var
-  SQLCode: SmallInt;
-begin
-  CheckRange(Index);
-  SetFieldType(Index, sizeof(Smallint), SQL_SHORT + 1, 0);
-  {$R-}
-  with FXSQLDA.sqlvar[Index] do
-  begin
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
-    SQLCode := (sqltype and not(1));
-
-    if (sqlscale < 0)  then
-    begin
-      case SQLCode of
-        SQL_SHORT  : PSmallInt(sqldata)^ := Value * IBScaleDivisor[sqlscale];
-        SQL_LONG   : PInteger(sqldata)^  := Value * IBScaleDivisor[sqlscale];
-        SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := Value * IBScaleDivisor[sqlscale];
-        SQL_DOUBLE : PDouble(sqldata)^   := Value;
-      else
-        raise EZIBConvertError.Create(SUnsupportedParameterType);
-      end;
-    end
-    else
-      case SQLCode of
-        SQL_DOUBLE    : PDouble(sqldata)^   := Value;
-        SQL_LONG      : PInteger(sqldata)^ := Value;
-        SQL_D_FLOAT,
-        SQL_FLOAT     : PSingle(sqldata)^ := Value;
-        SQL_BOOLEAN:
-                     begin
-                       if FPlainDriver.GetProtocol <> 'interbase-7' then
-                         raise EZIBConvertError.Create(SUnsupportedDataType);
-                       PSmallint(sqldata)^ := Value;
-                     end;
-        SQL_SHORT     : PSmallint(sqldata)^ := Value;
-        SQL_INT64     : PInt64(sqldata)^ := Value;
-        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
-        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToRaw(Value));
-      else
-        raise EZIBConvertError.Create(SUnsupportedParameterType);
-      end;
-    if (sqlind <> nil) then
-       sqlind^ := 0; // not null
-  end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
-end;
-
-{**
    Set up parameter byte value
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateBytes(const Index: Integer; Value: TByteDynArray);
+procedure TZParamsSQLDA.UpdateBytes(const Index: Integer; const Value: TByteDynArray);
 var
  SQLCode: SmallInt;
  Stream: TStream;
@@ -2107,7 +2045,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateDate(const Index: Integer; Value: TDateTime);
+procedure TZParamsSQLDA.UpdateDate(const Index: Integer; const Value: TDateTime);
 begin
   SetFieldType(Index, sizeof(Integer), SQL_TYPE_DATE + 1, 0);
   UpdateDateTime(Index, Value);
@@ -2172,7 +2110,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateDouble(const Index: Integer; Value: Double);
+procedure TZParamsSQLDA.UpdateDouble(const Index: Integer; const Value: Double);
 var
   SQLCode: SmallInt;
 begin
@@ -2224,7 +2162,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateFloat(const Index: Integer; Value: Single);
+procedure TZParamsSQLDA.UpdateFloat(const Index: Integer; const Value: Single);
 var
   SQLCode: SmallInt;
 begin
@@ -2278,7 +2216,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateInt(const Index: Integer; Value: Integer);
+procedure TZParamsSQLDA.UpdateInt(const Index: Integer; const Value: Integer);
 var
   SQLCode: SmallInt;
 begin
@@ -2330,7 +2268,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateLong(const Index: integer; Value: Int64);
+procedure TZParamsSQLDA.UpdateLong(const Index: integer; const Value: Int64);
 var
   SQLCode: SmallInt;
 begin
@@ -2382,7 +2320,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateNull(const Index: Integer; Value: boolean);
+procedure TZParamsSQLDA.UpdateNull(const Index: Integer; const Value: boolean);
 begin
   CheckRange(Index);
   {$R-}
@@ -2464,11 +2402,11 @@ begin
 end;
 
 {**
-   Set up parameter short value
+   Set up parameter Byte value
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateShort(const Index: Integer; Value: SmallInt);
+procedure TZParamsSQLDA.UpdateSmall(const Index: Integer; const Value: SmallInt);
 var
   SQLCode: SmallInt;
 begin
@@ -2478,7 +2416,7 @@ begin
   with FXSQLDA.sqlvar[Index] do
   begin
     if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+       Exit;
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2490,7 +2428,7 @@ begin
         SQL_QUAD   : PInt64(sqldata)^    := Value * IBScaleDivisor[sqlscale];
         SQL_DOUBLE : PDouble(sqldata)^   := Value;
       else
-        raise EZIBConvertError.Create(SUnsupportedDataType);
+        raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
     end
     else
@@ -2499,16 +2437,21 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := Value;
         SQL_D_FLOAT,
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
-        SQL_BOOLEAN   : PSmallint(sqldata)^ := Value;
+        SQL_BOOLEAN:
+                     begin
+                       if FPlainDriver.GetProtocol <> 'interbase-7' then
+                         raise EZIBConvertError.Create(SUnsupportedDataType);
+                       PSmallint(sqldata)^ := Value;
+                     end;
         SQL_SHORT     : PSmallint(sqldata)^ := Value;
         SQL_INT64     : PInt64(sqldata)^ := Value;
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
         SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToRaw(Value));
       else
-        raise EZIBConvertError.Create(SUnsupportedDataType);
+        raise EZIBConvertError.Create(SUnsupportedParameterType);
       end;
-      if (sqlind <> nil) then
-         sqlind^ := 0; // not null
+    if (sqlind <> nil) then
+       sqlind^ := 0; // not null
   end;
   {$IFOPT D+}
 {$R+}
@@ -2521,7 +2464,7 @@ end;
    @param Value the source value
 }
 
-procedure TZParamsSQLDA.UpdateString(const Index: Integer; Value: RawByteString);
+procedure TZParamsSQLDA.UpdateString(const Index: Integer; const Value: RawByteString);
 var
   L: Cardinal;
 begin
@@ -2534,7 +2477,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateTime(const Index: Integer; Value: TDateTime);
+procedure TZParamsSQLDA.UpdateTime(const Index: Integer; const Value: TDateTime);
 begin
   SetFieldType(Index, sizeof(Cardinal), SQL_TYPE_TIME + 1, 0);
   UpdateDateTime(Index, Value);
@@ -2545,7 +2488,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateTimestamp(const Index: Integer; Value: TDateTime);
+procedure TZParamsSQLDA.UpdateTimestamp(const Index: Integer; const Value: TDateTime);
 begin
   SetFieldType(Index, sizeof(TISC_QUAD), SQL_TIMESTAMP + 1, 0);
   UpdateDateTime(Index, Value);

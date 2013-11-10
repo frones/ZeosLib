@@ -896,7 +896,7 @@ begin
         values as vars and have a constant pointer ((: }
       case InParamTypes[ParamIndex] of
         stBoolean,
-        stByte, stShort, stInteger, stLong,
+        stByte, stShort, stSmall, stInteger, stLong,
         stBigDecimal, stFloat, stDouble,
         stString, stUnicodeString:
           UpdatePAnsiChar(ClientVarManager.GetAsCharRec(InParamValues[ParamIndex], ConSettings^.ClientCodePage^.CP).P, ParamIndex);
@@ -1399,8 +1399,8 @@ begin
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
       stBytes:
         OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-      stShort:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+      stSmall:
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
       stInteger:
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:

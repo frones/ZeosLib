@@ -131,8 +131,8 @@ begin
 //Bug #889223, bug with tinyint on mssql
 //    -6: Result := stByte;
     -5: Result := stLong;
-    -6: Result := stShort;
-    5: Result := stShort;
+    -6: Result := stSmall;
+    5: Result := stSmall;
     4: Result := stInteger;
     2, 3, 6, 7, 8: Result := stDouble;
     11, 93: Result := stTimestamp;
@@ -162,8 +162,8 @@ begin
     DBLIBSQLBIT: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
 //    DBLIBSQLINT1: Result := stByte;
-    DBLIBSQLINT1: Result := stShort;
-    DBLIBSQLINT2: Result := stShort;
+    DBLIBSQLINT1: Result := stSmall;
+    DBLIBSQLINT2: Result := stSmall;
     DBLIBSQLINT4: Result := stInteger;
     DBLIBSQLFLT4: Result := stDouble;
     DBLIBSQLFLT8: Result := stDouble;
@@ -197,7 +197,7 @@ begin
     SYBINTN, SYBINT4:                           Result := stInteger;
     SYBINT8:                                    Result := stLong;
     SYBNUMERIC:                                 Result := stBigDecimal;
-    SYBINT1, SYBINT2:                           Result := stShort;
+    SYBINT1, SYBINT2:                           Result := stSmall;
     SYBFLT8, SYBFLTN, SYBREAL, SYBDECIMAL:      Result := stDouble;
     SYBDATETIME, SYBDATETIME4, SYBDATETIMN:     Result := stTimestamp;
     SYBBIT, SYBBITN:                            Result := stBoolean;
@@ -244,7 +244,7 @@ begin
   case FieldType of
     stBoolean: Result := DBLIBSQLBIT;
     stByte: Result := DBLIBSQLINT1;
-    stShort: Result := DBLIBSQLINT2;
+    stSmall: Result := DBLIBSQLINT2;
     stInteger: Result := DBLIBSQLINT4;
     stLong: Result := DBLIBSQLFLT8;
     stFloat: Result := DBLIBSQLFLT8;
@@ -272,7 +272,7 @@ begin
   case FieldType of
     stBoolean: Result := 'bit';
     stByte: Result := 'tinyint';
-    stShort: Result := 'smallint';
+    stSmall: Result := 'smallint';
     stInteger: Result := 'int';
     stLong: Result := 'bigint';
     stFloat: Result := 'float(24)';
@@ -300,7 +300,7 @@ begin
   case FieldType of
     stBoolean: Result := SYBBIT;
     stByte: Result := SYBINT1;
-    stShort: Result := SYBINT2;
+    stSmall: Result := SYBINT2;
     stInteger: Result := SYBINT4;
     stLong: Result := SYBFLT8;
     stFloat: Result := SYBFLT8;
@@ -329,7 +329,7 @@ begin
   case FieldType of
     stBoolean: Result := 'bit';
     stByte: Result := 'tinyint';
-    stShort: Result := 'smallint';
+    stSmall: Result := 'smallint';
     stInteger: Result := 'int';
     stLong: Result := 'bigint';
     stFloat: Result := 'float(24)';
@@ -385,7 +385,7 @@ begin
           Result := '1'
         else
           Result := '0';
-      stByte, stShort, stInteger, stLong, stFloat, stDouble, stBigDecimal:
+      stByte, stShort, stSmall, stInteger, stLong, stFloat, stDouble, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stString, stUnicodeString:
         if NChar then

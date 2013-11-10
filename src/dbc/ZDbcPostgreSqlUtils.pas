@@ -198,7 +198,7 @@ begin
   else if TypeName = 'macaddr' then
     Result := stString
   else if TypeName = 'int2' then
-    Result := stShort
+    Result := stSmall
   else if TypeName = 'int4' then
     Result := stInteger
   else if TypeName = 'int8' then
@@ -266,7 +266,7 @@ begin
           Result := stInteger;
       end;
     19: Result := stString; { name }
-    21: Result := stShort; { int2 }
+    21: Result := stSmall; { int2 }
     23: Result := stInteger; { int4 }
     20: Result := stLong; { int8 }
     650: Result := stString; { cidr }
@@ -306,7 +306,7 @@ function SQLTypeToPostgreSQL(SQLType: TZSQLType; IsOidAsBlob: boolean): string;
 begin
   case SQLType of
     stBoolean: Result := 'bool';
-    stByte, stShort, stInteger, stLong: Result := 'int';
+    stByte, stSmall, stInteger, stLong: Result := 'int';
     stFloat, stDouble, stBigDecimal: Result := 'numeric';
     stString, stUnicodeString, stAsciiStream, stUnicodeStream: Result := 'text';
     stDate: Result := 'date';
@@ -327,7 +327,7 @@ end;
 }
 function IsNumber(Value: TZSQLType): Boolean;
 begin
-  Result := Value in [stByte, stShort, stInteger, stLong,
+  Result := Value in [stByte, stSmall, stInteger, stLong,
     stFloat, stDouble, stBigDecimal];
 end;
 
@@ -760,7 +760,7 @@ begin
           Result := 'TRUE'
         else
           Result := 'FALSE';
-      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         begin
           Result := ClientVarManager.GetAsRawByteString(Value);
           if QuotedNumbers then Result := #39+Result+#39;

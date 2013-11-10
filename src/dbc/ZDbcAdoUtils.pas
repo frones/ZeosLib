@@ -222,8 +222,8 @@ begin
     adBoolean: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
 //    adTinyInt, adUnsignedTinyInt: Result := stByte;
-    adTinyInt, adUnsignedTinyInt: Result := stShort;
-    adSmallInt, adUnsignedSmallInt: Result := stShort;
+    adTinyInt, adUnsignedTinyInt: Result := stSmall;
+    adSmallInt, adUnsignedSmallInt: Result := stSmall;
     adInteger, adUnsignedInt: Result := stInteger;
     adBigInt, adUnsignedBigInt: Result := stLong;
     adSingle: Result := stFloat;
@@ -273,7 +273,7 @@ begin
     stUnicodeString: Result := adVarWChar;
     stBoolean: Result := adBoolean;
     stByte: Result := adTinyInt;
-    stShort: Result := adSmallInt;
+    stSmall: Result := adSmallInt;
     stInteger: Result := adInteger;
     stLong: Result := adBigInt;
     stBigDecimal: Result := adDecimal;

@@ -985,8 +985,8 @@ begin
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
       stBytes:
         OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-      stShort:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+      stSmall:
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
       stInteger:
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:

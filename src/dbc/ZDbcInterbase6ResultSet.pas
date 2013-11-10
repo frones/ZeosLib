@@ -104,7 +104,8 @@ type
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetShort(ColumnIndex: Integer): ShortInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
@@ -824,7 +825,73 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZInterbase6XSQLDAResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZInterbase6XSQLDAResultSet.GetShort(ColumnIndex: Integer): ShortInt;
+var
+  SQLCode: SmallInt;
+  Index: Integer;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stShort);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+  begin
+    Index := ColumnIndex -1;
+    {$R-}
+    with FXSQLDA.sqlvar[Index] do
+    begin
+      Result := 0;
+      if (sqlind <> nil) and (sqlind^ = -1) then
+           Exit;
+      SQLCode := (sqltype and not(1));
+
+      if (sqlscale < 0)  then
+      begin
+        case SQLCode of
+          SQL_SHORT  : Result := PSmallInt(sqldata)^ div IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result := PInteger(sqldata)^  div IBScaleDivisor[sqlscale];
+          SQL_INT64,
+          SQL_QUAD   : Result := PInt64(sqldata)^    div IBScaleDivisor[sqlscale];
+          SQL_DOUBLE : Result := Trunc(PDouble(sqldata)^);
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+        end;
+      end
+      else
+        case SQLCode of
+          SQL_DOUBLE    : Result := Trunc(PDouble(sqldata)^);
+          SQL_LONG      : Result := PInteger(sqldata)^;
+          SQL_D_FLOAT,
+          SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
+          SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_SHORT     : Result := PSmallint(sqldata)^;
+          SQL_INT64     : Result := PInt64(sqldata)^;
+          SQL_TEXT      : Result := RawToInt(DecodeString(True, Index));
+          SQL_VARYING   : Result := RawToInt(DecodeString(False, Index));
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(Index), GetNameSqlType(SQLCode)]));
+        end;
+    end;
+    {$IFOPT D+}
+  {$R+}
+  {$ENDIF}
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>short</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZInterbase6XSQLDAResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 var
   SQLCode: SmallInt;
   Index: Integer;

@@ -138,7 +138,7 @@ begin
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TINYINT') then
     Result := stByte
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALLINT') then
-    Result := stShort
+    Result := stSmall
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MEDIUMINT') then
     Result := stInteger
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT')) then
@@ -189,7 +189,7 @@ begin
     if Precision <= 2 then
       Result := stByte
     else if Precision <= 4 then
-      Result := stShort
+      Result := stSmall
     else if Precision <= 9 then
       Result := stInteger
     else

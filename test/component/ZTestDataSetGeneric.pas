@@ -1612,7 +1612,9 @@ var
   BinStreamA, TextStreamA: TStream;
   BinStreamE, TextStreamE: TMemoryStream;
   TempA: RawByteString;
+  {$IFDEF WITH_WIDEMEMO}
   TempU: ZWideString;
+  {$ENDIF}
 
   TextLob, BinLob: String;
   TempConnection: TZConnection;

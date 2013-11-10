@@ -1510,7 +1510,7 @@ const
     'DOUBLE', 'CHAR', 'VARCHAR', 'BINARY', 'VARBINARY', 'DATE',
     'TIME', 'DATETIME', 'TIMESTAMP', 'BLOB', 'TEXT');
   TypeCodes: array[1..MaxTypeCount] of TZSQLType = (
-    stBoolean, stByte, stShort, stInteger, stInteger, stLong,
+    stBoolean, stByte, stSmall, stInteger, stInteger, stLong,
     stFloat, stFloat, stDouble, stDouble, stDouble, stDouble,
     stString, {$IFDEF UNICODE}stUnicodeString{$ELSE}stString{$ENDIF},
     stBytes, stBytes, stDate, stTime, stTimestamp,
@@ -1704,7 +1704,7 @@ These constant define integer codes that represent the various text encodings su
   begin
     Result.MoveToInsertRow;
     Result.UpdateString(1, Encodings[i].CP); //CHARACTER_SET_NAME
-    Result.UpdateShort(2, Encodings[i].ID); //CHARACTER_SET_ID
+    Result.UpdateSmall(2, Encodings[i].ID); //CHARACTER_SET_ID
     Result.InsertRow;
   end;
 end;

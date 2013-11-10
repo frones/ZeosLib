@@ -96,7 +96,7 @@ type
     procedure UpdateNull(const Index: Integer; Value: boolean);
     procedure UpdateBoolean(const Index: Integer; Value: boolean);
     procedure UpdateByte(const Index: Integer; Value: Byte);
-    procedure UpdateShort(const Index: Integer; Value: SmallInt);
+    procedure UpdateSmall(const Index: Integer; Value: SmallInt);
     procedure UpdateInt(const Index: Integer; Value: Integer);
     procedure UpdateLong(const Index: Integer; Value: Int64);
     procedure UpdateFloat(const Index: Integer; Value: Single);
@@ -115,7 +115,7 @@ type
     function IsAssigned(const Index: Integer): Boolean;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): Byte;
-    function GetShort(const Index: Integer): SmallInt;
+    function GetSmall(const Index: Integer): SmallInt;
     function GetInt(const Index: Integer): Integer;
     function GetLong(const Index: Integer): Int64;
     function GetFloat(const Index: Integer): Single;
@@ -177,7 +177,7 @@ type
     procedure UpdateNull(const Index: Integer; Value: boolean);
     procedure UpdateBoolean(const Index: Integer; Value: boolean);
     procedure UpdateByte(const Index: Integer; Value: Byte);
-    procedure UpdateShort(const Index: Integer; Value: SmallInt);
+    procedure UpdateSmall(const Index: Integer; Value: SmallInt);
     procedure UpdateInt(const Index: Integer; Value: Integer);
     procedure UpdateLong(const Index: Integer; Value: Int64);
     procedure UpdateFloat(const Index: Integer; Value: Single);
@@ -197,7 +197,7 @@ type
     function IsAssigned(const Index: Integer): Boolean;
     function GetBoolean(const Index: Integer): Boolean;
     function GetByte(const Index: Integer): Byte;
-    function GetShort(const Index: Integer): SmallInt;
+    function GetSmall(const Index: Integer): SmallInt;
     function GetInt(const Index: Integer): Integer;
     function GetLong(const Index: Integer): Int64;
     function GetFloat(const Index: Integer): Single;
@@ -671,7 +671,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateShort(const Index: Integer; Value: SmallInt);
+procedure TZASASQLDA.UpdateSmall(const Index: Integer; Value: SmallInt);
 begin
   CheckIndex( Index);
   SetFieldType( Index, DT_SMALLINT or 1, SizeOf( SmallInt));
@@ -1090,7 +1090,7 @@ begin
   case VarType(Value) of
     varEmpty,
     varNull       : UpdateNull( Index, True);
-    varSmallint   : UpdateShort( Index, Value);
+    varSmallint   : UpdateSmall( Index, Value);
     varInteger    : UpdateInt( Index, Value);
     varSingle     : UpdateFloat( Index, Value);
     varDouble     : UpdateDouble( Index, Value);
@@ -1104,7 +1104,7 @@ begin
     varInt64      : UpdateLong( Index, Value);
     varShortInt   : UpdateByte( Index, Value);
     varLongWord   : UpdateInt( Index, Value);
-    varWord       : UpdateShort( Index, Value);
+    varWord       : UpdateSmall( Index, Value);
   else
     if VarArrayDimCount( Value) = 1 then
     begin
@@ -1546,7 +1546,7 @@ end;
    @param Index the field index
    @return the field Short value
 }
-function TZASASQLDA.GetShort(const Index: Integer): SmallInt;
+function TZASASQLDA.GetSmall(const Index: Integer): SmallInt;
 var
   s: RawByteString;
 begin
@@ -1878,7 +1878,7 @@ begin
     DT_NOTYPE:
       Result := stUnknown;
     DT_SMALLINT:
-      Result := stShort;
+      Result := stSmall;
     DT_INT:
       Result := stInteger;
     DT_DECIMAL:
@@ -1916,7 +1916,7 @@ begin
     DT_UNSINT:
       Result := stInteger;
     DT_UNSSMALLINT:
-      Result := stShort;
+      Result := stSmall;
     DT_UNSBIGINT:
       Result := stLong;
     DT_BIT:
@@ -2007,7 +2007,7 @@ begin
         Result := stString;
     -7: Result := stBoolean;
     -6: Result := stByte;
-    5: Result := stShort;
+    5: Result := stSmall;
     4: Result := stInteger;
     -5 : Result := stLong;
     6, 7, 8: Result := stDouble;
@@ -2209,8 +2209,8 @@ begin
         stByte:
           ParamSqlData.UpdateByte( i,
             ClientVarManager.GetAsInteger( InParamValues[i]));
-        stShort:
-          ParamSqlData.UpdateShort( i,
+        stShort, stSmall:
+          ParamSqlData.UpdateSmall( i,
             ClientVarManager.GetAsInteger( InParamValues[i]));
         stInteger:
           ParamSqlData.UpdateInt( i,

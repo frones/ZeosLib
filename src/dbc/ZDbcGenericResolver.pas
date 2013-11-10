@@ -594,6 +594,8 @@ begin
         Statement.SetByte(I + 1, RowAccessor.GetByte(ColumnIndex, WasNull));
       stShort:
         Statement.SetShort(I + 1, RowAccessor.GetShort(ColumnIndex, WasNull));
+      stSmall:
+        Statement.SetSmall(I + 1, RowAccessor.GetSmall(ColumnIndex, WasNull));
       stInteger:
         Statement.SetInt(I + 1, RowAccessor.GetInt(ColumnIndex, WasNull));
       stLong:
@@ -950,8 +952,8 @@ begin
                   ResultSet.GetBoolean(I));
               stByte:
                 RowAccessor.SetByte(Current.ColumnIndex, ResultSet.GetByte(I));
-              stShort:
-                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetShort(I));
+              stSmall:
+                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetSmall(I));
               stInteger:
                 RowAccessor.SetInt(Current.ColumnIndex, ResultSet.GetInt(I));
               stLong:

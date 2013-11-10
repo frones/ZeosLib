@@ -956,8 +956,8 @@ begin
         OutParamValues[I] := EncodeBoolean(Value.GetBoolean(I));
       stByte:
         OutParamValues[I] := EncodeInteger(Value.GetByte(I));
-      stShort:
-        OutParamValues[I] := EncodeInteger(Value.GetShort(I));
+      stSmall:
+        OutParamValues[I] := EncodeInteger(Value.GetSmall(I));
       stInteger:
         OutParamValues[I] := EncodeInteger(Value.GetInt(I));
       stLong:

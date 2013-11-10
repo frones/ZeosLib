@@ -653,7 +653,7 @@ begin
     //stByte, stString, stUnicoeString first. If this type is returned from the
     //ResultSet-Metadata we do NOT overwrite the column-type
     //f.e. select cast( name as varchar(100)), cast(setting as varchar(100)) from pg_settings
-    tempColType := TZSQLType(TableColumns.GetShort(5));
+    tempColType := TZSQLType(TableColumns.GetSmall(5));
     if not (( tempColType in [stBinaryStream, stAsciiStream, stUnicodeStream] )
       and ( ColumnInfo.ColumnType in [stBytes, stString, stUnicodeString] )) then
     ColumnInfo.ColumnType := tempColType;
