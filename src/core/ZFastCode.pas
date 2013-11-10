@@ -245,7 +245,7 @@ var
 
 var
   {$IFDEF FPC}
-  StrLen: function(Str: PAnsiChar): LongInt;
+  StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
   {$ELSE}
   StrLen: function(const Str: PAnsiChar): Cardinal;
   {$ENDIF}
