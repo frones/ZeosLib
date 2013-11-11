@@ -109,6 +109,7 @@ type
     procedure Test1023149;
     procedure TestMantis220;
     procedure TestMantis235;
+    procedure TestTicket52;
   end;
 
 implementation
@@ -1661,6 +1662,38 @@ begin
     Query.SQL.Text := 'CALL SingleResultSet()';
     Query.ExecSQL;
     Query.ExecSQL; //Here the Exception was raised
+  finally
+    Query.Free;
+  end;
+end;
+
+{
+I think, there is an error in MatchAfterStar function in ZMatchPattern.pas,
+this block:
+if TLen = 1 then
+begin
+Result := MATCH_VALID;
+Exit;
+end;
+returns MATCH_VALID in case Pattern = '*any_pattern*' and Text = '1' (or another only one character)
+May be there should be "if PLen = 1 then ...."?
+....
+than, connect to this table from ZQuery and set Filter property to '*ring*' and Filtered:=true. There should be only 2 records (id=1,6), but you will see 5 filtered records (id=1,2,3,4,6).
+}
+procedure TZTestCompMySQLBugReport.TestTicket52;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Query.SQL.Text := 'select * from TableTicket52';
+  Query.Open;
+  Query.Filtered := True;
+  Query.Filter := 'filter_test like ''*tring*''';
+
+  try
+    CheckEquals(2, Query.RecordCount);
   finally
     Query.Free;
   end;

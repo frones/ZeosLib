@@ -245,7 +245,7 @@ begin
   T := 1;
   PLen := Length(Pattern);
   TLen := Length(Text);
-  if TLen = 1 then
+  if (TLen = 1) and (PLen = 1) then //pattern like '*ring*' schould not match if Text 'A'
   begin
     Result := MATCH_VALID;
     Exit;
