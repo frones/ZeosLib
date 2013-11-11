@@ -572,7 +572,7 @@ end;
 }
 function TZMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  Len: ULong;
+  Len: Cardinal;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -706,7 +706,7 @@ end;
 }
 function TZMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: ULong;
+  Len: Cardinal;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
