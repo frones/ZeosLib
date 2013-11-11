@@ -1256,12 +1256,10 @@ begin
 end;
 
 function ZConvertStringToRaw(const Src: String; const StringCP, RawCP: Word): RawByteString;
-{$IFNDEF UNICODE}
+{$IF not defined(UNICODE) and not defined(WITH_LCONVENCODING)}
 var
-  {$IFNDEF WITH_LCONVENCODING}
   US: ZWideString; //COM based, so let's localize the value to avoid Buffer overrun
-  {$ENDIF}
-{$ENDIF}
+{$IFEND}
 begin
   if Src = '' then
     Result := ''
