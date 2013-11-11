@@ -392,3 +392,20 @@ CREATE TABLE table1045286 (
 );
 
 INSERT INTO table1045286 VALUES ('');
+
+
+/*==============================================================*/
+/* Tables for Ticket#52                                         */
+/*==============================================================*/
+CREATE TABLE TableTicket52 (
+  id_test int(11) UNSIGNED NOT NULL,
+  filter_test varchar(255) DEFAULT NULL,
+  PRIMARY KEY (id_test)
+);
+
+INSERT INTO TableTicket52(id_test, filter_test) VALUES (1, 'String01');
+INSERT INTO TableTicket52(id_test, filter_test) VALUES (2, '0');
+INSERT INTO TableTicket52(id_test, filter_test) VALUES (3, '1');
+INSERT INTO TableTicket52(id_test, filter_test) VALUES (4, '2');
+INSERT INTO TableTicket52(id_test, filter_test) VALUES (5, 'Other');
+INSERT INTO TableTicket52(id_test, filter_test) VALUES (6, 'String02');

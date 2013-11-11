@@ -1184,6 +1184,7 @@ end;
     or <code>False</code> otherwise.
 }
 function IsIpAddr(const Str: string): Boolean;
+LAbel LExit;
 var
   I, N: Integer;
   Splited: TStrings;
@@ -1191,15 +1192,16 @@ begin
   Result := False;
   Splited := SplitString(Str, '.');
   if Splited.Count <> 4 then
-    Exit
+    goto LExit
   else
     for i := 0 to 3 do
     begin
       N := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Splited[i], -1);
       if (N < 0) or (N > 255) then
-        Exit;
+        goto LExit;
     end;
   Result := True;
+  LExit: Splited.Free;
 end;
 {$ENDIF}
 
@@ -2048,7 +2050,7 @@ var
                 MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
                 if Failed then
                 begin
-                  Failed := not ((Value+i)^ in ['+', '-']); //postgres 2013-10-23 12:31:52.48+02 f.e.
+                  Failed := not ((Value+i)^ = '+'); //postgres 2013-10-23 12:31:52.48+02 f.e.
                   if Failed then
                     Exit
                   else
@@ -2058,6 +2060,8 @@ var
                   end;
                 end;
               end;
+            '.':
+              if ((Value+i)^ = '+') then Break; //postgres 1997-02-25 00:00:00+01 f.e.
           end;
           Inc(TimeStampFormat);
           if (i+1) = ValLen then Break;

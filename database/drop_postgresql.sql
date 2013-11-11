@@ -4,35 +4,35 @@
 /* Created on:     04.02.2003 19:59:06                          */
 /*==============================================================*/
 
-drop table blob_values;
-drop table date_values;
-drop table default_values;
-drop table string_values;
-drop table not_null_values;
-drop table number_values;
+drop table if exists blob_values;
+drop table if exists date_values;
+drop table if exists default_values;
+drop table if exists string_values;
+drop table if exists not_null_values;
+drop table if exists number_values;
 
-drop table cargo;
-drop table people;
-drop table equipment2;
-drop table equipment;
-drop table department;
+drop table if exists cargo;
+drop table if exists people;
+drop table if exists equipment2;
+drop table if exists equipment;
+drop table if exists department;
 
-drop table "Case_Sensitive";
-drop table "Spaced Names";
-drop table case_sensitive;
-drop table high_load;
+drop table if exists "Case_Sensitive";
+drop table if exists "Spaced Names";
+drop table if exists case_sensitive;
+drop table if exists high_load;
 
-drop function procedure1(INT4);
-drop function procedure2();
-drop function "ABTEST"(integer, integer, character varying);
-drop function proc_nonames (integer, integer);
-drop function proc_onename (integer, integer);
-drop function proc_noout (integer, integer);
-drop function proc_composite (integer, integer);
-drop function proc_mixedorder (integer, integer);
-drop function proc_set ();
+drop function if exists procedure1(INT4);
+drop function if exists procedure2();
+drop function if exists "ABTEST"(integer, integer, character varying);
+drop function if exists proc_nonames (integer, integer);
+drop function if exists proc_onename (integer, integer);
+drop function if exists proc_noout (integer, integer);
+drop function if exists proc_composite (integer, integer);
+drop function if exists proc_mixedorder (integer, integer);
+drop function if exists proc_set ();
 
-drop type compositetype;
+drop type if exists compositetype;
 
 /*
 drop SEQUENCE cargo_c_id_seq;

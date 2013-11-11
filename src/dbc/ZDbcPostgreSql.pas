@@ -336,7 +336,7 @@ end;
 destructor TZPostgreSQLConnection.Destroy;
 begin
   if FTypeList <> nil then
-    FTypeList.Free;
+    FreeAndNil(FTypeList);
   inherited Destroy;
   if Assigned(FPreparedStmts) then
     FreeAndNil(FPreparedStmts);
@@ -901,9 +901,9 @@ begin
       TypeCode := RawToIntDef(
         GetPlainDriver.GetValue(QueryHandle, I, 0), 0);
       isEnum := LowerCase(String(GetPlainDriver.GetValue(QueryHandle, I, 3))) = 'e';
-      if isEnum then 
-        TypeName := 'enum' 
-      else 
+      if isEnum then
+        TypeName := 'enum'
+      else
         TypeName := String(GetPlainDriver.GetValue(QueryHandle, I, 1));
 
       if LastVersion then
