@@ -599,6 +599,8 @@ function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal
 
 function FloatToRaw(const Value: Extended): RawByteString;
 function FloatToSqlRaw(const Value: Extended): RawByteString;
+function FloatToUnicode(const Value: Extended): ZWideString;
+function FloatToSqlUnicode(const Value: Extended): ZWideString;
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal); overload;
@@ -3376,6 +3378,16 @@ begin
   Result := FloatToRaw(Value);
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+end;
+
+function FloatToUnicode(const Value: Extended): ZWideString;
+begin
+  Result := NotEmptyASCII7ToUnicodeString(FloatToRaw(Value));
+end;
+
+function FloatToSqlUnicode(const Value: Extended): ZWideString;
+begin
+  Result := NotEmptyASCII7ToUnicodeString(FloatToSqlRaw(Value));
 end;
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal);

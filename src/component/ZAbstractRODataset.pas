@@ -502,6 +502,7 @@ type
   private
     FEmptyAsNull: Boolean;
     FFieldIndex: Integer;
+    FRowBuffer: PZRowBuffer;
     function GetActiveRowBuffer: Boolean;
     function IsFieldEditable: Boolean;
   protected
@@ -1748,8 +1749,10 @@ begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
 
+    {$IFNDEF WITH_ZSTRINGFIELDS}
     if State in [dsEdit, dsInsert] then
       Field.Validate(Buffer);
+    {$ENDIF}
 
     if Assigned(Buffer) then
     begin
@@ -1771,6 +1774,7 @@ begin
         ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}: { Processes string fields. }
           FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
         {$ELSE !WITH_ZSTRINGFIELDS}
+        ftWideString, ftString: ; //snooze! Done by Field
         ftGUID: { Processes string fields. }
           RowAccessor.SetAnsiString( ColumnIndex, PAnsichar(Buffer));
         {$ENDIF WITH_ZSTRINGFIELDS}
@@ -4035,12 +4039,11 @@ end;
 {$IFDEF WITH_ZSTRINGFIELDS}
 
 function TZStringField.GetActiveRowBuffer: Boolean;
-var RowBuffer: PZRowBuffer;
 begin
   if DataSet = nil then DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
-  Result := (DataSet as TZAbstractRODataset).GetActiveBuffer(RowBuffer);
+  Result := (DataSet as TZAbstractRODataset).GetActiveBuffer(FRowBuffer);
   if Result then
-    (DataSet as TZAbstractRODataset).FRowAccessor.RowBuffer := RowBuffer;
+    (DataSet as TZAbstractRODataset).FRowAccessor.RowBuffer := FRowBuffer;
 end;
 
 function TZStringField.IsFieldEditable: Boolean;
@@ -4184,43 +4187,64 @@ end;
 procedure TZStringField.SetAsBoolean(Value: Boolean);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetBoolean(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 procedure TZStringField.SetAsDateTime(Value: TDateTime);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 procedure TZStringField.SetAsSingle(Value: Single);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetFloat(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 procedure TZStringField.SetAsFloat(Value: Double);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetDouble(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 procedure TZStringField.SetAsExtended(Value: Extended);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetBigDecimal(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 procedure TZStringField.SetAsInteger(Value: Longint);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetInt(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 procedure TZStringField.SetAsLargeInt(Value: Largeint);
 begin
   if IsFieldEditable then
+  begin
     (DataSet as TZAbstractRODataset).FRowAccessor.SetLong(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
 end;
 
 
@@ -4230,7 +4254,13 @@ begin
     if FEmptyAsNull and (Value = '') then
       SetData(nil, True)
     else
-      (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Value);
+      if Length(Value) > Size then
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Copy(Value, 1, Size))
+      else
+      begin
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Value);
+        (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+      end;
 end;
 
 procedure TZStringField.SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF});
@@ -4239,7 +4269,13 @@ begin
     if FEmptyAsNull and (Value = '') then
       SetData(nil, True)
     else
-      (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Value);
+      if Length(Value) > Size then
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Copy(Value, 1, Size))
+      else
+      begin
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Value);
+        (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+      end;
 end;
 
 procedure TZStringField.SetAsAnsiString(const Value: AnsiString);
@@ -4248,7 +4284,10 @@ begin
     if FEmptyAsNull and (Value = '') then
       SetData(nil, True)
     else
+    begin
       (DataSet as TZAbstractRODataset).FRowAccessor.SetAnsiString(FFieldIndex, Value);
+      (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    end;
 end;
 
 procedure TZStringField.SetAsUTF8String(const Value: UTF8String);
@@ -4257,7 +4296,14 @@ begin
     if FEmptyAsNull and (Value = '') then
       SetData(nil, True)
     else
-      (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Value);
+      if Length(Value) > Size then
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Copy(Value, 1, Size))
+      else
+      begin
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Value);
+        (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+      end;
+
 end;
 
 { TZWideStringField }
