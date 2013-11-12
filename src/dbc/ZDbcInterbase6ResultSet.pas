@@ -57,7 +57,7 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined (WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}Windows, {$IFEND}
   ZDbcIntfs, ZDbcResultSet, ZDbcInterbase6, ZPlainFirebirdInterbaseConstants,
   ZPlainFirebirdDriver, ZCompatibility, ZDbcResultSetMetadata, ZMessages,
@@ -111,7 +111,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -156,7 +156,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils;
+  ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils;
 
 { TZInterbase6XSQLDAResultSet }
 
@@ -481,7 +481,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6XSQLDAResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZInterbase6XSQLDAResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   SQLCode: SmallInt;
 begin

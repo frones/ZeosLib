@@ -501,7 +501,7 @@ end;
 function TZMySQLEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempBlob: IZBlob;
 begin
   if InParamCount <= ParamIndex then
@@ -1043,7 +1043,7 @@ end;
 function TZMySQLCallableStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempBlob: IZBlob;
 begin
   TempBytes := nil;

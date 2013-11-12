@@ -128,7 +128,7 @@ type
     procedure UpdateBigDecimal(const Index: Integer; const Value: Extended);
     procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
     procedure UpdateString(const Index: Integer; const Value: RawByteString);
-    procedure UpdateBytes(const Index: Integer; const Value: TByteDynArray);
+    procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; const Value: TDateTime);
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
@@ -183,7 +183,7 @@ type
     procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString); overload;
     procedure EncodeString(const Code: Smallint; const Index: Word;
       const Str: PAnsiChar; const Len: Cardinal); overload;
-    procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TByteDynArray);
+    procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TBytes);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     procedure WriteBlob(const Index: Integer; Stream: TStream);
@@ -199,7 +199,7 @@ type
     procedure UpdateBigDecimal(const Index: Integer; const Value: Extended);
     procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
     procedure UpdateString(const Index: Integer; const Value: RawByteString);
-    procedure UpdateBytes(const Index: Integer; const Value: TByteDynArray);
+    procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; const Value: TDateTime);
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
@@ -1847,7 +1847,7 @@ end;
 }
 
 procedure TZParamsSQLDA.EncodeBytes(Code: Smallint; const Index: Word;
-  const Value: TByteDynArray);
+  const Value: TBytes);
 var
   Len: Cardinal;
 begin
@@ -1993,7 +1993,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZParamsSQLDA.UpdateBytes(const Index: Integer; const Value: TByteDynArray);
+procedure TZParamsSQLDA.UpdateBytes(const Index: Integer; const Value: TBytes);
 var
  SQLCode: SmallInt;
  Stream: TStream;

@@ -61,7 +61,7 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
   ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
 
@@ -143,7 +143,7 @@ type
 
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
   end;
 
@@ -154,7 +154,7 @@ var
 implementation
 
 uses
-  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} SysUtils,
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF FPC}, ZClasses{$ENDIF};
 
@@ -877,7 +877,7 @@ begin
   inherited;
 end;
 
-function TZDBLibConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+function TZDBLibConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetSQLHexString(PAnsiChar(Value), Length(Value), True);
   if GetAutoEncodeStrings then

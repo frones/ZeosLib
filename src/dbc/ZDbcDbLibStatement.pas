@@ -687,7 +687,7 @@ var
   DatString: RawByteString;
   DatMoney: Currency;
   DatDBDATETIME: DBDATETIME;
-  DatBytes: TByteDynArray;
+  DatBytes: TBytes;
   Temp: TZVariant;
   ParamType: TZSQLType;
   TempBlob: IZBlob;

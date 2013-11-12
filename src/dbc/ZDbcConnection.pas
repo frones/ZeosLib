@@ -239,7 +239,7 @@ type
     function GetWarnings: EZSQLWarning; virtual;
     procedure ClearWarnings; virtual;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; virtual;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; virtual;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload; virtual;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function UseMetadata: boolean;
@@ -1464,7 +1464,7 @@ begin
     Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
 end;
 
-function TZAbstractConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+function TZAbstractConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   if ConSettings^.AutoEncode then
     Result := GetDriver.GetTokenizer.GetEscapeString({$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value)))

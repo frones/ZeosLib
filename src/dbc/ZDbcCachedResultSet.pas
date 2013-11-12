@@ -185,7 +185,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -226,7 +226,7 @@ type
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); override;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); override;
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); override;
@@ -1078,7 +1078,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractCachedResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZAbstractCachedResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
@@ -1594,7 +1594,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateBytes(ColumnIndex: Integer;
-  const Value: TByteDynArray);
+  const Value: TBytes);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;

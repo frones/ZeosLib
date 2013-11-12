@@ -89,7 +89,7 @@ type
     function GetServerMajorVersion: Integer;
     function GetServerMinorVersion: Integer;
     function EncodeBinary(const Value: RawByteString): RawByteString; overload;
-    function EncodeBinary(const Value: TByteDynArray): RawByteString; overload;
+    function EncodeBinary(const Value: TBytes): RawByteString; overload;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
@@ -123,7 +123,7 @@ type
     procedure OnPropertiesChange(Sender: TObject); override;
     procedure SetStandardConformingStrings(const Value: Boolean);
     function EncodeBinary(const Value: RawByteString): RawByteString; overload;
-    function EncodeBinary(const Value: TByteDynArray): RawByteString; overload;
+    function EncodeBinary(const Value: TBytes): RawByteString; overload;
     procedure RegisterPreparedStmtName(const value: String);
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
@@ -165,7 +165,7 @@ type
     function PingServer: Integer; override;
     function EscapeString(Value: RawByteString): RawByteString; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; override;
     function GetServerSetting(const AName: RawByteString): string;
@@ -471,7 +471,7 @@ end;
   @param Value the Binary String
   @result the encoded String
 }
-function TZPostgreSQLConnection.EncodeBinary(const Value: TByteDynArray): RawByteString;
+function TZPostgreSQLConnection.EncodeBinary(const Value: TBytes): RawByteString;
 var Temp: RawByteString;
 begin
   ZSetString(PAnsiChar(Value), Length(Value), Temp);
@@ -1096,7 +1096,7 @@ end;
   @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
-function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TBytes): String;
 var Tmp: RawByteString;
 begin
   ZSetString(PAnsiChar(Value), Length(Value), Tmp);

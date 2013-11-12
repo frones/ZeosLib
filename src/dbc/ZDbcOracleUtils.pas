@@ -485,7 +485,7 @@ var
   Status: Integer;
   CurrentVar: PZSQLVar;
   TempDate: TDateTime;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempBlob: IZBlob;
   WriteTempBlob: IZOracleBlob;
 

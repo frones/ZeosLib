@@ -116,9 +116,9 @@ type
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
     procedure SetBlobObject(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
       const Value: IZBlob);
-    function InternalGetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer): TByteDynArray; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer): TBytes; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
-      const Value: TByteDynArray; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+      const Value: TBytes; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetString(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
       const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetUnicodeString(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
@@ -193,7 +193,7 @@ type
     function GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single; virtual;
     function GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double; virtual;
     function GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended; virtual;
-    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TByteDynArray; virtual;
+    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes; virtual;
     function GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
     function GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
     function GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
@@ -227,7 +227,7 @@ type
     procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); virtual;
     procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); virtual;
-    procedure SetBytes(Const ColumnIndex: Integer; const Value: TByteDynArray); virtual;
+    procedure SetBytes(Const ColumnIndex: Integer; const Value: TBytes); virtual;
     procedure SetDate(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTime(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
@@ -524,7 +524,7 @@ begin
 end;
 
 function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
-  const ColumnIndex: Integer): TByteDynArray;
+  const ColumnIndex: Integer): TBytes;
 var
   P: PPointer;
   L: SmallInt;
@@ -543,7 +543,7 @@ begin
 end;
 
 procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
-  const ColumnIndex: Integer; const Value: TByteDynArray;
+  const ColumnIndex: Integer; const Value: TBytes;
   const NewPointer: Boolean = False);
 var
   P: PPointer;
@@ -722,7 +722,7 @@ var
   ValuePtr1, ValuePtr2: Pointer;
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
-  Bts1, Bts2: TByteDynArray;
+  Bts1, Bts2: TBytes;
 
   function CompareFloat(Value1, Value2: Extended): Integer;
   begin
@@ -1458,7 +1458,7 @@ function TZRowAccessor.GetWideRec(Const ColumnIndex: Integer;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stByte: FUniTemp := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
@@ -1519,7 +1519,7 @@ function TZRowAccessor.GetUnicodeString(Const ColumnIndex: Integer;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stByte: Result := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
@@ -1974,7 +1974,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TByteDynArray;
+function TZRowAccessor.GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -2860,7 +2860,7 @@ end;
 procedure TZRowAccessor.SetString(Const ColumnIndex: Integer; const Value: String);
 var
   IsNull: Boolean;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   GUID: TGUID;
   TempBlob: IZBlob;
   Failed: Boolean;
@@ -2945,7 +2945,7 @@ procedure TZRowAccessor.SetAnsiRec(Const ColumnIndex: Integer; const Value: TZAn
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Blob: IZBlob;
   Failed: Boolean;
 begin
@@ -3051,7 +3051,7 @@ procedure TZRowAccessor.SetWideRec(Const ColumnIndex: Integer; const Value: TZWi
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Blob: IZBlob;
   Failed: Boolean;
 begin
@@ -3162,7 +3162,7 @@ procedure TZRowAccessor.SetRawByteString(Const ColumnIndex: Integer; const Value
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Failed: Boolean;
 begin
   case FColumnTypes[ColumnIndex - 1] of
@@ -3231,7 +3231,7 @@ procedure TZRowAccessor.SetUnicodeString(Const ColumnIndex: Integer; const Value
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Blob: IZBlob;
   Failed: Boolean;
 begin
@@ -3306,7 +3306,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; const Value: TByteDynArray);
+procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; const Value: TBytes);
 var
   IsNull: Boolean;
 begin

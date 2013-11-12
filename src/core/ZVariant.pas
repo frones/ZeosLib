@@ -86,7 +86,7 @@ type
     VRawByteString: RawByteString;
     VUTF8String: UTF8String;
     VUnicodeString: ZWideString;
-    VBytes: TByteDynArray;
+    VBytes: TBytes;
     VInterface: IZInterface;
     case TZVariantType of
       vtBoolean: (VBoolean: Boolean);
@@ -119,7 +119,7 @@ type
     function Compare(const Value1, Value2: TZVariant): Integer;
 
     function GetAsBoolean(const Value: TZVariant): Boolean;
-    function GetAsBytes(const Value: TZVariant): TByteDynArray;
+    function GetAsBytes(const Value: TZVariant): TBytes;
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): String;
@@ -133,7 +133,7 @@ type
     function GetAsInterface(const Value: TZVariant): IZInterface;
 
     procedure SetAsBoolean(var Value: TZVariant; Data: Boolean);
-    procedure SetAsBytes(var Value: TZVariant; const Data: TByteDynArray);
+    procedure SetAsBytes(var Value: TZVariant; const Data: TBytes);
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: String);
@@ -188,7 +188,7 @@ type
     procedure SetNull(var Value: TZVariant);
 
     function GetAsBoolean(const Value: TZVariant): Boolean;
-    function GetAsBytes(const Value: TZVariant): TByteDynArray;
+    function GetAsBytes(const Value: TZVariant): TBytes;
     function GetAsInteger(const Value: TZVariant): Int64;
     function GetAsFloat(const Value: TZVariant): Extended;
     function GetAsString(const Value: TZVariant): String;
@@ -203,7 +203,7 @@ type
     function GetAsInterface(const Value: TZVariant): IZInterface;
 
     procedure SetAsBoolean(var Value: TZVariant; Data: Boolean);
-    procedure SetAsBytes(var Value: TZVariant; const Data: TByteDynArray);
+    procedure SetAsBytes(var Value: TZVariant; const Data: TBytes);
     procedure SetAsInteger(var Value: TZVariant; Data: Int64);
     procedure SetAsFloat(var Value: TZVariant; Data: Extended);
     procedure SetAsString(var Value: TZVariant; const Data: String);
@@ -272,7 +272,7 @@ type
     function GetValue: TZVariant;
 
     function GetBoolean: Boolean;
-    function GetBytes: TByteDynArray;
+    function GetBytes: TBytes;
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: String;
@@ -309,7 +309,7 @@ type
     function GetValue: TZVariant;
 
     function GetBoolean: Boolean;
-    function GetBytes: TByteDynArray;
+    function GetBytes: TBytes;
     function GetInteger: Int64;
     function GetFloat: Extended;
     function GetString: String;
@@ -367,7 +367,7 @@ function EncodeBoolean(const Value: Boolean): TZVariant; {$IFDEF WITH_INLINE}inl
   @param Value a boolean value to be encoded.
   @returns an encoded custom variant.
 }
-function EncodeBytes(const Value: TByteDynArray): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+function EncodeBytes(const Value: TBytes): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 {**
   Encodes an integer into a custom variant.
   @param Value an intger value to be encoded.
@@ -965,7 +965,7 @@ end;
   @param a result value.
 }
 function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.GetAsBytes(
-  const Value: TZVariant): TByteDynArray;
+  const Value: TZVariant): TBytes;
 begin
   Result := Convert(Value, vtBytes).VBytes;
 end;
@@ -1095,7 +1095,7 @@ end;
   @param Data a value to be assigned.
 }
 procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsBytes(var Value: TZVariant;
-  const Data: TByteDynArray);
+  const Data: TBytes);
 begin
   Value := EncodeBytes(Data);
 end;
@@ -2555,7 +2555,7 @@ end;
   Gets a stored value converted to byte array.
   @return a stored value converted to a byte array.
 }
-function TZAnyValue.GetBytes: TByteDynArray;
+function TZAnyValue.GetBytes: TBytes;
 begin
   Result := SoftVarManager.GetAsBytes(FValue);
 end;
@@ -2707,7 +2707,7 @@ end;
   Creates a bytes array variant.
   @param Value a value to be assigned.
 }
-function EncodeBytes(const Value: TByteDynArray): TZVariant;
+function EncodeBytes(const Value: TBytes): TZVariant;
 begin
   Result.VType := vtBytes;
   Result.VBytes := Value;
