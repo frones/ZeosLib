@@ -86,6 +86,7 @@ type
     procedure Test1004584;
     procedure Test1021705;
     procedure Test_Decimal;
+    procedure Test_Ticket54;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -732,6 +733,28 @@ begin
     end;
     CheckEquals(False, Error, 'Problems with change user name');
 
+  finally
+    Query.Free;
+  end;
+end;
+{
+I'm using Firebird 2.5.2. This error appears for lazarus 1.0.12 (windows and linux) and delphi 7.
+INSERT with RETURNING works when executed Query.SQL.Text. If you do the Close and Open, the error is "Error Code: -502. The cursor identified in an OPEN statement is already open.".
+}
+procedure ZTestCompInterbaseBugReport.Test_Ticket54;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'INSERT INTO Ticket54(Val) VALUES(:P) RETURNING ID';
+    Query.ParamByName('P').AsString := 'Test';
+    Query.ExecSQL;
+    Query.Open;
+    Query.Close;
+    Query.Open;
   finally
     Query.Free;
   end;
