@@ -64,6 +64,7 @@
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
  {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
  {$DEFINE USE_FAST_CHARPOS}     // use Fascode CharPos function
+ {$DEFINE HAVE_TBYTES}          //Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -89,6 +90,7 @@
   {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
+  {$UNDEF HAVE_TBYTES} //D7 doesn't have TBytes
 {$ENDIF}
 
 // Compilation directives for Delphi 8
@@ -105,12 +107,14 @@
   {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE VER170BELOW} // Used in Zeos.inc only
   {$DEFINE WITH_C11389_ERROR} //D2005 has some inline problems
+  {$UNDEF HAVE_TBYTES} //D2005 doesn't have TBytes
 {$ENDIF}
 
 // Compilation directives for BDS 2006 (Delphi 2006, BCB 2006)
 {$IFDEF VER180}
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
+  {$UNDEF HAVE_TBYTES} //D2006 doesn't have TBytes
   {EH since D2006 FastCode proc FillChar is already included}
 {$ENDIF}
 
@@ -214,7 +218,6 @@
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
   {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
   {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
-  {$DEFINE HAVE_TBYTES}                 //Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
 {$ENDIF}
 
 {$IFDEF DELPHI12_UP}
