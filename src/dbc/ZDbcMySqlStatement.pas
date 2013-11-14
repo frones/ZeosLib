@@ -290,7 +290,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZMySQLResultSet.Create(FPlainDriver, Self, SQL, FHandle,
-    FUseResult, nil);
+    FUseResult, nil, CachedLob);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
     and (GetResultSetType <> rtForwardOnly)) then

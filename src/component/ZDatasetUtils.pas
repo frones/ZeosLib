@@ -547,11 +547,11 @@ begin
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString, ftWidestring:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          ResultSet.UpdateRawByteString(ColumnIndex,
-            RowAccessor.GetRawByteString(FieldIndex, WasNull))
+          ResultSet.UpdateAnsiRec(ColumnIndex,
+            RowAccessor.GetAnsiRec(FieldIndex, WasNull))
         else
-          ResultSet.UpdateUnicodeString(ColumnIndex,
-            RowAccessor.GetUnicodeString(FieldIndex, WasNull));
+          ResultSet.UpdateWideRec(ColumnIndex,
+            RowAccessor.GetWideRec(FieldIndex, WasNull));
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
@@ -1387,13 +1387,23 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
+{$IFDEF WITH_ZSTRINGFIELDS}
+type
+  TZHackStringField = Class(TZStringField); //access protected proprty
+{$ENDIF WITH_ZSTRINGFIELDS}
 function CreateFieldsLookupTable(Fields: TFields): TIntegerDynArray;
 var
   I: Integer;
 begin
   SetLength(Result, Fields.Count);
   for I := 0 to Fields.Count - 1 do
+  begin
     Result[I] := Integer(Fields[I]);
+    {$IFDEF WITH_ZSTRINGFIELDS}
+    if Fields[i] is TZStringField then
+      TZHackStringField(Fields[i]).FieldIndex := I+1;
+    {$ENDIF WITH_ZSTRINGFIELDS}
+  end;
 end;
 
 {**
