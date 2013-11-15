@@ -272,7 +272,7 @@ type
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual;
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
-    procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
     procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); virtual;
     procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); virtual;
@@ -360,7 +360,7 @@ type
     function GetFloat(ParameterIndex: Integer): Single; virtual;
     function GetDouble(ParameterIndex: Integer): Double; virtual;
     function GetBigDecimal(ParameterIndex: Integer): Extended; virtual;
-    function GetBytes(ParameterIndex: Integer): TByteDynArray; virtual;
+    function GetBytes(ParameterIndex: Integer): TBytes; virtual;
     function GetDate(ParameterIndex: Integer): TDateTime; virtual;
     function GetTime(ParameterIndex: Integer): TDateTime; virtual;
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
@@ -1784,7 +1784,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
-  const Value: TByteDynArray);
+  const Value: TBytes);
 begin
   SetInParam(ParameterIndex, stBytes, EncodeBytes(Value));
 end;
@@ -2650,7 +2650,7 @@ end;
    <code>null</code>.
 }
 function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer):
-  TByteDynArray;
+  TBytes;
 begin
   Result := SoftVarManager.GetAsBytes(GetOutParam(ParameterIndex));
 end;

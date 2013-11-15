@@ -57,7 +57,7 @@ interface
 
 {$I ZTestFramework.inc}
 
-uses Classes, Contnrs, Types, DB,
+uses Classes, Contnrs, Types, DB, SysUtils,
   ZCompatibility, ZTestCase, ZDataset, ZSqlTestCase, ZConnection, ZDbcIntfs;
 
 type
@@ -106,11 +106,11 @@ type
 
     { Random values generators. }
     function RandomStr(Length: Integer): string;
-    function RandomBts(Length: Integer): TByteDynArray;
+    function RandomBts(Length: Integer): TBytes;
     function RandomInt(MinValue, MaxValue: Integer): Integer;
     function RandomFloat(MinValue, MaxValue: Double): Double;
     function RandomGUIDString: String;
-    function RandomGUIDBytes: TByteDynArray;
+    function RandomGUIDBytes: TBytes;
 
     { Tests table preparation methods. }
     procedure PopulateTable(TableName: string; PrimaryKey: string;
@@ -278,7 +278,7 @@ const
 implementation
 
 uses
-  {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math, SysUtils,
+  {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math,
   ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses, ZDbcUtils;
 
 { TZPerformanceSQLTestCase }
@@ -391,7 +391,7 @@ begin
     Result := '{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}';
 end;
 
-function TZPerformanceSQLTestCase.RandomGUIDBytes: TByteDynArray;
+function TZPerformanceSQLTestCase.RandomGUIDBytes: TBytes;
 {$IFDEF WITH_FTGUID}
 var GUID: TGUID;
 {$ENDIF}
@@ -444,7 +444,7 @@ end;
   @param Length a ByteArray length (default is 32).
   @return a random generated value.
 }
-function TZPerformanceSQLTestCase.RandomBts(Length: Integer): TByteDynArray;
+function TZPerformanceSQLTestCase.RandomBts(Length: Integer): TBytes;
 var
   I: Integer;
 begin
@@ -855,7 +855,7 @@ end;
 }
 procedure TZPerformanceSQLTestCase.SetUpTestInsert;
 var
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Count: Integer;
 begin
   CleanupTable(FPerformanceTable);

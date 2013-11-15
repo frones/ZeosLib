@@ -1673,7 +1673,7 @@ procedure SetStatementParam(Index: Integer;
   Statement: IZPreparedStatement; Param: TParam);
 var
   Stream: TStream;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   {$IFDEF WITH_ASBYTES}Bts: TBytes;{$ENDIF}
   {$IFDEF WITHOUT_VARBYTESASSTRING}V: Variant;{$ENDIF}
 begin

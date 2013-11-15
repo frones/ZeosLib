@@ -85,7 +85,7 @@ type
     FAsciiStream: TStream;
     FUnicodeStream: TStream;
     FBinaryStream: TStream;
-    FByteArray: TByteDynArray;
+    FByteArray: TBytes;
     FAsciiStreamData: Ansistring;
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
@@ -98,7 +98,7 @@ type
       Writable: Boolean): TZColumnInfo;
     function GetColumnsInfoCollection: TObjectList;
     function GetRowAccessor: TZRowAccessor;
-    function CompareArrays(Array1, Array2: TByteDynArray): Boolean;
+    function CompareArrays(Array1, Array2: TBytes): Boolean;
     procedure FillRowAccessor(RowAccessor: TZRowAccessor);
     function CompareStreams(Stream1: TStream; Stream2: TStream): Boolean; overload;
 
@@ -140,7 +140,7 @@ uses ZTestConsts;
   @param Array2 the second array to compare.
   @return <code>True</code> if arrays are equal.
 }
-function TZTestRowAccessorCase.CompareArrays(Array1, Array2: TByteDynArray):
+function TZTestRowAccessorCase.CompareArrays(Array1, Array2: TBytes):
   Boolean;
 var
   I: Integer;
@@ -693,7 +693,7 @@ end;
 }
 procedure TZTestRowAccessorCase.TestRowAccessorBytes;
 
-  function  ArrayToString(BytesArray: TByteDynArray): string;
+  function  ArrayToString(BytesArray: TBytes): string;
   var
     I: Integer;
   begin
@@ -703,7 +703,7 @@ procedure TZTestRowAccessorCase.TestRowAccessorBytes;
 
 var
   I: Integer;
-  ByteArray: TByteDynArray;
+  ByteArray: TBytes;
   WasNull: Boolean;
 begin
   with RowAccessor do

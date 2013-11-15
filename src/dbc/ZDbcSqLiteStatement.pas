@@ -338,7 +338,7 @@ function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): Raw
 var
   Value: TZVariant;
   TempBlob: IZBlob;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);

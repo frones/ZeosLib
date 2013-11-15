@@ -519,7 +519,7 @@ type
 
     function column_blob(Stmt: Psqlite3_stmt; iCol:integer): Pointer;
     function column_blob_AsStream(Stmt: Psqlite3_stmt; iCol:integer): TStream;
-    function column_blob_AsBytes(Stmt: Psqlite3_stmt; iCol:integer): TByteDynArray;
+    function column_blob_AsBytes(Stmt: Psqlite3_stmt; iCol:integer): TBytes;
     function column_bytes(Stmt: Psqlite3_stmt; iCol: Integer): integer;
     function column_bytes16(Stmt: Psqlite3_stmt; iCol: Integer): integer;
     function column_double(Stmt: Psqlite3_stmt; iCol: Integer): Double;
@@ -648,7 +648,7 @@ type
 
     function column_blob(Stmt: Psqlite3_stmt; iCol: integer): Pointer;
     function column_blob_AsStream(Stmt: Psqlite3_stmt; iCol: integer): TStream;
-    function column_blob_AsBytes(Stmt: Psqlite3_stmt; iCol: integer): TByteDynArray;
+    function column_blob_AsBytes(Stmt: Psqlite3_stmt; iCol: integer): TBytes;
     function column_bytes(Stmt: Psqlite3_stmt; iCol: Integer): integer;
     function column_bytes16(Stmt: Psqlite3_stmt; iCol: Integer): integer;
     function column_double(Stmt: Psqlite3_stmt; iCol: Integer): Double;
@@ -1171,7 +1171,7 @@ begin
   result.WriteBuffer(P^,len);
 end;
 
-function TZSQLiteBaseDriver.column_blob_AsBytes(Stmt: Psqlite3_stmt; iCol:integer): TByteDynArray;
+function TZSQLiteBaseDriver.column_blob_AsBytes(Stmt: Psqlite3_stmt; iCol:integer): TBytes;
 var
   P : Pointer;
   len : integer;

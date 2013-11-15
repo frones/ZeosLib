@@ -104,7 +104,7 @@ type
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PChar);
     procedure UpdateString(const Index: Integer; Value: RawByteString);
-    procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
+    procedure UpdateBytes(const Index: Integer; Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; Value: TDateTime);
@@ -123,7 +123,7 @@ type
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
     function GetString(const Index: Integer): RawByteString;
-    function GetBytes(const Index: Integer): TByteDynArray;
+    function GetBytes(const Index: Integer): TBytes;
     function GetDate(const Index: Integer): TDateTime;
     function GetTime(const Index: Integer): TDateTime;
     function GetTimestamp(const Index: Integer): TDateTime;
@@ -185,7 +185,7 @@ type
     procedure UpdateBigDecimal(const Index: Integer; Value: Extended);
     procedure UpdatePChar(const Index: Integer; Value: PChar);
     procedure UpdateString(const Index: Integer; Value: RawByteString);
-    procedure UpdateBytes(const Index: Integer; Value: TByteDynArray);
+    procedure UpdateBytes(const Index: Integer; Value: TBytes);
     procedure UpdateDate(const Index: Integer; Value: TDateTime);
     procedure UpdateTime(const Index: Integer; Value: TDateTime);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
@@ -205,7 +205,7 @@ type
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
     function GetString(const Index: Integer): RawByteString;
-    function GetBytes(const Index: Integer): TByteDynArray;
+    function GetBytes(const Index: Integer): TBytes;
     function GetDate(const Index: Integer): TDateTime;
     function GetTime(const Index: Integer): TDateTime;
     function GetTimestamp(const Index: Integer): TDateTime;
@@ -976,7 +976,7 @@ end;
    @param Index the target parameter index
    @param Value the source value
 }
-procedure TZASASQLDA.UpdateBytes(const Index: Integer; Value: TByteDynArray);
+procedure TZASASQLDA.UpdateBytes(const Index: Integer; Value: TBytes);
 var
   BlobSize: Integer;
 begin
@@ -1304,7 +1304,7 @@ end;
    @param Index the field index
    @return the field Bytes value
 }
-function TZASASQLDA.GetBytes(const Index: Integer): TByteDynArray;
+function TZASASQLDA.GetBytes(const Index: Integer): TBytes;
 begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do

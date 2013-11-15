@@ -205,9 +205,9 @@ function BufferToStr(Buffer: PAnsiChar; Length: LongInt): string; overload;
   Converts a character buffer into pascal string.
   @param Buffer a character buffer pointer.
   @param Length a buffer length.
-  @return a TByteDynArray retrived from the buffer.
+  @return a TBytes retrived from the buffer.
 }
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
 
 {**
   Converts a string into boolean value.
@@ -318,14 +318,14 @@ procedure AppendSplitStringEx(List: TStrings; const Str, Delimiter: string);
   @param Value an array of bytes to be converted.
   @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): RawByteString;
+function BytesToStr(const Value: TBytes): RawByteString;
 
 {**
   Converts AnsiString into an array of bytes.
   @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: AnsiString): TByteDynArray; overload;
+function StrToBytes(const Value: AnsiString): TBytes; overload;
 
 {$IFDEF WITH_RAWBYTESTRING}
 {**
@@ -333,41 +333,41 @@ function StrToBytes(const Value: AnsiString): TByteDynArray; overload;
   @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: UTF8String): TByteDynArray; overload;
+function StrToBytes(const Value: UTF8String): TBytes; overload;
 {**
   Converts a UTF8String into an array of bytes.
   @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: RawByteString): TByteDynArray; overload;
+function StrToBytes(const Value: RawByteString): TBytes; overload;
 {**
   Converts a RawByteString into an array of bytes.
   @param Value a RawByteString to be converted.
   @return a converted array of bytes.
 }
 {$ENDIF}
-function StrToBytes(const Value: WideString): TByteDynArray; overload;
+function StrToBytes(const Value: WideString): TBytes; overload;
 {**
   Converts a String into an array of bytes.
   @param Value a String to be converted.
   @return a converted array of bytes.
 }
 {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-function StrToBytes(const Value: UnicodeString): TByteDynArray; overload;
+function StrToBytes(const Value: UnicodeString): TBytes; overload;
 {$ENDIF}
 {**
   Converts bytes into a variant representation.
   @param Value an array of bytes to be converted.
   @return a converted variant.
 }
-function BytesToVar(const Value: TByteDynArray): Variant;
+function BytesToVar(const Value: TBytes): Variant;
 
 {**
   Converts variant into an array of bytes.
   @param Value a varaint to be converted.
   @return a converted array of bytes.
 }
-function VarToBytes(const Value: Variant): TByteDynArray;
+function VarToBytes(const Value: Variant): TBytes;
 
 {**
   Converts Ansi SQL Date/Time to TDateTime
@@ -914,7 +914,7 @@ function SQLStrToFloatDef(Buffer: PAnsiChar; const Def: Extended;
   Len: Integer = 0): Extended;
 var
   I, ValidCount, InvalidPos, DotPos, CommaPos: Integer;
-  Value: TByteDynArray;
+  Value: TBytes;
 begin
   Result := Def;
   if Assigned(Buffer) then
@@ -1113,7 +1113,7 @@ begin
     SetString(Result, Buffer, Length);
 end;
 
-function BufferToBytes(Buffer: Pointer; Length: LongInt): TByteDynArray;
+function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
 begin
   SetLength(Result, Length);
   System.Move(Buffer^, Pointer(Result)^, Length);
@@ -1389,7 +1389,7 @@ end;
   @param Value an array of bytes to be converted.
   @return a converted AnsiString.
 }
-function BytesToStr(const Value: TByteDynArray): RawByteString;
+function BytesToStr(const Value: TBytes): RawByteString;
 {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
 var L: Integer;
 {$ENDIF}
@@ -1409,7 +1409,7 @@ end;
   @param Value a AnsiString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: AnsiString): TByteDynArray;
+function StrToBytes(const Value: AnsiString): TBytes;
 var L: Integer;
 begin
   L := Length(Value);
@@ -1424,7 +1424,7 @@ end;
   @param Value a UTF8String to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: UTF8String): TByteDynArray;
+function StrToBytes(const Value: UTF8String): TBytes;
 var L: Integer;
 begin
   L := Length(Value);
@@ -1438,7 +1438,7 @@ end;
   @param Value a RawByteString to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: RawByteString): TByteDynArray;
+function StrToBytes(const Value: RawByteString): TBytes;
 var L: Integer;
 begin
   L := Length(Value);
@@ -1452,7 +1452,7 @@ end;
   @param Value a String to be converted.
   @return a converted array of bytes.
 }
-function StrToBytes(const Value: WideString): TByteDynArray;
+function StrToBytes(const Value: WideString): TBytes;
 var
   L: Integer;
   RBS: RawByteString;
@@ -1474,7 +1474,7 @@ end;
   @return a converted array of bytes.
 }
 {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-function StrToBytes(const Value: UnicodeString): TByteDynArray;
+function StrToBytes(const Value: UnicodeString): TBytes;
 var
   L: Integer;
   RBS: RawByteString;
@@ -1496,7 +1496,7 @@ end;
   @param Value an array of bytes to be converted.
   @return a converted variant.
 }
-function BytesToVar(const Value: TByteDynArray): Variant;
+function BytesToVar(const Value: TBytes): Variant;
 var
   I: Integer;
 begin
@@ -1510,7 +1510,7 @@ end;
   @param Value a varaint to be converted.
   @return a converted array of bytes.
 }
-function VarToBytes(const Value: Variant): TByteDynArray;
+function VarToBytes(const Value: Variant): TBytes;
 var
   I: Integer;
 begin

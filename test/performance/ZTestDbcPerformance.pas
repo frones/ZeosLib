@@ -319,7 +319,7 @@ var
   Statement: IZPreparedStatement;
   Ansi: RawByteString;
   Uni: ZWideString;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   ConSettings: PZConSettings;
 begin
   if SkipForReason(srNoPerformance) then Exit;
@@ -584,7 +584,7 @@ end;
 
 procedure TZCachedDbcPerformanceTestCase.SetUpTestUpdate;
 var
-  Bts: TByteDynArray;
+  Bts: TBytes;
 begin
   inherited;
   FAsciiStream := TStringStream.Create(RawByteString(RandomStr(GetRecordCount*100)));

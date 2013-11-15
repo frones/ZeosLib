@@ -140,7 +140,7 @@ type
     function GetDescribeHandle: POCIDescribe;
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload; override;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
   end;
 
@@ -762,7 +762,7 @@ begin
   freemem(buf);
 end;
 
-function TZOracleConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+function TZOracleConnection.GetBinaryEscapeString(const Value: TBytes): String;
 var
   L: Integer;
   P: PChar;

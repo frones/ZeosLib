@@ -473,7 +473,7 @@ end;
 procedure TZTestDbcOracleCase.TestLargeBlob;
 var
   InStm: TMemoryStream;
-  OutBytes: TByteDynArray;
+  OutBytes: TBytes;
   OutStr: AnsiString;
   i, TestSize: Integer;
   Statement: IZStatement;

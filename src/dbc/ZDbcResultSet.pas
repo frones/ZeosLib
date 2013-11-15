@@ -153,7 +153,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; virtual;
     function GetDouble(ColumnIndex: Integer): Double; virtual;
     function GetBigDecimal(ColumnIndex: Integer): Extended; virtual;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; virtual;
+    function GetBytes(ColumnIndex: Integer): TBytes; virtual;
     function GetDate(ColumnIndex: Integer): TDateTime; virtual;
     function GetTime(ColumnIndex: Integer): TDateTime; virtual;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; virtual;
@@ -190,7 +190,7 @@ type
     function GetFloatByName(const ColumnName: string): Single; virtual;
     function GetDoubleByName(const ColumnName: string): Double; virtual;
     function GetBigDecimalByName(const ColumnName: string): Extended; virtual;
-    function GetBytesByName(const ColumnName: string): TByteDynArray; virtual;
+    function GetBytesByName(const ColumnName: string): TBytes; virtual;
     function GetDateByName(const ColumnName: string): TDateTime; virtual;
     function GetTimeByName(const ColumnName: string): TDateTime; virtual;
     function GetTimestampByName(const ColumnName: string): TDateTime; virtual;
@@ -274,7 +274,7 @@ type
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); virtual;
     procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); virtual;
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); virtual;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); virtual;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); virtual;
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); virtual;
@@ -307,7 +307,7 @@ type
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString); virtual;
     procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString); virtual;
-    procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray); virtual;
+    procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes); virtual;
     procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime); virtual;
     procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime); virtual;
     procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime); virtual;
@@ -360,8 +360,8 @@ type
 
     function GetString: RawByteString; virtual;
     procedure SetString(const Value: RawByteString); virtual;
-    function GetBytes: TByteDynArray; virtual;
-    procedure SetBytes(const Value: TByteDynArray); virtual;
+    function GetBytes: TBytes; virtual;
+    procedure SetBytes(const Value: TBytes); virtual;
     function GetStream: TStream; virtual;
     procedure SetStream(const Value: TStream); overload; virtual;
     function GetBuffer: Pointer; virtual;
@@ -408,7 +408,7 @@ type
     function IsEmpty: Boolean; override;
     function Length: Integer; override;
     function GetString: RawByteString; override;
-    function GetBytes: TByteDynArray; override;
+    function GetBytes: TBytes; override;
     function GetStream: TStream; override;
     function GetBuffer: Pointer; override;
   end;
@@ -1098,7 +1098,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZAbstractResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -1704,7 +1704,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetBytesByName(const ColumnName: string): TByteDynArray;
+function TZAbstractResultSet.GetBytesByName(const ColumnName: string): TBytes;
 begin
   Result := GetBytes(GetColumnIndex(ColumnName));
 end;
@@ -2683,7 +2683,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateBytes(ColumnIndex: Integer;
-  const Value: TByteDynArray);
+  const Value: TBytes);
 begin
   RaiseReadOnlyException;
 end;
@@ -3127,7 +3127,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdateBytesByName(const ColumnName: string;
-  const Value: TByteDynArray);
+  const Value: TBytes);
 begin
   UpdateBytes(GetColumnIndex(ColumnName), Value);
 end;
@@ -3708,7 +3708,7 @@ end;
   Gets the byte buffer from the stored data.
   @return a byte buffer which contains the stored data.
 }
-function TZAbstractBlob.GetBytes: TByteDynArray;
+function TZAbstractBlob.GetBytes: TBytes;
 begin
   if not IsEmpty then
   begin
@@ -3726,7 +3726,7 @@ end;
   Sets a new byte buffer to this blob content.
   @param Value a new byte buffer.
 }
-procedure TZAbstractBlob.SetBytes(const Value: TByteDynArray);
+procedure TZAbstractBlob.SetBytes(const Value: TBytes);
 begin
   Clear;
   if Value <> nil then
@@ -3839,7 +3839,7 @@ end;
   Gets the byte buffer from the stored data.
   @return a byte buffer which contains the stored data.
 }
-function TZAbstractUnCachedBlob.GetBytes: TByteDynArray;
+function TZAbstractUnCachedBlob.GetBytes: TBytes;
 begin
   if not FLoaded then ReadLob;
   Result := inherited GetBytes;

@@ -370,7 +370,7 @@ function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
   ClientVarManager: IZClientVariantManager; ConSettings: PZConSettings;
   const NChar: Boolean = False): RawByteString;
 var
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempBlob: IZBlob;
 begin
   TempBytes := nil;

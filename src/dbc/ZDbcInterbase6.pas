@@ -130,7 +130,7 @@ type
     procedure Close; override;
 
     function GetBinaryEscapeString(const Value: RawByteString): String; override;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; override;
+    function GetBinaryEscapeString(const Value: TBytes): String; override;
     function GetEscapeString(const Value: RawByteString): RawByteString; override;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
   end;
@@ -762,7 +762,7 @@ begin
     raise Exception.Create('Your Firebird-Version does''t support Binary-Data in SQL-Statements! Use parameters!');
 end;
 
-function TZInterbase6Connection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+function TZInterbase6Connection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   //http://tracker.firebirdsql.org/browse/CORE-2789
   if EndsWith(GetPlainDriver.GetProtocol, '2.5') then

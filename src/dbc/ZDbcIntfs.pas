@@ -282,7 +282,7 @@ type
     procedure SetUseMetadata(Value: Boolean);
     //EgonHugeist
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
     function GetClientCodePageInformations: PZCodePage;
@@ -589,7 +589,7 @@ type
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
-    procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
@@ -644,7 +644,7 @@ type
     function GetFloat(ParameterIndex: Integer): Single;
     function GetDouble(ParameterIndex: Integer): Double;
     function GetBigDecimal(ParameterIndex: Integer): Extended;
-    function GetBytes(ParameterIndex: Integer): TByteDynArray;
+    function GetBytes(ParameterIndex: Integer): TBytes;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
     function GetTimestamp(ParameterIndex: Integer): TDateTime;
@@ -690,7 +690,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetBigDecimal(ColumnIndex: Integer): Extended;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray;
+    function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
     function GetTimestamp(ColumnIndex: Integer): TDateTime;
@@ -727,7 +727,7 @@ type
     function GetFloatByName(const ColumnName: string): Single;
     function GetDoubleByName(const ColumnName: string): Double;
     function GetBigDecimalByName(const ColumnName: string): Extended;
-    function GetBytesByName(const ColumnName: string): TByteDynArray;
+    function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;
     function GetTimestampByName(const ColumnName: string): TDateTime;
@@ -811,7 +811,7 @@ type
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString); deprecated;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
     procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
@@ -844,7 +844,7 @@ type
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString); deprecated;
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
-    procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
+    procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes);
     procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime);
     procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime);
     procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime);
@@ -922,8 +922,8 @@ type
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
-    function GetBytes: TByteDynArray;
-    procedure SetBytes(const Value: TByteDynArray);
+    function GetBytes: TBytes;
+    procedure SetBytes(const Value: TBytes);
     function GetStream: TStream;
     procedure SetStream(const Value: TStream); overload;
     function GetBuffer: Pointer;

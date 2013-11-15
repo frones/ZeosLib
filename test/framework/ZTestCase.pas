@@ -61,7 +61,8 @@ uses
 {$IFNDEF VER130BELOW}
   Types,
 {$ENDIF}
-  Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, ZCompatibility;
+  Classes, {$IFDEF FPC}fpcunit{$ELSE}TestFramework{$ENDIF}, SysUtils,
+    ZCompatibility;
 
 type
   {$IFDEF FPC}
@@ -122,7 +123,7 @@ type
     procedure PrintLn(_Message: string = ''); virtual;
 
     { Additional checking methods. }
-    procedure CheckEquals(Array1, Array2: TByteDynArray;
+    procedure CheckEquals(Array1, Array2: TBytes;
       _Message: string = ''); overload;
     procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
       _Message: string = ''); overload;
@@ -177,7 +178,7 @@ uses
 {$ELSE}
   Windows,
 {$ENDIF}
-  SysUtils, ZSysUtils, ZTestConfig, Math, ZEncoding;
+  ZSysUtils, ZTestConfig, Math, ZEncoding;
 
 {$IFDEF FPC}
 function CallerAddr: Pointer;
@@ -391,7 +392,7 @@ end;
   @param the first array for compare
   @param the secon array for compare
 }
-procedure TZAbstractTestCase.CheckEquals(Array1, Array2: TByteDynArray;
+procedure TZAbstractTestCase.CheckEquals(Array1, Array2: TBytes;
   _Message: string = '');
 var
   Size1, Size2: Integer;

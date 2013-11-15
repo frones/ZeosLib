@@ -54,9 +54,10 @@ unit ZTestDbcCachedResultSet;
 interface
 {$I ZDbc.inc}
 uses
-  Types, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
+  Types, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Contnrs,
+  ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
-  Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
+  ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
 
 type
 
@@ -79,7 +80,7 @@ type
     FAsciiStream: TStream;
     FUnicodeStream: TStream;
     FBinaryStream: TStream;
-    FByteArray: TByteDynArray;
+    FByteArray: TBytes;
     FAsciiStreamData: AnsiString;
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
@@ -92,7 +93,7 @@ type
       Nullable: TZColumnNullableType; ReadOnly: Boolean;
       Writable: Boolean): TZColumnInfo;
     function GetColumnsInfoCollection: TObjectList;
-    function CompareArrays(Array1, Array2: TByteDynArray): Boolean;
+    function CompareArrays(Array1, Array2: TBytes): Boolean;
     procedure FillResultSet(ResultSet: IZResultSet; RecCount: integer);
     function CompareStreams(Stream1, Stream2: TStream): boolean; overload;
 
@@ -123,8 +124,6 @@ type
 
 implementation
 
-uses SysUtils;
-
 { TZTestCachedResultSetCase }
 
 {**
@@ -134,7 +133,7 @@ uses SysUtils;
   @return <code>True</code> if arrays are equal.
 }
 function TZTestCachedResultSetCase.CompareArrays(Array1,
-  Array2: TByteDynArray): Boolean;
+  Array2: TBytes): Boolean;
 var
   I: Integer;
 begin
@@ -499,7 +498,7 @@ var
   Blob: IZBlob;
   Stream: TStream;
   Collection: TObjectList;
-  ByteArray: TByteDynArray;
+  ByteArray: TBytes;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
   Collection := GetColumnsInfoCollection;

@@ -601,7 +601,7 @@ procedure TZTestMySQLStoredProcedure.Test_TEST_All_TYPES;
 const Str1 = 'צהüךבאüהצ';
 var
   SQLTime: TDateTime;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
 begin
   StoredProc.StoredProcName := 'TEST_All_TYPES';
   CheckEquals(28, StoredProc.Params.Count);
@@ -847,7 +847,7 @@ begin
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
   TempBytes :=StrToBytes(RawByteString('121415'));
   SetLength(TempBytes, StoredProc.Fields[24].Size);
-  CheckEquals(TempBytes, {$IFDEF WITH_ASBYTES}TByteDynArray(StoredProc.Fields[24].AsBytes){$ELSE}StrToBytes(StoredProc.Fields[24].AsString){$ENDIF});
+  CheckEquals(TempBytes, {$IFDEF WITH_ASBYTES}TBytes(StoredProc.Fields[24].AsBytes){$ELSE}StrToBytes(StoredProc.Fields[24].AsString){$ENDIF});
   CheckEquals(ord(ftBytes), ord(StoredProc.Fields[24].DataType));
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);

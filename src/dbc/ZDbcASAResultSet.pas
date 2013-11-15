@@ -57,7 +57,7 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZPlainASADriver, ZCompatibility,
   ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZVariant;
 
@@ -101,7 +101,7 @@ type
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -130,7 +130,7 @@ type
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); override;
     procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); override;
     procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); override;
     procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); override;
@@ -169,7 +169,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
- SysUtils, Math, ZFastCode, ZDbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
+ Math, ZFastCode, ZDbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
 
 { TZASAResultSet }
 
@@ -253,7 +253,7 @@ end;
 }
 function TZASAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempRaw: RawByteString;
 begin
   Result := nil;
@@ -354,7 +354,7 @@ end;
     value returned is <code>null</code>
 }
 function TZASAResultSet.GetBytes(
-  ColumnIndex: Integer): TByteDynArray;
+  ColumnIndex: Integer): TBytes;
 begin
   CheckClosed;
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -857,7 +857,7 @@ begin
   FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
-procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
+procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateBytes( ColumnIndex, Value);
