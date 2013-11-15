@@ -4,15 +4,15 @@
 /* Created on:     04.02.2003 19:59:06                          */
 /*==============================================================*/
 
-drop table Mantis229;
-drop table ntax_bejovo_konyvelesi_tipusok;
-drop table test739514;
-drop table test739519;
-drop table test766053a;
-drop table test766053b;
-drop table test816846;
+drop table if exists Mantis229;
+drop table if exists ntax_bejovo_konyvelesi_tipusok;
+drop table if exists test739514;
+drop table if exists test739519;
+drop table if exists test766053a;
+drop table if exists test766053b;
+drop table if exists test816846;
 
-drop table "insert";
+drop table if exists "insert";
 
-drop table test894367b;
-drop table test894367a;
+drop table if exists test894367b;
+drop table if exists test894367a;

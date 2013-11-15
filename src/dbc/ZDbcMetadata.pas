@@ -2048,6 +2048,8 @@ begin
           DestResultSet.UpdateByte(I, SrcResultSet.GetByte(I));
         stShort:
           DestResultSet.UpdateShort(I, SrcResultSet.GetShort(I));
+        stSmall:
+          DestResultSet.UpdateSmall(I, SrcResultSet.GetSmall(I));
         stInteger:
           DestResultSet.UpdateInt(I, SrcResultSet.GetInt(I));
         stLong:
@@ -4877,7 +4879,7 @@ const
   CharacterSetsColumns: array[1..CharacterSetsColumnsCount]
     of TZMetadataColumnDef =(
     (Name: 'CHARACTER_SET_NAME'; SQLType: stString; Length: 35),
-    (Name: 'CHARACTER_SET_ID'; SQLType: stShort; Length: 0)
+    (Name: 'CHARACTER_SET_ID'; SQLType: stSmall; Length: 0)
   );
 
   CollationCharSetColumnsCount = 8; //EgonHugeist
@@ -4889,8 +4891,8 @@ const
     (Name: 'COLLATION_COLUMN'; SQLType: stString; Length: 35),
     (Name: 'COLLATION_NAME'; SQLType: stString; Length: 35),
     (Name: 'CHARACTER_SET_NAME'; SQLType: stString; Length: 35),
-    (Name: 'CHARACTER_SET_ID'; SQLType: stShort; Length: 0),
-    (Name: 'CHARACTER_SET_SIZE'; SQLType: stShort; Length: 0)
+    (Name: 'CHARACTER_SET_ID'; SQLType: stSmall; Length: 0),
+    (Name: 'CHARACTER_SET_SIZE'; SQLType: stSmall; Length: 0)
   );
 
   TriggersColumnCount = 8;  //EgonHugeist
@@ -4900,8 +4902,8 @@ const
     (Name: 'TRIGGER_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'TRIGGER_NAME'; SQLType: stString; Length: 255), //RDB$TRIGGER_NAME
     (Name: 'TRIGGER_RELATION'; SQLType: stString; Length: 255), //RDB$RELATION_NAME
-    (Name: 'TRIGGER_TYPE'; SQLType: stShort; Length: 0),     //RDB$TRIGGER_TYPE
-    (Name: 'TRIGGER_INACTIVE'; SQLType: stShort; Length: 0),     //RDB$TRIGGER_INACTIVE
+    (Name: 'TRIGGER_TYPE'; SQLType: stSmall; Length: 0),     //RDB$TRIGGER_TYPE
+    (Name: 'TRIGGER_INACTIVE'; SQLType: stSmall; Length: 0),     //RDB$TRIGGER_INACTIVE
     (Name: 'TRIGGER_SOURCE'; SQLType: stString; Length: 3000),     //RDB$TRIGGER_SOURCE
     (Name: 'TRIGGER_DESCRIPTION'; SQLType: stString; Length: 255)     //RDB$DESCRIPTION
   );
@@ -4916,7 +4918,7 @@ const
     (Name: 'RESERVED1'; SQLType: stString; Length: 255),
     (Name: 'RESERVED2'; SQLType: stString; Length: 255),
     (Name: 'REMARKS'; SQLType: stString; Length: 255),
-    (Name: 'PROCEDURE_TYPE'; SQLType: stShort; Length: 0)
+    (Name: 'PROCEDURE_TYPE'; SQLType: stSmall; Length: 0)
   );
 
   ProceduresColColumnCount = 13;
@@ -4926,14 +4928,14 @@ const
     (Name: 'PROCEDURE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_NAME'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'COLUMN_TYPE'; SQLType: stShort; Length: 0),
-    (Name: 'DATA_TYPE'; SQLType: stShort; Length: 0),
+    (Name: 'COLUMN_TYPE'; SQLType: stSmall; Length: 0),
+    (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
     (Name: 'PRECISION'; SQLType: stInteger; Length: 0),
     (Name: 'LENGTH'; SQLType: stInteger; Length: 0),
-    (Name: 'SCALE'; SQLType: stShort; Length: 0),
-    (Name: 'RADIX'; SQLType: stShort; Length: 0),
-    (Name: 'NULLABLE'; SQLType: stShort; Length: 0),
+    (Name: 'SCALE'; SQLType: stSmall; Length: 0),
+    (Name: 'RADIX'; SQLType: stSmall; Length: 0),
+    (Name: 'NULLABLE'; SQLType: stSmall; Length: 0),
     (Name: 'REMARKS'; SQLType: stString; Length: 255)
   );
 
@@ -4972,7 +4974,7 @@ const
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'TABLE_NAME'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DATA_TYPE'; SQLType: stShort; Length: 0),
+    (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_SIZE'; SQLType: stInteger; Length: 0),
     (Name: 'BUFFER_LENGTH'; SQLType: stInteger; Length: 0),
@@ -5022,27 +5024,27 @@ const
   BestRowIdentColumnCount = 8;
   BestRowIdentColumns: array[1..BestRowIdentColumnCount]
     of TZMetadataColumnDef =(
-    (Name: 'SCOPE'; SQLType: stShort; Length: 0),
+    (Name: 'SCOPE'; SQLType: stSmall; Length: 0),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DATA_TYPE'; SQLType: stShort; Length: 0),
+    (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_SIZE'; SQLType: stInteger; Length: 0),
     (Name: 'BUFFER_LENGTH'; SQLType: stInteger; Length: 0),
-    (Name: 'DECIMAL_DIGITS'; SQLType: stShort; Length: 0),
-    (Name: 'PSEUDO_COLUMN'; SQLType: stShort; Length: 0)
+    (Name: 'DECIMAL_DIGITS'; SQLType: stSmall; Length: 0),
+    (Name: 'PSEUDO_COLUMN'; SQLType: stSmall; Length: 0)
   );
 
   TableColVerColumnCount = 8;
   TableColVerColumns: array[1..TableColVerColumnCount]
     of TZMetadataColumnDef =(
-    (Name: 'SCOPE'; SQLType: stShort; Length: 0),
+    (Name: 'SCOPE'; SQLType: stSmall; Length: 0),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DATA_TYPE'; SQLType: stShort; Length: 0),
+    (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_SIZE'; SQLType: stInteger; Length: 0),
     (Name: 'BUFFER_LENGTH'; SQLType: stInteger; Length: 0),
-    (Name: 'DECIMAL_DIGITS'; SQLType: stShort; Length: 0),
-    (Name: 'PSEUDO_COLUMN'; SQLType: stShort; Length: 0)
+    (Name: 'DECIMAL_DIGITS'; SQLType: stSmall; Length: 0),
+    (Name: 'PSEUDO_COLUMN'; SQLType: stSmall; Length: 0)
   );
 
   PrimaryKeyColumnCount = 6;
@@ -5052,7 +5054,7 @@ const
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'TABLE_NAME'; SQLType: stString; Length: 255),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'KEY_SEQ'; SQLType: stShort; Length: 0),
+    (Name: 'KEY_SEQ'; SQLType: stSmall; Length: 0),
     (Name: 'PK_NAME'; SQLType: stString; Length: 255)
   );
 
@@ -5067,12 +5069,12 @@ const
     (Name: 'FKTABLE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'FKTABLE_NAME'; SQLType: stString; Length: 255),
     (Name: 'FKCOLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'KEY_SEQ'; SQLType: stShort; Length: 0),
-    (Name: 'UPDATE_RULE'; SQLType: stShort; Length: 0),
-    (Name: 'DELETE_RULE'; SQLType: stShort; Length: 0),
+    (Name: 'KEY_SEQ'; SQLType: stSmall; Length: 0),
+    (Name: 'UPDATE_RULE'; SQLType: stSmall; Length: 0),
+    (Name: 'DELETE_RULE'; SQLType: stSmall; Length: 0),
     (Name: 'FK_NAME'; SQLType: stString; Length: 255),
     (Name: 'PK_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DEFERRABILITY'; SQLType: stShort; Length: 0)
+    (Name: 'DEFERRABILITY'; SQLType: stSmall; Length: 0)
   );
 
   ExportedKeyColumnCount = 14;
@@ -5086,12 +5088,12 @@ const
     (Name: 'FKTABLE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'FKTABLE_NAME'; SQLType: stString; Length: 255),
     (Name: 'FKCOLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'KEY_SEQ'; SQLType: stShort; Length: 0),
-    (Name: 'UPDATE_RULE'; SQLType: stShort; Length: 0),
-    (Name: 'DELETE_RULE'; SQLType: stShort; Length: 0),
+    (Name: 'KEY_SEQ'; SQLType: stSmall; Length: 0),
+    (Name: 'UPDATE_RULE'; SQLType: stSmall; Length: 0),
+    (Name: 'DELETE_RULE'; SQLType: stSmall; Length: 0),
     (Name: 'FK_NAME'; SQLType: stString; Length: 255),
     (Name: 'PK_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DEFERRABILITY'; SQLType: stShort; Length: 0)
+    (Name: 'DEFERRABILITY'; SQLType: stSmall; Length: 0)
   );
 
   CrossRefColumnCount = 14;
@@ -5105,32 +5107,32 @@ const
     (Name: 'FKTABLE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'FKTABLE_NAME'; SQLType: stString; Length: 255),
     (Name: 'FKCOLUMN_NAME'; SQLType: stString; Length: 255),
-    (Name: 'KEY_SEQ'; SQLType: stShort; Length: 0),
-    (Name: 'UPDATE_RULE'; SQLType: stShort; Length: 0),
-    (Name: 'DELETE_RULE'; SQLType: stShort; Length: 0),
+    (Name: 'KEY_SEQ'; SQLType: stSmall; Length: 0),
+    (Name: 'UPDATE_RULE'; SQLType: stSmall; Length: 0),
+    (Name: 'DELETE_RULE'; SQLType: stSmall; Length: 0),
     (Name: 'FK_NAME'; SQLType: stString; Length: 255),
     (Name: 'PK_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DEFERRABILITY'; SQLType: stShort; Length: 0)
+    (Name: 'DEFERRABILITY'; SQLType: stSmall; Length: 0)
   );
 
   TypeInfoColumnCount = 18;
   TypeInfoColumns: array[1..TypeInfoColumnCount]
     of TZMetadataColumnDef =(
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DATA_TYPE'; SQLType: stShort; Length: 0),
+    (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
     (Name: 'PRECISION'; SQLType: stInteger; Length: 0),
     (Name: 'LITERAL_PREFIX'; SQLType: stString; Length: 255),
     (Name: 'LITERAL_SUFFIX'; SQLType: stString; Length: 255),
     (Name: 'CREATE_PARAMS'; SQLType: stString; Length: 255),
-    (Name: 'NULLABLE'; SQLType: stShort; Length: 0),
+    (Name: 'NULLABLE'; SQLType: stSmall; Length: 0),
     (Name: 'CASE_SENSITIVE'; SQLType: stBoolean; Length: 0),
-    (Name: 'SEARCHABLE'; SQLType: stShort; Length: 0),
+    (Name: 'SEARCHABLE'; SQLType: stSmall; Length: 0),
     (Name: 'UNSIGNED_ATTRIBUTE'; SQLType: stBoolean; Length: 0),
     (Name: 'FIXED_PREC_SCALE'; SQLType: stBoolean; Length: 0),
     (Name: 'AUTO_INCREMENT'; SQLType: stBoolean; Length: 0),
     (Name: 'LOCAL_TYPE_NAME'; SQLType: stString; Length: 255),
-    (Name: 'MINIMUM_SCALE'; SQLType: stShort; Length: 0),
-    (Name: 'MAXIMUM_SCALE'; SQLType: stShort; Length: 0),
+    (Name: 'MINIMUM_SCALE'; SQLType: stSmall; Length: 0),
+    (Name: 'MAXIMUM_SCALE'; SQLType: stSmall; Length: 0),
     (Name: 'SQL_DATA_TYPE'; SQLType: stInteger; Length: 0),
     (Name: 'SQL_DATETIME_SUB'; SQLType: stInteger; Length: 0),
     (Name: 'NUM_PREC_RADIX'; SQLType: stInteger; Length: 0)
@@ -5145,8 +5147,8 @@ const
     (Name: 'NON_UNIQUE'; SQLType: stBoolean; Length: 0),
     (Name: 'INDEX_QUALIFIER'; SQLType: stString; Length: 255),
     (Name: 'INDEX_NAME'; SQLType: stString; Length: 255),
-    (Name: 'TYPE'; SQLType: stShort; Length: 0),
-    (Name: 'ORDINAL_POSITION'; SQLType: stShort; Length: 0),
+    (Name: 'TYPE'; SQLType: stSmall; Length: 0),
+    (Name: 'ORDINAL_POSITION'; SQLType: stSmall; Length: 0),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
     (Name: 'ASC_OR_DESC'; SQLType: stString; Length: 255),
     (Name: 'CARDINALITY'; SQLType: stInteger; Length: 0),
@@ -5169,7 +5171,7 @@ const
     (Name: 'TYPE_SCHEM'; SQLType: stString; Length: 255),
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
     (Name: 'CLASS_NAME'; SQLType: stString; Length: 255),
-    (Name: 'DATA_TYPE'; SQLType: stShort; Length: 0),
+    (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
     (Name: 'REMARKS'; SQLType: stString; Length: 255)
   );
 

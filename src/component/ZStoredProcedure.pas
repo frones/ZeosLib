@@ -234,7 +234,7 @@ begin
         ftBoolean:
           Param.AsBoolean := FCallableStatement.GetBoolean(I + 1);
         ftSmallInt:
-          Param.AsSmallInt := FCallableStatement.GetShort(I + 1);
+          Param.AsSmallInt := FCallableStatement.GetSmall(I + 1);
         ftInteger, ftAutoInc:
           Param.AsInteger := FCallableStatement.GetInt(I + 1);
         ftFloat:

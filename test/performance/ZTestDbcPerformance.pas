@@ -222,7 +222,8 @@ begin
       case ConnectionConfig.PerformanceResultSetTypes[N-1] of
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
         stByte,
-        stShort: Statement.SetByte(N, Ord(Random(255)));
+        stShort,
+        stSmall: Statement.SetByte(N, Ord(Random(255)));
         stInteger,
         stLong:    Statement.SetInt(N, I);
         stFloat,
@@ -275,6 +276,7 @@ begin
         stBoolean: FResultSet.GetBoolean(I);
         stByte:    FResultSet.GetByte(I);
         stShort,
+        stSmall,
         stInteger,
         stLong:    FResultSet.GetInt(I);
         stFloat,
@@ -331,6 +333,7 @@ begin
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
         stByte:    Statement.SetByte(N, Ord(Random(255)));
         stShort,
+        stSmall,
         stInteger,
         stLong:    Statement.SetInt(N, I);
         stFloat,
@@ -470,6 +473,7 @@ begin
         stByte:
           SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(255));
         stShort,
+        stSmall,
         stInteger,
         stLong:
           SQL := SQL + FDirectFieldNames[N]+'='+IntToStr(Random(I));
@@ -556,6 +560,7 @@ begin
         stBoolean: FResultSet.UpdateBoolean(N, Random(1) = 1);
         stByte:    FResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,
+        stSmall,
         stInteger,
         stLong:    FResultSet.UpdateInt(N, I);
         stFloat,
@@ -608,6 +613,7 @@ begin
         stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
         stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,
+        stSmall,
         stInteger,
         stLong:    ResultSet.UpdateInt(N, ResultSet.GetRow);
         stFloat,

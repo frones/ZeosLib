@@ -414,7 +414,7 @@ begin
   Variable.DataSize := DataSize;
   Length := 0;
   case Variable.ColType of
-    stByte, stShort, stInteger:
+    stByte, stShort, stSmall, stInteger:
       begin
         Variable.TypeCode := SQLT_INT;
         Length := SizeOf(LongInt);
@@ -678,7 +678,7 @@ begin
       if Precision <= 2 then
         Result := stByte
       else if Precision <= 4 then
-        Result := stShort
+        Result := stSmall
       else if Precision <= 9 then
         Result := stInteger
       else if Precision <= 19 then

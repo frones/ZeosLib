@@ -1203,8 +1203,8 @@ begin
       Result.UpdateNull(2);
       Result.UpdateString(3, GetString(1)); //RDB$TRIGGER_NAME
       Result.UpdateString(4, GetString(2)); //RDB$RELATION_NAME
-      Result.UpdateShort(5, GetShort(3)); //RDB$TRIGGER_TYPE
-      Result.UpdateShort(6, GetShort(4)); //RDB$TRIGGER_INACTIVE
+      Result.UpdateSmall(5, GetSmall(3)); //RDB$TRIGGER_TYPE
+      Result.UpdateSmall(6, GetSmall(4)); //RDB$TRIGGER_INACTIVE
       Result.UpdateString(7, GetString(5)); //RDB$TRIGGER_SOURCE
       Result.UpdateString(8, GetString(6)); //RDB$DESCRIPTION
       Result.InsertRow;
@@ -2536,15 +2536,15 @@ begin
       Result.UpdateNull(6); //FKTABLE_SCHEM
       Result.UpdateString(7, GetString(3)); //FKTABLE_NAME
       Result.UpdateString(8, GetString(4)); //FKCOLUMN_NAME
-      Result.UpdateShort(9, KeySeq); //KEY_SEQ
-      Result.UpdateShort(10, Ord(GetRuleType(GetString(5)))); //UPDATE_RULE
-      Result.UpdateShort(11, Ord(GetRuleType(GetString(6)))); //DELETE_RULE
+      Result.UpdateSmall(9, KeySeq); //KEY_SEQ
+      Result.UpdateSmall(10, Ord(GetRuleType(GetString(5)))); //UPDATE_RULE
+      Result.UpdateSmall(11, Ord(GetRuleType(GetString(6)))); //DELETE_RULE
       Result.UpdateString(12, GetString(7)); //FK_NAME
       Result.UpdateString(13, GetString(8)); //PK_NAME
       if GetString(9) = 'NO' then
-        Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+        Result.UpdateSmall(14, Ord(ikNotDeferrable)) //DEFERRABILITY
       else
-        Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+        Result.UpdateSmall(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
       Result.InsertRow;
     end;
     Close;
@@ -2848,8 +2848,8 @@ begin
               Result.UpdateString(4, ColumnNamePattern);//COLLATION_COLUMN
               Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
               Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-              Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
-              Result.UpdateShort(8, GetShort(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+              Result.UpdateSmall(7, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+              Result.UpdateSmall(8, GetSmall(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
               Result.InsertRow;
               Close;
               Exit;
@@ -2877,8 +2877,8 @@ begin
       Result.UpdateNull(4);//COLLATION_COLUMN
       Result.UpdateString(5, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
       Result.UpdateString(6, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-      Result.UpdateShort(7, GetShort(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
-      Result.UpdateShort(8, GetShort(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
+      Result.UpdateSmall(7, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
+      Result.UpdateSmall(8, GetSmall(FindColumn('RDB$BYTES_PER_CHARACTER'))); //CHARACTER_SET_SIZE
       Result.InsertRow;
     end;
     Close;

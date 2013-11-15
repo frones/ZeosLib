@@ -178,7 +178,8 @@ type
     function GetUnicodeString(ColumnIndex: Integer): ZWidestring; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetShort(ColumnIndex: Integer): ShortInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
@@ -206,15 +207,16 @@ type
     function RowDeleted: Boolean; override;
 
     procedure UpdateNull(ColumnIndex: Integer); override;
-    procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean); override;
-    procedure UpdateByte(ColumnIndex: Integer; Value: ShortInt); override;
-    procedure UpdateShort(ColumnIndex: Integer; Value: SmallInt); override;
-    procedure UpdateInt(ColumnIndex: Integer; Value: Integer); override;
-    procedure UpdateLong(ColumnIndex: Integer; Value: Int64); override;
-    procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
-    procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
-    procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean); override;
+    procedure UpdateByte(ColumnIndex: Integer; const Value: Byte); override;
+    procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt); override;
+    procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt); override;
+    procedure UpdateInt(ColumnIndex: Integer; const Value: Integer); override;
+    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64); override;
+    procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); override;
+    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); override;
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
+    procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); override;
     procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
     procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); override;
@@ -225,12 +227,12 @@ type
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
-    procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
-    procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
-    procedure UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime); override;
-    procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); override;
-    procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); override;
-    procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); override;
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); override;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); override;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); override;
+    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream); override;
+    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream); override;
+    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream); override;
     procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob); override;
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string); override;
 
@@ -955,12 +957,29 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAbstractCachedResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZAbstractCachedResultSet.GetShort(ColumnIndex: Integer): ShortInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetShort(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>short</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractCachedResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetSmall(ColumnIndex, LastWasNull);
 end;
 
 {**
@@ -1186,7 +1205,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateBoolean(ColumnIndex: Integer;
-  Value: Boolean);
+  const Value: Boolean);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1206,7 +1225,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateByte(ColumnIndex: Integer;
-  Value: ShortInt);
+  const Value: Byte);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1216,7 +1235,7 @@ begin
 end;
 
 {**
-  Updates the designated column with a <code>short</code> value.
+  Updates the designated column with a <code>smallint</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
   update the underlying database; instead the <code>updateRow</code> or
@@ -1226,13 +1245,33 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateShort(ColumnIndex: Integer;
-  Value: SmallInt);
+  const Value: ShortInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetShort(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>smallint</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateSmall(ColumnIndex: Integer;
+  const Value: SmallInt);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetSmall(ColumnIndex, Value);
 end;
 
 {**
@@ -1245,7 +1284,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractCachedResultSet.UpdateInt(ColumnIndex, Value: Integer);
+procedure TZAbstractCachedResultSet.UpdateInt(ColumnIndex: Integer;
+  const Value: Integer);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1265,7 +1305,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateLong(ColumnIndex: Integer;
-  Value: Int64);
+  const Value: Int64);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1285,7 +1325,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateFloat(ColumnIndex: Integer;
-  Value: Single);
+  const Value: Single);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1305,7 +1345,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateDouble(ColumnIndex: Integer;
-  Value: Double);
+  const Value: Double);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1326,7 +1366,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateBigDecimal(ColumnIndex: Integer;
-  Value: Extended);
+  const Value: Extended);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1346,7 +1386,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePChar(ColumnIndex: Integer;
-  Value: PChar);
+  const Value: PChar);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1574,7 +1614,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateDate(ColumnIndex: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1594,7 +1634,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateTime(ColumnIndex: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1615,7 +1655,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateTimestamp(ColumnIndex: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1635,7 +1675,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateAsciiStream(ColumnIndex: Integer;
-  Value: TStream);
+  const Value: TStream);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1656,7 +1696,7 @@ end;
   @param length the length of the stream
 }
 procedure TZAbstractCachedResultSet.UpdateBinaryStream(
-  ColumnIndex: Integer; Value: TStream);
+  ColumnIndex: Integer; const Value: TStream);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1665,7 +1705,8 @@ begin
   FRowAccessor.SetBinaryStream(ColumnIndex, Value);
 end;
 
-procedure TZAbstractCachedResultSet.UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
+procedure TZAbstractCachedResultSet.UpdateLob(ColumnIndex: Integer;
+  const Value: IZBlob);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1685,7 +1726,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdateUnicodeStream(
-  ColumnIndex: Integer; Value: TStream);
+  ColumnIndex: Integer; const Value: TStream);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -2099,6 +2140,7 @@ begin
         stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
         stByte: RowAccessor.SetByte(I, ResultSet.GetByte(I));
         stShort: RowAccessor.SetShort(I, ResultSet.GetShort(I));
+        stSmall: RowAccessor.SetSmall(I, ResultSet.GetSmall(I));
         stInteger: RowAccessor.SetInt(I, ResultSet.GetInt(I));
         stLong: RowAccessor.SetLong(I, ResultSet.GetLong(I));
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));

@@ -567,13 +567,10 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
-procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
-procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
 {$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
 {$ENDIF}
 
@@ -602,6 +599,8 @@ function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal
 
 function FloatToRaw(const Value: Extended): RawByteString;
 function FloatToSqlRaw(const Value: Extended): RawByteString;
+function FloatToUnicode(const Value: Extended): ZWideString;
+function FloatToSqlUnicode(const Value: Extended): ZWideString;
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal); overload;
@@ -1184,6 +1183,7 @@ end;
     or <code>False</code> otherwise.
 }
 function IsIpAddr(const Str: string): Boolean;
+LAbel LExit;
 var
   I, N: Integer;
   Splited: TStrings;
@@ -1191,15 +1191,16 @@ begin
   Result := False;
   Splited := SplitString(Str, '.');
   if Splited.Count <> 4 then
-    Exit
+    goto LExit
   else
     for i := 0 to 3 do
     begin
       N := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Splited[i], -1);
       if (N < 0) or (N > 255) then
-        Exit;
+        goto LExit;
     end;
   Result := True;
+  LExit: Splited.Free;
 end;
 {$ENDIF}
 
@@ -2048,7 +2049,7 @@ var
                 MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
                 if Failed then
                 begin
-                  Failed := not ((Value+i)^ in ['+', '-']); //postgres 2013-10-23 12:31:52.48+02 f.e.
+                  Failed := not ((Value+i)^ = '+'); //postgres 2013-10-23 12:31:52.48+02 f.e.
                   if Failed then
                     Exit
                   else
@@ -2058,6 +2059,8 @@ var
                   end;
                 end;
               end;
+            '.':
+              if ((Value+i)^ = '+') then Break; //postgres 1997-02-25 00:00:00+01 f.e.
           end;
           Inc(TimeStampFormat);
           if (i+1) = ValLen then Break;
@@ -3040,29 +3043,9 @@ begin
            {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(SubVersion);
 end;
 
-procedure ZSetString(const Src: PAnsiChar; var Dest: AnsiString);
-begin
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
-end;
-
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
   SetString(Dest, Src, Len);
-end;
-
-procedure ZSetString(const Src: PAnsiChar; var Dest: UTF8String);
-{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-var Len: Integer;
-{$ENDIF}
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  Len := ZFastCode.StrLen(Src);
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
-  {$ENDIF}
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
@@ -3089,21 +3072,6 @@ begin
 end;
 
 {$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; var Dest: RawByteString);
-{$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-var Len: Integer;
-{$ENDIF}
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  Len := ZFastCode.StrLen(Src);
-  SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, ZFastCode.StrLen(Src));
-  {$ENDIF}
-end;
-
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
@@ -3410,6 +3378,16 @@ begin
   Result := FloatToRaw(Value);
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator := OldDecimalSeparator;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}ThousandSeparator := OldThousandSeparator;
+end;
+
+function FloatToUnicode(const Value: Extended): ZWideString;
+begin
+  Result := NotEmptyASCII7ToUnicodeString(FloatToRaw(Value));
+end;
+
+function FloatToSqlUnicode(const Value: Extended): ZWideString;
+begin
+  Result := NotEmptyASCII7ToUnicodeString(FloatToSqlRaw(Value));
 end;
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal);

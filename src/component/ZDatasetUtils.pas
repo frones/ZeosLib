@@ -304,7 +304,7 @@ begin
   case Value of
     stBoolean:
       Result := ftBoolean;
-    stByte, stShort:
+    stByte, stShort, stSmall:
       Result := ftSmallInt;
     stInteger:
       Result := ftInteger;
@@ -354,7 +354,7 @@ begin
     ftBoolean:
       Result := stBoolean;
     ftSmallInt:
-      Result := stShort;
+      Result := stSmall;
     ftInteger, ftAutoInc:
       Result := stInteger;
     ftFloat:
@@ -461,8 +461,12 @@ begin
     case Current.DataType of
       ftBoolean:
         RowAccessor.SetBoolean(FieldIndex, ResultSet.GetBoolean(ColumnIndex));
-      ftSmallInt:
+      {$IFDEF WITH_FTSHORTINT}
+      ftShortInt:
         RowAccessor.SetShort(FieldIndex, ResultSet.GetShort(ColumnIndex));
+      {$ENDIF}
+      ftSmallInt:
+        RowAccessor.SetSmall(FieldIndex, ResultSet.GetSmall(ColumnIndex));
       ftInteger, ftAutoInc:
         RowAccessor.SetInt(FieldIndex, ResultSet.GetInt(ColumnIndex));
       ftFloat:
@@ -535,7 +539,7 @@ begin
       ftBoolean:
         ResultSet.UpdateBoolean(ColumnIndex, RowAccessor.GetBoolean(FieldIndex, WasNull));
       ftSmallInt:
-        ResultSet.UpdateShort(ColumnIndex, RowAccessor.GetShort(FieldIndex, WasNull));
+        ResultSet.UpdateSmall(ColumnIndex, RowAccessor.GetSmall(FieldIndex, WasNull));
       ftInteger, ftAutoInc:
         ResultSet.UpdateInt(ColumnIndex, RowAccessor.GetInt(FieldIndex, WasNull));
       ftFloat:
@@ -547,11 +551,11 @@ begin
           RowAccessor.GetBigDecimal(FieldIndex, WasNull));
       ftString, ftWidestring:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          ResultSet.UpdateRawByteString(ColumnIndex,
-            RowAccessor.GetRawByteString(FieldIndex, WasNull))
+          ResultSet.UpdateAnsiRec(ColumnIndex,
+            RowAccessor.GetAnsiRec(FieldIndex, WasNull))
         else
-          ResultSet.UpdateUnicodeString(ColumnIndex,
-            RowAccessor.GetUnicodeString(FieldIndex, WasNull));
+          ResultSet.UpdateWideRec(ColumnIndex,
+            RowAccessor.GetWideRec(FieldIndex, WasNull));
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:
@@ -987,7 +991,7 @@ begin
         stBoolean:
           DecodedKeyValues[I] := SoftVarManager.Convert(
             DecodedKeyValues[I], vtBoolean);
-        stByte, stShort, stInteger, stLong:
+        stByte, stSmall, stInteger, stLong:
           DecodedKeyValues[I] := SoftVarManager.Convert(
             DecodedKeyValues[I], vtInteger);
         stFloat, stDouble, stBigDecimal:
@@ -1117,7 +1121,7 @@ begin
               ResultSet.GetBoolean(ColumnIndex);
           end;
         stByte,
-        stShort,
+        stSmall,
         stInteger,
         stLong:
           Result := KeyValues[I].VInteger = ResultSet.GetLong(ColumnIndex);
@@ -1387,13 +1391,23 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
+{$IFDEF WITH_ZSTRINGFIELDS}
+type
+  TZHackStringField = Class(TZStringField); //access protected proprty
+{$ENDIF WITH_ZSTRINGFIELDS}
 function CreateFieldsLookupTable(Fields: TFields): TIntegerDynArray;
 var
   I: Integer;
 begin
   SetLength(Result, Fields.Count);
   for I := 0 to Fields.Count - 1 do
+  begin
     Result[I] := Integer(Fields[I]);
+    {$IFDEF WITH_ZSTRINGFIELDS}
+    if Fields[i] is TZStringField then
+      TZHackStringField(Fields[i]).FieldIndex := I+1;
+    {$ENDIF WITH_ZSTRINGFIELDS}
+  end;
 end;
 
 {**
@@ -1670,8 +1684,12 @@ begin
     case Param.DataType of
       ftBoolean:
         Statement.SetBoolean(Index, Param.AsBoolean);
-      ftSmallInt{$IFDEF WITH_FTSHORTINT}, ftShortInt{$ENDIF}:
-        Statement.SetShort(Index, Param.AsSmallInt);
+      {$IFDEF WITH_FTSHORTINT}
+      ftShortInt:
+        Statement.SetShort(Index, Param.AsShortInt);
+      {$ENDIF}
+      ftSmallInt:
+        Statement.SetSmall(Index, Param.AsSmallInt);
       ftInteger, ftAutoInc{$IFDEF WITH_FTBYTE}, ftByte{$ENDIF}:
         Statement.SetInt(Index, Param.AsInteger);
       ftFloat{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:

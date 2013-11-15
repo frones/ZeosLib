@@ -713,6 +713,8 @@ begin
   TestRawSQLTimeStampToDateTime(TimeStamp4_3, 0, True);
 
   TestRawSQLTimeStampToDateTime('2013-10-23 12:31:52.48+02', EncodeDate(2013, 10, 23)+EncodeTime(12, 31, 52, 48), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 2013-10-23 12:31:52.48+02 f.e.
+  TestRawSQLTimeStampToDateTime('1997-02-25 00:00:00+01', EncodeDate(1997, 2, 25)+EncodeTime(0, 0, 0, 0), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 1997-02-25 00:00:00+01 f.e.
+  TestRawSQLTimeStampToDateTime('1997-02-25', EncodeDate(1997, 2, 25)+EncodeTime(0, 0, 0, 0), False, 'YYYY-MM-DD HH:NN:SS.ZZZ');//postgres 1997-02-25 00:00:00+01 f.e.
 end;
 
 procedure TZTestSysUtilsCase.TestDateTimeToRawSQLDate;

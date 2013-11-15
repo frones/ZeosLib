@@ -290,7 +290,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZMySQLResultSet.Create(FPlainDriver, Self, SQL, FHandle,
-    FUseResult, nil);
+    FUseResult, nil, CachedLob);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (GetResultSetConcurrency <> rcReadOnly) or (FUseResult
     and (GetResultSetType <> rtForwardOnly)) then
@@ -516,7 +516,7 @@ begin
            Result := '''Y'''
         else
            Result := '''N''';
-      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1059,7 +1059,7 @@ begin
           Result := '''Y'''
         else
           Result := '''N''';
-      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1204,6 +1204,8 @@ begin
         OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
       stShort:
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+      stSmall:
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
       stInteger:
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:

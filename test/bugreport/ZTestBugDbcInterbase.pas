@@ -340,7 +340,7 @@ begin
       CheckEquals(ord(stString), ord(GetColumnType(2)));
       CheckEquals(ord(stString), ord(GetColumnType(3)));
     end;
-    CheckEquals(ord(stShort), ord(GetColumnType(4)));
+    CheckEquals(ord(stSmall), ord(GetColumnType(4)));
   end;
 
   with ResultSet do

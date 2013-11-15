@@ -730,7 +730,7 @@ begin
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
               FPlainDriver.GetVariables.datatypes[Z_SQLINT1], -1, -1, @DatByte);
           end;
-        stShort:
+        stSmall:
           begin
             DatShort := SmallInt(SoftVarManager.GetAsInteger(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,

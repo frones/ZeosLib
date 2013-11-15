@@ -111,8 +111,10 @@ type
     constructor Create(ADataset: TZAbstractRODataset); {$IFDEF FPC}reintroduce;{$ENDIF}
   end;
 
+  {$IFNDEF WITH_ZSTRINGFIELDS}
   TStringFieldSetter = procedure(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar);
   TStringFieldGetter = function(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+  {$ENDIF WITH_ZSTRINGFIELDS}
 
   {** Abstract dataset component optimized for read/only access. }
   {$IFDEF WITH_WIDEDATASET}
@@ -173,9 +175,11 @@ type
     FPrepared: Boolean;
     FDoNotCloseResultset: Boolean;
     FUseCurrentStatment: Boolean;
+    {$IFNDEF WITH_ZSTRINGFIELDS}
     FStringFieldSetter: TStringFieldSetter;
     FStringFieldGetter: TStringFieldGetter;
     procedure SetStringFieldSetterAndSetter;
+    {$ENDIF WITH_ZSTRINGFIELDS}
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -393,6 +397,9 @@ type
 
     procedure InternalPrepare; virtual;
     procedure InternalUnPrepare; virtual;
+    {$IFDEF WITH_ZSTRINGFIELDS}
+    function GetFieldClass(FieldType: TFieldType): TFieldClass; override;
+    {$ENDIF}
   protected
   {$IFDEF WITH_IPROVIDER}
     procedure PSStartTransaction; override;
@@ -490,6 +497,187 @@ type
     property Filtered;
   end;
 
+  {$IFDEF WITH_ZSTRINGFIELDS}
+  TZStringField = Class(TStringField)
+  private
+    FEmptyAsNull: Boolean;
+    FFieldIndex: Integer;
+    FRowBuffer: PZRowBuffer;
+    function GetActiveRowBuffer: Boolean;
+    function IsFieldEditable: Boolean;
+  protected
+    function GetAsBoolean: Boolean; override;
+    function GetAsDateTime: TDateTime; override;
+    function GetAsSingle: Single; {$IFDEF WITH_FTSINGLE}override;{$ENDIF}
+    function GetAsFloat: Double; override;
+    function GetAsExtended: Extended; {$IFDEF WITH_FTEXTENDED}override;{$ENDIF}
+    function GetAsByte: Byte;
+    function GetAsShortInt: ShortInt;
+    function GetAsSmallInt: SmallInt;
+    function GetAsInteger: Longint; override;
+    function GetAsLargeInt: Largeint; {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ENDIF}
+    function GetAsString: string; override;
+    function GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}; {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
+    function GetAsAnsiString: AnsiString; {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
+    function GetAsUTF8String: UTF8String;
+    procedure SetAsBoolean(Value: Boolean); override;
+    procedure SetAsDateTime(Value: TDateTime); override;
+    procedure SetAsSingle(Value: Single); {$IFDEF WITH_FTSINGLE}override;{$ENDIF}
+    procedure SetAsFloat(Value: Double); override;
+    procedure SetAsExtended(Value: Extended); {$IFDEF WITH_FTEXTENDED}override;{$ENDIF}
+    procedure SetAsInteger(Value: Longint); override;
+    procedure SetAsLargeInt(Value: Largeint); {$IFDEF TFIELD_HAS_ASLARGEINT}override;{$ENDIF}
+    procedure SetAsString(const Value: string); override;
+    procedure SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF}); {$IFDEF WITH_FTWIDESTRING}override;{$ENDIF}
+    procedure SetAsAnsiString(const Value: AnsiString); {$IFDEF WITH_ASANSISTRING}override;{$ENDIF}
+    procedure SetAsUTF8String(const Value: UTF8String);
+    property FieldIndex: Integer read FFieldIndex write FFieldIndex;
+  public
+    property AsBCD;
+    property AsBoolean;
+    property AsCurrency;
+    property AsDateTime;
+    {$IFNDEF FPC}
+    property AsSQLTimeStamp;
+    {$ENDIF}
+    {$IFDEF WITH_FTTIMESTAMPOFFSET}
+    property AsSQLTimeStampOffset;
+    {$ENDIF WITH_FTTIMESTAMPOFFSET}
+    property AsSingle{$IFNDEF WITH_FTSINGLE}: Single read GetAsSingle write SetAsSingle{$ENDIF};
+    property AsFloat;
+    property AsExtended {$IFNDEF WITH_FTEXTENDED}: Extended read GetAsExtended write SetAsExtended{$ENDIF};
+    property AsInteger;
+    property AsLargeInt {$IFNDEF TFIELD_HAS_ASLARGEINT}: LargeInt read GetAsLargeInt write SetAsLargeInt{$ENDIF};
+    property AsString;
+    property AsWideString{$IFNDEF WITH_FTWIDESTRING}: WideString read GetAsWideString write SetAsWideString{$ENDIF};
+    property AsAnsiString{$IFNDEF WITH_ASANSISTRING}: AnsiString read GetAsAnsiString write SetAsAnsiString{$ENDIF};
+    property AsUTF8String: UTF8String read GetAsUTF8String write SetAsUTF8String;
+    {$IFDEF WITH_ASBYTES}
+    property AsBytes;
+    {$ENDIF WITH_ASBYTES}
+    property AsVariant;
+    property AttributeSet;
+    property Calculated;
+    property CanModify;
+    property CurValue;
+    property DataSet;
+    property DataSize;
+    property DataType;
+    property DisplayName;
+    property DisplayText;
+    property EditMask;
+    property EditMaskPtr;
+    property FieldNo;
+    {$IFNDEF FPC}
+    property FullName;
+    {$ENDIF}
+    property IsIndexField;
+    property IsNull;
+    property Lookup;
+    property LookupList;
+    property NewValue;
+    property Offset;
+    property OldValue;
+    {$IFNDEF FPC}
+    property ParentField;
+    {$ENDIF}
+    property Size;
+    property Text;
+    property ValidChars;
+    property Value;
+  published
+    property EmptyStringAsNull: Boolean read FEmptyAsNull write FEmptyAsNull default False;
+  End;
+
+  TZWideStringField = Class(TZStringField)
+  public
+    constructor Create(AOwner: TComponent); override;
+  end;
+
+const
+  DefaultFieldClasses: array[TFieldType] of TFieldClass = (
+    {$IFDEF FPC}
+    TField,
+    {$ELSE}
+    nil,                       { ftUnknown }
+    {$ENDIF}
+    TZStringField,             { ftString }
+    TSmallintField,            { ftSmallint }
+    TIntegerField,             { ftInteger }
+    TWordField,                { ftWord }
+    TBooleanField,             { ftBoolean }
+    TFloatField,               { ftFloat }
+    TCurrencyField,            { ftCurrency }
+    TBCDField,                 { ftBCD }
+    TDateField,                { ftDate }
+    TTimeField,                { ftTime }
+    TDateTimeField,            { ftDateTime }
+    TBytesField,               { ftBytes }
+    TVarBytesField,            { ftVarBytes }
+    TAutoIncField,             { ftAutoInc }
+    TBlobField,                { ftBlob }
+    TMemoField,                { ftMemo }
+    TGraphicField,             { ftGraphic }
+    TBlobField,                { ftFmtMemo }
+    TBlobField,                { ftParadoxOle }
+    TBlobField,                { ftDBaseOle }
+    TBlobField,                { ftTypedBinary }
+    nil,                       { ftCursor }
+    TZStringField,             { ftFixedChar }
+    TZWideStringField,         { ftWideString }
+    TLargeIntField,            { ftLargeInt }
+    {$IFDEF FPC}
+    nil,
+    nil,
+    nil,
+    nil,
+    {$ELSE}
+    TADTField,                 { ftADT }
+    TArrayField,               { ftArray }
+    TReferenceField,           { ftReference }
+    TDataSetField,             { ftDataSet }
+    {$ENDIF}
+    TBlobField,                { ftOraBlob }
+    TMemoField,                { ftOraClob }
+    TVariantField,             { ftVariant }
+    {$IFDEF FPC}
+    nil,
+    nil,
+    {$ELSE}
+    TInterfaceField,           { ftInterface }
+    TIDispatchField,           { ftIDispatch }
+    {$ENDIF}
+    TGuidField,                { ftGuid }
+    {$IFDEF FPC}
+    nil,
+    {$ELSE}
+    TSQLTimeStampField,        { ftTimeStamp }
+    {$ENDIF}
+    TFMTBcdField               { ftFMTBcd }
+    {$IF defined(BDS4_UP) or defined(FPC)}
+    ,TZWideStringField,        { ftFixedWideChar }
+    TWideMemoField             { ftWideMemo }
+    {$IFNDEF FPC}
+    ,TSQLTimeStampField,        { ftOraTimeStamp }
+    TStringField               { ftOraInterval }
+    {$ENDIF}
+    {$IFEND}
+    {$IFDEF DELPHI12_UP}
+    ,TLongWordField,           { ftLongWord }
+    TShortintField,            { ftShortint }
+    TByteField,                { ftByte }
+    TExtendedField,
+    nil,                       { ftConnection }
+    nil,                       { ftParams }
+    nil                        { ftStream }
+    {$IFDEF DELPHI14_UP}
+    ,TSQLTimeStampOffsetField, { ftTimeStampOffset }
+    nil,                       { ftObject }
+    TSingleField               { ftSingle }
+    {$ENDIF DELPHI14_UP}
+    {$ENDIF DELPHI12_UP}
+    );
+  {$ENDIF WITH_ZSTRINGFIELDS}
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
@@ -498,6 +686,7 @@ uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSc
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
+{$IFNDEF WITH_ZSTRINGFIELDS}
 {$IFNDEF UNICODE}
 procedure RowAccessorStringFieldSetterFromRawAutoEncode(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar);
@@ -512,19 +701,14 @@ end;
 
 procedure RowAccessorStringFieldSetterFromUTF8(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar);
-var
-  Tmp: UTF8String;
 begin
-  ZSetString(Buffer, Tmp);
-  RowAccessor.SetUTF8String(ColumnIndex, Tmp);
+  RowAccessor.SetUTF8String(ColumnIndex, Buffer);
 end;
 
 procedure RowAccessorStringFieldSetterFromAnsi(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar);
-var Tmp: AnsiString;
 begin
-  ZSetString(Buffer, Tmp);
-  RowAccessor.SetAnsiString(ColumnIndex, Tmp);
+  RowAccessor.SetAnsiString(ColumnIndex, Buffer);
 end;
 
 procedure RowAccessorStringFieldSetterFromRaw(RowAccessor: TZRowAccessor;
@@ -583,6 +767,7 @@ begin
     (Buffer+L)^ := #0;
   end;
 end;
+{$ENDIF WITH_ZSTRINGFIELDS}
 
 { EZDatabaseError }
 
@@ -750,6 +935,7 @@ begin
 end;
 
 
+{$IFNDEF WITH_ZSTRINGFIELDS}
 procedure TZAbstractRODataset.SetStringFieldSetterAndSetter;
 begin
   {$IFNDEF UNICODE}
@@ -780,6 +966,8 @@ begin
   FStringFieldSetter := @RowAccessorStringFieldSetterFromAnsi;
   {$ENDIF}
 end;
+{$ENDIF WITH_ZSTRINGFIELDS}
+
 
 {**
   Sets a new SQL query.
@@ -1390,7 +1578,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean): Boolean;
 begin
-  if Field.DataType in [ftWideString] then
+  if Field.DataType in [{$IFDEF WITH_ZSTRINGFIELDS}ftString, {$ENDIF}ftWideString] then
     NativeFormat := True;
   Result := inherited GetFieldData(Field, Buffer, NativeFormat);
 end;
@@ -1405,18 +1593,25 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
     {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
-  ColumnIndex, Len: Integer;
+  ColumnIndex{$IFNDEF WITH_ZSTRINGFIELDS}, Len{$ENDIF}: Integer;
   RowBuffer: PZRowBuffer;
   ACurrency: Currency;
   Bts: TByteDynArray;
+  {$IFNDEF WITH_ZSTRINGFIELDS}
   WideRec: TZWideRec;
+  {$ENDIF}
 begin
   if GetActiveBuffer(RowBuffer) then
   begin
+    {$IFNDEF WITH_ZSTRINGFIELDS}
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
+    {$ENDIF WITH_ZSTRINGFIELDS}
     RowAccessor.RowBuffer := RowBuffer;
     if Buffer <> nil then
     begin
+      {$IFDEF WITH_ZSTRINGFIELDS}
+      ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
+      {$ENDIF WITH_ZSTRINGFIELDS}
       case Field.DataType of
         { Processes DateTime fields. }
         ftDate, ftTime, ftDateTime:
@@ -1441,6 +1636,7 @@ begin
         ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF} :
           Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         ftWideString:
+        {$IFNDEF WITH_ZSTRINGFIELDS}
           begin
             WideRec := RowAccessor.GetWideRec(ColumnIndex, Result);
             if Result then
@@ -1453,6 +1649,9 @@ begin
             end;
             Result := not Result;
           end;
+        {$ELSE !WITH_ZSTRINGFIELDS}
+        Result := not RowAccessor.IsNull(ColumnIndex);
+        {$ENDIF WITH_ZSTRINGFIELDS}
         {$IFDEF WITH_FTGUID}
         ftGUID:
           begin
@@ -1462,7 +1661,12 @@ begin
           end;
         {$ENDIF}
         ftString:
-            Result := not FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
+        {$IFNDEF WITH_ZSTRINGFIELDS}
+          Result := not FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
+        {$ELSE}
+          Result := not RowAccessor.IsNull(ColumnIndex);
+        {$ENDIF WITH_ZSTRINGFIELDS}
+
         {$IFDEF WITH_FTDATASETSUPPORT}
         ftDataSet:
           Result := not RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
@@ -1485,6 +1689,9 @@ begin
     end
     else
     begin
+      {$IFDEF WITH_ZSTRINGFIELDS}
+      ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
+      {$ENDIF WITH_ZSTRINGFIELDS}
       if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}] then
         Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty
       else
@@ -1501,7 +1708,7 @@ end;
 procedure TZAbstractRODataset.SetFieldData(Field: TField; Buffer: {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF};
   NativeFormat: Boolean);
 begin
-  if Field.DataType in [ftWideString{$IFDEF WITH_WIDEMEMO}, ftWideMemo{$ENDIF}] then
+  if Field.DataType in [ftWideString] then
     NativeFormat := True;
 
   {$IFNDEF VIRTUALSETFIELDDATA}
@@ -1542,8 +1749,10 @@ begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
 
+    {$IFNDEF WITH_ZSTRINGFIELDS}
     if State in [dsEdit, dsInsert] then
       Field.Validate(Buffer);
+    {$ENDIF}
 
     if Assigned(Buffer) then
     begin
@@ -1554,15 +1763,21 @@ begin
           RowAccessor.SetTime(ColumnIndex, NativeToDateTime(Field.DataType, Buffer));
         ftBytes: { Processes binary array fields. }
           RowAccessor.SetBytes(ColumnIndex, BufferToBytes(Pointer(Buffer), Field.Size));
+        {$IFNDEF WITH_ZSTRINGFIELDS}
         ftWideString: { Processes widestring fields. }
           //EH: Using the WideRec setter doesn't perform better. Don't know why but it seems like the IDE's are faster by setting the UnicodeStrings directly
           {$IFDEF WITH_PWIDECHAR_TOWIDESTRING}
-          RowAccessor.SetUnicodeString(ColumnIndex, PWideChar(Buffer));
+          RowAccessor.SetUnicodeString(ColumnIndex,  PWideChar(Buffer));
           {$ELSE}
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
         ftString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}: { Processes string fields. }
           FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
+        {$ELSE !WITH_ZSTRINGFIELDS}
+        ftWideString, ftString: ; //snooze! Done by Field
+        ftGUID: { Processes string fields. }
+          RowAccessor.SetAnsiString( ColumnIndex, PAnsichar(Buffer));
+        {$ENDIF WITH_ZSTRINGFIELDS}
         ftCurrency:
           begin
             {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
@@ -1922,7 +2137,9 @@ begin
     FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
     FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
 
+    {$IFNDEF WITH_ZSTRINGFIELDS}
     SetStringFieldSetterAndSetter;
+    {$ENDIF WITH_ZSTRINGFIELDS}
 
     FieldsLookupTable := CreateFieldsLookupTable(Fields);
     InitFilterFields := False;
@@ -2367,6 +2584,13 @@ begin
       Statement := nil;
     end;
 end;
+
+{$IFDEF WITH_ZSTRINGFIELDS}
+function TZAbstractRODataset.GetFieldClass(FieldType: TFieldType): TFieldClass;
+begin
+  Result := DefaultFieldClasses[FieldType];
+end;
+{$ENDIF}
 
 {**
   Performs internal switch to the specified bookmark.
@@ -3213,7 +3437,7 @@ end;
 }
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
-  Result := Integer(Item1) - Integer(Item2);
+  Result := NativeUInt(Item1) - NativeUInt(Item2);
 end;
 
 {**
@@ -3689,6 +3913,7 @@ begin
   end;
 end;
 
+
 {**
   Reset the calculated (includes fkLookup) fields
   @param Buffer
@@ -3809,6 +4034,286 @@ end;
 
 {====================end of bangfauzan addition====================}
 
+{ TZStringField }
+
+{$IFDEF WITH_ZSTRINGFIELDS}
+
+function TZStringField.GetActiveRowBuffer: Boolean;
+begin
+  if DataSet = nil then DatabaseErrorFmt({$IFDEF FPC}SNoDataset{$ELSE}SDataSetMissing{$ENDIF}, [DisplayName]);
+  Result := (DataSet as TZAbstractRODataset).GetActiveBuffer(FRowBuffer);
+  if Result then
+    (DataSet as TZAbstractRODataset).FRowAccessor.RowBuffer := FRowBuffer;
+end;
+
+function TZStringField.IsFieldEditable: Boolean;
+begin
+  if ReadOnly and (FieldKind <> fkLookup)
+                    and not (DataSet.State in [dsSetKey, dsCalcFields, dsFilter, dsBlockRead, dsInternalCalc, dsOpening]) then
+    DatabaseErrorFmt(SFieldReadOnly, [DisplayName]);
+  if not (DataSet.State in dsWriteModes) then
+    DatabaseError(SNotEditing, DataSet);
+
+  Result := GetActiveRowBuffer;
+end;
+
+function TZStringField.GetAsBoolean: Boolean;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBoolean(FFieldIndex, IsNull)
+  else
+    Result := False;
+end;
+
+function TZStringField.GetAsDateTime: TDateTime;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetTimestamp(FFieldIndex, IsNull)
+  else
+    Result := 0;
+end;
+
+function TZStringField.GetAsSingle: Single;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetFloat(FFieldIndex, IsNull)
+  else
+    Result := 0.0;
+end;
+
+function TZStringField.GetAsFloat: Double;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetDouble(FFieldIndex, IsNull)
+  else
+    Result := 0.0;
+end;
+
+function TZStringField.GetAsExtended: Extended;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetBigDecimal(FFieldIndex, IsNull)
+  else
+    Result := 0.0;
+end;
+
+function TZStringField.GetAsByte: Byte;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetByte(FFieldIndex, IsNull)
+  else
+    Result := 0;
+end;
+
+function TZStringField.GetAsShortInt: ShortInt;
+var
+  IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetByte(FFieldIndex, IsNull)
+  else
+    Result := 0;
+end;
+
+function TZStringField.GetAsSmallInt: SmallInt;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetSmall(FFieldIndex, IsNull)
+  else
+    Result := 0;
+end;
+
+function TZStringField.GetAsInteger: Longint;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetInt(FFieldIndex, IsNull)
+  else
+    Result := 0;
+end;
+
+function TZStringField.GetAsLargeInt: LargeInt;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetLong(FFieldIndex, IsNull)
+  else
+    Result := 0;
+end;
+
+function TZStringField.GetAsString: string;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetString(FFieldIndex, IsNull)
+  else
+    Result := '';
+end;
+
+function TZStringField.GetAsWideString: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF};
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUnicodeString(FFieldIndex, IsNull)
+  else
+    Result := '';
+end;
+
+function TZStringField.GetAsAnsiString: AnsiString;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetAnsiString(FFieldIndex, IsNull)
+  else
+    Result := '';
+end;
+
+function TZStringField.GetAsUTF8String: UTF8String;
+var IsNull: Boolean;
+begin
+  if GetActiveRowBuffer then //need this call to get active RowBuffer.
+    Result := (DataSet as TZAbstractRODataset).FRowAccessor.GetUTF8String(FFieldIndex, IsNull)
+  else
+    Result := '';
+end;
+
+procedure TZStringField.SetAsBoolean(Value: Boolean);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetBoolean(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+procedure TZStringField.SetAsDateTime(Value: TDateTime);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetTimestamp(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+procedure TZStringField.SetAsSingle(Value: Single);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetFloat(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+procedure TZStringField.SetAsFloat(Value: Double);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetDouble(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+procedure TZStringField.SetAsExtended(Value: Extended);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetBigDecimal(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+procedure TZStringField.SetAsInteger(Value: Longint);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetInt(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+procedure TZStringField.SetAsLargeInt(Value: Largeint);
+begin
+  if IsFieldEditable then
+  begin
+    (DataSet as TZAbstractRODataset).FRowAccessor.SetLong(FFieldIndex, Value);
+    (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+  end;
+end;
+
+
+procedure TZStringField.SetAsString(const Value: string);
+begin
+  if IsFieldEditable then
+    if FEmptyAsNull and (Value = '') then
+      SetData(nil, True)
+    else
+      if Length(Value) > Size then
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Copy(Value, 1, Size))
+      else
+      begin
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetString(FFieldIndex, Value);
+        (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+      end;
+end;
+
+procedure TZStringField.SetAsWideString(const Value: {$IFDEF UNICODE}UnicodeString{$ELSE}WideString{$ENDIF});
+begin
+  if IsFieldEditable then
+    if FEmptyAsNull and (Value = '') then
+      SetData(nil, True)
+    else
+      if Length(Value) > Size then
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Copy(Value, 1, Size))
+      else
+      begin
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUnicodeString(FFieldIndex, Value);
+        (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+      end;
+end;
+
+procedure TZStringField.SetAsAnsiString(const Value: AnsiString);
+begin
+  if IsFieldEditable then
+    if FEmptyAsNull and (Value = '') then
+      SetData(nil, True)
+    else
+    begin
+      (DataSet as TZAbstractRODataset).FRowAccessor.SetAnsiString(FFieldIndex, Value);
+      (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+    end;
+end;
+
+procedure TZStringField.SetAsUTF8String(const Value: UTF8String);
+begin
+  if IsFieldEditable then
+    if FEmptyAsNull and (Value = '') then
+      SetData(nil, True)
+    else
+      if Length(Value) > Size then
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Copy(Value, 1, Size))
+      else
+      begin
+        (DataSet as TZAbstractRODataset).FRowAccessor.SetUTF8String(FFieldIndex, Value);
+        (DataSet as TZAbstractRODataset).DataEvent(deFieldChange, ULong(Self));
+      end;
+
+end;
+
+{ TZWideStringField }
+constructor TZWideStringField.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  SetDataType(ftWideString);
+end;
+
+{$ENDIF WITH_ZSTRINGFIELDS}
 end.
 
 
