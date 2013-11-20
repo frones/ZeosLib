@@ -73,6 +73,7 @@
        {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
        {$DEFINE FPC2_6UP}
+       {$DEFINE HAVE_TBYTES}
     {$IFEND}
 
     {$IFDEF LCL}
@@ -98,7 +99,7 @@
   {$IF FPC_FULLVERSION>20602}       // will be introduced in 2.6.2 (and up to date 2.6.1)
     {$DEFINE WITH_INLINE}           // compiler supports inline methodes
   {$IFEND}
-  {$IF FPC_FULLVERSION>20603}       // will be introduced in 2.6.4? is don on 2.7up
+  {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
   {$IFEND}

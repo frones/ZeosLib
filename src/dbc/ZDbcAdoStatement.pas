@@ -484,7 +484,7 @@ begin
         case TZColumnInfo(ColumnsInfo[i-1]).ColumnType of
           stBoolean:
             RS.UpdateBoolean(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
-          stByte, stShort, stInteger, stLong:
+          stByte, stSmall, stInteger, stLong:
             RS.UpdateInt(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
           stFloat, stDouble, stBigDecimal:
             RS.UpdateFloat(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
@@ -670,7 +670,7 @@ begin
       ConSettings.CPType) of
       stBoolean:
         ClientVarManager.SetAsBoolean(Result, Temp);
-      stByte, stShort, stInteger, stLong:
+      stByte, stSmall, stInteger, stLong:
         ClientVarManager.SetAsInteger(Result, Temp);
       stFloat, stDouble, stBigDecimal:
         ClientVarManager.SetAsFloat(Result, Temp);

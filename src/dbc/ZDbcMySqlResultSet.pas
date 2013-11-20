@@ -97,13 +97,13 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -141,13 +141,13 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -503,13 +503,13 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZMySQLResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZMySQLResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 var
   Len: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len);
 
@@ -572,7 +572,7 @@ end;
 }
 function TZMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  Len: ULong;
+  Len: Cardinal;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -647,7 +647,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZMySQLResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   Len: ULong;
   Buffer: PAnsiChar;
@@ -706,7 +706,7 @@ end;
 }
 function TZMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: ULong;
+  Len: Cardinal;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -1158,10 +1158,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZMySQLPreparedResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZMySQLPreparedResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 Begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
   LastWasNull := FColumnArray[ColumnIndex-1].is_null = 1;
   if LastWasNull then
@@ -1274,7 +1274,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZMySQLPreparedResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -1706,7 +1706,7 @@ begin
   for I := 1 to Metadata.GetColumnCount do
   begin
     if Metadata.IsAutoIncrement(I) and
-      (Metadata.GetColumnType(I) in [stByte, stShort, stInteger, stLong]) then
+      (Metadata.GetColumnType(I) in [stByte, stSmall, stInteger, stLong]) then
     begin
       FAutoColumnIndex := I;
       Break;

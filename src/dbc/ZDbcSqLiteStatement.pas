@@ -338,7 +338,7 @@ function TZSQLitePreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): Raw
 var
   Value: TZVariant;
   TempBlob: IZBlob;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
 begin
   if InParamCount <= ParamIndex then
     raise EZSQLException.Create(SInvalidInputParameterCount);
@@ -354,7 +354,7 @@ begin
            Result := '''Y'''
         else
            Result := '''N''';
-      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -484,7 +484,7 @@ begin
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
               PAnsichar(AnsiString('N')), 1, nil);
-        stByte, stShort, stInteger:
+        stByte, stShort, stSmall, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             ClientVarManager.GetAsInteger(InParamValues[i-1]));
         stLong:

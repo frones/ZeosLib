@@ -54,9 +54,10 @@ unit ZTestDbcCachedResultSet;
 interface
 {$I ZDbc.inc}
 uses
-  Types, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
+  Types, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Contnrs,
+  ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
-  Contnrs, ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
+  ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
 
 type
 
@@ -64,8 +65,9 @@ type
   TZTestCachedResultSetCase = class(TZGenericTestCase)
   private
     FBoolean: Boolean;
-    FByte: ShortInt;
-    FShort: SmallInt;
+    FByte: Byte;
+    FShort: ShortInt;
+    FSmall: SmallInt;
     FInt: Integer;
     FLong: LongInt;
     FFloat: Single;
@@ -78,7 +80,7 @@ type
     FAsciiStream: TStream;
     FUnicodeStream: TStream;
     FBinaryStream: TStream;
-    FByteArray: TByteDynArray;
+    FByteArray: TBytes;
     FAsciiStreamData: AnsiString;
     FUnicodeStreamData: WideString;
     FBinaryStreamData: Pointer;
@@ -91,7 +93,7 @@ type
       Nullable: TZColumnNullableType; ReadOnly: Boolean;
       Writable: Boolean): TZColumnInfo;
     function GetColumnsInfoCollection: TObjectList;
-    function CompareArrays(Array1, Array2: TByteDynArray): Boolean;
+    function CompareArrays(Array1, Array2: TBytes): Boolean;
     procedure FillResultSet(ResultSet: IZResultSet; RecCount: integer);
     function CompareStreams(Stream1, Stream2: TStream): boolean; overload;
 
@@ -122,8 +124,6 @@ type
 
 implementation
 
-uses SysUtils;
-
 { TZTestCachedResultSetCase }
 
 {**
@@ -133,7 +133,7 @@ uses SysUtils;
   @return <code>True</code> if arrays are equal.
 }
 function TZTestCachedResultSetCase.CompareArrays(Array1,
-  Array2: TByteDynArray): Boolean;
+  Array2: TBytes): Boolean;
 var
   I: Integer;
 begin
@@ -156,6 +156,7 @@ begin
      UpdateBoolean(1, FBoolean);
      UpdateByte(2, FByte);
      UpdateShort(3, FShort);
+     UpdateSmall(3, FShort);
      UpdateInt(4, FInt);
      UpdateLong(5, FLong);
      UpdateFloat(6, FFloat);
@@ -216,19 +217,20 @@ begin
     Add(GetColumnsInfo(1, stBoolean, ntNullable, False, True));
     Add(GetColumnsInfo(2, stByte, ntNullable, False, True));
     Add(GetColumnsInfo(3, stShort, ntNullable, False, True));
-    Add(GetColumnsInfo(4, stInteger, ntNullable, False, True));
-    Add(GetColumnsInfo(5, stLong, ntNullable, False, True));
-    Add(GetColumnsInfo(6, stFloat, ntNullable, False, True));
-    Add(GetColumnsInfo(7, stDouble, ntNullable, False, True));
-    Add(GetColumnsInfo(8, stBigDecimal, ntNullable, False, True));
-    Add(GetColumnsInfo(9, stString, ntNullable, False, True));
-    Add(GetColumnsInfo(10, stBytes, ntNullable, False, True));
-    Add(GetColumnsInfo(11, stDate, ntNullable, False, True));
-    Add(GetColumnsInfo(12, stTime, ntNullable, False, True));
-    Add(GetColumnsInfo(13, stTimestamp, ntNullable, False, True));
-    Add(GetColumnsInfo(14, stAsciiStream, ntNullable, False, True));
-    Add(GetColumnsInfo(15, stUnicodeStream, ntNullable, False, True));
-    Add(GetColumnsInfo(16, stBinaryStream, ntNullable, False, True));
+    Add(GetColumnsInfo(4, stSmall, ntNullable, False, True));
+    Add(GetColumnsInfo(5, stInteger, ntNullable, False, True));
+    Add(GetColumnsInfo(6, stLong, ntNullable, False, True));
+    Add(GetColumnsInfo(7, stFloat, ntNullable, False, True));
+    Add(GetColumnsInfo(8, stDouble, ntNullable, False, True));
+    Add(GetColumnsInfo(9, stBigDecimal, ntNullable, False, True));
+    Add(GetColumnsInfo(10, stString, ntNullable, False, True));
+    Add(GetColumnsInfo(11, stBytes, ntNullable, False, True));
+    Add(GetColumnsInfo(12, stDate, ntNullable, False, True));
+    Add(GetColumnsInfo(13, stTime, ntNullable, False, True));
+    Add(GetColumnsInfo(14, stTimestamp, ntNullable, False, True));
+    Add(GetColumnsInfo(15, stAsciiStream, ntNullable, False, True));
+    Add(GetColumnsInfo(16, stUnicodeStream, ntNullable, False, True));
+    Add(GetColumnsInfo(17, stBinaryStream, ntNullable, False, True));
   end;
 end;
 
@@ -259,8 +261,9 @@ begin
   FBinaryStream.Write(FBinaryStreamData^, BINARY_BUFFER_SIZE);
 
   FBoolean := true;
-  FByte := 127;
-  FShort := 32767;
+  FByte := 255;
+  FShort := 127;
+  FSmall := 32767;
   FInt := 2147483647;
   FLong := 1147483647;
   FFloat := 3.4E-38;
@@ -495,7 +498,7 @@ var
   Blob: IZBlob;
   Stream: TStream;
   Collection: TObjectList;
-  ByteArray: TByteDynArray;
+  ByteArray: TBytes;
   CachedResultSet: TZAbstractCachedResultSet;
 begin
   Collection := GetColumnsInfoCollection;
@@ -524,19 +527,20 @@ begin
         UpdateBoolean(1, FBoolean);
         UpdateByte(2, FByte);
         UpdateShort(3, FShort);
-        UpdateInt(4, FInt);
-        UpdateLong(5, FLong);
-        UpdateFloat(6, FFloat);
-        UpdateDouble(7, FDouble);
-        UpdateBigDecimal(8, FBigDecimal);
-        UpdateString(9, FString);
-        UpdateBytes(10, FByteArray);
-        UpdateDate(11, FDate);
-        UpdateTime(12, FTime);
-        UpdateTimestamp(13, FTimestamp);
-        UpdateAsciiStream(14, FAsciiStream);
-        UpdateUnicodeStream(15, FUnicodeStream);
-        UpdateBinaryStream(16, FBinaryStream);
+        UpdateSmall(4, FSmall);
+        UpdateInt(5, FInt);
+        UpdateLong(6, FLong);
+        UpdateFloat(7, FFloat);
+        UpdateDouble(8, FDouble);
+        UpdateBigDecimal(9, FBigDecimal);
+        UpdateString(10, FString);
+        UpdateBytes(11, FByteArray);
+        UpdateDate(12, FDate);
+        UpdateTime(13, FTime);
+        UpdateTimestamp(14, FTimestamp);
+        UpdateAsciiStream(15, FAsciiStream);
+        UpdateUnicodeStream(16, FUnicodeStream);
+        UpdateBinaryStream(17, FBinaryStream);
         InsertRow;
         Check(RowInserted);
       end;
@@ -547,30 +551,31 @@ begin
         CheckEquals(FBoolean, GetBoolean(1), 'GetBoolean');
         CheckEquals(FByte, GetByte(2), 'GetByte');
         CheckEquals(FShort, GetShort(3), 'GetShort');
-        CheckEquals(FInt, GetInt(4), 'GetInt');
-        CheckEquals(FLong, GetLong(5), 'GetLong');
-        CheckEquals(FFloat, GetFloat(6), 0, 'GetFloat');
-        CheckEquals(FDouble, GetDouble(7), 0, 'GetDouble');
-        CheckEquals(FBigDecimal, GetBigDecimal(8), 0, 'GetBigDecimal');
-        CheckEquals(FString, GetString(9), 'GetString');
-        CheckEquals(FDate, GetDate(11), 0, 'GetDate');
-        CheckEquals(FTime, GetTime(12), 0, 'GetTime');
-        CheckEquals(FTimeStamp, GetTimestamp(13), 0, 'GetTimestamp');
+        CheckEquals(FSmall, GetSmall(4), 'GetSmall');
+        CheckEquals(FInt, GetInt(5), 'GetInt');
+        CheckEquals(FLong, GetLong(6), 'GetLong');
+        CheckEquals(FFloat, GetFloat(7), 0, 'GetFloat');
+        CheckEquals(FDouble, GetDouble(8), 0, 'GetDouble');
+        CheckEquals(FBigDecimal, GetBigDecimal(9), 0, 'GetBigDecimal');
+        CheckEquals(FString, GetString(10), 'GetString');
+        CheckEquals(FDate, GetDate(12), 0, 'GetDate');
+        CheckEquals(FTime, GetTime(13), 0, 'GetTime');
+        CheckEquals(FTimeStamp, GetTimestamp(14), 0, 'GetTimestamp');
 
-        ByteArray := GetBytes(10);
+        ByteArray := GetBytes(11);
         Check(CompareArrays(FByteArray, ByteArray));
 
         CheckEquals(False, FResultSet.WasNull, 'WasNull');
 
         { GetBlob }
-        Blob := GetBlob(14);
+        Blob := GetBlob(15);
         if (Blob = nil) or Blob.IsEmpty then
           Fail('asciistream emty');
         Blob := nil;
 
         { AciiStream check }
         try
-          Stream := GetAsciiStream(14);
+          Stream := GetAsciiStream(15);
           Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
           Stream.Free;
         except
@@ -579,7 +584,7 @@ begin
 
         { UnicodeStream check }
         try
-          Stream := GetUnicodeStream(15);
+          Stream := GetUnicodeStream(16);
           Check(CompareStreams(Stream, FUnicodeStream), 'UnicodeStream');
           Stream.Free;
         except
@@ -588,7 +593,7 @@ begin
 
         { BinaryStream check }
         try
-          Stream := GetBinaryStream(16);
+          Stream := GetBinaryStream(17);
           Check(CompareStreams(Stream, FBinaryStream), 'BinaryStream');
           Stream.Free;
         except
@@ -606,7 +611,7 @@ begin
         MoveToCurrentRow;
         CheckEquals(FBoolean, GetBoolean(1), 'GetBoolean to current row');
         CheckEquals(FByte, GetByte(2), 'GetByte to current row');
-        CheckEquals(FShort, GetShort(3), 'GetShort to current row');
+        CheckEquals(FShort, GetSmall(3), 'GetSmall to current row');
         MoveToInsertRow;
         Check(IsNull(1), '2. IsNull column number 1');
         Check(IsNull(2), '2. IsNull column number 2');
@@ -647,7 +652,7 @@ begin
       First;
       while Next do
       begin
-        for I := 1 to 16 do
+        for I := 1 to 17 do
          UpdateNull(I);
         UpdateRow;
         Check(RowUpdated or RowInserted, 'Row updated with null fields');
@@ -656,7 +661,7 @@ begin
       First;
       while Next do
       begin
-        for I := 1 to 16 do
+        for I := 1 to 17 do
           Check(IsNull(I), 'The field '+IntToStr(I)+' did not set to null');
       end;
 
@@ -667,19 +672,20 @@ begin
         UpdateBooleanByName('Column1', FBoolean);
         UpdateByteByName('Column2', FByte);
         UpdateShortByName('Column3', FShort);
-        UpdateIntByName('Column4', FInt);
-        UpdateLongByName('Column5', FLong);
-        UpdateFloatByName('Column6', FFloat);
-        UpdateDoubleByName('Column7', FDouble);
-        UpdateBigDecimalByName('Column8', FBigDecimal);
-        UpdateStringByName('Column9', FString);
-        UpdateBytesByName('Column10', FByteArray);
-        UpdateDateByName('Column11', FDate);
-        UpdateTimeByName('Column12', FTime);
-        UpdateTimestampByName('Column13', FTimestamp);
-        UpdateAsciiStreamByName('Column14', FAsciiStream);
-        UpdateUnicodeStreamByName('Column15', FUnicodeStream);
-        UpdateBinaryStreamByName('Column16', FBinaryStream);
+        UpdateSmallByName('Column4', FSmall);
+        UpdateIntByName('Column5', FInt);
+        UpdateLongByName('Column6', FLong);
+        UpdateFloatByName('Column7', FFloat);
+        UpdateDoubleByName('Column8', FDouble);
+        UpdateBigDecimalByName('Column9', FBigDecimal);
+        UpdateStringByName('Column10', FString);
+        UpdateBytesByName('Column11', FByteArray);
+        UpdateDateByName('Column12', FDate);
+        UpdateTimeByName('Column13', FTime);
+        UpdateTimestampByName('Column14', FTimestamp);
+        UpdateAsciiStreamByName('Column15', FAsciiStream);
+        UpdateUnicodeStreamByName('Column16', FUnicodeStream);
+        UpdateBinaryStreamByName('Column17', FBinaryStream);
         UpdateRow;
         Check(RowUpdated or RowInserted, 'RowUpdated');
       end;
@@ -691,27 +697,29 @@ begin
         CheckEquals(FBoolean, GetBoolean(1), 'Field changed; GetBoolean.');
         CheckEquals(FByte, GetByte(2), 'Field changed; GetByte');
         CheckEquals(FShort, GetShort(3), 'Field changed; GetShort');
-        CheckEquals(FInt, GetInt(4), 'Field changed; GetInt');
-        CheckEquals(FLong, GetLong(5), 'Field changed; GetLong');
-        CheckEquals(FFloat, GetFloat(6), 0, 'Field changed; GetFloat');
-        CheckEquals(FDouble, GetDouble(7), 0, 'Field changed; GetDouble');
-        CheckEquals(FBigDecimal, GetBigDecimal(8), 0, 'Field changed; GetBigDecimal');
-        CheckEquals(FString, GetString(9), 'Field changed; GetString');
-        CheckEquals(FDate, GetDate(11), 0, 'Field changed; GetDate');
-        CheckEquals(FTime, GetTime(12), 0, 'Field changed; GetTime');
-        CheckEquals(FTimeStamp, GetTimestamp(13), 0, 'Field changed; GetTimestamp');
+        CheckEquals(FSmall, GetSmall(4), 'Field changed; GetSmall');
+        CheckEquals(FInt, GetInt(5), 'Field changed; GetInt');
+        CheckEquals(FLong, GetLong(6), 'Field changed; GetLong');
+        CheckEquals(FFloat, GetFloat(7), 0, 'Field changed; GetFloat');
+        CheckEquals(FDouble, GetDouble(8), 0, 'Field changed; GetDouble');
+        CheckEquals(FBigDecimal, GetBigDecimal(9), 0, 'Field changed; GetBigDecimal');
+        CheckEquals(FString, GetString(10), 'Field changed; GetString');
+        CheckEquals(FByteArray, GetBytes(11), 'Field changed; GetBytes');
+        CheckEquals(FDate, GetDate(12), 0, 'Field changed; GetDate');
+        CheckEquals(FTime, GetTime(13), 0, 'Field changed; GetTime');
+        CheckEquals(FTimeStamp, GetTimestamp(14), 0, 'Field changed; GetTimestamp');
         { GetBlob }
-        Blob := GetBlob(14);
+        Blob := GetBlob(15);
         if (Blob = nil) or Blob.IsEmpty then
           Fail('asciistream emty');
         Blob := nil;
 
-        Blob := GetBlob(15);
+        Blob := GetBlob(16);
         if (Blob = nil) or Blob.IsEmpty then
           Fail('unicodestream emty');
         Blob := nil;
 
-        Blob := GetBlob(16);
+        Blob := GetBlob(17);
         if (Blob = nil) or Blob.IsEmpty then
           Fail('binarystream emty');
         Blob := nil;
@@ -738,19 +746,20 @@ begin
         UpdateBooleanByName('Column1', FBoolean);
         UpdateByteByName('Column2', FByte);
         UpdateShortByName('Column3', FShort);
-        UpdateIntByName('Column4', FInt);
-        UpdateLongByName('Column5', FLong);
-        UpdateFloatByName('Column6', FFloat);
-        UpdateDoubleByName('Column7', FDouble);
-        UpdateBigDecimalByName('Column8', FBigDecimal);
-        UpdateStringByName('Column9', FString);
-        UpdateBytesByName('Column10', FByteArray);
-        UpdateDateByName('Column11', FDate);
-        UpdateTimeByName('Column12', FTime);
-        UpdateTimestampByName('Column13', FTimestamp);
-        UpdateAsciiStreamByName('Column14', FAsciiStream);
-        UpdateUnicodeStreamByName('Column15', FUnicodeStream);
-        UpdateBinaryStreamByName('Column16', FBinaryStream);
+        UpdateSmallByName('Column4', FSmall);
+        UpdateIntByName('Column5', FInt);
+        UpdateLongByName('Column6', FLong);
+        UpdateFloatByName('Column7', FFloat);
+        UpdateDoubleByName('Column9', FDouble);
+        UpdateBigDecimalByName('Column10', FBigDecimal);
+        UpdateStringByName('Column11', FString);
+        UpdateBytesByName('Column12', FByteArray);
+        UpdateDateByName('Column13', FDate);
+        UpdateTimeByName('Column14', FTime);
+        UpdateTimestampByName('Column14', FTimestamp);
+        UpdateAsciiStreamByName('Column15', FAsciiStream);
+        UpdateUnicodeStreamByName('Column16', FUnicodeStream);
+        UpdateBinaryStreamByName('Column17', FBinaryStream);
         CancelRowUpdates;
         Check(RowUpdated or RowInserted, 'The row did not updated');
       end;
@@ -912,6 +921,7 @@ begin
         UpdateBoolean(1, FBoolean);
         UpdateByte(2, FByte);
         UpdateShort(3, FShort);
+        UpdateSmall(4, FSmall);
         UpdateInt(4, FInt);
         UpdateLong(5, FLong);
         UpdateFloat(6, FFloat);

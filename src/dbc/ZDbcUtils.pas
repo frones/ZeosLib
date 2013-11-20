@@ -268,9 +268,9 @@ end;
 function CheckConvertion(InitialType: TZSQLType; ResultType: TZSQLType): Boolean;
 begin
   case ResultType of
-    stBoolean, stByte, stShort, stInteger,
+    stBoolean, stByte, stSmall, stInteger,
     stLong, stFloat, stDouble, stBigDecimal:
-      Result := InitialType in [stBoolean, stByte, stShort, stInteger,
+      Result := InitialType in [stBoolean, stByte, stSmall, stInteger,
         stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString];
     stString, stUnicodeString:
       Result := True;
@@ -300,7 +300,7 @@ begin
       Result := 'Boolean';
     stByte:
       Result := 'Byte';
-    stShort:
+    stSmall:
       Result := 'Short';
     stInteger:
       Result := 'Integer';

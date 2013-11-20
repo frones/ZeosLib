@@ -2591,15 +2591,15 @@ begin
         Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
         Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
         Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
-        Result.UpdateShort(9, KeySequence); //KEY_SEQ
-        Result.UpdateShort(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
-        Result.UpdateShort(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
+        Result.UpdateSmall(9, KeySequence); //KEY_SEQ
+        Result.UpdateSmall(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
+        Result.UpdateSmall(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
         Result.UpdateString(12, GetString(11)); //FK_NAME
         Result.UpdateString(13, GetString(12)); //PK_NAME
         if GetString(13) = 'NO' then
-          Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+          Result.UpdateSmall(14, Ord(ikNotDeferrable)) //DEFERRABILITY
         else
-          Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+          Result.UpdateSmall(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
         Result.InsertRow;
       end;
       Close;
@@ -2732,15 +2732,15 @@ begin
         Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
         Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
         Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
-        Result.UpdateShort(9, KeySequence); //KEY_SEQ
-        Result.UpdateShort(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
-        Result.UpdateShort(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
+        Result.UpdateSmall(9, KeySequence); //KEY_SEQ
+        Result.UpdateSmall(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
+        Result.UpdateSmall(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
         Result.UpdateString(12, GetString(11)); //FK_NAME
         Result.UpdateString(13, GetString(12)); //PK_NAME
         if GetString(13) = 'NO' then
-          Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+          Result.UpdateSmall(14, Ord(ikNotDeferrable)) //DEFERRABILITY
         else
-          Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+          Result.UpdateSmall(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
         Result.InsertRow;
       end;
       Close;
@@ -2891,15 +2891,15 @@ begin
         Result.UpdateString(6, GetString(6)); //FKTABLE_SCHEM
         Result.UpdateString(7, GetString(7)); //FKTABLE_NAME
         Result.UpdateString(8, GetString(8)); //FKCOLUMN_NAME
-        Result.UpdateShort(9, KeySequence); //KEY_SEQ
-        Result.UpdateShort(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
-        Result.UpdateShort(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
+        Result.UpdateSmall(9, KeySequence); //KEY_SEQ
+        Result.UpdateSmall(10, Ord(GetRuleType(GetString(9)))); //UPDATE_RULE
+        Result.UpdateSmall(11, Ord(GetRuleType(GetString(10)))); //DELETE_RULE
         Result.UpdateString(12, GetString(11)); //FK_NAME
         Result.UpdateString(13, GetString(12)); //PK_NAME
         if GetString(13) = 'NO' then
-          Result.UpdateShort(14, Ord(ikNotDeferrable)) //DEFERRABILITY
+          Result.UpdateSmall(14, Ord(ikNotDeferrable)) //DEFERRABILITY
         else
-          Result.UpdateShort(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
+          Result.UpdateSmall(14, Ord(ikInitiallyDeferred)); //DEFERRABILITY
         Result.InsertRow;
       end;
       Close;
@@ -3444,7 +3444,7 @@ begin
     begin
       Result.MoveToInsertRow;
       Result.UpdateString(1, GetString(2)); //CHARACTER_SET_NAME
-      Result.UpdateShort(2, GetShort(1)); //CHARACTER_SET_ID
+      Result.UpdateSmall(2, GetSmall(1)); //CHARACTER_SET_ID
       Result.InsertRow;
     end;
     CLose;

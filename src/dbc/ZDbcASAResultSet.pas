@@ -57,7 +57,7 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZPlainASADriver, ZCompatibility,
   ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZVariant;
 
@@ -94,13 +94,14 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetShort(ColumnIndex: Integer): ShortInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -117,24 +118,25 @@ type
     function RowDeleted: Boolean; override;
 
     procedure UpdateNull(ColumnIndex: Integer); override;
-    procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean); override;
-    procedure UpdateByte(ColumnIndex: Integer; Value: ShortInt); override;
-    procedure UpdateShort(ColumnIndex: Integer; Value: SmallInt); override;
-    procedure UpdateInt(ColumnIndex: Integer; Value: Integer); override;
-    procedure UpdateLong(ColumnIndex: Integer; Value: Int64); override;
-    procedure UpdateFloat(ColumnIndex: Integer; Value: Single); override;
-    procedure UpdateDouble(ColumnIndex: Integer; Value: Double); override;
-    procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar); override;
+    procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean); override;
+    procedure UpdateByte(ColumnIndex: Integer; const Value: Byte); override;
+    procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt); override;
+    procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt); override;
+    procedure UpdateInt(ColumnIndex: Integer; const Value: Integer); override;
+    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64); override;
+    procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); override;
+    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); override;
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
+    procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray); override;
-    procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime); override;
-    procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime); override;
-    procedure UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime); override;
-    procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream); override;
-    procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream); override;
-    procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream); override;
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); override;
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime); override;
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime); override;
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime); override;
+    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream); override;
+    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream); override;
+    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream); override;
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); override;
 
     procedure InsertRow; override;
@@ -167,7 +169,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
- SysUtils, Math, ZFastCode, ZDbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
+ Math, ZFastCode, ZDbcLogging, ZPlainASAConstants, ZDbcUtils, ZEncoding;
 
 { TZASAResultSet }
 
@@ -251,7 +253,7 @@ end;
 }
 function TZASAResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempRaw: RawByteString;
 begin
   Result := nil;
@@ -324,6 +326,26 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>shortint</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZASAResultSet.GetShort(ColumnIndex: Integer): ShortInt;
+begin
+  CheckClosed;
+  CheckColumnConvertion(ColumnIndex, stShort);
+  if FInsert or ( FUpdate and FUpdateSQLData.IsAssigned( ColumnIndex - 1)) then
+    Result := FUpdateSqlData.GetSmall( ColumnIndex - 1)
+  else
+    Result := FSqlData.GetSmall( ColumnIndex - 1);
+  LastWasNull := IsNull( ColumnIndex);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>byte</code> array in the Java programming language.
   The bytes represent the raw values returned by the driver.
 
@@ -332,7 +354,7 @@ end;
     value returned is <code>null</code>
 }
 function TZASAResultSet.GetBytes(
-  ColumnIndex: Integer): TByteDynArray;
+  ColumnIndex: Integer): TBytes;
 begin
   CheckClosed;
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -452,14 +474,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZASAResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZASAResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 begin
   CheckClosed;
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
   if FInsert or ( FUpdate and FUpdateSQLData.IsAssigned( ColumnIndex - 1)) then
-    Result := FUpdateSqlData.GetShort( ColumnIndex - 1)
+    Result := FUpdateSqlData.GetSmall( ColumnIndex - 1)
   else
-    Result := FSqlData.GetShort( ColumnIndex - 1);
+    Result := FSqlData.GetSmall( ColumnIndex - 1);
   LastWasNull := IsNull( ColumnIndex);
 end;
 
@@ -763,55 +785,61 @@ begin
   FUpdateSqlData.UpdateNull( ColumnIndex, True);
 end;
 
-procedure TZASAResultSet.UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
+procedure TZASAResultSet.UpdateBoolean(ColumnIndex: Integer; const Value: Boolean);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateBoolean( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateByte(ColumnIndex: Integer; Value: ShortInt);
+procedure TZASAResultSet.UpdateByte(ColumnIndex: Integer; const Value: Byte);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateByte( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateShort(ColumnIndex: Integer; Value: SmallInt);
+procedure TZASAResultSet.UpdateShort(ColumnIndex: Integer; const Value: ShortInt);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateShort( ColumnIndex, Value);
+  FUpdateSqlData.UpdateSmall( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateInt(ColumnIndex: Integer; Value: Integer);
+procedure TZASAResultSet.UpdateSmall(ColumnIndex: Integer; const Value: SmallInt);
+begin
+  PrepareUpdateSQLData;
+  FUpdateSqlData.UpdateSmall( ColumnIndex, Value);
+end;
+
+procedure TZASAResultSet.UpdateInt(ColumnIndex: Integer; const Value: Integer);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateInt( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateLong(ColumnIndex: Integer; Value: Int64);
+procedure TZASAResultSet.UpdateLong(ColumnIndex: Integer; const Value: Int64);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateLong( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateFloat(ColumnIndex: Integer; Value: Single);
+procedure TZASAResultSet.UpdateFloat(ColumnIndex: Integer; const Value: Single);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateFloat( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateDouble(ColumnIndex: Integer; Value: Double);
+procedure TZASAResultSet.UpdateDouble(ColumnIndex: Integer; const Value: Double);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateDouble( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
+procedure TZASAResultSet.UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateBigDecimal( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; Value: PChar);
+procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; const Value: PChar);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdatePChar( ColumnIndex, Value);
@@ -829,43 +857,43 @@ begin
   FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
 end;
 
-procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
+procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateBytes( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateDate(ColumnIndex: Integer; Value: TDateTime);
+procedure TZASAResultSet.UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateDate( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateTime(ColumnIndex: Integer; Value: TDateTime);
+procedure TZASAResultSet.UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateTime( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime);
+procedure TZASAResultSet.UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.UpdateTimestamp( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdateAsciiStream(ColumnIndex: Integer; Value: TStream);
+procedure TZASAResultSet.UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.WriteBlob( ColumnIndex, Value, stAsciiStream);
 end;
 
-procedure TZASAResultSet.UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
+procedure TZASAResultSet.UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.WriteBlob( ColumnIndex, Value, stUnicodeStream);
 end;
 
-procedure TZASAResultSet.UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
+procedure TZASAResultSet.UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.WriteBlob( ColumnIndex, Value, stBinaryStream);

@@ -2065,11 +2065,11 @@ const
     'MEDIUMINT', 'SMALLINT', 'DOUBLE', 'FLOAT', 'REAL', 'ENUM', 'SET',
     'DATE', 'TIME', 'DATETIME', 'TIMESTAMP');
   TypeCodes: array[1..MaxTypeCount] of TZSQLType = (
-    stByte, stBoolean, stShort, stLong, stBinaryStream, stBinaryStream,
+    stByte, stBoolean, stSmall, stLong, stBinaryStream, stBinaryStream,
     stBinaryStream, stBinaryStream, stBinaryStream, stBytes, stBytes,
     stString, stAsciiStream, stAsciiStream, stAsciiStream, stAsciiStream,
     stString, stString, stBigDecimal, stBigDecimal, stInteger, stInteger,
-    stInteger, stShort, stDouble, stFloat, stFloat, stString, stString,
+    stInteger, stSmall, stDouble, stFloat, stFloat, stString, stString,
     stDate, stTime, stTimestamp, stTimestamp);
   TypePrecision: array[1..MaxTypeCount] of Integer = (
     1, -1, 4, 16, 16777215, 16777215, MAXBUF, 65535, 255, 255, 255,
@@ -2653,7 +2653,7 @@ begin
             Result.UpdateString(5, GetString(FindColumn('COLLATION_NAME'))); //COLLATION_NAME
             Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
             Result.UpdateNull(7); //CHARACTER_SET_ID
-            Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+            Result.UpdateSmall(8, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
           Close;
@@ -2677,7 +2677,7 @@ begin
             Result.UpdateString(5, GetString(FindColumn('TABLE_COLLATION'))); //COLLATION_NAME
             Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
             Result.UpdateNull(7); //CHARACTER_SET_ID
-            Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+            Result.UpdateSmall(8, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
           Close;
@@ -2704,7 +2704,7 @@ begin
           Result.UpdateString(5, GetString(FindColumn('DEFAULT_COLLATION_NAME'))); //COLLATION_NAME
           Result.UpdateString(6, GetString(FindColumn('DEFAULT_CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
           Result.UpdateNull(7); //CHARACTER_SET_ID
-          Result.UpdateShort(8, GetShort(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+          Result.UpdateSmall(8, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
           Result.InsertRow;
         end;
         Close;

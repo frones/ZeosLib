@@ -251,29 +251,30 @@ type
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
-    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean); virtual;
-    procedure SetByte(ParameterIndex: Integer; Value: Byte); virtual;
-    procedure SetShort(ParameterIndex: Integer; Value: SmallInt); virtual;
-    procedure SetInt(ParameterIndex: Integer; Value: Integer); virtual;
-    procedure SetLong(ParameterIndex: Integer; Value: Int64); virtual;
-    procedure SetFloat(ParameterIndex: Integer; Value: Single); virtual;
-    procedure SetDouble(ParameterIndex: Integer; Value: Double); virtual;
-    procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended); virtual;
-    procedure SetPChar(ParameterIndex: Integer; Value: PChar); virtual;
+    procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); virtual;
+    procedure SetByte(ParameterIndex: Integer; const Value: Byte); virtual;
+    procedure SetShort(ParameterIndex: Integer; const Value: ShortInt); virtual;
+    procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt); virtual;
+    procedure SetInt(ParameterIndex: Integer; const Value: Integer); virtual;
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
+    procedure SetFloat(ParameterIndex: Integer; const Value: Single); virtual;
+    procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended); virtual;
+    procedure SetPChar(ParameterIndex: Integer; const Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
     procedure SetString(ParameterIndex: Integer; const Value: String); virtual;
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString); virtual;
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String); virtual;
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString); virtual;
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString);  virtual; //AVZ
-    procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
-    procedure SetDate(ParameterIndex: Integer; Value: TDateTime); virtual;
-    procedure SetTime(ParameterIndex: Integer; Value: TDateTime); virtual;
-    procedure SetTimestamp(ParameterIndex: Integer; Value: TDateTime); virtual;
-    procedure SetAsciiStream(ParameterIndex: Integer; Value: TStream); virtual;
-    procedure SetUnicodeStream(ParameterIndex: Integer; Value: TStream); virtual;
-    procedure SetBinaryStream(ParameterIndex: Integer; Value: TStream); virtual;
-    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType; Value: IZBlob); virtual;
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes); virtual;
+    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream); virtual;
+    procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream); virtual;
+    procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream); virtual;
+    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); virtual;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
 
     procedure ClearParameters; virtual;
@@ -346,13 +347,14 @@ type
     function GetUnicodeString(ParameterIndex: Integer): ZWideString; virtual;
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
     function GetByte(ParameterIndex: Integer): Byte; virtual;
-    function GetShort(ParameterIndex: Integer): SmallInt; virtual;
+    function GetShort(ParameterIndex: Integer): ShortInt; virtual;
+    function GetSmall(ParameterIndex: Integer): SmallInt; virtual;
     function GetInt(ParameterIndex: Integer): Integer; virtual;
     function GetLong(ParameterIndex: Integer): Int64; virtual;
     function GetFloat(ParameterIndex: Integer): Single; virtual;
     function GetDouble(ParameterIndex: Integer): Double; virtual;
     function GetBigDecimal(ParameterIndex: Integer): Extended; virtual;
-    function GetBytes(ParameterIndex: Integer): TByteDynArray; virtual;
+    function GetBytes(ParameterIndex: Integer): TBytes; virtual;
     function GetDate(ParameterIndex: Integer): TDateTime; virtual;
     function GetTime(ParameterIndex: Integer): TDateTime; virtual;
     function GetTimestamp(ParameterIndex: Integer): TDateTime; virtual;
@@ -1505,7 +1507,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBoolean(ParameterIndex: Integer;
-  Value: Boolean);
+  const Value: Boolean);
 begin
   SetInParam(ParameterIndex, stBoolean, EncodeBoolean(Value));
 end;
@@ -1513,15 +1515,29 @@ end;
 {**
   Sets the designated parameter to a Java <code>byte</code> value.
   The driver converts this
-  to an SQL <code>TINYINT</code> value when it sends it to the database.
+  to an SQL <code>Byte</code> value when it sends it to the database.
 
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetByte(ParameterIndex: Integer;
-  Value: Byte);
+  const Value: Byte);
 begin
   SetInParam(ParameterIndex, stByte, EncodeInteger(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>byte</code> value.
+  The driver converts this
+  to an SQL <code>ShortInt</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetShort(ParameterIndex: Integer;
+  const Value: ShortInt);
+begin
+  SetInParam(ParameterIndex, stShort, EncodeInteger(Value));
 end;
 
 {**
@@ -1532,10 +1548,10 @@ end;
   @param parameterIndex the first parameter is 1, the second is 2, ...
   @param x the parameter value
 }
-procedure TZAbstractPreparedStatement.SetShort(ParameterIndex: Integer;
-  Value: SmallInt);
+procedure TZAbstractPreparedStatement.SetSmall(ParameterIndex: Integer;
+  const Value: SmallInt);
 begin
-  SetInParam(ParameterIndex, stShort, EncodeInteger(Value));
+  SetInParam(ParameterIndex, stSmall, EncodeInteger(Value));
 end;
 
 {**
@@ -1547,7 +1563,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetInt(ParameterIndex: Integer;
-  Value: Integer);
+  const Value: Integer);
 begin
   SetInParam(ParameterIndex, stInteger, EncodeInteger(Value));
 end;
@@ -1561,7 +1577,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetLong(ParameterIndex: Integer;
-  Value: Int64);
+  const Value: Int64);
 begin
   SetInParam(ParameterIndex, stLong, EncodeInteger(Value));
 end;
@@ -1575,7 +1591,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetFloat(ParameterIndex: Integer;
-  Value: Single);
+  const Value: Single);
 begin
   SetInParam(ParameterIndex, stFloat, EncodeFloat(Value));
 end;
@@ -1589,7 +1605,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetDouble(ParameterIndex: Integer;
-  Value: Double);
+  const Value: Double);
 begin
   SetInParam(ParameterIndex, stDouble, EncodeFloat(Value));
 end;
@@ -1603,7 +1619,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBigDecimal(
-  ParameterIndex: Integer; Value: Extended);
+  ParameterIndex: Integer; const Value: Extended);
 begin
   SetInParam(ParameterIndex, stBigDecimal, EncodeFloat(Value));
 end;
@@ -1620,7 +1636,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetPChar(ParameterIndex: Integer;
-   Value: PChar);
+   const Value: PChar);
 begin
   SetInParam(ParameterIndex, stString, EncodeString(Value));
 end;
@@ -1738,7 +1754,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetBytes(ParameterIndex: Integer;
-  const Value: TByteDynArray);
+  const Value: TBytes);
 begin
   SetInParam(ParameterIndex, stBytes, EncodeBytes(Value));
 end;
@@ -1752,7 +1768,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetDate(ParameterIndex: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 begin
   SetInParam(ParameterIndex, stDate, EncodeDateTime(Value));
 end;
@@ -1766,7 +1782,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetTime(ParameterIndex: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 begin
   SetInParam(ParameterIndex, stTime, EncodeDateTime(Value));
 end;
@@ -1780,7 +1796,7 @@ end;
   @param x the parameter value
 }
 procedure TZAbstractPreparedStatement.SetTimestamp(ParameterIndex: Integer;
-  Value: TDateTime);
+  const Value: TDateTime);
 begin
   SetInParam(ParameterIndex, stTimestamp, EncodeDateTime(Value));
 end;
@@ -1803,7 +1819,7 @@ end;
   @param length the number of bytes in the stream
 }
 procedure TZAbstractPreparedStatement.SetAsciiStream(
-  ParameterIndex: Integer; Value: TStream);
+  ParameterIndex: Integer; const Value: TStream);
 begin
   if ConSettings^.AutoEncode then
     SetBlob(ParameterIndex, stAsciiStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_NONE, ConSettings))
@@ -1830,7 +1846,7 @@ end;
   @param x the java input stream which contains the UNICODE parameter value
 }
 procedure TZAbstractPreparedStatement.SetUnicodeStream(
-  ParameterIndex: Integer; Value: TStream);
+  ParameterIndex: Integer; const Value: TStream);
 begin
   SetBlob(ParameterIndex, stUnicodeStream, TZAbstractClob.CreateWithData(TMemoryStream(Value).Memory, Value.Size, zCP_UTF16, ConSettings));
 end;
@@ -1851,7 +1867,7 @@ end;
   @param x the java input stream which contains the binary parameter value
 }
 procedure TZAbstractPreparedStatement.SetBinaryStream(
-  ParameterIndex: Integer; Value: TStream);
+  ParameterIndex: Integer; const Value: TStream);
 begin
   SetBlob(ParameterIndex, stBinaryStream, TZAbstractBlob.CreateWithStream(Value));
 end;
@@ -1862,7 +1878,7 @@ end;
   @param Value the java blob object.
 }
 procedure TZAbstractPreparedStatement.SetBlob(ParameterIndex: Integer;
-  SQLType: TZSQLType; Value: IZBlob);
+  const SQLType: TZSQLType; const Value: IZBlob);
 begin
   if not (SQLType in [stAsciiStream, stUnicodeStream, stBinaryStream]) then
     raise EZSQLException.Create(SWrongTypeForBlobParameter);
@@ -2479,6 +2495,19 @@ begin
 end;
 
 {**
+  Gets the value of a JDBC <code>SHORTINT</code> parameter as a <code>short</code>
+  in the Java programming language.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is 0.
+}
+function TZAbstractCallableStatement.GetShort(ParameterIndex: Integer): ShortInt;
+begin
+  Result := ShortInt(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+end;
+
+{**
   Gets the value of a JDBC <code>SMALLINT</code> parameter as a <code>short</code>
   in the Java programming language.
   @param parameterIndex the first parameter is 1, the second is 2,
@@ -2486,7 +2515,7 @@ end;
   @return the parameter value.  If the value is SQL <code>NULL</code>, the result
   is 0.
 }
-function TZAbstractCallableStatement.GetShort(ParameterIndex: Integer): SmallInt;
+function TZAbstractCallableStatement.GetSmall(ParameterIndex: Integer): SmallInt;
 begin
   Result := SmallInt(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
@@ -2568,7 +2597,7 @@ end;
    <code>null</code>.
 }
 function TZAbstractCallableStatement.GetBytes(ParameterIndex: Integer):
-  TByteDynArray;
+  TBytes;
 begin
   Result := SoftVarManager.GetAsBytes(GetOutParam(ParameterIndex));
 end;

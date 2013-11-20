@@ -64,12 +64,12 @@ type
   private
     FString: string;
     FBuffer: Pointer;
-    FBytes: TByteDynArray;
+    FBytes: TBytes;
   protected
     procedure SetUp; override;
     procedure TearDown; override;
     function CompareStreams(Stream1, Stream2: TStream): Boolean;
-    function CompareArrays(Array1, Array2: TByteDynArray): Boolean;
+    function CompareArrays(Array1, Array2: TBytes): Boolean;
   published
     procedure TestBlob;
     procedure TestBlobNil;
@@ -95,7 +95,7 @@ uses ZDbcResultSetMetadata;
   @result if two streams equals then result true otherwise false
 }
 function TZTestAbstractBlobCase.CompareArrays(Array1,
-  Array2: TByteDynArray): Boolean;
+  Array2: TBytes): Boolean;
 var
   I: Integer;
 begin
@@ -150,7 +150,7 @@ var
   StreamIn: TStream;
   StreamOut: TStream;
   ResultString: string;
-  ResultBytes: TByteDynArray;
+  ResultBytes: TBytes;
   WriteNum, ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin
@@ -231,7 +231,7 @@ var
   StreamIn: TStream;
   StreamOut: TStream;
   ResultString: string;
-  ResultBytes: TByteDynArray;
+  ResultBytes: TBytes;
   WriteNum, ReadNum: integer;
   Buffer: array[0..BINARY_BUFFER_SIZE] of Byte;
 begin

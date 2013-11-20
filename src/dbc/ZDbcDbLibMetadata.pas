@@ -1503,7 +1503,7 @@ begin
           GetStringByName('PROCEDURE_NAME'));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
-        Result.UpdateShortByName('PROCEDURE_TYPE', 0);
+        Result.UpdateSmallByName('PROCEDURE_TYPE', 0);
         Result.InsertRow;
       end;
       Close;
@@ -1588,27 +1588,27 @@ begin
           GetStringByName('PROCEDURE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        case GetShortByName('COLUMN_TYPE') of
-          1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
-          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
-          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
-          4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
-          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
+        case GetSmallByName('COLUMN_TYPE') of
+          1: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctUnknown));
+          4: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctInOut));
+          5: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
+          Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION', GetIntByName('PRECISION'));
         Result.UpdateIntByName('LENGTH', GetIntByName('LENGTH'));
-        Result.UpdateShortByName('SCALE', GetShortByName('SCALE'));
-        Result.UpdateShortByName('RADIX', GetShortByName('RADIX'));
-        Result.UpdateShortByName('NULLABLE', 2);
+        Result.UpdateSmallByName('SCALE', GetSmallByName('SCALE'));
+        Result.UpdateSmallByName('RADIX', GetSmallByName('RADIX'));
+        Result.UpdateSmallByName('NULLABLE', 2);
         if GetStringByName('IS_NULLABLE') = 'NO' then
-          Result.UpdateShortByName('NULLABLE', 0);
+          Result.UpdateSmallByName('NULLABLE', 0);
         if GetStringByName('IS_NULLABLE') = 'YES' then
-          Result.UpdateShortByName('NULLABLE', 1);
+          Result.UpdateSmallByName('NULLABLE', 1);
         Result.UpdateStringByName('REMARKS', GetStringByName('REMARKS'));
         Result.InsertRow;
       end;
@@ -1855,34 +1855,34 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         //The value in the resultset will be used
-        SQLType := ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType);
+        SQLType := ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType);
         if SQLType = stUnknown then
           Result.UpdateNullByName('DATA_TYPE')
         else
-          Result.UpdateShortByName('DATA_TYPE', Ord(SQLType));
+          Result.UpdateSmallByName('DATA_TYPE', Ord(SQLType));
         if ( SQLType = stBytes) and (UpperCase(GetStringByName('TYPE_NAME')) = 'UNIQUEIDENTIFIER') then
-          Result.UpdateShortByName('DATA_TYPE', Ord(stGUID));
+          Result.UpdateSmallByName('DATA_TYPE', Ord(stGUID));
         Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE', GetIntByName('LENGTH'));
         Result.UpdateIntByName('BUFFER_LENGTH', GetIntByName('LENGTH'));
         Result.UpdateIntByName('DECIMAL_DIGITS', GetIntByName('SCALE'));
-        Result.UpdateIntByName('NUM_PREC_RADIX', GetShortByName('RADIX'));
+        Result.UpdateIntByName('NUM_PREC_RADIX', GetSmallByName('RADIX'));
         Result.UpdateIntByName('NULLABLE', 2);
         if GetStringByName('IS_NULLABLE') = 'NO' then
-          Result.UpdateShortByName('NULLABLE', 0);
+          Result.UpdateSmallByName('NULLABLE', 0);
         if GetStringByName('IS_NULLABLE') = 'YES' then
-          Result.UpdateShortByName('NULLABLE', 1);
+          Result.UpdateSmallByName('NULLABLE', 1);
         Result.UpdateStringByName('REMARKS', GetStringByName('REMARKS'));
         Result.UpdateStringByName('COLUMN_DEF', GetStringByName('COLUMN_DEF'));
-        Result.UpdateShortByName('SQL_DATA_TYPE', GetShortByName('SQL_DATA_TYPE'));
-        Result.UpdateShortByName('SQL_DATETIME_SUB', GetShortByName('SQL_DATETIME_SUB'));
+        Result.UpdateSmallByName('SQL_DATA_TYPE', GetSmallByName('SQL_DATA_TYPE'));
+        Result.UpdateSmallByName('SQL_DATETIME_SUB', GetSmallByName('SQL_DATETIME_SUB'));
         Result.UpdateIntByName('CHAR_OCTET_LENGTH', GetIntByName('CHAR_OCTET_LENGTH'));
         Result.UpdateIntByName('ORDINAL_POSITION', GetIntByName('ORDINAL_POSITION'));
         Result.UpdateStringByName('IS_NULLABLE',
           GetStringByName('IS_NULLABLE'));
 
         Result.UpdateBooleanByName('SEARCHABLE',
-          not (GetShortByName('SS_DATA_TYPE') in [34, 35]));
+          not (GetSmallByName('SS_DATA_TYPE') in [34, 35]));
 
         Result.InsertRow;
       end;
@@ -1901,14 +1901,14 @@ begin
       begin
         Result.Next;
         Result.UpdateBooleanByName('AUTO_INCREMENT',
-          (GetShortByName('status') and $80) <> 0);
+          (GetSmallByName('status') and $80) <> 0);
         Result.UpdateNullByName('CASE_SENSITIVE');
         Result.UpdateBooleanByName('SEARCHABLE',
           Result.GetBooleanByName('SEARCHABLE')
           and (GetIntByName('iscomputed') = 0));
         Result.UpdateBooleanByName('WRITABLE',
-          ((GetShortByName('status') and $80) = 0)
-          (*and (GetShortByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
+          ((GetSmallByName('status') and $80) = 0)
+          (*and (GetSmallByName('type') <> 37)*)   // <<<< *DEBUG WARUM?
           and (GetIntByName('iscomputed') = 0));
         Result.UpdateBooleanByName('DEFINITELYWRITABLE',
           Result.GetBooleanByName('WRITABLE'));
@@ -1916,7 +1916,7 @@ begin
           not Result.GetBooleanByName('WRITABLE'));
         if Result.GetBooleanByName('AUTO_INCREMENT') then
         begin
-          Result.UpdateShortByName('NULLABLE', 1);
+          Result.UpdateSmallByName('NULLABLE', 1);
           Result.UpdateStringByName('IS_NULLABLE', 'YES');
         end;
         Result.UpdateRow;
@@ -2100,12 +2100,12 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateShortByName('SCOPE',
-          GetShortByName('SCOPE'));
+        Result.UpdateSmallByName('SCOPE',
+          GetSmallByName('SCOPE'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -2114,8 +2114,8 @@ begin
           GetIntByName('LENGTH'));
         Result.UpdateIntByName('DECIMAL_DIGITS',
           GetIntByName('SCALE'));
-        Result.UpdateShortByName('PSEUDO_COLUMN',
-          GetShortByName('PSEUDO_COLUMN'));
+        Result.UpdateSmallByName('PSEUDO_COLUMN',
+          GetSmallByName('PSEUDO_COLUMN'));
         Result.InsertRow;
       end;
       Close;
@@ -2165,8 +2165,8 @@ begin
           GetStringByName('TABLE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
+        Result.UpdateSmallByName('KEY_SEQ',
+          GetSmallByName('KEY_SEQ'));
         Result.UpdateStringByName('PK_NAME',
           GetStringByName('PK_NAME'));
         Result.InsertRow;
@@ -2284,11 +2284,11 @@ begin
         GetStringByName('FKTABLE_NAME'));
       Result.UpdateStringByName('FKCOLUMN_NAME',
         GetStringByName('FKCOLUMN_NAME'));
-      Result.UpdateShortByName('KEY_SEQ', KeySeq);
-      Result.UpdateShortByName('UPDATE_RULE',
-        GetShortByName('UPDATE_RULE'));
-      Result.UpdateShortByName('DELETE_RULE',
-        GetShortByName('DELETE_RULE'));
+      Result.UpdateSmallByName('KEY_SEQ', KeySeq);
+      Result.UpdateSmallByName('UPDATE_RULE',
+        GetSmallByName('UPDATE_RULE'));
+      Result.UpdateSmallByName('DELETE_RULE',
+        GetSmallByName('DELETE_RULE'));
       Result.UpdateStringByName('FK_NAME',
         GetStringByName('FK_NAME'));
       Result.UpdateStringByName('PK_NAME',
@@ -2357,8 +2357,8 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -2367,30 +2367,30 @@ begin
           GetStringByName('LITERAL_SUFFIX'));
         Result.UpdateStringByName('CREATE_PARAMS',
           GetStringByName('CREATE_PARAMS'));
-        Result.UpdateShortByName('NULLABLE',
-          GetShortByName('NULLABLE'));
+        Result.UpdateSmallByName('NULLABLE',
+          GetSmallByName('NULLABLE'));
         Result.UpdateBooleanByName('CASE_SENSITIVE',
-          GetShortByName('CASE_SENSITIVE') = 1);
-        Result.UpdateShortByName('SEARCHABLE',
-          GetShortByName('SEARCHABLE'));
+          GetSmallByName('CASE_SENSITIVE') = 1);
+        Result.UpdateSmallByName('SEARCHABLE',
+          GetSmallByName('SEARCHABLE'));
         Result.UpdateBooleanByName('UNSIGNED_ATTRIBUTE',
-          GetShortByName('UNSIGNED_ATTRIBUTE') = 1);
+          GetSmallByName('UNSIGNED_ATTRIBUTE') = 1);
         Result.UpdateBooleanByName('FIXED_PREC_SCALE',
-          GetShortByName('MONEY') = 1);
+          GetSmallByName('MONEY') = 1);
         Result.UpdateBooleanByName('AUTO_INCREMENT',
-          GetShortByName('AUTO_INCREMENT') = 1);
+          GetSmallByName('AUTO_INCREMENT') = 1);
         Result.UpdateStringByName('LOCAL_TYPE_NAME',
           GetStringByName('LOCAL_TYPE_NAME'));
-        Result.UpdateShortByName('MINIMUM_SCALE',
-          GetShortByName('MINIMUM_SCALE'));
-        Result.UpdateShortByName('MAXIMUM_SCALE',
-          GetShortByName('MAXIMUM_SCALE'));
-        Result.UpdateShortByName('SQL_DATA_TYPE',
-          GetShortByName('SQL_DATA_TYPE'));
-        Result.UpdateShortByName('SQL_DATETIME_SUB',
-          GetShortByName('SQL_DATETIME_SUB'));
-        Result.UpdateShortByName('NUM_PREC_RADIX',
-          GetShortByName('NUM_PREC_RADIX'));
+        Result.UpdateSmallByName('MINIMUM_SCALE',
+          GetSmallByName('MINIMUM_SCALE'));
+        Result.UpdateSmallByName('MAXIMUM_SCALE',
+          GetSmallByName('MAXIMUM_SCALE'));
+        Result.UpdateSmallByName('SQL_DATA_TYPE',
+          GetSmallByName('SQL_DATA_TYPE'));
+        Result.UpdateSmallByName('SQL_DATETIME_SUB',
+          GetSmallByName('SQL_DATETIME_SUB'));
+        Result.UpdateSmallByName('NUM_PREC_RADIX',
+          GetSmallByName('NUM_PREC_RADIX'));
         Result.InsertRow;
       end;
       Close;
@@ -2478,15 +2478,15 @@ begin
         Result.UpdateStringByName('TABLE_NAME',
           GetStringByName('TABLE_NAME'));
         Result.UpdateBooleanByName('NON_UNIQUE',
-          GetShortByName('NON_UNIQUE') = 1);
+          GetSmallByName('NON_UNIQUE') = 1);
         Result.UpdateStringByName('INDEX_QUALIFIER',
           GetStringByName('INDEX_QUALIFIER'));
         Result.UpdateStringByName('INDEX_NAME',
           GetStringByName('INDEX_NAME'));
-        Result.UpdateShortByName('TYPE',
-          GetShortByName('TYPE'));
-        Result.UpdateShortByName('ORDINAL_POSITION',
-          GetShortByName('SEQ_IN_INDEX'));
+        Result.UpdateSmallByName('TYPE',
+          GetSmallByName('TYPE'));
+        Result.UpdateSmallByName('ORDINAL_POSITION',
+          GetSmallByName('SEQ_IN_INDEX'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         Result.UpdateStringByName('ASC_OR_DESC',
@@ -2569,8 +2569,8 @@ begin
           GetStringByName('PROCEDURE_NAME'));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
-        Result.UpdateShortByName('PROCEDURE_TYPE',
-          GetShortByName('PROCEDURE_TYPE'));
+        Result.UpdateSmallByName('PROCEDURE_TYPE',
+          GetSmallByName('PROCEDURE_TYPE'));
         Result.InsertRow;
       end;
       Close;
@@ -2658,29 +2658,29 @@ begin
           GetStringByName('PROCEDURE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        case GetShortByName('COLUMN_TYPE') of
-          0, 1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
-          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
-          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
-          4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
-          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
+        case GetSmallByName('COLUMN_TYPE') of
+          0, 1: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctUnknown));
+          4: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctInOut));
+          5: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
+          Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateIntByName('LENGTH',
           GetIntByName('LENGTH'));
-        Result.UpdateShortByName('SCALE',
-          GetShortByName('SCALE'));
-        Result.UpdateShortByName('RADIX',
-          GetShortByName('RADIX'));
-        Result.UpdateShortByName('NULLABLE',
-          GetShortByName('NULLABLE'));
+        Result.UpdateSmallByName('SCALE',
+          GetSmallByName('SCALE'));
+        Result.UpdateSmallByName('RADIX',
+          GetSmallByName('RADIX'));
+        Result.UpdateSmallByName('NULLABLE',
+          GetSmallByName('NULLABLE'));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.InsertRow;
@@ -2715,17 +2715,17 @@ begin
       begin
         Result.Next;
         if FindColumn('status2') >= 1 then
-          status2 := GetShortByName('status2')
+          status2 := GetSmallByName('status2')
         else
           status2 := 0;
         case status2 of
-          0, 1: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctIn));
-          2: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
-          3: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
-          4: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctInOut));
-          5: Result.UpdateShortByName('COLUMN_TYPE', Ord(pctReturn));
+          0, 1: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctIn));
+          2: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctInOut));
+          3: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctUnknown));
+          4: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctInOut));
+          5: Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctReturn));
         else
-          Result.UpdateShortByName('COLUMN_TYPE', Ord(pctUnknown));
+          Result.UpdateSmallByName('COLUMN_TYPE', Ord(pctUnknown));
         end;
         Result.UpdateRow;
       end;
@@ -2964,8 +2964,8 @@ begin
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
   //The value in the resultset will be used
-  //      Result.UpdateShortByName('DATA_TYPE',
-  //        Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'))));
+  //      Result.UpdateSmallByName('DATA_TYPE',
+  //        Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'))));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -2975,17 +2975,17 @@ begin
         Result.UpdateIntByName('DECIMAL_DIGITS',
           GetIntByName('DECIMAL_DIGITS'));
         Result.UpdateIntByName('NUM_PREC_RADIX',
-          GetShortByName('NUM_PREC_RADIX'));
-        Result.UpdateShortByName('NULLABLE',
-          GetShortByName('NULLABLE'));
+          GetSmallByName('NUM_PREC_RADIX'));
+        Result.UpdateSmallByName('NULLABLE',
+          GetSmallByName('NULLABLE'));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.UpdateStringByName('COLUMN_DEF',
           GetStringByName('COLUMN_DEF'));
-        Result.UpdateShortByName('SQL_DATA_TYPE',
-          GetShortByName('SQL_DATA_TYPE'));
-        Result.UpdateShortByName('SQL_DATETIME_SUB',
-          GetShortByName('SQL_DATETIME_SUB'));
+        Result.UpdateSmallByName('SQL_DATA_TYPE',
+          GetSmallByName('SQL_DATA_TYPE'));
+        Result.UpdateSmallByName('SQL_DATETIME_SUB',
+          GetSmallByName('SQL_DATETIME_SUB'));
         Result.UpdateIntByName('CHAR_OCTET_LENGTH',
           GetIntByName('CHAR_OCTET_LENGTH'));
         Result.UpdateIntByName('ORDINAL_POSITION',
@@ -3006,20 +3006,20 @@ begin
       begin
         Result.Next;
         Result.UpdateBooleanByName('AUTO_INCREMENT',
-          (GetShortByName('status') and $80) <> 0);
+          (GetSmallByName('status') and $80) <> 0);
         Result.UpdateNullByName('CASE_SENSITIVE');
         Result.UpdateBooleanByName('SEARCHABLE',
-          not (GetShortByName('type') in [34, 35]));
+          not (GetSmallByName('type') in [34, 35]));
         Result.UpdateBooleanByName('WRITABLE',
-          ((GetShortByName('status') and $80) = 0)
-          (*and (GetShortByName('type') <> 37)*));   // <<<< *DEBUG WARUM?
+          ((GetSmallByName('status') and $80) = 0)
+          (*and (GetSmallByName('type') <> 37)*));   // <<<< *DEBUG WARUM?
         Result.UpdateBooleanByName('DEFINITELYWRITABLE',
           Result.GetBooleanByName('WRITABLE'));
         Result.UpdateBooleanByName('READONLY',
           not Result.GetBooleanByName('WRITABLE'));
         if Result.GetBooleanByName('AUTO_INCREMENT') then
         begin
-          Result.UpdateShortByName('NULLABLE', 1);
+          Result.UpdateSmallByName('NULLABLE', 1);
           Result.UpdateStringByName('IS_NULLABLE', 'YES');
         end;
         Result.UpdateRow;
@@ -3197,12 +3197,12 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateShortByName('SCOPE',
-          GetShortByName('SCOPE'));
+        Result.UpdateSmallByName('SCOPE',
+          GetSmallByName('SCOPE'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE',
@@ -3211,8 +3211,8 @@ begin
           GetIntByName('BUFFER_LENGTH'));
         Result.UpdateIntByName('DECIMAL_DIGITS',
           GetIntByName('DECIMAL_DIGITS'));
-        Result.UpdateShortByName('PSEUDO_COLUMN',
-          GetShortByName('PSEUDO_COLUMN'));
+        Result.UpdateSmallByName('PSEUDO_COLUMN',
+          GetSmallByName('PSEUDO_COLUMN'));
         Result.InsertRow;
       end;
       Close;
@@ -3261,8 +3261,8 @@ begin
           GetStringByName('TABLE_NAME'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
+        Result.UpdateSmallByName('KEY_SEQ',
+          GetSmallByName('KEY_SEQ'));
         Result.UpdateStringByName('PK_NAME',
           GetStringByName('PK_NAME'));
         Result.InsertRow;
@@ -3366,12 +3366,12 @@ begin
           GetStringByName('FKTABLE_NAME'));
         Result.UpdateStringByName('FKCOLUMN_NAME',
           GetStringByName('FKCOLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
-        Result.UpdateShortByName('UPDATE_RULE',
-          GetShortByName('UPDATE_RULE'));
-        Result.UpdateShortByName('DELETE_RULE',
-          GetShortByName('DELETE_RULE'));
+        Result.UpdateSmallByName('KEY_SEQ',
+          GetSmallByName('KEY_SEQ'));
+        Result.UpdateSmallByName('UPDATE_RULE',
+          GetSmallByName('UPDATE_RULE'));
+        Result.UpdateSmallByName('DELETE_RULE',
+          GetSmallByName('DELETE_RULE'));
         Result.UpdateStringByName('FK_NAME',
           GetStringByName('FK_NAME'));
         Result.UpdateStringByName('PK_NAME',
@@ -3479,12 +3479,12 @@ begin
           GetStringByName('FKTABLE_NAME'));
         Result.UpdateStringByName('FKCOLUMN_NAME',
           GetStringByName('FKCOLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
-        Result.UpdateShortByName('UPDATE_RULE',
-          GetShortByName('UPDATE_RULE'));
-        Result.UpdateShortByName('DELETE_RULE',
-          GetShortByName('DELETE_RULE'));
+        Result.UpdateSmallByName('KEY_SEQ',
+          GetSmallByName('KEY_SEQ'));
+        Result.UpdateSmallByName('UPDATE_RULE',
+          GetSmallByName('UPDATE_RULE'));
+        Result.UpdateSmallByName('DELETE_RULE',
+          GetSmallByName('DELETE_RULE'));
         Result.UpdateStringByName('FK_NAME',
           GetStringByName('FK_NAME'));
         Result.UpdateStringByName('PK_NAME',
@@ -3603,12 +3603,12 @@ begin
           GetStringByName('FKTABLE_NAME'));
         Result.UpdateStringByName('FKCOLUMN_NAME',
           GetStringByName('FKCOLUMN_NAME'));
-        Result.UpdateShortByName('KEY_SEQ',
-          GetShortByName('KEY_SEQ'));
-        Result.UpdateShortByName('UPDATE_RULE',
-          GetShortByName('UPDATE_RULE'));
-        Result.UpdateShortByName('DELETE_RULE',
-          GetShortByName('DELETE_RULE'));
+        Result.UpdateSmallByName('KEY_SEQ',
+          GetSmallByName('KEY_SEQ'));
+        Result.UpdateSmallByName('UPDATE_RULE',
+          GetSmallByName('UPDATE_RULE'));
+        Result.UpdateSmallByName('DELETE_RULE',
+          GetSmallByName('DELETE_RULE'));
         Result.UpdateStringByName('FK_NAME',
           GetStringByName('FK_NAME'));
         Result.UpdateStringByName('PK_NAME',
@@ -3677,8 +3677,8 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateStringByName('TYPE_NAME',
           GetStringByName('TYPE_NAME'));
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateIntByName('PRECISION',
           GetIntByName('PRECISION'));
         Result.UpdateStringByName('LITERAL_PREFIX',
@@ -3687,30 +3687,30 @@ begin
           GetStringByName('LITERAL_SUFFIX'));
         Result.UpdateStringByName('CREATE_PARAMS',
           GetStringByName('CREATE_PARAMS'));
-        Result.UpdateShortByName('NULLABLE',
-          GetShortByName('NULLABLE'));
+        Result.UpdateSmallByName('NULLABLE',
+          GetSmallByName('NULLABLE'));
         Result.UpdateBooleanByName('CASE_SENSITIVE',
-          GetShortByName('CASE_SENSITIVE') = 1);
-        Result.UpdateShortByName('SEARCHABLE',
-          GetShortByName('SEARCHABLE'));
+          GetSmallByName('CASE_SENSITIVE') = 1);
+        Result.UpdateSmallByName('SEARCHABLE',
+          GetSmallByName('SEARCHABLE'));
         Result.UpdateBooleanByName('UNSIGNED_ATTRIBUTE',
-          GetShortByName('UNSIGNED_ATTRIBUTE') = 1);
+          GetSmallByName('UNSIGNED_ATTRIBUTE') = 1);
         Result.UpdateBooleanByName('FIXED_PREC_SCALE',
-          GetShortByName('FIXED_PREC_SCALE') = 1);
+          GetSmallByName('FIXED_PREC_SCALE') = 1);
         Result.UpdateBooleanByName('AUTO_INCREMENT',
-          GetShortByName('AUTO_INCREMENT') = 1);
+          GetSmallByName('AUTO_INCREMENT') = 1);
         Result.UpdateStringByName('LOCAL_TYPE_NAME',
           GetStringByName('LOCAL_TYPE_NAME'));
-        Result.UpdateShortByName('MINIMUM_SCALE',
-          GetShortByName('MINIMUM_SCALE'));
-        Result.UpdateShortByName('MAXIMUM_SCALE',
-          GetShortByName('MAXIMUM_SCALE'));
-        Result.UpdateShortByName('SQL_DATA_TYPE',
-          GetShortByName('SQL_DATA_TYPE'));
-        Result.UpdateShortByName('SQL_DATETIME_SUB',
-          GetShortByName('SQL_DATETIME_SUB'));
-        Result.UpdateShortByName('NUM_PREC_RADIX',
-          GetShortByName('NUM_PREC_RADIX'));
+        Result.UpdateSmallByName('MINIMUM_SCALE',
+          GetSmallByName('MINIMUM_SCALE'));
+        Result.UpdateSmallByName('MAXIMUM_SCALE',
+          GetSmallByName('MAXIMUM_SCALE'));
+        Result.UpdateSmallByName('SQL_DATA_TYPE',
+          GetSmallByName('SQL_DATA_TYPE'));
+        Result.UpdateSmallByName('SQL_DATETIME_SUB',
+          GetSmallByName('SQL_DATETIME_SUB'));
+        Result.UpdateSmallByName('NUM_PREC_RADIX',
+          GetSmallByName('NUM_PREC_RADIX'));
         Result.InsertRow;
       end;
       Close;
@@ -3797,15 +3797,15 @@ begin
         Result.UpdateStringByName('TABLE_NAME',
           GetStringByName('TABLE_NAME'));
         Result.UpdateBooleanByName('NON_UNIQUE',
-          GetShortByName('NON_UNIQUE') = 1);
+          GetSmallByName('NON_UNIQUE') = 1);
         Result.UpdateStringByName('INDEX_QUALIFIER',
           GetStringByName('INDEX_QUALIFIER'));
         Result.UpdateStringByName('INDEX_NAME',
           GetStringByName('INDEX_NAME'));
-        Result.UpdateShortByName('TYPE',
-          GetShortByName('TYPE'));
-        Result.UpdateShortByName('ORDINAL_POSITION',
-          GetShortByName('ORDINAL_POSITION'));
+        Result.UpdateSmallByName('TYPE',
+          GetSmallByName('TYPE'));
+        Result.UpdateSmallByName('ORDINAL_POSITION',
+          GetSmallByName('ORDINAL_POSITION'));
         Result.UpdateStringByName('COLUMN_NAME',
           GetStringByName('COLUMN_NAME'));
         Result.UpdateStringByName('ASC_OR_DESC',
@@ -3890,8 +3890,8 @@ begin
           GetStringByName('TYPE_NAME'));
         Result.UpdateStringByName('JAVA_CLASS',
           GetStringByName('JAVA_CLASS'));
-        Result.UpdateShortByName('DATA_TYPE',
-          Ord(ConvertODBCToSqlType(GetShortByName('DATA_TYPE'), ConSettings.CPType)));
+        Result.UpdateSmallByName('DATA_TYPE',
+          Ord(ConvertODBCToSqlType(GetSmallByName('DATA_TYPE'), ConSettings.CPType)));
         Result.UpdateStringByName('REMARKS',
           GetStringByName('REMARKS'));
         Result.InsertRow;

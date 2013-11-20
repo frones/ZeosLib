@@ -92,13 +92,13 @@ type
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -519,7 +519,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZAdoResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZAdoResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 begin
   Result := 0;
   LastWasNull := IsNull(ColumnIndex);
@@ -653,7 +653,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   V: Variant;
   GUID: TGUID;
@@ -811,7 +811,7 @@ begin
   for I := 1 to Metadata.GetColumnCount do
   begin
     if Metadata.IsAutoIncrement(I) and
-      (Metadata.GetColumnType(I) in [stByte, stShort, stInteger, stLong]) then
+      (Metadata.GetColumnType(I) in [stByte, stSmall, stInteger, stLong]) then
     begin
       FAutoColumnIndex := I;
       Break;

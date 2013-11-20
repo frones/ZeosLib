@@ -687,7 +687,7 @@ var
   DatString: RawByteString;
   DatMoney: Currency;
   DatDBDATETIME: DBDATETIME;
-  DatBytes: TByteDynArray;
+  DatBytes: TBytes;
   Temp: TZVariant;
   ParamType: TZSQLType;
   TempBlob: IZBlob;
@@ -730,7 +730,7 @@ begin
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
               FPlainDriver.GetVariables.datatypes[Z_SQLINT1], -1, -1, @DatByte);
           end;
-        stShort:
+        stSmall:
           begin
             DatShort := SmallInt(SoftVarManager.GetAsInteger(InParamValues[I]));
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,

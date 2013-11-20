@@ -582,6 +582,8 @@ begin
           Statement.SetByte(I + 1, RowAccessor.GetByte(ColumnIndex, WasNull));
         stShort:
           Statement.SetShort(I + 1, RowAccessor.GetShort(ColumnIndex, WasNull));
+        stSmall:
+          Statement.SetSmall(I + 1, RowAccessor.GetSmall(ColumnIndex, WasNull));
         stInteger:
           Statement.SetInt(I + 1, RowAccessor.GetInt(ColumnIndex, WasNull));
         stLong:
@@ -674,7 +676,7 @@ begin
           case RefreshColumnType of
             stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
             stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
-            stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
+            stSmall: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetSmall(I));
             stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
             stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
             stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));

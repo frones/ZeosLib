@@ -92,7 +92,7 @@ type
 // Data types
 type
   {** Defines supported SQL types. }
-  TZSQLType = (stUnknown, stBoolean, stByte, stShort, stInteger, stLong,
+  TZSQLType = (stUnknown, stBoolean, stByte, stShort, stSmall, stInteger, stLong,
     stFloat, stDouble, stBigDecimal, stString, stUnicodeString, stBytes,
     stDate, stTime, stTimestamp, stDataSet, stGUID,
     stAsciiStream, stUnicodeStream, stBinaryStream);
@@ -280,7 +280,7 @@ type
     procedure SetUseMetadata(Value: Boolean);
     //EgonHugeist
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload;
     function GetClientCodePageInformations: PZCodePage;
@@ -573,30 +573,31 @@ type
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
     procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
-    procedure SetBoolean(ParameterIndex: Integer; Value: Boolean);
-    procedure SetByte(ParameterIndex: Integer; Value: Byte);
-    procedure SetShort(ParameterIndex: Integer; Value: SmallInt);
-    procedure SetInt(ParameterIndex: Integer; Value: Integer);
-    procedure SetLong(ParameterIndex: Integer; Value: Int64);
-    procedure SetFloat(ParameterIndex: Integer; Value: Single);
-    procedure SetDouble(ParameterIndex: Integer; Value: Double);
-    procedure SetBigDecimal(ParameterIndex: Integer; Value: Extended);
-    procedure SetPChar(ParameterIndex: Integer; Value: PChar);
+    procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean);
+    procedure SetByte(ParameterIndex: Integer; const Value: Byte);
+    procedure SetShort(ParameterIndex: Integer; const Value: ShortInt);
+    procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt);
+    procedure SetInt(ParameterIndex: Integer; const Value: Integer);
+    procedure SetLong(ParameterIndex: Integer; const Value: Int64);
+    procedure SetFloat(ParameterIndex: Integer; const Value: Single);
+    procedure SetDouble(ParameterIndex: Integer; const Value: Double);
+    procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended);
+    procedure SetPChar(ParameterIndex: Integer; const Value: PChar);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
     procedure SetString(ParameterIndex: Integer; const Value: String);
     procedure SetUnicodeString(ParameterIndex: Integer; const Value: ZWideString); //AVZ
-    procedure SetBytes(ParameterIndex: Integer; const Value: TByteDynArray);
+    procedure SetBytes(ParameterIndex: Integer; const Value: TBytes);
     procedure SetAnsiString(ParameterIndex: Integer; const Value: AnsiString);
     procedure SetUTF8String(ParameterIndex: Integer; const Value: UTF8String);
     procedure SetRawByteString(ParameterIndex: Integer; const Value: RawByteString);
-    procedure SetDate(ParameterIndex: Integer; Value: TDateTime);
-    procedure SetTime(ParameterIndex: Integer; Value: TDateTime);
-    procedure SetTimestamp(ParameterIndex: Integer; Value: TDateTime);
-    procedure SetAsciiStream(ParameterIndex: Integer; Value: TStream);
-    procedure SetUnicodeStream(ParameterIndex: Integer; Value: TStream);
-    procedure SetBinaryStream(ParameterIndex: Integer; Value: TStream);
-    procedure SetBlob(ParameterIndex: Integer; SQLType: TZSQLType;
-      Value: IZBlob);
+    procedure SetDate(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetTime(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetTimestamp(ParameterIndex: Integer; const Value: TDateTime);
+    procedure SetAsciiStream(ParameterIndex: Integer; const Value: TStream);
+    procedure SetUnicodeStream(ParameterIndex: Integer; const Value: TStream);
+    procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream);
+    procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType;
+      const Value: IZBlob);
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
 
     procedure ClearParameters;
@@ -633,13 +634,14 @@ type
     function GetUnicodeString(ParameterIndex: Integer): ZWideString;
     function GetBoolean(ParameterIndex: Integer): Boolean;
     function GetByte(ParameterIndex: Integer): Byte;
-    function GetShort(ParameterIndex: Integer): SmallInt;
+    function GetShort(ParameterIndex: Integer): ShortInt;
+    function GetSmall(ParameterIndex: Integer): SmallInt;
     function GetInt(ParameterIndex: Integer): Integer;
     function GetLong(ParameterIndex: Integer): Int64;
     function GetFloat(ParameterIndex: Integer): Single;
     function GetDouble(ParameterIndex: Integer): Double;
     function GetBigDecimal(ParameterIndex: Integer): Extended;
-    function GetBytes(ParameterIndex: Integer): TByteDynArray;
+    function GetBytes(ParameterIndex: Integer): TBytes;
     function GetDate(ParameterIndex: Integer): TDateTime;
     function GetTime(ParameterIndex: Integer): TDateTime;
     function GetTimestamp(ParameterIndex: Integer): TDateTime;
@@ -678,13 +680,14 @@ type
     function GetWideRec(ColumnIndex: Integer): TZWideRec;
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
-    function GetShort(ColumnIndex: Integer): SmallInt;
+    function GetShort(ColumnIndex: Integer): ShortInt;
+    function GetSmall(ColumnIndex: Integer): SmallInt;
     function GetInt(ColumnIndex: Integer): Integer;
     function GetLong(ColumnIndex: Integer): Int64;
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
     function GetBigDecimal(ColumnIndex: Integer): Extended;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray;
+    function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
     function GetTime(ColumnIndex: Integer): TDateTime;
     function GetTimestamp(ColumnIndex: Integer): TDateTime;
@@ -714,13 +717,14 @@ type
     function GetWideRecByName(const ColumnName: string): TZWideRec;
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
-    function GetShortByName(const ColumnName: string): SmallInt;
+    function GetShortByName(const ColumnName: string): ShortInt;
+    function GetSmallByName(const ColumnName: string): SmallInt;
     function GetIntByName(const ColumnName: string): Integer;
     function GetLongByName(const ColumnName: string): Int64;
     function GetFloatByName(const ColumnName: string): Single;
     function GetDoubleByName(const ColumnName: string): Double;
     function GetBigDecimalByName(const ColumnName: string): Extended;
-    function GetBytesByName(const ColumnName: string): TByteDynArray;
+    function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
     function GetTimeByName(const ColumnName: string): TDateTime;
     function GetTimestampByName(const ColumnName: string): TDateTime;
@@ -784,15 +788,16 @@ type
     function RowDeleted: Boolean;
 
     procedure UpdateNull(ColumnIndex: Integer);
-    procedure UpdateBoolean(ColumnIndex: Integer; Value: Boolean);
-    procedure UpdateByte(ColumnIndex: Integer; Value: ShortInt);
-    procedure UpdateShort(ColumnIndex: Integer; Value: SmallInt);
-    procedure UpdateInt(ColumnIndex: Integer; Value: Integer);
-    procedure UpdateLong(ColumnIndex: Integer; Value: Int64);
-    procedure UpdateFloat(ColumnIndex: Integer; Value: Single);
-    procedure UpdateDouble(ColumnIndex: Integer; Value: Double);
-    procedure UpdateBigDecimal(ColumnIndex: Integer; Value: Extended);
-    procedure UpdatePChar(ColumnIndex: Integer; Value: PChar);
+    procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean);
+    procedure UpdateByte(ColumnIndex: Integer; const Value: Byte);
+    procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt);
+    procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt);
+    procedure UpdateInt(ColumnIndex: Integer; const Value: Integer);
+    procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
+    procedure UpdateFloat(ColumnIndex: Integer; const Value: Single);
+    procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
+    procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended);
+    procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar);
     procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
     procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar);
@@ -803,14 +808,14 @@ type
     procedure UpdateRawByteString(ColumnIndex: Integer; const Value: RawByteString);
     procedure UpdateBinaryString(ColumnIndex: Integer; const Value: RawByteString); deprecated;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
-    procedure UpdateBytes(ColumnIndex: Integer; const Value: TByteDynArray);
-    procedure UpdateDate(ColumnIndex: Integer; Value: TDateTime);
-    procedure UpdateTime(ColumnIndex: Integer; Value: TDateTime);
-    procedure UpdateTimestamp(ColumnIndex: Integer; Value: TDateTime);
-    procedure UpdateAsciiStream(ColumnIndex: Integer; Value: TStream);
-    procedure UpdateUnicodeStream(ColumnIndex: Integer; Value: TStream);
-    procedure UpdateBinaryStream(ColumnIndex: Integer; Value: TStream);
-    procedure UpdateDataSet(ColumnIndex: Integer; Value: IZDataSet);
+    procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
+    procedure UpdateDate(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateTime(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateTimestamp(ColumnIndex: Integer; const Value: TDateTime);
+    procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream);
+    procedure UpdateDataSet(ColumnIndex: Integer; const Value: IZDataSet);
     procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
     procedure UpdateDefaultExpression(ColumnIndex: Integer; const Value: string);
     procedure UpdateLob(ColumnIndex: Integer; const Value: IZBlob);
@@ -820,29 +825,30 @@ type
     //======================================================================
 
     procedure UpdateNullByName(const ColumnName: string);
-    procedure UpdateBooleanByName(const ColumnName: string; Value: Boolean);
-    procedure UpdateByteByName(const ColumnName: string; Value: ShortInt);
-    procedure UpdateShortByName(const ColumnName: string; Value: SmallInt);
-    procedure UpdateIntByName(const ColumnName: string; Value: Integer);
-    procedure UpdateLongByName(const ColumnName: string; Value: Int64);
-    procedure UpdateFloatByName(const ColumnName: string; Value: Single);
-    procedure UpdateDoubleByName(const ColumnName: string; Value: Double);
-    procedure UpdateBigDecimalByName(const ColumnName: string; Value: Extended);
-    procedure UpdatePCharByName(const ColumnName: string; Value: PChar);
+    procedure UpdateBooleanByName(const ColumnName: string; const Value: Boolean);
+    procedure UpdateByteByName(const ColumnName: string; const Value: Byte);
+    procedure UpdateShortByName(const ColumnName: string; const Value: ShortInt);
+    procedure UpdateSmallByName(const ColumnName: string; const Value: SmallInt);
+    procedure UpdateIntByName(const ColumnName: string; const Value: Integer);
+    procedure UpdateLongByName(const ColumnName: string; const Value: Int64);
+    procedure UpdateFloatByName(const ColumnName: string; const Value: Single);
+    procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
+    procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended);
+    procedure UpdatePCharByName(const ColumnName: string; const Value: PChar);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);
     procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String);
     procedure UpdateRawByteStringByName(const ColumnName: string; const Value: RawByteString);
     procedure UpdateBinaryStringByName(const ColumnName: string; const Value: RawByteString); deprecated;
     procedure UpdateUnicodeStringByName(const ColumnName: string; const Value: ZWideString);
-    procedure UpdateBytesByName(const ColumnName: string; const Value: TByteDynArray);
-    procedure UpdateDateByName(const ColumnName: string; Value: TDateTime);
-    procedure UpdateTimeByName(const ColumnName: string; Value: TDateTime);
-    procedure UpdateTimestampByName(const ColumnName: string; Value: TDateTime);
-    procedure UpdateAsciiStreamByName(const ColumnName: string; Value: TStream);
-    procedure UpdateUnicodeStreamByName(const ColumnName: string; Value: TStream);
-    procedure UpdateBinaryStreamByName(const ColumnName: string; Value: TStream);
-    procedure UpdateDataSetByName(const ColumnName: string; Value: IZDataSet);
+    procedure UpdateBytesByName(const ColumnName: string; const Value: TBytes);
+    procedure UpdateDateByName(const ColumnName: string; const Value: TDateTime);
+    procedure UpdateTimeByName(const ColumnName: string; const Value: TDateTime);
+    procedure UpdateTimestampByName(const ColumnName: string; const Value: TDateTime);
+    procedure UpdateAsciiStreamByName(const ColumnName: string; const Value: TStream);
+    procedure UpdateUnicodeStreamByName(const ColumnName: string; const Value: TStream);
+    procedure UpdateBinaryStreamByName(const ColumnName: string; const Value: TStream);
+    procedure UpdateDataSetByName(const ColumnName: string; const Value: IZDataSet);
     procedure UpdateValueByName(const ColumnName: string; const Value: TZVariant);
 
     procedure InsertRow;
@@ -913,8 +919,8 @@ type
 
     function GetString: RawByteString;
     procedure SetString(const Value: RawByteString);
-    function GetBytes: TByteDynArray;
-    procedure SetBytes(const Value: TByteDynArray);
+    function GetBytes: TBytes;
+    procedure SetBytes(const Value: TBytes);
     function GetStream: TStream;
     procedure SetStream(const Value: TStream); overload;
     function GetBuffer: Pointer;

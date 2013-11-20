@@ -501,7 +501,7 @@ end;
 function TZMySQLEmulatedPreparedStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempBlob: IZBlob;
 begin
   if InParamCount <= ParamIndex then
@@ -522,7 +522,7 @@ begin
            Result := '''Y'''
         else
            Result := '''N''';
-      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1043,7 +1043,7 @@ end;
 function TZMySQLCallableStatement.PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
 var
   Value: TZVariant;
-  TempBytes: TByteDynArray;
+  TempBytes: TBytes;
   TempBlob: IZBlob;
 begin
   TempBytes := nil;
@@ -1065,7 +1065,7 @@ begin
           Result := '''Y'''
         else
           Result := '''N''';
-      stByte, stShort, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1210,6 +1210,8 @@ begin
         OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
       stShort:
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+      stSmall:
+        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
       stInteger:
         OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
       stLong:

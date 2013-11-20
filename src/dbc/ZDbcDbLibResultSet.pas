@@ -92,13 +92,13 @@ type
     function GetUnicodeString(ColumnIndex: Integer): ZWideString; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -536,7 +536,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZDBLibResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZDBLibResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 var
   DL: Integer;
   Data: Pointer;
@@ -561,7 +561,7 @@ begin
         @Result, SizeOf(Result));
     end;
   end;
-  FDBLibConnection.CheckDBLibError(lcOther, 'GETSHORT');
+  FDBLibConnection.CheckDBLibError(lcOther, 'GetSmall');
 end;
 
 {**
@@ -714,7 +714,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZDBLibResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   DL: Integer;
   Data: Pointer;

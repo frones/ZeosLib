@@ -179,7 +179,7 @@ type
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload;
-    function GetBinaryEscapeString(const Value: TByteDynArray): String; overload;
+    function GetBinaryEscapeString(const Value: TBytes): String; overload;
     function GetEscapeString(const Value: ZWideString): ZWideString; overload; virtual;
     function GetEscapeString(const Value: RawByteString): RawByteString; overload; virtual;
     function GetEncoding: TZCharEncoding;
@@ -686,7 +686,7 @@ begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;
 
-function TZDbcPooledConnection.GetBinaryEscapeString(const Value: TByteDynArray): String;
+function TZDbcPooledConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   Result := GetConnection.GetBinaryEscapeString(Value);
 end;

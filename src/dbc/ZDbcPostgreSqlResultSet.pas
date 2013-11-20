@@ -89,13 +89,14 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetShort(ColumnIndex: Integer): ShortInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -418,9 +419,11 @@ var
   Len: Cardinal;
   Buffer: PAnsiChar;
 begin
-  Result := '';
   Buffer := GetBuffer(ColumnIndex, Len);
-  ZSetString(Buffer, Len, Result);
+  if LastWasNull then
+    Result := ''
+  else
+    ZSetString(Buffer, Len, Result);
 end;
 
 {**
@@ -450,11 +453,42 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetByte(ColumnIndex: Integer): Byte;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  Buffer := GetBuffer(ColumnIndex, Len);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := Byte(RawToIntDef(Buffer, 0));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>shortint</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZPostgreSQLResultSet.GetShort(ColumnIndex: Integer): ShortInt;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stShort);
+{$ENDIF}
+  Buffer := GetBuffer(ColumnIndex, Len);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := ShortInt(RawToIntDef(Buffer, 0));
 end;
 
 {**
@@ -466,12 +500,19 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZPostgreSQLResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZPostgreSQLResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Result := SmallInt(RawToIntDef(InternalGetString(ColumnIndex), 0));
+  Buffer := GetBuffer(ColumnIndex, Len);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := SmallInt(RawToIntDef(Buffer, 0));
 end;
 
 {**
@@ -484,11 +525,18 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetInt(ColumnIndex: Integer): Integer;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Result := RawToIntDef(InternalGetString(ColumnIndex), 0);
+  Buffer := GetBuffer(ColumnIndex, Len);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := RawToIntDef(Buffer, 0);
 end;
 
 {**
@@ -501,11 +549,18 @@ end;
     value returned is <code>0</code>
 }
 function TZPostgreSQLResultSet.GetLong(ColumnIndex: Integer): Int64;
+var
+  Len: Cardinal;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := RawToInt64Def(InternalGetString(ColumnIndex), 0);
+  Buffer := GetBuffer(ColumnIndex, Len);
+  if LastWasNull then
+    Result := 0
+  else
+    Result := RawToInt64Def(Buffer, 0);
 end;
 
 {**
@@ -594,7 +649,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZPostgreSQLResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);

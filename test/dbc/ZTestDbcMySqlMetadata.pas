@@ -140,7 +140,7 @@ begin
   ResultSet.Next;
   CheckEquals('2', ResultSet.GetStringByName('SCOPE'));
   CheckEquals('p_id', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals(ord(stShort), ResultSet.GetIntByName('DATA_TYPE'));
+  CheckEquals(ord(stSmall), ResultSet.GetIntByName('DATA_TYPE'));
   CheckEquals('smallint', ResultSet.GetStringByName('TYPE_NAME'));
   CheckEquals('6', ResultSet.GetStringByName('COLUMN_SIZE'));
   CheckEquals('65535', ResultSet.GetStringByName('BUFFER_LENGTH'));
@@ -272,7 +272,7 @@ begin
   CheckEquals('', ResultSet.GetStringByName('TABLE_SCHEM'));
   CheckEquals('people', ResultSet.GetStringByName('TABLE_NAME'));
   CheckEquals('p_redundant', ResultSet.GetStringByName('COLUMN_NAME'));
-  CheckEquals(ord(stShort), ResultSet.GetIntByName('DATA_TYPE'));
+  CheckEquals(ord(stSmall), ResultSet.GetIntByName('DATA_TYPE'));
   CheckEquals('TINYINT', UpperCase(ResultSet.GetStringByName('TYPE_NAME')));
   CheckEquals(1, ResultSet.GetIntByName('COLUMN_SIZE'));
   CheckEquals(65535, ResultSet.GetIntByName('BUFFER_LENGTH'));

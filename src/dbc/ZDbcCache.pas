@@ -116,9 +116,9 @@ type
     function GetBlobObject(Buffer: PZRowBuffer; ColumnIndex: Integer): IZBlob;
     procedure SetBlobObject(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
       const Value: IZBlob);
-    function InternalGetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer): TByteDynArray; {$IFDEF WITHINLINE} inline; {$ENDIF}
+    function InternalGetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer): TBytes; {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetBytes(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
-      const Value: TByteDynArray; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
+      const Value: TBytes; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetString(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
       const Value: RawByteString; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
     procedure InternalSetUnicodeString(const Buffer: PZRowBuffer; const ColumnIndex: Integer;
@@ -130,8 +130,8 @@ type
       const ColumnIndex: Integer; const Value: PWideChar;
       Const Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
-    procedure CheckColumnIndex(ColumnIndex: Integer);
-    procedure CheckColumnConvertion(ColumnIndex: Integer; ResultType: TZSQLType);
+    procedure CheckColumnIndex(Const ColumnIndex: Integer);
+    procedure CheckColumnConvertion(Const ColumnIndex: Integer; ResultType: TZSQLType);
     function CompareString(Value1, Value2: Pointer): Integer; virtual; abstract;
     property ConSettings: PZConSettings read FConSettings;
   public
@@ -159,82 +159,84 @@ type
     procedure Clear;
     procedure Dispose;
 
-    function GetColumnData(ColumnIndex: Integer; var IsNull: Boolean): Pointer;
-    function GetColumnDataSize(ColumnIndex: Integer): Integer;
+    function GetColumnData(Const ColumnIndex: Integer; var IsNull: Boolean): Pointer;
+    function GetColumnDataSize(Const ColumnIndex: Integer): Integer;
 
-    function GetColumnName(ColumnIndex: Integer): string;
-    function GetColumnCase(ColumnIndex: Integer): Boolean;
-    function GetColumnType(ColumnIndex: Integer): TZSQLType;
-    function GetColumnLength(ColumnIndex: Integer): Integer;
-    function GetColumnOffSet(ColumnIndex: Integer): Integer;
-    function GetColumnDefaultExpression(ColumnIndex: Integer): string;
-    procedure SetColumnDefaultExpression(ColumnIndex: Integer; Value: string);
-    procedure SetColumnCodePage(ColumnIndex: Integer; Value: Word);
+    function GetColumnName(Const ColumnIndex: Integer): string;
+    function GetColumnCase(Const ColumnIndex: Integer): Boolean;
+    function GetColumnType(Const ColumnIndex: Integer): TZSQLType;
+    function GetColumnLength(Const ColumnIndex: Integer): Integer;
+    function GetColumnOffSet(Const ColumnIndex: Integer): Integer;
+    function GetColumnDefaultExpression(Const ColumnIndex: Integer): string;
+    procedure SetColumnDefaultExpression(Const ColumnIndex: Integer; const Value: string);
+    procedure SetColumnCodePage(Const ColumnIndex: Integer; const Value: Word);
 
     //======================================================================
     // Methods for accessing results by column index
     //======================================================================
 
-    function IsNull(ColumnIndex: Integer): Boolean;
-    function GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; virtual;
-    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; virtual; abstract;
-    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; virtual;
-    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
-    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
-    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
-    function GetWideRec(ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; virtual;
-    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
-    function GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean; virtual;
-    function GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt; virtual;
-    function GetShort(ColumnIndex: Integer; var IsNull: Boolean): SmallInt; virtual;
-    function GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer; virtual;
-    function GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64; virtual;
-    function GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single; virtual;
-    function GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double; virtual;
-    function GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended; virtual;
-    function GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TByteDynArray; virtual;
-    function GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
-    function GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
-    function GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
-    function GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
-    function GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
-    function GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
-    function GetValue(ColumnIndex: Integer): TZVariant;
+    function IsNull(Const ColumnIndex: Integer): Boolean;
+    function GetAnsiRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; virtual;
+    function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; virtual; abstract;
+    function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; virtual;
+    function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
+    function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
+    function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
+    function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; virtual;
+    function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
+    function GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean; virtual;
+    function GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte; virtual;
+    function GetShort(Const ColumnIndex: Integer; var IsNull: Boolean): ShortInt; virtual;
+    function GetSmall(Const ColumnIndex: Integer; var IsNull: Boolean): SmallInt; virtual;
+    function GetInt(Const ColumnIndex: Integer; var IsNull: Boolean): Integer; virtual;
+    function GetLong(Const ColumnIndex: Integer; var IsNull: Boolean): Int64; virtual;
+    function GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single; virtual;
+    function GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double; virtual;
+    function GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended; virtual;
+    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes; virtual;
+    function GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
+    function GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
+    function GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
+    function GetAsciiStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
+    function GetUnicodeStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
+    function GetBinaryStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
+    function GetBlob(Const ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+    function GetDataSet(Const ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+    function GetValue(Const ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
     // Updates
     //---------------------------------------------------------------------
 
-    procedure SetNotNull(ColumnIndex: Integer);
-    procedure SetNull(ColumnIndex: Integer);
-    procedure SetBoolean(ColumnIndex: Integer; Value: Boolean); virtual;
-    procedure SetByte(ColumnIndex: Integer; Value: ShortInt); virtual;
-    procedure SetShort(ColumnIndex: Integer; Value: SmallInt); virtual;
-    procedure SetInt(ColumnIndex: Integer; Value: Integer); virtual;
-    procedure SetLong(ColumnIndex: Integer; Value: Int64); virtual;
-    procedure SetFloat(ColumnIndex: Integer; Value: Single); virtual;
-    procedure SetDouble(ColumnIndex: Integer; Value: Double); virtual;
-    procedure SetBigDecimal(ColumnIndex: Integer; Value: Extended); virtual;
-    procedure SetString(ColumnIndex: Integer; Value: String); virtual;
-    procedure SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);virtual;
-    procedure SetPAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); virtual;
-    procedure SetWideRec(ColumnIndex: Integer; const Value: TZWideRec);virtual;
-    procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); virtual;
-    procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); virtual;
-    procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); virtual;
-    procedure SetUnicodeString(ColumnIndex: Integer; Value: ZWideString); virtual;
-    procedure SetBytes(ColumnIndex: Integer; Value: TByteDynArray); virtual;
-    procedure SetDate(ColumnIndex: Integer; Value: TDateTime); virtual;
-    procedure SetTime(ColumnIndex: Integer; Value: TDateTime); virtual;
-    procedure SetTimestamp(ColumnIndex: Integer; Value: TDateTime); virtual;
-    procedure SetAsciiStream(ColumnIndex: Integer; Value: TStream);
-    procedure SetUnicodeStream(ColumnIndex: Integer; Value: TStream);
-    procedure SetBinaryStream(ColumnIndex: Integer; Value: TStream);
-    procedure SetBlob(ColumnIndex: Integer; Value: IZBlob);
-    procedure SetDataSet(ColumnIndex: Integer; Value: IZDataSet);
-    procedure SetValue(ColumnIndex: Integer; Value: TZVariant);
+    procedure SetNotNull(Const ColumnIndex: Integer);
+    procedure SetNull(Const ColumnIndex: Integer);
+    procedure SetBoolean(Const ColumnIndex: Integer; const Value: Boolean); virtual;
+    procedure SetByte(Const ColumnIndex: Integer; const Value: Byte); virtual;
+    procedure SetShort(Const ColumnIndex: Integer; const Value: ShortInt); virtual;
+    procedure SetSmall(Const ColumnIndex: Integer; const Value: SmallInt); virtual;
+    procedure SetInt(Const ColumnIndex: Integer; const Value: Integer); virtual;
+    procedure SetLong(Const ColumnIndex: Integer; const Value: Int64); virtual;
+    procedure SetFloat(Const ColumnIndex: Integer; const Value: Single); virtual;
+    procedure SetDouble(Const ColumnIndex: Integer; const Value: Double); virtual;
+    procedure SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended); virtual;
+    procedure SetString(Const ColumnIndex: Integer; const Value: String); virtual;
+    procedure SetAnsiRec(Const ColumnIndex: Integer; const Value: TZAnsiRec);virtual;
+    procedure SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar); virtual;
+    procedure SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec);virtual;
+    procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); virtual;
+    procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); virtual;
+    procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); virtual;
+    procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); virtual;
+    procedure SetBytes(Const ColumnIndex: Integer; const Value: TBytes); virtual;
+    procedure SetDate(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetTime(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime); virtual;
+    procedure SetAsciiStream(Const ColumnIndex: Integer; const Value: TStream);
+    procedure SetUnicodeStream(Const ColumnIndex: Integer; const Value: TStream);
+    procedure SetBinaryStream(Const ColumnIndex: Integer; const Value: TStream);
+    procedure SetBlob(Const ColumnIndex: Integer; const Value: IZBlob);
+    procedure SetDataSet(Const ColumnIndex: Integer; const Value: IZDataSet);
+    procedure SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
 
     property ColumnsSize: Integer read FColumnsSize;
     property RowSize: Integer read FRowSize;
@@ -253,26 +255,26 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; override;
-    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
-    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; override;
-    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
-    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
-    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
-    function GetWideRec(ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
-    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
+    function GetAnsiRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; override;
+    function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
+    function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; override;
+    function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
+    function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
+    function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
+    function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
+    function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
     // Updates
     //---------------------------------------------------------------------
 
-    procedure SetString(ColumnIndex: Integer; Value: String); override;
-    procedure SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
-    procedure SetWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
-    //procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); override;
-    //procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); override;
-    procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); override;
-    procedure SetUnicodeString(ColumnIndex: Integer; Value: ZWideString); override;
+    procedure SetString(Const ColumnIndex: Integer; const Value: String); override;
+    procedure SetAnsiRec(Const ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec); override;
+    //procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); override;
+    //procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); override;
+    procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); override;
+    procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); override;
   end;
 
   {** Implements a unicode-string based column buffer accessor. }
@@ -287,26 +289,26 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; override;
-    function GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
-    function GetString(ColumnIndex: Integer; var IsNull: Boolean): String; override;
-    function GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
-    function GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
-    function GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
-    function GetWideRec(ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
-    function GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
+    function GetAnsiRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec; override;
+    function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
+    function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; override;
+    function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
+    function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
+    function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
+    function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
+    function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
     // Updates
     //---------------------------------------------------------------------
 
-    procedure SetString(ColumnIndex: Integer; Value: String); override;
-    procedure SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
-    procedure SetWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
-    //procedure SetAnsiString(ColumnIndex: Integer; Value: AnsiString); override;
-    //procedure SetUTF8String(ColumnIndex: Integer; Value: UTF8String); override;
-    procedure SetRawByteString(ColumnIndex: Integer; Value: RawByteString); override;
-    procedure SetUnicodeString(ColumnIndex: Integer; Value: ZWideString); override;
+    procedure SetString(Const ColumnIndex: Integer; const Value: String); override;
+    procedure SetAnsiRec(Const ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec); override;
+    //procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); override;
+    //procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); override;
+    procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); override;
+    procedure SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString); override;
   end;
 
 const
@@ -378,7 +380,7 @@ end;
   Checks is the column index correct and row buffer is available.
   @param ColumnIndex an index of column.
 }
-procedure TZRowAccessor.CheckColumnIndex(ColumnIndex: Integer);
+procedure TZRowAccessor.CheckColumnIndex(Const ColumnIndex: Integer);
 begin
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
@@ -397,7 +399,7 @@ end;
   @return <code>true</code> if convertion is allowed or throw exception
     otherwise.
 }
-procedure TZRowAccessor.CheckColumnConvertion(ColumnIndex: Integer;
+procedure TZRowAccessor.CheckColumnConvertion(Const ColumnIndex: Integer;
   ResultType: TZSQLType);
 begin
   if not Assigned(FBuffer) then
@@ -431,6 +433,8 @@ begin
     stByte:
       Result := SizeOf(Byte);
     stShort:
+      Result := SizeOf(ShortInt);
+    stSmall:
       Result := SizeOf(SmallInt);
     stInteger:
       Result := SizeOf(Integer);
@@ -520,7 +524,7 @@ begin
 end;
 
 function TZRowAccessor.InternalGetBytes(const Buffer: PZRowBuffer;
-  const ColumnIndex: Integer): TByteDynArray;
+  const ColumnIndex: Integer): TBytes;
 var
   P: PPointer;
   L: SmallInt;
@@ -539,7 +543,7 @@ begin
 end;
 
 procedure TZRowAccessor.InternalSetBytes(const Buffer: PZRowBuffer;
-  const ColumnIndex: Integer; const Value: TByteDynArray;
+  const ColumnIndex: Integer; const Value: TBytes;
   const NewPointer: Boolean = False);
 var
   P: PPointer;
@@ -718,7 +722,7 @@ var
   ValuePtr1, ValuePtr2: Pointer;
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
-  Bts1, Bts2: TByteDynArray;
+  Bts1, Bts2: TBytes;
 
   function CompareFloat(Value1, Value2: Extended): Integer;
   begin
@@ -781,7 +785,7 @@ begin
     case FColumnTypes[ColumnIndex] of
       stByte:
         Result := PShortInt(ValuePtr1)^ - PShortInt(ValuePtr2)^;
-      stShort:
+      stSmall:
         Result := PSmallInt(ValuePtr1)^ - PSmallInt(ValuePtr2)^;
       stInteger:
         Result := PInteger(ValuePtr1)^ - PInteger(ValuePtr2)^;
@@ -1013,7 +1017,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the case sensitive flag of the column data buffer.
 }
-function TZRowAccessor.GetColumnCase(ColumnIndex: Integer): Boolean;
+function TZRowAccessor.GetColumnCase(Const ColumnIndex: Integer): Boolean;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnCases[ColumnIndex-1];
@@ -1025,7 +1029,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return a pointer to the column data buffer.
 }
-function TZRowAccessor.GetColumnData(ColumnIndex: Integer;
+function TZRowAccessor.GetColumnData(Const ColumnIndex: Integer;
   var IsNull: Boolean): Pointer;
 begin
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1039,7 +1043,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return a size of the column data buffer.
 }
-function TZRowAccessor.GetColumnDataSize(ColumnIndex: Integer): Integer;
+function TZRowAccessor.GetColumnDataSize(Const ColumnIndex: Integer): Integer;
 begin
   CheckColumnConvertion(ColumnIndex, stString);
   Result := FColumnLengths[ColumnIndex - 1];
@@ -1051,7 +1055,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the length of the column data buffer.
 }
-function TZRowAccessor.GetColumnLength(ColumnIndex: Integer): Integer;
+function TZRowAccessor.GetColumnLength(Const ColumnIndex: Integer): Integer;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnLengths[ColumnIndex-1];
@@ -1063,7 +1067,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the name of the column data buffer.
 }
-function TZRowAccessor.GetColumnName(ColumnIndex: Integer): string;
+function TZRowAccessor.GetColumnName(Const ColumnIndex: Integer): string;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnNames[ColumnIndex-1];
@@ -1075,7 +1079,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return then offset of the column data buffer.
 }
-function TZRowAccessor.GetColumnOffSet(ColumnIndex: Integer): Integer;
+function TZRowAccessor.GetColumnOffSet(Const ColumnIndex: Integer): Integer;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnOffSets[ColumnIndex-1];
@@ -1087,24 +1091,24 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @return the SQLType of the column data buffer.
 }
-function TZRowAccessor.GetColumnType(ColumnIndex: Integer): TZSQLType;
+function TZRowAccessor.GetColumnType(Const ColumnIndex: Integer): TZSQLType;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnTypes[ColumnIndex-1];
 end;
 
-function TZRowAccessor.GetColumnDefaultExpression(ColumnIndex: Integer): string;
+function TZRowAccessor.GetColumnDefaultExpression(Const ColumnIndex: Integer): string;
 begin
   CheckColumnIndex(ColumnIndex);
   Result := FColumnDefaultExpressions[ColumnIndex-1];
 end;
 
-procedure TZRowAccessor.SetColumnDefaultExpression(ColumnIndex: Integer; Value: string);
+procedure TZRowAccessor.SetColumnDefaultExpression(Const ColumnIndex: Integer; const Value: string);
 begin
   FColumnDefaultExpressions[ColumnIndex-1] := Value;
 end;
 
-procedure TZRowAccessor.SetColumnCodePage(ColumnIndex: Integer; Value: Word);
+procedure TZRowAccessor.SetColumnCodePage(Const ColumnIndex: Integer; const Value: Word);
 begin
   FColumnCodePages[ColumnIndex-1] := Value;
 end;
@@ -1122,7 +1126,7 @@ end;
   @return if the value is SQL <code>NULL</code>, the
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
-function TZRowAccessor.IsNull(ColumnIndex: Integer): Boolean;
+function TZRowAccessor.IsNull(Const ColumnIndex: Integer): Boolean;
 var
   TempBlob: IZBlob;
 begin
@@ -1136,7 +1140,7 @@ begin
   end;
 end;
 
-function TZRowAccessor.GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
+function TZRowAccessor.GetAnsiRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
 var
   Blob: IZBlob;
   GUID: TGUID;
@@ -1147,13 +1151,14 @@ begin
         FRawTemp := 'True'
       else
         FRawTemp := 'False';
-    stByte: FRawTemp := IntToRaw(GetByte(ColumnIndex, IsNull));
-    stShort: FRawTemp := IntToRaw(GetShort(ColumnIndex, IsNull));
-    stInteger: FRawTemp := IntToRaw(GetInt(ColumnIndex, IsNull));
-    stLong: FRawTemp := IntToRaw(GetLong(ColumnIndex, IsNull));
-    stFloat: FRawTemp := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
-    stDouble: FRawTemp := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
-    stBigDecimal: FRawTemp := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
+    stByte: FRawTemp := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: FRawTemp := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: FRawTemp := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: FRawTemp := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: FRawTemp := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: FRawTemp := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: FRawTemp := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: FRawTemp := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stBytes: FRawTemp := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
@@ -1165,9 +1170,12 @@ begin
         FRawTemp := GUIDToString(GUID);
         {$ENDIF}
       end;
-    stDate: FRawTemp := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTime: FRawTemp := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: FRawTemp := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
+    stDate: FRawTemp := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTime: FRawTemp := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: FRawTemp := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
     stAsciiStream, stUnicodeStream:
       begin
         Blob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1204,24 +1212,25 @@ begin
   Result.P := PAnsiChar(FRawTemp);
 end;
 
-function TZRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZRowAccessor.GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
-      if GetBoolean(ColumnIndex, IsNull) then
+      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then
         Result := 'True'
       else
         Result := 'False';
-    stByte: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetByte(ColumnIndex, IsNull));
-    stShort: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetShort(ColumnIndex, IsNull));
-    stInteger: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetInt(ColumnIndex, IsNull));
-    stLong: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(GetLong(ColumnIndex, IsNull));
-    stFloat: Result := FloatToSQLStr(GetFloat(ColumnIndex, IsNull));
-    stDouble: Result := FloatToSQLStr(GetDouble(ColumnIndex, IsNull));
-    stBigDecimal: Result := FloatToSQLStr(GetBigDecimal(ColumnIndex, IsNull));
+    stByte: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: Result := FloatToSQLStr(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: Result := FloatToSQLStr(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: Result := FloatToSQLStr(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stUnicodeStream:
       begin
@@ -1242,10 +1251,12 @@ begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
         Result := GUIDToString(GUID);
       end;
-    stDate: Result := FormatDateTime('yyyy-mm-dd', GetDate(ColumnIndex, IsNull));
-    stTime: Result := FormatDateTime('hh:mm:ss', GetTime(ColumnIndex, IsNull));
+    stDate: Result := FormatDateTime('yyyy-mm-dd',
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stTime: Result := FormatDateTime('hh:mm:ss',
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stTimestamp: Result := FormatDateTime('yyyy-mm-dd hh:mm:ss',
-        GetTimestamp(ColumnIndex, IsNull));
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stAsciiStream, stBinaryStream:
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1264,24 +1275,25 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
-      if GetBoolean(ColumnIndex, IsNull) then
+      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then
         Result := 'True'
       else
         Result := 'False';
-    stByte: Result := IntToRaw(GetByte(ColumnIndex, IsNull));
-    stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
-    stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
-    stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
-    stFloat: Result := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
-    stDouble: Result := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
-    stBigDecimal: Result := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
+    stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
@@ -1293,9 +1305,12 @@ begin
         Result := GUIDToString(GUID);
         {$ENDIF}
       end;
-    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
+    stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
     stAsciiStream, stUnicodeStream:
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1325,24 +1340,25 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
-      if GetBoolean(ColumnIndex, IsNull) then
+      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then
         Result := 'True'
       else
         Result := 'False';
-    stByte: Result := IntToRaw(GetByte(ColumnIndex, IsNull));
-    stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
-    stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
-    stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
-    stFloat: Result := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
-    stDouble: Result := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
-    stBigDecimal: Result := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
+    stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
       begin
@@ -1365,9 +1381,12 @@ begin
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
           Result := TempBlob.GetString;
       end;
-    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
+    stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
     else
       Result := ConSettings^.ConvFuncs.ZStringToUTF8(GetString(ColumnIndex, IsNull), ConSettings^.CTRL_CP);
   end;
@@ -1382,24 +1401,25 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZRowAccessor.GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
 begin
   case FColumnTypes[ColumnIndex - 1] of
     stBoolean:
-      if GetBoolean(ColumnIndex, IsNull) then
+      if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then
         Result := 'True'
       else
         Result := 'False';
-    stByte: Result := IntToRaw(GetByte(ColumnIndex, IsNull));
-    stShort: Result := IntToRaw(GetShort(ColumnIndex, IsNull));
-    stInteger: Result := IntToRaw(GetInt(ColumnIndex, IsNull));
-    stLong: Result := IntToRaw(GetLong(ColumnIndex, IsNull));
-    stFloat: Result := FloatToSqlRaw(GetFloat(ColumnIndex, IsNull));
-    stDouble: Result := FloatToSqlRaw(GetDouble(ColumnIndex, IsNull));
-    stBigDecimal: Result := FloatToSqlRaw(GetBigDecimal(ColumnIndex, IsNull));
+    stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
@@ -1407,9 +1427,12 @@ begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
         Result := ConSettings^.ConvFuncs.ZStringToRaw(GUIDToString(GUID), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
       end;
-    stDate: Result := DateTimeToRawSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToRawSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToRawSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
+    stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToRawSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToRawSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
     stAsciiStream, stUnicodeStream, stBinaryStream:
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
@@ -1430,18 +1453,22 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetWideRec(ColumnIndex: Integer;
+function TZRowAccessor.GetWideRec(Const ColumnIndex: Integer;
   var IsNull: Boolean): TZWideRec;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
 begin
   case FColumnTypes[ColumnIndex - 1] of
-    stByte: FUniTemp := IntToUnicode(GetByte(ColumnIndex, IsNull));
-    stShort: FUniTemp := IntToUnicode(GetShort(ColumnIndex, IsNull));
-    stInteger: FUniTemp := IntToUnicode(GetInt(ColumnIndex, IsNull));
-    stLong: FUniTemp := IntToUnicode(GetLong(ColumnIndex, IsNull));
+    stByte: FUniTemp := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: FUniTemp := IntToUnicode(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: FUniTemp := IntToUnicode(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: FUniTemp := IntToUnicode(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: FUniTemp := IntToUnicode(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: FUniTemp := FloatToSqlUnicode(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: FUniTemp := FloatToSqlUnicode(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: FUniTemp := FloatToSqlUnicode(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stUnicodeString, stString: do not handle here!
     stAsciiStream, stUnicodeStream:
       begin
@@ -1466,9 +1493,12 @@ begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
         FUniTemp := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
-    stDate: FUniTemp := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTime: FUniTemp := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
+    stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTime: FUniTemp := DateTimeToUnicodeSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: FUniTemp := DateTimeToUnicodeSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
     else
       FUniTemp := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
   end;
@@ -1484,18 +1514,22 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetUnicodeString(ColumnIndex: Integer;
+function TZRowAccessor.GetUnicodeString(Const ColumnIndex: Integer;
   var IsNull: Boolean): ZWideString;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
 begin
   case FColumnTypes[ColumnIndex - 1] of
-    stByte: Result := IntToUnicode(GetByte(ColumnIndex, IsNull));
-    stShort: Result := IntToUnicode(GetShort(ColumnIndex, IsNull));
-    stInteger: Result := IntToUnicode(GetInt(ColumnIndex, IsNull));
-    stLong: Result := IntToUnicode(GetLong(ColumnIndex, IsNull));
+    stByte: Result := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: Result := IntToUnicode(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: Result := IntToUnicode(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: Result := IntToUnicode(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: Result := IntToUnicode(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stFloat: Result := FloatToSqlUnicode(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stDouble: Result := FloatToSqlUnicode(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stBigDecimal: Result := FloatToSqlUnicode(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stUnicodeString, stString: do not handle here!
     stAsciiStream, stUnicodeStream:
       begin
@@ -1516,9 +1550,12 @@ begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
         Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
-    stDate: Result := DateTimeToUnicodeSQLDate(GetDate(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTime: Result := DateTimeToUnicodeSQLTime(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
-    stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(GetTime(ColumnIndex, IsNull), ConSettings^.DisplayFormatSettings, False);
+    stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTime: Result := DateTimeToUnicodeSQLTime(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
+    stTimestamp: Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
+      ConSettings^.DisplayFormatSettings, False);
     else
       Result := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
   end;
@@ -1533,7 +1570,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>false</code>
 }
-function TZRowAccessor.GetBoolean(ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+function TZRowAccessor.GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -1542,15 +1579,15 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        Result := PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stByte: Result := GetByte(ColumnIndex, IsNull) <> 0;
-      stShort: Result := GetShort(ColumnIndex, IsNull) <> 0;
-      stInteger: Result := GetInt(ColumnIndex, IsNull) <> 0;
-      stLong: Result := GetLong(ColumnIndex, IsNull) <> 0;
-      stFloat: Result := GetFloat(ColumnIndex, IsNull) <> 0;
-      stDouble: Result := GetDouble(ColumnIndex, IsNull) <> 0;
-      stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull) <> 0;
+      stBoolean: Result := PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := StrToBoolEx(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, False)
@@ -1574,7 +1611,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetByte(ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+function TZRowAccessor.GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
@@ -1588,10 +1625,55 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stShort: Result := GetShort(ColumnIndex, IsNull);
-      stInteger: Result := GetInt(ColumnIndex, IsNull);
-      stLong: Result := GetLong(ColumnIndex, IsNull);
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+        else
+          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZRowAccessor.GetShort(Const ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stByte);
+{$ENDIF}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stBoolean:
+        if GetBoolean(ColumnIndex, IsNull) then
+          Result := 1
+        else
+          Result := 0;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
@@ -1617,10 +1699,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetShort(ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+function TZRowAccessor.GetSmall(Const ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
   Result := 0;
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
@@ -1631,10 +1713,11 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := GetByte(ColumnIndex, IsNull);
-      stShort: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stInteger: Result := GetInt(ColumnIndex, IsNull);
-      stLong: Result := GetLong(ColumnIndex, IsNull);
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
@@ -1660,7 +1743,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetInt(ColumnIndex: Integer; var IsNull: Boolean): Integer;
+function TZRowAccessor.GetInt(Const ColumnIndex: Integer; var IsNull: Boolean): Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -1674,11 +1757,11 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := GetByte(ColumnIndex, IsNull);
-      stShort: Result := GetShort(ColumnIndex, IsNull);
-      stInteger:
-        Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stLong: Result := GetLong(ColumnIndex, IsNull);
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
@@ -1704,7 +1787,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetLong(ColumnIndex: Integer; var IsNull: Boolean): Int64;
+function TZRowAccessor.GetLong(Const ColumnIndex: Integer; var IsNull: Boolean): Int64;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -1718,11 +1801,11 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := GetByte(ColumnIndex, IsNull);
-      stShort: Result := GetShort(ColumnIndex, IsNull);
-      stInteger: Result := GetInt(ColumnIndex, IsNull);
-      stLong:
-        Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
       stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
@@ -1748,7 +1831,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetFloat(ColumnIndex: Integer; var IsNull: Boolean): Single;
+function TZRowAccessor.GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -1762,19 +1845,22 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := GetByte(ColumnIndex, IsNull);
-      stShort: Result := GetShort(ColumnIndex, IsNull);
-      stInteger: Result := GetInt(ColumnIndex, IsNull);
-      stLong: Result := GetLong(ColumnIndex, IsNull);
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat:
         Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stDouble: Result := GetDouble(ColumnIndex, IsNull);
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
         else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -1792,7 +1878,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZRowAccessor.GetDouble(ColumnIndex: Integer; var IsNull: Boolean): Double;
+function TZRowAccessor.GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -1806,19 +1892,22 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := GetByte(ColumnIndex, IsNull);
-      stShort: Result := GetShort(ColumnIndex, IsNull);
-      stInteger: Result := GetInt(ColumnIndex, IsNull);
-      stLong: Result := GetLong(ColumnIndex, IsNull);
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat: Result := GetFloat(ColumnIndex, IsNull);
       stDouble:
         Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
+           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
         else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
+           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -1837,7 +1926,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBigDecimal(ColumnIndex: Integer; var IsNull: Boolean): Extended;
+function TZRowAccessor.GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -1851,19 +1940,22 @@ begin
           Result := 1
         else
           Result := 0;
-      stByte: Result := GetByte(ColumnIndex, IsNull);
-      stShort: Result := GetShort(ColumnIndex, IsNull);
-      stInteger: Result := GetInt(ColumnIndex, IsNull);
-      stLong: Result := GetLong(ColumnIndex, IsNull);
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stFloat: Result := GetFloat(ColumnIndex, IsNull);
       stDouble: Result := GetDouble(ColumnIndex, IsNull);
       stBigDecimal:
         Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
         else
-          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
+            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -1882,7 +1974,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetBytes(ColumnIndex: Integer; var IsNull: Boolean): TByteDynArray;
+function TZRowAccessor.GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
@@ -1913,7 +2005,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetDate(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   AnsiBuffer: PAnsiChar;
@@ -1981,7 +2073,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetTime(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   AnsiBuffer: PAnsiChar;
@@ -2049,7 +2141,7 @@ end;
   value returned is <code>null</code>
   @exception SQLException if a database access error occurs
 }
-function TZRowAccessor.GetTimestamp(ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+function TZRowAccessor.GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
 var
   Failed: Boolean;
   TempBlob: IZBlob;
@@ -2109,7 +2201,7 @@ end;
     as a stream of one-byte ASCII characters; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetAsciiStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetAsciiStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
 var
   TempBlob: IZBlob;
 begin
@@ -2148,7 +2240,7 @@ end;
     as a stream in Java UTF-8 byte format; if the value is SQL
     <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetUnicodeStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetUnicodeStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
 var
   TempBlob: IZBlob;
 begin
@@ -2186,7 +2278,7 @@ end;
     as a stream of uninterpreted bytes;
     if the value is SQL <code>NULL</code>, the value returned is <code>null</code>
 }
-function TZRowAccessor.GetBinaryStream(ColumnIndex: Integer; var IsNull: Boolean): TStream;
+function TZRowAccessor.GetBinaryStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
 var
   TempBlob: IZBlob;
 begin
@@ -2210,7 +2302,7 @@ end;
   @return a <code>Blob</code> object representing the SQL <code>BLOB</code> value in
     the specified column
 }
-function TZRowAccessor.GetBlob(ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
+function TZRowAccessor.GetBlob(Const ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
@@ -2244,7 +2336,7 @@ end;
   @return a <code>ResultSet</code> object representing the SQL
     <code>ResultSet</code> value in the specified column
 }
-function TZRowAccessor.GetDataSet(ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+function TZRowAccessor.GetDataSet(Const ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
 var
   Ptr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
@@ -2280,7 +2372,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
   value returned is <code>null</code>
 }
-function TZRowAccessor.GetValue(ColumnIndex: Integer): TZVariant;
+function TZRowAccessor.GetValue(Const ColumnIndex: Integer): TZVariant;
 var
   ValuePtr: Pointer;
   IsNull: Boolean;
@@ -2293,9 +2385,14 @@ begin
       stByte:
         begin
           Result.VType := vtInteger;
-          Result.VInteger := PShortInt(ValuePtr)^;
+          Result.VInteger := PByte(ValuePtr)^;
         end;
       stShort:
+        begin
+          Result.VType := vtInteger;
+          Result.VInteger := PShortInt(ValuePtr)^;
+        end;
+      stSmall:
         begin
           Result.VType := vtInteger;
           Result.VInteger := PSmallInt(ValuePtr)^;
@@ -2387,7 +2484,7 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
 }
-procedure TZRowAccessor.SetNotNull(ColumnIndex: Integer);
+procedure TZRowAccessor.SetNotNull(Const ColumnIndex: Integer);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -2411,7 +2508,7 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
 }
-procedure TZRowAccessor.SetNull(ColumnIndex: Integer);
+procedure TZRowAccessor.SetNull(Const ColumnIndex: Integer);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -2440,7 +2537,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBoolean(ColumnIndex: Integer; Value: Boolean);
+procedure TZRowAccessor.SetBoolean(Const ColumnIndex: Integer; const Value: Boolean);
 var
   TempInt: Integer;
 begin
@@ -2452,24 +2549,24 @@ begin
   else
      TempInt := 0;
 
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stByte: SetByte(ColumnIndex, TempInt);
-    stShort: SetShort(ColumnIndex, TempInt);
-    stInteger: SetInt(ColumnIndex, TempInt);
-    stLong: SetLong(ColumnIndex, TempInt);
-    stFloat: SetFloat(ColumnIndex, TempInt);
-    stDouble: SetDouble(ColumnIndex, TempInt);
-    stBigDecimal: SetBigDecimal(ColumnIndex, TempInt);
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := TempInt;
     stString, stUnicodeString:
-         if Value then
-            SetString(ColumnIndex, 'True')
-         else
-            SetString(ColumnIndex, 'False');
+       if Value then
+          SetString(ColumnIndex, 'True')
+       else
+          SetString(ColumnIndex, 'False');
+    else
+      FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 1; //set null
   end;
 end;
 
@@ -2484,25 +2581,59 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetByte(ColumnIndex: Integer;
-  Value: ShortInt);
+procedure TZRowAccessor.SetByte(Const ColumnIndex: Integer;
+  const Value: Byte);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stShort: SetShort(ColumnIndex, Value);
-    stInteger: SetInt(ColumnIndex, Value);
-    stLong: SetLong(ColumnIndex, Value);
-    stFloat: SetFloat(ColumnIndex, Value);
-    stDouble: SetDouble(ColumnIndex, Value);
-    stBigDecimal: SetBigDecimal(ColumnIndex, Value);
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>byte</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetShort(Const ColumnIndex: Integer;
+  const Value: ShortInt);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stByte);
+{$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
@@ -2521,24 +2652,22 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetShort(ColumnIndex: Integer; Value: SmallInt);
+procedure TZRowAccessor.SetSmall(Const ColumnIndex: Integer; const Value: SmallInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, Value);
-    stShort:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stInteger: SetInt(ColumnIndex, Value);
-    stLong: SetLong(ColumnIndex, Value);
-    stFloat: SetFloat(ColumnIndex, Value);
-    stDouble: SetDouble(ColumnIndex, Value);
-    stBigDecimal: SetBigDecimal(ColumnIndex, Value);
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
@@ -2557,24 +2686,22 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetInt(ColumnIndex: Integer; Value: Integer);
+procedure TZRowAccessor.SetInt(Const ColumnIndex: Integer; const Value: Integer);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, Value);
-    stShort: SetShort(ColumnIndex, Value);
-    stInteger:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stLong: SetLong(ColumnIndex, Value);
-    stFloat: SetFloat(ColumnIndex, Value);
-    stDouble: SetDouble(ColumnIndex, Value);
-    stBigDecimal: SetBigDecimal(ColumnIndex, Value);
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
@@ -2593,24 +2720,22 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetLong(ColumnIndex: Integer; Value: Int64);
+procedure TZRowAccessor.SetLong(Const ColumnIndex: Integer; const Value: Int64);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, Value);
-    stShort: SetShort(ColumnIndex, Value);
-    stInteger: SetInt(ColumnIndex, Value);
-    stLong:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stFloat: SetFloat(ColumnIndex, Value);
-    stDouble: SetDouble(ColumnIndex, Value);
-    stBigDecimal: SetBigDecimal(ColumnIndex, Value);
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
@@ -2629,25 +2754,27 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetFloat(ColumnIndex: Integer; Value: Single);
+procedure TZRowAccessor.SetFloat(Const ColumnIndex: Integer; const Value: Single);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stShort: SetShort(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stInteger: SetInt(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stLong: SetLong(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stFloat:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stDouble: SetDouble(ColumnIndex, Value);
-    stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, FloatToSQLStr(Value));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
 end;
 
@@ -2661,25 +2788,27 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDouble(ColumnIndex: Integer; Value: Double);
+procedure TZRowAccessor.SetDouble(Const ColumnIndex: Integer; const Value: Double);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stShort: SetShort(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stInteger: SetInt(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stLong: SetLong(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stFloat: SetFloat(ColumnIndex, Value);
-    stDouble:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stBigDecimal: SetBigDecimal(ColumnIndex, Value);
-    stString, stUnicodeString: SetString(ColumnIndex, FloatToSQLStr(Value));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
 end;
 
@@ -2694,25 +2823,27 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBigDecimal(ColumnIndex: Integer; Value: Extended);
+procedure TZRowAccessor.SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, Value <> 0);
-    stByte: SetByte(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stShort: SetShort(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stInteger: SetInt(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stLong: SetLong(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
-    stFloat: SetFloat(ColumnIndex, Value);
-    stDouble: SetDouble(ColumnIndex, Value);
-    stBigDecimal:
-      begin
-        FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
-        PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
-      end;
-    stString, stUnicodeString: SetString(ColumnIndex, FloatToSQLStr(Value));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
   end;
 end;
 
@@ -2726,32 +2857,29 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetString(ColumnIndex: Integer; Value: String);
+procedure TZRowAccessor.SetString(Const ColumnIndex: Integer; const Value: String);
 var
-  TempStr: string;
   IsNull: Boolean;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   GUID: TGUID;
   TempBlob: IZBlob;
+  Failed: Boolean;
 begin
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean:
-      begin
-        TempStr := UpperCase(Value);
-        SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
-          or (TempStr = 'YES') or (TempStr = 'TRUE'));
-      end;
-    stByte: SetByte(ColumnIndex, {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0));
-    stShort: SetShort(ColumnIndex, {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0));
-    stInteger: SetInt(ColumnIndex, {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0));
-    stLong: SetLong(ColumnIndex, {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(PChar(Value), 0));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(PChar(Value), 0));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(PChar(Value), 0));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value, False);
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     //stString, stUnicodeString: do not handle here!
     stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
     stGUID:
-      if Value = '' then
+      if (Value = '') or (Length(Value) <> 38) then
         SetNull(ColumnIndex)
       else
       begin
@@ -2760,9 +2888,31 @@ begin
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
       end;
-    stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
+    stDate:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF UNICODE}UnicodeSQLDateToDateTime{$ELSE}RawSQLDateToDateTime{$ENDIF}(
+            PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+            {$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
+              PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTime:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        {$IFDEF UNICODE}UnicodeSQLTimeToDateTime{$ELSE}RawSQLTimeToDateTime{$ENDIF}(
+          PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            Frac({$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
+              PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTimestamp:
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF UNICODE}UnicodeSQLTimeStampToDateTime{$ELSE}RawSQLTimeStampToDateTime{$ENDIF}(
+            PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
     stAsciiStream, stUnicodeStream:
       begin
         TempBlob := GetBlob(ColumnIndex, IsNull);
@@ -2791,23 +2941,25 @@ end;
   @param Value the new column value
   @param Len the length of the String
 }
-procedure TZRowAccessor.SetAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
+procedure TZRowAccessor.SetAnsiRec(Const ColumnIndex: Integer; const Value: TZAnsiRec);
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Blob: IZBlob;
   Failed: Boolean;
 begin
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, StrToBoolEx(Value.P, False));
-    stByte: SetByte(ColumnIndex, RawToIntDef(Value.P, 0));
-    stShort: SetShort(ColumnIndex, RawToIntDef(Value.P, 0));
-    stInteger: SetInt(ColumnIndex, RawToIntDef(Value.P, 0));
-    stLong: SetLong(ColumnIndex, RawToInt64Def(Value.P, 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value.P, 0, Value.Len));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value.P, 0, Value.Len));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value.P, 0, Value.Len));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value.P, False);
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value.P, 0);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     //stString, stUnicodeString: do not handle here!
     stBytes:
       begin
@@ -2829,9 +2981,31 @@ begin
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
       end;
-    stDate: SetDate(ColumnIndex, RawSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
-    stTime: SetTime(ColumnIndex, RawSQLTimeToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
-    stTimestamp: SetTimestamp(ColumnIndex, RawSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    stDate:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            RawSQLDateToDateTime (Value.P, Value.Len,
+              ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+            RawSQLTimeStampToDateTime(Value.P, Value.Len,
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTime:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        RawSQLTimeToDateTime(Value.P, Value.Len,
+          ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            Frac(RawSQLTimeStampToDateTime(Value.P, Value.Len,
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTimestamp:
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          RawSQLTimeStampToDateTime(Value.P, Value.Len,
+            ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream:
       begin
         Blob := GetBlob(ColumnIndex, IsNull);
@@ -2855,7 +3029,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZRowAccessor.SetPAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar);
+procedure TZRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar);
 var AnsiRec: TZAnsiRec;
 begin
   AnsiRec.P := Value;
@@ -2873,23 +3047,24 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZRowAccessor.SetWideRec(ColumnIndex: Integer; const Value: TZWideRec);
+procedure TZRowAccessor.SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec);
 var
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Blob: IZBlob;
   Failed: Boolean;
 begin
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean: SetBoolean(ColumnIndex, StrToBoolEx(Value.P, False));
-    stByte: SetByte(ColumnIndex, UnicodeToIntDef(Value.P, 0));
-    stShort: SetShort(ColumnIndex, UnicodeToIntDef(Value.P, 0));
-    stInteger: SetInt(ColumnIndex, UnicodeToIntDef(Value.P, 0));
-    stLong: SetLong(ColumnIndex, UnicodeToInt64Def(Value.P, 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(Value.P, 0));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(Value.P, 0));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(Value.P, 0));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value.P, False);
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value.P, 0);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin
@@ -2897,7 +3072,7 @@ begin
         if Blob.IsClob then
           Blob.SetPWideChar(Value.P, Value.Len)
         else
-          Blob.SetBuffer(Value.P, Value.Len);
+          Blob.SetBuffer(Value.P, Value.Len*2);
       end;
     stBytes:
       SetBytes(ColumnIndex, StrToBytes(ZWideString(Value.P)));
@@ -2911,9 +3086,27 @@ begin
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
       end;
-    stDate: SetDate(ColumnIndex, UnicodeSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
-    stTime: SetTime(ColumnIndex, UnicodeSQLTimeToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
-    stTimestamp: SetTimestamp(ColumnIndex, UnicodeSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+    stDate:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          UnicodeSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+            UnicodeSQLTimeStampToDateTime(Value.P, Value.Len,
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTime:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        UnicodeSQLTimeToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            Frac(UnicodeSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTimestamp:
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        UnicodeSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed);
     else
       SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value.P, ConSettings^.CTRL_CP));
   end;
@@ -2929,7 +3122,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetAnsiString(ColumnIndex: Integer; Value: AnsiString);
+procedure TZRowAccessor.SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString);
 begin
   if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
     SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage^.CP))
@@ -2947,7 +3140,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUTF8String(ColumnIndex: Integer; Value: UTF8String);
+procedure TZRowAccessor.SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String);
 begin
   if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
     SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage^.CP))
@@ -2965,27 +3158,23 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetRawByteString(ColumnIndex: Integer; Value: RawByteString);
+procedure TZRowAccessor.SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString);
 var
-  TempStr: RawByteString;
   IsNull: Boolean;
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
+  Failed: Boolean;
 begin
   case FColumnTypes[ColumnIndex - 1] of
-    stBoolean:
-      begin
-        TempStr := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(Value);
-        SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
-          or (TempStr = 'YES') or (TempStr = 'TRUE'));
-      end;
-    stByte: SetByte(ColumnIndex, RawToIntDef(Value, 0));
-    stShort: SetShort(ColumnIndex, RawToIntDef(Value, 0));
-    stInteger: SetInt(ColumnIndex, RawToIntDef(Value, 0));
-    stLong: SetLong(ColumnIndex, RawToInt64Def(Value, 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(PAnsiChar(Value), 0));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(PAnsiChar(Value), 0));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(PAnsiChar(Value), 0));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value, False);
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value, 0);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     //stString, stUnicodeString: do not handle here!
     stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
     stGUID:
@@ -2998,9 +3187,31 @@ begin
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
       end;
-    stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value)));
-    stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value)));
-    stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime({$IFDEF WITH_RAWBYTESTRING}String{$ENDIF}(Value)));
+    stDate:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            RawSQLDateToDateTime (PAnsiChar(Value), Length(Value),
+              ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+            RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTime:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value),
+          ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            Frac(RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTimestamp:
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream, stBinaryStream:
       GetBlob(ColumnIndex, IsNull).SetString(Value);
   end;
@@ -3016,32 +3227,24 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: ZWideString);
+procedure TZRowAccessor.SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString);
 var
   IsNull: Boolean;
-{$IFDEF UNICODE}
-  tempStr: String;
-{$ENDIF}
   GUID: TGUID;
-  Bts: TByteDynArray;
+  Bts: TBytes;
   Blob: IZBlob;
+  Failed: Boolean;
 begin
   case FColumnTypes[ColumnIndex - 1] of
-    {$IFDEF UNICODE}
-    stBoolean:
-      begin
-        TempStr := UpperCase(Value);
-        SetBoolean(ColumnIndex, (TempStr = 'Y') or (TempStr = 'T')
-          or (TempStr = 'YES') or (TempStr = 'TRUE'));
-      end;
-    {$ENDIF}
-    stByte: SetByte(ColumnIndex, UnicodeToIntDef(PWidechar(Value), 0));
-    stShort: SetShort(ColumnIndex, UnicodeToIntDef(PWidechar(Value), 0));
-    stInteger: SetInt(ColumnIndex, UnicodeToIntDef(PWidechar(Value), 0));
-    stLong: SetLong(ColumnIndex, UnicodeToInt64Def(PWidechar(Value), 0));
-    stFloat: SetFloat(ColumnIndex, SQLStrToFloatDef(PWideChar(Value), 0));
-    stDouble: SetDouble(ColumnIndex, SQLStrToFloatDef(PWideChar(Value), 0));
-    stBigDecimal: SetBigDecimal(ColumnIndex, SQLStrToFloatDef(PWidechar(Value), 0));
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value, False);
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value, 0);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin
@@ -3063,11 +3266,31 @@ begin
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
       end;
-    {$IFDEF UNICODE}
-    stDate: SetDate(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    stTime: SetTime(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    stTimestamp: SetTimestamp(ColumnIndex, AnsiSQLDateToDateTime(Value));
-    {$ENDIF}
+    stDate:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          UnicodeSQLDateToDateTime(PWideChar(Value), Length(Value),
+            ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+          {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+            UnicodeSQLTimeStampToDateTime(PWideChar(Value), Length(Value),
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTime:
+      begin
+        PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        UnicodeSQLTimeToDateTime(PWideChar(Value), Length(Value),
+          ConSettings^.DisplayFormatSettings, Failed);
+        if Failed then
+          PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+            Frac(UnicodeSQLTimeStampToDateTime(PWideChar(Value), Length(Value),
+              ConSettings^.DisplayFormatSettings, Failed));
+      end;
+    stTimestamp:
+      PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
+        UnicodeSQLTimeStampToDateTime(PWideChar(Value), Length(Value),
+          ConSettings^.DisplayFormatSettings, Failed);
     else
       SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
   end;
@@ -3083,7 +3306,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetBytes(ColumnIndex: Integer; Value: TByteDynArray);
+procedure TZRowAccessor.SetBytes(Const ColumnIndex: Integer; const Value: TBytes);
 var
   IsNull: Boolean;
 begin
@@ -3114,7 +3337,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetDate(ColumnIndex: Integer; Value: TDateTime);
+procedure TZRowAccessor.SetDate(Const ColumnIndex: Integer; const Value: TDateTime);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -3126,7 +3349,7 @@ begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
       end;
-    stTimestamp: SetTimestamp(ColumnIndex, {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value));
+    stTimestamp: SetTimestamp(ColumnIndex, Value);
     stString, stUnicodeString: SetString(ColumnIndex, FormatDateTime('yyyy-mm-dd', Value));
   end;
 end;
@@ -3141,7 +3364,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTime(ColumnIndex: Integer; Value: TDateTime);
+procedure TZRowAccessor.SetTime(Const ColumnIndex: Integer; const Value: TDateTime);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -3170,7 +3393,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetTimestamp(ColumnIndex: Integer; Value: TDateTime);
+procedure TZRowAccessor.SetTimestamp(Const ColumnIndex: Integer; const Value: TDateTime);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -3198,7 +3421,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetAsciiStream(ColumnIndex: Integer; Value: TStream);
+procedure TZRowAccessor.SetAsciiStream(Const ColumnIndex: Integer; const Value: TStream);
 var
   IsNull: Boolean;
   Blob: IZBlob;
@@ -3228,7 +3451,7 @@ end;
   @param x the new column value
   @param length the length of the stream
 }
-procedure TZRowAccessor.SetBinaryStream(ColumnIndex: Integer; Value: TStream);
+procedure TZRowAccessor.SetBinaryStream(Const ColumnIndex: Integer; const Value: TStream);
 var
   IsNull: Boolean;
 begin
@@ -3249,8 +3472,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetUnicodeStream(ColumnIndex: Integer;
-  Value: TStream);
+procedure TZRowAccessor.SetUnicodeStream(Const ColumnIndex: Integer;
+  const Value: TStream);
 var
   IsNull: Boolean;
   Blob: IZBlob;
@@ -3271,7 +3494,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @param Value a blob wrapper object to be set.
 }
-procedure TZRowAccessor.SetBlob(ColumnIndex: Integer; Value: IZBlob);
+procedure TZRowAccessor.SetBlob(Const ColumnIndex: Integer; const Value: IZBlob);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnIndex(ColumnIndex);
@@ -3292,7 +3515,7 @@ end;
   @param ColumnIndex the first column is 1, the second is 2, ...
   @param Value a ResultSet wrapper object to be set.
 }
-procedure TZRowAccessor.SetDataSet(ColumnIndex: Integer; Value: IZDataSet);
+procedure TZRowAccessor.SetDataSet(Const ColumnIndex: Integer; const Value: IZDataSet);
 var
   Ptr: PPointer;
   NullPtr: {$IFDEF WIN64}PBoolean{$ELSE}PByte{$ENDIF};
@@ -3342,7 +3565,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRowAccessor.SetValue(ColumnIndex: Integer; Value: TZVariant);
+procedure TZRowAccessor.SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
 begin
   case Value.VType of
     vtNull: SetNull(ColumnIndex);
@@ -3460,7 +3683,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
+function TZRawRowAccessor.GetAnsiRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3486,7 +3709,7 @@ begin
   end;
 end;
 
-function TZRawRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
+function TZRawRowAccessor.GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
 var AnsiRec: TZAnsiRec;
 begin
   AnsiRec := GetAnsiRec(ColumnIndex, IsNull);
@@ -3504,7 +3727,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZRawRowAccessor.GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String;
 {$IFDEF UNICODE}
 var AnsiRec: TZAnsiRec;
 {$ENDIF}
@@ -3550,7 +3773,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZRawRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
 var AnsiRec: TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3591,7 +3814,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZRawRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
 var AnsiRec: TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3638,7 +3861,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZRawRowAccessor.GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3673,7 +3896,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetWideRec(ColumnIndex: Integer;
+function TZRawRowAccessor.GetWideRec(Const ColumnIndex: Integer;
   var IsNull: Boolean): TZWideRec;
 var AnsiRec: TZAnsiRec;
 begin
@@ -3713,7 +3936,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetUnicodeString(ColumnIndex: Integer;
+function TZRawRowAccessor.GetUnicodeString(Const ColumnIndex: Integer;
   var IsNull: Boolean): ZWideString;
 var AnsiRec: TZAnsiRec;
 begin
@@ -3749,7 +3972,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetString(ColumnIndex: Integer; Value: String);
+procedure TZRawRowAccessor.SetString(Const ColumnIndex: Integer; const Value: String);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3776,7 +3999,7 @@ end;
   @param Value the new column value
   @param Len the Length of the new column value
 }
-procedure TZRawRowAccessor.SetAnsiRec(ColumnIndex: Integer;
+procedure TZRawRowAccessor.SetAnsiRec(Const ColumnIndex: Integer;
   const Value: TZAnsiRec);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -3805,7 +4028,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetWideRec(ColumnIndex: Integer; const Value: TZWideRec);
+procedure TZRawRowAccessor.SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3833,7 +4056,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetRawByteString(ColumnIndex: Integer; Value: RawByteString);
+procedure TZRawRowAccessor.SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3858,7 +4081,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: ZWideString);
+procedure TZRawRowAccessor.SetUnicodeString(Const ColumnIndex: Integer; const Value: ZWideString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -3977,7 +4200,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetAnsiRec(ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
+function TZUnicodeRowAccessor.GetAnsiRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZAnsiRec;
 var ZWideRec: TZWideRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4007,7 +4230,7 @@ begin
   end;
 end;
 
-function TZUnicodeRowAccessor.GetCharRec(ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
+function TZUnicodeRowAccessor.GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
 var WideRec: TZWideRec;
 begin
   WideRec := GetWideRec(ColumnIndex, IsNull);
@@ -4024,7 +4247,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetString(ColumnIndex: Integer; var IsNull: Boolean): String;
+function TZUnicodeRowAccessor.GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String;
 {$IFNDEF UNICODE}
 var WideRec: TZWideRec;
 {$ENDIF}
@@ -4067,7 +4290,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetAnsiString(ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
+function TZUnicodeRowAccessor.GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString;
 var US: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4101,7 +4324,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetUTF8String(ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
+function TZUnicodeRowAccessor.GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String;
 var US: ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4135,7 +4358,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetRawByteString(ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
+function TZUnicodeRowAccessor.GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString;
 var WideRec: TZWideRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4169,7 +4392,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetWideRec(ColumnIndex: Integer;
+function TZUnicodeRowAccessor.GetWideRec(Const ColumnIndex: Integer;
   var IsNull: Boolean): TZWideRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4205,7 +4428,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetUnicodeString(ColumnIndex: Integer; var IsNull: Boolean):
+function TZUnicodeRowAccessor.GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean):
    ZWideString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4237,7 +4460,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZUnicodeRowAccessor.SetString(ColumnIndex: Integer; Value: String);
+procedure TZUnicodeRowAccessor.SetString(Const ColumnIndex: Integer;
+  const Value: String);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -4266,7 +4490,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZUnicodeRowAccessor.SetAnsiRec(ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetAnsiRec(Const ColumnIndex: Integer;
   const Value: TZAnsiRec);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4295,7 +4519,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZUnicodeRowAccessor.SetWideRec(ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetWideRec(Const ColumnIndex: Integer;
   const Value: TZWideRec);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4324,7 +4548,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZUnicodeRowAccessor.SetRawByteString(ColumnIndex: Integer; Value: RawByteString);
+procedure TZUnicodeRowAccessor.SetRawByteString(Const ColumnIndex: Integer;
+  const Value: RawByteString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -4349,7 +4574,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZUnicodeRowAccessor.SetUnicodeString(ColumnIndex: Integer; Value: ZWideString);
+procedure TZUnicodeRowAccessor.SetUnicodeString(Const ColumnIndex: Integer;
+  const Value: ZWideString);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);

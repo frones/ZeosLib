@@ -193,10 +193,10 @@ begin
       if not Signed {and (PlainDriver.GetFieldLength(FieldHandle)=1)} then
          Result := stByte
       else
-         Result := stShort;
+         Result := stSmall;
     FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
       if Signed then
-         Result := stShort
+         Result := stSmall
       else
          Result := stInteger;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
@@ -237,7 +237,7 @@ begin
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
-      Result := stShort;
+      Result := stSmall;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
@@ -298,18 +298,18 @@ begin
   if TypeName = 'TINYINT' then
   begin
     if not IsUnsigned then
-      Result := stShort
+      Result := stSmall
     else
       Result := stByte;
   end
   else if TypeName = 'YEAR' then
-    Result := stShort
+    Result := stSmall
   else if TypeName = 'SMALLINT' then
   begin
     if IsUnsigned then
       Result := stInteger
     else
-      Result := stShort;
+      Result := stSmall;
   end
   else if TypeName = 'MEDIUMINT' then
     Result := stInteger
@@ -395,7 +395,7 @@ begin
   else if TypeName = 'SET' then
     Result := stString
   else if TypeName = 'BIT' then
-    Result := stShort
+    Result := stSmall
   else
       for i := 0 to Length(GeoTypes) - 1 do
          if GeoTypes[i] = TypeName then

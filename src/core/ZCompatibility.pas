@@ -71,7 +71,11 @@ uses
   {$If defined(MSWINDOWS) and not defined(FPC)}
   Windows,
   {$IFEND}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils;
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFNDEF HAVE_TBYTES}
+  Types,
+  {$ENDIF}
+  SysUtils;
 
 type
 {$IFDEF FPC}
@@ -114,6 +118,10 @@ type
     CP: Word;      //CodePage of the String
     P: Pointer;    //Allocated Mem of String including #0 terminator
   end;
+
+  {$IFNDEF HAVE_TBYTES}
+  TBytes = TByteDynArray;
+  {$ENDIF}
 
   TObjectDynArray       = array of TObject;
 {$IFDEF FPC}

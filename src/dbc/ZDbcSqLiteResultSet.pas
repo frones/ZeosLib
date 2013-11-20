@@ -96,13 +96,13 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): SmallInt; override;
+    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
-    function GetBytes(ColumnIndex: Integer): TByteDynArray; override;
+    function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
@@ -454,12 +454,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZSQLiteResultSet.GetShort(ColumnIndex: Integer): SmallInt;
+function TZSQLiteResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
 var
   ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
+  CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
   ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
@@ -624,7 +624,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetBytes(ColumnIndex: Integer): TByteDynArray;
+function TZSQLiteResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   ColType: Integer;
 begin
@@ -894,7 +894,7 @@ begin
   for I := 1 to Metadata.GetColumnCount do
   begin
     if Metadata.IsAutoIncrement(I) and
-      (Metadata.GetColumnType(I) in [stByte, stShort, stInteger, stLong]) then
+      (Metadata.GetColumnType(I) in [stByte, stSmall, stInteger, stLong]) then
     begin
       FAutoColumnIndex := I;
       Break;
