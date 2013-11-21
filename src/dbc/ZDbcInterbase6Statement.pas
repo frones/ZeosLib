@@ -62,21 +62,6 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
 
 type
 
-  {** Implements Generic Interbase6 Statement. }
-  TZInterbase6Statement = class(TZAbstractStatement)
-  private
-    FStatusVector: TARRAY_ISC_STATUS;
-    FIBConnection: IZInterbase6Connection;
-  protected
-    function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
-  public
-    constructor Create(Connection: IZConnection; Info: TStrings);
-
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-  end;
-
   {** Implements Prepared SQL Statement. }
 
   { TZInterbase6PreparedStatement }
@@ -102,7 +87,8 @@ type
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
   public
-    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(Connection: IZConnection; Info: TStrings); overload;
     destructor Destroy; override;
 
     procedure Prepare; override;
@@ -112,7 +98,7 @@ type
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
   end;
-
+  TZInterbase6Statement = class(TZInterbase6PreparedStatement);
   TZInterbase6CallableStatement = class(TZAbstractPreparedCallableStatement)
   private
     FParamSQLData: IZParamsSQLDA;
@@ -143,248 +129,6 @@ type
 implementation
 
 uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver;
-
-{ TZInterbase6Statement }
-
-{**
-   Check interbase error status
-   @param Sql the used sql tring
-
-   @return ErrorCode for possible Database Disconnect 
-}
-function TZInterbase6Statement.CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
-begin
-  Result := ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
-    FStatusVector, ConSettings, lcExecute, SQL);
-end;
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Handle a connection handle pointer.
-  @param Dialect a dialect Interbase SQL must be 1 or 2 or 3.
-  @param Info a statement parameters.
-}
-constructor TZInterbase6Statement.Create(Connection: IZConnection;
-  Info: TStrings);
-begin
-  inherited Create(Connection, Info);
-
-  FIBConnection := Connection as IZInterbase6Connection;
-  ResultSetType := rtScrollInsensitive;
-  CursorName := '';
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-{**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-{$HINTS OFF}
-function TZInterbase6Statement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-var
-  Cursor: AnsiString;
-  SQLData: IZSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
-  iError : Integer; //For closing the database //AVZ
-begin
-  StmtHandle := 0;
-  iError := 0;
-  result := inherited ExecuteQuery(SQL);
-  with FIBConnection do
-  begin
-    SQLData := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
-    try
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, StmtHandle);
-
-      PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
-          ASQL, StmtHandle, SQLData, ConSettings);
-
-
-      GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
-        @StmtHandle, GetDialect, SQLData.GetData);
-      iError := CheckInterbase6Error(ASQL);
-
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
-      begin
-        if CursorName <> '' then
-        begin
-          Cursor := CursorName;
-          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
-                  @StmtHandle, PAnsiChar(Cursor), 0);
-          CheckInterbase6Error(ASQL);
-        end;
-
-        Result := CreateIBResultSet(Self.SQL, Self,
-               TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, StmtHandle, Cursor, SQLData, CachedLob));
-      end
-      else
-        if (iError <> DISCONNECT_ERROR) then
-          raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-    except
-      on E: Exception do
-      begin
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop); //Free Stmt handle only if Execution fails. Otherwise the ResultSet will do this
-        raise;
-      end;
-    end;
-  end;
-end;
-{$HINTS OFF}
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-{$HINTS OFF}
-function TZInterbase6Statement.ExecuteUpdate(const SQL: RawByteString): Integer;
-var
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
-begin
-  Result := inherited ExecuteUpdate(SQL);
-  StmtHandle := 0;
-  with FIBConnection do
-  begin
-    try
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, StmtHandle);
-
-      GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle,
-        @StmtHandle, GetDialect, nil, nil);
-      CheckInterbase6Error(ASQL);
-
-      case StatementType of
-        stCommit, stRollback, stUnknown: Result := -1;
-      else
-        begin
-          Result := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType, ConSettings);
-          LastUpdateCount := Result;
-        end;
-      end;
-
-      { Autocommit statement. }
-      if Connection.GetAutoCommit then
-        Connection.Commit;
-      { Logging SQL Command }
-    finally
-      FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop); //Free Stmt handle because of single executions without a prepared state
-    end;
-  end;
-end;
-{$HINTS ON}
-
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-  @see #getResultSet
-  @see #getUpdateCount
-  @see #getMoreResults
-}
-{$HINTS OFF}
-function TZInterbase6Statement.Execute(const SQL: RawByteString): Boolean;
-var
-  Cursor: AnsiString;
-  SQLData: IZSQLDA;
-  StmtHandle: TISC_STMT_HANDLE;
-  StatementType: TZIbSqlStatementType;
-begin
-  Result := inherited Execute(SQL);
-  StmtHandle := 0;
-  with FIBConnection do
-  begin
-    try
-      StatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, StmtHandle);
-
-      { Create Result SQLData if statement returns result }
-      if StatementType in [stSelect, stExecProc] then
-      begin
-        SQLData := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
-        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect, ASQL,
-          StmtHandle, SQLData, ConSettings);
-      end;
-
-      { Execute prepared statement }
-      GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle,
-              @StmtHandle, GetDialect, nil);
-      CheckInterbase6Error(ASQL);
-      { Set updated rows count }
-      LastUpdateCount := GetAffectedRows(GetPlainDriver, StmtHandle, StatementType, ConSettings);
-
-      case StatementType of
-        stInsert, stDelete, stUpdate, stSelectForUpdate: Result := False;
-      else
-        Result := True;
-      end;
-
-      { Create ResultSet if possible else free Stateent Handle }
-      if (StatementType in [stSelect, stExecProc])
-        and (SQLData.GetFieldCount <> 0) then
-      begin
-        if CursorName <> '' then
-        begin
-          Cursor := CursorName;
-
-          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
-                  @StmtHandle, PAnsiChar(Cursor), 0);
-          CheckInterbase6Error(ASQL);
-        end;
-
-        LastResultSet := CreateIBResultSet(Self.SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, StmtHandle, Cursor,
-            SQLData, CachedLob));
-      end
-      else
-      begin
-        LastResultSet := nil;
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop);
-      end;
-
-      { Autocommit statement. }
-      if Connection.GetAutoCommit then
-        Connection.Commit;
-    except
-      on E: Exception do
-      begin
-        FreeStatement(GetPlainDriver, StmtHandle, DSQL_drop); //Free Stmt handle because of single executions without a prepared state
-        raise;
-      end;
-    end;
-  end;
-end;
-{$HINTS ON}
 
 { TZInterbase6PreparedStatement }
 
@@ -473,6 +217,18 @@ begin
   CursorName := '';
 
   Prepare;
+end;
+
+constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
+  Info: TStrings);
+begin
+  inherited Create(Connection,'', Info);
+
+  FIBConnection := Connection as IZInterbase6Connection;
+  FCodePageArray := (FIBConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
+  FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
+  ResultSetType := rtScrollInsensitive;
+  StmtHandle := 0;
 end;
 
 destructor TZInterbase6PreparedStatement.Destroy;

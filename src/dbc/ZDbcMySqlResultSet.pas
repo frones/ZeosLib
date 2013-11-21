@@ -412,8 +412,11 @@ end;
     value returned is <code>null</code>
 }
 function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+var
+  Len: ULong;
 begin
-  Result.P := GetBuffer(ColumnIndex, Result.Len);
+  Result.P := GetBuffer(ColumnIndex, Len);
+  Result.Len := Len;
 end;
 
 {**
@@ -772,7 +775,7 @@ end;
 function TZMySQLResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   Buffer: PAnsiChar;
-  Len: Cardinal;
+  Len: ULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);

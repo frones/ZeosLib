@@ -41,7 +41,7 @@
 {********************************************************@}
  {$DEFINE ZEOS_TEST_ONLY}
 // Compilation directives for Lazarus
-{$DEFINE ZEOS}
+{$DEFINE ZEOS72UP}
 {.$DEFINE WITH_ZSTRINGFIELDS}
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}

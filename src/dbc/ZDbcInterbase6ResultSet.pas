@@ -1343,7 +1343,10 @@ begin
       RowNo := RowNo + 1;
       LastRowNo := RowNo;
       Result := True;
-    end;
+    end
+    else
+      if FHasNoCursorName and not (FFetchStat = 1) then
+        CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
   end;
 end;
 
