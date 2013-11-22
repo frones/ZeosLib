@@ -310,17 +310,17 @@ begin
       Result := ftInteger;
     stLong:
       Result := ftLargeInt;
-    {$IFDEF WITH_FTSINGLE}
+    (*{$IFDEF WITH_FTSINGLE}
     stFloat:
       Result := ftSingle;
-    {$ENDIF}
-    {$IFDEF WITH_FTEXTENDED}
+    {$ENDIF}*)
+    (*{$IFDEF WITH_FTEXTENDED}
     stBigDecimal:
       Result := ftExtended;
-    {$ENDIF}
-    {$IFNDEF WITH_FTSINGLE}stFloat,{$ENDIF}
+    {$ENDIF}*)
+    {.$IFNDEF WITH_FTSINGLE}stFloat,{.$ENDIF}
     stDouble
-    {$IFNDEF WITH_FTEXTENDED},stBigDecimal{$ENDIF}:
+    {.$IFNDEF WITH_FTEXTENDED},stBigDecimal{.$ENDIF}:
       Result := ftFloat;
     stString:
       Result := ftString;
@@ -560,6 +560,10 @@ begin
         ResultSet.UpdateSmall(ColumnIndex, RowAccessor.GetSmall(FieldIndex, WasNull));
       ftInteger, ftAutoInc:
         ResultSet.UpdateInt(ColumnIndex, RowAccessor.GetInt(FieldIndex, WasNull));
+      {$IFDEF WITH_FTSINGLE}
+      ftSingle:
+        ResultSet.UpdateFloat(ColumnIndex, RowAccessor.GetFloat(FieldIndex, WasNull));
+      {$ENDIF}
       ftFloat:
         ResultSet.UpdateDouble(ColumnIndex, RowAccessor.GetDouble(FieldIndex, WasNull));
       {$IFDEF WITH_FTEXTENDED}
