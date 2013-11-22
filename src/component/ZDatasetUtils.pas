@@ -310,7 +310,17 @@ begin
       Result := ftInteger;
     stLong:
       Result := ftLargeInt;
-    stFloat, stDouble, stBigDecimal:
+    {$IFDEF WITH_FTSINGLE}
+    stFloat:
+      Result := ftSingle;
+    {$ENDIF}
+    {$IFDEF WITH_FTEXTENDED}
+    stBigDecimal:
+      Result := ftExtended;
+    {$ENDIF}
+    {$IFNDEF WITH_FTSINGLE}stFloat,{$ENDIF}
+    stDouble
+    {$IFNDEF WITH_FTEXTENDED},stBigDecimal{$ENDIF}:
       Result := ftFloat;
     stString:
       Result := ftString;
@@ -357,8 +367,16 @@ begin
       Result := stSmall;
     ftInteger, ftAutoInc:
       Result := stInteger;
+    {$IFDEF WITH_FTSINGLE}
+    ftSingle:
+      Result := stFloat;
+    {$ENDIF}
     ftFloat:
       Result := stDouble;
+    {$IFDEF WITH_FTEXTENDED}
+    ftExtended:
+      Result := stBigDecimal;
+    {$ENDIF}
     ftLargeInt:
       Result := stLong;
     ftCurrency:
@@ -544,6 +562,10 @@ begin
         ResultSet.UpdateInt(ColumnIndex, RowAccessor.GetInt(FieldIndex, WasNull));
       ftFloat:
         ResultSet.UpdateDouble(ColumnIndex, RowAccessor.GetDouble(FieldIndex, WasNull));
+      {$IFDEF WITH_FTEXTENDED}
+      ftExtended:
+        ResultSet.UpdateBigDecimal(ColumnIndex, RowAccessor.GetBigDecimal(FieldIndex, WasNull));
+      {$ENDIF}
       ftLargeInt:
         ResultSet.UpdateLong(ColumnIndex, RowAccessor.GetLong(FieldIndex, WasNull));
       ftCurrency:
