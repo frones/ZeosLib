@@ -261,6 +261,10 @@ function IntToStr(const Value: Int64): String; overload;
 {$ENDIF WITH_FASTCODE_INTTOSTR}
 
 { Integer convertion in Raw and Unicode Format}
+function IntToRaw(Value: ShortInt): RawByteString; overload;
+function IntToRaw(Value: Byte): RawByteString; overload;
+function IntToRaw(Value: SmallInt): RawByteString; overload;
+function IntToRaw(Value: Word): RawByteString; overload;
 function IntToRaw(Value: Integer): RawByteString; overload;
 function IntToRaw(Value: Int64): RawByteString; overload;
 
@@ -2404,6 +2408,230 @@ const
   {$R-}
 {$endif}
 
+function IntToRaw(Value: ShortInt): RawByteString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  Negative       : Boolean;
+  I              : Byte;
+  Digits         : Integer;
+  P              : PByte;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
+begin
+  Negative := (Value < 0);
+  I := Abs(Value);
+  if I >= 100 then
+    Digits := 3
+  else
+    if I >= 10 then
+      Digits := 2
+    else
+      Digits := 1;
+  NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
+    OldLen := 0
+  else
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+  if NewLen <> OldLen then
+  begin
+    Result := '';
+    SetLength(Result, NewLen);
+  end;
+  {$ENDIF}
+  P := Pointer(Result);
+  P^ := Byte('-');
+  Inc(P, Ord(Negative));
+  if Digits > 2 then
+  begin
+    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[I mod 100];
+    P^ := Byte('1');
+  end
+  else
+    if Digits = 2 then
+      PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[I]
+    else
+      P^ := I or ord('0');
+end;
+
+function IntToRaw(Value: Byte): RawByteString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  Digits         : Integer;
+  P              : PByte;
+  {$IFNDEF FPC}
+  OldLen         : Integer;
+  {$ENDIF}
+begin
+  if Value >= 100 then
+    Digits := 3
+  else
+    if Value >= 10 then
+      Digits := 2
+    else
+      Digits := 1;
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, Digits);
+  {$ELSE}
+  if Result = '' then
+    OldLen := 0
+  else
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+  if Digits <> OldLen then
+  begin
+    Result := '';
+    SetLength(Result, Digits);
+  end;
+  {$ENDIF}
+  P := Pointer(Result);
+  if Digits > 2 then
+  begin
+    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value mod 100];
+    if (Value div 100) = 1 then  {byte have range to 255}
+      P^ := Byte('1')
+    else
+      P^ := Byte('2')
+  end
+  else
+    if Digits = 2 then
+      PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value]
+    else
+      P^ := Value or ord('0');
+end;
+
+function IntToRaw(Value: SmallInt): RawByteString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  Negative       : Boolean;
+  I, J, K        : Word;
+  Digits         : Integer;
+  P              : PByte;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
+begin
+  Negative := (Value < 0);
+  I := Abs(Value);
+  if I >= 10000 then
+    Digits := 5
+  else
+    if I >= 100 then
+      Digits := 3 + Ord(I >= 1000)
+    else
+      Digits := 1 + Ord(I >= 10);
+  NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
+    OldLen := 0
+  else
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+  if NewLen <> OldLen then
+  begin
+    Result := '';
+    SetLength(Result, NewLen);
+  end;
+  {$ENDIF}
+  P := Pointer(Result);
+  P^ := Byte('-');
+  Inc(P, Ord(Negative));
+  if Digits > 2 then
+    repeat
+      J  := I div 100;           {Dividend div 100}
+      K  := J * 100;
+      K  := I - K;               {Dividend mod 100}
+      I  := J;                   {Next Dividend}
+      Dec(Digits, 2);
+      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K];
+    until Digits <= 2;
+  if Digits = 2 then
+    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[I]
+  else
+    P^ := I or ord('0');
+end;
+
+function IntToRaw(Value: Word): RawByteString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+type
+  PByteArray = ^TByteArray;
+  TByteArray = array[0..32767] of Byte;
+var
+  J, K           : Word;
+  Digits         : Integer;
+  P              : PByte;
+  {$IFNDEF FPC}
+  OldLen         : Integer;
+  {$ENDIF}
+begin
+  if Value >= 10000 then
+    Digits := 5
+  else
+    if Value >= 100 then
+      Digits := 3 + Ord(Value >= 1000)
+    else
+      Digits := 1 + Ord(Value >= 10);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, Digits);
+  {$ELSE}
+  if Result = '' then
+    OldLen := 0
+  else
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+  if Digits <> OldLen then
+  begin
+    Result := '';
+    SetLength(Result, Digits);
+  end;
+  {$ENDIF}
+  P := Pointer(Result);
+  if Digits > 2 then
+    repeat
+      J  := Value div 100;           {Dividend div 100}
+      K  := J * 100;
+      K  := Value - K;               {Dividend mod 100}
+      Value  := J;                   {Next Dividend}
+      Dec(Digits, 2);
+      PWord(@PByteArray(P)[Digits])^ := TwoDigitLookupW[K];
+    until Digits <= 2;
+  if Digits = 2 then
+    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value]
+  else
+    P^ := Value or ord('0');
+end;
+
 {$IF defined(Delphi) and not defined(Unicode)}
 function IntToRaw(Value: Integer): String;
 //function IntToStr32_JOH_IA32_6_d(Value: Integer): string;
@@ -2766,7 +2994,7 @@ var
   I, J, K        : Cardinal;
   Digits         : Integer;
   P              : PByte;
-  NewLen{, OldLen} : Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   Negative := (Value < 0);
   I := Abs(Value);
@@ -2784,16 +3012,23 @@ begin
     else
       Digits := 1 + Ord(I >= 10);
   NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
   Result := '';
-  (*if Result = '' then
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     OldLen := 0
   else
-    if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
-      OldLen := (PInteger(PInteger(@Result)^ - 4)^)
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
-  if NewLen <> OldLen then*)
+  if NewLen <> OldLen then
+  begin
+    Result := '';
     SetLength(Result, NewLen);
+  end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2825,7 +3060,7 @@ var
   I32, J32, K32, L32 : Cardinal;
   Digits             : Byte;
   P                  : PByte;
-  NewLen{,OldLen}      : Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF}      : Integer;
   C                  : AnsiChar;
 begin
   if Value = $8000000000000000 then
@@ -2857,16 +3092,23 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
   Result := '';
-  (*if Result = '' then
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     OldLen := 0
   else
-    if PInteger(PInteger(@Result)^ - 8)^ = 1 then {Ref Count}
-      OldLen := (PInteger(PInteger(@Result)^ - 4)^)
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
-  if NewLen <> OldLen then*)
+  if NewLen <> OldLen then
+  begin
+    Result := '';
     SetLength(Result, NewLen);
+  end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
