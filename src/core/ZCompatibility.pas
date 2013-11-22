@@ -94,7 +94,7 @@ type
   PWord                 = ^Word; // M.A.
   {$ENDIF}
   ULong                 = LongWord;
-  ULongLong             = {$IFDEF WITH_UINT64}Uint64{$ELSE}Int64{$ENDIF}; //delphi don´t have Unsigned Int64 type
+  ULongLong             = {$IFDEF WITH_UINT64}Uint64{$ELSE}Int64{$ENDIF}; //delphi don´t have Unsigned Int64 type until XE2
 {$ENDIF}
   PULong                = ^ULong;
   PULongLong            = ^ULongLong;

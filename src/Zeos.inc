@@ -244,8 +244,6 @@
 {$IFDEF DELPHI14_UP}
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
   {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
-  {$DEFINE WITH_UINT64}                 // D2010 has virtually UInt64
-  {$DEFINE WITH_PUINT64}                // D2010 has virtually PUInt64
   {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
   {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
   {$DEFInE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
@@ -278,6 +276,8 @@
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
   {$DEFINE WITH_SYSTEM_PREFIX}
+  {$DEFINE WITH_UINT64}                 // XE2 has true UInt64
+  {$DEFINE WITH_PUINT64}                // XE2 has true PUInt64
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
