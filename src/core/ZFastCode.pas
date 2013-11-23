@@ -261,11 +261,11 @@ function IntToStr(const Value: Int64): String; overload;
 {$ENDIF WITH_FASTCODE_INTTOSTR}
 
 { Integer convertion in Raw and Unicode Strings}
+function IntToRaw(Value: Integer): RawByteString; overload;  //keep always this one @first pos becouse of the Ansi-Delphi faster BASM code (the int64 version call the 32bit within range)
 function IntToRaw(const Value: ShortInt): RawByteString; overload;
 function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString; overload;
 function IntToRaw(const Value: SmallInt): RawByteString; overload;
 function IntToRaw(Value: Word; Const Negative: Boolean = False): RawByteString; overload;
-function IntToRaw(Value: Integer): RawByteString; overload;
 function IntToRaw(Value: Cardinal; Const Negative: Boolean = False): RawByteString; overload;
 function IntToRaw(Value: Int64): RawByteString; overload;
 {$IF defined(WITH_UINT64) or defined(FPC)}
