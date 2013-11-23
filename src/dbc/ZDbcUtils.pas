@@ -270,9 +270,13 @@ begin
   case ResultType of
     stBoolean,
     stByte, stShort, stSmall, stInteger, stLong,
-    stFloat, stDouble, stBigDecimal:
+    stFloat, stBigDecimal:
       Result := InitialType in [stBoolean, stByte, stShort, stSmall, stInteger,
         stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString];
+    stDouble:
+      Result := InitialType in [stBoolean, stByte, stShort, stSmall, stInteger,
+        stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString,
+        stTime, stDate, stTimeStamp];
     stString, stUnicodeString:
       Result := True;
     stBytes:
@@ -284,6 +288,8 @@ begin
       Result := InitialType in [stString, stUnicodeString, stDate, stTimestamp, stDouble];
     stTime:
       Result := InitialType in [stString, stUnicodeString, stTime, stTimestamp, stDouble];
+    stBinaryStream:
+      Result := (InitialType in [stBinaryStream, stBytes]) and (InitialType <> stUnknown);
     else
       Result := (ResultType = InitialType) and (InitialType <> stUnknown);
   end;
