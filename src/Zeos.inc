@@ -239,6 +239,7 @@
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
   {$UNDEF USE_FAST_CHARPOS}
   {$DEFINE WITH_ASANSISTRING}           // T(Wide)StringField supports AsAnsiString property
+  {$DEFINE WITH_INC_PBYTE_SUPPORT}      // Compiler supports incrementing PByte-Pointer
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}

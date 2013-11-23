@@ -260,7 +260,7 @@ function IntToStr(const Value: Integer): String; overload;
 function IntToStr(const Value: Int64): String; overload;
 {$ENDIF WITH_FASTCODE_INTTOSTR}
 
-{ Integer convertion in Raw and Unicode Format}
+{ Integer convertion in Raw and Unicode Strings}
 function IntToRaw(const Value: ShortInt): RawByteString; overload;
 function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString; overload;
 function IntToRaw(const Value: SmallInt): RawByteString; overload;
@@ -272,8 +272,17 @@ function IntToRaw(Value: Int64): RawByteString; overload;
 function IntToRaw(Value: {$IFDEF WITH_UINT64}UInt64{$ELSE}QWord{$ENDIF}; Const Negative: Boolean = False): RawByteString; overload;
 {$IFEND}
 
-function IntToUnicode(Value: Integer): ZWideString; overload;
+function IntToUnicode(Value: Byte; Const Negative: Boolean = False): ZWideString; overload;
+function IntToUnicode(const Value: ShortInt): ZWideString; overload;
+function IntToUnicode(Value: Word; Const Negative: Boolean = False): ZWideString; overload;
+function IntToUnicode(const Value: SmallInt): ZWideString; overload;
+function IntToUnicode(Value: Cardinal; Const Negative: Boolean = False): ZWideString; overload;
+function IntToUnicode(const Value: Integer): ZWideString; overload;
 function IntToUnicode(Value: Int64): ZWideString; overload;
+{$IF defined(WITH_UINT64) or defined(FPC)}
+function IntToUnicode(Value: {$IFDEF WITH_UINT64}UInt64{$ELSE}QWord{$ENDIF}; Const Negative: Boolean = False): ZWideString; overload;
+{$IFEND}
+
 
 function RawToInt(const Value: RawByteString): Integer;
 function UnicodeToInt(const Value: ZWideString): Integer;
@@ -2464,15 +2473,16 @@ begin
   Inc(P, Ord(Negative));
   if Digits = 3 then
   begin
-    PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value mod 100];
-    if (Value div 100) = 1 then  {byte have range to 255}
-      P^ := Byte('1')
-    else
-      P^ := Byte('2')
+    {$IFDEF WITH_INC_PBYTE_SUPPORT}
+    PWord(P+1)^ := TwoDigitLookupW[Value mod 100];
+    {$ELSE}
+    PWord(@PByteArray(P)[1])^ := TwoDigitLookupW[Value mod 100];
+    {$ENDIF}
+    P^ := Byte('0') + (Value div 100);
   end
   else
     if Digits = 2 then
-      PWord(@PByteArray(P)[Digits-2])^ := TwoDigitLookupW[Value]
+      PWord(P)^ := TwoDigitLookupW[Value]
     else
       P^ := Value or ord('0');
 end;
@@ -3022,16 +3032,18 @@ begin
   SetLength(Result, NewLen);
   {$ELSE}
   if Result = '' then
-    OldLen := 0
+    SetLength(Result, NewLen)
   else
+  begin
     if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
       OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
-  if NewLen <> OldLen then
-  begin
-    Result := '';
-    SetLength(Result, NewLen);
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
   end;
   {$ENDIF}
   P := Pointer(Result);
@@ -3108,7 +3120,6 @@ var
   Digits             : Byte;
   P                  : PByte;
   NewLen{$IFNDEF FPC}, OldLen{$ENDIF}      : Integer;
-  C                  : AnsiChar;
 begin
   if (Negative and (Value <= High(Integer))) or
      (not Negative and (Value <= High(Cardinal))) then
@@ -3141,16 +3152,18 @@ begin
   SetLength(Result, NewLen);
   {$ELSE}
   if Result = '' then
-    OldLen := 0
+    SetLength(Result, NewLen)
   else
+  begin
     if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
       OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
-  if NewLen <> OldLen then
-  begin
-    Result := '';
-    SetLength(Result, NewLen);
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
   end;
   {$ENDIF}
   P := Pointer(Result);
@@ -3223,50 +3236,170 @@ begin
 end;
 {$IFEND}
 
-function IntToUnicode(Value: Integer): ZWideString;
+function IntToUnicode(Value: Byte; Const Negative: Boolean): ZWideString;
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr_JOH_PAS_5(Value: Integer): string;
-{$IFNDEF WITH_FASTCODE_INTTOSTR}
 var
-  Negative       : Boolean;
-  I, J, K        : Cardinal;
   Digits         : Integer;
-  P              : PByte;
+  P              : PWideChar;
   NewLen {$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
-  Negative := (Value < 0);
-  I := Abs(Value);
-  if I >= 10000 then
-    if I >= 1000000 then
-      if I >= 100000000 then
-        Digits := 9 + Ord(I >= 1000000000)
-      else
-        Digits := 7 + Ord(I >= 10000000)
-    else
-      Digits := 5 + Ord(I >= 100000)
+  if Value >= 100 then
+    Digits := 3
   else
-    if I >= 100 then
-      Digits := 3 + Ord(I >= 1000)
+    if Value >= 10 then
+      Digits := 2
     else
-      Digits := 1 + Ord(I >= 10);
+      Digits := 1;
   NewLen  := Digits + Ord(Negative);
-  Result := '';
   {$IFDEF FPC}
   Result := '';
   SetLength(Result, NewLen);
   {$ELSE}
   if Result = '' then
-    OldLen := 0
+    SetLength(Result, NewLen)
   else
+  begin
     if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
       OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
-  if NewLen <> OldLen then
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
+  end;
+  {$ENDIF}
+  P := Pointer(Result);
+  P^ := WideChar('-');
+  Inc(P, Ord(Negative));
+  if Digits = 3 then
   begin
-    Result := '';
-    SetLength(Result, NewLen);
+    PLongWord(P+1)^ := TwoDigitLookupLW[Value mod 100];
+    PWord(P)^ := Word('0') + (Value div 100);
+  end
+  else
+    if Digits = 2 then
+      PLongWord(P)^ := TwoDigitLookupLW[Value]
+    else
+      PWord(P)^ := Value or Word('0');
+end;
+
+function IntToUnicode(const Value: ShortInt): ZWideString;
+begin
+  if Value < 0 then
+    Result := IntToUnicode(Byte(Abs(Value)), True)
+  else
+    Result := IntToUnicode(Byte(Value));
+end;
+
+function IntToUnicode(Value: Word; Const Negative: Boolean = False): ZWideString; overload;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+var
+  J, K           : Word;
+  Digits         : Integer;
+  P              : PWideChar;
+  NewLen {$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
+begin
+  if Value >= 10000 then
+    Digits := 5
+  else
+    if Value >= 100 then
+      Digits := 3 + Ord(Value >= 1000)
+    else
+      Digits := 1 + Ord(Value >= 10);
+  NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
+    SetLength(Result, NewLen)
+  else
+  begin
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
+  end;
+  {$ENDIF}
+  P := PWideChar(Result);
+  P^ := WideChar('-');
+  Inc(P, Ord(Negative));
+  if Digits > 2 then
+    repeat
+      J  := Value div 100;           {Dividend div 100}
+      K  := J * 100;
+      K  := Value - K;               {Dividend mod 100}
+      Value  := J;                   {Next Dividend}
+      Dec(Digits, 2);
+      PLongWord(@PWordArray(P)[Digits])^ := TwoDigitLookupLW[K];
+    until Digits <= 2;
+  if Digits = 2 then
+    PLongWord(P)^ := TwoDigitLookupLW[Value]
+  else
+    PWord(P)^ := Value or Word('0');
+end;
+
+function IntToUnicode(const Value: SmallInt): ZWideString;
+begin
+  if Value < 0 then
+    Result := IntToUnicode(Word(Abs(Value)), True)
+  else
+    Result := IntToUnicode(Word(Value));
+end;
+
+
+function IntToUnicode(Value: Cardinal; Const Negative: Boolean): ZWideString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr_JOH_PAS_5(Value: Integer): string;
+var
+  J, K           : Cardinal;
+  Digits         : Integer;
+  P              : PByte;
+  NewLen {$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
+begin
+  if Value >= 10000 then
+    if Value >= 1000000 then
+      if Value >= 100000000 then
+        Digits := 9 + Ord(Value >= 1000000000)
+      else
+        Digits := 7 + Ord(Value >= 10000000)
+    else
+      Digits := 5 + Ord(Value >= 100000)
+  else
+    if Value >= 100 then
+      Digits := 3 + Ord(Value >= 1000)
+    else
+      Digits := 1 + Ord(Value >= 10);
+  NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
+    SetLength(Result, NewLen)
+  else
+  begin
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
   end;
   {$ENDIF}
   P := Pointer(Result);
@@ -3274,36 +3407,46 @@ begin
   Inc(P, Ord(Negative)*2);
   if Digits > 2 then
     repeat
-      J  := I div 100;           {Dividend div 100}
+      J  := Value div 100;           {Dividend div 100}
       K  := J * 100;
-      K  := I - K;               {Dividend mod 100}
-      I  := J;                   {Next Dividend}
+      K  := Value - K;               {Dividend mod 100}
+      Value  := J;                   {Next Dividend}
       Dec(Digits, 2);
       PLongWord(@PWordArray(P)[Digits])^ := TwoDigitLookupLW[K];
     until Digits <= 2;
   if Digits = 2 then
-    PLongWord(@PWordArray(P)[Digits-2])^ := TwoDigitLookupLW[I]
+    PLongWord(P)^ := TwoDigitLookupLW[Value]
   else
-    PWord(P)^ := I or Word('0');
+    PWord(P)^ := Value or Word('0');
 end;
-{$ELSE}
+
+function IntToUnicode(const Value: Integer): ZWideString;
 begin
-  Result := IntToStr(Value);
+  if Value < 0 then
+    Result := IntToUnicode(Cardinal(Abs(Value)), True)
+  else
+    Result := IntToUnicode(Cardinal(Value));
 end;
-{$ENDIF}
 
 function IntToUnicode(Value: Int64): ZWideString;
+{$IF defined(WITH_UINT64) or defined(FPC)}
+begin
+  if Value < 0 then
+    Result := IntToUnicode({$IFDEF WITH_UINT64}UInt64{$ELSE}QWord{$ENDIF}(Value), True)
+  else
+    Result := IntToUnicode({$IFDEF WITH_UINT64}UInt64{$ELSE}QWord{$ENDIF}(Value));
+end;
+{$ELSE}
 //fast pure pascal by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
 //function IntToStr64_JOH_PAS_5(Value: Int64): string;
-{$IFNDEF WITH_FASTCODE_INTTOSTR}
 var
   Negative           : Boolean;
   I64, J64, K64      : Int64;
   I32, J32, K32, L32 : Cardinal;
   Digits             : Byte;
   P                  : PWideChar;
-  NewLen             : Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF}             : Integer;
 begin
   if Value = $8000000000000000 then
     begin {Special WideString since ABS($8000000000000000) Fails}
@@ -3334,7 +3477,25 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
   SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
+    SetLength(Result, NewLen)
+  else
+  begin
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
+  end;
+  {$ENDIF}
   P := PWideChar(Result);
   P^ := '-';
   Inc(P, Ord(Negative));
@@ -3387,15 +3548,137 @@ begin
       PLongWord(P + Digits)^ := TwoDigitLookupLW[K32];
     until Digits <= 2;
   if Digits = 2 then
-    PLongWord(P + Digits-2)^ := TwoDigitLookupLW[I32]
+    PLongWord(P)^ := TwoDigitLookupLW[I32]
   else
     P^ := WideChar(I32 or ord('0'));
 end;
-{$ELSE}
+{$IFEND}
+
+{$IF defined(WITH_UINT64) or defined(FPC)}
+function IntToUnicode(Value: {$IFDEF WITH_UINT64}UInt64{$ELSE}QWord{$ENDIF}; const Negative: Boolean = False): ZWideString;
+//fast pure pascal by John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//function IntToStr64_JOH_PAS_5(Value: Int64): string;
+var
+  J64, K64           : {$IFDEF WITH_UINT64}UInt64{$ELSE}QWord{$ENDIF};
+  I32, J32, K32, L32 : Cardinal;
+  Digits             : Byte;
+  P                  : PWideChar;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF}             : Integer;
 begin
-  Result := IntToStr(Value);
+  if (Negative and (Value <= High(Integer))) or
+     (not Negative and (Value <= High(Cardinal))) then
+  begin {Within Integer Range - Use Faster Integer Version}
+    Result := IntToUnicode(Cardinal(Value));
+    Exit;
+  end;
+  if Value >= 100000000000000 then
+    if Value >= 10000000000000000 then
+      if Value >= 1000000000000000000 then
+        if Value >= 10000000000000000000 then
+          Digits := 20
+        else
+          Digits := 19
+      else
+        Digits := 17 + Ord(Value >= 100000000000000000)
+    else
+      Digits := 15 + Ord(Value >= 1000000000000000)
+  else
+    if Value >= 1000000000000 then
+      Digits := 13 + Ord(Value >= 10000000000000)
+    else
+      if Value >= 10000000000 then
+        Digits := 11 + Ord(Value >= 100000000000)
+      else
+        Digits := 10;
+  NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
+    SetLength(Result, NewLen)
+  else
+  begin
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
+    else
+      OldLen := 0;
+    if NewLen <> OldLen then
+    begin
+      Result := '';
+      SetLength(Result, NewLen);
+    end;
+  end;
+  {$ENDIF}
+  P := PWideChar(Result);
+  P^ := '-';
+  Inc(P, Ord(Negative));
+  if Digits = 20 then
+  begin
+    P^ := WideChar('1');
+    Inc(P);
+    {$IFDEF FPC} //(3618,5) Fatal: Internal error 200706094
+    Value := Value - 10000000000000000000;
+    {$ELSE}
+    Dec(Value, 10000000000000000000);
+    {$ENDIF}
+    Dec(Digits);
+  end;
+  if Digits > 17 then
+  begin {18 or 19 Digits}
+    if Digits = 19 then
+    begin
+      P^ := WideChar('0');
+      while Value >= 1000000000000000000 do
+      begin
+        Dec(Value, 1000000000000000000);
+        Inc(P^);
+      end;
+      Inc(P);
+    end;
+    P^ := WideChar('0');
+    while Value >= 100000000000000000 do
+    begin
+      Dec(Value, 100000000000000000);
+      Inc(P^);
+    end;
+    Inc(P);
+    Digits := 17;
+  end;
+  J64 := Value div 100000000;
+  K64 := Value - (J64 * 100000000); {Remainder = 0..99999999}
+  I32 := K64;
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  PLongWord(P + Digits - 2)^ := TwoDigitLookupLW[K32];
+  I32 := J32 div 100;
+  L32 := I32 * 100;
+  L32 := J32 - L32;
+  PLongWord(P + Digits - 4)^ := TwoDigitLookupLW[L32];
+  J32 := I32 div 100;
+  K32 := J32 * 100;
+  K32 := I32 - K32;
+  PLongWord(P + Digits - 6)^ := TwoDigitLookupLW[K32];
+  PLongWord(P + Digits - 8)^ := TwoDigitLookupLW[J32];
+  Dec(Digits, 8);
+  I32 := J64; {Dividend now Fits within Integer - Use Faster Version}
+  if Digits > 2 then
+    repeat
+      J32 := I32 div 100;
+      K32 := J32 * 100;
+      K32 := I32 - K32;
+      I32 := J32;
+      Dec(Digits, 2);
+      PLongWord(P + Digits)^ := TwoDigitLookupLW[K32];
+    until Digits <= 2;
+  if Digits = 2 then
+    PLongWord(P)^ := TwoDigitLookupLW[I32]
+  else
+    P^ := WideChar(I32 or ord('0'));
 end;
-{$ENDIF}
+{$IFEND}
 
 {$ifdef OverflowCheckEnabled}
   {$Q+}
