@@ -564,6 +564,8 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
+  Buffer := GetBuffer(ColumnIndex, Len);
+
   if LastWasNull then
     Result := 0
   else
