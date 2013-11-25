@@ -3038,9 +3038,9 @@ var
    MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
- Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(MajorVersion)+'.'+
-           {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(MinorVersion)+'.'+
-           {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(SubVersion);
+ Result := ZFastCode.IntToStr(MajorVersion)+'.'+
+           ZFastCode.IntToStr(MinorVersion)+'.'+
+           ZFastCode.IntToStr(SubVersion);
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);

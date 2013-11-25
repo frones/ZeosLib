@@ -1617,7 +1617,7 @@ begin
           if ArgNames.Count > I then
             ColumnName := ArgNames.Strings[I]
           else
-            ColumnName := '$' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(I + 1);
+            ColumnName := '$' + ZFastCode.IntToStr(I + 1);
 
           // column type
           if IsInParam then
@@ -3218,9 +3218,9 @@ begin
 
     SQL := Select + ' ct.relname AS TABLE_NAME, NOT i.indisunique'
       + ' AS NON_UNIQUE, NULL AS INDEX_QUALIFIER, ci.relname AS INDEX_NAME,'
-      + ' CASE i.indisclustered WHEN true THEN ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiClustered))
-      + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiHashed))
-      + ' ELSE ' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Ord(tiOther)) + ' END END AS TYPE,'
+      + ' CASE i.indisclustered WHEN true THEN ' + ZFastCode.IntToStr(Ord(tiClustered))
+      + ' ELSE CASE am.amname WHEN ''hash'' THEN ' + ZFastCode.IntToStr(Ord(tiHashed))
+      + ' ELSE ' + ZFastCode.IntToStr(Ord(tiOther)) + ' END END AS TYPE,'
       + ' a.attnum AS ORDINAL_POSITION, a.attname AS COLUMN_NAME,'
       + ' NULL AS ASC_OR_DESC, ci.reltuples AS CARDINALITY,'
       + ' ci.relpages AS PAGES, NULL AS FILTER_CONDITION'

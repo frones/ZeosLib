@@ -1229,11 +1229,11 @@ begin
         Result := 'True'
       else
         Result := 'False';
-    stByte: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
-    stShort: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
-    stSmall: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
-    stInteger: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
-    stLong: Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stByte: Result := ZFastCode.IntToStr(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stShort: Result := ZFastCode.IntToStr(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stSmall: Result := ZFastCode.IntToStr(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stInteger: Result := ZFastCode.IntToStr(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLong: Result := ZFastCode.IntToStr(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: Result := FloatToSQLStr(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: Result := FloatToSQLStr(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: Result := FloatToSQLStr(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);

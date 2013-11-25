@@ -1433,7 +1433,7 @@ function TZTokenizer.GetEscapeString(const EscapeString: String): String;
 var
   Temp: String;
 begin
-  Temp := EscapeMarkSequence+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
+  Temp := EscapeMarkSequence+ZFastCode.IntToStr(Length(EscapeString))+ReverseString(EscapeMarkSequence);
 
   if Length(EscapeString) > 0 then
     {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}

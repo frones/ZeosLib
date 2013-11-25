@@ -295,7 +295,6 @@
 
 {$IFDEF DELPHI18_UP}
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
-  {$DEFINE WITH_FASTCODE_INTTOSTR}      //using fastcode StrToInt implementations of http://fastcode.sourceforge.net/
   {$DEFINE WITH_BUFFERS_IS_TRECBUF} //Buffers[index] is TRecBuf type NativeInt
   {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings

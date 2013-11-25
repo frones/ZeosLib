@@ -2361,10 +2361,10 @@ var
     end
     else
       for N := 1 to MaxInt do
-        if Names.IndexOf(AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N)) = -1 then
+        if Names.IndexOf(AName+ZFastCode.IntToStr(N)) = -1 then
         begin
-          Names.Add(AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N));
-          Result := AName+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
+          Names.Add(AName+ZFastCode.IntToStr(N));
+          Result := AName+ZFastCode.IntToStr(N);
           Break;
         end;
   end;

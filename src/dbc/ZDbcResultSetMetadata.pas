@@ -390,7 +390,7 @@ begin
       if ColumnName = '' then
         ColumnName := 'Column';
       if N > 0 then
-        ColumnName := ColumnName + '_' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(N);
+        ColumnName := ColumnName + '_' + ZFastCode.IntToStr(N);
       FColumnsLabels.Add(ColumnName);
     end;
   end;

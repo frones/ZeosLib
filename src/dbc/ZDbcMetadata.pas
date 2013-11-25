@@ -4595,7 +4595,7 @@ var
 begin
   Result := '';
   for I := Low(Types) to High(Types) do
-    Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Types[I]);
+    Result := Result + ':' + ZFastCode.IntToStr(Types[I]);
   Result := Format('get-udts:%s:%s:%s%s',
     [Catalog, SchemaPattern, TypeNamePattern, Result]);
 end;

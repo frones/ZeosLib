@@ -1248,10 +1248,10 @@ begin
   FParamNames[ParameterIndex] := ParamName;
   if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
      ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-    FParamTypeNames[ParameterIndex] := 'CHAR('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
+    FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToStr(ColumnSize)+')'
   else
     if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-      FParamTypeNames[ParameterIndex] := 'CHAR('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
+      FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToStr(ColumnSize)+')'
     else
       if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
          ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
@@ -1268,7 +1268,7 @@ begin
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
               if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
-                FParamTypeNames[ParameterIndex] := 'BINARY('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
+                FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToStr(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
 end;
@@ -1610,7 +1610,7 @@ begin
   inherited Create;
   FBindOffsets := PlainDriver.GetBindOffsets;
   if FBindOffsets.buffer_type=0 then
-    raise EZSQLException.Create('Unknown dll version : '+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PlainDriver.GetClientVersion));
+    raise EZSQLException.Create('Unknown dll version : '+ZFastCode.IntToStr(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
   setlength(FBindArray,0);
   setlength(ColumnArray,BindCount);
