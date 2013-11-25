@@ -39,8 +39,11 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
- // Compilation directives for Lazarus
+//common compilation directives
 {$DEFINE ZEOS72UP}
+{$DEFINE SUPPORTS_UINT64_CONSTS}      // compiler supports integer constants with 20 digits
+
+ // Compilation directives for Lazarus
 {.$DEFINE WITH_ZSTRINGFIELDS}
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
@@ -64,7 +67,7 @@
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
  {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
  {$DEFINE USE_FAST_CHARPOS}     // use Fascode CharPos function
- {$DEFINE HAVE_TBYTES}          //Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
+ {$DEFINE HAVE_TBYTES}          // Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -91,6 +94,7 @@
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
   {$UNDEF HAVE_TBYTES} //D7 doesn't have TBytes
+  {$UNDEF SUPPORTS_UINT64_CONSTS}      // D7 doesn't support integer constants with 20 digits
 {$ENDIF}
 
 // Compilation directives for Delphi 8
@@ -98,6 +102,7 @@
   {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
+  {$UNDEF SUPPORTS_UINT64_CONSTS}      // D8 doesn't support integer constants with 20 digits
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
@@ -218,6 +223,7 @@
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
   {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
   {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
+  {$DEFINE SUPPORTS_UINT64_CONSTS}      //compiler supports integer constants with 20 didgits
 {$ENDIF}
 
 {$IFDEF DELPHI12_UP}
@@ -230,7 +236,7 @@
   {$DEFINE WITH_FTBYTE}                 // ftByte is supported
   {$DEFINE WITH_FTEXTENDED}             // ftExtended is supported
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
-  {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
+  {$DEFINE WITH_ASBYTES}                // AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
@@ -277,8 +283,6 @@
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
   {$DEFINE WITH_SYSTEM_PREFIX}
-  {$DEFINE WITH_UINT64}                 // XE2 has true UInt64
-  {$DEFINE WITH_PUINT64}                // XE2 has true PUInt64
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}

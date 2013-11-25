@@ -1406,7 +1406,7 @@ begin
     SQL := 'SELECT NULL AS PROCEDURE_CAT, n.nspname AS PROCEDURE_SCHEM,'
       + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
       + ' NULL AS RESERVED3, d.description AS REMARKS, '
-      + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE '
+      + ZFastCode.IntToStr(Ord(ProcedureReturnsResult)) + ' AS PROCEDURE_TYPE '
       + ' FROM pg_catalog.pg_namespace n, pg_catalog.pg_proc p  '
       + ' LEFT JOIN pg_catalog.pg_description d ON (p.oid=d.objoid) '
       + ' LEFT JOIN pg_catalog.pg_class c ON (d.classoid=c.oid AND'
@@ -1424,7 +1424,7 @@ begin
     SQL := 'SELECT NULL AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM,'
       + ' p.proname AS PROCEDURE_NAME, NULL AS RESERVED1, NULL AS RESERVED2,'
       + ' NULL AS RESERVED3, NULL AS REMARKS, '
-      + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ProcedureReturnsResult) + ' AS PROCEDURE_TYPE'
+      + ZFastCode.IntToStr(Ord(ProcedureReturnsResult)) + ' AS PROCEDURE_TYPE'
       + ' FROM pg_proc p';
     if ProcedureCondition <> '' then
       SQL := SQL + ' WHERE ' + ProcedureCondition;

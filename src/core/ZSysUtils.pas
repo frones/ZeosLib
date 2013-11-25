@@ -3091,7 +3091,12 @@ var i, l: integer;
 begin
   {$IFDEF UNICODE}
   l := Length(Src); //temp l speeds x2
-  SetString(result,nil,l);
+  if Result = '' then
+    System.SetString(Result,nil, l)
+  else
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
+      System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
