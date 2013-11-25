@@ -3358,7 +3358,7 @@ begin
   if (Negative and (Value <= High(Integer))) or
      (not Negative and (Value <= High(Cardinal))) then
   begin {Within Integer Range - Use Faster Integer Version}
-    Result := IntToUnicode(Cardinal(Value));
+    Result := IntToUnicode(Cardinal(Value), Negative);
     Exit;
   end;
   if Value >= 100000000000000 then
@@ -3410,7 +3410,7 @@ begin
   begin
     P^ := WideChar('1');
     Inc(P);
-    {$IFDEF FPC} //(3618,5) Fatal: Internal error 200706094
+    {$IFDEF FPC} //(???? Dec seems not supporting integers with range > MaxInt64 -> Fatal: Internal error 200706094
     Value := Value - 10000000000000000000;
     {$ELSE}
     Dec(Value, 10000000000000000000);
@@ -3911,9 +3911,9 @@ begin
   Valid := False;
   while P^ = ' ' do
     Inc(P);
-  if CharInSet(P^, ['+', '-']) then
+  if Ord(P^) in [Ord('+'), Ord('-')] then
     begin
-      Neg := (P^ = WideChar('-'));
+      Neg := Ord(P^) = Ord('-');
       inc(P);
     end;
   if P^ = WideChar('$') then
@@ -3923,7 +3923,7 @@ begin
     end
   else
     begin
-      if P^ = WideChar('0') then
+      if Ord(P^) = Ord('0') then
         begin
           Valid := True;
           inc(P);
@@ -3957,7 +3957,7 @@ begin
     begin
       while True do
         begin
-          if not (CharInSet(P^, ['0'..'9'])) then
+          if not (Ord(P^) in [Ord('0')..Ord('9')]) then
             Break;
           if Result > (MaxInt div 10) then
             Break;
@@ -4228,16 +4228,6 @@ var
   Digit: Integer;
   Neg, Hex, Valid: Boolean;
   P: PWideChar;
-  {$IFNDEF UNICODE}
-  function UpCase(Ch: WideChar): WideChar;
-  begin
-    Result := Ch;
-    case Ch of
-      'a'..'z':
-        Result := WideChar(Word(Ch) and $FFDF);
-    end;
-  end;
-  {$ENDIF}
 begin
   Code := 0;
   P := S;
@@ -4252,7 +4242,7 @@ begin
   Valid := False;
   while P^ = ' ' do
     Inc(P);
-  if CharInSet(P^, ['+', '-']) then
+  if Ord(P^) in [Ord('+'), Ord('-')] then
     begin
       Neg := (P^ = '-');
       inc(P);
@@ -4269,7 +4259,7 @@ begin
           inc(P);
           Valid := True;
         end;
-      if Upcase(P^) = 'X' then
+      if (Ord(P^) or $20) = ord('x') then //upcase
         begin
           Hex := True;
           inc(P);
@@ -4298,7 +4288,7 @@ begin
     begin
       while True do
         begin
-          if not CharInSet(P^, ['0'..'9']) then
+          if not (Ord(P^) in [Ord('0')..Ord('9')]) then
             break;
           if Result > (MaxInt div 10) then
             break;
@@ -4419,8 +4409,12 @@ begin
     begin
       while true do
         begin
-          if ( not ((S+Code)^ in ['0'..'9']) ) or ( UInt64(Result) > (High(Int64) div 10)) then
+          if ( not ((S+Code)^ in ['0'..'9']) ) or
+             ( UInt64(Result) > (High(Int64) div 10)) then
+          begin
+            inc(Code, Ord((S+Code)^ <> #0));
             break;
+          end;
           if UInt64(Result) < (MaxInt div 10)-9 then
             begin {Use Integer Math instead of Int64}
               I := Result;
@@ -4641,6 +4635,7 @@ const
 var
   I, Digit: Integer;
   Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+  P: PWideChar;
 begin
   Result := 0;
   Code   := 0;
@@ -4649,30 +4644,31 @@ begin
       inc(Code);
       Exit;
     end;
+  P := S;
   Flags := 0;
-  while (S+Code)^ = ' ' do
-    Inc(Code);
-  if CharInSet((S+Code)^, ['+', '-']) then
+  while (P)^ = ' ' do
+    Inc(P);
+  if Ord(P^) in [Ord('+'), Ord('-')] then
     begin
-      Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
-      inc(code);
+      Flags := Flags or (Ord(P^) - Ord('+')); {Set/Reset Neg}
+      inc(P);
     end;
-  if (S+Code)^ = WideChar('$') then
+  if Ord(P^) = Ord('$') then
     begin
-      inc(Code);
+      inc(P);
       Flags := Flags or 4; {Hex := True}
     end
   else
     begin
-      if (S+Code)^ = WideChar('0') then
+      if Ord(P^) = Ord('0') then
         begin
           Flags := Flags or 1; {Valid := True}
           inc(Code);
         end;
-      if (Ord((S+Code)^) or $20) = ord('x') then
+      if (Ord(P^) or $20) = ord('x') then
         begin {S[Code+1] in ['X','x']}
           Flags := Flags or 4; {Hex := True}
-          inc(Code);
+          inc(P);
         end;
     end;
   if (Flags and 4) <> 0 then
@@ -4681,10 +4677,10 @@ begin
       while true do
         begin
           inc(Code);
-          case (S+Code)^ of
-            '0'..'9': Digit := Ord((S+Code)^) - Ord('0');
-            'a'..'f': Digit := Ord((S+Code)^) - AdjustLowercase;
-            'A'..'F': Digit := Ord((S+Code)^) - AdjustUppercase;
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - AdjustLowercase;
+            'A'..'F': Digit := Ord(P^) - AdjustUppercase;
             else      Break;
           end;
           if UInt64(Result) > (High(Int64) shr 3) then
@@ -4704,33 +4700,38 @@ begin
     begin
       while true do
         begin
-          if ( not CharInSet((S+Code)^, ['0'..'9'] )) or
+          if ( not (Ord(P^) in [Ord('0')..Ord('9')] )) or
              ( UInt64(Result) > (High(Int64) div 10)) then
+          begin
+            inc(P, Ord(P^ <> #0));
             break;
+          end;
           if UInt64(Result) < (MaxInt div 10)-9 then
             begin {Use Integer Math instead of Int64}
               I := Result;
-              I := (I * 10) + Ord((S+Code)^) - Ord('0');
+              I := (I * 10) + Ord(P^) - Ord('0');
               Result := I;
             end
           else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
-            Result := (Result shl 1) + (Result shl 3) + Ord((S+Code)^) - Ord('0');
+            Result := (Result shl 1) + (Result shl 3) + Ord(P^) - Ord('0');
           Flags := Flags or 1; {Valid := True}
-          Inc(Code);
+          Inc(P);
         end;
       if UInt64(Result) >= $8000000000000000 then {Possible Overflow}
         if ((Flags and 2) = 0) or (Result <> $8000000000000000) then
           begin {Overflow}
             if ((Flags and 2) <> 0) then {Neg=True}
               Result := -Result;
-            Dec(Code);
+            Code := P-S;
             Exit;
           end;
     end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
-  if ((Flags and 1) <> 0) and ((S+Code)^ = #0) then
-    Code := 0; {Valid=True and End Reached}
+  if ((Flags and 1) <> 0) and (P^ = #0) then
+    Code := 0 {Valid=True and End Reached}
+  else
+    Code := P-S+1;
 end;
 {$ENDIF}
 {$WARNINGS ON}
@@ -5052,7 +5053,7 @@ begin
   while (S+code)^ = ' ' do
     Inc(Code);
   Ch := (S+code)^;
-  if CharInSet(Ch, ['+', '-']) then
+  if Ord(Ch) in [Ord('+'), Ord('-')] then
   begin
     inc(Code);
     Neg := (Ch = '-');
@@ -5061,7 +5062,7 @@ begin
   begin
     Ch := (S+code)^;
     inc(Code);
-    if not CharInSet(Ch, ['0'..'9']) then
+    if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
       break;
     Result := (Result * 10) + Ord(Ch) - Ord('0');
     Valid := True;
@@ -5073,7 +5074,7 @@ begin
       begin
         Ch := (S+code)^;
         inc(Code);
-        if not CharInSet(Ch, ['0'..'9']) then
+        if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
         begin
           if not valid then {Starts with '.'}
             if Ch = #0 then
@@ -5090,7 +5091,7 @@ begin
     begin {Ch in ['E','e']}
       Valid := false;
       Ch := (S+code)^;
-      if CharInSet(Ch, ['+', '-']) then
+      if Ord(Ch) in [Ord('+'), Ord('-')] then
         begin
           inc(Code);
           NegExp := (Ch = '-');
@@ -5100,7 +5101,7 @@ begin
         begin
           Ch := (S+code)^;
           inc(Code);
-          if not CharInSet(Ch, ['0'..'9']) then
+          if not (Ord(Ch) in [Ord('0')..Ord('9')]) then
             break;
           ExpValue := (ExpValue * 10) + Ord(Ch) - Ord('0');
           Valid := true;
