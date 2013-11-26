@@ -282,7 +282,7 @@ begin
   begin
     Result := Result + HostName;
     if Port <> 0 then
-      Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port);
+      Result := Result + ':' + ZFastCode.IntToStr(Port);
   end;
 
   // Database

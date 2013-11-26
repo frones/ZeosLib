@@ -2496,7 +2496,7 @@ begin
           if DetailField is TLargeIntField then
             TLargeIntField(DetailField).{$IFDEF WITH_ASLARGEINT}AsLargeInt{$ELSE}Value{$ENDIF} := Temp
           else
-            DetailField.AsString := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Temp);
+            DetailField.AsString := ZFastCode.IntToStr(Temp);
         end
         // Processes all other fields.
         else

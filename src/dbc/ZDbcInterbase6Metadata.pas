@@ -203,11 +203,15 @@ type
   end;
 
   {** Implements Interbase6 Database Metadata. }
+
+  { TZInterbase6DatabaseMetadata }
+
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     function GetPrivilege(Privilege: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
+    function ConstructNameCondition(Pattern: string; Column: string): string; override;
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -1168,6 +1172,32 @@ end;
 function TZInterbase6DatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
 begin
   Result := TZInterbase6DatabaseInfo.Create(Self);
+end;
+
+function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
+  Column: string): string;
+const
+  Spaces = '';
+var
+  WorkPattern: string;
+begin
+  Result := '';
+  if (Length(Pattern) > 2 * 31) then
+    raise EZSQLException.Create(SPattern2Long);
+
+  if (Pattern = '%') or (Pattern = '') then
+     Exit;
+  WorkPattern:=NormalizePatternCase(Pattern);
+  if HasNoWildcards(WorkPattern) then
+  begin
+    WorkPattern := StripEscape(WorkPattern);
+    Result := Format('%s = %s', [Column, EscapeString(WorkPattern)]);
+  end
+  else
+  begin
+    Result := Format('%s like %s',
+      [Column, EscapeString(WorkPattern+'%')]);
+  end;
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
@@ -2731,8 +2761,9 @@ begin
     end;
 end;
 
-function TZInterbase6DatabaseMetadata.UncachedGetSequences(const Catalog, SchemaPattern,
-  SequenceNamePattern: string): IZResultSet;
+function TZInterbase6DatabaseMetadata.UncachedGetSequences(
+  const Catalog: string; const SchemaPattern: string;
+  const SequenceNamePattern: string): IZResultSet;
 var
   SQL: string;
   LSequenceNamePattern: string;

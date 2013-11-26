@@ -557,11 +557,19 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetLong(ColumnIndex: Integer): Int64;
+var
+  Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := RawToInt64Def(InternalGetString(ColumnIndex), 0);
+  Buffer := GetBuffer(ColumnIndex, Len);
+
+  if LastWasNull then
+    Result := 0
+  else
+    Result := RawToInt64Def(Buffer, 0);
 end;
 
 {**
@@ -575,7 +583,7 @@ end;
 }
 function TZMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  Len: Cardinal;
+  Len: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -709,7 +717,7 @@ end;
 }
 function TZMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
+  Len: ULong;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin

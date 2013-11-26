@@ -2595,7 +2595,7 @@ begin
 {$ifdef fpc}
         Result := Value.VInteger;
 {$else}
-        Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Value.VInteger);
+        Result := ZFastCode.IntToStr(Value.VInteger);
 {$endif}
     vtFloat: Result := Value.VFloat;
     vtString: Result := Value.VString;

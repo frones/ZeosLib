@@ -78,6 +78,12 @@ uses
   SysUtils;
 
 type
+  {$IF not declared(UInt64)}
+  UInt64                = QWord;
+  {$IFEND}
+  {$IF not declared(PUInt64)}
+  PUInt64               = {$IFDEF FPC}PQWord{$ELSE}^UInt64{$ENDIF};
+  {$IFEND}
 {$IFDEF FPC}
   ULong                 = {$IFDEF WIN64}LongWord{$ELSE}PTRUINT{$ENDIF};
                             // EgonHugeist: Use always a 4Byte Integer as long the PlainDriver dll's are 32Bit for Windows64
@@ -94,7 +100,7 @@ type
   PWord                 = ^Word; // M.A.
   {$ENDIF}
   ULong                 = LongWord;
-  ULongLong             = {$IFDEF WITH_UINT64}Uint64{$ELSE}Int64{$ENDIF}; //delphi don´t have Unsigned Int64 type
+  ULongLong             = UInt64; //delphi don´t have Unsigned Int64 type until XE2 but integer constants with 20 digits are supported since D2005. Ideas??
 {$ENDIF}
   PULong                = ^ULong;
   PULongLong            = ^ULongLong;

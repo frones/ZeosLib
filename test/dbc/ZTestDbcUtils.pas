@@ -123,6 +123,7 @@ begin
   {check Boolean convertion}
   Check(CheckConvertion(stBoolean,stBoolean), 'stBoolean to stBoolean');
   Check(CheckConvertion(stBoolean,stByte), 'stBoolean to stByte');
+  Check(CheckConvertion(stBoolean,stShort), 'stBoolean to stShort');
   Check(CheckConvertion(stBoolean,stSmall), 'stBoolean to stSmall');
   Check(CheckConvertion(stBoolean,stInteger), 'stBoolean to stInteger');
   Check(CheckConvertion(stBoolean,stLong), 'stBoolean to stLong');
@@ -132,14 +133,15 @@ begin
   Check(CheckConvertion(stBoolean,stString), 'stBoolean to stString');
   Check(not CheckConvertion(stBoolean,stBytes), 'stBoolean to stBytes');
   Check(not CheckConvertion(stBoolean,stAsciiStream), 'stBoolean to stAsciiStream');
+  Check(not CheckConvertion(stBoolean,stUnicodeStream), 'stBoolean to stUnicodeStream');
   Check(not CheckConvertion(stBoolean,stBinaryStream), 'stBoolean to stBinaryStream');
   Check(not CheckConvertion(stBoolean,stDate), 'stBoolean to stDate');
   Check(not CheckConvertion(stBoolean,stTime), 'stBoolean to stTime');
   Check(not CheckConvertion(stBoolean,stTimestamp), 'stBoolean to stTimestamp');
-  Check(not CheckConvertion(stBoolean,stUnicodeStream), 'stBoolean to stUnicodeStream');
   {check Byte convertion}
   Check(CheckConvertion(stByte,stBoolean), 'stByte to stBoolean');
   Check(CheckConvertion(stByte,stByte), 'stByte to stByte');
+  Check(CheckConvertion(stByte,stShort), 'stByte to stShort');
   Check(CheckConvertion(stByte,stSmall), 'stByte to stSmall');
   Check(CheckConvertion(stByte,stInteger), 'stByte to stInteger');
   Check(CheckConvertion(stByte,stLong), 'stByte to stLong');
@@ -149,15 +151,34 @@ begin
   Check(CheckConvertion(stByte,stString), 'stByte,stString');
   Check(not CheckConvertion(stByte,stBytes), 'stByte to stBytes');
   Check(not CheckConvertion(stByte,stAsciiStream), 'stByte to stAsciiStream');
+  Check(not CheckConvertion(stByte,stUnicodeStream), 'stByte to stUnicodeStream');
   Check(not CheckConvertion(stByte,stBinaryStream), 'stByte to stBinaryStream');
   Check(not CheckConvertion(stByte,stDate), 'stByte to stDate');
   Check(not CheckConvertion(stByte,stTime), 'stByte to stTime');
   Check(not CheckConvertion(stByte,stTimestamp), 'stByte to stTimestamp');
-  Check(not CheckConvertion(stByte,stUnicodeStream), 'stByte to stUnicodeStream');
   {check Short convertion}
+  Check(CheckConvertion(stShort,stBoolean), 'stShort to stBoolean');
+  Check(CheckConvertion(stShort,stShort), 'stShort to stShort');
+  Check(CheckConvertion(stShort,stSmall), 'stShort to stSmall');
+  Check(CheckConvertion(stShort,stByte), 'stShort to stByte');
+  Check(CheckConvertion(stShort,stInteger), 'stShort to stInteger');
+  Check(CheckConvertion(stShort,stLong), 'stShort to stLong');
+  Check(CheckConvertion(stShort,stFloat), 'stShort to stFloat');
+  Check(CheckConvertion(stShort,stDouble), 'stShort to stDouble');
+  Check(CheckConvertion(stShort,stBigDecimal), 'stShort to stBigDecimal');
+  Check(CheckConvertion(stShort,stString), 'stShort,stString');
+  Check(not CheckConvertion(stShort,stBytes), 'stShort to stBytes');
+  Check(not CheckConvertion(stShort,stAsciiStream), 'stShort to stAsciiStream');
+  Check(not CheckConvertion(stShort,stUnicodeStream), 'stByte to stUnicodeStream');
+  Check(not CheckConvertion(stShort,stBinaryStream), 'stShort to stBinaryStream');
+  Check(not CheckConvertion(stShort,stDate), 'stShort to stDate');
+  Check(not CheckConvertion(stShort,stTime), 'stShort to stTime');
+  Check(not CheckConvertion(stShort,stTimestamp), 'stShort to stTimestamp');
+  {check Small convertion}
   Check(CheckConvertion(stSmall,stBoolean), 'stSmall to stBoolean');
-  Check(CheckConvertion(stSmall,stSmall), 'stSmall to stSmall');
   Check(CheckConvertion(stSmall,stByte), 'stSmall to stByte');
+  Check(CheckConvertion(stSmall,stSmall), 'stSmall to stShort');
+  Check(CheckConvertion(stSmall,stSmall), 'stSmall to stSmall');
   Check(CheckConvertion(stSmall,stInteger), 'stSmall to stInteger');
   Check(CheckConvertion(stSmall,stLong), 'stSmall to stLong');
   Check(CheckConvertion(stSmall,stFloat), 'stSmall to stFloat');
@@ -166,14 +187,15 @@ begin
   Check(CheckConvertion(stSmall,stString), 'stSmall,stString');
   Check(not CheckConvertion(stSmall,stBytes), 'stSmall to stBytes');
   Check(not CheckConvertion(stSmall,stAsciiStream), 'stSmall to stAsciiStream');
+  Check(not CheckConvertion(stSmall,stUnicodeStream), 'stByte to stUnicodeStream');
   Check(not CheckConvertion(stSmall,stBinaryStream), 'stSmall to stBinaryStream');
   Check(not CheckConvertion(stSmall,stDate), 'stSmall to stDate');
   Check(not CheckConvertion(stSmall,stTime), 'stSmall to stTime');
   Check(not CheckConvertion(stSmall,stTimestamp), 'stSmall to stTimestamp');
-  Check(not CheckConvertion(stBytes,stUnicodeStream), 'stBytes to stUnicodeStream');
   {check Integer convertion}
   Check(CheckConvertion(stInteger,stBoolean), 'stInteger to stBoolean');
   Check(CheckConvertion(stInteger,stByte), 'stInteger to stByte');
+  Check(CheckConvertion(stInteger,stShort), 'stInteger to stShort');
   Check(CheckConvertion(stInteger,stSmall), 'stInteger to stSmall');
   Check(CheckConvertion(stInteger,stInteger), 'stInteger to stInteger');
   Check(CheckConvertion(stInteger,stLong), 'stInteger to stLong');
@@ -183,14 +205,15 @@ begin
   Check(CheckConvertion(stInteger,stString), 'stInteger to stString');
   Check(not CheckConvertion(stInteger,stBytes), 'stInteger to stBytes');
   Check(not CheckConvertion(stInteger,stAsciiStream), 'stInteger to stAsciiStream');
+  Check(not CheckConvertion(stInteger,stUnicodeStream), 'stByte to stUnicodeStream');
   Check(not CheckConvertion(stInteger,stBinaryStream), 'stInteger to stBinaryStream');
   Check(not CheckConvertion(stInteger,stDate), 'stInteger to stDate');
   Check(not CheckConvertion(stInteger,stTime), 'stInteger to stTime');
   Check(not CheckConvertion(stInteger,stTimestamp), 'stInteger to stTimestamp');
-  Check(not CheckConvertion(stInteger,stUnicodeStream), 'stInteger to stUnicodeStream');
   {check Long convertion}
   Check(CheckConvertion(stLong,stBoolean), 'stLong to stTimestamp');
   Check(CheckConvertion(stLong,stByte), 'stLong to stByte');
+  Check(CheckConvertion(stLong,stByte), 'stLong to stShort');
   Check(CheckConvertion(stLong,stSmall), 'stLong to stSmall');
   Check(CheckConvertion(stLong,stInteger), 'stLong to stInteger');
   Check(CheckConvertion(stLong,stLong), 'stLong to stLong');
@@ -208,6 +231,7 @@ begin
   {check Float convertion}
   Check(CheckConvertion(stFloat,stBoolean), 'stFloat to stBoolean');
   Check(CheckConvertion(stFloat,stByte), 'stFloat to stByte');
+  Check(CheckConvertion(stFloat,stShort), 'stFloat to stShort');
   Check(CheckConvertion(stFloat,stSmall), 'stFloat to stSmall');
   Check(CheckConvertion(stFloat,stInteger), 'stFloat to stInteger');
   Check(CheckConvertion(stFloat,stLong), 'stFloat to stLong');
@@ -225,6 +249,7 @@ begin
   {check Double convertion}
   Check(CheckConvertion(stDouble,stBoolean), 'stDouble to stBoolean');
   Check(CheckConvertion(stDouble,stByte), 'stDouble to stByte');
+  Check(CheckConvertion(stDouble,stShort), 'stDouble to stShort');
   Check(CheckConvertion(stDouble,stSmall), 'stDouble to stSmall');
   Check(CheckConvertion(stDouble,stInteger), 'stDouble to stInteger');
   Check(CheckConvertion(stDouble,stLong), 'stDouble to stLong');
@@ -235,13 +260,14 @@ begin
   Check(not CheckConvertion(stDouble,stBytes), 'stDouble to stBytes');
   Check(not CheckConvertion(stDouble,stAsciiStream), 'stDouble to stAsciiStream');
   Check(not CheckConvertion(stDouble,stBinaryStream), 'stDouble to stBinaryStream');
-  Check(not CheckConvertion(stDouble,stDate), 'stDouble to stDate');
-  Check(not CheckConvertion(stDouble,stTime), 'stDouble to stTime');
-  Check(not CheckConvertion(stDouble,stTimestamp), 'stDouble to stTimestamp');
+  Check(CheckConvertion(stDouble,stDate), 'stDouble to stDate');
+  Check(CheckConvertion(stDouble,stTime), 'stDouble to stTime');
+  Check(CheckConvertion(stDouble,stTimestamp), 'stDouble to stTimestamp');
   Check(not CheckConvertion(stDouble,stUnicodeStream), 'stDouble to stUnicodeStream');
   {check BigDecimal convertion}
   Check(CheckConvertion(stBigDecimal,stBoolean), 'stBigDecimal to stBoolean');
   Check(CheckConvertion(stBigDecimal,stByte), 'stBigDecimal to stByte');
+  Check(CheckConvertion(stBigDecimal,stShort), 'stBigDecimal to stShort');
   Check(CheckConvertion(stBigDecimal,stSmall), 'stBigDecimal to stSmall');
   Check(CheckConvertion(stBigDecimal,stInteger), 'stBigDecimal to stInteger');
   Check(CheckConvertion(stBigDecimal,stLong), 'stBigDecimal to stLong');
@@ -259,6 +285,7 @@ begin
   {check String convertion}
   Check(CheckConvertion(stString,stBoolean), 'stString to stBoolean');
   Check(CheckConvertion(stString,stByte), 'stString to stByte');
+  Check(CheckConvertion(stString,stShort), 'stString to stShort');
   Check(CheckConvertion(stString,stSmall), 'stString to stSmall');
   Check(CheckConvertion(stString,stInteger), 'stString to stInteger');
   Check(CheckConvertion(stString,stLong), 'stString to stLong');
@@ -285,7 +312,7 @@ begin
   Check(CheckConvertion(stBytes,stString), 'stBytes to stString');
   Check(CheckConvertion(stBytes,stBytes), 'stBytes to stBytes');
   Check(not CheckConvertion(stBytes,stAsciiStream), 'stBytes to stAsciiStream');
-  Check(not CheckConvertion(stBytes,stBinaryStream), 'stBytes to stBinaryStream');
+  Check(CheckConvertion(stBytes,stBinaryStream), 'stBytes to stBinaryStream');
   Check(not CheckConvertion(stBytes,stDate), 'stBytes to stDate');
   Check(not CheckConvertion(stBytes,stTime), 'stBytes to stTime');
   Check(not CheckConvertion(stBytes,stTimestamp), 'stBytes to stTimestamp');
@@ -293,11 +320,12 @@ begin
   {check Date convertion}
   Check(not CheckConvertion(stDate,stBoolean), 'stDate to stBoolean');
   Check(not CheckConvertion(stDate,stByte), 'stDate,stByte');
+  Check(not CheckConvertion(stDate,stShort), 'stDate to stShort');
   Check(not CheckConvertion(stDate,stSmall), 'stDate to stSmall');
   Check(not CheckConvertion(stDate,stInteger), 'stDate to stInteger');
   Check(not CheckConvertion(stDate,stLong), 'stDate to stLong');
   Check(not CheckConvertion(stDate,stFloat), 'stDate to stFloat');
-  Check(not CheckConvertion(stDate,stDouble), 'stDate to stDouble');
+  Check(CheckConvertion(stDate,stDouble), 'stDate to stDouble');
   Check(not CheckConvertion(stDate,stBigDecimal), 'stDate to stBigDecimal');
   Check(CheckConvertion(stDate,stString), 'stDate to stString');
   Check(not CheckConvertion(stDate,stBytes), 'stDate to stBytes');
@@ -310,11 +338,12 @@ begin
   {check Time convertion}
   Check(not CheckConvertion(stTime,stBoolean), 'stTime to stBoolean');
   Check(not CheckConvertion(stTime,stByte), 'stTime to stByte');
+  Check(not CheckConvertion(stTime,stShort), 'stTime to stShort');
   Check(not CheckConvertion(stTime,stSmall), 'stTime to stSmall');
   Check(not CheckConvertion(stTime,stInteger), 'stTime to stInteger');
   Check(not CheckConvertion(stTime,stLong), 'stTime to stLong');
   Check(not CheckConvertion(stTime,stFloat), 'stTime to stFloat');
-  Check(not CheckConvertion(stTime,stDouble), 'stTime to stDouble');
+  Check(CheckConvertion(stTime,stDouble), 'stTime to stDouble');
   Check(not CheckConvertion(stTime,stBigDecimal), 'stTime to stBigDecimal');
   Check(CheckConvertion(stTime,stString), 'stTime,stString');
   Check(not CheckConvertion(stTime,stBytes), 'stTime to stBytes');
@@ -327,11 +356,12 @@ begin
   {check TimeStamp convertion}
   Check(not CheckConvertion(stTimestamp,stBoolean), 'stTimestamp to stBoolean');
   Check(not CheckConvertion(stTimestamp,stByte), 'stTimestamp to stByte');
+  Check(not CheckConvertion(stTimestamp,stShort), 'stTimestamp to stShort');
   Check(not CheckConvertion(stTimestamp,stSmall), 'stTimestamp to stSmall');
   Check(not CheckConvertion(stTimestamp,stInteger), 'stTimestamp to stInteger');
   Check(not CheckConvertion(stTimestamp,stLong), 'stTimestamp to stLong');
   Check(not CheckConvertion(stTimestamp,stFloat), 'stTimestamp to stFloat');
-  Check(not CheckConvertion(stTimestamp,stDouble), 'stTimestamp to stDouble');
+  Check(CheckConvertion(stTimestamp,stDouble), 'stTimestamp to stDouble');
   Check(not CheckConvertion(stTimestamp,stBigDecimal), 'stTimestamp to stBigDecimal');
   Check(CheckConvertion(stTimestamp,stString), 'stTimestamp to stString');
   Check(not CheckConvertion(stTimestamp,stBytes), 'stTimestamp to stBytes');
@@ -344,6 +374,7 @@ begin
   {check AsciiStream convertion}
   Check(not CheckConvertion(stAsciiStream,stBoolean), 'stAsciiStream to stBoolean');
   Check(not CheckConvertion(stAsciiStream,stByte), 'stAsciiStream to stByte');
+  Check(not CheckConvertion(stAsciiStream,stShort), 'stAsciiStream to stShort');
   Check(not CheckConvertion(stAsciiStream,stSmall), 'stAsciiStream to stSmall');
   Check(not CheckConvertion(stAsciiStream,stInteger), 'stAsciiStream to stInteger');
   Check(not CheckConvertion(stAsciiStream,stLong), 'stAsciiStream to stLong');
@@ -361,6 +392,7 @@ begin
   {check BinaryStream convertion}
   Check(not CheckConvertion(stBinaryStream,stBoolean), 'stBinaryStream to stBoolean');
   Check(not CheckConvertion(stBinaryStream,stByte), 'stBinaryStream to stByte');
+  Check(not CheckConvertion(stBinaryStream,stShort), 'stBinaryStream to stShort');
   Check(not CheckConvertion(stBinaryStream,stSmall), 'stBinaryStream to stSmall');
   Check(not CheckConvertion(stBinaryStream,stInteger), 'stBinaryStream to stInteger');
   Check(not CheckConvertion(stBinaryStream,stLong), 'stBinaryStream to stLong');
@@ -378,6 +410,7 @@ begin
   {check unknown convertion}
   Check(not CheckConvertion(stUnknown,stBoolean), 'stUnknown to stBoolean');
   Check(not CheckConvertion(stUnknown,stByte), 'stUnknown to stByte');
+  Check(not CheckConvertion(stUnknown,stShort), 'stUnknown to stShort');
   Check(not CheckConvertion(stUnknown,stSmall), 'stUnknown to stSmall');
   Check(not CheckConvertion(stUnknown,stInteger), 'stUnknown to stInteger');
   Check(not CheckConvertion(stUnknown,stLong), 'stUnknown to stLong');
@@ -395,6 +428,7 @@ begin
   {check UnicodeStream convertion}
   Check(not CheckConvertion(stUnicodeStream,stBoolean), 'stUnicodeStream to stBoolean');
   Check(not CheckConvertion(stUnicodeStream,stByte), 'stUnicodeStream to stByte');
+  Check(not CheckConvertion(stUnicodeStream,stShort), 'stUnicodeStream to stShort');
   Check(not CheckConvertion(stUnicodeStream,stSmall), 'stUnicodeStream to stSmall');
   Check(not CheckConvertion(stUnicodeStream,stInteger), 'stUnicodeStream to stInteger');
   Check(not CheckConvertion(stUnicodeStream,stLong), 'stUnicodeStream to stLong');
@@ -419,7 +453,8 @@ procedure TZTestDbcUtilsCase.TestDefineColumnTypeName;
 begin
   CheckEquals('Boolean', DefineColumnTypeName(stBoolean));
   CheckEquals('Byte', DefineColumnTypeName(stByte));
-  CheckEquals('Short', DefineColumnTypeName(stSmall));
+  CheckEquals('Short', DefineColumnTypeName(stShort));
+  CheckEquals('Small', DefineColumnTypeName(stSmall));
   CheckEquals('Integer', DefineColumnTypeName(stInteger));
   CheckEquals('Long', DefineColumnTypeName(stLong));
   CheckEquals('Float', DefineColumnTypeName(stFloat));

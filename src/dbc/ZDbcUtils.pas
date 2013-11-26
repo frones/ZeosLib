@@ -268,21 +268,28 @@ end;
 function CheckConvertion(InitialType: TZSQLType; ResultType: TZSQLType): Boolean;
 begin
   case ResultType of
-    stBoolean, stByte, stSmall, stInteger,
-    stLong, stFloat, stDouble, stBigDecimal:
-      Result := InitialType in [stBoolean, stByte, stSmall, stInteger,
+    stBoolean,
+    stByte, stShort, stSmall, stInteger, stLong,
+    stFloat, stBigDecimal:
+      Result := InitialType in [stBoolean, stByte, stShort, stSmall, stInteger,
         stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString];
+    stDouble:
+      Result := InitialType in [stBoolean, stByte, stShort, stSmall, stInteger,
+        stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString,
+        stTime, stDate, stTimeStamp];
     stString, stUnicodeString:
       Result := True;
     stBytes:
       Result := InitialType in [stString, stUnicodeString, stBytes, stGUID,
         stAsciiStream, stUnicodeStream, stBinaryStream];
     stTimestamp:
-      Result := InitialType in [stString, stUnicodeString, stDate, stTime, stTimestamp];
+      Result := InitialType in [stString, stUnicodeString, stDate, stTime, stTimestamp, stDouble];
     stDate:
-      Result := InitialType in [stString, stUnicodeString, stDate, stTimestamp];
+      Result := InitialType in [stString, stUnicodeString, stDate, stTimestamp, stDouble];
     stTime:
-      Result := InitialType in [stString, stUnicodeString, stTime, stTimestamp];
+      Result := InitialType in [stString, stUnicodeString, stTime, stTimestamp, stDouble];
+    stBinaryStream:
+      Result := (InitialType in [stBinaryStream, stBytes]) and (InitialType <> stUnknown);
     else
       Result := (ResultType = InitialType) and (InitialType <> stUnknown);
   end;
@@ -300,8 +307,10 @@ begin
       Result := 'Boolean';
     stByte:
       Result := 'Byte';
-    stSmall:
+    stShort:
       Result := 'Short';
+    stSmall:
+      Result := 'Small';
     stInteger:
       Result := 'Integer';
     stLong:

@@ -753,7 +753,7 @@ begin
   with FOracleParams[ParameterIndex-1] do
   begin
     if not GetConnection.UseMetadata then
-      pName := 'pOut'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ParameterIndex);
+      pName := 'pOut'+ZFastCode.IntToStr(ParameterIndex);
     pSQLType := SQLType;
   end;
 end;
@@ -798,7 +798,7 @@ begin
   begin
     AConnection := GetConnection;
     if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
-      pName := 'p'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ParameterIndex);
+      pName := 'p'+ZFastCode.IntToStr(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
   end;

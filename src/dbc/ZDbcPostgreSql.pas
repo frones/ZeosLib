@@ -373,7 +373,7 @@ begin
   else
     AddParamToResult('host', HostName);
 
-  AddParamToResult('port', {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port));
+  AddParamToResult('port', ZFastCode.IntToStr(Port));
   AddParamToResult('dbname', Database);
   AddParamToResult('user', User);
   AddParamToResult('password', Password);
@@ -400,7 +400,7 @@ begin
   { Sets a connection timeout. }
   ConnectTimeout := StrToIntDef(Info.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    AddParamToResult('connect_timeout', {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ConnectTimeout));
+    AddParamToResult('connect_timeout', ZFastCode.IntToStr(ConnectTimeout));
 
   { Sets the application name }
   if Info.Values['application_name'] <> '' then

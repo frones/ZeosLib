@@ -2535,7 +2535,7 @@ begin
     begin
       if Length(UDTypes) > 0 then
         UDTypes := UDTypes + ',';
-      UDTypes := UDTypes + AnsiQuotedStr({$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Types[I]), '''');
+      UDTypes := UDTypes + AnsiQuotedStr(ZFastCode.IntToStr(Types[I]), '''');
     end;
 
     with GetStatement.ExecuteQuery(
