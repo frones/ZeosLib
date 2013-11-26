@@ -55,6 +55,10 @@ interface
 
 {$I ZCore.inc}
 
+  {$Q-} //disable OverflowCheck
+  {$R-} //disable RangeCheck
+
+
   uses
     ZCompatibility;
 
@@ -292,6 +296,8 @@ function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
 function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64; overload;
 function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64; overload;
+function RawToUInt64Def(const S: PAnsiChar; const Default: Cardinal) : UInt64; overload;
+function RawToUInt64Def(const S: RawByteString; const Default: Cardinal) : UInt64; overload;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64; overload;
 
@@ -2440,15 +2446,6 @@ const
   MinInt64Uni : ZWideString = '-9223372036854775808';
   MinInt64Raw : RawByteString = '-9223372036854775808';
 
-{$ifopt Q+}
-  {$define OverflowCheckEnabled}
-  {$Q-}
-{$endif}
-{$ifopt R+}
-  {$define RangeCheckEnabled}
-  {$R-}
-{$endif}
-
 function IntToRaw(const Value: ShortInt): RawByteString;
 begin
   if Value < 0 then
@@ -3006,9 +3003,15 @@ end;
 function IntToRaw(const Value: Int64): RawByteString;
 begin
   if Value < 0 then
-    Result := IntToRaw(UInt64(Abs(Value)), True)
+    if Value <= Low(Integer) then
+      Result := IntToRaw(UInt64(Abs(Value)), True)
+    else
+      Result := IntToRaw(Cardinal(Abs(Value)), True)
   else
-    Result := IntToRaw(UInt64(Value));
+    if Value > High(Cardinal) then
+      Result := IntToRaw(UInt64(Value))
+    else
+      Result := IntToRaw(Cardinal(Value));
 end;
 {$IFEND}
 
@@ -3471,13 +3474,6 @@ begin
   else
     P^ := WideChar(I32 or ord('0'));
 end;
-
-{$ifdef OverflowCheckEnabled}
-  {$Q+}
-{$endif}
-{$ifdef RangeCheckEnabled}
-  {$R+}
-{$endif}
 
 {$IF defined (WIN32) and not defined(FPC)}
 procedure StrToIntError(const S: string);
@@ -4340,44 +4336,47 @@ function ValInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; var code: Integer): Int64;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion and PAnsiChar
 const
   AdjustLowercase = Ord('a') - 10;
   AdjustUppercase = Ord('A') - 10;
 var
   I, Digit: Integer;
   Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+  P: PAnsiChar;
 begin
   Result := 0;
   Code   := 0;
-  if S = '' then
+  if (S = nil) or (S^ = #0) then
     begin
       inc(Code);
       Exit;
     end;
   Flags := 0;
-  while (S+Code)^ = ' ' do
+  P := S;
+  while P^ = ' ' do
     Inc(Code);
-  if (S+Code)^ in ['+', '-'] then
+  if P^ in ['+', '-'] then
     begin
       Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
-      inc(code);
+      inc(P);
     end;
-  if (S+Code)^ = '$' then
+  if P^ = '$' then
     begin
-      inc(Code);
+      inc(P);
       Flags := Flags or 4; {Hex := True}
     end
   else
     begin
-      if (S+Code)^ = '0' then
+      if P^ = '0' then
         begin
           Flags := Flags or 1; {Valid := True}
-          inc(Code);
+          inc(P);
         end;
-      if (Ord((S+Code)^) or $20) = ord('x') then
+      if (Ord(P^) or $20) = ord('x') then
         begin {S[Code+1] in ['X','x']}
           Flags := Flags or 4; {Hex := True}
-          inc(Code);
+          inc(P);
         end;
     end;
   if (Flags and 4) <> 0 then
@@ -4385,11 +4384,10 @@ begin
       Flags := Flags and (not 1); {Valid := False}
       while true do
         begin
-          inc(Code);
-          case (S+Code)^ of
-            '0'..'9': Digit := Ord((S+Code)^) - Ord('0');
-            'a'..'f': Digit := Ord((S+Code)^) - AdjustLowercase;
-            'A'..'F': Digit := Ord((S+Code)^) - AdjustUppercase;
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - AdjustLowercase;
+            'A'..'F': Digit := Ord(P^) - AdjustUppercase;
             else      Break;
           end;
           if UInt64(Result) > (High(Int64) shr 3) then
@@ -4403,42 +4401,160 @@ begin
           else
             Result := (Result shl 4) + Digit;
           Flags := Flags or 1; {Valid := True}
+          Inc(P);
         end;
     end
   else
     begin
       while true do
         begin
-          if ( not ((S+Code)^ in ['0'..'9']) ) or
+          if ( not (P^ in ['0'..'9']) ) or
              ( UInt64(Result) > (High(Int64) div 10)) then
           begin
-            inc(Code, Ord((S+Code)^ <> #0));
+            inc(P, Ord(P^ <> #0));
             break;
           end;
           if UInt64(Result) < (MaxInt div 10)-9 then
             begin {Use Integer Math instead of Int64}
               I := Result;
-              I := (I * 10) + Ord((S+Code)^) - Ord('0');
+              I := (I * 10) + Ord(P^) - Ord('0');
               Result := I;
             end
           else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
-            Result := (Result shl 1) + (Result shl 3) + Ord((S+Code)^) - Ord('0');
+            Result := (Result shl 1) + (Result shl 3) + Ord(P^) - Ord('0');
           Flags := Flags or 1; {Valid := True}
-          Inc(Code);
+          Inc(P);
         end;
       if UInt64(Result) >= $8000000000000000 then {Possible Overflow}
         if ((Flags and 2) = 0) or (Result <> $8000000000000000) then
           begin {Overflow}
             if ((Flags and 2) <> 0) then {Neg=True}
               Result := -Result;
-            Dec(Code);
+            Code := P-S;
             Exit;
           end;
     end;
   if ((Flags and 2) <> 0) then {Neg=True}
     Result := -Result;
-  if ((Flags and 1) <> 0) and ((S+Code)^ = #0) then
-    Code := 0; {Valid=True and End Reached}
+  if ((Flags and 1) <> 0) and (P^ = #0) then
+    Code := 0 {Valid=True and End Reached}
+  else
+    Code := P-S+1;
+end;
+{$WARNINGS ON}
+
+{$WARNINGS OFF} //value digits might not be initialized
+function ValUInt64_JOH_PAS_8_a_raw(const s: PAnsiChar; var code: Integer): UInt64;
+//function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
+//fast pascal from John O'Harrow see:
+//http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion, PAnsiChar, UInt64
+const
+  AdjustLowercase = Ord('a') - 10;
+  AdjustUppercase = Ord('A') - 10;
+var
+  I, Digit: Integer;
+  Flags: Byte; {Bit 0 = Valid, Bit 1 = Negative, Bit 2 = Hex}
+  P: PAnsiChar;
+begin
+  Result := 0;
+  Code   := 0;
+  if (S = nil) or (S^ = #0) then
+    begin
+      inc(Code);
+      Exit;
+    end;
+  Flags := 0;
+  P := S;
+  while P^ = ' ' do
+    Inc(P);
+  if P^ in ['+', '-'] then
+    if P^ = '-' then //can't be negative
+    begin
+      Code := P-S;
+      Exit;
+    end
+    else
+    begin
+      Flags := Flags or (Ord(S^) - Ord('+')); {Set/Reset Neg}
+      inc(P);
+    end;
+  if P^ = '$' then
+    begin
+      inc(P);
+      Flags := Flags or 4; {Hex := True}
+    end
+  else
+    begin
+      if P^ = '0' then
+        begin
+          Flags := Flags or 1; {Valid := True}
+          inc(P);
+        end;
+      if (Ord(P^) or $20) = ord('x') then
+        begin {S[Code+1] in ['X','x']}
+          Flags := Flags or 4; {Hex := True}
+          inc(P);
+        end;
+    end;
+  if (Flags and 4) <> 0 then
+    begin {Hex = True}
+      Flags := Flags and (not 1); {Valid := False}
+      while true do
+        begin
+          case P^ of
+            '0'..'9': Digit := Ord(P^) - Ord('0');
+            'a'..'f': Digit := Ord(P^) - AdjustLowercase;
+            'A'..'F': Digit := Ord(P^) - AdjustUppercase;
+            else      Break;
+          end;
+          if UInt64(Result) > (High(UInt64) shr 3) then
+            Break;
+          if UInt64(Result) < (MaxInt div 16)-15 then
+            begin {Use Integer Math instead of Int64}
+              I := Result;
+              I := (I shl 4) + Digit;
+              Result := I;
+            end
+          else
+            Result := (Result shl 4) + Digit;
+          Flags := Flags or 1; {Valid := True}
+          Inc(P);
+        end;
+    end
+  else
+    begin
+      while true do
+        begin
+          if ( not (P^ in ['0'..'9']) ) or ( (Ord(P^) > Ord('5')) and (Result = (High(UInt64) div 10)) ) then //prevent overflow
+            if (Ord(P^) > Ord('5')) and ( Result = (High(UInt64) div 10)) then
+              begin //overflow
+                Code := P-S+1;
+                Exit;
+              end
+              else
+              begin
+                inc(P, Ord(P^ <> #0));
+                break;
+              end;
+          if UInt64(Result) < (MaxInt div 10)-9 then
+            begin {Use Integer Math instead of Int64}
+              I := Result;
+              I := (I * 10) + Ord(P^) - Ord('0');
+              Result := I;
+            end
+          else {Result := (Result * 10) + Ord(Ch) - Ord('0');}
+            Result := (Result shl 1) + (Result shl 3) + Ord(P^) - Ord('0');
+          Flags := Flags or 1; {Valid := True}
+          Inc(P);
+        end;
+    end;
+  if ((Flags and 2) <> 0) then {Neg=True}
+    Result := -Result;
+  if ((Flags and 1) <> 0) and (P^ = #0) then
+    Code := 0 {Valid=True and End Reached}
+  else
+    Code := P-S+1;
 end;
 {$WARNINGS ON}
 
@@ -4623,12 +4739,29 @@ begin
   if E <> 0 then Result := Default;
 end;
 
+function RawToUInt64Def(const S: PAnsiChar; const Default: Cardinal) : UInt64;
+var
+  E: Integer;
+begin
+  Result := ValUInt64_JOH_PAS_8_a_raw(S, E);
+  if E <> 0 then Result := Default;
+end;
+
+function RawToUInt64Def(const S: RawByteString; const Default: Cardinal) : UInt64;
+var
+  E: Integer;
+begin
+  Result := ValUInt64_JOH_PAS_8_a_raw(PAnsiChar(S), E);
+  if E <> 0 then Result := Default;
+end;
+
 {$WARNINGS OFF} //value digits might not be initialized
 {$IFNDEF FPC}
 function ValInt64_JOH_PAS_8_a_unicode(const s: PWideChar; var code: Integer): Int64;
 //function ValInt64_JOH_PAS_8_a(const s: AnsiString; var code: Integer): Int64;
 //fast pascal from John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//modified by EgonHugeist for faster conversion and PAnsiChar
 const
   AdjustLowercase = Ord('a') - 10;
   AdjustUppercase = Ord('A') - 10;
@@ -4663,7 +4796,7 @@ begin
       if Ord(P^) = Ord('0') then
         begin
           Flags := Flags or 1; {Valid := True}
-          inc(Code);
+          inc(P);
         end;
       if (Ord(P^) or $20) = ord('x') then
         begin {S[Code+1] in ['X','x']}
@@ -4676,7 +4809,6 @@ begin
       Flags := Flags and (not 1); {Valid := False}
       while true do
         begin
-          inc(Code);
           case P^ of
             '0'..'9': Digit := Ord(P^) - Ord('0');
             'a'..'f': Digit := Ord(P^) - AdjustLowercase;
@@ -4694,6 +4826,7 @@ begin
           else
             Result := (Result shl 4) + Digit;
           Flags := Flags or 1; {Valid := True}
+          inc(P);
         end;
     end
   else
