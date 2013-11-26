@@ -3846,7 +3846,7 @@ const
 {$IFDEF VER180} //D2006
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
-    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,, //5..11
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, //5..11
     ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, //12..18
     ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
     ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
