@@ -768,34 +768,17 @@ begin
     PlainDriver.isc_sql_interprete(ErrorCode, Msg, 1024);
     ErrorSqlMessage := Msg;
 
-{$IFDEF INTERBASE_EXTENDED_MESSAGES}
     if SQL <> '' then
       SQL := ' The SQL: '+SQL+'; ';
-{$ENDIF}
 
     if ErrorMessage <> '' then
     begin
       DriverManager.LogError(LoggingCategory, ConSettings^.Protocol,
         ErrorMessage, ErrorCode, ErrorSqlMessage + SQL);
 
-      //AVZ Ignore error codes for disconnected database -901, -902
-      if ((ErrorCode <> -901) and (ErrorCode <> -902)) then
-        {$IFDEF INTERBASE_EXTENDED_MESSAGES}
-        raise EZSQLException.CreateWithCode(ErrorCode,
-          ConSettings^.ConvFuncs.ZRawToString('SQL Error: '+ErrorMessage+'. Error Code: '+IntToRaw(ErrorCode)+
-          '. '+ErrorSqlMessage + SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-        {$ELSE}
-        raise EZSQLException.CreateWithCode(ErrorCode,
-          ConSettings^.ConvFuncs.ZRawToString('SQL Error: '+ErrorMessage+'. Error Code: '+IntToRaw(ErrorCode)+
-          '. '+ErrorSqlMessage, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-        {$ENDIF}
-      else
-      begin      //AVZ -- Added exception back in to help error trapping
-        raise EZSQLException.CreateWithCode(ErrorCode,
-          ConSettings^.ConvFuncs.ZRawToString('SQL Error: '+ErrorMessage+'. Error Code: '+IntToRaw(ErrorCode)+
-          '. '+ErrorSqlMessage, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
-        Result := DISCONNECT_ERROR;
-      end;
+      raise EZSQLException.CreateWithCode(ErrorCode,
+        ConSettings^.ConvFuncs.ZRawToString('SQL Error: '+ErrorMessage+'. Error Code: '+IntToRaw(ErrorCode)+
+        '. '+ErrorSqlMessage + SQL, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
     end;
   end;
 end;

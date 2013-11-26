@@ -419,9 +419,6 @@
 // Prevents loading default libpq.dll
 {.$DEFINE POSTGRESQL_STRICT_DLL_LOADING}
 
-//Allows to see SQL exceptions as strings
-{$DEFINE INTERBASE_EXTENDED_MESSAGES}
-
 // Loads libcrypt.so before Firebird client library.
 // It fixes error "Undefined symbol: crypt".
 {$DEFINE INTERBASE_CRYPT}
