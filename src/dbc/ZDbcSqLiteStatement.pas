@@ -354,7 +354,8 @@ begin
            Result := '''Y'''
         else
            Result := '''N''';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -484,13 +485,13 @@ begin
           else
             FErrorcode := FPlainDriver.bind_text(FStmtHandle, i,
               PAnsichar(AnsiString('N')), 1, nil);
-        stByte, stShort, stSmall, stInteger:
+        stByte, stShort, stWord, stSmall, stInteger:
           FErrorcode := FPlainDriver.bind_int(FStmtHandle, i,
             ClientVarManager.GetAsInteger(InParamValues[i-1]));
-        stLong:
+        stLongWord, stLong, stUlong:
           FErrorcode := FPlainDriver.bind_int64(FStmtHandle, i,
             ClientVarManager.GetAsInteger(InParamValues[i-1]));
-        stBigDecimal, stFloat, stDouble:
+        stFloat, stDouble, stCurrency, stBigDecimal:
           FErrorcode := FPlainDriver.bind_double(FStmtHandle, i,
             ClientVarManager.GetAsFloat(InParamValues[i-1]));
         stBytes:

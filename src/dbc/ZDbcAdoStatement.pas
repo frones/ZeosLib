@@ -484,8 +484,22 @@ begin
         case TZColumnInfo(ColumnsInfo[i-1]).ColumnType of
           stBoolean:
             RS.UpdateBoolean(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
-          stByte, stSmall, stInteger, stLong:
+          stByte:
+            RS.UpdateByte(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stShort:
+            RS.UpdateShort(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stWord:
+            RS.UpdateWord(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stSmall:
+            RS.UpdateSmall(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stLongWord:
+            RS.UpdateUInt(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stInteger:
             RS.UpdateInt(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stULong:
+            RS.UpdateULong(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+          stLong:
+            RS.UpdateLong(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
           stFloat, stDouble, stBigDecimal:
             RS.UpdateFloat(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
           stString:
@@ -670,10 +684,12 @@ begin
       ConSettings.CPType) of
       stBoolean:
         ClientVarManager.SetAsBoolean(Result, Temp);
-      stByte, stSmall, stInteger, stLong:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
         ClientVarManager.SetAsInteger(Result, Temp);
       stFloat, stDouble, stBigDecimal:
         ClientVarManager.SetAsFloat(Result, Temp);
+      stGUID:
+        ClientVarManager.SetAsString(Result, Temp);
       stString, stAsciiStream:
         ClientVarManager.SetAsString(Result, Temp);
       stUnicodeString, stUnicodeStream:

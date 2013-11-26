@@ -254,8 +254,11 @@ type
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); virtual;
     procedure SetByte(ParameterIndex: Integer; const Value: Byte); virtual;
     procedure SetShort(ParameterIndex: Integer; const Value: ShortInt); virtual;
+    procedure SetWord(ParameterIndex: Integer; const Value: Word); virtual;
     procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt); virtual;
+    procedure SetUInt(ParameterIndex: Integer; const Value: Cardinal); virtual;
     procedure SetInt(ParameterIndex: Integer; const Value: Integer); virtual;
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64); virtual;
     procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
     procedure SetFloat(ParameterIndex: Integer; const Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
@@ -348,8 +351,11 @@ type
     function GetBoolean(ParameterIndex: Integer): Boolean; virtual;
     function GetByte(ParameterIndex: Integer): Byte; virtual;
     function GetShort(ParameterIndex: Integer): ShortInt; virtual;
+    function GetWord(ParameterIndex: Integer): Word; virtual;
     function GetSmall(ParameterIndex: Integer): SmallInt; virtual;
+    function GetUInt(ParameterIndex: Integer): Cardinal; virtual;
     function GetInt(ParameterIndex: Integer): Integer; virtual;
+    function GetULong(ParameterIndex: Integer): UInt64; virtual;
     function GetLong(ParameterIndex: Integer): Int64; virtual;
     function GetFloat(ParameterIndex: Integer): Single; virtual;
     function GetDouble(ParameterIndex: Integer): Double; virtual;
@@ -1527,7 +1533,7 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>byte</code> value.
+  Sets the designated parameter to a Java <code>ShortInt</code> value.
   The driver converts this
   to an SQL <code>ShortInt</code> value when it sends it to the database.
 
@@ -1541,7 +1547,21 @@ begin
 end;
 
 {**
-  Sets the designated parameter to a Java <code>short</code> value.
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
+  The driver converts this
+  to an SQL <code>SMALLINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetWord(ParameterIndex: Integer;
+  const Value: Word);
+begin
+  SetInParam(ParameterIndex, stWord, EncodeInteger(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>SmallInt</code> value.
   The driver converts this
   to an SQL <code>SMALLINT</code> value when it sends it to the database.
 
@@ -1552,6 +1572,20 @@ procedure TZAbstractPreparedStatement.SetSmall(ParameterIndex: Integer;
   const Value: SmallInt);
 begin
   SetInParam(ParameterIndex, stSmall, EncodeInteger(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>uint</code> value.
+  The driver converts this
+  to an SQL <code>INTEGER</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetUInt(ParameterIndex: Integer;
+  const Value: Cardinal);
+begin
+  SetInParam(ParameterIndex, stLongWord, EncodeInteger(Value));
 end;
 
 {**
@@ -1566,6 +1600,20 @@ procedure TZAbstractPreparedStatement.SetInt(ParameterIndex: Integer;
   const Value: Integer);
 begin
   SetInParam(ParameterIndex, stInteger, EncodeInteger(Value));
+end;
+
+{**
+  Sets the designated parameter to a Java <code>ulong</code> value.
+  The driver converts this
+  to an SQL <code>BIGINT</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetULong(ParameterIndex: Integer;
+  const Value: UInt64);
+begin
+  SetInParam(ParameterIndex, stULong, EncodeInteger(Value));
 end;
 
 {**
@@ -2508,7 +2556,20 @@ begin
 end;
 
 {**
-  Gets the value of a JDBC <code>SMALLINT</code> parameter as a <code>short</code>
+  Gets the value of a JDBC <code>SMALLINT</code> parameter as a <code>word</code>
+  in the Java programming language.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is 0.
+}
+function TZAbstractCallableStatement.GetWord(ParameterIndex: Integer): Word;
+begin
+  Result := Word(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+end;
+
+{**
+  Gets the value of a JDBC <code>SMALLINT</code> parameter as a <code>small</code>
   in the Java programming language.
   @param parameterIndex the first parameter is 1, the second is 2,
   and so on
@@ -2518,6 +2579,19 @@ end;
 function TZAbstractCallableStatement.GetSmall(ParameterIndex: Integer): SmallInt;
 begin
   Result := SmallInt(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+end;
+
+{**
+  Gets the value of a JDBC <code>INTEGER</code> parameter as an <code>uint</code>
+  in the Java programming language.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is 0.
+}
+function TZAbstractCallableStatement.GetUInt(ParameterIndex: Integer): Cardinal;
+begin
+  Result := Cardinal(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**
@@ -2531,6 +2605,19 @@ end;
 function TZAbstractCallableStatement.GetInt(ParameterIndex: Integer): Integer;
 begin
   Result := Integer(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
+end;
+
+{**
+  Gets the value of a JDBC <code>ulong</code> parameter as a <code>long</code>
+  in the Java programming language.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is 0.
+}
+function TZAbstractCallableStatement.GetULong(ParameterIndex: Integer): UInt64;
+begin
+  Result := UInt64(SoftVarManager.GetAsInteger(GetOutParam(ParameterIndex)));
 end;
 
 {**

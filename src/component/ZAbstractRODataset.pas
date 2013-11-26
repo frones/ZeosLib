@@ -3835,24 +3835,27 @@ procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TF
 const
 {$IFDEF FPC}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
-    ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-    ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
-    ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
-    ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-    ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp,
-    ftFMTBcd , ftString, ftBlob);
+    ftUnknown, ftString, ftSmallint, ftInteger, ftWord,
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate,  ftTime, ftDateTime,
+    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo,
+    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar,
+    ftWideString, ftLargeint, ftADT, ftArray, ftReference,
+    ftDataSet, ftOraBlob, ftOraClob, ftVariant, ftInterface,
+    ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, ftFixedWideChar, ftWideMemo);
 {$ELSE}
 {$IFDEF VER180} //D2006
-BaseFieldTypes: array[TFieldType] of TFieldType = (
-  ftUnknown, ftString, ftInteger, ftInteger, ftInteger, ftBoolean, ftFloat,
-  ftCurrency, ftBCD, ftDateTime, ftDateTime, ftDateTime, ftBytes, ftVarBytes,
-  ftInteger, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftBlob, ftUnknown,
-  ftString, ftString, ftLargeInt, ftADT, ftArray, ftReference, ftDataSet,
-  ftBlob, ftBlob, ftVariant, ftInterface, ftInterface, ftString, ftTimeStamp, ftFMTBcd,
-  ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval);
+  BaseFieldTypes: array[TFieldType] of TFieldType = (
+    ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
+    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime,, //5..11
+    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, //12..18
+    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
+    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
+    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd, // 32..37
+    ftFixedWideChar,ftWideMemo,ftOraTimeStamp,ftOraInterval); // 38..41
 {$ELSE !VER180}
 {$IFDEF VER185} //D2007
-BaseFieldTypes: array[TFieldType] of TFieldType = (ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
+BaseFieldTypes: array[TFieldType] of TFieldType = (
+  ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
   ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate, ftTime, ftDateTime, // 5..11
   ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
   ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24

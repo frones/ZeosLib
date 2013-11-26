@@ -91,7 +91,6 @@ type
   {** Implements Prepared SQL Statement. }
   TZOraclePreparedStatement = class(TZAbstractPreparedStatement)
   private
-    //FPrepared: Boolean;
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
     FPlainDriver: IZOraclePlainDriver;
@@ -104,7 +103,6 @@ type
     function ConvertToOracleSQLQuery: RawByteString;
 
   protected
-    //property Prepared: Boolean read FPrepared write FPrepared;
     property Handle: POCIStmt read FHandle write FHandle;
     property ErrorHandle: POCIError read FErrorHandle write FErrorHandle;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
@@ -341,7 +339,6 @@ begin
   ResultSetType := rtForwardOnly;
   ASQL := ConvertToOracleSQLQuery;
   FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
-  //Prepare;
 end;
 
 {**

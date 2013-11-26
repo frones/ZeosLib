@@ -190,25 +190,27 @@ function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
 begin
     case PlainDriver.GetFieldType(FieldHandle) of
     FIELD_TYPE_TINY:
-      if not Signed {and (PlainDriver.GetFieldLength(FieldHandle)=1)} then
-         Result := stByte
+      if Signed then
+         Result := stShort
       else
-         Result := stSmall;
-    FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
+         Result := stByte;
+    FIELD_TYPE_YEAR:
+      Result := stWord;
+    FIELD_TYPE_SHORT:
       if Signed then
          Result := stSmall
       else
-         Result := stInteger;
+         Result := stWord;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
       if Signed then
          Result := stInteger
       else
-         Result := stLong;
+         Result := stLongWord;
     FIELD_TYPE_LONGLONG:
       if Signed then
          Result := stLong
       else
-         Result := stBigDecimal;
+        Result := stULong;
     FIELD_TYPE_FLOAT:
       Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
@@ -237,7 +239,7 @@ begin
       else
         Result := stBinaryStream;
     FIELD_TYPE_BIT:
-      Result := stSmall;
+      Result := stByte;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
@@ -297,33 +299,37 @@ begin
 
   if TypeName = 'TINYINT' then
   begin
-    if not IsUnsigned then
-      Result := stSmall
-    else
-      Result := stByte;
-  end
-  else if TypeName = 'YEAR' then
-    Result := stSmall
-  else if TypeName = 'SMALLINT' then
-  begin
     if IsUnsigned then
-      Result := stInteger
+      Result := stByte
     else
       Result := stSmall;
   end
-  else if TypeName = 'MEDIUMINT' then
-    Result := stInteger
-  else if (TypeName = 'INT') or (TypeName = 'INTEGER') then
+  else if TypeName = 'YEAR' then
+    Result := stWord  //1901 to 2155, and 0000 in the 4 year format and 1970-2069 if you use the 2 digit format (70-69).
+  else if TypeName = 'SMALLINT' then
   begin
-      if IsUnsigned then
-         Result := stLong
-      else
-         Result := stInteger
+    if IsUnsigned then
+      Result := stWord  //0 - 65535
+    else
+      Result := stSmall; //-32768 - 32767
   end
+  else if TypeName = 'MEDIUMINT' then
+    if IsUnsigned then  //0 - 16777215
+       Result := stLongWord
+    else
+       Result := stInteger //-8388608 - 8388607
+  else if (TypeName = 'INT') or (TypeName = 'INTEGER') or (TypeName = 'INT24') then
+    if IsUnsigned then
+       Result := stLongWord //0 - 4294967295
+    else
+       Result := stInteger //-2147483648 - 2147483647
   else if TypeName = 'BIGINT' then
-    Result := stLong
-  else if TypeName = 'INT24' then
-    Result := stLong
+    if IsUnsigned then
+       Result := stULong //0 - 18446744073709551615
+    else
+       Result := stLong // -9223372036854775808 - 9223372036854775807
+  //else if TypeName = 'INT24' then  //no docs?
+    //Result := stLong
   else if TypeName = 'REAL' then
   begin
     if IsUnsigned then

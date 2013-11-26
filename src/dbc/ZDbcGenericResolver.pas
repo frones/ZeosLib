@@ -594,10 +594,16 @@ begin
         Statement.SetByte(I + 1, RowAccessor.GetByte(ColumnIndex, WasNull));
       stShort:
         Statement.SetShort(I + 1, RowAccessor.GetShort(ColumnIndex, WasNull));
+      stWord:
+        Statement.SetWord(I + 1, RowAccessor.GetWord(ColumnIndex, WasNull));
       stSmall:
         Statement.SetSmall(I + 1, RowAccessor.GetSmall(ColumnIndex, WasNull));
+      stLongWord:
+        Statement.SetUInt(I + 1, RowAccessor.GetUInt(ColumnIndex, WasNull));
       stInteger:
         Statement.SetInt(I + 1, RowAccessor.GetInt(ColumnIndex, WasNull));
+      stULong:
+        Statement.SetULong(I + 1, RowAccessor.GetULong(ColumnIndex, WasNull));
       stLong:
         Statement.SetLong(I + 1, RowAccessor.GetLong(ColumnIndex, WasNull));
       stFloat:

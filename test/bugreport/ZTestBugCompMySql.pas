@@ -650,7 +650,7 @@ begin
   try
     Query.SQL.Text := 'select * from table799863';
     Query.Open;
-    CheckEquals(Ord(ftSmallInt), Ord(Query.Fields[0].DataType));
+    CheckEquals(Ord(ftWord), Ord(Query.Fields[0].DataType));
     CheckEquals(2, Query.RecordCount);
     CheckEquals(1940, Query.Fields[0].AsInteger);
     Query.Next;

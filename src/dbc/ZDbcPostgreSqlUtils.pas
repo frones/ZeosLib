@@ -760,7 +760,8 @@ begin
           Result := 'TRUE'
         else
           Result := 'FALSE';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         begin
           Result := ClientVarManager.GetAsRawByteString(Value);
           if QuotedNumbers then Result := #39+Result+#39;

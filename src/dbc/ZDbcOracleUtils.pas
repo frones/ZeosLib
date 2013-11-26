@@ -414,12 +414,12 @@ begin
   Variable.DataSize := DataSize;
   Length := 0;
   case Variable.ColType of
-    stByte, stShort, stSmall, stInteger:
+    stByte, stShort, stWord, stSmall, stInteger:
       begin
         Variable.TypeCode := SQLT_INT;
         Length := SizeOf(LongInt);
       end;
-    stFloat, stDouble, stLong:
+    stFloat, stDouble, stLongWord, stUlong, stLong:
       begin
         Variable.TypeCode := SQLT_FLT;
         Length := SizeOf(Double);

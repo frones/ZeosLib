@@ -2644,7 +2644,7 @@ begin
 end;
 
 {$IF defined(Delphi) and not defined(Unicode)}
-function IntToRaw(Value: Integer): String;
+function IntToRaw(Value: Integer): RawByteString;
 //function IntToStr32_JOH_IA32_6_d(Value: Integer): string;
 asm
   push   ebx
@@ -2747,7 +2747,7 @@ asm
   mov    [ecx], al               {Save Final Digit}
 end;
 
-function IntToRaw(Value: Int64): string;
+function IntToRaw(Value: Int64): RawByteString;
 //function IntToStr64_JOH_IA32_6_d(Value: Int64): string;
 asm
   push   ebx

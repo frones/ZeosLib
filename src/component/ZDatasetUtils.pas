@@ -306,9 +306,11 @@ begin
       Result := ftBoolean;
     stByte, stShort, stSmall:
       Result := ftSmallInt;
+    stWord:
+      Result := ftWord;
     stInteger:
       Result := ftInteger;
-    stLong:
+    stLongWord, stLong, stULong:
       Result := ftLargeInt;
     (*{$IFDEF WITH_FTSINGLE}
     stFloat:
@@ -348,6 +350,8 @@ begin
     stDataSet:
       Result := ftDataSet;
     {$ENDIF}
+    stArray:
+      Result := ftArray;
     else
       Result := ftUnknown;
   end;
@@ -363,10 +367,24 @@ begin
   case Value of
     ftBoolean:
       Result := stBoolean;
+    {$IFDEF WITH_FTBYTE}
+    ftByte:
+      Result := stByte;
+    {$ENDIF}
+    {$IFDEF WITH_FTSHORTINT}
+    ftShortInt:
+      Result := stShort;
+    {$ENDIF}
+    ftWord:
+      Result := stWord;
     ftSmallInt:
       Result := stSmall;
     ftInteger, ftAutoInc:
       Result := stInteger;
+    {$IFDEF WITH_FTLONGWORD}
+    ftLongWord:
+      Result := stLongWord;
+    {$ENDIF}
     {$IFDEF WITH_FTSINGLE}
     ftSingle:
       Result := stFloat;
@@ -409,6 +427,8 @@ begin
     ftDataSet:
       Result := stDataSet;
     {$ENDIF}
+    ftArray:
+      Result := stArray;
     else
       Result := stUnknown;
   end;
@@ -479,16 +499,34 @@ begin
     case Current.DataType of
       ftBoolean:
         RowAccessor.SetBoolean(FieldIndex, ResultSet.GetBoolean(ColumnIndex));
+      {$IFDEF WITH_FTBYTE}
+      ftByte:
+        RowAccessor.SetByte(FieldIndex, ResultSet.GetByte(ColumnIndex));
+      {$ENDIF}
       {$IFDEF WITH_FTSHORTINT}
       ftShortInt:
         RowAccessor.SetShort(FieldIndex, ResultSet.GetShort(ColumnIndex));
       {$ENDIF}
+      ftWord:
+        RowAccessor.SetWord(FieldIndex, ResultSet.GetWord(ColumnIndex));
       ftSmallInt:
         RowAccessor.SetSmall(FieldIndex, ResultSet.GetSmall(ColumnIndex));
+      {$IFDEF WITH_FTLONGWORD}
+      ftLongWord:
+        RowAccessor.SetUInt(FieldIndex, ResultSet.GetUInt(ColumnIndex));
+      {$ENDIF}
       ftInteger, ftAutoInc:
         RowAccessor.SetInt(FieldIndex, ResultSet.GetInt(ColumnIndex));
+      {$IFDEF WITH_FTSINGLE}
+      ftSingle:
+        RowAccessor.SetFloat(FieldIndex, ResultSet.GetFloat(ColumnIndex));
+      {$ENDIF}
       ftFloat:
         RowAccessor.SetDouble(FieldIndex, ResultSet.GetDouble(ColumnIndex));
+      {$IFDEF WITH_FTEXTENDED}
+      ftExtended:
+        RowAccessor.SetBigDecimal(FieldIndex, ResultSet.GetBigDecimal(ColumnIndex));
+      {$ENDIF}
       ftLargeInt:
         RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
       ftCurrency:
@@ -556,8 +594,22 @@ begin
     case Current.DataType of
       ftBoolean:
         ResultSet.UpdateBoolean(ColumnIndex, RowAccessor.GetBoolean(FieldIndex, WasNull));
+      {$IFDEF WITH_FTBYTE}
+      ftByte:
+        ResultSet.UpdateByte(ColumnIndex, RowAccessor.GetByte(FieldIndex, WasNull));
+      {$ENDIF}
+      {$IFDEF WITH_FTSHORTINT}
+      ftShortInt:
+        ResultSet.UpdateShort(ColumnIndex, RowAccessor.GetShort(FieldIndex, WasNull));
+      {$ENDIF}
+      ftWord:
+        ResultSet.UpdateWord(ColumnIndex, RowAccessor.GetWord(FieldIndex, WasNull));
       ftSmallInt:
         ResultSet.UpdateSmall(ColumnIndex, RowAccessor.GetSmall(FieldIndex, WasNull));
+      {$IFDEF WITH_FTLONGWORD}
+      ftLongWord:
+        ResultSet.UpdateUInt(ColumnIndex, RowAccessor.GetUInt(FieldIndex, WasNull));
+      {$ENDIF}
       ftInteger, ftAutoInc:
         ResultSet.UpdateInt(ColumnIndex, RowAccessor.GetInt(FieldIndex, WasNull));
       {$IFDEF WITH_FTSINGLE}
@@ -727,11 +779,11 @@ begin
         ftBoolean:
           ResultValues[I] := EncodeBoolean(ResultSet.GetBoolean(ColumnIndex));
         {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
-        ftSmallInt, ftInteger, ftAutoInc:
+        ftWord, ftSmallInt, ftInteger, ftAutoInc:
           ResultValues[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
         ftFloat, ftCurrency:
           ResultValues[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
-        ftLargeInt:
+        {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftDate, ftTime, ftDateTime:
           ResultValues[I] := EncodeDateTime(ResultSet.GetTimestamp(ColumnIndex));
@@ -776,11 +828,11 @@ begin
       ftBoolean:
         ResultValues[I] := EncodeBoolean(RowAccessor.GetBoolean(ColumnIndex, WasNull));
       {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
-      ftSmallInt, ftInteger, ftAutoInc:
+      ftWord, ftSmallInt, ftInteger, ftAutoInc:
         ResultValues[I] := EncodeInteger(RowAccessor.GetInt(ColumnIndex, WasNull));
       ftFloat, ftCurrency:
         ResultValues[I] := EncodeFloat(RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
-      ftLargeInt:
+      {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
         ResultValues[I] := EncodeInteger(RowAccessor.GetLong(ColumnIndex, WasNull));
       ftDate, ftTime, ftDateTime:
         ResultValues[I] := EncodeDateTime(RowAccessor.GetTimestamp(ColumnIndex, WasNull));
@@ -822,11 +874,11 @@ begin
         ftBoolean:
           Variables.Values[I] := EncodeBoolean(ResultSet.GetBoolean(ColumnIndex));
         {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
-        ftSmallInt, ftInteger, ftAutoInc:
+        ftWord, ftSmallInt, ftInteger, ftAutoInc:
           Variables.Values[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
         ftFloat:
           Variables.Values[I] := EncodeFloat(ResultSet.GetDouble(ColumnIndex));
-        ftLargeInt:
+        {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftCurrency:
           Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
@@ -842,6 +894,9 @@ begin
           Variables.Values[I] := EncodeUnicodeString(ResultSet.GetUnicodeString(ColumnIndex));
         ftBytes:
           Variables.Values[I] := EncodeBytes(ResultSet.GetBytes(ColumnIndex));
+        ftArray: ;
+        ftDataSet:
+          Variables.Values[I] := EncodePointer(Pointer(ResultSet.GetDataSet(ColumnIndex)));
         else
           Variables.Values[I] := EncodeString(ResultSet.GetString(ColumnIndex));
       end;
@@ -1017,7 +1072,7 @@ begin
         stBoolean:
           DecodedKeyValues[I] := SoftVarManager.Convert(
             DecodedKeyValues[I], vtBoolean);
-        stByte, stSmall, stInteger, stLong:
+        stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
           DecodedKeyValues[I] := SoftVarManager.Convert(
             DecodedKeyValues[I], vtInteger);
         stFloat, stDouble, stBigDecimal:
@@ -1146,10 +1201,7 @@ begin
             Result := KeyValues[I].VBoolean =
               ResultSet.GetBoolean(ColumnIndex);
           end;
-        stByte,
-        stSmall,
-        stInteger,
-        stLong:
+        stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong:
           Result := KeyValues[I].VInteger = ResultSet.GetLong(ColumnIndex);
         stFloat:
           Result := Abs(KeyValues[I].VFloat -
