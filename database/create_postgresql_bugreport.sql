@@ -112,3 +112,26 @@ CREATE TABLE Mantis229
 );
 
 INSERT INTO Mantis229 VALUES ('Mantis229');
+
+/*==============================================================*/
+/* Tables for Ticket#51                                         */
+/*==============================================================*/
+
+CREATE TABLE Ticket51_A
+(
+    "ID" integer NOT NULL,
+    order_id integer,
+    CONSTRAINT table1_pkey PRIMARY KEY ("ID")
+);
+
+CREATE TABLE Ticket51_B
+(
+    "ID" oid NOT NULL,
+    t1_id oid,
+    "Name" character varying(80),
+    CONSTRAINT table2_pkey PRIMARY KEY ("ID")
+);
+
+INSERT INTO Ticket51_A values(1,2);
+INSERT INTO Ticket51_A values(2,3);
+INSERT INTO Ticket51_B VALUES (1,1,'MyName');
