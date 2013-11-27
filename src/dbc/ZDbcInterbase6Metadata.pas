@@ -1176,8 +1176,6 @@ end;
 
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
-const
-  Spaces = '';
 var
   WorkPattern: string;
 begin

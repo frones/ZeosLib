@@ -70,8 +70,6 @@ type
   private
     FCachedBlob: boolean;
     FFetchStat: Integer;
-    FCursorName: AnsiString;
-    FHasNoCursorName: Boolean;
     FStmtHandle: TISC_STMT_HANDLE;
     FXSQLDA: PXSQLDA;
     FIZSQLDA: IZSQLDA;
@@ -81,6 +79,7 @@ type
     FPlainDriver: IZInterbasePlainDriver;
     FDialect: Word;
     FCodePageArray: TWordDynArray;
+    FStmtType: TZIbSqlStatementType;
     procedure CheckRange(const Index: Word); {$IFDEF WITH_INLINE} inline; {$ENDIF}
     function GetIbSqlSubType(const Index: Word): Smallint; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
     function DecodeString(const IsText: Boolean; const Index: Word): RawByteString; {$IF defined(WITH_INLINE) and not (defined(WITH_URW1135_ISSUE) or defined(WITH_URW1111_ISSUE))} inline; {$IFEND}
@@ -90,12 +89,10 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(const Statement: IZStatement; const SQL: string;
-      var StatementHandle: TISC_STMT_HANDLE; const CursorName: AnsiString;
-      const XSQLDA: IZSQLDA; const CachedBlob: boolean);
+      var StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
+      const CachedBlob: boolean; const StmtType: TZIbSqlStatementType);
 
     procedure Close; override;
-
-    function GetCursorName: AnsiString; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
@@ -197,7 +194,8 @@ end;
 }
 constructor TZInterbase6XSQLDAResultSet.Create(const Statement: IZStatement;
   const SQL: string; var StatementHandle: TISC_STMT_HANDLE;
-  const CursorName: AnsiString; const XSQLDA: IZSQLDA; const CachedBlob: boolean);
+  const XSQLDA: IZSQLDA; const CachedBlob: Boolean;
+  const StmtType: TZIbSqlStatementType);
 begin
   inherited Create(Statement, SQL, nil,
     Statement.GetConnection.GetConSettings);
@@ -206,12 +204,11 @@ begin
   FIZSQLDA := XSQLDA; //localize the interface to avoid automatic free the object
   FXSQLDA := XSQLDA.GetData; // localize buffer for fast access
 
-  FCursorName := CursorName;
-  FHasNoCursorName := CursorName = ''; //avoid old string compare / fetch
   FCachedBlob := CachedBlob;
   FIBConnection := Statement.GetConnection as IZInterbase6Connection;
   FPlainDriver := FIBConnection.GetPlainDriver;
   FDialect := FIBConnection.GetDialect;
+  FStmtType := StmtType; //required to know how to fetch the columns for ExecProc
 
   FStmtHandle := StatementHandle;
   ResultSetType := rtForwardOnly;
@@ -1329,7 +1326,7 @@ begin
   { Fetch row. }
   if (ResultSetType = rtForwardOnly) and (FFetchStat = 0) then
   begin
-    if (FHasNoCursorName) then  //AVZ - Test for ExecProc - this is for multiple rows
+    if (FStmtType = stSelect) then  //AVZ - Test for ExecProc - this is for multiple rows
       FFetchStat := FPlainDriver.isc_dsql_fetch(@StatusVector,
         @FStmtHandle, FDialect, FXSQLDA)
     else
@@ -1345,7 +1342,7 @@ begin
       Result := True;
     end
     else
-      if FHasNoCursorName and not (FFetchStat = 1) then
+      if (FStmtType <> stSelect) and not (FFetchStat = 1) then
         CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
   end;
 end;
@@ -1494,11 +1491,6 @@ begin
     ColumnsInfo.Add(ColumnInfo);
   end;
   inherited Open;
-end;
-
-function TZInterbase6XSQLDAResultSet.GetCursorName: AnsiString;
-begin
-  Result := FCursorName;
 end;
 
 { TZInterbase6UnCachedBlob }

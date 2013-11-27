@@ -319,8 +319,8 @@ begin
       and (FResultXSQLDA.GetFieldCount <> 0) then
     begin
       LastResultSet := CreateIBResultSet(SQL, Self,
-      TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle, Cursor,
-      FResultXSQLDA, CachedLob));
+      TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
+      FResultXSQLDA, CachedLob, StatementType));
     end
       else
     begin
@@ -388,7 +388,9 @@ begin
         end;
 
         if (iError <> DISCONNECT_ERROR) then
-          Result := CreateIBResultSet(SQL, Self, TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle, Cursor, FResultXSQLDA, CachedLob));
+          Result := CreateIBResultSet(SQL, Self,
+            TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
+            FResultXSQLDA, CachedLob, StatementType));
       end
       else
         if (iError <> DISCONNECT_ERROR) then    //AVZ
@@ -588,12 +590,14 @@ begin
         and (FResultSQLData.GetFieldCount <> 0) then
       begin
         Cursor := RandomString(12);
-        LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, CachedLob);
+        LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
+          FStmtHandle, FResultSQLData, CachedLob, FStatementType);
       end
       else
       begin
         { Fetch data and fill Output params }
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, CachedLob));
+        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType));
         FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
         LastResultSet := nil;
       end;
@@ -654,7 +658,7 @@ begin
       end;
 
       Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
-        Cursor, FResultSQLData, CachedLob);
+        FResultSQLData, CachedLob, FStatementType);
     end;
 
   end;
@@ -693,10 +697,12 @@ begin
         and (FResultSQLData.GetFieldCount <> 0) then
       begin
         Cursor := RandomString(12);
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, CachedLob));
+        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType));
       end
       else
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, '', FResultSQLData, CachedLob));
+        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType));
     { Autocommit statement. }
     if Connection.GetAutoCommit then
       Connection.Commit;
