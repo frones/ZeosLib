@@ -264,6 +264,7 @@ begin
   PreparedStatement.SetAsciiStream(1, TextStream);
   PreparedStatement.SetBinaryStream(2, ImageStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+  ResultSet.Close;
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
     + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
@@ -288,6 +289,7 @@ begin
   PreparedStatement.SetNull(2,stBinaryStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
+  ResultSet.Close;
   ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
     + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
   CheckNotNull(ResultSet);
@@ -300,6 +302,7 @@ begin
 
 // Update null ascii blob
 
+  ResultSet.Close;
   PreparedStatement := Connection.PrepareStatement(
     'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
   PreparedStatement.SetInt(3, TEST_ROW_ID);
