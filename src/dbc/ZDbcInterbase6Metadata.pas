@@ -1176,26 +1176,8 @@ end;
 
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
-var
-  WorkPattern: string;
 begin
-  Result := '';
-  if (Length(Pattern) > 2 * 31) then
-    raise EZSQLException.Create(SPattern2Long);
-
-  if (Pattern = '%') or (Pattern = '') then
-     Exit;
-  WorkPattern:=NormalizePatternCase(Pattern);
-  if HasNoWildcards(WorkPattern) then
-  begin
-    WorkPattern := StripEscape(WorkPattern);
-    Result := Format('%s = %s', [Column, EscapeString(WorkPattern)]);
-  end
-  else
-  begin
-    Result := Format('%s like %s',
-      [Column, EscapeString(WorkPattern+'%')]);
-  end;
+  Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
