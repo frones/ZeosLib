@@ -1342,7 +1342,7 @@ begin
       Result := True;
     end
     else
-      if (FStmtType <> stSelect) and not (FFetchStat = 1) then
+      if not Result then
         CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
   end;
 end;
