@@ -253,14 +253,17 @@ procedure PrepareOracleStatement(const PlainDriver: IZOraclePlainDriver;
 {**
   Executes an Oracle statement.
   @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param SQL an SQL query to be prepared.
+  @param ContectHandle the OCI ContextHandle.
+  @param SQL an SQL query to be logged.
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
+  @param ConSettings the connection settings record.
+  @param AutoCommit the commit each execution?.
 }
 procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const Connection: IZConnection; const LogSQL: RawByteString;
-  const Handle: POCIStmt; const ErrorHandle: POCIError);
+  const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
+  const Handle: POCIStmt; const ErrorHandle: POCIError;
+  const ConSettings: PZConSettings; const AutoCommit: Boolean);
 
 {**
   Gets a number of updates made by executed Oracle statement.
@@ -887,22 +890,28 @@ end;
 {**
   Executes an Oracle statement.
   @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param SQL an SQL query to be prepared.
+  @param ContectHandle the OCI ContextHandle.
+  @param SQL an SQL query to be logged.
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
+  @param ConSettings the connection settings record.
+  @param AutoCommit the commit each execution?.
 }
 procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const Connection: IZConnection; const LogSQL: RawByteString;
-  const Handle: POCIStmt; const ErrorHandle: POCIError);
-var
-  Status: Integer;
-  OracleConnection: IZOracleConnection;
+  const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
+  const Handle: POCIStmt; const ErrorHandle: POCIError;
+  const ConSettings: PZConSettings; const AutoCommit: Boolean);
 begin
-  OracleConnection := Connection as IZOracleConnection;
-  Status := PlainDriver.StmtExecute(OracleConnection.GetContextHandle,
-    Handle, ErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
-  CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, LogSQL, Connection.GetConSettings);
+  if AutoCommit then
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.StmtExecute(ContextHandle,
+        Handle, ErrorHandle, 1, 0, nil, nil, OCI_COMMIT_ON_SUCCESS),
+      lcExecute, LogSQL, ConSettings)
+  else
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.StmtExecute(ContextHandle,
+        Handle, ErrorHandle, 1, 0, nil, nil, OCI_DEFAULT),
+      lcExecute, LogSQL, ConSettings);
 end;
 
 {**
