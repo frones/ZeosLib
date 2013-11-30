@@ -1653,7 +1653,7 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
 var
   ColumnIndex{$IFNDEF WITH_ZSTRINGFIELDS}, Len{$ENDIF}: Integer;
   RowBuffer: PZRowBuffer;
-  ACurrency: Currency;
+  ACurrency: Double;
   Bts: TBytes;
   {$IFNDEF WITH_ZSTRINGFIELDS}
   WideRec: TZWideRec;
@@ -1732,9 +1732,9 @@ begin
         { Processes all other fields. }
         ftCurrency:
           begin
-            {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
-            ACurrency := RowAccessor.GetBigDecimal(ColumnIndex, Result);
-            System.Move(Pointer(@ACurrency)^, Pointer(Buffer)^, SizeOf(Currency));
+            {SizeOf(double) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
+            ACurrency := RowAccessor.GetDouble(ColumnIndex, Result);
+            System.Move(Pointer(@ACurrency)^, Pointer(Buffer)^, SizeOf(Double));
             Result := not Result;
           end;
         else
@@ -1786,7 +1786,6 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
-  Curr: Currency;
 begin
   WasNull := False;
   if not Active then
@@ -1837,11 +1836,8 @@ begin
           RowAccessor.SetAnsiString( ColumnIndex, PAnsichar(Buffer));
         {$ENDIF WITH_ZSTRINGFIELDS}
         ftCurrency:
-          begin
             {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
-            Curr := PCurrency(Buffer)^;
-            RowAccessor.SetBigDecimal(ColumnIndex, Curr); //cast Currrency to Extented
-          end;
+            RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Currrency to Extented
         else  { Processes all other fields. }
           begin
             System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,
