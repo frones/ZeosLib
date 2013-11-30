@@ -420,11 +420,7 @@ begin
     case StatementType of
       stCommit, stRollback, stUnknown: Result := -1;
       stSelect: FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
-      stDelete: if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
-      stUpdate: ; //EgonHugeist - but not a UpdateStatement!
     end;
-
-
 
     { Autocommit statement. }
     if Connection.GetAutoCommit and ( StatementType <> stSelect ) then
