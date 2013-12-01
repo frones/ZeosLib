@@ -616,13 +616,19 @@ begin
      Prepare;
   { after reading the last row we reset the statment. So we don't need this here }
   try
+    if LastResultSet <> nil then
+      LastResultSet.Close; // reset stmt
+    LastResultSet := nil;
     BindInParameters;
     FErrorCode := FPlainDriver.Step(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther,
       ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),
       ConSettings);
-    if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE)then
-      Result := CreateResultSet(FStmtHandle, FErrorCode);
+    if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE) then
+      LastResultSet := CreateResultSet(FStmtHandle, FErrorCode)
+    else
+      LastResultSet := nil;
+    Result := LastResultSet;
     inherited ExecuteQueryPrepared;
   except
     raise;

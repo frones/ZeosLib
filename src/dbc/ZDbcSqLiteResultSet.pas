@@ -290,8 +290,12 @@ begin
   end
   else
   begin
-    ErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
+    if FStmtHandle <> nil then
+    begin
+      ErrorCode := FPlainDriver.reset(FStmtHandle);
+      FStmtHandle := nil;
+      CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
+    end;
     FErrorCode := SQLITE_DONE;
   end;
 end;
