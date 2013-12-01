@@ -2359,6 +2359,18 @@ begin
           Result.P := PAnsiChar(Value.VRawByteString);
           Result.Len := Length(Value.VRawByteString);
         end;
+    vtUTF8String:
+      if CodePage = zCP_UTF8 then
+      begin
+        Result.P := PAnsiChar(Value.VUTF8String);
+        Result.Len := Length(Value.VUTF8String);
+      end
+      else
+      begin
+        Value.VRawByteString := GetAsRawByteString(Value, CodePage);
+        Result.P := PAnsiChar(Value.VRawByteString);
+        Result.Len := Length(Value.VRawByteString);
+      end;
     else
       begin
         Value.VRawByteString := GetAsRawByteString(Value, CodePage);
