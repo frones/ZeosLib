@@ -198,6 +198,7 @@ type
 
 type
   {declare move or converter functions for the String Types}
+  TZAnsiRecToUTF8 = function(const Src: TZAnsiRec; const RawCP: Word): UTF8String;
   TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): RawByteString;
   TZRawToAnsi = function (const Src: RawByteString; const RawCP: Word): AnsiString;
   TZAnsiToUTF8 = function (const Src: AnsiString): UTF8String;
@@ -259,6 +260,7 @@ type
     ZStringToUnicode: TZStringToUnicode;
     ZAnsiRecToString: TZAnsiRecToString;
     ZWideRecToString: TZWideRecToString;
+    ZAnsiRecToUTF8: TZAnsiRecToUTF8;
   end;
 
   TZFormatSettings = Record

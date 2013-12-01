@@ -900,7 +900,7 @@ end;
 }
 function TZAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 begin
-  Result := ConSettings^.ConvFuncs.ZRawToUTF8(InternalGetString(ColumnIndex),
+  Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(GetAnsiRec(ColumnIndex),
     ConSettings^.ClientCodePage^.CP);
 end;
 
@@ -1047,7 +1047,7 @@ end;
 function TZAbstractResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stCardinal);
+  CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
   Result := GetLong(ColumnIndex);
 end;
