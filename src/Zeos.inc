@@ -246,6 +246,7 @@
   {$UNDEF USE_FAST_CHARPOS}
   {$DEFINE WITH_ASANSISTRING}           // T(Wide)StringField supports AsAnsiString property
   {$DEFINE WITH_INC_PBYTE_SUPPORT}      // Compiler supports incrementing PByte-Pointer
+  {$DEFINE WITH_PARAM_ASLARGEINT}       // TParam.AsLargint is supported
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}

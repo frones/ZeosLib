@@ -1428,7 +1428,7 @@ begin
         end;
 
         Result.UpdateInt(6,
-          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName,
+          Ord(ConvertInterbase6ToSqlType(TypeName, SubTypeName, GetInt(ColumnIndexes[7]),
             ConSettings.CPType))); //DATA_TYPE
         Result.UpdateString(7,GetString(ColumnIndexes[4]));    //TYPE_NAME
         Result.UpdateInt(10, GetInt(ColumnIndexes[6]));
@@ -1731,8 +1731,8 @@ begin
         Result.UpdateNull(2);    //TABLE_SCHEM
         Result.UpdateString(3, GetString(ColumnIndexes[7]));    //TABLE_NAME
         Result.UpdateString(4, ColumnName);    //COLUMN_NAME
-        SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName
-          , ConSettings.CPType);
+        SQLType := ConvertInterbase6ToSqlType(TypeName, SubTypeName, FieldScale,
+          ConSettings.CPType);
         Result.UpdateInt(5, Ord(SQLType));
         // TYPE_NAME
         case TypeName of
@@ -2619,9 +2619,9 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateString(1, GetString(2));
-        Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0,
-          ConSettings.CPType)));
+        Result.UpdateAnsiRec(1, GetAnsiRec(2));
+        Result.UpdateInt(2, Ord(ConvertInterbase6ToSqlType(GetInt(1), 0, 10,
+          ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scal
         Result.UpdateInt(3, 9);
         Result.UpdateInt(7, Ord(ntNoNulls));
         Result.UpdateBoolean(8, false);
@@ -2920,3 +2920,4 @@ begin
 end;
 
 end.
+

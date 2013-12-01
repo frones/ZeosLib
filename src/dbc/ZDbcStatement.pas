@@ -262,6 +262,7 @@ type
     procedure SetLong(ParameterIndex: Integer; const Value: Int64); virtual;
     procedure SetFloat(ParameterIndex: Integer; const Value: Single); virtual;
     procedure SetDouble(ParameterIndex: Integer; const Value: Double); virtual;
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency); virtual;
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended); virtual;
     procedure SetPChar(ParameterIndex: Integer; const Value: PChar); virtual;
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec); virtual;
@@ -359,6 +360,7 @@ type
     function GetLong(ParameterIndex: Integer): Int64; virtual;
     function GetFloat(ParameterIndex: Integer): Single; virtual;
     function GetDouble(ParameterIndex: Integer): Double; virtual;
+    function GetCurrency(ParameterIndex: Integer): Currency; virtual;
     function GetBigDecimal(ParameterIndex: Integer): Extended; virtual;
     function GetBytes(ParameterIndex: Integer): TBytes; virtual;
     function GetDate(ParameterIndex: Integer): TDateTime; virtual;
@@ -1659,6 +1661,20 @@ begin
 end;
 
 {**
+  Sets the designated parameter to a Java <code>double</code> value.
+  The driver converts this
+  to an SQL <code>DOUBLE</code> value when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetCurrency(ParameterIndex: Integer;
+  const Value: Currency);
+begin
+  SetInParam(ParameterIndex, stCurrency, EncodeFloat(Value));
+end;
+
+{**
   Sets the designated parameter to a <code>java.math.BigDecimal</code> value.
   The driver converts this to an SQL <code>NUMERIC</code> value when
   it sends it to the database.
@@ -2655,6 +2671,19 @@ end;
   is 0.
 }
 function TZAbstractCallableStatement.GetDouble(ParameterIndex: Integer): Double;
+begin
+  Result := SoftVarManager.GetAsFloat(GetOutParam(ParameterIndex));
+end;
+
+{**
+  Gets the value of a JDBC <code>CURRENCY</code> parameter as a <code>double</code>
+  in the Java programming language.
+  @param parameterIndex the first parameter is 1, the second is 2,
+  and so on
+  @return the parameter value.  If the value is SQL <code>NULL</code>, the result
+  is 0.
+}
+function TZAbstractCallableStatement.GetCurrency(ParameterIndex: Integer): Currency;
 begin
   Result := SoftVarManager.GetAsFloat(GetOutParam(ParameterIndex));
 end;

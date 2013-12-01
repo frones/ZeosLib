@@ -94,8 +94,10 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
+    function GetShort(ColumnIndex: Integer): ShortInt; override;
     function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
@@ -358,6 +360,34 @@ begin
   LastWasNull := Result = nil;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+begin //rewritten because of performance reasons to avoid localized the RBS before
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  if LastWasNull then
+    Result := ''
+  else
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  begin
+    Result := ''
+    SetLength(Result, FPlainDriver.column_bytes(FStmtHandle, ColumnIndex -1);
+    System.Move(FPlainDriver.column_text(FStmtHandle, ColumnIndex -1)^, Result,
+      FPlainDriver.column_bytes(FStmtHandle, ColumnIndex -1));
+  end;
+  {$ELSE}
+    System.SetString(Result, FPlainDriver.column_text(FStmtHandle, ColumnIndex -1),
+      FPlainDriver.column_bytes(FStmtHandle, ColumnIndex -1));
+  {$ENDIF}
+end;
+
 
 {**
   Gets the value of the designated column in the current row
@@ -427,22 +457,44 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetByte(ColumnIndex: Integer): Byte;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
      Result := Byte(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>byte</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZSQLiteResultSet.GetShort(ColumnIndex: Integer): ShortInt;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stShort);
+{$ENDIF}
+  ColumnIndex := ColumnIndex -1;
+
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  if LastWasNull then
+    Result := 0
+  else
+    { sqlite does the conversion if required
+      http://www.sqlite.org/c3ref/column_blob.html }
+     Result := ShortInt(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
 end;
 
 {**
@@ -455,16 +507,13 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
@@ -483,16 +532,13 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetInt(ColumnIndex: Integer): Integer;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
@@ -511,16 +557,13 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetLong(ColumnIndex: Integer): Int64;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
@@ -539,16 +582,13 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetFloat(ColumnIndex: Integer): Single;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
@@ -567,16 +607,13 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetDouble(ColumnIndex: Integer): Double;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
@@ -596,16 +633,13 @@ end;
     value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
@@ -625,16 +659,13 @@ end;
     value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetBytes(ColumnIndex: Integer): TBytes;
-var
-  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
-  LastWasNull := ColType = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := nil
   else
@@ -671,16 +702,16 @@ begin
       SQLITE_INTEGER, SQLITE_FLOAT:
         Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex);
       else
-        begin
-          Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-          Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
+      begin
+        Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
+        Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
-            Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
-          else
-            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-              RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
-        end;
+        if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
+          Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
+        else
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+            RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
+      end;
       LastWasNull := Result = 0;
     end;
 end;
@@ -715,16 +746,16 @@ begin
       SQLITE_INTEGER, SQLITE_FLOAT:
         Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
       else
-        begin
-          Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-          Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
+      begin
+        Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
+        Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
-            Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
-          else
-            Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len,
-              ConSettings^.ReadFormatSettings, Failed));
-        end;
+        if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
+          Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+        else
+          Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len,
+            ConSettings^.ReadFormatSettings, Failed));
+      end;
       LastWasNull := Result = 0;
     end;
 end;
@@ -760,12 +791,12 @@ begin
       SQLITE_INTEGER, SQLITE_FLOAT:
         Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex);
       else
-        begin
-          Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-          Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
+      begin
+        Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
+        Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
 
-          Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
-        end;
+        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+      end;
       LastWasNull := Result = 0;
     end;
 end;

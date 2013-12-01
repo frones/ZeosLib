@@ -312,18 +312,20 @@ begin
       Result := ftInteger;
     stLongWord, stLong, stULong:
       Result := ftLargeInt;
-    (*{$IFDEF WITH_FTSINGLE}
+    {$IFDEF WITH_FTSINGLE}
     stFloat:
       Result := ftSingle;
-    {$ENDIF}*)
-    (*{$IFDEF WITH_FTEXTENDED}
+    {$ENDIF}
+    {$IFDEF WITH_FTEXTENDED}
     stBigDecimal:
       Result := ftExtended;
-    {$ENDIF}*)
-    {.$IFNDEF WITH_FTSINGLE}stFloat,{.$ENDIF}
+    {$ENDIF}
+    {$IFNDEF WITH_FTSINGLE}stFloat,{$ENDIF}
     stDouble
-    {.$IFNDEF WITH_FTEXTENDED},stBigDecimal{.$ENDIF}:
+    {$IFNDEF WITH_FTEXTENDED},stBigDecimal{$ENDIF}:
       Result := ftFloat;
+    stCurrency:
+      Result := ftCurrency;
     stString:
       Result := ftString;
     stBytes{$IFNDEF WITH_FTGUID}, stGUID{$ENDIF}:
@@ -398,7 +400,7 @@ begin
     ftLargeInt:
       Result := stLong;
     ftCurrency:
-      Result := stBigDecimal;
+      Result := stCurrency;
     ftString:
       Result := stString;
     ftBytes:
@@ -530,7 +532,7 @@ begin
       ftLargeInt:
         RowAccessor.SetLong(FieldIndex, ResultSet.GetLong(ColumnIndex));
       ftCurrency:
-        RowAccessor.SetBigDecimal(FieldIndex, ResultSet.GetBigDecimal(ColumnIndex));
+        RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           RowAccessor.SetRawByteString(FieldIndex, ResultSet.GetRawByteString(ColumnIndex))
@@ -625,8 +627,8 @@ begin
       ftLargeInt:
         ResultSet.UpdateLong(ColumnIndex, RowAccessor.GetLong(FieldIndex, WasNull));
       ftCurrency:
-        ResultSet.UpdateBigDecimal(ColumnIndex,
-          RowAccessor.GetBigDecimal(FieldIndex, WasNull));
+        ResultSet.UpdateCurrency(ColumnIndex,
+          RowAccessor.GetCurrency(FieldIndex, WasNull));
       ftString, ftWidestring:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           ResultSet.UpdateAnsiRec(ColumnIndex,
@@ -781,7 +783,10 @@ begin
         {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
         ftWord, ftSmallInt, ftInteger, ftAutoInc:
           ResultValues[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
-        ftFloat, ftCurrency:
+        {$IFDEF WITH_FTSINGLE}ftSingle,{$ENDIF}
+        ftFloat,
+        ftCurrency
+        {$IFDEF WITH_FTEXTENDED},ftExtended{$ENDIF}:
           ResultValues[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
         {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           ResultValues[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
@@ -830,7 +835,9 @@ begin
       {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
       ftWord, ftSmallInt, ftInteger, ftAutoInc:
         ResultValues[I] := EncodeInteger(RowAccessor.GetInt(ColumnIndex, WasNull));
-      ftFloat, ftCurrency:
+      {$IFDEF WITH_FTSINGLE}ftSingle,{$ENDIF}
+      ftFloat, ftCurrency
+      {$IFDEF WITH_FTEXTENDED},ftExtended{$ENDIF}:
         ResultValues[I] := EncodeFloat(RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
       {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
         ResultValues[I] := EncodeInteger(RowAccessor.GetLong(ColumnIndex, WasNull));
@@ -876,8 +883,16 @@ begin
         {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}{$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
         ftWord, ftSmallInt, ftInteger, ftAutoInc:
           Variables.Values[I] := EncodeInteger(ResultSet.GetInt(ColumnIndex));
+        {$IFDEF WITH_FTSINGLE}
+        ftSingle:
+          Variables.Values[I] := EncodeFloat(ResultSet.GetFloat(ColumnIndex));
+        {$ENDIF}
         ftFloat:
           Variables.Values[I] := EncodeFloat(ResultSet.GetDouble(ColumnIndex));
+        {$IFDEF WITH_FTEXTENDED}
+        ftExtended:
+          Variables.Values[I] := EncodeFloat(ResultSet.GetBigDecimal(ColumnIndex));
+        {$ENDIF}
         {$IFDEF WITH_FTLONGWORD}ftLongword,{$ENDIF}ftLargeInt:
           Variables.Values[I] := EncodeInteger(ResultSet.GetLong(ColumnIndex));
         ftCurrency:
@@ -1075,7 +1090,7 @@ begin
         stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
           DecodedKeyValues[I] := SoftVarManager.Convert(
             DecodedKeyValues[I], vtInteger);
-        stFloat, stDouble, stBigDecimal:
+        stFloat, stDouble, stCurrency, stBigDecimal:
           DecodedKeyValues[I] := SoftVarManager.Convert(
             DecodedKeyValues[I], vtFloat);
         stUnicodeString:
@@ -1207,6 +1222,7 @@ begin
           Result := Abs(KeyValues[I].VFloat -
             ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION_SINGLE;
         stDouble,
+        stCurrency,
         stBigDecimal:
           Result := Abs(KeyValues[I].VFloat -
             ResultSet.GetBigDecimal(ColumnIndex)) < FLOAT_COMPARE_PRECISION;
@@ -1358,13 +1374,30 @@ begin
     case Field1.DataType of
       ftBoolean:
         Result := ResultSet.GetBoolean(Field1.FieldNo) = Field2.AsBoolean;
+      {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}
+      {$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
       ftSmallInt, ftInteger, ftAutoInc:
         Result := ResultSet.GetInt(Field1.FieldNo) = Field2.AsInteger;
+      {$IFDEF WITH_FTSINGLE}
+      ftSingle:
+        Result := Abs(ResultSet.GetFloat(Field1.FieldNo)
+          - Field2.AsSingle) < FLOAT_COMPARE_PRECISION_SINGLE;
+      {$ENDIF}
       ftFloat:
         begin
-          Result := Abs(ResultSet.GetFloat(Field1.FieldNo)
+          Result := Abs(ResultSet.GetDouble(Field1.FieldNo)
             - Field2.AsFloat) < FLOAT_COMPARE_PRECISION;
         end;
+      {$IFDEF WITH_FTEXTENDED}
+      ftExtended:
+        Result := Abs(ResultSet.GetBigDecimal(Field1.FieldNo)
+          - Field2.AsExtended) < FLOAT_COMPARE_PRECISION_SINGLE;
+      {$ENDIF}
+      {$IFDEF WITH_FTLONGWORD}
+      ftLongword:
+        Result := ResultSet.GetULong(Field1.FieldNo)
+          = Field2.{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF};
+      {$ENDIF}
       ftLargeInt:
         begin
           if Field2 is TLargeIntField then
@@ -1374,8 +1407,8 @@ begin
             Result := ResultSet.GetInt(Field1.FieldNo) = Field2.AsInteger;
         end;
       ftCurrency:
-        begin 
-          Result := Abs(ResultSet.GetBigDecimal(Field1.FieldNo) 
+        begin
+          Result := Abs(ResultSet.GetBigDecimal(Field1.FieldNo)
             - Field2.{$IFDEF WITH_ASCURRENCY}AsCurrency{$ELSE}AsFloat{$ENDIF})
             < FLOAT_COMPARE_PRECISION;
         end;
@@ -1762,22 +1795,36 @@ begin
     case Param.DataType of
       ftBoolean:
         Statement.SetBoolean(Index, Param.AsBoolean);
+      {$IFDEF WITH_FTBYTE}
+      ftByte:
+        Statement.SetByte(Index, Param.AsByte);
+      {$ENDIF}
       {$IFDEF WITH_FTSHORTINT}
       ftShortInt:
         Statement.SetShort(Index, Param.AsShortInt);
       {$ENDIF}
+      ftWord:
+        Statement.SetWord(Index, Param.AsWord);
       ftSmallInt:
         Statement.SetSmall(Index, Param.AsSmallInt);
-      ftInteger, ftAutoInc{$IFDEF WITH_FTBYTE}, ftByte{$ENDIF}:
+      ftInteger, ftAutoInc:
         Statement.SetInt(Index, Param.AsInteger);
-      ftFloat{$IFDEF WITH_FTEXTENDED}, ftExtended{$ENDIF}:
+      {$IFDEF WITH_FTSINGLE}
+      ftSingle:
+        Statement.SetFloat(Index, Param.AsSingle);
+      {$ENDIF}
+      ftFloat:
         Statement.SetDouble(Index, Param.AsFloat);
+      {$IFDEF WITH_FTEXTENDED}
+      ftExtended:
+        Statement.SetBigDecimal(Index, Param.AsFloat);
+      {$ENDIF}
       {$IFDEF WITH_FTLONGWORD}
       ftLongWord:
         Statement.SetInt(Index, Integer(Param.AsLongWord));
       {$ENDIF}
       ftLargeInt:
-        Statement.SetLong(Index, StrToInt64(Param.AsString));
+        Statement.SetLong(Index, {$IFDEF WITH_PARAM_ASLARGEINT}Param.AsLargeInt{$ELSE}StrToInt64(Param.AsString){$ENDIF});
       ftCurrency, ftBCD:
         Statement.SetBigDecimal(Index, Param.AsCurrency);
       ftString, ftFixedChar:

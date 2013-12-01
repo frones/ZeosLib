@@ -107,6 +107,7 @@ type
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    function GetCurrency(ColumnIndex: Integer): Currency; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
@@ -572,6 +573,68 @@ var
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
+  LastWasNull := IsNull(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+    {$R-}
+    with FXSQLDA.sqlvar[ColumnIndex -1] do
+    begin
+      Result := 0;
+      if (sqlind <> nil) and (sqlind^ = -1) then
+           Exit;
+      SQLCode := (sqltype and not(1));
+
+      if (sqlscale < 0)  then
+      begin
+        case SQLCode of
+          SQL_SHORT  : Result := PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale];
+          SQL_LONG   : Result := PInteger(sqldata)^  / IBScaleDivisor[sqlscale];
+          SQL_INT64,
+          SQL_QUAD   : Result := PInt64(sqldata)^    / IBScaleDivisor[sqlscale];
+          SQL_DOUBLE : Result := PDouble(sqldata)^;
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(ColumnIndex -1), GetNameSqlType(SQLCode)]));
+        end;
+      end
+      else
+        case SQLCode of
+          SQL_DOUBLE    : Result := PDouble(sqldata)^;
+          SQL_LONG      : Result := PInteger(sqldata)^;
+          SQL_D_FLOAT,
+          SQL_FLOAT     : Result := PSingle(sqldata)^;
+          SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_SHORT     : Result := PSmallint(sqldata)^;
+          SQL_INT64     : Result := PInt64(sqldata)^;
+          SQL_TEXT      : Result := RawToFloat(DecodeString(True, ColumnIndex -1), '.');
+          SQL_VARYING   : Result := RawToFloat(DecodeString(False, ColumnIndex -1), '.');
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(ColumnIndex -1), GetNameSqlType(SQLCode)]));
+        end;
+    end;
+    {$IFOPT D+}
+  {$R+}
+  {$ENDIF}
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>double</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZInterbase6XSQLDAResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+var
+  SQLCode: SmallInt;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stCurrency);
 {$ENDIF}
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then

@@ -270,15 +270,15 @@ begin
   case ResultType of
     stBoolean,
     stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
-    stFloat, stBigDecimal:
+    stFloat, stCurrency, stBigDecimal:
       Result := InitialType in [stBoolean,
         stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
-        stFloat, stDouble, stBigDecimal,
+        stFloat, stDouble, stCurrency, stBigDecimal,
         stString, stUnicodeString];
     stDouble:
       Result := InitialType in [stBoolean,
         stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
-        stFloat, stDouble, stBigDecimal,
+        stFloat, stDouble, stCurrency, stBigDecimal,
         stString, stUnicodeString,
         stTime, stDate, stTimeStamp];
     stString, stUnicodeString:
@@ -307,50 +307,31 @@ end;
 function DefineColumnTypeName(ColumnType: TZSQLType): string;
 begin
   case ColumnType of
-    stBoolean:
-      Result := 'Boolean';
-    stByte:
-      Result := 'Byte';
-    stShort:
-      Result := 'Short';
-    stWord:
-      Result := 'Word';
-    stSmall:
-      Result := 'Small';
-    stLongWord:
-      Result := 'LongWord';
-    stInteger:
-      Result := 'Integer';
-    stULong:
-      Result := 'ULong';
-    stLong:
-      Result := 'Long';
-    stFloat:
-      Result := 'Float';
-    stDouble:
-      Result := 'Double';
-    stBigDecimal:
-      Result := 'BigDecimal';
-    stString:
-      Result := 'String';
-    stUnicodeString:
-      Result := 'UnicodeString';
-    stBytes:
-      Result := 'Bytes';
-    stGUID:
-      Result := 'GUID';
-    stDate:
-      Result := 'Date';
-    stTime:
-      Result := 'Time';
-    stTimestamp:
-      Result := 'Timestamp';
-    stAsciiStream:
-      Result := 'AsciiStream';
-    stUnicodeStream:
-      Result := 'UnicodeStream';
-    stBinaryStream:
-      Result := 'BinaryStream';
+    stBoolean:        Result := 'Boolean';
+    stByte:           Result := 'Byte';
+    stShort:          Result := 'Short';
+    stWord:           Result := 'Word';
+    stSmall:          Result := 'Small';
+    stLongWord:       Result := 'LongWord';
+    stInteger:        Result := 'Integer';
+    stULong:          Result := 'ULong';
+    stLong:           Result := 'Long';
+    stFloat:          Result := 'Float';
+    stDouble:         Result := 'Double';
+    stCurrency:       Result := 'Currency';
+    stBigDecimal:     Result := 'BigDecimal';
+    stString:         Result := 'String';
+    stUnicodeString:  Result := 'UnicodeString';
+    stBytes:          Result := 'Bytes';
+    stGUID:           Result := 'GUID';
+    stDate:           Result := 'Date';
+    stTime:           Result := 'Time';
+    stTimestamp:      Result := 'Timestamp';
+    stAsciiStream:    Result := 'AsciiStream';
+    stUnicodeStream:  Result := 'UnicodeStream';
+    stBinaryStream:   Result := 'BinaryStream';
+    stArray:          Result := 'Array';
+    stDataSet:        Result := 'DataSet';
     else
       Result := 'Unknown';
   end;

@@ -608,6 +608,8 @@ begin
         Statement.SetLong(I + 1, RowAccessor.GetLong(ColumnIndex, WasNull));
       stFloat:
         Statement.SetFloat(I + 1, RowAccessor.GetFloat(ColumnIndex, WasNull));
+      stCurrency:
+        Statement.SetCurrency(I + 1, RowAccessor.GetCurrency(ColumnIndex, WasNull));
       stDouble:
         Statement.SetDouble(I + 1, RowAccessor.GetDouble(ColumnIndex, WasNull));
       stBigDecimal:
