@@ -673,48 +673,52 @@ begin
         RDB_NUMBERS_NONE: Result := stLong;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
         RDB_NUMBERS_DECIMAL:
-          if Abs(Scale) <= 4 then
-            Result := stCurrency
+          if Scale = 0 then
+            Result := stLong
           else
-            Result := stBigDecimal;
+            if Abs(Scale) <= 4 then
+              Result := stCurrency
+            else
+              Result := stBigDecimal;
       end;
     blr_long:
-      begin
-        case SqlSubType of
-          RDB_NUMBERS_NONE: Result := stInteger;
-          RDB_NUMBERS_NUMERIC: Result := stDouble;
-          RDB_NUMBERS_DECIMAL: Result := stBigDecimal;
-        end;
+      case SqlSubType of
+        RDB_NUMBERS_NONE: Result := stInteger;
+        RDB_NUMBERS_NUMERIC: Result := stDouble;
+        RDB_NUMBERS_DECIMAL:
+          if Scale = 0 then
+            Result := stInteger
+          else
+            if Abs(Scale) <= 4 then
+              Result := stCurrency
+            else
+              Result := stBigDecimal;
       end;
     blr_short:
-      begin
-        case SqlSubType of
-          RDB_NUMBERS_NONE: Result := stSmall;
-          RDB_NUMBERS_NUMERIC: Result := stDouble;
-          RDB_NUMBERS_DECIMAL: Result := stDouble;
-        end;
+      case SqlSubType of
+        RDB_NUMBERS_NONE: Result := stSmall;
+        RDB_NUMBERS_NUMERIC: Result := stDouble;
+        RDB_NUMBERS_DECIMAL: Result := stDouble;
       end;
     blr_sql_date: Result := stDate;
     blr_sql_time: Result := stTime;
     blr_timestamp: Result := stTimestamp;
     blr_blob, blr_blob2:
-      begin
-        case SqlSubType of
-          { Blob Subtypes }
-          { types less than zero are reserved for customer use }
-          isc_blob_untyped: Result := stBinaryStream;
+      case SqlSubType of
+        { Blob Subtypes }
+        { types less than zero are reserved for customer use }
+        isc_blob_untyped: Result := stBinaryStream;
 
-          { internal subtypes }
-          isc_blob_text: Result := stAsciiStream;
-          isc_blob_blr: Result := stBinaryStream;
-          isc_blob_acl: Result := stAsciiStream;
-          isc_blob_ranges: Result := stBinaryStream;
-          isc_blob_summary: Result := stBinaryStream;
-          isc_blob_format: Result := stAsciiStream;
-          isc_blob_tra: Result := stAsciiStream;
-          isc_blob_extfile: Result := stAsciiStream;
-          isc_blob_debug_info: Result := stBinaryStream;
-        end;
+        { internal subtypes }
+        isc_blob_text: Result := stAsciiStream;
+        isc_blob_blr: Result := stBinaryStream;
+        isc_blob_acl: Result := stAsciiStream;
+        isc_blob_ranges: Result := stBinaryStream;
+        isc_blob_summary: Result := stBinaryStream;
+        isc_blob_format: Result := stAsciiStream;
+        isc_blob_tra: Result := stAsciiStream;
+        isc_blob_extfile: Result := stAsciiStream;
+        isc_blob_debug_info: Result := stBinaryStream;
       end;
     else
       Result := ZDbcIntfs.stUnknown;

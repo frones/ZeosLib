@@ -625,9 +625,7 @@ begin
       ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),
       ConSettings);
     if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE) then
-      LastResultSet := CreateResultSet(FStmtHandle, FErrorCode)
-    else
-      LastResultSet := nil;
+      LastResultSet := CreateResultSet(FStmtHandle, FErrorCode);
     Result := LastResultSet;
     inherited ExecuteQueryPrepared;
   except
