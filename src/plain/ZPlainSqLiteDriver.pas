@@ -540,6 +540,7 @@ type
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
+    function GetSQLite3_API: TZSQLite_API;
   end;
 
   {** Implements a base driver for SQLite}
@@ -669,7 +670,7 @@ type
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
-
+    function GetSQLite3_API: TZSQLite_API;
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -955,6 +956,11 @@ begin
   begin
     Result := SQLite_API.sqlite_key(db, pKey, nKey);
   end;
+end;
+
+function TZSQLiteBaseDriver.GetSQLite3_API: TZSQLite_API;
+begin
+  Result := SQLite_API;
 end;
 
 function TZSQLiteBaseDriver.SetAuthorizer(db: Psqlite;
