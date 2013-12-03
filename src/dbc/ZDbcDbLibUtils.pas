@@ -138,7 +138,8 @@ begin
     11, 93: Result := stTimestamp;
     -1, -10: Result := stAsciiStream;
     -4{image}: Result := stBinaryStream;
-    -2{binary},-3{varbinary},-11{uniqueidentifier}: Result := stBytes;
+    -2{binary},-3{varbinary}: Result := stBytes;
+    -11{uniqueidentifier}: Result := stGUID;
   else
     Result := stUnknown;
   end;
@@ -167,8 +168,8 @@ begin
     DBLIBSQLINT4: Result := stInteger;
     DBLIBSQLFLT4: Result := stDouble;
     DBLIBSQLFLT8: Result := stDouble;
-    DBLIBSQLMONEY4: Result := stDouble;
-    DBLIBSQLMONEY: Result := stDouble;
+    DBLIBSQLMONEY4: Result := stCurrency;
+    DBLIBSQLMONEY: Result := stCurrency;
     DBLIBSQLDATETIM4: Result := stTimestamp;
     DBLIBSQLDATETIME: Result := stTimestamp;
     DBLIBSQLTEXT: Result := stAsciiStream;
@@ -206,7 +207,7 @@ begin
     SYBIMAGE:                                   Result := stBinaryStream;
     SYBBINARY, SYBVARBINARY,
     XSYBBINARY, XSYBVARBINARY:                  Result := stBytes;
-    SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stDouble;
+    SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stCurrency;
     SYBVOID:                                    Result := stUnknown;
     SYBNVARCHAR, XSYBNCHAR, XSYBNVARCHAR:       Result := stUnicodeString;
     SYBMSXML:                                   Result := stBinaryStream;
