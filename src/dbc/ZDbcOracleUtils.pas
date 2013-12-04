@@ -422,7 +422,7 @@ begin
         Variable.TypeCode := SQLT_INT;
         Length := SizeOf(LongInt);
       end;
-    stFloat, stDouble, stLongWord, stUlong, stLong:
+    stFloat, stDouble, stLongWord, stUlong, stLong, stCurrency:
       begin
         Variable.TypeCode := SQLT_FLT;
         Length := SizeOf(Double);
