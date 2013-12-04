@@ -1639,7 +1639,7 @@ begin
       begin
         Result := '';
         SetLength(Result, Src.Len);
-        System.Move(Src.P^, @Result[1], Src.Len);
+        System.Move(Src.P^, PAnsiChar(Result)^, Src.Len);
       end;
       {$ELSE}
       SetString(Result, Src.P, Src.Len);

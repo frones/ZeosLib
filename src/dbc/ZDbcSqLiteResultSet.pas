@@ -393,9 +393,9 @@ begin //rewritten because of performance reasons to avoid localized the RBS befo
   begin
     AnsiRec := GetAnsiRec(ColumnIndex);
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Result := ''
+    Result := '';
     SetLength(Result, AnsiRec.Len);
-    System.Move(P^, PAnsiChar(Result)^, AnsiRec.Len);
+    System.Move(AnsiRec.P^, PAnsiChar(Result)^, AnsiRec.Len);
     {$ELSE}
     System.SetString(Result, AnsiRec.P, AnsiRec.Len);
     {$ENDIF}
