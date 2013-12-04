@@ -718,7 +718,7 @@ begin
       else
       begin
         Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
-        Len := FSQLite3_API.sqlite_column_bytes(FStmtHandle, ColumnIndex);
+        Len := ZFastCode.StrLen(Buffer);
 
         if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
           Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
@@ -762,7 +762,7 @@ begin
       else
       begin
         Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
-        Len := FSQLite3_API.sqlite_column_bytes(FStmtHandle, ColumnIndex);
+        Len := ZFastCode.StrLen(Buffer);
 
         if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
           Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
@@ -807,7 +807,7 @@ begin
       else
       begin
         Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
-        Len := FSQLite3_API.sqlite_column_bytes(FStmtHandle, ColumnIndex);
+        Len := ZFastCode.StrLen(Buffer);
 
         Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
       end;
@@ -827,6 +827,7 @@ end;
 function TZSQLiteResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   ColType: Integer;
+  Buffer: PAnsiChar;
 begin
   Result := nil;
 {$IFNDEF DISABLE_CHECKING}
@@ -842,10 +843,11 @@ begin
     try
       case GetMetadata.GetColumnType(ColumnIndex+1) of
         stAsciiStream, stUnicodeStream:
-          Result := TZAbstractClob.CreateWithData(
-            FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex),
-            FSQLite3_API.sqlite_column_bytes(FStmtHandle, ColumnIndex),
-            zCP_UTF8, ConSettings);
+          begin
+            Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
+            Result := TZAbstractClob.CreateWithData( Buffer,
+              ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
+          end;
         stBinaryStream:
            Result := TZAbstractBlob.CreateWithData(FSQLite3_API.sqlite_column_blob(FStmtHandle,ColumnIndex), FSQLite3_API.sqlite_column_bytes(FStmtHandle, ColumnIndex));
         else
@@ -936,7 +938,8 @@ begin
   for I := 1 to Metadata.GetColumnCount do
   begin
     if Metadata.IsAutoIncrement(I) and
-      (Metadata.GetColumnType(I) in [stByte, stSmall, stInteger, stLong]) then
+      (Metadata.GetColumnType(I) in [stByte, stShort, stSmall, stLongWord,
+        stInteger, stUlong, stLong]) then
     begin
       FAutoColumnIndex := I;
       Break;
