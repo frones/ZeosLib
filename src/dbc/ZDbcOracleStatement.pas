@@ -91,7 +91,6 @@ type
   {** Implements Prepared SQL Statement. }
   TZOraclePreparedStatement = class(TZAbstractPreparedStatement)
   private
-    //FPrepared: Boolean;
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
     FPlainDriver: IZOraclePlainDriver;
@@ -104,7 +103,6 @@ type
     function ConvertToOracleSQLQuery: RawByteString;
 
   protected
-    //property Prepared: Boolean read FPrepared write FPrepared;
     property Handle: POCIStmt read FHandle write FHandle;
     property ErrorHandle: POCIError read FErrorHandle write FErrorHandle;
     property ExecStatement: IZStatement read FExecStatement write FExecStatement;
@@ -341,7 +339,6 @@ begin
   ResultSetType := rtForwardOnly;
   ASQL := ConvertToOracleSQLQuery;
   FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
-  //Prepare;
 end;
 
 {**
@@ -753,7 +750,7 @@ begin
   with FOracleParams[ParameterIndex-1] do
   begin
     if not GetConnection.UseMetadata then
-      pName := 'pOut'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ParameterIndex);
+      pName := 'pOut'+ZFastCode.IntToStr(ParameterIndex);
     pSQLType := SQLType;
   end;
 end;
@@ -798,7 +795,7 @@ begin
   begin
     AConnection := GetConnection;
     if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
-      pName := 'p'+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ParameterIndex);
+      pName := 'p'+ZFastCode.IntToStr(ParameterIndex);
     pSQLType := ord(SQLType);
     pValue := Value;
   end;

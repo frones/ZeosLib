@@ -203,11 +203,15 @@ type
   end;
 
   {** Implements Interbase6 Database Metadata. }
+
+  { TZInterbase6DatabaseMetadata }
+
   TZInterbase6DatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     function GetPrivilege(Privilege: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
+    function ConstructNameCondition(Pattern: string; Column: string): string; override;
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -1168,6 +1172,12 @@ end;
 function TZInterbase6DatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
 begin
   Result := TZInterbase6DatabaseInfo.Create(Self);
+end;
+
+function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
+  Column: string): string;
+begin
+  Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;
@@ -2731,8 +2741,9 @@ begin
     end;
 end;
 
-function TZInterbase6DatabaseMetadata.UncachedGetSequences(const Catalog, SchemaPattern,
-  SequenceNamePattern: string): IZResultSet;
+function TZInterbase6DatabaseMetadata.UncachedGetSequences(
+  const Catalog: string; const SchemaPattern: string;
+  const SequenceNamePattern: string): IZResultSet;
 var
   SQL: string;
   LSequenceNamePattern: string;

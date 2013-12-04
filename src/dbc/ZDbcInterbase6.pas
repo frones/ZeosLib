@@ -365,7 +365,7 @@ begin
 
   ConnectTimeout := StrToIntDef(URL.Properties.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
-    URL.Properties.Values['isc_dpb_connect_timeout'] := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ConnectTimeout);
+    URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
 
 end;
 
@@ -462,7 +462,7 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + '/' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port) + ':' + Database))
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database))
     else
       {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
   end

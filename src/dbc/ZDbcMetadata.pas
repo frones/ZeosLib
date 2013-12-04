@@ -124,11 +124,11 @@ type
     FIC: IZIdentifierConvertor;
     function GetInfo: TStrings;
     function GetURLString: String;
-    function StripEscape(const Pattern: string): string;
-    function HasNoWildcards(const Pattern: string): boolean;
   protected
     FDatabase: String;
     WildcardsArray: array of char; //Added by Cipto
+    function StripEscape(const Pattern: string): string;
+    function HasNoWildcards(const Pattern: string): boolean;
     function EscapeString(const S: string): string; virtual;
     function DecomposeObjectString(const S: String): String; virtual;
     function CreateDatabaseInfo: IZDatabaseInfo; virtual; // technobot 2008-06-24
@@ -2153,7 +2153,7 @@ begin
   else
   begin
     Result := Format('%s like %s',
-      [Column, EscapeString(WorkPattern+'%')]);
+      [Column, EscapeString(WorkPattern)]);
   end;
 end;
 
@@ -4595,7 +4595,7 @@ var
 begin
   Result := '';
   for I := Low(Types) to High(Types) do
-    Result := Result + ':' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Types[I]);
+    Result := Result + ':' + ZFastCode.IntToStr(Types[I]);
   Result := Format('get-udts:%s:%s:%s%s',
     [Catalog, SchemaPattern, TypeNamePattern, Result]);
 end;

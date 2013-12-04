@@ -522,7 +522,8 @@ begin
            Result := '''Y'''
         else
            Result := '''N''';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1065,7 +1066,8 @@ begin
           Result := '''Y'''
         else
           Result := '''N''';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1202,40 +1204,46 @@ begin
       OutParamValues[ParamIndex] := NullVariant
     else
       case ResultSet.GetMetadata.GetColumnType(I) of
-      stBoolean:
-        OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-      stByte:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-      stBytes:
-        OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-      stShort:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
-      stSmall:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-      stInteger:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-      stLong:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-      stFloat:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-      stDouble:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-      stBigDecimal:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-      stString, stAsciiStream:
-        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      stUnicodeString, stUnicodeStream:
-        OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-      stDate:
-        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
-      stTime:
-        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
-      stTimestamp:
-        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
-      stBinaryStream:
-        OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-      else
-        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stBoolean:
+          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
+        stByte:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
+        stShort:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+        stWord:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
+        stSmall:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
+        stLongword:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
+        stInteger:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
+        stULong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
+        stLong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
+        stBytes:
+          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
+        stFloat:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
+        stDouble:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
+        stBigDecimal:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+        stString, stAsciiStream:
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stUnicodeString, stUnicodeStream:
+          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
+        stDate:
+          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
+        stTime:
+          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
+        stTimestamp:
+          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
+        stBinaryStream:
+          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
+        else
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       end;
     Inc(I);
   end;
@@ -1248,10 +1256,10 @@ begin
   FParamNames[ParameterIndex] := ParamName;
   if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
      ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-    FParamTypeNames[ParameterIndex] := 'CHAR('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
+    FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToStr(ColumnSize)+')'
   else
     if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-      FParamTypeNames[ParameterIndex] := 'CHAR('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
+      FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToStr(ColumnSize)+')'
     else
       if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
          ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
@@ -1268,7 +1276,7 @@ begin
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
               if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
-                FParamTypeNames[ParameterIndex] := 'BINARY('+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(ColumnSize)+')'
+                FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToStr(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
 end;
@@ -1610,7 +1618,7 @@ begin
   inherited Create;
   FBindOffsets := PlainDriver.GetBindOffsets;
   if FBindOffsets.buffer_type=0 then
-    raise EZSQLException.Create('Unknown dll version : '+{$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(PlainDriver.GetClientVersion));
+    raise EZSQLException.Create('Unknown dll version : '+ZFastCode.IntToStr(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
   setlength(FBindArray,0);
   setlength(ColumnArray,BindCount);

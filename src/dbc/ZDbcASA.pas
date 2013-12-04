@@ -442,7 +442,7 @@ begin
     if Info.Values['LINKS'] <> ''
       then Links := 'LINKS=' + Info.Values['LINKS'];
     if (Links = '') and (Port <> 0)
-      then Links := 'LINKS=tcpip(PORT=' + {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(Port) + ')';
+      then Links := 'LINKS=tcpip(PORT=' + ZFastCode.IntToStr(Port) + ')';
     if Links <> ''
       then ConnectionString := ConnectionString + Links + '; ';
 
@@ -545,7 +545,7 @@ begin
   ASATL := Ord( TransactIsolationLevel);
   if ASATL > 1 then
     ASATL := ASATL - 1;
-  SetOption( 1, nil, 'ISOLATION_LEVEL', {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr( ASATL));
+  SetOption( 1, nil, 'ISOLATION_LEVEL', ZFastCode.IntToStr( ASATL));
 end;
 
 function TZASAConnection.DetermineASACharSet: String;

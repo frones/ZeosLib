@@ -557,11 +557,19 @@ end;
     value returned is <code>0</code>
 }
 function TZMySQLResultSet.GetLong(ColumnIndex: Integer): Int64;
+var
+  Len: ULong;
+  Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := RawToInt64Def(InternalGetString(ColumnIndex), 0);
+  Buffer := GetBuffer(ColumnIndex, Len);
+
+  if LastWasNull then
+    Result := 0
+  else
+    Result := RawToInt64Def(Buffer, 0);
 end;
 
 {**
@@ -575,7 +583,7 @@ end;
 }
 function TZMySQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  Len: Cardinal;
+  Len: ULong;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -709,7 +717,7 @@ end;
 }
 function TZMySQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
+  Len: ULong;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -1516,12 +1524,12 @@ begin
       FIELD_TYPE_TINY:      Result := PByte(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_SHORT:     Result := PWord(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_LONG:      Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_FLOAT:     Result := 0;
-      FIELD_TYPE_DOUBLE:    Result := 0;
+      FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColumnArray[ColumnIndex-1].buffer)^);
+      FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColumnArray[ColumnIndex-1].buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP: Result := 0;
-      FIELD_TYPE_LONGLONG:  Result := PULongLong(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_LONGLONG:  Result := PUInt64(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^; //warning Delphi deosn't have a 24 bit float -> samllint have 2Byte, integer have 4Byte but int24 have 3Byte?
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
       FIELD_TYPE_DATETIME  = 12,*)
@@ -1547,16 +1555,16 @@ begin
       FIELD_TYPE_TINY:      Result := PShortInt(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_SHORT:     Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_LONG:      Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_FLOAT:     Result := 0;
-      FIELD_TYPE_DOUBLE:    Result := 0;
+      FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColumnArray[ColumnIndex-1].buffer)^);
+      FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColumnArray[ColumnIndex-1].buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP: Result := 0;
       FIELD_TYPE_LONGLONG:  Result := PInt64(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;  //warning Delphi deosn't have a 24 bit float -> samllint have 2Byte, integer have 4Byte but int24 have 3Byte?
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
       FIELD_TYPE_DATETIME  = 12, *)
-      FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^; //obviously impossible
       (*FIELD_TYPE_NEWDATE   = 14,
       FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
       FIELD_TYPE_BIT: ;

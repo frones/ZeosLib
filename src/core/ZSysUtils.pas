@@ -3038,9 +3038,9 @@ var
    MajorVersion, MinorVersion, SubVersion: Integer;
 begin
  DecodeSQLVersioning(SQLVersion, MajorVersion, MinorVersion, SubVersion);
- Result := {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(MajorVersion)+'.'+
-           {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(MinorVersion)+'.'+
-           {$IFNDEF WITH_FASTCODE_INTTOSTR}ZFastCode.{$ENDIF}IntToStr(SubVersion);
+ Result := ZFastCode.IntToStr(MajorVersion)+'.'+
+           ZFastCode.IntToStr(MinorVersion)+'.'+
+           ZFastCode.IntToStr(SubVersion);
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
@@ -3091,7 +3091,12 @@ var i, l: integer;
 begin
   {$IFDEF UNICODE}
   l := Length(Src); //temp l speeds x2
-  SetString(result,nil,l);
+  if Result = '' then
+    System.SetString(Result,nil, l)
+  else
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
+      System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
@@ -3119,8 +3124,13 @@ var i, l: integer;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  L := System.Length(Src); //temp l speeds x2
-  System.SetString(Result,nil, l);
+  L := Length(Src); //temp l speeds x2
+  if Result = '' then
+    System.SetString(Result,nil, l)
+  else
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
+      System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}

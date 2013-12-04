@@ -39,8 +39,11 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
-// Compilation directives for Lazarus
+//common compilation directives
 {$DEFINE ZEOS72UP}
+{$DEFINE SUPPORTS_UINT64_CONSTS}      // compiler supports integer constants with 20 digits
+
+ // Compilation directives for Lazarus
 {.$DEFINE WITH_ZSTRINGFIELDS}
 {$IFDEF FPC}
  {$I ZeosLazarus.inc}
@@ -64,7 +67,7 @@
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
  {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
  {$DEFINE USE_FAST_CHARPOS}     // use Fascode CharPos function
- {$DEFINE HAVE_TBYTES}          //Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
+ {$DEFINE HAVE_TBYTES}          // Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -91,6 +94,7 @@
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
   {$UNDEF HAVE_TBYTES} //D7 doesn't have TBytes
+  {$UNDEF SUPPORTS_UINT64_CONSTS}      // D7 doesn't support integer constants with 20 digits
 {$ENDIF}
 
 // Compilation directives for Delphi 8
@@ -98,6 +102,7 @@
   {$DEFINE VER150BELOW} // Used in zeos.inc only
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$DEFINE Use_FastCodeFillChar}
+  {$UNDEF SUPPORTS_UINT64_CONSTS}      // D8 doesn't support integer constants with 20 digits
 {$ENDIF}
 
 // Compilation directives for Delphi 9 (DELPHI 2005)
@@ -218,6 +223,7 @@
   {$DEFINE WITH_WIDESTRUTILS}           // WideStrUtils Unit.
   {$DEFINE WITH_REPORTMEMORYLEAKSONSHUTDOWN} //ReportMemoryLeaksOnShutdown property does exists (testsuites)
   {$DEFINE WITH_MM_CAN_REALLOC_EXTERNAL_MEM} //sinc FastMM4 Memorymanager IDE can FreeMem/AllocMem/ReallocMem for Pointers which have been allocated in a different object
+  {$DEFINE SUPPORTS_UINT64_CONSTS}      //compiler supports integer constants with 20 didgits
 {$ENDIF}
 
 {$IFDEF DELPHI12_UP}
@@ -230,7 +236,7 @@
   {$DEFINE WITH_FTBYTE}                 // ftByte is supported
   {$DEFINE WITH_FTEXTENDED}             // ftExtended is supported
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
-  {$DEFINE WITH_ASBYTES}                //  AsBytes is supported
+  {$DEFINE WITH_ASBYTES}                // AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
@@ -239,13 +245,12 @@
   {$DEFINE PWIDECHAR_IS_PUNICODECHAR}   // PWideChar = ^UnicodeString
   {$UNDEF USE_FAST_CHARPOS}
   {$DEFINE WITH_ASANSISTRING}           // T(Wide)StringField supports AsAnsiString property
+  {$DEFINE WITH_INC_PBYTE_SUPPORT}      // Compiler supports incrementing PByte-Pointer
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
   {$UNDEF WITH_INLINE_ANSICOMPARETEXT}  // AnsiCompareText is no more inline declared
   {$DEFINE WITH_PWIDECHAR_STRLEN}       // SysUtils.StrLen supports PWideChar
-  {$DEFINE WITH_UINT64}                 // D2010 has virtually UInt64
-  {$DEFINE WITH_PUINT64}                // D2010 has virtually PUInt64
   {$DEFINE WITH_FTTIMESTAMPOFFSET}      // ftTimeStampOffset is supported
   {$DEFINE WITH_FTSINGLE}               // ftSingle is supported
   {$DEFInE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
@@ -290,7 +295,6 @@
 
 {$IFDEF DELPHI18_UP}
   {$DEFINE WITH_VAR_TVALUEBUFFER}	//GetFieldata overloads using !var! Buffer: TValueBuffer
-  {$DEFINE WITH_FASTCODE_INTTOSTR}      //using fastcode StrToInt implementations of http://fastcode.sourceforge.net/
   {$DEFINE WITH_BUFFERS_IS_TRECBUF} //Buffers[index] is TRecBuf type NativeInt
   {$DEFINE WITH_ANSISTRINGPOS_DEPRECATED} //AnsiStringPos deprecated moved to AnsiStrings
   {$DEFINE WITH_STRLEN_DEPRECATED} //StrLen deprecated moved to AnsiStrings

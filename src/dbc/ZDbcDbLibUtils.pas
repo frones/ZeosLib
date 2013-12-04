@@ -385,7 +385,8 @@ begin
           Result := '1'
         else
           Result := '0';
-      stByte, stShort, stSmall, stInteger, stLong, stFloat, stDouble, stBigDecimal:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stString, stUnicodeString:
         if NChar then

@@ -65,15 +65,16 @@
       {$DEFINE WITH_IPROVIDER}
     {$IFEND}
     {$IF FPC_FULLVERSION>=20600}  // assumes 2.5.1 pretty close to 2.6.0. Summer 2011 or newer
+       {$DEFINE WITH_INC_PBYTE_SUPPORT}  // Compiler supports incrementing PByte-Pointer
        {$DEFINE WITH_WIDEMEMO}
        {$DEFINE WITH_ASLARGEINT}      // tlargeint aslargeint. Fixed 2.6.0+ or 2.6.2+ probably
        {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
        {$DEFINE WITH_ASVARIANT}
        {$DEFINE WITH_FORMATSETTINGS}
-       {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
+       {$DEFINE WITH_WIDEFIELDS}      // Wide-fields are supported (common define for ftWideString/ftWideMemo)
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
        {$DEFINE FPC2_6UP}
-       {$DEFINE HAVE_TBYTES}
+       {$DEFINE HAVE_TBYTES}         // TBytes is supported
     {$IFEND}
 
     {$IFDEF LCL}

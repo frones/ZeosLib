@@ -92,9 +92,13 @@ type
 // Data types
 type
   {** Defines supported SQL types. }
-  TZSQLType = (stUnknown, stBoolean, stByte, stShort, stSmall, stInteger, stLong,
-    stFloat, stDouble, stBigDecimal, stString, stUnicodeString, stBytes,
-    stDate, stTime, stTimestamp, stDataSet, stGUID,
+  TZSQLType = (stUnknown, stBoolean,
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+    stFloat, stDouble, stCurrency, stBigDecimal,
+    stString, stUnicodeString,
+    stBytes, stGUID,
+    stDate, stTime, stTimestamp,
+    stArray, stDataSet,
     stAsciiStream, stUnicodeStream, stBinaryStream);
 
   {** Defines a transaction isolation level. }
@@ -576,8 +580,11 @@ type
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; const Value: Byte);
     procedure SetShort(ParameterIndex: Integer; const Value: ShortInt);
+    procedure SetWord(ParameterIndex: Integer; const Value: Word);
     procedure SetSmall(ParameterIndex: Integer; const Value: SmallInt);
+    procedure SetUInt(ParameterIndex: Integer; const Value: Cardinal);
     procedure SetInt(ParameterIndex: Integer; const Value: Integer);
+    procedure SetULong(ParameterIndex: Integer; const Value: UInt64);
     procedure SetLong(ParameterIndex: Integer; const Value: Int64);
     procedure SetFloat(ParameterIndex: Integer; const Value: Single);
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
@@ -635,8 +642,11 @@ type
     function GetBoolean(ParameterIndex: Integer): Boolean;
     function GetByte(ParameterIndex: Integer): Byte;
     function GetShort(ParameterIndex: Integer): ShortInt;
+    function GetWord(ParameterIndex: Integer): Word;
     function GetSmall(ParameterIndex: Integer): SmallInt;
+    function GetUInt(ParameterIndex: Integer): Cardinal;
     function GetInt(ParameterIndex: Integer): Integer;
+    function GetULong(ParameterIndex: Integer): UInt64;
     function GetLong(ParameterIndex: Integer): Int64;
     function GetFloat(ParameterIndex: Integer): Single;
     function GetDouble(ParameterIndex: Integer): Double;
@@ -681,8 +691,11 @@ type
     function GetBoolean(ColumnIndex: Integer): Boolean;
     function GetByte(ColumnIndex: Integer): Byte;
     function GetShort(ColumnIndex: Integer): ShortInt;
+    function GetWord(ColumnIndex: Integer): Word;
     function GetSmall(ColumnIndex: Integer): SmallInt;
+    function GetUInt(ColumnIndex: Integer): Cardinal;
     function GetInt(ColumnIndex: Integer): Integer;
+    function GetULong(ColumnIndex: Integer): UInt64;
     function GetLong(ColumnIndex: Integer): Int64;
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
@@ -718,8 +731,11 @@ type
     function GetBooleanByName(const ColumnName: string): Boolean;
     function GetByteByName(const ColumnName: string): Byte;
     function GetShortByName(const ColumnName: string): ShortInt;
+    function GetWordByName(const ColumnName: string): Word;
     function GetSmallByName(const ColumnName: string): SmallInt;
+    function GetUIntByName(const ColumnName: string): Cardinal;
     function GetIntByName(const ColumnName: string): Integer;
+    function GetULongByName(const ColumnName: string): UInt64;
     function GetLongByName(const ColumnName: string): Int64;
     function GetFloatByName(const ColumnName: string): Single;
     function GetDoubleByName(const ColumnName: string): Double;
@@ -791,8 +807,11 @@ type
     procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean);
     procedure UpdateByte(ColumnIndex: Integer; const Value: Byte);
     procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt);
+    procedure UpdateWord(ColumnIndex: Integer; const Value: Word);
     procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt);
+    procedure UpdateUInt(ColumnIndex: Integer; const Value: Cardinal);
     procedure UpdateInt(ColumnIndex: Integer; const Value: Integer);
+    procedure UpdateULong(ColumnIndex: Integer; const Value: UInt64);
     procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single);
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
@@ -828,8 +847,11 @@ type
     procedure UpdateBooleanByName(const ColumnName: string; const Value: Boolean);
     procedure UpdateByteByName(const ColumnName: string; const Value: Byte);
     procedure UpdateShortByName(const ColumnName: string; const Value: ShortInt);
+    procedure UpdateWordByName(const ColumnName: string; const Value: Word);
     procedure UpdateSmallByName(const ColumnName: string; const Value: SmallInt);
+    procedure UpdateUIntByName(const ColumnName: string; const Value: Cardinal);
     procedure UpdateIntByName(const ColumnName: string; const Value: Integer);
+    procedure UpdateULongByName(const ColumnName: string; const Value: UInt64);
     procedure UpdateLongByName(const ColumnName: string; const Value: Int64);
     procedure UpdateFloatByName(const ColumnName: string; const Value: Single);
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);

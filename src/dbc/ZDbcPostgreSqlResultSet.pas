@@ -72,7 +72,7 @@ type
     FIs_bytea_output_hex: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
-    function GetBuffer(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    function GetBuffer(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;

@@ -1016,10 +1016,10 @@ begin
       stByte, stShort, stSmall:
         ParamSqlData.UpdateSmall(I,
           ClientVarManager.GetAsInteger(InParamValues[I]));
-      stInteger:
+      stWord, stInteger:
         ParamSqlData.UpdateInt(I,
           ClientVarManager.GetAsInteger(InParamValues[I]));
-      stLong:
+      stLongWord, stLong, stULong:
         ParamSqlData.UpdateLong(I,
           ClientVarManager.GetAsInteger(InParamValues[I]));
       stFloat:
