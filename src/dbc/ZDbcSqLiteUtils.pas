@@ -136,11 +136,13 @@ begin
   if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('BOOL')) then
     Result := stBoolean
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('TINYINT') then
-    Result := stByte
+    Result := stShort
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('SMALLINT') then
     Result := stSmall
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MEDIUMINT') then
     Result := stInteger
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('INTEGER') then
+    Result := stLong //http://www.sqlite.org/autoinc.html
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT')) then
     Result := stInteger
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('BIGINT') then
@@ -160,7 +162,7 @@ begin
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('DOUB')) then
     Result := stDouble
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('MONEY') then
-    Result := stBigDecimal
+    Result := stCurrency
   else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('CHAR')) then
     Result := stString
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('VARCHAR') then
