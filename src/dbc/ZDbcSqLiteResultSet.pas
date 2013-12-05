@@ -80,7 +80,6 @@ type
     FFreeHandle: Boolean;
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
-    FSQLite3_API: TZSQLite_API;
   protected
     procedure Open; override;
     procedure FreeHandle;
@@ -197,7 +196,6 @@ begin
   FErrorCode := ErrorCode;
   FUndefinedVarcharAsStringLength := StrToIntDef(Statement.GetConnection.GetParameters.Values['Undefined_Varchar_AsString_Length'], 0);
   FFirstRow := True;
-  FSQLite3_API := FPlainDriver.GetSQLite3_API;
 
   Open;
 end;
