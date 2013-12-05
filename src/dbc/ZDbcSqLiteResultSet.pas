@@ -217,10 +217,10 @@ begin
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
   UndefinedVarcharAsStringLength := (GetStatement.GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
-  FColumnCount := FSQLite3_API.sqlite_column_count(FStmtHandle);
+  FColumnCount := FPlainDriver.column_count(FStmtHandle);
 
   LastRowNo := 0;
-  //MaxRows := FSQLite3_API.sqlite_data_count(FStmtHandle) +1; {first ResultSetRow = 1}
+  //MaxRows := FPlainDriver.data_count(FStmtHandle) +1; {first ResultSetRow = 1}
 
   { Fills the column info. }
   ColumnsInfo.Clear;
@@ -229,11 +229,11 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FSQLite3_API.sqlite_column_name(FStmtHandle, i),
+      ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.column_name(FStmtHandle, i),
         ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       TableName := '';
       ReadOnly := False;
-      TypeName := FSQLite3_API.sqlite_column_decltype(FStmtHandle, i);
+      TypeName := FPlainDriver.column_decltype(FStmtHandle, i);
       if TypeName = nil then
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.column_type_AsString(FStmtHandle, i),
           UndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
@@ -283,7 +283,7 @@ begin
   if FFreeHandle then
   begin
     if Assigned(FStmtHandle) then
-      ErrorCode := FSQLite3_API.sqlite_Finalize(FStmtHandle)
+      ErrorCode := FPlainDriver.Finalize(FStmtHandle)
     else
       ErrorCode := SQLITE_OK;
     FStmtHandle := nil;
@@ -294,7 +294,7 @@ begin
   begin
     if FStmtHandle <> nil then
     begin
-      ErrorCode := FSQLite3_API.sqlite_reset(FStmtHandle);
+      ErrorCode := FPlainDriver.reset(FStmtHandle);
       CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
       FStmtHandle := nil;
     end;
@@ -331,7 +331,7 @@ end;
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
 end;
 
 {**
@@ -346,7 +346,7 @@ end;
 }
 function TZSQLiteResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
   if LastWasNull then
   begin
     Result.P := nil;
@@ -354,7 +354,7 @@ begin
   end
   else
   begin
-    Result.P := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex -1);
+    Result.P := FPlainDriver.column_text(FStmtHandle, ColumnIndex -1);
     Result.Len := ZFastCode.StrLen(Result.P);
   end;
 end;
@@ -370,7 +370,7 @@ end;
 }
 function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
-  Result := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex -1);
+  Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex -1);
   LastWasNull := Result = nil;
 end;
 
@@ -386,7 +386,7 @@ end;
 function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var AnsiRec: TZAnsiRec;
 begin //rewritten because of performance reasons to avoid localized the RBS before
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
   if LastWasNull then
     Result := ''
   else
@@ -419,7 +419,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex-1);
+  Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex-1);
   LastWasNull := Buffer = nil;
   if LastWasNull then
     Result := ''
@@ -444,7 +444,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -452,11 +452,11 @@ begin
   else
     case ColType of
       SQLITE_INTEGER:
-        Result := FSQLite3_API.sqlite_column_int(FStmtHandle, ColumnIndex) <> 0;
+        Result := FPlainDriver.column_int(FStmtHandle, ColumnIndex) <> 0;
       SQLITE_FLOAT:
-        Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex) <> 0;
+        Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex) <> 0;
       SQLITE3_TEXT:
-        Result := StrToBoolEx(FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex));
+        Result := StrToBoolEx(FPlainDriver.column_text(FStmtHandle, ColumnIndex));
       else Result := False; {SQLITE_BLOB}
     end;
 end;
@@ -477,13 +477,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := Byte(FSQLite3_API.sqlite_column_int(FStmtHandle, ColumnIndex));
+     Result := Byte(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
 end;
 
 {**
@@ -502,13 +502,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := ShortInt(FSQLite3_API.sqlite_column_int(FStmtHandle, ColumnIndex));
+     Result := ShortInt(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
 end;
 
 {**
@@ -527,13 +527,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := SmallInt(FSQLite3_API.sqlite_column_int(FStmtHandle, ColumnIndex));
+     Result := SmallInt(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
 end;
 
 {**
@@ -552,13 +552,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FSQLite3_API.sqlite_column_int(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.column_int(FStmtHandle, ColumnIndex);
 end;
 
 {**
@@ -577,13 +577,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FSQLite3_API.sqlite_column_int64(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.column_int64(FStmtHandle, ColumnIndex);
 end;
 
 {**
@@ -602,13 +602,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex);
 end;
 
 {**
@@ -627,13 +627,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex);
 end;
 
 {**
@@ -653,13 +653,13 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
     { sqlite does the conversion if required
       http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex);
+     Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex);
 end;
 
 {**
@@ -679,7 +679,7 @@ begin
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
 
-  LastWasNull := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := nil
   else
@@ -706,7 +706,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -714,10 +714,10 @@ begin
   else
     case ColType of
       SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex);
+        Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
       else
       begin
-        Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
+        Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
         Len := ZFastCode.StrLen(Buffer);
 
         if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
@@ -750,7 +750,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -758,10 +758,10 @@ begin
   else
     case ColType of
       SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
+        Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
       else
       begin
-        Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
+        Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
         Len := ZFastCode.StrLen(Buffer);
 
         if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
@@ -795,7 +795,7 @@ begin
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
   ColumnIndex := ColumnIndex -1;
-  ColType := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex);
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
@@ -803,10 +803,10 @@ begin
   else
     case ColType of
       SQLITE_INTEGER, SQLITE_FLOAT:
-        Result := FSQLite3_API.sqlite_column_double(FStmtHandle, ColumnIndex);
+        Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
       else
       begin
-        Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
+        Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
         Len := ZFastCode.StrLen(Buffer);
 
         Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
@@ -833,7 +833,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-  ColType := FSQLite3_API.sqlite_column_type(FStmtHandle, ColumnIndex-1);
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex-1);
   ColumnIndex := ColumnIndex -1;
 
   LastWasNull := ColType = SQLITE_NULL;
@@ -844,12 +844,12 @@ begin
       case GetMetadata.GetColumnType(ColumnIndex+1) of
         stAsciiStream, stUnicodeStream:
           begin
-            Buffer := FSQLite3_API.sqlite_column_text(FStmtHandle, ColumnIndex);
+            Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
             Result := TZAbstractClob.CreateWithData( Buffer,
               ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
           end;
         stBinaryStream:
-           Result := TZAbstractBlob.CreateWithData(FSQLite3_API.sqlite_column_blob(FStmtHandle,ColumnIndex), FSQLite3_API.sqlite_column_bytes(FStmtHandle, ColumnIndex));
+           Result := TZAbstractBlob.CreateWithData(FPlainDriver.column_blob(FStmtHandle,ColumnIndex), FPlainDriver.column_bytes(FStmtHandle, ColumnIndex));
         else
           Result := TZAbstractBlob.CreateWithStream(nil);
       end;
@@ -885,7 +885,7 @@ begin
 
   if (FStmtHandle <> nil ) and not FFirstRow then
   begin
-    FErrorCode := FSQLite3_API.sqlite_Step(FStmtHandle);
+    FErrorCode := FPlainDriver.Step(FStmtHandle);
     CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcOther, 'FETCH', ConSettings);
   end;
 
