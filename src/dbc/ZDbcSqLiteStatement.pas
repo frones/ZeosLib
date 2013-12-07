@@ -98,8 +98,13 @@ type
   end;
   {$ENDIF}
 
+  IZSQLiteCAPIPreparedStatement = Interface(IZPreparedStatement)
+    ['{CA05874D-E817-4523-B0AF-DBCDD0CF85CA}']
+    Procedure FreeReference;
+  end;
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement,
+    IZSQLiteCAPIPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
@@ -108,9 +113,12 @@ type
     FForceNativeResultSet: Boolean;
     FBindDoubleDateTimeValues: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
+    FLastResultSet: Pointer; //weak interface reference
     function CreateResultSet(const StmtHandle: Psqlite_vm;
       const ErrorCode: Integer): IZResultSet;
   protected
+    Procedure FreeReference;
+  protected //abstaction overrides
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
@@ -124,6 +132,7 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
+
   end;
 
 
@@ -170,7 +179,7 @@ var
 begin
   { Creates a native result set. }
   NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
-    StmtHandle, ErrorCode, FUndefinedVarcharAsStringLength, True);
+    StmtHandle, ErrorCode, FUndefinedVarcharAsStringLength);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
   if FForceNativeResultSet then
@@ -435,7 +444,7 @@ begin
     { Fetches all rows to prevent blocking (DataBase is locked).}
     CachedResultSet.Last;
     CachedResultSet.BeforeFirst;
-    
+
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
 
@@ -443,6 +452,11 @@ begin
   end
   else
     Result := NativeResultSet;
+end;
+
+Procedure TZSQLiteCAPIPreparedStatement.FreeReference;
+begin
+  FLastResultSet := nil;
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
@@ -591,7 +605,6 @@ end;
 
 procedure TZSQLiteCAPIPreparedStatement.Unprepare;
 begin
-  ClearParameters;
   CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.Finalize(FStmtHandle),
     nil, lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   FStmtHandle := nil;
@@ -603,8 +616,9 @@ begin
   if Not Prepared then
      Prepare;
 
-  if LastResultSet <> nil then LastResultSet.Close; // reset stmt-handle
-  LastResultSet := nil; //keep track we do not return a closed ResultSet
+  if FLastResultSet <> nil then
+    IZResultSet(FLastResultSet).Close; // reset stmt-handle
+  FLastResultSet := nil; //keep track we do not return a closed ResultSet
   BindInParameters;
 
   FErrorCode := FPlainDriver.Step(FStmtHandle); //exec prepared
@@ -614,8 +628,11 @@ begin
   if FPlainDriver.column_count(FStmtHandle) = 0 then
     FPlainDriver.reset(FStmtHandle) //reset handle now!
   else //expect a resultset
-    LastResultSet := CreateResultSet(FStmtHandle, FErrorCode); //resultset executes reset stmt-handle
-  Result := LastResultSet;
+  begin
+    Result := CreateResultSet(FStmtHandle, FErrorCode); //resultset executes reset stmt-handle
+    FLastResultSet := Pointer(Result); //weak reference to Resultset to avoid NO decrementing of RefCount.
+      //we need this reference to close the SQLite resultset and reset the stmt handle.
+  end;
 
   inherited ExecuteQueryPrepared; //Log values
 end;
@@ -637,6 +654,9 @@ begin
       nil, lcOther, 'Reset', ConSettings); //reset handle
     LastUpdateCount := Result;
   end;
+  { Autocommit statement. }
+  if Connection.GetAutoCommit then
+    Connection.Commit;
 end;
 
 function TZSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
@@ -664,7 +684,7 @@ begin
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset', ConSettings);
   end;
   { Autocommit statement. }
-  if Connection.GetAutoCommit then
+  if not Result and Connection.GetAutoCommit then
     Connection.Commit;
 
   inherited ExecutePrepared;

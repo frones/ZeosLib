@@ -137,7 +137,7 @@ implementation
 
 uses
   ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
-  ZVariant
+  ZVariant, ZDbcSqLiteStatement
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -296,6 +296,8 @@ end;
 }
 procedure TZSQLiteResultSet.Close;
 begin
+  if not FFinalizeHandle  and (Statement <> nil) then
+    (Statement as IZSQLiteCAPIPreparedStatement).FreeReference;
   inherited Close;
   FreeHandle;
 end;
