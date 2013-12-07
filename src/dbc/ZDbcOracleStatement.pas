@@ -89,24 +89,17 @@ type
   end;
 
   {** Implements Prepared SQL Statement. }
-  TZOraclePreparedStatement = class(TZAbstractPreparedStatement)
+  TZOraclePreparedStatement = class(TZAbstractRealPreparedStatement)
   private
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
     FPlainDriver: IZOraclePlainDriver;
-    FExecStatement: IZStatement;
-    FLastStatement: IZStatement;
     FInVars: PZSQLVars;
     FPrefetchCount: Integer;
-    procedure SetLastStatement(LastStatement: IZStatement);
-    function GetExecStatement: IZStatement;
     function ConvertToOracleSQLQuery: RawByteString;
-
   protected
     property Handle: POCIStmt read FHandle write FHandle;
     property ErrorHandle: POCIError read FErrorHandle write FErrorHandle;
-    property ExecStatement: IZStatement read FExecStatement write FExecStatement;
-    property LastStatement: IZStatement read FLastStatement write SetLastStatement;
     property InVars: PZSQLVars read FInVars write FInVars;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
@@ -114,9 +107,6 @@ type
 
     procedure Close; override;
     procedure Prepare; override;
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -339,43 +329,6 @@ begin
 end;
 
 {**
-  Sets a reference to the last statement.
-  @param LastStatement the last statement interface.
-}
-procedure TZOraclePreparedStatement.SetLastStatement(
-  LastStatement: IZStatement);
-begin
-  if FLastStatement <> nil then
-    FLastStatement.Close;
-  FLastStatement := LastStatement;
-end;
-
-{**
-  Creates a temporary statement which executes queries.
-  @param Info a statement parameters.
-  @return a created statement object.
-}
-function TZOraclePreparedStatement.GetExecStatement: IZStatement;
-begin
-  if ExecStatement = nil then
-  begin
-    ExecStatement := TZOracleStatement.Create(FPlainDriver, Connection, Info);
-
-    ExecStatement.SetMaxFieldSize(GetMaxFieldSize);
-    ExecStatement.SetMaxRows(GetMaxRows);
-    ExecStatement.SetEscapeProcessing(EscapeProcessing);
-    ExecStatement.SetQueryTimeout(GetQueryTimeout);
-    ExecStatement.SetCursorName(CursorName);
-
-    ExecStatement.SetFetchDirection(GetFetchDirection);
-    ExecStatement.SetFetchSize(GetFetchSize);
-    ExecStatement.SetResultSetConcurrency(GetResultSetConcurrency);
-    ExecStatement.SetResultSetType(GetResultSetType);
-  end;
-  Result := ExecStatement;
-end;
-
-{**
   Converts an SQL query into Oracle format.
   @param SQL a query with parameters defined with '?'
   @returns a query with parameters in Oracle format ':pN'.
@@ -405,71 +358,8 @@ end;
 procedure TZOraclePreparedStatement.Close;
 begin
   inherited Close;
-  if LastStatement <> nil then
-  begin
-    FLastStatement.Close;
-    FLastStatement := nil;
-  end;
   FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
   FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
-end;
-
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-}
-function TZOraclePreparedStatement.Execute(const SQL: RawByteString): Boolean;
-begin
-  LastStatement := GetExecStatement;
-  Result := LastStatement.Execute(SQL);
-  if Result then
-    LastResultSet := LastStatement.GetResultSet
-  else
-    LastUpdateCount := LastStatement.GetUpdateCount;
-end;
-
-{**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-function TZOraclePreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-begin
-  Result := GetExecStatement.ExecuteQuery(SQL);
-end;
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-function TZOraclePreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
-begin
-  Result := GetExecStatement.ExecuteUpdate(SQL);
-  LastUpdateCount := Result;
 end;
 
 {**

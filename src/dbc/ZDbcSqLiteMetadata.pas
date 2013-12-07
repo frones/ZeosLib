@@ -1250,7 +1250,7 @@ end;
 function TZSQLiteDatabaseMetadata.UncachedGetTableTypes: IZResultSet;
 const
   TableTypeCount = 2;
-  Types: array [1..TableTypeCount] of string = ('TABLE', 'VIEW');
+  Types: array [1..TableTypeCount] of UTF8String = ('TABLE', 'VIEW');
 var
   I: Integer;
 begin
@@ -1259,7 +1259,7 @@ begin
   for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateString(1, Types[I]);
+      Result.UpdateUTF8String(1, Types[I]);
       Result.InsertRow;
     end;
 end;
@@ -1364,19 +1364,19 @@ begin
         if GetInt(4) <> 0 then
         begin
           Result.UpdateInt(11, Ord(ntNoNulls));
-          Result.UpdateString(18, 'NO');
+          Result.UpdateRawByteString(18, 'NO');
         end
         else
         begin
           Result.UpdateInt(11, Ord(ntNullable));
-          Result.UpdateString(18, 'YES');
+          Result.UpdateRawByteString(18, 'YES');
         end;
 
         Result.UpdateNull(12);
         if Trim(GetString(5)) <> '' then
-          Result.UpdateString(13, GetString(5))
-  //          Result.UpdateString(13, '''' + GetString(5) + '''')
-        else Result.UpdateNull(13);
+          Result.UpdateAnsiRec(13, GetAnsiRec(5))
+        else
+          Result.UpdateNull(13);
         Result.UpdateNull(14);
         Result.UpdateNull(15);
         Result.UpdateNull(16);
@@ -1446,7 +1446,7 @@ begin
         else Result.UpdateNull(1);
         Result.UpdateNull(2);
         Result.UpdateString(3, Table);
-        Result.UpdateString(4, GetString(2));
+        Result.UpdateAnsiRec(4, GetAnsiRec(2));
         Result.UpdateInt(5, Index);
         Result.UpdateNull(6);
 
@@ -1650,10 +1650,10 @@ begin
             Result.UpdateString(3, Table);
             Result.UpdateBoolean(4, MainResultSet.GetInt(3) = 0);
             Result.UpdateNull(5);
-            Result.UpdateString(6, MainResultSet.GetString(2));
+            Result.UpdateAnsiRec(6, MainResultSet.GetAnsiRec(2));
             Result.UpdateNull(7);
             Result.UpdateInt(8, ResultSet.GetInt(1) + 1);
-            Result.UpdateString(9, ResultSet.GetString(3));
+            Result.UpdateAnsiRec(9, ResultSet.GetAnsiRec(3));
             Result.UpdateString(10, 'A');
             Result.UpdateInt(11, 0);
             Result.UpdateInt(12, 0);

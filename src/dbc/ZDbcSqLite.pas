@@ -379,6 +379,7 @@ function TZSQLiteConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
     Open;
+
   Result := TZSQLiteStatement.Create(GetPlainDriver, Self, Info, FHandle);
 end;
 

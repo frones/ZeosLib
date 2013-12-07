@@ -77,7 +77,7 @@ type
     FStmtHandle: Psqlite_vm;
     FColumnCount: Integer;
     FPlainDriver: IZSQLitePlainDriver;
-    FFreeHandle: Boolean;
+    FFinalizeHandle: Boolean;
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
   protected
@@ -87,7 +87,8 @@ type
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
-      const ErrorCode: Integer; const AllowFreeHandle: Boolean = True); overload;
+      const ErrorCode: Integer; const UndefinedVarcharAsStringLength: Integer;
+      const FinalizeHandle: Boolean = True); overload;
 
     procedure Close; override;
 
@@ -139,20 +140,6 @@ uses
   ZVariant
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
-{ TZSQLiteResultSetMetadata }
-
-{**
-  Indicates whether the designated column is automatically numbered, thus read-only.
-  @param column the first column is 1, the second is 2, ...
-  @return <code>true</code> if so; <code>false</code> otherwise
-}
-{
-function TZSQLiteResultSetMetadata.IsAutoIncrement(Column: Integer): Boolean;
-begin
-  Result := TZColumnInfo(ResultSet.ColumnsInfo[Column - 1]).AutoIncrement;
-end;
-}
-
 {**
   Indicates the nullability of values in the designated column.
   @param column the first column is 1, the second is 2, ...
@@ -182,7 +169,7 @@ end;
 constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   Statement: IZStatement; SQL: string; const Handle: Psqlite;
   const StmtHandle: Psqlite_vm; const ErrorCode: Integer;
-  const AllowFreeHandle: Boolean = True);
+  const UndefinedVarcharAsStringLength: Integer; const FinalizeHandle: Boolean = True);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -192,9 +179,9 @@ begin
   FStmtHandle := StmtHandle;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
-  FFreeHandle := AllowFreeHandle;
+  FFinalizeHandle := FinalizeHandle;
   FErrorCode := ErrorCode;
-  FUndefinedVarcharAsStringLength := StrToIntDef(Statement.GetConnection.GetParameters.Values['Undefined_Varchar_AsString_Length'], 0);
+  FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
 
   Open;
@@ -205,7 +192,7 @@ end;
 }
 procedure TZSQLiteResultSet.Open;
 var
-  I, UndefinedVarcharAsStringLength: Integer;
+  I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldPrecision: Integer;
   FieldDecimals: Integer;
@@ -214,7 +201,6 @@ begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
-  UndefinedVarcharAsStringLength := (GetStatement.GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
   FColumnCount := FPlainDriver.column_count(FStmtHandle);
 
   LastRowNo := 0;
@@ -234,13 +220,12 @@ begin
       TypeName := FPlainDriver.column_decltype(FStmtHandle, i);
       if TypeName = nil then
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.column_type_AsString(FStmtHandle, i),
-          UndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
+          FUndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
           ConSettings.CPType)
       else
         ColumnType := ConvertSQLiteTypeToSQLType(TypeName,
-          UndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
+          FUndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
           ConSettings.CPType);
-
 
       if ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
       begin
@@ -275,25 +260,21 @@ end;
   Frees statement handle.
 }
 procedure TZSQLiteResultSet.FreeHandle;
-var
-  ErrorCode: Integer;
 begin
-  if FFreeHandle then
+  if FFinalizeHandle then //
   begin
     if Assigned(FStmtHandle) then
-      ErrorCode := FPlainDriver.Finalize(FStmtHandle)
-    else
-      ErrorCode := SQLITE_OK;
+      CheckSQLiteError(FPlainDriver, FStmtHandle,
+        FPlainDriver.Finalize(FStmtHandle), nil,
+        lcOther, 'FINALIZE SQLite VM', ConSettings);
     FStmtHandle := nil;
-    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil,
-      lcOther, 'FINALIZE SQLite VM', ConSettings);
   end
   else
   begin
     if FStmtHandle <> nil then
     begin
-      ErrorCode := FPlainDriver.reset(FStmtHandle);
-      CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
+      CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
+        nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
       FStmtHandle := nil;
     end;
     FErrorCode := SQLITE_DONE;
@@ -455,7 +436,8 @@ begin
         Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex) <> 0;
       SQLITE3_TEXT:
         Result := StrToBoolEx(FPlainDriver.column_text(FStmtHandle, ColumnIndex));
-      else Result := False; {SQLITE_BLOB}
+      else
+        Result := False; {SQLITE_BLOB}
     end;
 end;
 

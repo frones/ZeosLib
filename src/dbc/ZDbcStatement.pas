@@ -289,6 +289,12 @@ type
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
   end;
 
+  TZAbstractRealPreparedStatement = class(TZAbstractPreparedStatement)
+  protected
+    procedure SetASQL(const Value: RawByteString); override;
+    procedure SetWSQL(const Value: ZWideString); override;
+  end;
+
   {** Implements Abstract Callable SQL statement. }
   TZAbstractCallableStatement = class(TZAbstractPreparedStatement,
     IZCallableStatement)
@@ -2085,6 +2091,21 @@ begin
   end
   else
     Result := inherited GetUnicodeEncodedSQL(SQL);
+end;
+
+{ TZAbstractRealPreparedStatement }
+procedure TZAbstractRealPreparedStatement.SetASQL(const Value: RawByteString);
+begin
+  if ( ASQL <> Value ) and Prepared then
+    Unprepare;
+  inherited SetASQL(Value);
+end;
+
+procedure TZAbstractRealPreparedStatement.SetWSQL(const Value: ZWideString);
+begin
+  if ( WSQL <> Value ) and Prepared then
+    Unprepare;
+  inherited SetWSQL(Value);
 end;
 
 { TZAbstractCallableStatement }

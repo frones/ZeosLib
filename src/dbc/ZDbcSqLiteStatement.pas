@@ -69,7 +69,7 @@ type
     FHandle: Psqlite;
     FPlainDriver: IZSQLitePlainDriver;
     FForceNativeResultSet: Boolean;
-
+    FUndefinedVarcharAsStringLength: Integer;
     function CreateResultSet(const StmtHandle: Psqlite_vm;
       const ErrorCode: Integer): IZResultSet;
   public
@@ -99,7 +99,7 @@ type
   {$ENDIF}
 
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
@@ -107,16 +107,16 @@ type
     FPlainDriver: IZSQLitePlainDriver;
     FForceNativeResultSet: Boolean;
     FBindDoubleDateTimeValues: Boolean;
+    FUndefinedVarcharAsStringLength: Integer;
     function CreateResultSet(const StmtHandle: Psqlite_vm;
       const ErrorCode: Integer): IZResultSet;
   protected
-    procedure SetASQL(const Value: RawByteString); override;
-    procedure SetWSQL(const Value: ZWideString); override;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(PlainDriver: IZSQLitePlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings; Handle: Psqlite);
+    constructor Create(const PlainDriver: IZSQLitePlainDriver;
+      const Connection: IZConnection; const SQL: string; const Info: TStrings;
+      const Handle: Psqlite); overload;
 
     procedure Prepare; override;
     procedure Unprepare; override;
@@ -151,6 +151,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FForceNativeResultSet :=  StrToBoolEx(DefineStatementParameter(Self, 'ForceNativeResultSet', 'false'));
+  FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length', '0'), 0);
 end;
 
 {**
@@ -169,10 +170,12 @@ var
 begin
   { Creates a native result set. }
   NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
-    StmtHandle, ErrorCode);
+    StmtHandle, ErrorCode, FUndefinedVarcharAsStringLength, True);
   NativeResultSet.SetConcurrency(rcReadOnly);
 
-  if not FForceNativeResultSet then
+  if FForceNativeResultSet then
+    Result := NativeResultSet
+  else
   begin
     { Creates a cached result set. }
     CachedResolver := TZSQLiteCachedResolver.Create(FPlainDriver, FHandle, Self,
@@ -187,9 +190,7 @@ begin
     CachedResultSet.SetType(rtScrollInsensitive);
     CachedResultSet.SetConcurrency(GetResultSetConcurrency);
     Result := CachedResultSet;
-  end
-  else
-    Result := NativeResultSet;
+  end;
 end;
 
 {**
@@ -418,7 +419,7 @@ var
 begin
   { Creates a native result set. }
     NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
-      StmtHandle, ErrorCode, False);
+      StmtHandle, ErrorCode, FUndefinedVarcharAsStringLength, False);
     NativeResultSet.SetConcurrency(rcReadOnly);
 
   if not FForceNativeResultSet then
@@ -440,20 +441,6 @@ begin
   end
   else
     Result := NativeResultSet;
-end;
-
-procedure TZSQLiteCAPIPreparedStatement.SetASQL(const Value: RawByteString);
-begin
-  if ( ASQL <> Value ) and Prepared then
-    Unprepare;
-  inherited SetASQL(Value);
-end;
-
-procedure TZSQLiteCAPIPreparedStatement.SetWSQL(const Value: ZWideString);
-begin
-  if ( WSQL <> Value ) and Prepared then
-    Unprepare;
-  inherited SetWSQL(Value);
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
@@ -579,15 +566,18 @@ begin
   inherited BindInParameters;
 end;
 
-constructor TZSQLiteCAPIPreparedStatement.Create(PlainDriver: IZSQLitePlainDriver;
-  Connection: IZConnection; const SQL: string; Info: TStrings; Handle: Psqlite);
+constructor TZSQLiteCAPIPreparedStatement.Create(
+  const PlainDriver: IZSQLitePlainDriver; const Connection: IZConnection;
+  const SQL: string; const Info: TStrings; const Handle: Psqlite);
 begin
   inherited Create(Connection, SQL, Info);
+  FStmtHandle := nil;
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtForwardOnly;
   FForceNativeResultSet :=  StrToBoolEx(DefineStatementParameter(Self, 'ForceNativeResultSet', 'false'));
   FBindDoubleDateTimeValues :=  StrToBoolEx(DefineStatementParameter(Self, 'BindDoubleDateTimeValues', 'false'));
+  FUndefinedVarcharAsStringLength := StrToIntDef(DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length', '0'), 0);
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
@@ -600,13 +590,9 @@ end;
 procedure TZSQLiteCAPIPreparedStatement.Unprepare;
 begin
   ClearParameters;
-  if Assigned(FStmtHandle) then
-    FErrorCode := FPlainDriver.Finalize(FStmtHandle)
-  else
-    FErrorCode := SQLITE_OK;
+  CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.Finalize(FStmtHandle),
+    nil, lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   FStmtHandle := nil;
-  CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil,
-    lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   inherited UnPrepare;
 end;
 
@@ -614,23 +600,22 @@ function TZSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   if Not Prepared then
      Prepare;
-  { after reading the last row we reset the statment. So we don't need this here }
-  try
-    if LastResultSet <> nil then
-      LastResultSet.Close; // reset stmt
-    LastResultSet := nil;
-    BindInParameters;
-    FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther,
-      ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),
-      ConSettings);
-    if ( FErrorCode = SQLITE_ROW ) or ( FErrorCode = SQLITE_DONE) then
-      LastResultSet := CreateResultSet(FStmtHandle, FErrorCode);
-    Result := LastResultSet;
-    inherited ExecuteQueryPrepared;
-  except
-    raise;
-  end;
+
+  if LastResultSet <> nil then LastResultSet.Close; // reset stmt-handle
+  LastResultSet := nil; //keep track we do not return a closed ResultSet
+  BindInParameters;
+
+  FErrorCode := FPlainDriver.Step(FStmtHandle); //exec prepared
+  CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther,
+    ConSettings^.ConvFuncs.ZStringToRaw(SCanNotRetrieveResultsetData,
+    ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP), ConSettings);
+  if FPlainDriver.column_count(FStmtHandle) = 0 then
+    FPlainDriver.reset(FStmtHandle) //reset handle now!
+  else //expect a resultset
+    LastResultSet := CreateResultSet(FStmtHandle, FErrorCode); //resultset executes reset stmt-handle
+  Result := LastResultSet;
+
+  inherited ExecuteQueryPrepared; //Log values
 end;
 
 function TZSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
@@ -641,13 +626,13 @@ begin
 
   Result := 0;
   try
-    FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, ASQL, ConSettings);
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.Step(FStmtHandle),
+      nil, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
     Result := FPlainDriver.Changes(FHandle);
-    inherited ExecuteUpdatePrepared;
+    inherited ExecuteUpdatePrepared; //log values
   finally
-    FErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset', ConSettings);
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
+      nil, lcOther, 'Reset', ConSettings); //reset handle
     LastUpdateCount := Result;
   end;
 end;
@@ -657,14 +642,10 @@ begin
   if Not Prepared then
      Prepare;
 
-  try
-    BindInParameters;
+  BindInParameters;
 
-    FErrorCode := FPlainDriver.Step(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, 'Step', ConSettings);
-  except
-    raise;
-  end;
+  FErrorCode := FPlainDriver.Step(FStmtHandle);
+  CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, 'Step', ConSettings);
 
   { Process queries with result sets }
   if FPlainDriver.column_count(FStmtHandle) <> 0 then
