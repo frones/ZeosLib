@@ -214,7 +214,9 @@ begin
     ErrorCode := FPlainDriver.Step(StmtHandle);
     CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, nil, lcOther, 'FETCH', ConSettings);
     if FPlainDriver.column_count(StmtHandle) > 0 then
-      Result := CreateResultSet(StmtHandle, ErrorCode);
+      Result := CreateResultSet(StmtHandle, ErrorCode)
+    else
+      FPlainDriver.Finalize(StmtHandle); //finalize handle else: Databae is locked happens on close connection
   except
     FPlainDriver.Finalize(StmtHandle);
     raise;
