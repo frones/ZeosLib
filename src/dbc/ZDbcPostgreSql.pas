@@ -76,6 +76,31 @@ type
   end;
   {$WARNINGS ON}
 
+type
+  PZPGTableInfo = ^TZPGTableInfo;
+  TZPGTableInfo = record
+    OID: Oid;
+    Name: String;
+    Schema: String;
+    ColNames: Array of String;
+  end;
+
+  TZPGTableInfoCache = class(TObject)
+    protected
+      FConn: IZConnection;
+      FTblInfo: Array of TZPGTableInfo;
+      FConSettings: PZconSettings;
+      FPlainDriver: IZPostgreSQLPlainDriver;
+      FHandle: PZPostgreSQLConnect;
+      function LoadTblInfo(const TblOid: Oid; out Index: Integer): Boolean;
+      function GetTblPos(const TblOid: Oid): Integer;
+    public
+      constructor Create(const ConSettings: PZConSettings;
+        const Handle: PZPostgreSQLConnect; const PlainDriver: IZPostgreSQLPlainDriver);
+      function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+      procedure Clear;
+  end;
+
   {** Defines a PostgreSQL specific connection. }
   IZPostgreSQLConnection = interface(IZConnection)
     ['{8E62EA93-5A49-4F20-928A-0EA44ABCE5DB}']
@@ -94,6 +119,7 @@ type
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
+    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -113,10 +139,12 @@ type
     FNoticeProcessor: TZPostgreSQLNoticeProcessor;
     FPreparedStmts: TStrings;
     FClientSettingsChanged: Boolean;
+    FTableInfoCache: TZPGTableInfoCache;
     FIs_bytea_output_hex: Boolean;
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
+    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
@@ -194,7 +222,7 @@ implementation
 uses
   ZFastCode, ZMessages, ZSysUtils, ZDbcUtils, ZDbcPostgreSqlStatement,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
-  ZPostgreSqlAnalyser;
+  ZPostgreSqlAnalyser, ZEncoding;
 
 const
   FON = String('ON');
@@ -204,6 +232,117 @@ procedure DefaultNoticeProcessor(arg: Pointer; message: PAnsiChar); cdecl;
 begin
   DriverManager.LogMessage(lcOther,'Postgres NOTICE', message);
 end;
+
+{ TZPGTableInfoCache }
+function TZPGTableInfoCache.LoadTblInfo(const TblOid: Oid; 
+  out Index: Integer): Boolean;
+var
+  SQL: RawByteString;
+  TblInfo: TZPGTableInfo;
+  RawOid: RawByteString;
+  QueryHandle: PZPostgreSQLResult;
+  I: Integer;
+  function GetInt(const Row, Col: Integer): Integer;
+  begin
+    Result := RawToInt(FPlainDriver.GetValue(QueryHandle, Row, Col));
+  end;
+
+  function GetString(const Row, Col: Integer): String;
+  var
+    AnsiRec: TZAnsiRec;
+  begin
+    AnsiRec.Len := FPlainDriver.GetLength(QueryHandle, Row, Col);
+    AnsiRec.P := FPlainDriver.GetValue(QueryHandle, Row, Col);
+    {$IFDEF UNICODE}
+    Result := ZAnsiRecToUnicode(AnsiRec, FConSettings^.ClientCodePage^.CP);
+    {$ELSE}
+    SetString(Result, AnsiRec.P, AnsiRec.Len);
+    {$ENDIF}
+  end;
+begin
+  RawOID := IntToRaw(TblOid);
+
+  SQL := 'select pc.relname, pns.nspname, (select max(attnum) '+
+    'from pg_catalog.pg_attribute where attrelid = pc.oid) as colcount from '+
+    'pg_catalog.pg_class pc '+
+    'join pg_catalog.pg_namespace pns on pc.relnamespace = pns.oid '+
+    'where pc.oid = '+RawOID;
+
+  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsichar(SQL));
+  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  DriverManager.LogMessage(lcExecute, FConSettings^.Protocol, SQL);
+
+  Result := FPlainDriver.GetRowCount(QueryHandle) > 0;
+  if Result then
+  begin
+    TblInfo.OID := TblOid;
+    TblInfo.Name := GetString(0, 0);
+    TblInfo.Schema := GetString(0, 1);
+    SetLength(TblInfo.ColNames, GetInt(0, 2)+1);
+    FPlainDriver.Clear(QueryHandle);
+
+    SQL := 'select attnum, attname from pg_catalog.pg_attribute '+
+      'where attrelid = '+RawOID+' and attnum > 0';
+
+    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsichar(SQL));
+    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+    DriverManager.LogMessage(lcExecute, FConSettings^.Protocol, SQL);
+    for I := 0 to FPlainDriver.GetRowCount(QueryHandle)-1 do
+      TblInfo.ColNames[GetInt(I, 0)-1] := GetString(i, 1);
+    FPlainDriver.Clear(QueryHandle);
+
+    Index := Length(FTblInfo);
+    SetLength(FTblInfo, Index +1);
+    FTblInfo[Index] := TblInfo;
+  end
+  else
+    Index := -1;
+end;
+
+function TZPGTableInfoCache.GetTblPos(const TblOid: Oid): Integer;
+var
+  x: Integer;
+begin
+  Result := -1;
+  if TblOid <> InvalidOid then
+    for x := 0 to Length(FTblInfo) - 1 do
+      if FTblInfo[x].OID = TblOid then
+      begin
+        Result := x;
+        Break;
+      end;
+end;
+
+constructor TZPGTableInfoCache.Create(const ConSettings: PZConSettings;
+  const Handle: PZPostgreSQLConnect; const PlainDriver: IZPostgreSQLPlainDriver);
+begin
+  FConSettings := ConSettings;
+  FPlainDriver := PlainDriver;
+  FHandle := Handle;
+
+  Clear;
+end;
+
+function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+var Idx: Integer;
+begin
+  Idx := GetTblPos(TblOid);
+  if (Idx = -1) then
+  begin
+    if (TblOid <> InvalidOid) and (LoadTblInfo(TblOid, Idx)) then
+      Result := @FTblInfo[Idx]
+    else
+      Result := nil;
+  end
+  else
+    Result := @FTblInfo[Idx];
+end;
+
+procedure TZPGTableInfoCache.Clear;
+begin
+  SetLength(FTblInfo, 0);
+end;
+
 { TZPostgreSQLDriver }
 
 {**
@@ -330,11 +469,18 @@ begin
   Result := FUndefinedVarcharAsStringLength;
 end;
 
+function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+begin
+  Result := FTableInfoCache.GetTableInfo(TblOid);
+end;
+
 {**
   Destroys this object and cleanups the memory.
 }
 destructor TZPostgreSQLConnection.Destroy;
 begin
+  if FTableInfoCache <> nil then
+    FreeAndNil(FTableInfoCache);
   if FTypeList <> nil then
     FreeAndNil(FTypeList);
   inherited Destroy;
@@ -558,6 +704,8 @@ begin
       CheckCharEncoding(FClientCodePage);
       FClientSettingsChanged := True;
     end;
+
+    FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];

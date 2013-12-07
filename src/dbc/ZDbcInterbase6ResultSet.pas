@@ -1327,23 +1327,23 @@ begin
   if (ResultSetType = rtForwardOnly) and (FFetchStat = 0) then
   begin
     if (FStmtType = stSelect) then  //AVZ - Test for ExecProc - this is for multiple rows
+    begin
       FFetchStat := FPlainDriver.isc_dsql_fetch(@StatusVector,
-        @FStmtHandle, FDialect, FXSQLDA)
+        @FStmtHandle, FDialect, FXSQLDA);
+      if FFetchStat = 0 then
+        begin
+          RowNo := RowNo + 1;
+          LastRowNo := RowNo;
+          Result := True;
+        end
+      else
+        CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
+    end
     else
-    begin     //AVZ - Cursor name has a value therefore the result set already exists
+    begin
       FFetchStat := 1;
       Result := True;
     end;
-
-    if FFetchStat = 0 then
-    begin
-      RowNo := RowNo + 1;
-      LastRowNo := RowNo;
-      Result := True;
-    end
-    else
-      if not Result then
-        CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
   end;
 end;
 

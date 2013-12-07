@@ -72,9 +72,7 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
     FCodePageArray: TWordDynArray;
-    CursorAlreadySet: Boolean;
 
-    Cursor: AnsiString;
     FResultXSQLDA: IZSQLDA;
 
     StmtHandle: TISC_STMT_HANDLE;
@@ -214,7 +212,6 @@ begin
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   ResultSetType := rtScrollInsensitive;
   StmtHandle := 0;
-  CursorName := '';
 
   Prepare;
 end;
@@ -239,7 +236,6 @@ end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
 begin
-  CursorAlreadySet := False;
   StmtHandle := 0;
   with FIBConnection do
   begin
@@ -262,8 +258,6 @@ begin
   if StmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
-  CursorName := '';
-  CursorAlreadySet := False;
   inherited Unprepare;
 end;
 
@@ -291,7 +285,6 @@ begin
         GetDialect, FParamSQLData.GetData)
     else
     begin
-      //CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
       if (FResultXSQLDA = nil) then
         GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
           GetDialect, FParamSQLData.GetData, nil) //not expecting a result
@@ -359,34 +352,17 @@ begin
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
           GetDialect, FParamSQLData.GetData)
       else
-      begin
-        if (CursorName = '') and not CursorAlreadySet then
-        begin
-          CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
-          CursorAlreadySet := False;
-        end
-        else
-          CursorAlreadySet := True;
         if (FResultXSQLDA = nil) then
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, nil) //not expecting a result
         else
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, FResultXSQLDA.GetData); //expecting a result
-      end;
 
       iError := CheckInterbase6Error(ASQL);
 
       if (StatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
       begin
-        if (CursorName <> '') and not CursorAlreadySet then
-        begin
-          Cursor := CursorName;
-          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
-                  @StmtHandle, PAnsiChar(Cursor), 0);
-          iError := CheckInterbase6Error(ASQL);
-        end;
-
         if (iError <> DISCONNECT_ERROR) then
           Result := CreateIBResultSet(SQL, Self,
             TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
@@ -400,10 +376,6 @@ begin
     except
       on E: Exception do
       begin
-        //The cursor will be already closed for exec2
-        if (Pos('ExecProc', String(CursorName)) <> 0) then
-          StmtHandle := 0;
-
         {EH: do not Close the Stmt if execution fails !! This will be done on unprepare}
         //FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
         raise;
@@ -448,11 +420,7 @@ begin
     case StatementType of
       stCommit, stRollback, stUnknown: Result := -1;
       stSelect: FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
-      stDelete: if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
-      stUpdate: ; //EgonHugeist - but not a UpdateStatement!
     end;
-
-
 
     { Autocommit statement. }
     if Connection.GetAutoCommit and ( StatementType <> stSelect ) then
@@ -562,8 +530,6 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
-var
-  Cursor: AnsiString;
 begin
   Result := False;
   with FIBConnection do
@@ -588,11 +554,8 @@ begin
         ParamSqlData }
       if (FStatementType in [stSelect, stExecProc])
         and (FResultSQLData.GetFieldCount <> 0) then
-      begin
-        Cursor := RandomString(12);
         LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
-          FStmtHandle, FResultSQLData, CachedLob, FStatementType);
-      end
+          FStmtHandle, FResultSQLData, CachedLob, FStatementType)
       else
       begin
         { Fetch data and fill Output params }
@@ -626,8 +589,6 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  Cursor: AnsiString;
 begin
   with FIBConnection do
   begin
@@ -640,27 +601,14 @@ begin
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
         GetDialect, FParamSQLData.GetData)
     else
-    begin
-      CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
         GetDialect, FParamSQLData.GetData, FResultSQLData.GetData);
-    end;
 
     CheckInterbase6Error(ProcSql);
 
     if (FStatementType in [stSelect, stExecProc]) and (FResultSQLData.GetFieldCount <> 0) then
-    begin
-      if CursorName <> '' then
-      begin
-        Cursor := CursorName;
-        GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector, @FStmtHandle, PAnsiChar(Cursor), 0);
-        CheckInterbase6Error(ProcSql);
-      end;
-
       Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
         FResultSQLData, CachedLob, FStatementType);
-    end;
-
   end;
 end;
 {$HINTS ON}
@@ -676,8 +624,6 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
-var
-  Cursor: AnsiString;
 begin
   with FIBConnection do
   begin
@@ -696,7 +642,6 @@ begin
       if (FStatementType in [stSelect, stExecProc])
         and (FResultSQLData.GetFieldCount <> 0) then
       begin
-        Cursor := RandomString(12);
         FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
           FResultSQLData, CachedLob, FStatementType));
       end

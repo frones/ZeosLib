@@ -238,7 +238,8 @@ begin
   try
     PrepareOracleStatement(FPlainDriver, ASQL, Handle, ErrorHandle,
       FPrefetchcount, ConSettings);
-    ExecuteOracleStatement(FPlainDriver, Connection, ASQL, Handle, ErrorHandle);
+    ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+      ASQL, Handle, ErrorHandle, ConSettings, Connection.GetAutoCommit);
     Result := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
   finally
     FreeOracleStatementHandles(FPlainDriver, Handle, ErrorHandle);
@@ -246,9 +247,7 @@ begin
 
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
+  { Autocommit statement. done by ExecuteOracleStatement}
 end;
 
 {**
@@ -296,8 +295,8 @@ begin
     end
     else
     begin
-      ExecuteOracleStatement(FPlainDriver, Connection, ASQL,
-        Handle, ErrorHandle);
+      ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+        ASQL, Handle, ErrorHandle, ConSettings, Connection.GetAutoCommit);
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
     end;
   finally
@@ -307,9 +306,7 @@ begin
 
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
-  { Autocommit statement. }
-  if not Result and Connection.GetAutoCommit then
-    Connection.Commit;
+  { Autocommit statement. done by ExecuteOracleStatement}
 end;
 
 {**
@@ -570,8 +567,8 @@ begin
   else
   begin
     { Executes the statement and gets a result. }
-    ExecuteOracleStatement(FPlainDriver, Connection, ASQL,
-      Handle, ErrorHandle);
+    ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+      ASQL, Handle, ErrorHandle, ConSettings, Connection.GetAutoCommit);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
   end;
 
@@ -580,9 +577,7 @@ begin
   { Unloads binded variables with values. }
   UnloadOracleVars(FInVars);
 
-  { Autocommit statement. }
-  if not Result and Connection.GetAutoCommit then
-    Connection.Commit;
+  { Autocommit statement. done by ExecuteOracleStatement}
 end;
 
 {**
@@ -655,8 +650,8 @@ begin
     else
     begin
       { Executes the statement and gets a result. }
-      ExecuteOracleStatement(FPlainDriver, Connection, ASQL,
-        Handle, ErrorHandle);
+      ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+        ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
     end;
     Result := LastUpdateCount;
@@ -667,9 +662,7 @@ begin
     UnloadOracleVars(FInVars);
   end;
 
-  { Autocommit statement. }
-  if Connection.GetAutoCommit then
-    Connection.Commit;
+  { Autocommit statement. done by ExecuteOracleStatement}
 end;
 
 {**
@@ -1062,8 +1055,8 @@ begin
     FInVars, InParamValues, ChunkSize);
 
   try
-    ExecuteOracleStatement(FPlainDriver, Connection, ASQL,
-      FHandle, FErrorHandle);
+    ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     FetchOutParamsFromOracleVars;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
@@ -1072,7 +1065,7 @@ begin
     UnloadOracleVars(FInVars);
   end;
 
-  { Autocommit statement. }
+  { Autocommit statement. done by ExecuteOracleStatement}
   if Connection.GetAutoCommit then
     Connection.Commit;
 
@@ -1090,8 +1083,8 @@ begin
     FInVars, InParamValues, ChunkSize);
 
   try
-    ExecuteOracleStatement(FPlainDriver, Connection, ASQL,
-      FHandle, FErrorHandle);
+    ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
     FetchOutParamsFromOracleVars;
     LastResultSet := CreateOracleResultSet(FPlainDriver, Self, Self.SQL,
       FHandle, FErrorHandle, FInVars, FOracleParams);
