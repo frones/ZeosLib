@@ -6,6 +6,8 @@
 
 drop table if exists Mantis229;
 drop table if exists ntax_bejovo_konyvelesi_tipusok;
+drop table if exists Ticket51_A;
+drop table if exists Ticket51_B;
 drop table if exists test739514;
 drop table if exists test739519;
 drop table if exists test766053a;

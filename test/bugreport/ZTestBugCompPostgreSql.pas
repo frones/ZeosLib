@@ -98,6 +98,7 @@ type
     procedure TestUnknowParam;
     procedure TestTicket44;
     procedure TestUnicodeEscape;
+    procedure TestTicket51;
   end;
 
   TZTestCompPostgreSQLBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -930,6 +931,32 @@ begin
     Query.SQL.Text := 'select :content';
     Query.ParamByName('content').AsString := 'C:/User';
     Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
+
+{
+Column "Name"
+-> done! Expected result: Name column shows "(Memo/WideMemo)"
+-> resolved: Actual result: Name column is empty
+}
+procedure TZTestCompPostgreSQLBugReport.TestTicket51;
+var Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Query := CreateQuery;
+  Connection.Connect;
+  try
+    Query.SQL.Text := 'SELECT Ticket51_A.*, '+
+      '(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" '+
+      'ELSE ''Empty'' END) As "Name" FROM Ticket51_A '+
+      'LEFT JOIN Ticket51_B ON Ticket51_B."t1_id" = Ticket51_A."ID" '+
+      'WHERE Ticket51_A."order_id" = 2';
+    Query.Open;
+    CheckMemoFieldType(Query.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
+    CheckEquals('MyName', Query.Fields[2].AsString);
   finally
     Query.Free;
   end;

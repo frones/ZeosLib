@@ -78,7 +78,6 @@ type
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
       QueryHandle: PZPostgreSQLResult; Chunk_Size: Integer);
-    destructor Destroy; override;
 
     procedure Close; override;
 
@@ -165,14 +164,6 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZPostgreSQLResultSet.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
   Converts a PostgreSQL native types into ZDBC SQL types.
   @param ColumnIndex a column index.
   @param ColumnInfo a column description object.
@@ -204,7 +195,7 @@ begin
         ColumnInfo.Precision := 256;
   end;
 
-  SQLType := PostgreSQLToSQLType(Connection, TypeOid);
+  SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid);
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
@@ -224,12 +215,16 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldMode, FieldSize, FieldType: Integer;
+  TableInfo: PZPGTableInfo;
+  Connection: IZPostgreSQLConnection;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
   if not Assigned(FQueryHandle) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+
+  Connection := Statement.GetConnection as IZPostgreSQLConnection;
 
   LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
 
@@ -240,10 +235,23 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnName := '';
-      TableName := '';
+      if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
+        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
+      else
+        TableInfo := nil;
+      if TableInfo = nil then
+      begin
+        SchemaName := '';
+        ColumnName := '';
+        TableName := '';
+      end
+      else
+      begin
+        SchemaName := TableInfo^.Schema;
+        TableName := TableInfo^.Name;
+        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I)];
+      end;
       ColumnLabel := ZDbcString(FPlainDriver.GetFieldName(FQueryHandle, I));
-
       ColumnDisplaySize := 0;
       Scale := 0;
       Precision := 0;

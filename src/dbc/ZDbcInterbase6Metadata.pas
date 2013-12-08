@@ -208,6 +208,7 @@ type
     function GetPrivilege(Privilege: string): string;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-25
+    function ConstructNameCondition(Pattern: string; Column: string): string; override;
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
@@ -1170,6 +1171,12 @@ end;
 function TZInterbase6DatabaseMetadata.CreateDatabaseInfo: IZDatabaseInfo;
 begin
   Result := TZInterbase6DatabaseInfo.Create(Self);
+end;
+
+function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
+  Column: string): string;
+begin
+  Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;

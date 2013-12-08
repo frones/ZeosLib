@@ -134,7 +134,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  SysUtils, ZDbcUtils, ZEncoding{, ZDbcLogging};
+  SysUtils, ZDbcUtils, ZEncoding, ZDbcLogging;
 
 { TZInterbase6ResultSet }
 
@@ -676,13 +676,11 @@ begin
       begin
         FFetchStat := GetPlainDriver.isc_dsql_fetch(@StatusVector,
           @FStmtHandle, GetDialect, FSqlData.GetData);
-        //CheckInterbase6Error(GetPlainDriver, StatusVector, lcOther); //EH to test
       end
       else
-      begin     //AVZ - Cursor name has a value therefore the result set already exists
+      begin
         FFetchStat := 1;
         Result := True;
-        //FStmtHandle := nil;  //AVZ TEST
       end;
     end;
 
@@ -691,7 +689,10 @@ begin
       RowNo := RowNo + 1;
       LastRowNo := RowNo;
       Result := True;
-    end;
+    end
+    else
+      if not Result then
+        CheckInterbase6Error(FIBConnection.GetPlainDriver, StatusVector, lcOther);
   end;
 end;
 
