@@ -32,6 +32,7 @@ drop table IF EXISTS table894367a;
 drop table IF EXISTS table894367b;
 drop table IF EXISTS table894367c;
 drop table IF EXISTS TableTicket52;
+drop table IF EXISTS TableMS56OBER9357;
 /*
 drop table table914436;
 */
