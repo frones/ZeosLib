@@ -152,7 +152,7 @@ type
     destructor Destroy; override;
 
     function FormWhereClause(Columns: TObjectList;
-      OldRowAccessor: TZRowAccessor): string;
+      OldRowAccessor: TZRowAccessor): string; virtual;
     function FormInsertStatement(Columns: TObjectList;
       NewRowAccessor: TZRowAccessor): string;
     function FormUpdateStatement(Columns: TObjectList;
@@ -665,23 +665,7 @@ begin
     Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
     if OldRowAccessor.IsNull(Current.ColumnIndex) then
     begin
-      if not (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then
-      begin
-        case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
-          stDate:
-            Result := Result+ '=' + QuotedStr('0000-00-00')+
-              ' OR '+Result + ' IS NULL';
-          stTime:
-            Result := Result+ '=' + QuotedStr('00:00:00')+
-              ' OR '+Result + ' IS NULL';
-          stTimeStamp:
-            Result := Result+ '=' + QuotedStr('0000-00-00 00:00:00')+
-              ' OR '+Result + ' IS NULL';
-          else Result := Result + ' IS NULL';
-        end;
-      end
-      else
-        Result := Result + ' IS NULL ';
+      Result := Result + ' IS NULL ';
       Columns.Delete(N);
     end
     else
