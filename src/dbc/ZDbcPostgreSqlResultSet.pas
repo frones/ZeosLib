@@ -283,7 +283,7 @@ begin
       begin
         SchemaName := TableInfo^.Schema;
         TableName := TableInfo^.Name;
-        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I)];
+        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I) - 1];
       end;
       ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldName(FQueryHandle, I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ColumnDisplaySize := 0;
