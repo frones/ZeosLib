@@ -681,6 +681,9 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
+    if (InParamValues[I].VType = vtNull) and (InParamDefaultValues[I] <> '') and
+      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+        ClientVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2));
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_STRING then
       CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
