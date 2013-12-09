@@ -2350,31 +2350,31 @@ begin
         if ZCompatibleCodePages(CodePage, zCP_UTF16) then
         begin
           Value.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
-          Result.P := PWideChar(Value.VUnicodeString);
+          Result.P := Pointer(Value.VUnicodeString);
           Result.Len := Length(Value.VUnicodeString);
         end
         else
         begin
           Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-          Result.P := PAnsiChar(Value.VRawByteString);
+          Result.P := Pointer(Value.VRawByteString);
           Result.Len := Length(Value.VRawByteString);
         end;
     vtUTF8String:
       if CodePage = zCP_UTF8 then
       begin
-        Result.P := PAnsiChar(Value.VUTF8String);
+        Result.P := Pointer(Value.VUTF8String);
         Result.Len := Length(Value.VUTF8String);
       end
       else
       begin
         Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-        Result.P := PAnsiChar(Value.VRawByteString);
+        Result.P := Pointer(Value.VRawByteString);
         Result.Len := Length(Value.VRawByteString);
       end;
     else
       begin
         Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-        Result.P := PAnsiChar(Value.VRawByteString);
+        Result.P := Pointer(Value.VRawByteString);
         Result.Len := Length(Value.VRawByteString);
       end;
   end;

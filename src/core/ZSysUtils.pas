@@ -3053,7 +3053,7 @@ begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
   SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  Move(Src^, Pointer(Dest)^, Len);
   {$ELSE}
   SetString(Dest, Src, Len);
   {$ENDIF}
@@ -3067,7 +3067,7 @@ begin
   else
   begin
     SetLength(Dest, Len div 2);
-    Move(Src^, PWideChar(Dest)^, Len);
+    Move(Src^, Pointer(Dest)^, Len);
   end;
 end;
 
@@ -3077,7 +3077,7 @@ begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
   SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  Move(Src^, Pointer(Dest)^, Len);
   {$ELSE}
   SetString(Dest, Src, Len);
   {$ENDIF}
@@ -3114,7 +3114,7 @@ begin
   for i := 0 to Len-1 do
     PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
-  System.SetString(Result, PAnsiChar(Src), Len);
+  System.SetString(Result, Src, Len);
   {$ENDIF}
 end;
 
@@ -3189,7 +3189,7 @@ begin
       PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
   {$ELSE}
-  System.SetString(Result, PAnsiChar(Src), Len);
+  System.SetString(Result, Src, Len);
   {$ENDIF}
 end;
 
@@ -3431,11 +3431,11 @@ begin
   begin
     Hex := IntToHex(I, 2);
     {$IFDEF UNICODE}
-    TwoDigitLookupHexLW[i] := PCardinal(PWideChar(Hex))^;
-    TwoDigitLookupHexW[i] := PWord(PAnsiChar(AnsiString(Hex)))^;
+    TwoDigitLookupHexLW[i] := PLongWord(Pointer(Hex))^;
+    TwoDigitLookupHexW[i] := PWord(Pointer(AnsiString(Hex)))^;
     {$ELSE}
-    TwoDigitLookupHexW[i] := PWord(PChar(Hex))^;
-    TwoDigitLookupHexLW[i] := PCardinal(PWideChar(ZWideString(Hex)))^;
+    TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
+    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
     {$ENDIF}
   end;
 end;
