@@ -613,7 +613,7 @@ var
 begin
   {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
   WideRec.Len := Length(US);
-  WideRec.P := PWideChar(US);
+  WideRec.P := Pointer(US);
   Result := ZWideRecToRaw(WideRec, CP);
   {$ELSE}
     if ZCompatibleCodePages(CP, zCP_UTF8) then

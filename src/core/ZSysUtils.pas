@@ -525,14 +525,6 @@ function DecodeCString(const Value: string): string;
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
 
 {**
-   Copy buffer to the pascal string
-   @param Buffer a buffer with data
-   @param Length a buffer length
-   @return a buffer content
-}
-function MemPas(Buffer: PChar; Length: LongInt): string;
-
-{**
   Decodes a Full Version Value encoded with the format:
    (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
   into separated major, minor and subversion values
@@ -2976,19 +2968,6 @@ begin
       P^ := Target;
     Inc(P);
   end;
-end;
-
-{**
-   Copy buffer to the pascal string
-   @param Buffer a buffer with data
-   @param Length a buffer length
-   @return a buffer content
-}
-function MemPas(Buffer: PChar; Length: LongInt): string;
-begin
-  Result := '';
-  if Assigned(Buffer) then
-    SetString(Result, Buffer, Length);
 end;
 
 {**
