@@ -2335,6 +2335,7 @@ begin
 end;
 
 function TZClientVariantManager.GetAsCharRec(var Value: TZVariant; const CodePage: Word): TZCharRec;
+Label AsRBS;
 begin
   Result.CP := CodePage;
   case Value.VType of
@@ -2350,32 +2351,34 @@ begin
         if ZCompatibleCodePages(CodePage, zCP_UTF16) then
         begin
           Value.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
-          Result.P := Pointer(Value.VUnicodeString);
           Result.Len := Length(Value.VUnicodeString);
+          if Result.Len = 0 then
+            Result.P := PWideChar(Value.VUnicodeString) //Pointer Result would be nil
+          else //avoid RTL conversion to PWideChar
+            Result.P := Pointer(Value.VUnicodeString);
         end
         else
-        begin
-          Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-          Result.P := Pointer(Value.VRawByteString);
-          Result.Len := Length(Value.VRawByteString);
-        end;
+          goto AsRBS;
     vtUTF8String:
       if CodePage = zCP_UTF8 then
       begin
-        Result.P := Pointer(Value.VUTF8String);
         Result.Len := Length(Value.VUTF8String);
+        if Result.Len = 0 then
+          Result.P := PAnsiChar(Value.VUTF8String)
+        else //avoid RTL conversion to PAnsiChar
+          Result.P := Pointer(Value.VUTF8String)
       end
       else
-      begin
-        Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-        Result.P := Pointer(Value.VRawByteString);
-        Result.Len := Length(Value.VRawByteString);
-      end;
+        goto AsRBS;
     else
+      AsRBS:
       begin
         Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-        Result.P := Pointer(Value.VRawByteString);
         Result.Len := Length(Value.VRawByteString);
+        if Result.Len = 0 then
+          Result.P := PAnsiChar(Value.VRawByteString) //Pointer Result would be nil
+        else //avoid RTL conversion to PAnsiChar
+          Result.P := Pointer(Value.VRawByteString)
       end;
   end;
 end;

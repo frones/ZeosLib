@@ -1542,7 +1542,7 @@ begin
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        FUniTemp := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+        FUniTemp := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
@@ -1603,7 +1603,7 @@ begin
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        Result := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+        Result := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
@@ -3649,27 +3649,27 @@ begin
     stDate:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-            RawSQLDateToDateTime (PAnsiChar(Value), Length(Value),
+            RawSQLDateToDateTime (Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-        RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value),
+        RawSQLTimeToDateTime(Pointer(Value), Length(Value),
           ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-            Frac(RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            Frac(RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
       PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-          RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+          RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
             ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream, stBinaryStream:
       GetBlob(ColumnIndex, IsNull).SetString(Value);
@@ -4112,7 +4112,7 @@ begin
           if Columns[FColumnOffsets[I]] = 0 then
             InternalSetPAnsiChar(DestBuffer, I +1,
               PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PAnsiInc,
-              PLongWord(PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
+              PLongWord(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -4150,7 +4150,7 @@ begin
           if (Columns[FColumnOffsets[I]] = 0) then
             InternalSetPAnsiChar(DestBuffer, I +1,
               PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PAnsiInc,
-              PLongWord(PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
+              PLongWord(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -4176,7 +4176,7 @@ begin
       stString, stUnicodeString:
         begin
           Result.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          Result.Len := PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          Result.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
         end;
       else
         Result := inherited GetAnsiRec(ColumnIndex, IsNull);
@@ -4268,8 +4268,8 @@ begin
       stString, stUnicodeString:
         begin
           if ZCompatibleCodePages(ZDefaultsystemCodePage, ConSettings^.ClientCodePage^.CP) then
-            System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
-              PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
+              PLongWord(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
           else
           begin
             AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
@@ -4311,8 +4311,8 @@ begin
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         begin
           SetLength(Result, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
-          System.Move(PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
-            PAnsiChar(Result)^, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          System.Move((PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
+            Pointer(Result)^, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
         end
         {$ELSE}
           System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
@@ -4355,10 +4355,10 @@ begin
       stString, stUnicodeString:
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         ZSetString(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^, Result);
+          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^, Result);
         {$ELSE}
         System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
         {$ENDIF}
       else
         Result := Inherited GetRawByteString(ColumnIndex, IsNull);
