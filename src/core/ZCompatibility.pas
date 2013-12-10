@@ -84,6 +84,9 @@ type
   {$IF not declared(PUInt64)}
   PUInt64               = {$IFDEF FPC}PQWord{$ELSE}^UInt64{$ENDIF};
   {$IFEND}
+  {$IF not declared(PPLongWord)}
+  PPLongWord            = ^PLongWord;
+  {$IFEND}
 {$IFDEF FPC}
   ULong                 = {$IFDEF WIN64}LongWord{$ELSE}PTRUINT{$ENDIF};
                             // EgonHugeist: Use always a 4Byte Integer as long the PlainDriver dll's are 32Bit for Windows64
@@ -354,33 +357,33 @@ var
       DisplayFormatSettings:
         (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
-          PDateFormat: PAnsiChar('DD-MM-YYYY');
+          PDateFormat: 'DD-MM-YYYY';
           TimeFormat: 'HH:NN:SS.ZZZ';
           TimeFormatLen: 12;
-          PTimeFormat: PAnsiChar('HH:NN:SS.ZZZ');
+          PTimeFormat: 'HH:NN:SS.ZZZ';
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS';
           DateTimeFormatLen: 23;
-          PDateTimeFormat: PAnsiChar('DD-MM-YYYY HH:NN:SS'));
+          PDateTimeFormat: 'DD-MM-YYYY HH:NN:SS');
       ReadFormatSettings:
           (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
-          PDateFormat: PAnsiChar('DD-MM-YYYY');
+          PDateFormat: 'DD-MM-YYYY';
           TimeFormat: 'HH:NN:SS.ZZZ';
           TimeFormatLen: 12;
-          PTimeFormat: PAnsiChar('HH:NN:SS.ZZZ');
+          PTimeFormat: 'HH:NN:SS.ZZZ';
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
           DateTimeFormatLen: 23;
-          PDateTimeFormat: PAnsiChar('DD-MM-YYYY HH:NN:SS.ZZZ'));
+          PDateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ');
       WriteFormatSettings:
           (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
-          PDateFormat: PAnsiChar('DD-MM-YYYY');
+          PDateFormat: 'DD-MM-YYYY';
           TimeFormat: 'HH:NN:SS.ZZZ';
           TimeFormatLen: 12;
-          PTimeFormat: PAnsiChar('HH:NN:SS.ZZZ');
+          PTimeFormat: 'HH:NN:SS.ZZZ';
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
           DateTimeFormatLen: 23;
-          PDateTimeFormat: PAnsiChar('DD-MM-YYYY HH:NN:SS.ZZZ'));
+          PDateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ');
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
