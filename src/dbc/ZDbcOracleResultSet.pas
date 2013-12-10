@@ -806,6 +806,8 @@ begin
         // later we only need the reference-pointers to create a new dataset
       else
       begin
+         //http://cpansearch.perl.org/src/TIMB/DBD-Oracle-1.26/oci8.c
+
         //create a temporary object
         type_ref := nil;
         CheckOracleError(FPlainDriver, FErrorHandle,
@@ -1025,9 +1027,9 @@ begin
 
           CurrentVar._Obj := DescribeObject(FplainDriver, FConnection,
             CurrentVar.Handle, FStmtHandle, nil, 0);
-          if CurrentVar._Obj.typecode = OCI_TYPECODE_TABLE then
+          if CurrentVar._Obj.col_typecode = OCI_TYPECODE_TABLE then
             CurrentVar.ColType := stDataSet
-          else if CurrentVar._Obj.typecode = OCI_TYPECODE_VARRAY then
+          else if CurrentVar._Obj.col_typecode = OCI_TYPECODE_VARRAY then
             CurrentVar.ColType := stArray
           else //more possible types
             CurrentVar.ColType := stBinaryStream;

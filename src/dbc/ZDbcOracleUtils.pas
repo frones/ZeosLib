@@ -747,9 +747,11 @@ begin
       ErrorMessage := 'OCI_NO_DATA';
     OCI_ERROR:
       begin
-        PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
-          OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_ERROR: ' + RawByteString(ErrorBuffer);
+        if PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
+          OCI_HTYPE_ERROR) = 100 then
+          ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
+        else
+          ErrorMessage := 'OCI_ERROR: ' + RawByteString(ErrorBuffer);
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';
@@ -946,6 +948,7 @@ var
     Result.parmap := nil;
     Result.tdo := nil;
     Result.typecode := 0;
+    Result.col_typecode := 0;
     Result.elem_typecode := 0;
     Result.obj_ref := nil;
     Result.obj_ind := nil;
