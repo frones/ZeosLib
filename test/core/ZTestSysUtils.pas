@@ -366,6 +366,7 @@ const
   begin
     ZFormatSettings.DateFormat := DateFormat;
     ZFormatSettings.DateFormatLen := Length(DateFormat);
+    ZFormatSettings.PDateFormat := PAnsiChar(ZFormatSettings.DateFormat);
     CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
@@ -450,6 +451,7 @@ const
   begin
     ZFormatSettings.TimeFormat := TimeFormat;
     ZFormatSettings.TimeFormatLen := Length(TimeFormat);
+    ZFormatSettings.PTimeFormat := PAnsiChar(ZFormatSettings.TimeFormat);
     CheckEquals(Expected, ZSysUtils.RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
@@ -582,6 +584,7 @@ const
   begin
     ZFormatSettings.DateTimeFormat := DateTimeFormat;
     ZFormatSettings.DateTimeFormatLen := Length(DateTimeFormat);
+    ZFormatSettings.PDateTimeFormat := PAnsiChar(ZFormatSettings.DateTimeFormat);
     CheckEquals(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
