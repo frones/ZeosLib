@@ -474,6 +474,9 @@
 // You can get SynEdit at http://synedit.sourceforge.net/
 {.$DEFINE USE_SYNEDIT}
 
+//NO COLUMN-LIMITATION!
+{.$DEFINE NO_COLUMN_LIMIT}
+
 //run ZSysUtils benchmarks
 {.$DEFINE BENCHMARK}
 
