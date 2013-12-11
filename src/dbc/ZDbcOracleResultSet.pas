@@ -365,7 +365,6 @@ begin
   if SQLVarHolder = nil then
     SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   if SQLVarHolder <> nil then
-  begin
     case SQLVarHolder.TypeCode of
       SQLT_INT:
         Result := IntToRaw(PLongInt(SQLVarHolder.Data)^);
@@ -384,8 +383,7 @@ begin
           Blob := GetBlob(ColumnIndex);
           Result := Blob.GetString;
         end;
-    end;
-  end
+    end
   else
     Result := '';
 end;
@@ -808,6 +806,8 @@ begin
         // later we only need the reference-pointers to create a new dataset
       else
       begin
+         //http://cpansearch.perl.org/src/TIMB/DBD-Oracle-1.26/oci8.c
+
         //create a temporary object
         type_ref := nil;
         CheckOracleError(FPlainDriver, FErrorHandle,
@@ -981,6 +981,9 @@ begin
             else if CurrentVar.Precision <= 19 then
               CurrentVar.ColType := stLong;
           end
+          else if (CurrentVar.Scale <= 4) and (CurrentVar.Precision > 0) and
+            (CurrentVar.Precision <= 19) then
+            CurrentVar.ColType := stCurrency;
         end;
       SQLT_BFLOAT, SQLT_BDOUBLE, SQLT_IBFLOAT, SQLT_IBDOUBLE:
         CurrentVar.ColType := stDouble;
@@ -1024,11 +1027,11 @@ begin
 
           CurrentVar._Obj := DescribeObject(FplainDriver, FConnection,
             CurrentVar.Handle, FStmtHandle, nil, 0);
-
-          if FPlainDriver.TypeTypeCode(Connection.GetConnectionHandle,
-              FerrorHandle, CurrentVar._Obj.tdo) = SQLT_NCO then
+          if CurrentVar._Obj.col_typecode = OCI_TYPECODE_TABLE then
             CurrentVar.ColType := stDataSet
-          else
+          else if CurrentVar._Obj.col_typecode = OCI_TYPECODE_VARRAY then
+            CurrentVar.ColType := stArray
+          else //more possible types
             CurrentVar.ColType := stBinaryStream;
         end;
       else

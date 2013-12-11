@@ -184,19 +184,23 @@ type
     function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
     function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; virtual;
     function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
-    function GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean; virtual;
-    function GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte; virtual;
-    function GetShort(Const ColumnIndex: Integer; var IsNull: Boolean): ShortInt; virtual;
-    function GetSmall(Const ColumnIndex: Integer; var IsNull: Boolean): SmallInt; virtual;
-    function GetInt(Const ColumnIndex: Integer; var IsNull: Boolean): Integer; virtual;
-    function GetLong(Const ColumnIndex: Integer; var IsNull: Boolean): Int64; virtual;
-    function GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single; virtual;
-    function GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double; virtual;
-    function GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended; virtual;
-    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes; virtual;
-    function GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
-    function GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
-    function GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime; virtual;
+    function GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean;
+    function GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte;
+    function GetShort(Const ColumnIndex: Integer; var IsNull: Boolean): ShortInt;
+    function GetWord(Const ColumnIndex: Integer; var IsNull: Boolean): Word;
+    function GetSmall(Const ColumnIndex: Integer; var IsNull: Boolean): SmallInt;
+    function GetUInt(Const ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+    function GetInt(Const ColumnIndex: Integer; var IsNull: Boolean): Integer;
+    function GetULong(Const ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+    function GetLong(Const ColumnIndex: Integer; var IsNull: Boolean): Int64;
+    function GetFloat(Const ColumnIndex: Integer; var IsNull: Boolean): Single;
+    function GetDouble(Const ColumnIndex: Integer; var IsNull: Boolean): Double;
+    function GetCurrency(Const ColumnIndex: Integer; var IsNull: Boolean): Currency;
+    function GetBigDecimal(Const ColumnIndex: Integer; var IsNull: Boolean): Extended;
+    function GetBytes(Const ColumnIndex: Integer; var IsNull: Boolean): TBytes;
+    function GetDate(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+    function GetTime(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
+    function GetTimestamp(Const ColumnIndex: Integer; var IsNull: Boolean): TDateTime;
     function GetAsciiStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetUnicodeStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBinaryStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
@@ -210,15 +214,19 @@ type
 
     procedure SetNotNull(Const ColumnIndex: Integer);
     procedure SetNull(Const ColumnIndex: Integer);
-    procedure SetBoolean(Const ColumnIndex: Integer; const Value: Boolean); virtual;
-    procedure SetByte(Const ColumnIndex: Integer; const Value: Byte); virtual;
-    procedure SetShort(Const ColumnIndex: Integer; const Value: ShortInt); virtual;
-    procedure SetSmall(Const ColumnIndex: Integer; const Value: SmallInt); virtual;
-    procedure SetInt(Const ColumnIndex: Integer; const Value: Integer); virtual;
-    procedure SetLong(Const ColumnIndex: Integer; const Value: Int64); virtual;
-    procedure SetFloat(Const ColumnIndex: Integer; const Value: Single); virtual;
-    procedure SetDouble(Const ColumnIndex: Integer; const Value: Double); virtual;
-    procedure SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended); virtual;
+    procedure SetBoolean(Const ColumnIndex: Integer; const Value: Boolean);
+    procedure SetByte(Const ColumnIndex: Integer; const Value: Byte);
+    procedure SetShort(Const ColumnIndex: Integer; const Value: ShortInt);
+    procedure SetWord(Const ColumnIndex: Integer; const Value: Word);
+    procedure SetSmall(Const ColumnIndex: Integer; const Value: SmallInt);
+    procedure SetUInt(Const ColumnIndex: Integer; const Value: Cardinal);
+    procedure SetInt(Const ColumnIndex: Integer; const Value: Integer);
+    procedure SetULong(Const ColumnIndex: Integer; const Value: UInt64);
+    procedure SetLong(Const ColumnIndex: Integer; const Value: Int64);
+    procedure SetFloat(Const ColumnIndex: Integer; const Value: Single);
+    procedure SetDouble(Const ColumnIndex: Integer; const Value: Double);
+    procedure SetCurrency(Const ColumnIndex: Integer; const Value: Currency);
+    procedure SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended);
     procedure SetString(Const ColumnIndex: Integer; const Value: String); virtual;
     procedure SetAnsiRec(Const ColumnIndex: Integer; const Value: TZAnsiRec);virtual;
     procedure SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar); virtual;
@@ -434,16 +442,24 @@ begin
       Result := SizeOf(Byte);
     stShort:
       Result := SizeOf(ShortInt);
+    stWord:
+      Result := SizeOf(Word);
     stSmall:
       Result := SizeOf(SmallInt);
+    stLongWord:
+      Result := SizeOf(LongWord);
     stInteger:
       Result := SizeOf(Integer);
+    stULong:
+      Result := SizeOf(UInt64);
     stLong:
       Result := SizeOf(Int64);
     stFloat:
       Result := SizeOf(Single);
     stDouble:
       Result := SizeOf(Double);
+    stCurrency:
+      Result := SizeOf(Currency);
     stBigDecimal:
       Result := SizeOf(Extended);
     stString:
@@ -784,17 +800,27 @@ begin
     ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
     case FColumnTypes[ColumnIndex] of
       stByte:
+        Result := SmallInt(PByte(ValuePtr1)^) - SmallInt(PByte(ValuePtr2)^);
+      stShort:
         Result := PShortInt(ValuePtr1)^ - PShortInt(ValuePtr2)^;
+      stWord:
+        Result := Integer(PWord(ValuePtr1)^) - Integer(PWord(ValuePtr2)^);
       stSmall:
         Result := PSmallInt(ValuePtr1)^ - PSmallInt(ValuePtr2)^;
+      stLongWord:
+        Result := Int64(PLongWord(ValuePtr1)^) - Int64(PLongWord(ValuePtr2)^);
       stInteger:
         Result := PInteger(ValuePtr1)^ - PInteger(ValuePtr2)^;
+      stULong:
+        Result := CompareInt64(PUInt64(ValuePtr1)^, PUInt64(ValuePtr2)^);
       stLong:
         Result := CompareInt64(PInt64(ValuePtr1)^, PInt64(ValuePtr2)^);
       stFloat:
         Result := CompareFloat(PSingle(ValuePtr1)^, PSingle(ValuePtr2)^);
       stDouble:
         Result := CompareFloat(PDouble(ValuePtr1)^, PDouble(ValuePtr2)^);
+      stCurrency:
+        Result := CompareFloat(PCurrency(ValuePtr1)^, PCurrency(ValuePtr2)^);
       stBigDecimal:
         Result := CompareFloat(PExtended(ValuePtr1)^, PExtended(ValuePtr2)^);
       stBoolean:
@@ -1159,11 +1185,15 @@ begin
         FRawTemp := 'False';
     stByte: FRawTemp := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: FRawTemp := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: FRawTemp := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: FRawTemp := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: FRawTemp := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: FRawTemp := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: FRawTemp := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: FRawTemp := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: FRawTemp := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: FRawTemp := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: FRawTemp := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: FRawTemp := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stBytes: FRawTemp := BytesToStr(GetBytes(ColumnIndex, IsNull));
@@ -1231,11 +1261,15 @@ begin
         Result := 'False';
     stByte: Result := ZFastCode.IntToStr(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: Result := ZFastCode.IntToStr(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: Result := ZFastCode.IntToStr(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: Result := ZFastCode.IntToStr(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: Result := ZFastCode.IntToStr(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: Result := ZFastCode.IntToStr(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: Result := ZFastCode.IntToStr(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: Result := ZFastCode.IntToStr(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: Result := FloatToSQLStr(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: Result := FloatToSQLStr(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: Result := FloatToSQLStr(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: Result := FloatToSQLStr(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stUnicodeStream:
@@ -1294,11 +1328,15 @@ begin
         Result := 'False';
     stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: Result := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: Result := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: Result := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: Result := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
@@ -1359,11 +1397,15 @@ begin
         Result := 'False';
     stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: Result := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: Result := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: Result := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: Result := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
@@ -1420,11 +1462,15 @@ begin
         Result := 'False';
     stByte: Result := IntToRaw(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: Result := IntToRaw(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: Result := IntToRaw(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: Result := IntToRaw(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: Result := IntToRaw(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: Result := IntToRaw(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: Result := IntToRaw(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: Result := IntToRaw(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: Result := FloatToSqlRaw(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: Result := FloatToSqlRaw(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: Result := FloatToSqlRaw(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: Result := FloatToSqlRaw(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stString, stUnicodeString: do not handle here!
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
@@ -1469,11 +1515,15 @@ begin
   case FColumnTypes[ColumnIndex - 1] of
     stByte: FUniTemp := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: FUniTemp := IntToUnicode(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: FUniTemp := IntToUnicode(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: FUniTemp := IntToUnicode(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: FUniTemp := IntToUnicode(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: FUniTemp := IntToUnicode(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: FUniTemp := IntToUnicode(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: FUniTemp := IntToUnicode(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: FUniTemp := FloatToSqlUnicode(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: FUniTemp := FloatToSqlUnicode(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: FUniTemp := FloatToSqlUnicode(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: FUniTemp := FloatToSqlUnicode(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stUnicodeString, stString: do not handle here!
     stAsciiStream, stUnicodeStream:
@@ -1492,7 +1542,7 @@ begin
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        FUniTemp := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+        FUniTemp := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
@@ -1530,11 +1580,15 @@ begin
   case FColumnTypes[ColumnIndex - 1] of
     stByte: Result := IntToUnicode(PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stShort: Result := IntToUnicode(PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stWord: Result := IntToUnicode(PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stSmall: Result := IntToUnicode(PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stLongWord: Result := IntToUnicode(PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stInteger: Result := IntToUnicode(PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stULong: Result := IntToUnicode(PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stLong: Result := IntToUnicode(PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stFloat: Result := FloatToSqlUnicode(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stDouble: Result := FloatToSqlUnicode(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+    stCurrency: Result := FloatToSqlUnicode(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     stBigDecimal: Result := FloatToSqlUnicode(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
     //stUnicodeString, stString: do not handle here!
     stAsciiStream, stUnicodeStream:
@@ -1549,7 +1603,7 @@ begin
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        Result := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+        Result := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
@@ -1588,11 +1642,15 @@ begin
       stBoolean: Result := PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
+      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ <> 0;
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -1626,19 +1684,19 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
@@ -1655,7 +1713,7 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
+  a <code>Short</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
@@ -1670,19 +1728,19 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
@@ -1699,7 +1757,50 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
+  a <code>Word</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZRowAccessor.GetWord(Const ColumnIndex: Integer; var IsNull: Boolean): Word;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stByte);
+{$ENDIF}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+        else
+          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>small</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
@@ -1714,25 +1815,69 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
-      stAsciiStream, stUnicodeStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  an <code>Cardinal</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZRowAccessor.GetUInt(Const ColumnIndex: Integer; var IsNull: Boolean): Cardinal;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stInteger);
+{$ENDIF}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+        else
+          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1758,25 +1903,69 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
-      stAsciiStream, stUnicodeStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>Ulong</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZRowAccessor.GetULong(Const ColumnIndex: Integer; var IsNull: Boolean): UInt64;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stLong);
+{$ENDIF}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
+        else
+          Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToInt64Def(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1802,25 +1991,25 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetFloat(ColumnIndex, IsNull));
-      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex, IsNull));
-      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetBigDecimal(ColumnIndex, IsNull));
+      stFloat: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stDouble: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
+      stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0);
-      stAsciiStream, stUnicodeStream: Result := RawToInt64Def(GetBlob(ColumnIndex, IsNull).GetString, 0);
+      stUnicodeStream, stAsciiStream: Result := RawToInt64Def(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
   end
@@ -1846,27 +2035,26 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat:
-        Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stDouble: Result := GetDouble(ColumnIndex, IsNull);
-      stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
+      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -1893,29 +2081,73 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := GetFloat(ColumnIndex, IsNull);
-      stDouble:
-        Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stBigDecimal: Result := GetBigDecimal(ColumnIndex, IsNull);
-      stTime, stDate, stTimeStamp:
-        Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stTime, stDate, stTimeStamp: Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
+      stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
+    end;
+    IsNull := False;
+  end
+  else
+    IsNull := True;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>double</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZRowAccessor.GetCurrency(Const ColumnIndex: Integer; var IsNull: Boolean): Currency;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
+  Result := 0;
+  if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
+  begin
+    case FColumnTypes[ColumnIndex - 1] of
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
+      stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stString, stUnicodeString:
+        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+          Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
+        else
+          Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -1943,27 +2175,26 @@ begin
   if FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] = 0 then
   begin
     case FColumnTypes[ColumnIndex - 1] of
-      stBoolean:
-        if GetBoolean(ColumnIndex, IsNull) then
-          Result := 1
-        else
-          Result := 0;
+      stBoolean: if PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ then Result := 1;
       stByte: Result := PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stShort: Result := PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stWord: Result := PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stSmall: Result := PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stLongWord: Result := PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stInteger: Result := PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stULong: Result := PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stLong: Result := PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
-      stFloat: Result := GetFloat(ColumnIndex, IsNull);
-      stDouble: Result := GetDouble(ColumnIndex, IsNull);
-      stBigDecimal:
-        Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stFloat: Result := PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stDouble: Result := PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
+      stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^;
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -2034,7 +2265,7 @@ begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, BufLen,
            ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2044,7 +2275,7 @@ begin
         else
         begin
           WideBuffer := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.UnicodeSQLDateToDateTime(WideBuffer,
             BufLen, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2102,7 +2333,7 @@ begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, BufLen,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2112,7 +2343,7 @@ begin
         else
         begin
           WideBuffer := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.UnicodeSQLTimeToDateTime(WideBuffer, BufLen,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2167,12 +2398,12 @@ begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := ZSysUtils.RawSQLTimeStampToDateTime(
             PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^,
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^,
                 ConSettings^.ReadFormatSettings, Failed)
         else
           Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(
             PPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^,
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^,
                 ConSettings^.ReadFormatSettings, Failed);
       stAsciiStream, stUnicodeStream:
         begin
@@ -2400,15 +2631,30 @@ begin
           Result.VType := vtInteger;
           Result.VInteger := PShortInt(ValuePtr)^;
         end;
+      stWord:
+        begin
+          Result.VType := vtInteger;
+          Result.VInteger := PWord(ValuePtr)^;
+        end;
       stSmall:
         begin
           Result.VType := vtInteger;
           Result.VInteger := PSmallInt(ValuePtr)^;
         end;
+      stLongWord:
+        begin
+          Result.VType := vtInteger;
+          Result.VInteger := PLongWord(ValuePtr)^;
+        end;
       stInteger:
         begin
           Result.VType := vtInteger;
           Result.VInteger := PInteger(ValuePtr)^;
+        end;
+      stULong:
+        begin
+          Result.VType := vtInteger;
+          Result.VInteger := PUInt64(ValuePtr)^;
         end;
       stLong:
         begin
@@ -2424,6 +2670,11 @@ begin
         begin
           Result.VType := vtFloat;
           Result.VFloat := PDouble(ValuePtr)^;
+        end;
+      stCurrency:
+        begin
+          Result.VType := vtFloat;
+          Result.VFloat := PCurrency(ValuePtr)^;
         end;
       stBigDecimal:
         begin
@@ -2555,11 +2806,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Ord(Value);
     stString, stUnicodeString:
        if Value then
@@ -2593,11 +2848,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2608,7 +2867,7 @@ begin
 end;
 
 {**
-  Sets the designated column with a <code>byte</code> value.
+  Sets the designated column with a <code>shortint</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
@@ -2629,11 +2888,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2644,7 +2907,47 @@ begin
 end;
 
 {**
-  Sets the designated column with a <code>short</code> value.
+  Sets the designated column with a <code>shortint</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetWord(Const ColumnIndex: Integer;
+  const Value: Word);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stWord);
+{$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>smallint</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
@@ -2663,11 +2966,54 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>smallint</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetUInt(Const ColumnIndex: Integer;
+  const Value: Cardinal);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stLongWord);
+{$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2697,11 +3043,53 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, IntToRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, IntToUnicode(Value));
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>long</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetULong(Const ColumnIndex: Integer; const Value: UInt64);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stLong);
+{$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2731,11 +3119,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2765,11 +3157,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2799,11 +3195,53 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stString, stUnicodeString:
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
+      else
+        SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
+  end;
+end;
+
+{**
+  Sets the designated column with a <code>currency</code> value.
+  The <code>SetXXX</code> methods are used to Set column values in the
+  current row or the insert row.  The <code>SetXXX</code> methods do not
+  Set the underlying database; instead the <code>SetRow</code> or
+  <code>insertRow</code> methods are called to Set the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZRowAccessor.SetCurrency(Const ColumnIndex: Integer; const Value: Currency);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stDouble);
+{$ENDIF}
+  FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := 0;
+  case FColumnTypes[ColumnIndex - 1] of
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2834,11 +3272,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value <> 0;
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := Value;
     stString, stUnicodeString:
       if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
@@ -2871,11 +3313,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value, False);
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Value, 0);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value, 0);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(PChar(Value), 0, Length(Value));
     //stString, stUnicodeString: do not handle here!
     stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
@@ -2955,11 +3401,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value.P, False);
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value.P, 0);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value.P, 0);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value.P, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value.P, 0);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     //stString, stUnicodeString: do not handle here!
     stBytes:
@@ -3060,11 +3510,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value.P, False);
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value.P, 0);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value.P, 0);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value.P, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value.P, 0);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
@@ -3170,11 +3624,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value, False);
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value, 0);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToIntDef(Value, 0);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := RawToInt64Def(Value, 0);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     //stString, stUnicodeString: do not handle here!
     stBytes: SetBytes(ColumnIndex, StrToBytes(Value));
@@ -3191,27 +3649,27 @@ begin
     stDate:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-            RawSQLDateToDateTime (PAnsiChar(Value), Length(Value),
+            RawSQLDateToDateTime (Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-        RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value),
+        RawSQLTimeToDateTime(Pointer(Value), Length(Value),
           ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-            Frac(RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            Frac(RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
       PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-          RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+          RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
             ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream, stBinaryStream:
       GetBlob(ColumnIndex, IsNull).SetString(Value);
@@ -3240,11 +3698,15 @@ begin
     stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := StrToBoolEx(Value, False);
     stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
     stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
     stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value, 0);
     stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToIntDef(Value, 0);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value, 0);
     stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := UnicodeToInt64Def(Value, 0);
     stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ := SQLStrToFloatDef(Value, 0);
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
@@ -3567,6 +4029,9 @@ end;
   @param x the new column value
 }
 procedure TZRowAccessor.SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
+var
+  AnsiRec: TZAnsiRec;
+  WideRec: TZWideRec;
 begin
   case Value.VType of
     vtNull: SetNull(ColumnIndex);
@@ -3580,6 +4045,22 @@ begin
     vtRawByteString: SetRawByteString(ColumnIndex, Value.VRawByteString);
     vtUnicodeString: SetUnicodeString(ColumnIndex, Value.VUnicodeString);
     vtDateTime: SetTimestamp(ColumnIndex, Value.VDateTime);
+    vtCharRec:
+      if ZCompatibleCodePages(zCP_UTF16, Value.VCharRec.CP) then
+      begin
+        WideRec.Len := Value.VCharRec.Len;
+        WideRec.P := Value.VCharRec.P;
+        SetWideRec(ColumnIndex, WideRec);
+      end
+      else
+      begin
+        AnsiRec.Len := Value.VCharRec.Len;
+        AnsiRec.P := Value.VCharRec.P;
+        if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.VCharRec.CP) then
+          SetAnsiRec(ColumnIndex, AnsiRec)
+        else
+          SetUnicodeString(ColumnIndex, ZAnsiRecToUnicode(AnsiRec, Value.VCharRec.CP));
+      end;
   end;
 end;
 
@@ -3631,7 +4112,7 @@ begin
           if Columns[FColumnOffsets[I]] = 0 then
             InternalSetPAnsiChar(DestBuffer, I +1,
               PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PAnsiInc,
-              PLongWord(PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
+              PLongWord(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -3669,7 +4150,7 @@ begin
           if (Columns[FColumnOffsets[I]] = 0) then
             InternalSetPAnsiChar(DestBuffer, I +1,
               PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PAnsiInc,
-              PLongWord(PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
+              PLongWord(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -3695,7 +4176,7 @@ begin
       stString, stUnicodeString:
         begin
           Result.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          Result.Len := PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          Result.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
         end;
       else
         Result := inherited GetAnsiRec(ColumnIndex, IsNull);
@@ -3743,14 +4224,14 @@ begin
       stString, stUnicodeString:
         {$IFDEF UNICODE}
         begin
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
           Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
         end;
         {$ELSE}
         if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode then
           System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := ConSettings^.ConvFuncs.ZRawToString(
             PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
@@ -3787,11 +4268,11 @@ begin
       stString, stUnicodeString:
         begin
           if ZCompatibleCodePages(ZDefaultsystemCodePage, ConSettings^.ClientCodePage^.CP) then
-            System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
-              PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
+              PLongWord(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
           else
           begin
-            AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+            AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
             AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
             FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
             Result := AnsiString(FUniTemp);
@@ -3829,17 +4310,17 @@ begin
         if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         begin
-          SetLength(Result, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
-          System.Move(PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
-            PAnsiChar(Result)^, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          SetLength(Result, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
+          System.Move((PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
+            Pointer(Result)^, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
         end
         {$ELSE}
           System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         {$ENDIF}
         else
         begin
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
           FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP); //localize the vals to avoid buffer overrun for WideStrings
           Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
@@ -3874,10 +4355,10 @@ begin
       stString, stUnicodeString:
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         ZSetString(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^, Result);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^, Result);
         {$ELSE}
         System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
         {$ENDIF}
       else
         Result := Inherited GetRawByteString(ColumnIndex, IsNull);
@@ -3910,7 +4391,7 @@ begin
       stUnicodeString, stString:
         begin
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
           Result.P := PWideChar(FUniTemp);
           Result.Len := Length(FUniTemp);
@@ -3951,7 +4432,7 @@ begin
       stUnicodeString, stString:
         begin
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
         end;
       else
@@ -4146,8 +4627,7 @@ begin
         if (Columns[FColumnOffsets[I]] = 0) then
           InternalSetPWideChar(DestBuffer, I +1,
             ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc,
-            PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^,
-            True);
+            PPLongWord(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^^, True);
       stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
     end;
   end;
@@ -4185,8 +4665,7 @@ begin
           if (Columns[FColumnOffsets[I]] = 0) then
             InternalSetPWideChar(DestBuffer, I +1,
               ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc,
-              PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^,
-              True);
+              PPLongWord(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -4212,7 +4691,7 @@ begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
         begin
-          ZWideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          ZWideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           ZWideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
           FRawTemp := ZWideRecToRaw(ZWideRec, ConSettings^.ClientCodePage^.CP);
           Result.Len := Length(FRawTemp);
@@ -4263,11 +4742,11 @@ begin
       stString, stUnicodeString:
         {$IFDEF UNICODE}
         System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-                          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+                          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         {$ELSE}
         begin
           WideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          WideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          WideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           if ConSettings^.AutoEncode then
             Result := ZWideRecToString(WideRec, ConSettings^.CTRL_CP)
           else
@@ -4304,7 +4783,7 @@ begin
       stString, stUnicodeString:
         begin
           System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
           Result := AnsiString(US);
         end;
       else
@@ -4338,7 +4817,7 @@ begin
       stString, stUnicodeString:
         begin
           System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
           Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
         end;
       else
@@ -4372,7 +4851,7 @@ begin
       stString, stUnicodeString:
         begin
           WideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          WideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          WideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP);
         end;
       else
@@ -4405,7 +4884,7 @@ begin
       stUnicodeString, stString:
         begin
           Result.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          Result.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          Result.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
         end;
       else
         Result := inherited GetWideRec(ColumnIndex, IsNull);
@@ -4441,7 +4920,7 @@ begin
     case FColumnTypes[ColumnIndex - 1] of
       stUnicodeString, stString:
         System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       else
         Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;

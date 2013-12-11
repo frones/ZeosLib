@@ -85,8 +85,8 @@ function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
    @param TypeOid is PostgreSQL type OID
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
-  TypeOid: Integer): TZSQLType; overload;
+function PostgreSQLToSQLType(const ConSettings: PZConSettings;
+  const OIDAsBlob: Boolean; const TypeOid: Integer): TZSQLType; overload;
 
 {**
    Return PostgreSQL type name from ZSQLType
@@ -158,8 +158,8 @@ function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVaria
 
 implementation
 
-uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZEncoding,
-     ZDbcPostgreSqlStatement, ZSysUtils;
+uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZEncoding, ZSysUtils,
+     ZDbcPostgreSqlStatement;
 
 {**
    Return ZSQLType from PostgreSQL type name
@@ -209,7 +209,7 @@ begin
     or (TypeName = 'numeric') then
     Result := stDouble
   else if TypeName = 'money' then
-    Result := stDouble
+    Result := stCurrency
   else if TypeName = 'bool' then
     Result := stBoolean
   else if TypeName = 'date' then
@@ -248,19 +248,19 @@ end;
    @param TypeOid is PostgreSQL type OID
    @return The ZSQLType type
 }
-function PostgreSQLToSQLType(Connection: IZPostgreSQLConnection;
-  TypeOid: Integer): TZSQLType; overload;
+function PostgreSQLToSQLType(const ConSettings: PZConSettings;
+  const OIDAsBlob: Boolean; const TypeOid: Integer): TZSQLType; overload;
 begin
   case TypeOid of
     1186,18,1042,1043:  { interval/char/bpchar/varchar }
-      if (Connection.GetConSettings.CPType = cCP_UTF16) then
+      if (ConSettings.CPType = cCP_UTF16) then
           Result := stUnicodeString
         else
           Result := stString;
     25: Result := stAsciiStream; { text }
     26: { oid }
       begin
-        if Connection.IsOidAsBlob() then
+        if OidAsBlob then
           Result := stBinaryStream
         else
           Result := stInteger;
@@ -274,7 +274,7 @@ begin
     829: Result := stString; { macaddr }
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stDouble; { money }
+    790: Result := stCurrency; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
@@ -284,7 +284,7 @@ begin
     1034: Result := stAsciiStream; {aclitem[]}
     17: { bytea }
       begin
-        if Connection.IsOidAsBlob then
+        if OidAsBlob then
           Result := stBytes
         else
           Result := stBinaryStream;
@@ -297,7 +297,7 @@ begin
       Result := stUnknown;
   end;
 
-  if (Connection.GetConSettings.CPType = cCP_UTF16) then
+  if (ConSettings.CPType = cCP_UTF16) then
     if Result = stAsciiStream then
       Result := stUnicodeStream;
 end;
@@ -746,7 +746,8 @@ begin
           Result := 'TRUE'
         else
           Result := 'FALSE';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         begin
           Result := ClientVarManager.GetAsRawByteString(Value);
           if QuotedNumbers then Result := #39+Result+#39;
@@ -833,5 +834,6 @@ begin
     end;
   end;
 end;
+
 
 end.

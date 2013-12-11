@@ -592,13 +592,13 @@ begin
           Statement.SetFloat(I + 1, RowAccessor.GetFloat(ColumnIndex, WasNull));
         stDouble:
           Statement.SetDouble(I + 1, RowAccessor.GetDouble(ColumnIndex, WasNull));
+        stCurrency:
+          Statement.SetCurrency(I + 1, RowAccessor.GetCurrency(ColumnIndex, WasNull));
         stBigDecimal:
           Statement.SetBigDecimal(I + 1,
             RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
-        stString:
-          Statement.SetString(I + 1, RowAccessor.GetString(ColumnIndex, WasNull)); //smells like DataLoss
-        stUnicodeString:
-          Statement.SetUnicodeString(I + 1, RowAccessor.GetUnicodeString(ColumnIndex, WasNull));
+        stString, stUnicodeString:
+          Statement.SetCharRec(I + 1, RowAccessor.GetCharRec(ColumnIndex, WasNull));
         stBytes:
           Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
         stDate:
@@ -676,16 +676,22 @@ begin
           case RefreshColumnType of
             stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
             stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
+            stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
+            stWord: RefreshRowAccessor.SetWord(RefreshColumnIndex, RefreshResultSet.GetWord(I));
             stSmall: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetSmall(I));
+            stLongWord: RefreshRowAccessor.SetUInt(RefreshColumnIndex, RefreshResultSet.GetUInt(I));
             stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
+            stULong: RefreshRowAccessor.SetULong(RefreshColumnIndex, RefreshResultSet.GetULong(I));
             stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
             stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
             stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
+            stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
             stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
-               // gto: do we need PChar here?
-			   //stString: RefreshRowAccessor.SetPChar(RefreshColumnIndex, RefreshResultSet.GetPChar(I));
-			      stString: RefreshRowAccessor.SetString(RefreshColumnIndex, String(RefreshResultSet.GetString(I)));
-            stUnicodeString: RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
+            stString, stUnicodeString:
+              if Sender.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+                RefreshRowAccessor.SetAnsiRec(RefreshColumnIndex, RefreshResultSet.GetAnsiRec(I))
+              else
+                RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
             stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
             stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
             stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));

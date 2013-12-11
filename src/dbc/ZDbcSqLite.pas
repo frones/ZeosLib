@@ -379,6 +379,7 @@ function TZSQLiteConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
     Open;
+
   Result := TZSQLiteStatement.Create(GetPlainDriver, Self, Info, FHandle);
 end;
 
@@ -515,13 +516,16 @@ end;
 procedure TZSQLiteConnection.Close;
 var
   LogMessage: RawByteString;
+  ErrorCode: Integer;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
 
-  GetPlainDriver.Close(FHandle);
-  FHandle := nil;
   LogMessage := 'DISCONNECT FROM "'+ConSettings.Database+'"';
+  ErrorCode := GetPlainDriver.Close(FHandle);
+  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil,
+    lcOther, LogMessage, ConSettings);
+  FHandle := nil;
   if Assigned(DriverManager) then
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   inherited Close;

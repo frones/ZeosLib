@@ -110,6 +110,7 @@ type
     procedure TestMantis220;
     procedure TestMantis235;
     procedure TestTicket52;
+    procedure TestMS56OBER9357;
   end;
 
 implementation
@@ -650,7 +651,7 @@ begin
   try
     Query.SQL.Text := 'select * from table799863';
     Query.Open;
-    CheckEquals(Ord(ftSmallInt), Ord(Query.Fields[0].DataType));
+    CheckEquals(Ord(ftWord), Ord(Query.Fields[0].DataType));
     CheckEquals(2, Query.RecordCount);
     CheckEquals(1940, Query.Fields[0].AsInteger);
     Query.Next;
@@ -1696,6 +1697,41 @@ begin
     CheckEquals(2, Query.RecordCount);
   finally
     Query.Free;
+  end;
+end;
+
+{See:
+http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=9357
+}
+procedure TZTestCompMySQLBugReport.TestMS56OBER9357;
+var
+  qy: TZquery;
+begin
+  qy := CreateQuery;
+  qy.SQL.Text := 'select * from TableMS56OBER9357';
+  qy.Open;
+  try
+    qy.Append;
+    qy.FieldByName('keyfield').value := 1;
+    qy.FieldByName('dtField').value := Date;
+    qy.FieldByName('infofield').value := 'test';
+    qy.Post;
+
+    qy.Edit;
+    qy.FieldByName('keyfield').Value := 1;
+    qy.FieldByName('dtField').Value := NULL;
+    qy.FieldByName('infofield').AsString := 'test';
+    qy.Post;
+
+    qy.Edit;
+    qy.FieldByName('keyfield').value := 1;
+    qy.FieldByName('dtField').Value := date;
+    qy.FieldByName('infofield').value := 'test';
+    qy.Post;
+  finally
+    qy.SQL.Text := 'delete from TableMS56OBER9357';
+    qy.ExecSQL;
+    qy.Free;
   end;
 end;
 

@@ -171,6 +171,8 @@ type
     constructor Create(PlainDriver: IZMySQLPlainDriver; Handle: PZMySQLConnect;
       Statement: IZMysqlStatement; Metadata: IZResultSetMetadata);
 
+    function FormWhereClause(Columns: TObjectList;
+      OldRowAccessor: TZRowAccessor): string; override;
     procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
@@ -1524,12 +1526,12 @@ begin
       FIELD_TYPE_TINY:      Result := PByte(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_SHORT:     Result := PWord(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_LONG:      Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_FLOAT:     Result := 0;
-      FIELD_TYPE_DOUBLE:    Result := 0;
+      FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColumnArray[ColumnIndex-1].buffer)^);
+      FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColumnArray[ColumnIndex-1].buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP: Result := 0;
-      FIELD_TYPE_LONGLONG:  Result := PULongLong(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_LONGLONG:  Result := PUInt64(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^; //warning Delphi deosn't have a 24 bit float -> samllint have 2Byte, integer have 4Byte but int24 have 3Byte?
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
       FIELD_TYPE_DATETIME  = 12,*)
@@ -1555,16 +1557,16 @@ begin
       FIELD_TYPE_TINY:      Result := PShortInt(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_SHORT:     Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_LONG:      Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_FLOAT:     Result := 0;
-      FIELD_TYPE_DOUBLE:    Result := 0;
+      FIELD_TYPE_FLOAT:     Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PSingle(FColumnArray[ColumnIndex-1].buffer)^);
+      FIELD_TYPE_DOUBLE:    Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(FColumnArray[ColumnIndex-1].buffer)^);
       FIELD_TYPE_NULL:      Result := 0;
       FIELD_TYPE_TIMESTAMP: Result := 0;
       FIELD_TYPE_LONGLONG:  Result := PInt64(FColumnArray[ColumnIndex-1].buffer)^;
-      FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;  //warning Delphi deosn't have a 24 bit float -> samllint have 2Byte, integer have 4Byte but int24 have 3Byte?
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
       FIELD_TYPE_DATETIME  = 12, *)
-      FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^; //obviously impossible
       (*FIELD_TYPE_NEWDATE   = 14,
       FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
       FIELD_TYPE_BIT: ;
@@ -1725,6 +1727,72 @@ begin
   end;
 end;
 
+{**
+  Forms a where clause for UPDATE or DELETE DML statements.
+  @param Columns a collection of key columns.
+  @param OldRowAccessor an accessor object to old column values.
+}
+function TZMySQLCachedResolver.FormWhereClause(Columns: TObjectList;
+  OldRowAccessor: TZRowAccessor): string;
+var
+  I, N: Integer;
+  Current: TZResolverParameter;
+begin
+  Result := '';
+  N := Columns.Count - WhereColumns.Count;
+
+  for I := 0 to WhereColumns.Count - 1 do
+  begin
+    Current := TZResolverParameter(WhereColumns[I]);
+    if Result <> '' then
+      Result := Result + ' AND ';
+
+    Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
+    if OldRowAccessor.IsNull(Current.ColumnIndex) then
+    begin
+      if not (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then
+        case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
+          stDate:
+            if I > 0 then
+            begin
+              Current := TZResolverParameter(WhereColumns[I-1]);
+              Result := Result+ '=''0000-00-00'' OR '+Result + ' IS NULL';
+              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
+              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+            end;
+          stTime:
+            if I > 0 then
+            begin
+              Current := TZResolverParameter(WhereColumns[I-1]);
+              Result := Result+ '=''00:00:00'' OR '+Result + ' IS NULL';
+              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
+              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+            end;
+          stTimeStamp:
+            if I > 0 then
+            begin
+              Current := TZResolverParameter(WhereColumns[I-1]);
+              Result := Result+ '=''0000-00-00 00:00:00'' OR '+Result + ' IS NULL';
+              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
+              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+            end;
+          else
+            Result := Result + ' IS NULL';
+        end
+      else
+        Result := Result + ' IS NULL ';
+      Columns.Delete(N);
+    end
+    else
+    begin
+      Result := Result + '=?';
+      Inc(N);
+    end;
+  end;
+
+  if Result <> '' then
+    Result := ' WHERE ' + Result;
+end;
 {**
   Posts updates to database.
   @param Sender a cached result set object.

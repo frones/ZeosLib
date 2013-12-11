@@ -185,7 +185,7 @@ type
   Tsqlite_trace_callback = procedure(p1: Pointer; const p2: PAnsiChar); cdecl;
 
   Tsqlite_open = function(const filename: PAnsiChar;var Qsqlite: Psqlite): Integer; cdecl;
-  Tsqlite_close = procedure(db: Psqlite); cdecl;
+  Tsqlite_close = function(db: Psqlite): Integer; cdecl;
 
   { prepared statment api}
   Tsqlite3_prepare = function(
@@ -262,6 +262,7 @@ type
   Tsqlite3_column_text16 = function(Stmt: Psqlite3_stmt; iCol: Integer): PWideChar; cdecl;
   Tsqlite3_column_type = function(Stmt: Psqlite3_stmt; iCol: Integer): Integer; cdecl;
   Tsqlite3_column_value = function(Stmt: Psqlite3_stmt; iCol: Integer): Psqlite3_value; cdecl;
+  Tsqlite3_last_insert_rowid = function(db: Psqlite): Int64; cdecl;
 
   //gets the column type
   Tsqlite_column_type = function(db:PSqlite;iCol:integer):Integer; cdecl;
@@ -271,7 +272,7 @@ type
     var errmsg: PAnsiChar): Integer; cdecl;
   Tsqlite_errmsg = function(db: Psqlite): PAnsiChar; cdecl;
   Tsqlite_errstr = function(code: Integer): PAnsiChar; cdecl;
-  Tsqlite_last_insert_rowid = function(db: Psqlite): Integer; cdecl;
+  //Tsqlite_last_insert_rowid = function(db: Psqlite): Integer; cdecl;
   Tsqlite_changes = function(db: Psqlite): Integer; cdecl;
   Tsqlite_last_statement_changes = function(db: Psqlite): Integer; cdecl;
   Tsqlite_interrupt = procedure(db: Psqlite); cdecl;
@@ -386,7 +387,7 @@ TZSQLite_API = record
   sqlite_exec: Tsqlite_exec;
   sqlite_errmsg: Tsqlite_errmsg;
   sqlite_errstr: Tsqlite_errstr;
-  sqlite_last_insert_rowid: Tsqlite_last_insert_rowid;
+  sqlite_last_insert_rowid: Tsqlite3_last_insert_rowid;
   sqlite_changes: Tsqlite_changes;
   sqlite_last_statement_changes: Tsqlite_last_statement_changes;
   sqlite_interrupt: Tsqlite_interrupt;
@@ -425,11 +426,11 @@ type
 
     function Open(const filename: PAnsiChar; mode: Integer;
       var errmsg: PAnsiChar): Psqlite;
-    procedure Close(db: Psqlite);
+    function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
       var errmsg: PAnsiChar): Integer;
-    function LastInsertRowId(db: Psqlite): Integer;
+    function LastInsertRowId(db: Psqlite): Int64;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
     function ErrorString(db: Psqlite; code: Integer): RawByteString;
@@ -554,11 +555,11 @@ type
 
     function Open(const filename: PAnsiChar; mode: Integer;
       var errmsg: PAnsiChar): Psqlite;
-    procedure Close(db: Psqlite);
+    function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
       var errmsg: PAnsiChar): Integer;
-    function LastInsertRowId(db: Psqlite): Integer;
+    function LastInsertRowId(db: Psqlite): Int64;
     function Changes(db: Psqlite): Integer;
     function LastStatementChanges(db: Psqlite): Integer;
     function ErrorString(db: Psqlite; code: Integer): RawByteString;
@@ -669,7 +670,6 @@ type
       nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
-
   end;
 
   {** Implements a driver for SQLite 3 }
@@ -864,7 +864,7 @@ begin
   SQLite_API.sqlite_interrupt(db);
 end;
 
-function TZSQLiteBaseDriver.LastInsertRowId(db: Psqlite): Integer;
+function TZSQLiteBaseDriver.LastInsertRowId(db: Psqlite): Int64;
 begin
   Result := SQLite_API.sqlite_last_insert_rowid(db);
 end;
@@ -1258,9 +1258,9 @@ begin
   Result := SQLite_API.sqlite_user_data(func);
 end;
 
-procedure TZSQLiteBaseDriver.Close(db: Psqlite);
+function TZSQLiteBaseDriver.Close(db: Psqlite): Integer;
 begin
-  SQLite_API.sqlite_close(db);
+  Result := SQLite_API.sqlite_close(db);
 end;
 
 { TZSQLite3PlainDriver }

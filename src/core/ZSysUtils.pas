@@ -525,14 +525,6 @@ function DecodeCString(const Value: string): string;
 function ReplaceChar(const Source, Target: Char; const Str: string): string;
 
 {**
-   Copy buffer to the pascal string
-   @param Buffer a buffer with data
-   @param Length a buffer length
-   @return a buffer content
-}
-function MemPas(Buffer: PChar; Length: LongInt): string;
-
-{**
   Decodes a Full Version Value encoded with the format:
    (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
   into separated major, minor and subversion values
@@ -1633,9 +1625,9 @@ var
   Day: Word;
   DateFormat: PAnsiChar;
 
-  procedure TryExtractDateFromFormat;
+  procedure TryExtractDateFromFormat(Value: PAnsiChar);
   var
-    I: Integer;
+    I: Cardinal;
   begin
     Result := 0;
     Failed := ZFormatSettings.DateFormatLen = 0;
@@ -1647,22 +1639,23 @@ var
         case DateFormat^ of
           'Y', 'y':
             begin
-              Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
+              Year := Year * 10 + CheckNumberRange(Value^, Failed);
               if Failed then Exit;
             end;
           'M', 'm':
             begin
-              Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
+              Month := Month * 10 + CheckNumberRange(Value^, Failed);
               if Failed then Exit;
             end;
           'D', 'd':
             begin
-              Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
+              Day := Day * 10 + CheckNumberRange(Value^, Failed);
               if Failed then Exit;
             end;
         end;
         Inc(DateFormat);
-        if Cardinal(I+1) = vallen then Break;
+        Inc(Value);
+        if I+1 = vallen then Break;
       end;
       Failed := not ((Year <> 0) and (Month <> 0) and (Day <> 0));
       if not Failed then
@@ -1749,13 +1742,13 @@ var
     end;
   end;
 begin
-  DateFormat := PAnsiChar(ZFormatSettings.DateFormat);
+  DateFormat := ZFormatSettings.PDateFormat;
   Failed := False;
-  if Value = '' then
+  if (Value = nil) or (ValLen = 0) then
     Result := 0
   else
   begin
-    TryExtractDateFromFormat;
+    TryExtractDateFromFormat(Value);
     if Failed and ( ZFormatSettings.DateFormatLen = 0 )then
       TryExtractDateFromUnknownSize;
   end;
@@ -1790,7 +1783,7 @@ var
   Code: Integer;
   TimeFormat: PAnsiChar;
 
-  procedure TryExtractTimeFromFormat;
+  procedure TryExtractTimeFromFormat(Value: PAnsiChar);
   var
     I: Cardinal;
   begin
@@ -1807,26 +1800,27 @@ var
           case TimeFormat^ of
             'H', 'h':
               begin
-                Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
+                Hour := Hour * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'N', 'n':
               begin
-                Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
+                Minute := Minute * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'S', 's':
               begin
-                Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
+                Sec := Sec * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'Z', 'z':
               begin
-                MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                MSec := MSec * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
           end;
           Inc(TimeFormat);
+          Inc(Value);
           if i+1 = ValLen then Break;
         end;
         try
@@ -1935,12 +1929,12 @@ var
   end;
 begin
   Failed := False;
-  TimeFormat := PAnsiChar(ZFormatSettings.TimeFormat);
-  if ValLen = 0 then
+  TimeFormat := ZFormatSettings.PTimeFormat;
+  if (Value = nil) or (ValLen = 0) then
     Result := 0
   else
   begin
-    TryExtractTimeFromFormat; //prefered. Adapts to given Format-Mask
+    TryExtractTimeFromFormat(Value); //prefered. Adapts to given Format-Mask
     if Failed and ( ZFormatSettings.TimeFormatLen = 0 )then
       TryExtractTimeFromVaryingSize;
   end;
@@ -1999,7 +1993,7 @@ var
       Failed := True;
   end;
 
-  procedure TryExtractTimeStampFromFormat;
+  procedure TryExtractTimeStampFromFormat(Value: PAnsiChar);
   var
     I: Cardinal;
   begin
@@ -2016,40 +2010,40 @@ var
           case TimeStampFormat^ of
             'Y', 'y':
               begin
-                Year := Year * 10 + CheckNumberRange((Value+i)^, Failed);
+                Year := Year * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'M', 'm':
               begin
-                Month := Month * 10 + CheckNumberRange((Value+i)^, Failed);
+                Month := Month * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'D', 'd':
               begin
-                Day := Day * 10 + CheckNumberRange((Value+i)^, Failed);
+                Day := Day * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'H', 'h':
               begin
-                Hour := Hour * 10 + CheckNumberRange((Value+i)^, Failed);
+                Hour := Hour * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'N', 'n':
               begin
-                Minute := Minute * 10 + CheckNumberRange((Value+i)^, Failed);
+                Minute := Minute * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'S', 's':
               begin
-                Sec := Sec * 10 + CheckNumberRange((Value+i)^, Failed);
+                Sec := Sec * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then Exit;
               end;
             'Z', 'z':
               begin
-                MSec := MSec * 10 + CheckNumberRange((Value+i)^, Failed);
+                MSec := MSec * 10 + CheckNumberRange(Value^, Failed);
                 if Failed then
                 begin
-                  Failed := not ((Value+i)^ = '+'); //postgres 2013-10-23 12:31:52.48+02 f.e.
+                  Failed := not (Value^ = '+'); //postgres 2013-10-23 12:31:52.48+02 f.e.
                   if Failed then
                     Exit
                   else
@@ -2060,9 +2054,10 @@ var
                 end;
               end;
             '.':
-              if ((Value+i)^ = '+') then Break; //postgres 1997-02-25 00:00:00+01 f.e.
+              if (Value^ = '+') then Break; //postgres 1997-02-25 00:00:00+01 f.e.
           end;
           Inc(TimeStampFormat);
+          Inc(Value);
           if (i+1) = ValLen then Break;
         end;
         CheckFailAndEncode;
@@ -2264,11 +2259,12 @@ var
   end;
 begin
   Failed := False;
-  Result := 0;
-  if ValLen > 0 then
+  if (Value = nil) or (ValLen = 0) then
+    Result := 0
+  else
   begin
-    TimeStampFormat := PAnsiChar(ZFormatSettings.DateTimeFormat);
-    TryExtractTimeStampFromFormat;
+    TimeStampFormat := ZFormatSettings.PDateTimeFormat;
+    TryExtractTimeStampFromFormat(Value);
     if Failed then
       TryExtractTimeStampFromVaryingSize;
   end;
@@ -2382,7 +2378,7 @@ begin
   PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result, PA);
 
   I := ConFormatSettings.DateFormatLen-1;
-  DateFormat := PAnsiChar(ConFormatSettings.DateFormat);
+  DateFormat := ConFormatSettings.PDateFormat;
   while I > 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
@@ -2441,7 +2437,7 @@ begin
   PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result, PW);
 
   I := ConFormatSettings.DateFormatLen-1;
-  DateFormat := PAnsiChar(ConFormatSettings.DateFormat);
+  DateFormat := ConFormatSettings.PDateFormat;
   while I > 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
@@ -2497,7 +2493,7 @@ begin
   ZSet := False;
 
   I := ConFormatSettings.TimeFormatLen-1;
-  TimeFormat := PAnsiChar(ConFormatSettings.TimeFormat);
+  TimeFormat := ConFormatSettings.PTimeFormat;
   while I > 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
@@ -2563,7 +2559,7 @@ begin
   ZSet := False;
 
   I := ConFormatSettings.TimeFormatLen-1;
-  TimeFormat := PAnsiChar(ConFormatSettings.TimeFormat);
+  TimeFormat := ConFormatSettings.PTimeFormat;
   while I > 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
@@ -2626,7 +2622,7 @@ begin
   YearSet := False;
 
   I := ConFormatSettings.DateTimeFormatLen-1;
-  TimeStampFormat := PAnsiChar(ConFormatSettings.DateTimeFormat);
+  TimeStampFormat := ConFormatSettings.PDateTimeFormat;
   while I > 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
@@ -2714,7 +2710,7 @@ begin
   YearSet := False;
 
   I := ConFormatSettings.DateTimeFormatLen-1;
-  TimeStampFormat := PAnsiChar(ConFormatSettings.DateTimeFormat);
+  TimeStampFormat := ConFormatSettings.PDateTimeFormat;
   while I > 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
@@ -2979,19 +2975,6 @@ begin
 end;
 
 {**
-   Copy buffer to the pascal string
-   @param Buffer a buffer with data
-   @param Length a buffer length
-   @return a buffer content
-}
-function MemPas(Buffer: PChar; Length: LongInt): string;
-begin
-  Result := '';
-  if Assigned(Buffer) then
-    SetString(Result, Buffer, Length);
-end;
-
-{**
   Decodes a full version value encoded with Zeos SQL format:
    (major_version * 1,000,000) + (minor_version * 1,000) + sub_version
   into separated major, minor and subversion values
@@ -3053,7 +3036,7 @@ begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
   SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  Move(Src^, Pointer(Dest)^, Len);
   {$ELSE}
   SetString(Dest, Src, Len);
   {$ENDIF}
@@ -3067,7 +3050,7 @@ begin
   else
   begin
     SetLength(Dest, Len div 2);
-    Move(Src^, PWideChar(Dest)^, Len);
+    Move(Src^, Pointer(Dest)^, Len);
   end;
 end;
 
@@ -3077,7 +3060,7 @@ begin
   {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
   Dest := '';
   SetLength(Dest, Len);
-  Move(Src^, PAnsiChar(Dest)^, Len);
+  Move(Src^, Pointer(Dest)^, Len);
   {$ELSE}
   SetString(Dest, Src, Len);
   {$ENDIF}
@@ -3114,7 +3097,7 @@ begin
   for i := 0 to Len-1 do
     PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}
-  System.SetString(Result, PAnsiChar(Src), Len);
+  System.SetString(Result, Src, Len);
   {$ENDIF}
 end;
 
@@ -3189,7 +3172,7 @@ begin
       PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
   {$ELSE}
-  System.SetString(Result, PAnsiChar(Src), Len);
+  System.SetString(Result, Src, Len);
   {$ENDIF}
 end;
 
@@ -3431,11 +3414,11 @@ begin
   begin
     Hex := IntToHex(I, 2);
     {$IFDEF UNICODE}
-    TwoDigitLookupHexLW[i] := PCardinal(PWideChar(Hex))^;
-    TwoDigitLookupHexW[i] := PWord(PAnsiChar(AnsiString(Hex)))^;
+    TwoDigitLookupHexLW[i] := PLongWord(Pointer(Hex))^;
+    TwoDigitLookupHexW[i] := PWord(Pointer(AnsiString(Hex)))^;
     {$ELSE}
-    TwoDigitLookupHexW[i] := PWord(PChar(Hex))^;
-    TwoDigitLookupHexLW[i] := PCardinal(PWideChar(ZWideString(Hex)))^;
+    TwoDigitLookupHexW[i] := PWord(Pointer(Hex))^;
+    TwoDigitLookupHexLW[i] := PCardinal(Pointer(ZWideString(Hex)))^;
     {$ENDIF}
   end;
 end;

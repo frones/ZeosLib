@@ -229,7 +229,7 @@ begin
         ColumnInfo.Precision := 256;
   end;
 
-  SQLType := PostgreSQLToSQLType(Connection, TypeOid);
+  SQLType := PostgreSQLToSQLType(ConSettings, Connection.IsOidAsBlob, TypeOid);
 
   if SQLType <> stUnknown then
     ColumnInfo.ColumnType := SQLType
@@ -249,12 +249,16 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   FieldMode, FieldSize, FieldType: Integer;
+  TableInfo: PZPGTableInfo;
+  Connection: IZPostgreSQLConnection;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
 
   if not Assigned(FQueryHandle) then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+
+  Connection := Statement.GetConnection as IZPostgreSQLConnection;
 
   LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
 
@@ -265,9 +269,22 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
-      ColumnName := '';
-      TableName := '';
-
+      if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
+        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
+      else
+        TableInfo := nil;
+      if TableInfo = nil then
+      begin
+        SchemaName := '';
+        ColumnName := '';
+        TableName := '';
+      end
+      else
+      begin
+        SchemaName := TableInfo^.Schema;
+        TableName := TableInfo^.Name;
+        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I) - 1];
+      end;
       ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldName(FQueryHandle, I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ColumnDisplaySize := 0;
       Scale := 0;

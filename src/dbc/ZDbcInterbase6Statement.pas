@@ -66,23 +66,19 @@ type
 
   { TZInterbase6PreparedStatement }
 
-  TZInterbase6PreparedStatement = class(TZAbstractPreparedStatement)
+  TZInterbase6PreparedStatement = class(TZAbstractRealPreparedStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;
     FIBConnection: IZInterbase6Connection;
     FCodePageArray: TWordDynArray;
-    CursorAlreadySet: Boolean;
 
-    Cursor: AnsiString;
     FResultXSQLDA: IZSQLDA;
 
     StmtHandle: TISC_STMT_HANDLE;
     StatementType: TZIbSqlStatementType;
   protected
     procedure PrepareInParameters; override;
-    procedure SetASQL(const Value: RawByteString); override;
-    procedure SetWSQL(const Value: ZWideString); override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
@@ -158,20 +154,6 @@ begin
   inherited PrepareInParameters;
 end;
 
-procedure TZInterbase6PreparedStatement.SetASQL(const Value: RawByteString);
-begin
-  if ( ASQL <> Value ) and Prepared then
-    Unprepare;
-  inherited SetASQL(Value);
-end;
-
-procedure TZInterbase6PreparedStatement.SetWSQL(const Value: ZWideString);
-begin
-  if ( WSQL <> Value ) and Prepared then
-    Unprepare;
-  inherited SetWSQL(Value);
-end;
-
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
   BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager, InParamValues,
@@ -214,7 +196,6 @@ begin
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   ResultSetType := rtScrollInsensitive;
   StmtHandle := 0;
-  CursorName := '';
 
   Prepare;
 end;
@@ -239,7 +220,6 @@ end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
 begin
-  CursorAlreadySet := False;
   StmtHandle := 0;
   with FIBConnection do
   begin
@@ -262,8 +242,6 @@ begin
   if StmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
-  CursorName := '';
-  CursorAlreadySet := False;
   inherited Unprepare;
 end;
 
@@ -291,7 +269,6 @@ begin
         GetDialect, FParamSQLData.GetData)
     else
     begin
-      //CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
       if (FResultXSQLDA = nil) then
         GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
           GetDialect, FParamSQLData.GetData, nil) //not expecting a result
@@ -319,8 +296,8 @@ begin
       and (FResultXSQLDA.GetFieldCount <> 0) then
     begin
       LastResultSet := CreateIBResultSet(SQL, Self,
-      TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle, Cursor,
-      FResultXSQLDA, CachedLob));
+      TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
+      FResultXSQLDA, CachedLob, StatementType));
     end
       else
     begin
@@ -359,36 +336,21 @@ begin
         GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @StmtHandle,
           GetDialect, FParamSQLData.GetData)
       else
-      begin
-        if (CursorName = '') and not CursorAlreadySet then
-        begin
-          CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
-          CursorAlreadySet := False;
-        end
-        else
-          CursorAlreadySet := True;
         if (FResultXSQLDA = nil) then
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, nil) //not expecting a result
         else
           GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @StmtHandle,
             GetDialect, FParamSQLData.GetData, FResultXSQLDA.GetData); //expecting a result
-      end;
 
       iError := CheckInterbase6Error(ASQL);
 
       if (StatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
       begin
-        if (CursorName <> '') and not CursorAlreadySet then
-        begin
-          Cursor := CursorName;
-          GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector,
-                  @StmtHandle, PAnsiChar(Cursor), 0);
-          iError := CheckInterbase6Error(ASQL);
-        end;
-
         if (iError <> DISCONNECT_ERROR) then
-          Result := CreateIBResultSet(SQL, Self, TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle, Cursor, FResultXSQLDA, CachedLob));
+          Result := CreateIBResultSet(SQL, Self,
+            TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
+            FResultXSQLDA, CachedLob, StatementType));
       end
       else
         if (iError <> DISCONNECT_ERROR) then    //AVZ
@@ -398,10 +360,6 @@ begin
     except
       on E: Exception do
       begin
-        //The cursor will be already closed for exec2
-        if (Pos('ExecProc', String(CursorName)) <> 0) then
-          StmtHandle := 0;
-
         {EH: do not Close the Stmt if execution fails !! This will be done on unprepare}
         //FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE); //AVZ
         raise;
@@ -446,11 +404,7 @@ begin
     case StatementType of
       stCommit, stRollback, stUnknown: Result := -1;
       stSelect: FreeStatement(GetPlainDriver, StmtHandle, DSQL_CLOSE);  //AVZ
-      stDelete: if (Result = 0) then Result := 1; //AVZ - A delete statement may return zero affected rows, calling procedure expects 1 as Result or Error!
-      stUpdate: ; //EgonHugeist - but not a UpdateStatement!
     end;
-
-
 
     { Autocommit statement. }
     if Connection.GetAutoCommit and ( StatementType <> stSelect ) then
@@ -560,8 +514,6 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
-var
-  Cursor: AnsiString;
 begin
   Result := False;
   with FIBConnection do
@@ -586,14 +538,13 @@ begin
         ParamSqlData }
       if (FStatementType in [stSelect, stExecProc])
         and (FResultSQLData.GetFieldCount <> 0) then
-      begin
-        Cursor := RandomString(12);
-        LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, CachedLob);
-      end
+        LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
+          FStmtHandle, FResultSQLData, CachedLob, FStatementType)
       else
       begin
         { Fetch data and fill Output params }
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, CachedLob));
+        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType));
         FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
         LastResultSet := nil;
       end;
@@ -622,8 +573,6 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
-var
-  Cursor: AnsiString;
 begin
   with FIBConnection do
   begin
@@ -636,27 +585,14 @@ begin
       GetPlainDriver.isc_dsql_execute(@FStatusVector, GetTrHandle, @FStmtHandle,
         GetDialect, FParamSQLData.GetData)
     else
-    begin
-      CursorName := 'ExecProc'+RandomString(12); //AVZ - Need a way to return one row so we give the cursor a name
       GetPlainDriver.isc_dsql_execute2(@FStatusVector, GetTrHandle, @FStmtHandle,
         GetDialect, FParamSQLData.GetData, FResultSQLData.GetData);
-    end;
 
     CheckInterbase6Error(ProcSql);
 
     if (FStatementType in [stSelect, stExecProc]) and (FResultSQLData.GetFieldCount <> 0) then
-    begin
-      if CursorName <> '' then
-      begin
-        Cursor := CursorName;
-        GetPlainDriver.isc_dsql_set_cursor_name(@FStatusVector, @FStmtHandle, PAnsiChar(Cursor), 0);
-        CheckInterbase6Error(ProcSql);
-      end;
-
       Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
-        Cursor, FResultSQLData, CachedLob);
-    end;
-
+        FResultSQLData, CachedLob, FStatementType);
   end;
 end;
 {$HINTS ON}
@@ -672,8 +608,6 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
-var
-  Cursor: AnsiString;
 begin
   with FIBConnection do
   begin
@@ -692,11 +626,12 @@ begin
       if (FStatementType in [stSelect, stExecProc])
         and (FResultSQLData.GetFieldCount <> 0) then
       begin
-        Cursor := RandomString(12);
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, Cursor, FResultSQLData, CachedLob));
+        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType));
       end
       else
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle, '', FResultSQLData, CachedLob));
+        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType));
     { Autocommit statement. }
     if Connection.GetAutoCommit then
       Connection.Commit;
@@ -728,38 +663,46 @@ begin
       OutParamValues[ParamIndex] := NullVariant
     else
       case ResultSet.GetMetadata.GetColumnType(I) of
-      stBoolean:
-        OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-      stByte:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-      stBytes:
-        OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-      stSmall:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-      stInteger:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-      stLong:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-      stFloat:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-      stDouble:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-      stBigDecimal:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-      stString, stAsciiStream:
-        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      stUnicodeString, stUnicodeStream:
-        OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-      stDate:
-        OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
-      stTime:
-        OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
-      stTimestamp:
-        OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
-      stBinaryStream:
-        OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-      else
-        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stBoolean:
+          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
+        stByte:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
+        stShort:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+        stWord:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
+        stSmall:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
+        stLongword:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
+        stInteger:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
+        stULong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
+        stLong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
+        stBytes:
+          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
+        stFloat:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
+        stDouble:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
+        stBigDecimal:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+        stString, stAsciiStream:
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stUnicodeString, stUnicodeStream:
+          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
+        stDate:
+          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
+        stTime:
+          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
+        stTimestamp:
+          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
+        stBinaryStream:
+          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
+        else
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       end;
     Inc(I);
   end;

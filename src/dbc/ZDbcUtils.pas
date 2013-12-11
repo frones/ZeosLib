@@ -269,13 +269,17 @@ function CheckConvertion(InitialType: TZSQLType; ResultType: TZSQLType): Boolean
 begin
   case ResultType of
     stBoolean,
-    stByte, stShort, stSmall, stInteger, stLong,
-    stFloat, stBigDecimal:
-      Result := InitialType in [stBoolean, stByte, stShort, stSmall, stInteger,
-        stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString];
+    stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+    stFloat, stCurrency, stBigDecimal:
+      Result := InitialType in [stBoolean,
+        stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+        stFloat, stDouble, stCurrency, stBigDecimal,
+        stString, stUnicodeString];
     stDouble:
-      Result := InitialType in [stBoolean, stByte, stShort, stSmall, stInteger,
-        stLong, stFloat, stDouble, stBigDecimal, stString, stUnicodeString,
+      Result := InitialType in [stBoolean,
+        stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+        stFloat, stDouble, stCurrency, stBigDecimal,
+        stString, stUnicodeString,
         stTime, stDate, stTimeStamp];
     stString, stUnicodeString:
       Result := True;
@@ -303,44 +307,31 @@ end;
 function DefineColumnTypeName(ColumnType: TZSQLType): string;
 begin
   case ColumnType of
-    stBoolean:
-      Result := 'Boolean';
-    stByte:
-      Result := 'Byte';
-    stShort:
-      Result := 'Short';
-    stSmall:
-      Result := 'Small';
-    stInteger:
-      Result := 'Integer';
-    stLong:
-      Result := 'Long';
-    stFloat:
-      Result := 'Float';
-    stDouble:
-      Result := 'Double';
-    stBigDecimal:
-      Result := 'BigDecimal';
-    stString:
-      Result := 'String';
-    stUnicodeString:
-      Result := 'UnicodeString';
-    stBytes:
-      Result := 'Bytes';
-    stGUID:
-      Result := 'GUID';
-    stDate:
-      Result := 'Date';
-    stTime:
-      Result := 'Time';
-    stTimestamp:
-      Result := 'Timestamp';
-    stAsciiStream:
-      Result := 'AsciiStream';
-    stUnicodeStream:
-      Result := 'UnicodeStream';
-    stBinaryStream:
-      Result := 'BinaryStream';
+    stBoolean:        Result := 'Boolean';
+    stByte:           Result := 'Byte';
+    stShort:          Result := 'Short';
+    stWord:           Result := 'Word';
+    stSmall:          Result := 'Small';
+    stLongWord:       Result := 'LongWord';
+    stInteger:        Result := 'Integer';
+    stULong:          Result := 'ULong';
+    stLong:           Result := 'Long';
+    stFloat:          Result := 'Float';
+    stDouble:         Result := 'Double';
+    stCurrency:       Result := 'Currency';
+    stBigDecimal:     Result := 'BigDecimal';
+    stString:         Result := 'String';
+    stUnicodeString:  Result := 'UnicodeString';
+    stBytes:          Result := 'Bytes';
+    stGUID:           Result := 'GUID';
+    stDate:           Result := 'Date';
+    stTime:           Result := 'Time';
+    stTimestamp:      Result := 'Timestamp';
+    stAsciiStream:    Result := 'AsciiStream';
+    stUnicodeStream:  Result := 'UnicodeStream';
+    stBinaryStream:   Result := 'BinaryStream';
+    stArray:          Result := 'Array';
+    stDataSet:        Result := 'DataSet';
     else
       Result := 'Unknown';
   end;
@@ -534,12 +525,12 @@ begin
       //the RowAccessor assumes SizeOf(Char)*Precision+SizeOf(Char)
       //the Field assumes Precision*SizeOf(Char)
       {$IFDEF UNICODE}
-      if ConSettings.ClientCodePage.CharWidth >= 2 then //All others > 3 are UTF8
+      if ConSettings^.ClientCodePage^.CharWidth >= 2 then //All others > 3 are UTF8
         Result := TempPrecision * 2 //add more mem for a reserved thirt byte
       else //two and one byte AnsiChars are one WideChar
         Result := TempPrecision
       {$ELSE}
-        if ( ConSettings.CPType = cCP_UTF8 ) or (ConSettings.CTRL_CP = zCP_UTF8) then
+        if ( ConSettings^.CPType = cCP_UTF8 ) or (ConSettings^.CTRL_CP = zCP_UTF8) then
           Result := TempPrecision * 4
         else
           Result := TempPrecision * CharWidth

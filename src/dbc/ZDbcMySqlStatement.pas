@@ -104,6 +104,7 @@ type
   private
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
+    FUseDefaults: Boolean;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
@@ -147,13 +148,15 @@ type
 
   { TZMySQLPreparedStatement }
 
-  TZMySQLPreparedStatement = class(TZAbstractPreparedStatement,IZMySQLPreparedStatement)
+  TZMySQLPreparedStatement = class(TZAbstractRealPreparedStatement,
+    IZMySQLPreparedStatement)
   private
     FHandle: PZMySQLConnect;
     FMySQLConnection: IZMySQLConnection;
     FStmtHandle: PZMySqlPrepStmt;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
+    FUseDefaults: Boolean;
 
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
@@ -190,6 +193,7 @@ type
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
+    FUseDefaults: Boolean;
     function GetCallSQL: RawByteString;
     function GetOutParamSQL: String;
     function GetSelectFunctionSQL: RawByteString;
@@ -475,6 +479,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
 end;
 
 {**
@@ -503,9 +508,9 @@ begin
 
   Value := InParamValues[ParamIndex];
   if ClientVarManager.IsNull(Value) then
-    if (InParamDefaultValues[ParamIndex] <> '') and
-      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := ZPlainString(InParamDefaultValues[ParamIndex])
+    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
     else
       Result := 'NULL'
   else
@@ -516,7 +521,8 @@ begin
            Result := '''Y'''
         else
            Result := '''N''';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -579,6 +585,7 @@ begin
   ResultSetType := rtScrollInsensitive;
 
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
 
   Prepare;
 end;
@@ -673,6 +680,8 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
+    if (InParamValues[I].VType = vtNull) and FUseDefaults and (InParamDefaultValues[I] <> '') then
+      ClientVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2)); //extract quotes
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_STRING then
       CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
@@ -1046,9 +1055,9 @@ begin
 
   Value := InParamValues[ParamIndex];
   if ClientVarManager.IsNull(Value) then
-    if (InParamDefaultValues[ParamIndex] <> '') and
-      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := RawByteString(InParamDefaultValues[ParamIndex])
+    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
     else
       Result := 'NULL'
   else
@@ -1059,7 +1068,8 @@ begin
           Result := '''Y'''
         else
           Result := '''N''';
-      stByte, stShort, stSmall, stInteger, stLong, stBigDecimal, stFloat, stDouble:
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stUlong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
         Result := ClientVarManager.GetAsRawByteString(Value);
       stBytes:
         begin
@@ -1196,40 +1206,46 @@ begin
       OutParamValues[ParamIndex] := NullVariant
     else
       case ResultSet.GetMetadata.GetColumnType(I) of
-      stBoolean:
-        OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-      stByte:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-      stBytes:
-        OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-      stShort:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
-      stSmall:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-      stInteger:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-      stLong:
-        OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-      stFloat:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-      stDouble:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-      stBigDecimal:
-        OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-      stString, stAsciiStream:
-        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      stUnicodeString, stUnicodeStream:
-        OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-      stDate:
-        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
-      stTime:
-        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
-      stTimestamp:
-        OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
-      stBinaryStream:
-        OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-      else
-        OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stBoolean:
+          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
+        stByte:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
+        stShort:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+        stWord:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
+        stSmall:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
+        stLongword:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
+        stInteger:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
+        stULong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
+        stLong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
+        stBytes:
+          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
+        stFloat:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
+        stDouble:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
+        stBigDecimal:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+        stString, stAsciiStream:
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stUnicodeString, stUnicodeStream:
+          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
+        stDate:
+          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
+        stTime:
+          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
+        stTimestamp:
+          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
+        stBinaryStream:
+          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
+        else
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
       end;
     Inc(I);
   end;
@@ -1276,6 +1292,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'))
 end;
 
 {**

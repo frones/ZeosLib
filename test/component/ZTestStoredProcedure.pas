@@ -660,7 +660,7 @@ begin
 
   CheckEquals('P14', StoredProc.Params[13].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[13].ParamType));
-  CheckEquals(ord(ftSmallInt), ord(StoredProc.Params[13].DataType));
+  CheckEquals(ord(ftWord), ord(StoredProc.Params[13].DataType));
 
   CheckEquals('P15', StoredProc.Params[14].Name);
   CheckEquals(ord(ptInputOutput), ord(StoredProc.Params[14].ParamType));

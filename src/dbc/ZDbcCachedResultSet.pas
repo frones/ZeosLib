@@ -179,11 +179,15 @@ type
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
     function GetShort(ColumnIndex: Integer): ShortInt; override;
+    function GetWord(ColumnIndex: Integer): Word; override;
     function GetSmall(ColumnIndex: Integer): SmallInt; override;
+    function GetUInt(ColumnIndex: Integer): Cardinal; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
+    function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    function GetCurrency(ColumnIndex: Integer): Currency; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
@@ -210,11 +214,15 @@ type
     procedure UpdateBoolean(ColumnIndex: Integer; const Value: Boolean); override;
     procedure UpdateByte(ColumnIndex: Integer; const Value: Byte); override;
     procedure UpdateShort(ColumnIndex: Integer; const Value: ShortInt); override;
+    procedure UpdateWord(ColumnIndex: Integer; const Value: Word); override;
     procedure UpdateSmall(ColumnIndex: Integer; const Value: SmallInt); override;
+    procedure UpdateUInt(ColumnIndex: Integer; const Value: Cardinal); override;
     procedure UpdateInt(ColumnIndex: Integer; const Value: Integer); override;
+    procedure UpdateULong(ColumnIndex: Integer; const Value: UInt64); override;
     procedure UpdateLong(ColumnIndex: Integer; const Value: Int64); override;
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); override;
+    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); override;
@@ -968,7 +976,24 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
+  a <code>word</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractCachedResultSet.GetWord(ColumnIndex: Integer): Word;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetWord(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>small</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
   @return the column value; if the value is SQL <code>NULL</code>, the
@@ -980,6 +1005,23 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetSmall(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  an <code>uint</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractCachedResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetUInt(ColumnIndex, LastWasNull);
 end;
 
 {**
@@ -997,6 +1039,23 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetInt(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>ulong</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractCachedResultSet.GetULong(ColumnIndex: Integer): UInt64;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetULong(ColumnIndex, LastWasNull);
 end;
 
 {**
@@ -1048,6 +1107,23 @@ begin
   CheckAvailable;
 {$ENDIF}
   Result := FRowAccessor.GetDouble(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractCachedResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetCurrency(ColumnIndex, LastWasNull);
 end;
 
 {**
@@ -1255,6 +1331,26 @@ begin
 end;
 
 {**
+  Updates the designated column with a <code>word</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateWord(ColumnIndex: Integer;
+  const Value: Word);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetWord(ColumnIndex, Value);
+end;
+
+{**
   Updates the designated column with a <code>smallint</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -1275,6 +1371,26 @@ begin
 end;
 
 {**
+  Updates the designated column with an <code>uint</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateUInt(ColumnIndex: Integer;
+  const Value: Cardinal);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetUInt(ColumnIndex, Value);
+end;
+
+{**
   Updates the designated column with an <code>int</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
@@ -1292,6 +1408,26 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetInt(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>ulong</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateULong(ColumnIndex: Integer;
+  const Value: UInt64);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetULong(ColumnIndex, Value);
 end;
 
 {**
@@ -1352,6 +1488,26 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetDouble(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>currency</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateCurrency(ColumnIndex: Integer;
+  const Value: Currency);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetCurrency(ColumnIndex, Value);
 end;
 
 {**
@@ -2140,11 +2296,15 @@ begin
         stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
         stByte: RowAccessor.SetByte(I, ResultSet.GetByte(I));
         stShort: RowAccessor.SetShort(I, ResultSet.GetShort(I));
+        stWord: RowAccessor.SetWord(I, ResultSet.GetWord(I));
         stSmall: RowAccessor.SetSmall(I, ResultSet.GetSmall(I));
+        stLongWord: RowAccessor.SetUInt(I, ResultSet.GetUInt(I));
         stInteger: RowAccessor.SetInt(I, ResultSet.GetInt(I));
+        stULong: RowAccessor.SetLong(I, ResultSet.GetULong(I));
         stLong: RowAccessor.SetLong(I, ResultSet.GetLong(I));
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
+        stCurrency: RowAccessor.SetCurrency(I, ResultSet.GetCurrency(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
         stString, stUnicodeString: FStringFieldAssignFromResultSet(RowAccessor, ResultSet, i);
         stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));

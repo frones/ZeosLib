@@ -253,14 +253,17 @@ procedure PrepareOracleStatement(const PlainDriver: IZOraclePlainDriver;
 {**
   Executes an Oracle statement.
   @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param SQL an SQL query to be prepared.
+  @param ContectHandle the OCI ContextHandle.
+  @param SQL an SQL query to be logged.
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
+  @param ConSettings the connection settings record.
+  @param AutoCommit the commit each execution?.
 }
 procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const Connection: IZConnection; const LogSQL: RawByteString;
-  const Handle: POCIStmt; const ErrorHandle: POCIError);
+  const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
+  const Handle: POCIStmt; const ErrorHandle: POCIError;
+  const ConSettings: PZConSettings; const AutoCommit: Boolean);
 
 {**
   Gets a number of updates made by executed Oracle statement.
@@ -414,12 +417,12 @@ begin
   Variable.DataSize := DataSize;
   Length := 0;
   case Variable.ColType of
-    stByte, stShort, stSmall, stInteger:
+    stByte, stShort, stWord, stSmall, stInteger:
       begin
         Variable.TypeCode := SQLT_INT;
         Length := SizeOf(LongInt);
       end;
-    stFloat, stDouble, stLong:
+    stFloat, stDouble, stLongWord, stUlong, stLong, stCurrency:
       begin
         Variable.TypeCode := SQLT_FLT;
         Length := SizeOf(Double);
@@ -744,9 +747,11 @@ begin
       ErrorMessage := 'OCI_NO_DATA';
     OCI_ERROR:
       begin
-        PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
-          OCI_HTYPE_ERROR);
-        ErrorMessage := 'OCI_ERROR: ' + RawByteString(ErrorBuffer);
+        if PlainDriver.ErrorGet(ErrorHandle, 1, nil, ErrorCode, ErrorBuffer, 255,
+          OCI_HTYPE_ERROR) = 100 then
+          ErrorMessage := 'OCI_ERROR: Unkown(OCI_NO_DATA)'
+        else
+          ErrorMessage := 'OCI_ERROR: ' + RawByteString(ErrorBuffer);
       end;
     OCI_INVALID_HANDLE:
       ErrorMessage := 'OCI_INVALID_HANDLE';
@@ -887,22 +892,28 @@ end;
 {**
   Executes an Oracle statement.
   @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param SQL an SQL query to be prepared.
+  @param ContectHandle the OCI ContextHandle.
+  @param SQL an SQL query to be logged.
   @param Handle a holder for Statement handle.
   @param ErrorHandle a holder for Error handle.
+  @param ConSettings the connection settings record.
+  @param AutoCommit the commit each execution?.
 }
 procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const Connection: IZConnection; const LogSQL: RawByteString;
-  const Handle: POCIStmt; const ErrorHandle: POCIError);
-var
-  Status: Integer;
-  OracleConnection: IZOracleConnection;
+  const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
+  const Handle: POCIStmt; const ErrorHandle: POCIError;
+  const ConSettings: PZConSettings; const AutoCommit: Boolean);
 begin
-  OracleConnection := Connection as IZOracleConnection;
-  Status := PlainDriver.StmtExecute(OracleConnection.GetContextHandle,
-    Handle, ErrorHandle, 1, 0, nil, nil, OCI_DEFAULT);
-  CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, LogSQL, Connection.GetConSettings);
+  if AutoCommit then
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.StmtExecute(ContextHandle,
+        Handle, ErrorHandle, 1, 0, nil, nil, OCI_COMMIT_ON_SUCCESS),
+      lcExecute, LogSQL, ConSettings)
+  else
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.StmtExecute(ContextHandle,
+        Handle, ErrorHandle, 1, 0, nil, nil, OCI_DEFAULT),
+      lcExecute, LogSQL, ConSettings);
 end;
 
 {**
@@ -937,6 +948,7 @@ var
     Result.parmap := nil;
     Result.tdo := nil;
     Result.typecode := 0;
+    Result.col_typecode := 0;
     Result.elem_typecode := 0;
     Result.obj_ref := nil;
     Result.obj_ind := nil;

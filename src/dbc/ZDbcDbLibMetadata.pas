@@ -1861,7 +1861,9 @@ begin
         else
           Result.UpdateSmallByName('DATA_TYPE', Ord(SQLType));
         if ( SQLType = stBytes) and (UpperCase(GetStringByName('TYPE_NAME')) = 'UNIQUEIDENTIFIER') then
-          Result.UpdateSmallByName('DATA_TYPE', Ord(stGUID));
+          Result.UpdateSmallByName('DATA_TYPE', Ord(stGUID))
+        else if ( SQLType = stDouble) and StartsWith(UpperCase(GetStringByName('TYPE_NAME')), 'MONEY') then
+          Result.UpdateSmallByName('DATA_TYPE', Ord(stCurrency));
         Result.UpdateStringByName('TYPE_NAME', GetStringByName('TYPE_NAME'));
         Result.UpdateIntByName('COLUMN_SIZE', GetIntByName('LENGTH'));
         Result.UpdateIntByName('BUFFER_LENGTH', GetIntByName('LENGTH'));

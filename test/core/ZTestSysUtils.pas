@@ -61,7 +61,7 @@ uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type
-
+  {$UNDEF WITH_UNICODEFROMLOCALECHARS}
   {** Implements a test case for Utilities. }
   TZTestSysUtilsCase = class(TZGenericTestCase)
   published
@@ -100,6 +100,7 @@ type
     procedure TestRawToInt;
     procedure TestRawToIntDef;
     procedure TestRawToInt64Def;
+    procedure TestRawToUInt64Def;
     procedure TestUnicodeToInt;
     procedure TestUnicodeToIntDef;
     procedure TestUnicodeToInt64Def;
@@ -365,6 +366,7 @@ const
   begin
     ZFormatSettings.DateFormat := DateFormat;
     ZFormatSettings.DateFormatLen := Length(DateFormat);
+    ZFormatSettings.PDateFormat := PAnsiChar(ZFormatSettings.DateFormat);
     CheckEquals(Expected, ZSysUtils.RawSQLDateToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
@@ -449,6 +451,7 @@ const
   begin
     ZFormatSettings.TimeFormat := TimeFormat;
     ZFormatSettings.TimeFormatLen := Length(TimeFormat);
+    ZFormatSettings.PTimeFormat := PAnsiChar(ZFormatSettings.TimeFormat);
     CheckEquals(Expected, ZSysUtils.RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
@@ -581,6 +584,7 @@ const
   begin
     ZFormatSettings.DateTimeFormat := DateTimeFormat;
     ZFormatSettings.DateTimeFormatLen := Length(DateTimeFormat);
+    ZFormatSettings.PDateTimeFormat := PAnsiChar(ZFormatSettings.DateTimeFormat);
     CheckEquals(Expected, ZSysUtils.RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value), ZFormatSettings, Failed), 'Expected Date');
     CheckEquals(ExpFailed, Failed, 'Fail value');
   end;
@@ -796,7 +800,7 @@ end;
 {$IFDEF BENCHMARK}
 procedure TZTestSysUtilsCase.TestASCII7ToString_VS_RawByteToString;
 var
-  tm: RawByteString;
+  tm, raw: RawByteString;
   Between1, Between2: Cardinal;
   Start, Stop: Cardinal;
   S1, S2: String;
@@ -834,7 +838,8 @@ var
       end;
     end;
 begin
-  ZSetString(PAnsiChar(RawByteString(Format('''%s''::timestamp', [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', now)]))), tm);
+  Raw :=RawByteString(Format('''%s''::timestamp', [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', now)]));
+  ZSetString(PAnsiChar(Raw), Length(Raw), tm);
 
   Start := GetTickCount;
   S1 := TestNotEmptyASCII7ToString;
@@ -908,16 +913,54 @@ var
     var
       I: Integer;
     begin
-      for i := 0 to 10000000 do
-        Result := IntToRaw(i);
+      {$IFDEF HUGE_BENCHMARK}
+      for i := Low(Integer) to High(Integer) do
+      {$ELSE}
+      for i := -1 to 10000000 do
+      {$ENDIF}
+        if I < 0 then
+          if I < Low(ShortInt) then
+            if i < Low(SmallInt) then
+              Result := IntToRaw(I)
+            else
+              Result := IntToRaw(SmallInt(I))
+          else
+            Result := IntToRaw(ShortInt(I))
+        else
+          if I > High(Byte) then
+            if I > High(Word) then
+              Result := IntToRaw(I)
+            else
+              Result := IntToRaw(Word(I))
+          else
+            Result := IntToRaw(Byte(I))
     end;
 
     function TestIntToString: RawByteString;
     var
       I: Integer;
     begin
-      for i := 0 to 10000000 do
-        Result := NotEmptyStringToASCII7(SysUtils.IntToStr(i));
+      {$IFDEF HUGE_BENCHMARK}
+      for i := Low(Integer) to High(Integer) do
+      {$ELSE}
+      for i := -1 to 10000000 do
+      {$ENDIF}
+        if I < 0 then
+          if I < Low(ShortInt) then
+            if i < Low(SmallInt) then
+              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(I))
+            else
+              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(SmallInt(I)))
+          else
+            Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(ShortInt(I)))
+        else
+          if I > High(Byte) then
+            if I > High(Word) then
+              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(I))
+            else
+              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(Word(I)))
+          else
+            Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(Byte(I)));
     end;
 begin
   Start := GetTickCount;
@@ -1421,11 +1464,19 @@ var
     var
       I: Integer;
     begin
+      {$IFDEF UNICODE}
+      CheckEquals(Low(Int64), StrToInt64Def(UnicodeString(IntToRaw(Low(Int64))), 0), 'Results of RawToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(UnicodeString(IntToRaw(High(Int64))), 0), 'Results of RawToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := StrToInt64Def(UnicodeString(IntToRaw(Int64(i)*Int64(i))), 1);
+      Result := Result + StrToInt64Def('test', -999);
+      {$ELSE}
       CheckEquals(Low(Int64), StrToInt64Def(SysUtils.IntToStr(Low(Int64)), 0), 'Results of RawToInt64Def VS. Low(Int64)');
       CheckEquals(High(Int64), StrToInt64Def(SysUtils.IntToStr(High(Int64)), 0), 'Results of RawToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
         Result := StrToInt64Def(SysUtils.IntToStr(Int64(i)*Int64(i)), 1);
       Result := Result + StrToInt64Def('test', -999);
+      {$ENDIF}
     end;
 begin
   Start := GetTickCount;
@@ -1441,6 +1492,52 @@ begin
 
   system.WriteLn('');
   system.WriteLn(Format('Benchmarking(x %d): RawToInt64Def', [10000000]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
+
+end;
+
+procedure TZTestSysUtilsCase.TestRawToUInt64Def;
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: Int64;
+
+    function TRawToInt: UInt64;
+    var
+      I: Integer;
+    begin
+      CheckEquals(Low(UInt64), RawToUInt64Def(IntToRaw(Low(UInt64)), 0), 'Results of RawToUInt64Def VS. Low(UInt64)');
+      CheckEquals(High(UInt64), RawToUInt64Def(IntToRaw(High(UInt64)), 0), 'Results of RawToUInt64Def VS. High(UInt64)');
+      CheckEquals(0, RawToUInt64Def('18446744073709551616', 0), 'Results of RawToUInt64Def VS. High(UInt64)');
+      for i := 0 to 10000000 do
+        Result := RawToUInt64Def(IntToRaw(UInt64(i)*UInt64(i)), 1);
+      Result := Result + RawToUInt64Def('test', 999);
+    end;
+
+    function TStrToInt: UInt64;
+    var
+      I: Integer;
+    begin
+      CheckEquals(Low(UInt64), StrToInt64Def(SysUtils.IntToStr(Low(UInt64)), 0), 'Results of RawToInt64Def VS. Low(Int64)');
+      CheckEquals(High(Int64), StrToInt64Def(SysUtils.IntToStr(High(Int64)), 0), 'Results of RawToInt64Def VS. High(Int64)');
+      for i := 0 to 10000000 do
+        Result := StrToInt64Def(SysUtils.IntToStr(UInt64(i)*UInt64(i)), 1);
+      Result := Result + StrToInt64Def('test', 999);
+    end;
+begin
+  Start := GetTickCount;
+  S1 := TRawToInt;
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  Start := GetTickCount;
+  S2 := TStrToInt;
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+
+  CheckEquals(s1, s2, 'Results of RawToUInt64Def VS. StrToInt64Def');
+
+  system.WriteLn('');
+  system.WriteLn(Format('Benchmarking(x %d): RawToUInt64Def', [10000000]));
   system.WriteLn(Format('Zeos: %d ms VS. SysUtils.StrToIntDef: %d ms', [Between1, Between2]));
 
 end;
@@ -1466,9 +1563,9 @@ var
       for i := -20 to 10000000 do
         Result :=
           {$IFDEF UNICODE}
-            StrToInt(SysUtils.IntToStr(I));
+            SysUtils.StrToInt(SysUtils.IntToStr(I));
           {$ELSE}
-            StrToInt(String(ZWideString(SysUtils.IntToStr(I))));
+            SysUtils.StrToInt(String(ZWideString(SysUtils.IntToStr(I))));
           {$ENDIF}
     end;
 begin

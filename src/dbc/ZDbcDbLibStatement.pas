@@ -75,7 +75,7 @@ type
 
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
-    destructor Destroy; override;
+    procedure Close; override;
 
     function GetMoreResults: Boolean; override;
 
@@ -190,10 +190,14 @@ begin
   FResults := TZCollection.Create;
 end;
 
-destructor TZDBLibStatement.Destroy;
+procedure TZDBLibStatement.Close;
+var
+  I: Integer;
 begin
+  for i := 0 to FResults.Count -1 do
+    IZResultSet(FResults.Items[i]).Close;
   FResults.Clear;
-  inherited Destroy;
+  inherited Close;
 end;
 
 {**

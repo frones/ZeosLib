@@ -646,29 +646,17 @@ begin
 
     {timestamp format}
     if Info.Values['datetimewriteformat'] = '' then
-      if (ConSettings^.ReadFormatSettings.DateFormat = 'FLOAT') or
-         (ConSettings^.ReadFormatSettings.TimeFormat = 'FLOAT') then
-        ConSettings^.ReadFormatSettings.DateTimeFormat := 'FLOAT'
-      else
-        ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
+      ConSettings^.WriteFormatSettings.DateTimeFormat := ConSettings^.WriteFormatSettings.DateFormat+' '+ConSettings^.WriteFormatSettings.TimeFormat
     else
       ConSettings^.WriteFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimewriteformat']));
 
     if Info.Values['datetimereadformat'] = '' then
-      if (ConSettings^.ReadFormatSettings.DateFormat = 'FLOAT') or
-         (ConSettings^.ReadFormatSettings.TimeFormat = 'FLOAT') then
-        ConSettings^.ReadFormatSettings.DateTimeFormat := 'FLOAT'
-      else
-        ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
+      ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat
     else
       ConSettings^.ReadFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimereadformat']));
 
     if Info.Values['datetimediaplayformat'] = '' then
-      if (ConSettings^.ReadFormatSettings.DateFormat = 'FLOAT') or
-         (ConSettings^.ReadFormatSettings.TimeFormat = 'FLOAT') then
-        ConSettings^.ReadFormatSettings.DateTimeFormat := 'FLOAT'
-      else
-        ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
+      ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
     else
       ConSettings^.DisplayFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimediaplayformat']));
   end;
@@ -676,14 +664,23 @@ begin
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
   ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
   ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
+  ConSettings^.WriteFormatSettings.PDateFormat := PAnsiChar(ConSettings^.WriteFormatSettings.DateFormat);
+  ConSettings^.ReadFormatSettings.PDateFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateFormat);
+  ConSettings^.DisplayFormatSettings.PDateFormat := PAnsiChar(ConSettings^.DisplayFormatSettings.DateFormat);
 
   ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
   ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
   ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
+  ConSettings^.WriteFormatSettings.PTimeFormat := PAnsiChar(ConSettings^.WriteFormatSettings.TimeFormat);
+  ConSettings^.ReadFormatSettings.PTimeFormat := PAnsiChar(ConSettings^.ReadFormatSettings.TimeFormat);
+  ConSettings^.DisplayFormatSettings.PTimeFormat := PAnsiChar(ConSettings^.DisplayFormatSettings.TimeFormat);
 
   ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
   ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
+  ConSettings^.WriteFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.WriteFormatSettings.DateTimeFormat);
+  ConSettings^.ReadFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateTimeFormat);
+  ConSettings^.DisplayFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
 procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);
@@ -831,11 +828,13 @@ begin
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
-  InternalCreate;
-  SetDateTimeFormatProperties;
+  // should be set BEFORE InternalCreate
   ConSettings^.Protocol := NotEmptyStringToASCII7(FIZPlainDriver.GetProtocol);
   ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  // now InternalCreate will work, since it will try to Open the connection
+  InternalCreate;
+  SetDateTimeFormatProperties;
 
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;
