@@ -62,11 +62,16 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
 
 type
 
+  IZInterbase6PreparedStatement = Interface(IZPreparedStatement)
+    ['{6C91A176-40DD-4E47-8084-F4CA5187D81A}']
+    Procedure FreeReference;
+  End;
   {** Implements Prepared SQL Statement. }
 
   { TZInterbase6PreparedStatement }
 
-  TZInterbase6PreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZInterbase6PreparedStatement = class(TZAbstractRealPreparedStatement,
+    IZInterbase6PreparedStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;
@@ -77,7 +82,9 @@ type
 
     StmtHandle: TISC_STMT_HANDLE;
     StatementType: TZIbSqlStatementType;
+    FLastResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
   protected
+    Procedure FreeReference;
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
@@ -127,6 +134,11 @@ implementation
 uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver;
 
 { TZInterbase6PreparedStatement }
+
+Procedure TZInterbase6PreparedStatement.FreeReference;
+begin
+  FLastResultSet := nil;
+end;
 
 procedure TZInterbase6PreparedStatement.PrepareInParameters;
 var
@@ -242,6 +254,8 @@ begin
   if StmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, StmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
+  if Assigned(FLastResultSet) then
+    IZResultSet(FLastResultSet).Close;
   inherited Unprepare;
 end;
 
@@ -330,6 +344,10 @@ begin
   with FIBConnection do
   begin
     try
+      if Assigned(FLastResultSet) then
+        IZResultSet(FLastResultSet).Close;
+      FLastResultSet := nil;
+
       BindInParameters;
 
       if (StatementType = stSelect) then     //AVZ Get many rows - only need to use execute not execute2
@@ -351,6 +369,7 @@ begin
           Result := CreateIBResultSet(SQL, Self,
             TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
             FResultXSQLDA, CachedLob, StatementType));
+        FLastResultSet := Pointer(Result);
       end
       else
         if (iError <> DISCONNECT_ERROR) then    //AVZ

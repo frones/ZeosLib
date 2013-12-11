@@ -608,6 +608,8 @@ begin
   CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.Finalize(FStmtHandle),
     nil, lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   FStmtHandle := nil;
+  if Assigned(FLastResultSet) then
+    IZResultSet(FLastResultSet).Close;
   inherited UnPrepare;
 end;
 
