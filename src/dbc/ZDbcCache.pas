@@ -70,7 +70,9 @@ type
   TZRowUpdateType = (utUnmodified, utModified, utInserted, utDeleted);
   TZRowUpdateTypes = set of TZRowUpdateType;
 
+  {$IFNDEF NO_COLUMN_LIMIT}
   TZByteArray = array[0..4096 * SizeOf(Pointer)] of Byte;
+  {$ENDIF}
   {** Defines a header for row buffer. }
   {ludob. Notes on alignment:
   Columns contains a record per field with the structure
@@ -89,7 +91,11 @@ type
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     dummyalign:pointer;
     {$endif}
+    {$IFDEF NO_COLUMN_LIMIT}
+    Columns: array of Byte;
+    {$ELSE}
     Columns: TZByteArray;
+    {$ENDIF}
   end;
   PZRowBuffer = ^TZRowBuffer;
 
@@ -320,7 +326,7 @@ type
   end;
 
 const
-  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TZByteArray);
+  RowHeaderSize = SizeOf(TZRowBuffer){$IFNDEF NO_COLUMN_LIMIT} - SizeOf(TZByteArray){$ENDIF};
 
 implementation
 
@@ -376,8 +382,10 @@ begin
       FColumnLengths[I] := Current.Precision;
     if Current.ColumnType = stGUID then
       FColumnLengths[I] := 16;
+    {$IFNDEF NO_COLUMN_LIMIT}
     if FColumnsSize > SizeOf(TZByteArray)-1 then
       raise EZSQLException.Create(SRowBufferWidthExceeded);
+    {$ENDIF}
     FHasBlobs := FHasBlobs
       or (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream]);
   end;
@@ -601,7 +609,7 @@ begin
     L := Length(Value);
     ReallocMem(C^, L +SizeOf(Cardinal)+1);
     System.Move(Value[1], (C^+PAnsiInc)^, L);
-    PCardinal(C^)^ := L;
+    PLongWord(C^)^ := L;
     (C^+PAnsiInc+L)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
@@ -622,7 +630,7 @@ begin
     LMem := LStr * 2;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
     System.Move(Value[1], (W^+PWideInc)^, LMem);
-    PCardinal(W^)^ := LStr;
+    PLongWord(W^)^ := LStr;
     (W^+PWideInc+LStr)^ := WideChar(#0);
   end;
 end;
@@ -642,7 +650,7 @@ begin
     LMem := Len * 2;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
     System.Move(Value^, (W^+PWideInc)^, LMem);
-    PCardinal(W^)^ := Len;
+    PLongWord(W^)^ := Len;
     (W^+PWideInc+Len)^ := WideChar(#0);
   end;
 end;
@@ -661,7 +669,7 @@ begin
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     ReallocMem(C^, Len+SizeOf(Cardinal)+1);
     Move(Value^, (C^+PAnsiInc)^, Len);
-    PCardinal(C^)^ := Len;
+    PLongWord(C^)^ := Len;
     (C^+PAnsiInc+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
@@ -673,7 +681,12 @@ end;
 }
 function TZRowAccessor.AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
 begin
+  {$IFDEF NO_COLUMN_LIMIT}
+  Buffer := New(PZRowBuffer);
+  SetLength(Buffer^.Columns, FColumnsSize);
+  {$ELSE}
   GetMem(Buffer, FRowSize);
+  {$ENDIF}
   InitBuffer(Buffer);
   Result := Buffer;
 end;
@@ -687,7 +700,11 @@ begin
   if Assigned(Buffer) then
   begin
     ClearBuffer(Buffer);
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Dispose(Buffer);
+    {$ELSE}
     FreeMem(Buffer);
+    {$ENDIF}
   end;
 end;
 
@@ -700,14 +717,15 @@ var
   I : Integer;
 begin
   if Assigned(Buffer) then
-    with Buffer^ do
-    begin
-      Index := 0;
-      BookmarkFlag := 0;//bfCurrent;
-      UpdateType := utUnmodified;
-      FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-      for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
-    end;
+  Buffer^.Index := 0;
+  Buffer^.BookmarkFlag := 0;//bfCurrent;
+  Buffer^.UpdateType := utUnmodified;
+  {$IFDEF NO_COLUMN_LIMIT}
+  FillChar(Pointer(Buffer^.Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  {$ELSE}
+  FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  {$ENDIF}
+  for I := 0 to FColumnCount - 1 do Buffer^.Columns[FColumnOffsets[I]] := 1;
 end;
 
 {**
@@ -944,7 +962,11 @@ begin
             System.FreeMem(P^);
           end;
       end;
+    {$IFDEF  NO_COLUMN_LIMIT}
+    FillChar(Pointer(Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    {$ELSE}
     FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
   end;
 end;
@@ -2250,7 +2272,7 @@ var
   AnsiBuffer: PAnsiChar;
   WideBuffer: PWideChar;
   TempBlob: IZBlob;
-  BufLen: Cardinal;
+  BufLen: LongWord;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -2318,7 +2340,7 @@ var
   AnsiBuffer: PAnsiChar;
   WideBuffer: PWideChar;
   TempBlob: IZBlob;
-  BufLen: Cardinal;
+  BufLen: LongWord;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -4099,7 +4121,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4134,7 +4160,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4614,7 +4644,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4649,7 +4683,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
