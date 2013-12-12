@@ -319,11 +319,9 @@ end;
 }
 function TZMySQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
-  ASQL := SQL;
-  Result := nil;
+  Result := inherited ExecuteQuery(SQL);
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
     Result := CreateResultSet(Self.SQL);
@@ -348,11 +346,9 @@ var
   QueryHandle: PZMySQLResult;
   HasResultset : Boolean;
 begin
-  ASQL := SQL;
-  Result := -1;
+  Result := Inherited ExecuteUpdate(SQL);
   if FPlainDriver.ExecQuery(FHandle, PAnsichar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
@@ -407,11 +403,9 @@ function TZMySQLStatement.Execute(const SQL: RawByteString): Boolean;
 var
   HasResultset : Boolean;
 begin
-  ASQL := SQL;
-  Result := False;
+  Result := inherited Execute(SQL);
   if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
   begin
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
     if HasResultSet then
