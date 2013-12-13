@@ -615,6 +615,7 @@ type
 
     procedure AddBatchPrepared;
     function GetMetadata: IZResultSetMetadata;
+    procedure FreeReference;
   end;
 
   {** Callable SQL statement interface. }

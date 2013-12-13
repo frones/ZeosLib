@@ -207,6 +207,8 @@ type
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
   protected
+    FLastResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
+    Procedure FreeReference;
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -1368,6 +1370,10 @@ begin
   Result := ExecutePrepared;
 end;
 
+procedure TZAbstractPreparedStatement.FreeReference;
+begin
+  FLastResultSet := nil;
+end;
 
 {**
   Return a VariantManager which supports client encoded RawByteStrings
@@ -2059,6 +2065,8 @@ end;
 
 procedure TZAbstractPreparedStatement.Unprepare;
 begin
+  if Assigned(FLastResultSet) then
+    IZResultSet(FLastResultSet).Close;
   UnPrepareInParameters;
   FPrepared := False;
   SetLength(FCachedQueryRaw, 0);

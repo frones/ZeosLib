@@ -729,6 +729,7 @@ procedure TZAbstractResultSet.Close;
 var
    I: integer;
    FColumnInfo: TZColumnInfo;
+   stmt: IZPreparedStatement;
 begin
   LastWasNull := True;
   FRowNo := 0;
@@ -740,6 +741,8 @@ begin
     FColumnInfo.Free;
   end;
   FColumnsInfo.Clear;
+  if (Statement <> nil) and Supports(Statement, IZPreparedStatement, stmt) then
+    stmt.FreeReference;
   FStatement := nil;
 end;
 
