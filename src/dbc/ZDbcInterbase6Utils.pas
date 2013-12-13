@@ -264,7 +264,7 @@ function GetAffectedRows(const PlainDriver: IZInterbasePlainDriver;
   const StmtHandle: TISC_STMT_HANDLE; const StatementType: TZIbSqlStatementType;
   const ConSettings: PZConSettings): integer;
 
-function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSqlType;
 
 { interbase blob routines }
@@ -275,14 +275,25 @@ procedure ReadBlobBufer(const PlainDriver: IZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const TransactionHandle: PISC_TR_HANDLE;
   const BlobId: TISC_QUAD; var Size: Integer; var Buffer: Pointer;
   const Binary: Boolean; const ConSettings: PZConSettings);
-function GetIBScaleDivisor(Scale: SmallInt): Int64;
 
 const
   { Default Interbase blob size for readig }
   DefaultBlobSegmentSize = 16 * 1024;
 
-  IBScaleDivisor: array[-15..-1] of Int64 = (1000000000000000,100000000000000,
-    10000000000000,1000000000000,100000000000,10000000000,1000000000,100000000,
+  IBScaleDivisor: array[-18..-1] of Int64 = (
+    {sqldialect 3 range 1..18}
+    1000000000000000000,
+    100000000000000000,
+    10000000000000000,
+    {sqldialect 1 range 1..15}
+    1000000000000000,
+    100000000000000,
+    10000000000000,
+    1000000000000,
+    100000000000,
+    10000000000,
+    1000000000,
+    100000000,
     10000000,1000000,100000,10000,1000,100,10);
 
   { count database parameters }
@@ -637,7 +648,7 @@ end;
 
   <b>Note:</b> The interbase type and subtype get from RDB$TYPES table
 }
-function ConvertInterbase6ToSqlType(SqlType, SqlSubType: Integer;
+function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   Result := ZDbcIntfs.stUnknown;
@@ -661,45 +672,53 @@ begin
       case SqlSubType of
         RDB_NUMBERS_NONE: Result := stLong;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
-        RDB_NUMBERS_DECIMAL: Result := stBigDecimal;
+        RDB_NUMBERS_DECIMAL:
+          if Scale = 0 then
+            Result := stLong
+          else
+            if Abs(Scale) <= 4 then
+              Result := stCurrency
+            else
+              Result := stBigDecimal;
       end;
     blr_long:
-      begin
-        case SqlSubType of
-          RDB_NUMBERS_NONE: Result := stInteger;
-          RDB_NUMBERS_NUMERIC: Result := stDouble;
-          RDB_NUMBERS_DECIMAL: Result := stBigDecimal;
-        end;
+      case SqlSubType of
+        RDB_NUMBERS_NONE: Result := stInteger;
+        RDB_NUMBERS_NUMERIC: Result := stDouble;
+        RDB_NUMBERS_DECIMAL:
+          if Scale = 0 then
+            Result := stInteger
+          else
+            if Abs(Scale) <= 4 then
+              Result := stCurrency
+            else
+              Result := stBigDecimal;
       end;
     blr_short:
-      begin
-        case SqlSubType of
-          RDB_NUMBERS_NONE: Result := stSmall;
-          RDB_NUMBERS_NUMERIC: Result := stDouble;
-          RDB_NUMBERS_DECIMAL: Result := stDouble;
-        end;
+      case SqlSubType of
+        RDB_NUMBERS_NONE: Result := stSmall;
+        RDB_NUMBERS_NUMERIC: Result := stDouble;
+        RDB_NUMBERS_DECIMAL: Result := stDouble;
       end;
     blr_sql_date: Result := stDate;
     blr_sql_time: Result := stTime;
     blr_timestamp: Result := stTimestamp;
     blr_blob, blr_blob2:
-      begin
-        case SqlSubType of
-          { Blob Subtypes }
-          { types less than zero are reserved for customer use }
-          isc_blob_untyped: Result := stBinaryStream;
+      case SqlSubType of
+        { Blob Subtypes }
+        { types less than zero are reserved for customer use }
+        isc_blob_untyped: Result := stBinaryStream;
 
-          { internal subtypes }
-          isc_blob_text: Result := stAsciiStream;
-          isc_blob_blr: Result := stBinaryStream;
-          isc_blob_acl: Result := stAsciiStream;
-          isc_blob_ranges: Result := stBinaryStream;
-          isc_blob_summary: Result := stBinaryStream;
-          isc_blob_format: Result := stAsciiStream;
-          isc_blob_tra: Result := stAsciiStream;
-          isc_blob_extfile: Result := stAsciiStream;
-          isc_blob_debug_info: Result := stBinaryStream;
-        end;
+        { internal subtypes }
+        isc_blob_text: Result := stAsciiStream;
+        isc_blob_blr: Result := stBinaryStream;
+        isc_blob_acl: Result := stAsciiStream;
+        isc_blob_ranges: Result := stBinaryStream;
+        isc_blob_summary: Result := stBinaryStream;
+        isc_blob_format: Result := stAsciiStream;
+        isc_blob_tra: Result := stAsciiStream;
+        isc_blob_extfile: Result := stAsciiStream;
+        isc_blob_debug_info: Result := stBinaryStream;
       end;
     else
       Result := ZDbcIntfs.stUnknown;
@@ -1028,7 +1047,7 @@ begin
       stDouble:
         ParamSqlData.UpdateDouble(I,
           ClientVarManager.GetAsFloat(InParamValues[I]));
-      stBigDecimal:
+      stBigDecimal, stCurrency:
         ParamSqlData.UpdateBigDecimal(I,
           ClientVarManager.GetAsFloat(InParamValues[I]));
       stString, stUnicodeString:
@@ -1203,19 +1222,6 @@ begin
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
 end;
 
-function GetIBScaleDivisor(Scale: SmallInt): Int64;
-var
-  i: Integer;
-begin
-  Result := 1;
-  if Scale > 0 then
-    for i := 1 to Scale do
-      Result := Result * 10
-  else
-    if Scale < 0 then
-      for i := -1 downto Scale do
-        Result := Result * 10;
-end;
 {**
    Return interbase server version string
    @param PlainDriver a interbase plain driver
@@ -1576,8 +1582,10 @@ begin
         else
           Result := stFloat; //Numeric with low precision
        end;
-    SQL_FLOAT: Result := stFloat;
-    SQL_DOUBLE: Result := stDouble;
+    SQL_FLOAT:
+      Result := stFloat;
+    SQL_DOUBLE:
+      Result := stDouble;
     SQL_DATE: Result := stTimestamp;
     SQL_TYPE_TIME: Result := stTime;
     SQL_TYPE_DATE: Result := stDate;
@@ -1586,18 +1594,18 @@ begin
         if SqlScale = 0 then
           Result := stLong
         else if Abs(SqlScale) <= 4 then
-          Result := stDouble
+          Result := stCurrency
         else
           Result := stBigDecimal;
       end;
-    SQL_QUAD, SQL_ARRAY, SQL_BLOB:
+    SQL_QUAD, SQL_BLOB:
       begin
         if SqlSubType = isc_blob_text then
           Result := stAsciiStream
         else
           Result := stBinaryStream;
       end;
-    //SQL_ARRAY: Result := stBytes;
+    SQL_ARRAY: Result := stArray;
   else
       Result := stString;
   end;
@@ -1902,15 +1910,11 @@ begin
     if (sqlscale < 0)  then
     begin //http://code.google.com/p/fbclient/wiki/DatatypeMapping
       case SQLCode of
-        SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(Value * IBScaleDivisor[sqlscale], 0));
+        SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(Value * IBScaleDivisor[sqlscale], 0));
         SQL_INT64,
-        SQL_QUAD   : //PInt64(sqldata)^    := Trunc(Value * GetIBScaleDivisor(sqlscale)); EgonHugeist: Trunc seems to have rounding issues!
-            //remain issues if decimal digits > scale than we've school learned rounding success randomly only
-            //each aproach did fail: RoundTo(Value, sqlscale*-1), Round etc.
-            //so the developer has to take
-            PInt64(sqldata)^    := StrToInt64(FloatToStrF(RoundTo(Value, sqlscale) * GetIBScaleDivisor(sqlscale), ffFixed, 18, 0));
-        SQL_DOUBLE : PDouble(sqldata)^   := Value;                                        //I have tested with Query.ParamByName ().AsCurrency to check this, problem does not lie with straight SQL
+        SQL_QUAD   : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(Value * IBScaleDivisor[sqlscale], 0));
+        SQL_DOUBLE : PDouble(sqldata)^   := Value;
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
       end;
@@ -2125,11 +2129,12 @@ begin
 
     if (sqlscale < 0)  then
     begin
+      //EH: Double is within Round(x: Real=Double) precision.
       case SQLCode of
-        SQL_SHORT  : PSmallInt(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
-        SQL_LONG   : PInteger(sqldata)^  := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_SHORT  : PSmallInt(sqldata)^ := Round(Value * IBScaleDivisor[sqlscale]);
+        SQL_LONG   : PInteger(sqldata)^  := Round(Value * IBScaleDivisor[sqlscale]);
         SQL_INT64,
-        SQL_QUAD   : PInt64(sqldata)^    := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value * IBScaleDivisor[sqlscale]);
+        SQL_QUAD   : PInt64(sqldata)^    := Round(Value * IBScaleDivisor[sqlscale]);
         SQL_DOUBLE : PDouble(sqldata)^   := Value;
       else
         raise EZIBConvertError.Create(SUnsupportedDataType);
@@ -2138,12 +2143,12 @@ begin
     else
       case SQLCode of
         SQL_DOUBLE    : PDouble(sqldata)^   := Value;
-        SQL_LONG      : PInteger(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_LONG      : PInteger(sqldata)^ := Round(Value);
         SQL_D_FLOAT,
         SQL_FLOAT     : PSingle(sqldata)^ := Value;
-        SQL_BOOLEAN   : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-        SQL_SHORT     : PSmallint(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
-        SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value);
+        SQL_BOOLEAN   : PSmallint(sqldata)^ := Round(Value);
+        SQL_SHORT     : PSmallint(sqldata)^ := Round(Value);
+        SQL_INT64     : PInt64(sqldata)^ := Round(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, FloatToRaw(Value));
         SQL_VARYING   : EncodeString(SQL_VARYING, Index, FloatToRaw(Value));
       else
@@ -2360,7 +2365,7 @@ begin
       SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0);
       SQL_D_FLOAT,
       SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(Value, 0);
-      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(SQLStrToFloatDef(Value, 0, Len) * GetIBScaleDivisor(sqlscale)); //AVZ - INT64 value was not recognized
+      SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[sqlscale], 0)); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD: WriteLobBuffer(Index, Value, Len);
     else
       raise EZIBConvertError.Create(SErrorConvertion);

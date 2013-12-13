@@ -1836,8 +1836,7 @@ begin
           RowAccessor.SetAnsiString( ColumnIndex, PAnsichar(Buffer));
         {$ENDIF WITH_ZSTRINGFIELDS}
         ftCurrency:
-            {SizeOf(curreny) = 8Byte but SizeOf(Extented) = 10 Byte, so i need to convert the value}
-            RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^); //cast Currrency to Extented
+          RowAccessor.SetDouble(ColumnIndex, PDouble(Buffer)^);
         else  { Processes all other fields. }
           begin
             System.Move(Pointer(Buffer)^, RowAccessor.GetColumnData(ColumnIndex, WasNull)^,

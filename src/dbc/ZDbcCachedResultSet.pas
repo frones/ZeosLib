@@ -187,6 +187,7 @@ type
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
+    function GetCurrency(ColumnIndex: Integer): Currency; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
     function GetBytes(ColumnIndex: Integer): TBytes; override;
     function GetDate(ColumnIndex: Integer): TDateTime; override;
@@ -221,6 +222,7 @@ type
     procedure UpdateLong(ColumnIndex: Integer; const Value: Int64); override;
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); override;
+    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); override;
@@ -1110,6 +1112,23 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>currency</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractCachedResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckAvailable;
+{$ENDIF}
+  Result := FRowAccessor.GetCurrency(ColumnIndex, LastWasNull);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>java.sql.BigDecimal</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -1469,6 +1488,26 @@ begin
 {$ENDIF}
   PrepareRowForUpdates;
   FRowAccessor.SetDouble(ColumnIndex, Value);
+end;
+
+{**
+  Updates the designated column with a <code>currency</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractCachedResultSet.UpdateCurrency(ColumnIndex: Integer;
+  const Value: Currency);
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckUpdatable;
+{$ENDIF}
+  PrepareRowForUpdates;
+  FRowAccessor.SetCurrency(ColumnIndex, Value);
 end;
 
 {**
@@ -2265,6 +2304,7 @@ begin
         stLong: RowAccessor.SetLong(I, ResultSet.GetLong(I));
         stFloat: RowAccessor.SetFloat(I, ResultSet.GetFloat(I));
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
+        stCurrency: RowAccessor.SetCurrency(I, ResultSet.GetCurrency(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
         stString, stUnicodeString: FStringFieldAssignFromResultSet(RowAccessor, ResultSet, i);
         stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));

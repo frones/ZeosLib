@@ -85,7 +85,7 @@ type
   end;
 
   {** Implements Prepared ADO Statement. }
-  TZAdoPreparedStatement = class(TZAbstractPreparedStatement)
+  TZAdoPreparedStatement = class(TZAbstractRealPreparedStatement)
   private
     FPlainDriver: IZPlainDriver;
     AdoRecordSet: ZPlainAdo.RecordSet;

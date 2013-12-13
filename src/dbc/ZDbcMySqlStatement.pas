@@ -104,6 +104,7 @@ type
   private
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
+    FUseDefaults: Boolean;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
@@ -147,13 +148,15 @@ type
 
   { TZMySQLPreparedStatement }
 
-  TZMySQLPreparedStatement = class(TZAbstractPreparedStatement,IZMySQLPreparedStatement)
+  TZMySQLPreparedStatement = class(TZAbstractRealPreparedStatement,
+    IZMySQLPreparedStatement)
   private
     FHandle: PZMySQLConnect;
     FMySQLConnection: IZMySQLConnection;
     FStmtHandle: PZMySqlPrepStmt;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
+    FUseDefaults: Boolean;
 
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
@@ -190,6 +193,7 @@ type
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
+    FUseDefaults: Boolean;
     function GetCallSQL: RawByteString;
     function GetOutParamSQL: String;
     function GetSelectFunctionSQL: RawByteString;
@@ -481,6 +485,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
 end;
 
 {**
@@ -509,9 +514,9 @@ begin
 
   Value := InParamValues[ParamIndex];
   if ClientVarManager.IsNull(Value) then
-    if (InParamDefaultValues[ParamIndex] <> '') and
-      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := ZPlainString(InParamDefaultValues[ParamIndex])
+    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
     else
       Result := 'NULL'
   else
@@ -586,6 +591,7 @@ begin
   ResultSetType := rtScrollInsensitive;
 
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
 
   Prepare;
 end;
@@ -680,6 +686,8 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
+    if (InParamValues[I].VType = vtNull) and FUseDefaults and (InParamDefaultValues[I] <> '') then
+      ClientVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2)); //extract quotes
     MyType := GetFieldType(InParamValues[I]);
     if MyType = FIELD_TYPE_STRING then
       CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
@@ -1053,9 +1061,9 @@ begin
 
   Value := InParamValues[ParamIndex];
   if ClientVarManager.IsNull(Value) then
-    if (InParamDefaultValues[ParamIndex] <> '') and
-      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := RawByteString(InParamDefaultValues[ParamIndex])
+    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
     else
       Result := 'NULL'
   else
@@ -1290,6 +1298,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'))
 end;
 
 {**

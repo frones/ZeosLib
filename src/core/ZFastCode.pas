@@ -77,20 +77,8 @@ const
 var
   TwoDigitLookupW : packed array[0..99] of Word absolute TwoDigitLookupRaw;
 
-const
-  TwoDigitLookupWide : packed array[0..99] of array[1..2] of WideChar =
-    (ZWideString('00'),ZWideString('01'),ZWideString('02'),ZWideString('03'),ZWideString('04'),ZWideString('05'),ZWideString('06'),ZWideString('07'),ZWideString('08'),ZWideString('09'),
-     ZWideString('10'),ZWideString('11'),ZWideString('12'),ZWideString('13'),ZWideString('14'),ZWideString('15'),ZWideString('16'),ZWideString('17'),ZWideString('18'),ZWideString('19'),
-     ZWideString('20'),ZWideString('21'),ZWideString('22'),ZWideString('23'),ZWideString('24'),ZWideString('25'),ZWideString('26'),ZWideString('27'),ZWideString('28'),ZWideString('29'),
-     ZWideString('30'),ZWideString('31'),ZWideString('32'),ZWideString('33'),ZWideString('34'),ZWideString('35'),ZWideString('36'),ZWideString('37'),ZWideString('38'),ZWideString('39'),
-     ZWideString('40'),ZWideString('41'),ZWideString('42'),ZWideString('43'),ZWideString('44'),ZWideString('45'),ZWideString('46'),ZWideString('47'),ZWideString('48'),ZWideString('49'),
-     ZWideString('50'),ZWideString('51'),ZWideString('52'),ZWideString('53'),ZWideString('54'),ZWideString('55'),ZWideString('56'),ZWideString('57'),ZWideString('58'),ZWideString('59'),
-     ZWideString('60'),ZWideString('61'),ZWideString('62'),ZWideString('63'),ZWideString('64'),ZWideString('65'),ZWideString('66'),ZWideString('67'),ZWideString('68'),ZWideString('69'),
-     ZWideString('70'),ZWideString('71'),ZWideString('72'),ZWideString('73'),ZWideString('74'),ZWideString('75'),ZWideString('76'),ZWideString('77'),ZWideString('78'),ZWideString('79'),
-     ZWideString('80'),ZWideString('81'),ZWideString('82'),ZWideString('83'),ZWideString('84'),ZWideString('85'),ZWideString('86'),ZWideString('87'),ZWideString('88'),ZWideString('89'),
-     ZWideString('90'),ZWideString('91'),ZWideString('92'),ZWideString('93'),ZWideString('94'),ZWideString('95'),ZWideString('96'),ZWideString('97'),ZWideString('98'),ZWideString('99'));
 var
-  TwoDigitLookupLW : packed array[0..99] of LongWord absolute TwoDigitLookupWide;
+  TwoDigitLookupLW : packed array[0..99] of LongWord;
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN)}
   {$D-} {Prevent Steppping into Move Code} //EH: moved after FastCode.inc is loaded to prevent debugging
@@ -6275,7 +6263,22 @@ begin
 end;
 {$IFEND}
 
+procedure FillTwoDigitLoopLW;
+var
+  I: Integer;
+  W: Array[0..1] of Word;
+begin
+  for i := 0 to 99 do
+  begin
+    W[0] := Ord(TwoDigitLookupRaw[I][1]);
+    W[1] := Ord(TwoDigitLookupRaw[I][2]);
+    TwoDigitLookupLW[I] := PLongWord(@W)^;
+  end;
+end;
+
 initialization
+
+FillTwoDigitLoopLW;
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
   GetCPUInfo;

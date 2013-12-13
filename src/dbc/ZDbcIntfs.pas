@@ -588,6 +588,7 @@ type
     procedure SetLong(ParameterIndex: Integer; const Value: Int64);
     procedure SetFloat(ParameterIndex: Integer; const Value: Single);
     procedure SetDouble(ParameterIndex: Integer; const Value: Double);
+    procedure SetCurrency(ParameterIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(ParameterIndex: Integer; const Value: Extended);
     procedure SetPChar(ParameterIndex: Integer; const Value: PChar);
     procedure SetCharRec(ParameterIndex: Integer; const Value: TZCharRec);
@@ -650,6 +651,7 @@ type
     function GetLong(ParameterIndex: Integer): Int64;
     function GetFloat(ParameterIndex: Integer): Single;
     function GetDouble(ParameterIndex: Integer): Double;
+    function GetCurrency(ParameterIndex: Integer): Currency;
     function GetBigDecimal(ParameterIndex: Integer): Extended;
     function GetBytes(ParameterIndex: Integer): TBytes;
     function GetDate(ParameterIndex: Integer): TDateTime;
@@ -699,6 +701,7 @@ type
     function GetLong(ColumnIndex: Integer): Int64;
     function GetFloat(ColumnIndex: Integer): Single;
     function GetDouble(ColumnIndex: Integer): Double;
+    function GetCurrency(ColumnIndex: Integer): Currency;
     function GetBigDecimal(ColumnIndex: Integer): Extended;
     function GetBytes(ColumnIndex: Integer): TBytes;
     function GetDate(ColumnIndex: Integer): TDateTime;
@@ -739,6 +742,7 @@ type
     function GetLongByName(const ColumnName: string): Int64;
     function GetFloatByName(const ColumnName: string): Single;
     function GetDoubleByName(const ColumnName: string): Double;
+    function GetCurrencyByName(const ColumnName: string): Currency;
     function GetBigDecimalByName(const ColumnName: string): Extended;
     function GetBytesByName(const ColumnName: string): TBytes;
     function GetDateByName(const ColumnName: string): TDateTime;
@@ -815,6 +819,7 @@ type
     procedure UpdateLong(ColumnIndex: Integer; const Value: Int64);
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single);
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double);
+    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency);
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar);
@@ -854,6 +859,7 @@ type
     procedure UpdateULongByName(const ColumnName: string; const Value: UInt64);
     procedure UpdateLongByName(const ColumnName: string; const Value: Int64);
     procedure UpdateFloatByName(const ColumnName: string; const Value: Single);
+    procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended);
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar);

@@ -831,11 +831,13 @@ begin
   FReadOnly := True;
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
-  InternalCreate;
-  SetDateTimeFormatProperties;
+  // should be set BEFORE InternalCreate
   ConSettings^.Protocol := NotEmptyStringToASCII7(FIZPlainDriver.GetProtocol);
   ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  // now InternalCreate will work, since it will try to Open the connection
+  InternalCreate;
+  SetDateTimeFormatProperties;
 
   {$IFDEF ZEOS_TEST_ONLY}
   FTestMode := 0;

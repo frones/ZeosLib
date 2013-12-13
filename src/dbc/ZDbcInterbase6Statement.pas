@@ -66,7 +66,7 @@ type
 
   { TZInterbase6PreparedStatement }
 
-  TZInterbase6PreparedStatement = class(TZAbstractPreparedStatement)
+  TZInterbase6PreparedStatement = class(TZAbstractRealPreparedStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;
@@ -79,8 +79,6 @@ type
     StatementType: TZIbSqlStatementType;
   protected
     procedure PrepareInParameters; override;
-    procedure SetASQL(const Value: RawByteString); override;
-    procedure SetWSQL(const Value: ZWideString); override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function CheckInterbase6Error(const Sql: RawByteString = '') : Integer;
@@ -154,20 +152,6 @@ begin
       FParamSQLData.InitFields(True);
     end;
   inherited PrepareInParameters;
-end;
-
-procedure TZInterbase6PreparedStatement.SetASQL(const Value: RawByteString);
-begin
-  if ( ASQL <> Value ) and Prepared then
-    Unprepare;
-  inherited SetASQL(Value);
-end;
-
-procedure TZInterbase6PreparedStatement.SetWSQL(const Value: ZWideString);
-begin
-  if ( WSQL <> Value ) and Prepared then
-    Unprepare;
-  inherited SetWSQL(Value);
 end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;

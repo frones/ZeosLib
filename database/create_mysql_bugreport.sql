@@ -409,3 +409,13 @@ INSERT INTO TableTicket52(id_test, filter_test) VALUES (3, '1');
 INSERT INTO TableTicket52(id_test, filter_test) VALUES (4, '2');
 INSERT INTO TableTicket52(id_test, filter_test) VALUES (5, 'Other');
 INSERT INTO TableTicket52(id_test, filter_test) VALUES (6, 'String02');
+
+/*==============================================================*/
+/* Tables for TableMS56OBER9357                                 */
+/*==============================================================*/
+CREATE TABLE `TableMS56OBER9357` (
+`keyfield` int(11) NOT NULL default '0',
+`dtfield` date NOT NULL default '0000-00-00',
+`infofield` varchar(10) default NULL,
+PRIMARY KEY (`keyfield`,`dtfield`)
+);

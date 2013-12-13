@@ -155,6 +155,7 @@ type
     function GetLong(ColumnIndex: Integer): Int64; virtual;
     function GetFloat(ColumnIndex: Integer): Single; virtual;
     function GetDouble(ColumnIndex: Integer): Double; virtual;
+    function GetCurrency(ColumnIndex: Integer): Currency; virtual;
     function GetBigDecimal(ColumnIndex: Integer): Extended; virtual;
     function GetBytes(ColumnIndex: Integer): TBytes; virtual;
     function GetDate(ColumnIndex: Integer): TDateTime; virtual;
@@ -195,6 +196,7 @@ type
     function GetLongByName(const ColumnName: string): Int64; virtual;
     function GetFloatByName(const ColumnName: string): Single; virtual;
     function GetDoubleByName(const ColumnName: string): Double; virtual;
+    function GetCurrencyByName(const ColumnName: string): Currency; virtual;
     function GetBigDecimalByName(const ColumnName: string): Extended; virtual;
     function GetBytesByName(const ColumnName: string): TBytes; virtual;
     function GetDateByName(const ColumnName: string): TDateTime; virtual;
@@ -271,6 +273,7 @@ type
     procedure UpdateLong(ColumnIndex: Integer; const Value: Int64); virtual;
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); virtual;
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); virtual;
+    procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); virtual;
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); virtual;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); virtual;
@@ -311,6 +314,7 @@ type
     procedure UpdateLongByName(const ColumnName: string; const Value: Int64); virtual;
     procedure UpdateFloatByName(const ColumnName: string; const Value: Single); virtual;
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double); virtual;
+    procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency); virtual;
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended); virtual;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); virtual;
     procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
@@ -896,7 +900,7 @@ end;
 }
 function TZAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 begin
-  Result := ConSettings^.ConvFuncs.ZRawToUTF8(InternalGetString(ColumnIndex),
+  Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(GetAnsiRec(ColumnIndex),
     ConSettings^.ClientCodePage^.CP);
 end;
 
@@ -1043,7 +1047,7 @@ end;
 function TZAbstractResultSet.GetUInt(ColumnIndex: Integer): Cardinal;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stCardinal);
+  CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
   Result := GetLong(ColumnIndex);
 end;
@@ -1131,6 +1135,23 @@ begin
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
   Result := 0;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractResultSet.GetCurrency(ColumnIndex: Integer): Currency;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stCurrency);
+{$ENDIF}
+  Result := GetBigDecimal(ColumnIndex);
 end;
 
 {**
@@ -1783,6 +1804,20 @@ end;
 function TZAbstractResultSet.GetDoubleByName(const ColumnName: string): Double;
 begin
   Result := GetDouble(GetColumnIndex(ColumnName));
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>currency</code> in the Java programming language.
+
+  @param columnName the SQL name of the column
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZAbstractResultSet.GetCurrencyByName(const ColumnName: string): Currency;
+begin
+  Result := GetCurrency(GetColumnIndex(ColumnName));
 end;
 
 {**
@@ -2629,6 +2664,22 @@ begin
 end;
 
 {**
+  Updates the designated column with a <code>currency</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateCurrency(ColumnIndex: Integer;
+  const Value: Currency);
+begin
+  RaiseReadOnlyException;
+end;
+
+{**
   Updates the designated column with a <code>java.math.BigDecimal</code>
   value.
   The <code>updateXXX</code> methods are used to update column values in the
@@ -3178,6 +3229,22 @@ procedure TZAbstractResultSet.UpdateDoubleByName(const ColumnName: string;
   const Value: Double);
 begin
   UpdateDouble(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>currency</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdateCurrencyByName(const ColumnName: string;
+  const Value: Currency);
+begin
+  UpdateCurrency(GetColumnIndex(ColumnName), Value);
 end;
 
 {**

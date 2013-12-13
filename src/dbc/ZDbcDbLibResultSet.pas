@@ -86,6 +86,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
+    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
@@ -260,6 +261,30 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
+  a <code>TZAnsiRec</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZDBLibResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+begin
+  FRawTemp := InternalGetString(ColumnIndex);
+  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
+    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
+      case DetectUTF8Encoding(FRawTemp) of
+        etUTF8:
+          TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
+        etAnsi:
+          TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+      end;
+  Result.P := PAnsiChar(FRawTemp);
+  Result.Len := Length(FRawTemp);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
   a <code>String</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
@@ -269,94 +294,103 @@ end;
 function TZDBLibResultSet.GetString(ColumnIndex: Integer): String;
 var Tmp: RawByteString;
 begin
-  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
-    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
-    begin
-      Tmp := InternalGetString(ColumnIndex);
-      case DetectUTF8Encoding(Tmp) of
-        etUTF8:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
-            Result := ZConvertRawToString(Tmp, zCP_UTF8, ConSettings^.CTRL_CP);
-          end;
-        etAnsi:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-            Result := ZConvertRawToString(tmp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-          end;
-        else
-          Result := {$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(tmp);
-      end;
-    end
+  case TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType of
+    stAsciiStream, stUnicodeStream:
+      Result := ZConvertRawToString(tmp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+    stString, stUnicodeString:
+      if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
+      begin
+        Tmp := InternalGetString(ColumnIndex);
+        case DetectUTF8Encoding(Tmp) of
+          etUTF8:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
+              Result := ZConvertRawToString(Tmp, zCP_UTF8, ConSettings^.CTRL_CP);
+            end;
+          etAnsi:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+              Result := ZConvertRawToString(tmp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+            end;
+          else
+            Result := {$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(tmp);
+        end;
+      end
+      else
+        Result := ZConvertRawToString(InternalGetString(ColumnIndex),
+          TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage, ConSettings^.CTRL_CP);
     else
-      Result := {$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(InternalGetString(ColumnIndex))
-  else
-    Result := ZConvertRawToString(InternalGetString(ColumnIndex),
-      TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage, ConSettings^.CTRL_CP);
+      Result := ZMoveRawToString(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP,
+        ConSettings^.CTRL_CP);
+  end;
 end;
 
 function TZDBLibResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var Tmp: RawByteString;
 begin
-  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
-    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
-    begin
-      Tmp := InternalGetString(ColumnIndex);
-      case DetectUTF8Encoding(Tmp) of
-        etUTF8:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
-            Result := ZConvertRawToAnsi(Tmp, zCP_UTF8);
-          end;
-        etAnsi:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+  case TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType of
+    stAsciiStream, stUnicodeStream:
+      Result := ZMoveRawToAnsi(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+    stString, stUnicodeString:
+      if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
+      begin
+        Tmp := InternalGetString(ColumnIndex);
+        case DetectUTF8Encoding(Tmp) of
+          etUTF8:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
+              Result := ZConvertRawToAnsi(Tmp, zCP_UTF8);
+            end;
+          etAnsi:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+              Result := ZMoveRawToAnsi(Tmp, ConSettings^.ClientCodePage^.CP);
+            end;
+          else
             Result := ZMoveRawToAnsi(Tmp, ConSettings^.ClientCodePage^.CP);
-          end;
-        else
-          Result := ZMoveRawToAnsi(Tmp, ConSettings^.ClientCodePage^.CP);
-      end;
-    end
+        end;
+      end
+      else
+        Result := ZMoveRawToAnsi(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP)
     else
-      Result := ZMoveRawToAnsi(Tmp, ConSettings^.ClientCodePage^.CP)
-  else
-    if ZCompatibleCodePages(TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage, ZDefaultSystemCodePage) then
-      Result := ZMoveRawToAnsi(Tmp, ConSettings^.ClientCodePage^.CP)
-    else
-      Result := ZConvertRawToAnsi(InternalGetString(ColumnIndex),
-        TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage);
+      Result := ZMoveRawToAnsi(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+  end;
 end;
 
 function TZDBLibResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var Tmp: RawByteString;
 begin
-  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
-    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
-    begin
-      Tmp := InternalGetString(ColumnIndex);
-      case DetectUTF8Encoding(Tmp) of
-        etUTF8:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
-            Result := ZMoveRawToUTF8(Tmp, zCP_UTF8);
-          end;
-        etAnsi:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-            Result := ZConvertRawToUTF8(Tmp, ConSettings^.ClientCodePage^.CP);
-          end;
+  case TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType of
+    stAsciiStream, stUnicodeStream:  //DBlib doesn't convert NTEXT so in all cases we've ansi-Encoding
+      Result := ZConvertRawToUTF8(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+    stString, stUnicodeString:
+      if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
+      begin
+        Tmp := InternalGetString(ColumnIndex);
+        case DetectUTF8Encoding(Tmp) of
+          etUTF8:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
+              Result := ZMoveRawToUTF8(Tmp, zCP_UTF8);
+            end;
+          etAnsi:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+              Result := ZConvertRawToUTF8(Tmp, ConSettings^.ClientCodePage^.CP);
+            end;
+          else
+            Result := ZMoveRawToUTF8(Tmp, ConSettings^.ClientCodePage^.CP);
+        end;
+      end
+      else
+        if ZCompatibleCodePages(TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage, zCP_UTF8) then
+          Result := ZMoveRawToUTF8(InternalGetString(ColumnIndex), zCP_UTF8)
         else
-          Result := ZMoveRawToUTF8(Tmp, ConSettings^.ClientCodePage^.CP);
-      end;
-    end
+          Result := ZConvertRawToUTF8(InternalGetString(ColumnIndex),
+            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage)
     else
-      Result := ZMoveRawToUTF8(Tmp, zCP_UTF8)
-  else
-    if ZCompatibleCodePages(TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage, zCP_UTF8) then
-      Result := ZMoveRawToUTF8(Tmp, zCP_UTF8)
-    else
-      Result := ZConvertRawToUTF8(InternalGetString(ColumnIndex),
-        TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage);
+      Result := ZMoveRawToUTF8(InternalGetString(ColumnIndex), zCP_UTF8);
+  end;
 end;
 
 {**
@@ -371,30 +405,34 @@ end;
 function TZDBLibResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 var Tmp: RawByteString;
 begin
-  if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
-    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
-    begin
-      Tmp := InternalGetString(ColumnIndex);
-      case DetectUTF8Encoding(Tmp) of
-        etUTF8:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
-            Result := ConSettings^.ConvFuncs.ZRawToUnicode(Tmp, zCP_UTF8);
-          end;
-        etAnsi:
-          begin
-            TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-            Result := ConSettings^.ConvFuncs.ZRawToUnicode(tmp, ConSettings^.ClientCodePage^.CP)
-          end;
-        else
-          Result := PosEmptyASCII7ToUnicodeString(tmp);
-      end;
-    end
+  case TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType of
+    stAsciiStream, stUnicodeStream:  //DBlib doesn't convert NTEXT so in all cases we've ansi-Encoding
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+    stString, stUnicodeString:
+      if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
+      begin
+        Tmp := InternalGetString(ColumnIndex);
+        case DetectUTF8Encoding(Tmp) of
+          etUTF8:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := zCP_UTF8;
+              Result := ConSettings^.ConvFuncs.ZRawToUnicode(Tmp, zCP_UTF8);
+            end;
+          etAnsi:
+            begin
+              TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+              Result := ConSettings^.ConvFuncs.ZRawToUnicode(tmp, ConSettings^.ClientCodePage^.CP);
+            end;
+          else
+            Result := PosEmptyASCII7ToUnicodeString(tmp);
+        end;
+      end
+      else
+        Result := ZRawToUnicode(InternalGetString(ColumnIndex),
+          TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage);
     else
-      Result := PosEmptyASCII7ToUnicodeString(InternalGetString(ColumnIndex))
-  else
-    Result := ZRawToUnicode(InternalGetString(ColumnIndex),
-      TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage);
+      Result := PosEmptyASCII7ToUnicodeString(InternalGetString(ColumnIndex));
+  end;
 end;
 
 {**
@@ -419,37 +457,39 @@ begin
   Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
-
-  Result := '';
-  if Assigned(Data) then
+  if LastWasNull then
+    Result := ''
+  else
   begin
-    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
-      (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
+    Result := '';
+    if Assigned(Data) then
     begin
-      while (DL > 0) and (PAnsiChar(NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
-              Dec(DL);
-      if DL > 0 then
+      if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
+        (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
+      begin
+        while (DL > 0) and (PAnsiChar(NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
+                Dec(DL);
+        if DL > 0 then
+        begin
+          SetLength(Result, DL);
+          Move(Data^, PAnsiChar(Result)^, DL);
+        end;
+      end else
+      if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
       begin
         SetLength(Result, DL);
         Move(Data^, PAnsiChar(Result)^, DL);
+      end else
+      begin
+        SetLength(Result, 4001);
+        DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL,
+          FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(PAnsiChar(Result)), Length(Result));
+        while (DL > 0) and (Result[DL] = ' ') do
+            Dec(DL);
+        SetLength(Result, DL);
       end;
-    end else
-    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
-    begin
-      SetLength(Result, DL);
-      Move(Data^, PAnsiChar(Result)^, DL);
-    end else
-    begin
-      SetLength(Result, 4001);
-      DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL,
-        FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(PAnsiChar(Result)), Length(Result));
-      while (DL > 0) and (Result[DL] = ' ') do
-          Dec(DL);
-      SetLength(Result, DL);
     end;
   end;
-  //else
-
   FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
 end;
 

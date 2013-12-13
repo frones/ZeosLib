@@ -79,6 +79,8 @@ type
     procedure TestAutoIncFields;
     procedure TestDefaultValues;
     procedure TestEmptyTypes;
+    procedure TestReuseResultsetNative;
+    procedure TestReuseResultsetCached;
   end;
 
 
@@ -350,6 +352,102 @@ begin
 
   ResultSet.Close;
   Statement.Close;
+end;
+
+procedure TZTestDbcSQLiteCase.TestReuseResultsetNative;
+var
+  PreparedStatement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  Info: TStrings;
+begin
+  Info := TStringList.Create;
+  Info.Add('ForceNativeResultSet=True');
+  PreparedStatement := Connection.PrepareStatementWithParams(
+    'SELECT * FROM PEOPLE WHERE p_id > ?', Info);
+  try
+    PreparedStatement.SetInt(1, 0); //expecting 5 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(1, ResultSet.GetInt(1));
+    CheckEquals(True, ResultSet.Next); //fetch second row.
+    CheckEquals(True, ResultSet.Next); //fetch third row.
+    CheckEquals(True, ResultSet.Next); //fetch fourth row.
+    {ignore last row}
+    PreparedStatement.SetInt(1, 1); //expecting 4 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(2, ResultSet.GetInt(1));
+    CheckEquals(True, ResultSet.Next); //fetch second row.
+    CheckEquals(True, ResultSet.Next); //fetch third row.
+    {ignore last row}
+
+    PreparedStatement.SetInt(1, 2); //expecting 3 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(3, ResultSet.GetInt(1));
+    while ResultSet.Next do; //full fetch automatically resets handle
+
+    PreparedStatement.SetInt(1, 3); //expecting 2 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(4, ResultSet.GetInt(1));
+    while ResultSet.Next do; //full fetch automatically resets handle
+
+    PreparedStatement.SetInt(1, 10); //expecting !0! rows  e.g AB -> no metadata???
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckNotNull(ResultSet);
+    CheckEquals(False, ResultSet.Next); //fetch first row.
+  finally
+    Info.Free;
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    PreparedStatement.Close;
+  end;
+end;
+
+procedure TZTestDbcSQLiteCase.TestReuseResultsetCached;
+var
+  PreparedStatement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  Info: TStrings;
+begin
+  Info := TStringList.Create;
+  PreparedStatement := Connection.PrepareStatement(
+    'SELECT * FROM PEOPLE WHERE p_id > ?');
+  try
+    PreparedStatement.SetInt(1, 0); //expecting 5 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(1, ResultSet.GetInt(1));
+    CheckEquals(True, ResultSet.Next); //fetch second row.
+    CheckEquals(True, ResultSet.Next); //fetch third row.
+    CheckEquals(True, ResultSet.Next); //fetch fourth row.
+    {ignore last row}
+    PreparedStatement.SetInt(1, 1); //expecting 4 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(2, ResultSet.GetInt(1));
+    CheckEquals(True, ResultSet.Next); //fetch second row.
+    CheckEquals(True, ResultSet.Next); //fetch third row.
+    {ignore last row}
+
+    PreparedStatement.SetInt(1, 2); //expecting 3 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(3, ResultSet.GetInt(1));
+    while ResultSet.Next do; //full fetch automatically resets handle
+
+    PreparedStatement.SetInt(1, 3); //expecting 2 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(4, ResultSet.GetInt(1));
+    while ResultSet.Next do; //full fetch automatically resets handle
+  finally
+    Info.Free;
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    PreparedStatement.Close;
+  end;
 end;
 
 initialization

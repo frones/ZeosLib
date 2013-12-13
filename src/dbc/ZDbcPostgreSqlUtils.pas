@@ -209,7 +209,7 @@ begin
     or (TypeName = 'numeric') then
     Result := stDouble
   else if TypeName = 'money' then
-    Result := stDouble
+    Result := stCurrency
   else if TypeName = 'bool' then
     Result := stBoolean
   else if TypeName = 'date' then
@@ -274,7 +274,7 @@ begin
     829: Result := stString; { macaddr }
     700: Result := stFloat; { float4 }
     701,1700: Result := stDouble; { float8/numeric. no 'decimal' any more }
-    790: Result := stDouble; { money }
+    790: Result := stCurrency; { money }
     16: Result := stBoolean; { bool }
     1082: Result := stDate; { date }
     1083: Result := stTime; { time }
