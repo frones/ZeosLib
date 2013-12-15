@@ -362,7 +362,7 @@ var
   ResultStatus: TZPostgreSQLExecStatusType;
   ConnectionHandle: PZPostgreSQLConnect;
 begin
-  result := inherited Execute(SQL);
+  inherited Execute(SQL);
   ConnectionHandle := GetConnectionHandle();
   QueryHandle := FPlainDriver.ExecuteQuery(ConnectionHandle, PAnsiChar(ASQL));
   CheckPostgreSQLError(Connection, FPlainDriver, ConnectionHandle, lcExecute,
