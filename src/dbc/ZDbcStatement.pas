@@ -94,6 +94,8 @@ type
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
     FStatementId : Integer;
+    FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
+    Procedure FreeOpenResultSetReference;
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -207,8 +209,6 @@ type
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
   protected
-    FLastResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
-    Procedure FreeReference;
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -553,6 +553,11 @@ begin
     FLastResultSet.Close;
 
   FLastResultSet := ResultSet;
+end;
+
+procedure TZAbstractStatement.FreeOpenResultSetReference;
+begin
+  FOpenResultSet := nil;
 end;
 
 class function TZAbstractStatement.GetNextStatementId: integer;
@@ -1370,11 +1375,6 @@ begin
   Result := ExecutePrepared;
 end;
 
-procedure TZAbstractPreparedStatement.FreeReference;
-begin
-  FLastResultSet := nil;
-end;
-
 {**
   Return a VariantManager which supports client encoded RawByteStrings
   @returns IZClientVariantManager
@@ -2065,8 +2065,8 @@ end;
 
 procedure TZAbstractPreparedStatement.Unprepare;
 begin
-  if Assigned(FLastResultSet) then
-    IZResultSet(FLastResultSet).Close;
+  if Assigned(FOpenResultSet) then
+    IZResultSet(FOpenResultSet).Close;
   UnPrepareInParameters;
   FPrepared := False;
   SetLength(FCachedQueryRaw, 0);

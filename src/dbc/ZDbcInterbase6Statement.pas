@@ -330,9 +330,9 @@ begin
   with FIBConnection do
   begin
     try
-      if Assigned(FLastResultSet) then
-        IZResultSet(FLastResultSet).Close;
-      FLastResultSet := nil;
+      if Assigned(FOpenResultSet) then
+        IZResultSet(FOpenResultSet).Close;
+      FOpenResultSet := nil;
 
       BindInParameters;
 
@@ -355,7 +355,7 @@ begin
           Result := CreateIBResultSet(SQL, Self,
             TZInterbase6XSQLDAResultSet.Create(Self, SQL, StmtHandle,
             FResultXSQLDA, CachedLob, StatementType));
-        FLastResultSet := Pointer(Result);
+        FOpenResultSet := Pointer(Result);
       end
       else
         if (iError <> DISCONNECT_ERROR) then    //AVZ

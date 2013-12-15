@@ -567,6 +567,7 @@ type
 
     function GetWarnings: EZSQLWarning;
     procedure ClearWarnings;
+    procedure FreeOpenResultSetReference;
   end;
 
   {** Prepared SQL statement interface. }
@@ -615,7 +616,6 @@ type
 
     procedure AddBatchPrepared;
     function GetMetadata: IZResultSetMetadata;
-    procedure FreeReference;
   end;
 
   {** Callable SQL statement interface. }
