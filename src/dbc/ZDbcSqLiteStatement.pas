@@ -98,13 +98,8 @@ type
   end;
   {$ENDIF}
 
-  IZSQLiteCAPIPreparedStatement = Interface(IZPreparedStatement)
-    ['{CA05874D-E817-4523-B0AF-DBCDD0CF85CA}']
-    Procedure FreeReference;
-  end;
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement,
-    IZSQLiteCAPIPreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
@@ -113,11 +108,8 @@ type
     FForceNativeResultSet: Boolean;
     FBindDoubleDateTimeValues: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
-    FLastResultSet: Pointer; //weak interface reference
     function CreateResultSet(const StmtHandle: Psqlite_vm;
       const ErrorCode: Integer): IZResultSet;
-  protected
-    Procedure FreeReference;
   protected //abstaction overrides
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -454,11 +446,6 @@ begin
     Result := NativeResultSet;
 end;
 
-Procedure TZSQLiteCAPIPreparedStatement.FreeReference;
-begin
-  FLastResultSet := nil;
-end;
-
 procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
 begin
   if FPlainDriver.bind_parameter_count(FStmtHandle) <> InParamCount then
@@ -608,8 +595,8 @@ begin
   CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.Finalize(FStmtHandle),
     nil, lcUnprepStmt, 'Unprepare SQLite Statement', ConSettings);
   FStmtHandle := nil;
-  if Assigned(FLastResultSet) then
-    IZResultSet(FLastResultSet).Close;
+  if Assigned(FOpenResultSet) then
+    IZResultSet(FOpenResultSet).Close;
   inherited UnPrepare;
 end;
 
@@ -618,9 +605,9 @@ begin
   if Not Prepared then
      Prepare;
 
-  if FLastResultSet <> nil then
-    IZResultSet(FLastResultSet).Close; // reset stmt-handle
-  FLastResultSet := nil; //keep track we do not return a closed ResultSet
+  if FOpenResultSet <> nil then
+    IZResultSet(FOpenResultSet).Close; // reset stmt-handle
+  FOpenResultSet := nil; //keep track we do not return a closed ResultSet
   BindInParameters;
 
   FErrorCode := FPlainDriver.Step(FStmtHandle); //exec prepared
@@ -632,7 +619,7 @@ begin
   else //expect a resultset
   begin
     Result := CreateResultSet(FStmtHandle, FErrorCode); //resultset executes reset stmt-handle
-    FLastResultSet := Pointer(Result); //weak reference to Resultset to avoid NO decrementing of RefCount.
+    FOpenResultSet := Pointer(Result); //weak reference to Resultset to avoid NO decrementing of RefCount.
       //we need this reference to close the SQLite resultset and reset the stmt handle.
   end;
 
