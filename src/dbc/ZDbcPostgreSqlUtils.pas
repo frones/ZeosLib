@@ -760,7 +760,7 @@ begin
             ClientVarManager.GetAsRawByteString(Value), ConSettings, True)
         else
           Result := ZDbcPostgreSqlUtils.PGEscapeString(Connection.GetConnectionHandle,
-            PlainDriver.ZPlainString(SoftVarManager.GetAsString(Value), ConSettings), ConSettings, True);
+            ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
         if DateTimePrefix then
           Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),

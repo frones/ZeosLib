@@ -373,15 +373,20 @@ begin
   if StrToBoolEx(Info.Values['MYSQL_SSL']) then
     begin
        if Info.Values['MYSQL_SSL_KEY'] <> '' then
-          SslKey := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_KEY'], ceUTF8));
+          SslKey := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+            Info.Values['MYSQL_SSL_KEY'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
        if Info.Values['MYSQL_SSL_CERT'] <> '' then
-          SslCert := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CERT'], ceUTF8));
+          SslCert := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+            Info.Values['MYSQL_SSL_CERT'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
        if Info.Values['MYSQL_SSL_CA'] <> '' then
-          SslCa := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CA'], ceUTF8));
+          SslCa := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+            Info.Values['MYSQL_SSL_CA'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
        if Info.Values['MYSQL_SSL_CAPATH'] <> '' then
-          SslCaPath := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CAPATH'], ceUTF8));
+          SslCaPath := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+            Info.Values['MYSQL_SSL_CAPATH'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
        if Info.Values['MYSQL_SSL_CYPHER'] <> '' then
-          SslCypher := PAnsiChar(ZPlainString(Info.Values['MYSQL_SSL_CYPHER'], ceUTF8));
+          SslCypher := PAnsiChar(ConSettings^.ConvFuncs.ZStringToRaw(
+            Info.Values['MYSQL_SSL_CYPHER'], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
        GetPlainDriver.SslSet(FHandle, SslKey, SslCert, SslCa, SslCaPath,
           SslCypher);
        DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -389,15 +394,16 @@ begin
     end;
 
     { Connect to MySQL database. }
-    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(ZPlainString(HostName)),
-                              PAnsiChar(ZPlainString(User)), PAnsiChar(ZPlainString(Password)),
-                              PAnsiChar(ZPlainString(Database)), Port, nil,
+    if GetPlainDriver.RealConnect(FHandle, PAnsiChar(AnsiString(HostName)),
+                              PAnsiChar(ConSettings^.User), PAnsiChar(AnsiString(Password)),
+                              PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then
 
     begin
       CheckMySQLError(GetPlainDriver, FHandle, lcConnect, LogMessage, ConSettings);
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
-        0, ZPlainString(SUnknownError));
+        0, ConSettings.ConvFuncs.ZStringToRaw(SUnknownError,
+          ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
       raise EZSQLException.Create(SCanNotConnectToServer);
     end;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
@@ -415,7 +421,7 @@ begin
 
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
-      SQL := PAnsiChar(ZPlainString(Format('SET NAMES %s', [FClientCodePage])));
+      SQL := PAnsiChar('SET NAMES '+NotEmptyStringToASCII7(FClientCodePage));
       GetPlainDriver.ExecQuery(FHandle, PAnsichar(SQL));
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);

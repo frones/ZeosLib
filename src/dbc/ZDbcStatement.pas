@@ -783,12 +783,18 @@ begin
       {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} + SQLTokens[i].Value;
       case (SQLTokens[i].TokenType) of
         ttEscape:
-          Result := Result + {$IFDEF UNICODE}ZPlainString{$ENDIF}(SQLTokens[i].Value);
+          {$IFDEF UNICODE}
+          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+          {$ELSE}
+          Result := Result + SQLTokens[i].Value;
+          {$ENDIF}
         ttQuoted, ttComment,
         ttWord, ttQuotedIdentifier, ttKeyword:
-          Result := Result + ZPlainString(SQLTokens[i].Value);
+          Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
         else
-          Result := Result + RawByteString(SQLTokens[i].Value);
+          Result := Result + NotEmptyStringToASCII7(SQLTokens[i].Value);
       end;
     end;
   end
@@ -796,7 +802,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     {$IFDEF UNICODE}
-    Result := ZPlainString(SQL);
+    Result := ConSettings^.ConvFuncs.ZUnicodeToRaw(SQL, ConSettings^.ClientCodePage^.CP);
     {$ELSE}
     Result := SQL;
     {$ENDIF}

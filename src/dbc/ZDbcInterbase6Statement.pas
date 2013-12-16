@@ -106,7 +106,6 @@ type
     FCodePageArray: TWordDynArray;
   protected
     procedure CheckInterbase6Error(const Sql: RawByteString = '');
-    procedure FetchOutParams(const ResultSet: IZResultSet);
     function GetProcedureSql(SelectProc: boolean): RawByteString;
 
     procedure PrepareInParameters; override;
@@ -548,8 +547,9 @@ begin
       else
       begin
         { Fetch data and fill Output params }
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultSQLData, CachedLob, FStatementType));
+          AssignOutParamValuesFromResultSet(TZInterbase6XSQLDAResultSet.Create(
+            Self, SQL, FStmtHandle, FResultSQLData, CachedLob, FStatementType),
+              OutParamValues, OutParamCount , FDBParamTypes);
         FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE); //AVZ
         LastResultSet := nil;
       end;
@@ -631,87 +631,18 @@ begin
       if (FStatementType in [stSelect, stExecProc])
         and (FResultSQLData.GetFieldCount <> 0) then
       begin
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultSQLData, CachedLob, FStatementType));
+        AssignOutParamValuesFromResultSet(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType), OutParamValues, OutParamCount , FDBParamTypes);
       end
       else
-        FetchOutParams(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultSQLData, CachedLob, FStatementType));
+        AssignOutParamValuesFromResultSet(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultSQLData, CachedLob, FStatementType), OutParamValues, OutParamCount , FDBParamTypes);
     { Autocommit statement. }
     if Connection.GetAutoCommit then
       Connection.Commit;
   end;
 end;
 
-{**
-  Set output parameters values from TZResultSQLDA.
-  @param Value a TZResultSQLDA object.
-}
-procedure TZInterbase6CallableStatement.FetchOutParams(
-  const ResultSet: IZResultSet);
-var
-  ParamIndex, I: Integer;
-  HasRows: Boolean;
-begin
-  HasRows := ResultSet.Next;
-
-  I := 1;
-  for ParamIndex := 0 to OutParamCount - 1 do
-  begin
-    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
-      Continue;
-
-    if I > ResultSet.GetMetadata.GetColumnCount then
-      Break;
-
-    if (not HasRows) or (ResultSet.IsNull(I)) then
-      OutParamValues[ParamIndex] := NullVariant
-    else
-      case ResultSet.GetMetadata.GetColumnType(I) of
-        stBoolean:
-          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-        stByte:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-        stShort:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
-        stWord:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
-        stSmall:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-        stLongword:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
-        stInteger:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-        stULong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
-        stLong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-        stBytes:
-          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-        stFloat:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-        stDouble:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-        stBigDecimal:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-        stString, stAsciiStream:
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-        stUnicodeString, stUnicodeStream:
-          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-        stDate:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
-        stTime:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
-        stTimestamp:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
-        stBinaryStream:
-          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-        else
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      end;
-    Inc(I);
-  end;
-end;
 {**
    Create sql string for calling stored procedure.
    @param SelectProc indicate use <b>EXECUTE PROCEDURE</b> or

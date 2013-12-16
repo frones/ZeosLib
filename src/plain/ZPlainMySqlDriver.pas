@@ -789,7 +789,7 @@ begin
   if WasEncoded then
     TempValue := Value
   else
-    TempValue := ZPlainString(Value, ConSettings); //check encoding too
+    TempValue := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP); //check encoding too
   {$ENDIF}
   Len := Length(TempValue);
   Setlength(Outbuffer,Len*2+1);

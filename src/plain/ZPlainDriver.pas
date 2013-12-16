@@ -72,8 +72,6 @@ type
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function ValidateCharEncoding(const CharacterSetName: String; const DoArrange: Boolean = False): PZCodePage; overload;
     function ValidateCharEncoding(const CharacterSetID: Integer; const DoArrange: Boolean = False): PZCodePage; overload;
-    function ZPlainString(const AStr: String; ConSettings: PZConSettings): RawByteString; overload;
-    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings): RawByteString; overload;
     function EscapeString(Handle: Pointer; const Value: ZWideString;
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
@@ -85,7 +83,7 @@ type
   {ADDED by fduenas 15-06-2006}
   {** Base class of a generic plain driver with TZNativeLibraryLoader-object. }
 
-  TZAbstractPlainDriver = class(TZCodePagedObject, IZPlainDriver)
+  TZAbstractPlainDriver = class(TInterfacedObject, IZPlainDriver)
   protected
     FCodePages: array of TZCodePage;
     FTokenizer: IZTokenizer;

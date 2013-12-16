@@ -115,9 +115,6 @@ type
     function GetFirebirdAPI: TZFirebird_API;
     function GetCodePageArray: TWordDynArray;
 
-    function ZPlainString(const AStr: String; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
-    function ZPlainString(const AStr: WideString; ConSettings: PZConSettings; const ToCP: Word): RawByteString; overload;
-
     function isc_attach_database (status_vector: PISC_STATUS;
       db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
       parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
@@ -781,10 +778,8 @@ function TZFirebirdBaseDriver.isc_attach_database(status_vector: PISC_STATUS;
   db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
   parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
 begin
-
-    Result := FIREBIRD_API.isc_attach_database(status_vector, db_name_length,
+  Result := FIREBIRD_API.isc_attach_database(status_vector, db_name_length,
     db_name, db_handle, parm_buffer_length, parm_buffer);
-
 end;
 
 function TZFirebirdBaseDriver.isc_blob_info(status_vector: PISC_STATUS;

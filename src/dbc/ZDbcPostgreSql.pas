@@ -727,7 +727,8 @@ var
 begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
-    SQL:='PREPARE TRANSACTION '''+copy(ZPLainString(transactionid),1,200)+'''';
+    SQL:='PREPARE TRANSACTION '''+copy(ConSettings^.ConvFuncs.ZStringToRaw(transactionid,
+      ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),1,200)+'''';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
     GetPlainDriver.Clear(QueryHandle);

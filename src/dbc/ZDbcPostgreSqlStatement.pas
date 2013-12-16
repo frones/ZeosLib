@@ -181,7 +181,6 @@ type
     function GetPlainDriver:IZPostgreSQLPlainDriver;
     function CreateResultSet(const SQL: string;
       QueryHandle: PZPostgreSQLResult): IZResultSet;
-    procedure FetchOutParams(ResultSet: IZResultSet);
     procedure TrimInParameters; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
@@ -1096,7 +1095,7 @@ begin
   if QueryHandle <> nil then
   begin
     Result := CreateResultSet(Self.SQL, QueryHandle);
-    FetchOutParams(Result);
+    AssignOutParamValuesFromResultSet(Result, OutParamValues, OutParamCount , FDBParamTypes);
   end
   else
     Result := nil;
@@ -1196,7 +1195,8 @@ begin
   if QueryHandle <> nil then
   begin
     Result := RawToIntDef(GetPlainDriver.GetCommandTuples(QueryHandle), 0);
-    FetchOutParams(CreateResultSet(Self.SQL, QueryHandle));
+    AssignOutParamValuesFromResultSet(CreateResultSet(Self.SQL, QueryHandle),
+      OutParamValues, OutParamCount , FDBParamTypes);
   end;
 
   { Autocommit statement. }
@@ -1209,77 +1209,6 @@ function TZPostgreSQLCallableStatement.ExecuteUpdatePrepared: Integer;
 begin
   TrimInParameters;
   Result := Self.ExecuteUpdate(FillParams(GetProcedureSql));
-end;
-
-{**
-  Sets output parameters from a ResultSet
-  @param Value a IZResultSet object.
-}
-procedure TZPostgreSQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
-var
-  ParamIndex, I: Integer;
-  HasRows: Boolean;
-begin
-  ResultSet.BeforeFirst;
-  HasRows := ResultSet.Next;
-
-  I := 1;
-  for ParamIndex := 0 to OutParamCount - 1 do
-  begin
-    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
-      Continue;
-
-    if I > ResultSet.GetMetadata.GetColumnCount then
-      Break;
-
-    if (not HasRows) or (ResultSet.IsNull(I)) then
-      OutParamValues[ParamIndex] := NullVariant
-    else
-      case ResultSet.GetMetadata.GetColumnType(I) of
-        stBoolean:
-          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-        stByte:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-        stShort:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
-        stWord:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
-        stSmall:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-        stLongword:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
-        stInteger:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-        stULong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
-        stLong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-        stBytes:
-          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-        stFloat:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-        stDouble:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-        stBigDecimal:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-        stString, stAsciiStream:
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-        stUnicodeString, stUnicodeStream:
-          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-        stDate:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
-        stTime:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
-        stTimestamp:
-          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
-        stBinaryStream:
-          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-        else
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      end;
-    Inc(I);
-  end;
-  ResultSet.BeforeFirst;
 end;
 
 {**

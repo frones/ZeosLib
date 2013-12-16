@@ -758,20 +758,10 @@ begin
             FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
               FPlainDriver.GetVariables.datatypes[Z_SQLFLT8], -1, -1, @DatDouble);
           end;
-        stString:
+        stString, stUnicodeString:
           begin
-            DatString := ZPlainString(SoftVarManager.GetAsString(InParamValues[I]));
+            DatString := ClientVarManager.GetAsRawByteString(InParamValues[I]);
             if DatString = ''then
-              DatLen := 1
-            else
-              DatLen := Length(DatString);
-            FPlainDriver.dbRpcParam(FHandle, nil, RetParam,
-              FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], MaxInt, DatLen, PAnsiChar(DatString));
-          end;
-        stUnicodeString:
-          begin
-            DatString := UTF8Encode(SoftVarManager.GetAsUnicodeString(InParamValues[I]));
-            if DatString = '' then
               DatLen := 1
             else
               DatLen := Length(DatString);

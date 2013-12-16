@@ -524,7 +524,8 @@ function TZASASQLDA.GetFieldIndex(const Name: String): Word;
 begin
   for Result := 0 to FSQLDA.sqld - 1 do
     if FSQLDA.sqlvar[Result].sqlname.length = Length(name) then
-      if {$IFDEF WITH_STRLICOMP_DEPRECATED}AnsiStrings.{$ENDIF}StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FPlainDriver.ZPlainString(Name, FConSettings)), Length(name)) = 0 then
+      if {$IFDEF WITH_STRLICOMP_DEPRECATED}AnsiStrings.{$ENDIF}StrLIComp(@FSQLDA.sqlvar[Result].sqlname.data, PAnsiChar(FConSettings^.ConvFuncs.ZStringToRaw(Name,
+            FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP)), Length(name)) = 0 then
             Exit;
   CreateException( Format( SFieldNotFound1, [name]));
   Result := 0; // satisfy compiler
@@ -902,8 +903,9 @@ var
   AnsiTmp: RawByteString;
 begin
   CheckIndex( Index);
-  AnsiTmp := FPlainDriver.ZPlainString(Value, FConSettings);
-  BlobSize := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}{$IFDEF UNICODE}System.Length{$ELSE}ZFastCode.StrLen{$ENDIF}{$ENDIF}( Value);
+  AnsiTmp := FConSettings^.ConvFuncs.ZStringToRaw(Value,
+            FConSettings^.CTRL_CP, FConSettings^.ClientCodePage^.CP);
+  BlobSize := System.Length(AnsiTmp);
   if BlobSize < MinBLOBSize then
     SetFieldType( Index, DT_VARCHAR or 1, MinBLOBSize - 1)
   else
@@ -1098,7 +1100,7 @@ begin
     varDate       : UpdateDateTime( Index, Value);
     varStrArg,
     varString     : UpdateString(Index, AnsiString(Value));
-    varOleStr     : UpdateString(Index, FPlainDriver.ZPlainString(WideString(Value), FConSettings));
+    varOleStr     : UpdateString(Index, FConSettings^.ConvFuncs.ZUnicodeToRaw(ZWideString(Value), FConSettings^.ClientCodePage^.CP));
     varBoolean    : UpdateBoolean( Index, Value);
     varByte       : UpdateByte( Index, Value);
     varInt64      : UpdateLong( Index, Value);

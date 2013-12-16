@@ -1717,21 +1717,19 @@ begin
     if WasEncoded then
       SourceTemp := Value
     else
-      SourceTemp := ZPlainString(Value, ConSettings); //check encoding too
+      SourceTemp := ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP); //check encoding too
     {$ENDIF}
     GetMem(Temp, Length(SourceTemp)*2);
     if Assigned(POSTGRESQL_API.PQescapeStringConn) then
       ResLen := POSTGRESQL_API.PQescapeStringConn(Handle, Temp,
-
-
-      PAnsiChar(SourceTemp), {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(SourceTemp)), @IError)
+      PAnsiChar(SourceTemp), Length(SourceTemp), @IError)
     else
-      ResLen := POSTGRESQL_API.PQescapeString(Temp, PAnsiChar(SourceTemp),
-       {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(PAnsiChar(SourceTemp)));
+      ResLen := POSTGRESQL_API.PQescapeString(Temp, PAnsiChar(SourceTemp), Length(SourceTemp));
     if not (IError = 0) then
       raise Exception.Create('Wrong escape behavior!');
+    Result := ''; //speeds up setlength x2
     SetLength(Result, ResLen);
-    Move(Temp^, PAnsiChar(Result)^, ResLen);
+    Move(Temp^, Pointer(Result)^, ResLen);
     FreeMem(Temp);
   end
   else
