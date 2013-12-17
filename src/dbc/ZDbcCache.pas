@@ -70,7 +70,9 @@ type
   TZRowUpdateType = (utUnmodified, utModified, utInserted, utDeleted);
   TZRowUpdateTypes = set of TZRowUpdateType;
 
+  {$IFNDEF NO_COLUMN_LIMIT}
   TZByteArray = array[0..4096 * SizeOf(Pointer)] of Byte;
+  {$ENDIF}
   {** Defines a header for row buffer. }
   {ludob. Notes on alignment:
   Columns contains a record per field with the structure
@@ -89,7 +91,11 @@ type
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     dummyalign:pointer;
     {$endif}
+    {$IFDEF NO_COLUMN_LIMIT}
+    Columns: array of Byte;
+    {$ELSE}
     Columns: TZByteArray;
+    {$ENDIF}
   end;
   PZRowBuffer = ^TZRowBuffer;
 
@@ -320,7 +326,7 @@ type
   end;
 
 const
-  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TZByteArray);
+  RowHeaderSize = SizeOf(TZRowBuffer){$IFNDEF NO_COLUMN_LIMIT} - SizeOf(TZByteArray){$ENDIF};
 
 implementation
 
@@ -376,8 +382,10 @@ begin
       FColumnLengths[I] := Current.Precision;
     if Current.ColumnType = stGUID then
       FColumnLengths[I] := 16;
+    {$IFNDEF NO_COLUMN_LIMIT}
     if FColumnsSize > SizeOf(TZByteArray)-1 then
       raise EZSQLException.Create(SRowBufferWidthExceeded);
+    {$ENDIF}
     FHasBlobs := FHasBlobs
       or (FColumnTypes[I] in [stAsciiStream, stUnicodeStream, stBinaryStream]);
   end;
@@ -601,7 +609,7 @@ begin
     L := Length(Value);
     ReallocMem(C^, L +SizeOf(Cardinal)+1);
     System.Move(Value[1], (C^+PAnsiInc)^, L);
-    PCardinal(C^)^ := L;
+    PLongWord(C^)^ := L;
     (C^+PAnsiInc+L)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
@@ -622,7 +630,7 @@ begin
     LMem := LStr * 2;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
     System.Move(Value[1], (W^+PWideInc)^, LMem);
-    PCardinal(W^)^ := LStr;
+    PLongWord(W^)^ := LStr;
     (W^+PWideInc+LStr)^ := WideChar(#0);
   end;
 end;
@@ -642,7 +650,7 @@ begin
     LMem := Len * 2;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
     System.Move(Value^, (W^+PWideInc)^, LMem);
-    PCardinal(W^)^ := Len;
+    PLongWord(W^)^ := Len;
     (W^+PWideInc+Len)^ := WideChar(#0);
   end;
 end;
@@ -661,7 +669,7 @@ begin
     C := PPAnsiChar(@Buffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1]);
     ReallocMem(C^, Len+SizeOf(Cardinal)+1);
     Move(Value^, (C^+PAnsiInc)^, Len);
-    PCardinal(C^)^ := Len;
+    PLongWord(C^)^ := Len;
     (C^+PAnsiInc+Len)^ := #0; //set #0 terminator if a truncation is required e.g. FireBird Char columns with trailing spaces
   end;
 end;
@@ -673,7 +681,12 @@ end;
 }
 function TZRowAccessor.AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
 begin
+  {$IFDEF NO_COLUMN_LIMIT}
+  Buffer := New(PZRowBuffer);
+  SetLength(Buffer^.Columns, FColumnsSize);
+  {$ELSE}
   GetMem(Buffer, FRowSize);
+  {$ENDIF}
   InitBuffer(Buffer);
   Result := Buffer;
 end;
@@ -687,7 +700,11 @@ begin
   if Assigned(Buffer) then
   begin
     ClearBuffer(Buffer);
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Dispose(Buffer);
+    {$ELSE}
     FreeMem(Buffer);
+    {$ENDIF}
   end;
 end;
 
@@ -700,14 +717,15 @@ var
   I : Integer;
 begin
   if Assigned(Buffer) then
-    with Buffer^ do
-    begin
-      Index := 0;
-      BookmarkFlag := 0;//bfCurrent;
-      UpdateType := utUnmodified;
-      FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-      for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
-    end;
+  Buffer^.Index := 0;
+  Buffer^.BookmarkFlag := 0;//bfCurrent;
+  Buffer^.UpdateType := utUnmodified;
+  {$IFDEF NO_COLUMN_LIMIT}
+  FillChar(Pointer(Buffer^.Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  {$ELSE}
+  FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+  {$ENDIF}
+  for I := 0 to FColumnCount - 1 do Buffer^.Columns[FColumnOffsets[I]] := 1;
 end;
 
 {**
@@ -944,7 +962,11 @@ begin
             System.FreeMem(P^);
           end;
       end;
+    {$IFDEF  NO_COLUMN_LIMIT}
+    FillChar(Pointer(Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    {$ELSE}
     FillChar(Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do Columns[FColumnOffsets[I]] := 1;
   end;
 end;
@@ -1542,7 +1564,7 @@ begin
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        FUniTemp := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+        FUniTemp := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
@@ -1603,7 +1625,7 @@ begin
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        Result := NotEmptyASCII7ToUnicodeString(PAnsiChar(Bts), Length(Bts));
+        Result := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
@@ -2051,10 +2073,10 @@ begin
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -2098,10 +2120,10 @@ begin
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -2144,10 +2166,10 @@ begin
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-           PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+           PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -2191,10 +2213,10 @@ begin
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := SQLStrToFloatDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc, 0,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       stAsciiStream, stUnicodeStream: Result := SQLStrToFloatDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -2250,7 +2272,7 @@ var
   AnsiBuffer: PAnsiChar;
   WideBuffer: PWideChar;
   TempBlob: IZBlob;
-  BufLen: Cardinal;
+  BufLen: LongWord;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
@@ -2265,7 +2287,7 @@ begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, BufLen,
            ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2275,7 +2297,7 @@ begin
         else
         begin
           WideBuffer := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.UnicodeSQLDateToDateTime(WideBuffer,
             BufLen, ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2318,7 +2340,7 @@ var
   AnsiBuffer: PAnsiChar;
   WideBuffer: PWideChar;
   TempBlob: IZBlob;
-  BufLen: Cardinal;
+  BufLen: LongWord;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -2333,7 +2355,7 @@ begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
         begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, BufLen,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2343,7 +2365,7 @@ begin
         else
         begin
           WideBuffer := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          BufLen := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.UnicodeSQLTimeToDateTime(WideBuffer, BufLen,
             ConSettings^.ReadFormatSettings, Failed);
           if Failed then
@@ -2398,12 +2420,12 @@ begin
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
           Result := ZSysUtils.RawSQLTimeStampToDateTime(
             PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^,
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^,
                 ConSettings^.ReadFormatSettings, Failed)
         else
           Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(
             PPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^,
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^,
                 ConSettings^.ReadFormatSettings, Failed);
       stAsciiStream, stUnicodeStream:
         begin
@@ -3649,27 +3671,27 @@ begin
     stDate:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-            RawSQLDateToDateTime (PAnsiChar(Value), Length(Value),
+            RawSQLDateToDateTime (Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-        RawSQLTimeToDateTime(PAnsiChar(Value), Length(Value),
+        RawSQLTimeToDateTime(Pointer(Value), Length(Value),
           ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-            Frac(RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+            Frac(RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
       PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-          RawSQLTimeStampToDateTime(PAnsiChar(Value), Length(Value),
+          RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
             ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream, stBinaryStream:
       GetBlob(ColumnIndex, IsNull).SetString(Value);
@@ -4099,7 +4121,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4112,7 +4138,7 @@ begin
           if Columns[FColumnOffsets[I]] = 0 then
             InternalSetPAnsiChar(DestBuffer, I +1,
               PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PAnsiInc,
-              PLongWord(PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
+              PLongWord(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -4134,7 +4160,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4150,7 +4180,7 @@ begin
           if (Columns[FColumnOffsets[I]] = 0) then
             InternalSetPAnsiChar(DestBuffer, I +1,
               PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PAnsiInc,
-              PLongWord(PPAnsiChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
+              PLongWord(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -4176,7 +4206,7 @@ begin
       stString, stUnicodeString:
         begin
           Result.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          Result.Len := PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          Result.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
         end;
       else
         Result := inherited GetAnsiRec(ColumnIndex, IsNull);
@@ -4224,14 +4254,14 @@ begin
       stString, stUnicodeString:
         {$IFDEF UNICODE}
         begin
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
           Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
         end;
         {$ELSE}
         if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP) or not ConSettings^.AutoEncode then
           System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         else
           Result := ConSettings^.ConvFuncs.ZRawToString(
             PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
@@ -4268,11 +4298,11 @@ begin
       stString, stUnicodeString:
         begin
           if ZCompatibleCodePages(ZDefaultsystemCodePage, ConSettings^.ClientCodePage^.CP) then
-            System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
-              PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
+              PLongWord(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
           else
           begin
-            AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+            AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
             AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
             FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
             Result := AnsiString(FUniTemp);
@@ -4310,17 +4340,17 @@ begin
         if ZCompatibleCodePages(zCP_UTF8, ConSettings^.ClientCodePage^.CP) then
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         begin
-          SetLength(Result, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
-          System.Move(PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
-            PAnsiChar(Result)^, PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          SetLength(Result, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
+          System.Move((PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc)^,
+            Pointer(Result)^, PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
         end
         {$ELSE}
           System.SetString(Result, PAnsiChar(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc),
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         {$ENDIF}
         else
         begin
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
           FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP); //localize the vals to avoid buffer overrun for WideStrings
           Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(FUniTemp);
@@ -4355,10 +4385,10 @@ begin
       stString, stUnicodeString:
         {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
         ZSetString(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^, Result);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^, Result);
         {$ELSE}
         System.SetString(Result, PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
-          PCardinal(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
         {$ENDIF}
       else
         Result := Inherited GetRawByteString(ColumnIndex, IsNull);
@@ -4391,7 +4421,7 @@ begin
       stUnicodeString, stString:
         begin
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
           Result.P := PWideChar(FUniTemp);
           Result.Len := Length(FUniTemp);
@@ -4432,7 +4462,7 @@ begin
       stUnicodeString, stString:
         begin
           AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
-          AnsiRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
         end;
       else
@@ -4614,7 +4644,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4627,8 +4661,7 @@ begin
         if (Columns[FColumnOffsets[I]] = 0) then
           InternalSetPWideChar(DestBuffer, I +1,
             ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc,
-            PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^,
-            True);
+            PPLongWord(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^^, True);
       stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
     end;
   end;
@@ -4650,7 +4683,11 @@ begin
     Index := SrcBuffer^.Index;
     UpdateType := SrcBuffer^.UpdateType;
     BookmarkFlag := SrcBuffer^.BookmarkFlag;
+    {$IFDEF NO_COLUMN_LIMIT}
+    System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(Columns)^, FColumnsSize);
+    {$ELSE}
     System.Move(SrcBuffer^.Columns, Columns, FColumnsSize);
+    {$ENDIF}
     for I := 0 to FColumnCount - 1 do
       case FColumnTypes[I] of
         stAsciiStream, stUnicodeStream, stBinaryStream:
@@ -4666,8 +4703,7 @@ begin
           if (Columns[FColumnOffsets[I]] = 0) then
             InternalSetPWideChar(DestBuffer, I +1,
               ZPPWideChar(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^+PWideInc,
-              PCardinal(PPointer(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^)^,
-              True);
+              PPLongWord(@SrcBuffer.Columns[FColumnOffsets[I] + 1])^^, True);
         stBytes,stGUID: InternalSetBytes(DestBuffer, I +1, InternalGetBytes(SrcBuffer, I +1), True);
       end;
   end;
@@ -4693,7 +4729,7 @@ begin
     case FColumnTypes[ColumnIndex - 1] of
       stString, stUnicodeString:
         begin
-          ZWideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          ZWideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           ZWideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
           FRawTemp := ZWideRecToRaw(ZWideRec, ConSettings^.ClientCodePage^.CP);
           Result.Len := Length(FRawTemp);
@@ -4744,11 +4780,11 @@ begin
       stString, stUnicodeString:
         {$IFDEF UNICODE}
         System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-                          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^)
+                          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^)
         {$ELSE}
         begin
           WideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          WideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          WideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           if ConSettings^.AutoEncode then
             Result := ZWideRecToString(WideRec, ConSettings^.CTRL_CP)
           else
@@ -4785,7 +4821,7 @@ begin
       stString, stUnicodeString:
         begin
           System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
           Result := AnsiString(US);
         end;
       else
@@ -4819,7 +4855,7 @@ begin
       stString, stUnicodeString:
         begin
           System.SetString(US, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-            PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
           Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(US);
         end;
       else
@@ -4853,7 +4889,7 @@ begin
       stString, stUnicodeString:
         begin
           WideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          WideRec.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          WideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP);
         end;
       else
@@ -4886,7 +4922,7 @@ begin
       stUnicodeString, stString:
         begin
           Result.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc;
-          Result.Len := PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^;
+          Result.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
         end;
       else
         Result := inherited GetWideRec(ColumnIndex, IsNull);
@@ -4922,7 +4958,7 @@ begin
     case FColumnTypes[ColumnIndex - 1] of
       stUnicodeString, stString:
         System.SetString(Result, ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
-          PCardinal(PPointer(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^)^);
+          PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^);
       else
         Result := inherited GetUnicodeString(ColumnIndex, IsNull);
     end;

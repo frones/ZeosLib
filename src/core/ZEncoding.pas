@@ -613,7 +613,7 @@ var
 begin
   {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS) or defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
   WideRec.Len := Length(US);
-  WideRec.P := PWideChar(US);
+  WideRec.P := Pointer(US);
   Result := ZWideRecToRaw(WideRec, CP);
   {$ELSE}
     if ZCompatibleCodePages(CP, zCP_UTF8) then
@@ -1262,7 +1262,7 @@ begin
     {$ELSE}
     US := ZRawToUnicode(Src, RawCP);
     Raw := ZUnicodeToRaw(US, StringCP);
-    ZSetString(PAnsiChar(Raw), Length(Raw), Result);
+    ZSetString(Pointer(Raw), Length(Raw), Result);
     {$ENDIF}
   {$ENDIF}
   end;
@@ -1362,7 +1362,7 @@ begin
     etUTF8:
       if (RawCP = zCP_UTF8) then
         {$IFDEF WITH_RAWBYTESTRING}
-        ZSetString(PAnsiChar(Src), Length(Src), Result)
+        ZSetString(Pointer(Src), Length(Src), Result)
         {$ELSE !WITH_RAWBYTESTRING}
         Result := Src
         {$ENDIF WITH_RAWBYTESTRING}
@@ -1394,7 +1394,7 @@ begin
       US := UTF8ToString(PAnsiChar(Src));
       {$IFDEF WITH_RAWBYTESTRING}
       S := ZUnicodeToRaw(US, StringCP);
-      ZSetString(PAnsiChar(S), Length(S), Result);
+      ZSetString(Pointer(S), Length(S), Result);
       {$ELSE}
       Result := ZUnicodeToRaw(US, StringCP);
       {$ENDIF}
@@ -1526,7 +1526,7 @@ begin
   UniTmp := ZRawToUnicode(PAnsiChar(Src), ZDefaultSystemCodePage);
   {$IFDEF WITH_RAWBYTESTRING}
   RawTemp := ZUnicodeToRaw(UniTmp, StringCP);
-  ZSetString(PAnsiChar(RawTemp), Length(RawTemp), Result);
+  ZSetString(Pointer(RawTemp), Length(RawTemp), Result);
   {$ELSE !WITH_RAWBYTESTRING}
   Result := ZUnicodeToRaw(UniTmp, StringCP);
   {$ENDIF WITH_RAWBYTESTRING}
@@ -1544,7 +1544,7 @@ begin
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
     Tmp := ZUnicodeToRaw(Src, StringCP);
-    ZSetString(PAnsiChar(Tmp), Length(Tmp), Result);
+    ZSetString(Pointer(Tmp), Length(Tmp), Result);
     {$ELSE WITH_RAWBYTESTRING}
     Result := ZUnicodeToRaw(Src, StringCP);
     {$ENDIF WITH_RAWBYTESTRING}
@@ -1563,7 +1563,7 @@ begin
     {$IFDEF WITH_RAWBYTESTRING}
     Result := '';
     Tmp := UTF8Encode(Src);
-    ZSetString(PAnsiChar(Tmp), Length(Tmp), Result);
+    ZSetString(Pointer(Tmp), Length(Tmp), Result);
     {$ELSE !WITH_RAWBYTESTRING}
     Result := UTF8Encode(Src);
     {$ENDIF}
@@ -1581,7 +1581,7 @@ begin
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
     Tmp := ''; //Makes compiler Happy
-    ZSetString(PAnsiChar(Src), Length(Src), Tmp);
+    ZSetString(Pointer(Src), Length(Src), Tmp);
     Result := ZRawToUnicode(Tmp, StringCP);
     {$ELSE !WITH_RAWBYTESTRING}
     Result := ZRawToUnicode(Src, StringCP);
@@ -1600,7 +1600,7 @@ begin
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
     Tmp := ''; //Makes Compiler happy
-    ZSetString(PAnsiChar(Src), Length(Src), Tmp);
+    ZSetString(Pointer(Src), Length(Src), Tmp);
     Result := UTF8ToString(Tmp);
     {$ELSE !WITH_RAWBYTESTRING}
     Result := UTF8ToString(Src);
@@ -1650,7 +1650,7 @@ begin
     else
       if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
         if Src.len = Cardinal(PLongInt(NativeInt(Result) - 4)^) { length } then
-          System.Move(Src.P^, PAnsiChar(Result)^, Src.Len)
+          System.Move(Src.P^, Pointer(Result)^, Src.Len)
         else
           SetString(Result, Src.P, Src.Len)
       else
@@ -1661,7 +1661,7 @@ end;
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  ZSetString(Pointer(Src), Length(Src), Result);
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1670,7 +1670,7 @@ end;
 function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  ZSetString(Pointer(Src), Length(Src), Result);
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1679,7 +1679,7 @@ end;
 function ZMoveAnsiToUTF8(const Src: AnsiString): UTF8String;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  ZSetString(Pointer(Src), Length(Src), Result);
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1688,7 +1688,7 @@ end;
 function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  ZSetString(Pointer(Src), Length(Src), Result);
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1697,7 +1697,7 @@ end;
 function ZMoveRawToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  ZSetString(Pointer(Src), Length(Src), Result);
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1706,7 +1706,7 @@ end;
 function ZMoveUTF8ToRaw(Const Src: UTF8String; const CP: Word): RawByteString;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(PAnsiChar(Src), Length(Src), Result);
+  ZSetString(Pointer(Src), Length(Src), Result);
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1718,7 +1718,7 @@ begin
   Result := AnsiString(Src);
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    ZSetString(Pointer(Src), Length(Src), Result);
     {$ELSE}
     Result := Src;
     {$ENDIF}
@@ -1731,7 +1731,7 @@ begin
   Result := String(Src);
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    ZSetString(Pointer(Src), Length(Src), Result);
     {$ELSE}
     Result := Src;
     {$ENDIF}
@@ -1746,7 +1746,7 @@ begin
   Result := ZRawToUnicode(Src, RawCP);
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    ZSetString(Pointer(Src), Length(Src), Result);
     {$ELSE}
     Result := Src;
     {$ENDIF}
@@ -1760,7 +1760,7 @@ begin
   Result := ZUnicodeToRaw(Src, RawCP);
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    ZSetString(Pointer(Src), Length(Src), Result);
     {$ELSE}
     Result := Src;
     {$ENDIF}
@@ -1773,7 +1773,7 @@ begin
   Result := String(Src);
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    ZSetString(Pointer(Src), Length(Src), Result);
     {$ELSE}
     Result := Src;
     {$ENDIF}
@@ -1786,7 +1786,7 @@ begin
   Result := UTF8String(Src);
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
-    ZSetString(PAnsiChar(Src), Length(Src), Result);
+    ZSetString(Pointer(Src), Length(Src), Result);
     {$ELSE}
     Result := Src;
     {$ENDIF}
@@ -1908,7 +1908,7 @@ var
   procedure SetFromWide;
   begin
     SetLength(US, Size div 2);
-    System.Move(PWideChar(Bytes)^, PWideChar(US)^, Size);
+    System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
   end;
 begin
   Result := nil;
@@ -1937,13 +1937,13 @@ begin
         ceAnsi: //We've to start from the premisse we've got a Unicode string i there
           begin
             SetLength(US, Size div 2);
-            System.Move(PWideChar(Bytes)^, PWideChar(US)^, Size);
+            System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
           end;
         ceUTF8: US := UTF8ToString(PAnsiChar(Bytes));
         ceUTF16:
           begin
             SetLength(US, Size div 2);
-            System.Move(PWideChar(Bytes)^, PWideChar(US)^, Size);
+            System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
           end;
       end;
 
@@ -1952,7 +1952,7 @@ begin
     begin
       Result := TMemoryStream.Create;
       Result.Size := Len;
-      System.Move(PWideChar(US)^, TMemoryStream(Result).Memory^, Len);
+      System.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
     end;
   end;
@@ -1992,7 +1992,7 @@ begin
     begin
       Result := TMemoryStream.Create;
       Result.Size := Len;
-      System.Move(PWideChar(US)^, TMemoryStream(Result).Memory^, Len);
+      System.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
       Result.Position := 0;
     end;
   end;

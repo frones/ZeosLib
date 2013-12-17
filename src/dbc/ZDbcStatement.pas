@@ -67,7 +67,7 @@ type
 
   { TZAbstractStatement }
 
-  TZAbstractStatement = class(TZCodePagedObject, IZStatement)
+  TZAbstractStatement = class(TZCodePagedObject, IZStatement, IZLoggingObject)
   private
     FMaxFieldSize: Integer;
     FMaxRows: Integer;
@@ -93,6 +93,7 @@ type
     FCachedLob: Boolean;
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
+    FStatementId : Integer;
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -126,6 +127,8 @@ type
     property ChunkSize: Integer read FChunkSize;
     property IsAnsiDriver: Boolean read FIsAnsiDriver;
     property CachedLob: Boolean read FCachedLob;
+    function CreateStmtLogEvent(Category: TZLoggingCategory;
+      const Msg: RawByteString=''): TZLoggingEvent;
   public
     constructor Create(Connection: IZConnection; Info: TStrings);
     destructor Destroy; override;
@@ -137,6 +140,8 @@ type
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload; virtual;
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload; virtual;
     function Execute(const SQL: RawByteString): Boolean; overload; virtual;
+
+    function GetSQL : String;
 
     procedure Close; virtual;
 
@@ -181,6 +186,7 @@ type
     procedure ClearWarnings; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -201,7 +207,6 @@ type
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
   protected
-    FStatementId : Integer;
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -287,6 +292,7 @@ type
     function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
   TZAbstractRealPreparedStatement = class(TZAbstractPreparedStatement)
@@ -389,6 +395,9 @@ type
   end;
 
   {** Implements an Emulated Prepared SQL Statement. }
+
+  { TZEmulatedPreparedStatement }
+
   TZEmulatedPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FExecStatement: IZStatement;
@@ -420,6 +429,7 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
+    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
 implementation
@@ -467,6 +477,7 @@ begin
   FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
   FIsAnsiDriver := Connection.GetIZPlainDriver.IsAnsiDriver;
   FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'false'));
+  FStatementId := Self.GetNextStatementId;
 end;
 
 {**
@@ -562,8 +573,9 @@ end;
 
 function TZAbstractStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
+  ASQL := SQL;
   Result := nil;
-  RaiseUnsupportedException;
+  DriverManager.LogMessage(lcExecute,Self);
 end;
 
 {**
@@ -585,8 +597,9 @@ end;
 
 function TZAbstractStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
 begin
-  Result := 0;
-  RaiseUnsupportedException;
+  ASQL := SQL;
+  Result := -1;
+  DriverManager.LogMessage(lcExecute,Self);
 end;
 
 {**
@@ -821,6 +834,29 @@ begin
     {$ENDIF UNICODE}
   end;
 end;
+
+function TZAbstractStatement.CreateStmtLogEvent(Category: TZLoggingCategory;
+  const Msg: RawByteString = ''): TZLoggingEvent;
+begin
+  if msg <> '' then
+    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, '')
+  else
+    result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, '');
+  end;
+
+function TZAbstractStatement.CreateLogEvent(Category: TZLoggingCategory
+  ): TZLoggingEvent;
+begin
+  case Category of
+    lcPrepStmt, lcExecute:
+      result := CreateStmtLogEvent(Category, ASQL);
+    lcExecPrepStmt, lcUnprepStmt:
+      result := CreateStmtLogEvent(Category);
+  else
+    result := nil;
+  end;
+end;
+
 {**
   Defines the SQL cursor name that will be used by
   subsequent <code>Statement</code> object <code>execute</code> methods.
@@ -876,9 +912,16 @@ end;
 
 function TZAbstractStatement.Execute(const SQL: RawByteString): Boolean;
 begin
+  ASQL := SQL;
   Result := False;
   LastResultSet := nil;
   LastUpdateCount := -1;
+  DriverManager.LogMessage(lcExecute,Self);
+end;
+
+function TZAbstractStatement.GetSQL: String;
+begin
+  Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
 end;
 
 {**
@@ -1197,7 +1240,6 @@ begin
   SetInParamCount(0);
   FPrepared := False;
   FExecCount := 0;
-  FStatementId := Self.GetNextStatementId;
 end;
 
 {**
@@ -1347,20 +1389,8 @@ end;
   Binds the input parameters
 }
 procedure TZAbstractPreparedStatement.BindInParameters;
-var
-  I : integer;
-  LogString : RawByteString;
 begin
-  LogString := '';
-  if InParamCount = 0 then
-     exit;
-    { Prepare Log Output}
-  For I := 0 to InParamCount - 1 do
-    if I > 0 then
-      LogString := LogString + ','+GetInParamLogValue(InParamValues[I])
-    else
-      LogString := GetInParamLogValue(InParamValues[I]);
-  LogPrepStmtMessage(lcBindPrepStmt, LogString);
+  DriverManager.LogMessage(lcBindPrepStmt,Self);
 end;
 
 {**
@@ -1461,7 +1491,7 @@ end;
 function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
-  LogPrepStmtMessage(lcExecPrepStmt);
+  DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount);
 end;
 {$WARNINGS ON}
@@ -1479,7 +1509,7 @@ end;
 function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
-  LogPrepStmtMessage(lcExecPrepStmt);
+  DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount);
 end;
 {$WARNINGS ON}
@@ -2010,7 +2040,7 @@ end;
 function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   { Logging Execution }
-  LogPrepStmtMessage(lcExecPrepStmt, '');
+  DriverManager.LogMessage(lcExecPrepStmt,Self);
   Inc(FExecCount);
 end;
 {$WARNINGS ON}
@@ -2022,6 +2052,7 @@ end;
 
 procedure TZAbstractPreparedStatement.Prepare;
 begin
+  DriverManager.LogMessage(lcPrepStmt,Self);
   PrepareInParameters;
   FPrepared := True;
 end;
@@ -2091,6 +2122,28 @@ begin
   end
   else
     Result := inherited GetUnicodeEncodedSQL(SQL);
+end;
+
+function TZAbstractPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
+  ): TZLoggingEvent;
+var
+  I : integer;
+  LogString : RawByteString;
+begin
+  LogString := '';
+  case Category of
+    lcBindPrepStmt:
+        if InParamCount = 0 then
+          result := nil
+        else
+          begin { Prepare Log Output}
+            For I := 0 to InParamCount - 1 do
+              LogString := LogString + GetInParamLogValue(InParamValues[I])+',';
+            result := CreateStmtLogEvent(Category, Logstring);
+          end;
+  else
+    result := inherited CreatelogEvent(Category);
+  end;
 end;
 
 { TZAbstractRealPreparedStatement }
@@ -3157,6 +3210,12 @@ begin
     Result := Execute(PrepareAnsiSQLQuery)
   else
     Result := Execute(PrepareWideSQLQuery);
+end;
+
+function TZEmulatedPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
+  ): TZLoggingEvent;
+begin
+  Result:=nil; // All logic happens using non-prepared statements, so we don't need to log the 'empty' prepare, unprepare, ...
 end;
 
 {**

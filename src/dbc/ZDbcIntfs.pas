@@ -185,9 +185,11 @@ type
 
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString);
+      const Msg: RawByteString); overload;
+    procedure LogMessage(Category: TZLoggingCategory; Sender: IZLoggingObject); overload;
     procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
     function ConstructURL(const Protocol, HostName, Database,
@@ -521,6 +523,9 @@ type
     function ExecuteQuery(const SQL: RawByteString): IZResultSet; overload;
     function ExecuteUpdate(const SQL: RawByteString): Integer; overload;
     function Execute(const SQL: RawByteString): Boolean; overload;
+
+    function GetSQL : String;
+
     procedure Close;
 
     function GetMaxFieldSize: Integer;
@@ -571,8 +576,6 @@ type
     function ExecuteQueryPrepared: IZResultSet;
     function ExecuteUpdatePrepared: Integer;
     function ExecutePrepared: Boolean;
-
-    function GetSQL : String;
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
@@ -1020,12 +1023,17 @@ uses ZMessages;
 
 type
   {** Driver Manager interface. }
+
+  { TZDriverManager }
+
   TZDriverManager = class(TInterfacedObject, IZDriverManager)
   private
     FDrivers: IZCollection;
     FLoginTimeout: Integer;
     FLoggingListeners: IZCollection;
+    FHasLoggingListener: Boolean;
     FURL: TZURL;
+    procedure LogEvent(Event: TZLoggingEvent);
   public
     constructor Create;
     destructor Destroy; override;
@@ -1048,9 +1056,11 @@ type
 
     procedure AddLoggingListener(Listener: IZLoggingListener);
     procedure RemoveLoggingListener(Listener: IZLoggingListener);
+    function HasLoggingListener: Boolean;
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
-      const Msg: RawByteString);
+      const Msg: RawByteString); overload;
+    procedure LogMessage(Category: TZLoggingCategory; Sender: IZLoggingObject); overload;
     procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
 
@@ -1073,6 +1083,7 @@ begin
   FDrivers := TZCollection.Create;
   FLoginTimeout := 0;
   FLoggingListeners := TZCollection.Create;
+  FHasLoggingListener := False;
   FURL := TZURL.Create;
 end;
 
@@ -1226,6 +1237,7 @@ end;
 procedure TZDriverManager.AddLoggingListener(Listener: IZLoggingListener);
 begin
   FLoggingListeners.Add(Listener);
+  FHasLoggingListener := True;
 end;
 
 {**
@@ -1235,6 +1247,12 @@ end;
 procedure TZDriverManager.RemoveLoggingListener(Listener: IZLoggingListener);
 begin
   FLoggingListeners.Remove(Listener);
+  FHasLoggingListener := (FLoggingListeners.Count>0);
+end;
+
+function TZDriverManager.HasLoggingListener: Boolean;
+begin
+  result := FHasLoggingListener;
 end;
 
 {**
@@ -1249,24 +1267,40 @@ procedure TZDriverManager.LogError(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString; ErrorCode: Integer;
   const Error: RawByteString);
 var
-  I: Integer;
-  Listener: IZLoggingListener;
   Event: TZLoggingEvent;
 begin
-  if FLoggingListeners.Count = 0 then
+  if not FHasLoggingListener then
     Exit;
   Event := TZLoggingEvent.Create(Category, Protocol, Msg, ErrorCode, Error);
   try
-    for I := 0 to FLoggingListeners.Count - 1 do
-    begin
-      Listener := FLoggingListeners[I] as IZLoggingListener;
-      try
-        Listener.LogEvent(Event);
-      except
-      end;
-    end;
+    LogEvent(Event);
   finally
     Event.Destroy;
+  end;
+end;
+
+{**
+  Logs a message about event with error result code.
+  @param Category a category of the message.
+  @param Protocol a name of the protocol.
+  @param Msg a description message.
+  @param ErrorCode an error code.
+  @param Error an error message.
+}
+procedure TZDriverManager.LogEvent(Event: TZLoggingEvent);
+var
+  I: Integer;
+  Listener: IZLoggingListener;
+begin
+  if not FHasLoggingListener then
+    Exit;
+  for I := 0 to FLoggingListeners.Count - 1 do
+  begin
+    Listener := FLoggingListeners[I] as IZLoggingListener;
+    try
+      Listener.LogEvent(Event);
+    except
+    end;
   end;
 end;
 
@@ -1279,9 +1313,21 @@ end;
 procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
   const Protocol: RawByteString; const Msg: RawByteString);
 begin
-  if FLoggingListeners.Count = 0 then
+  if not FHasLoggingListener then
       Exit;
   LogError(Category, Protocol, Msg, 0, '');
+end;
+
+procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
+  Sender: IZLoggingObject);
+var
+  Event: TZLoggingEvent;
+begin
+  if not FHasLoggingListener then
+    Exit;
+  Event := Sender.CreateLogEvent(Category);
+  If Assigned(Event) then
+    LogEvent(Event);
 end;
 
 {**
