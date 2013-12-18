@@ -733,14 +733,20 @@ end;
 procedure TZRowAccessor.InitBuffer(Buffer: PZRowBuffer);
 begin
   if Assigned(Buffer) then
-  Buffer^.Index := 0;
-  Buffer^.BookmarkFlag := 0;//bfCurrent;
-  Buffer^.UpdateType := utUnmodified;
-  {$IFDEF NO_COLUMN_LIMIT}
-  FillChar(Pointer(Buffer^.Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-  {$ELSE}
-  FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-  {$ENDIF}
+  begin
+    Buffer^.Index := 0;
+    Buffer^.BookmarkFlag := 0;//bfCurrent;
+    Buffer^.UpdateType := utUnmodified;
+    {$IFDEF NO_COLUMN_LIMIT}
+      {$IFNDEF DELPHI}
+      //EH: actually i'm not able to find the dyn-array helpers for FPC
+      //Delphi SetLength=DynArraySetLength already execute FillChar(x, Y*elem-size, 0), if RefCount of Array = 1
+      FillChar(Pointer(Buffer^.Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+      {$ENDIF}
+    {$ELSE}
+    FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
+    {$ENDIF}
+  end;
 end;
 
 {**
