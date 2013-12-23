@@ -106,14 +106,12 @@ type
   {** Defines an interface to accept logging events. }
   IZLoggingListener = interface (IZInterface)
     ['{53559F5F-AC22-4DDC-B2EA-45D21ADDD2D4}']
-
     procedure LogEvent(Event: TZLoggingEvent);
   end;
 
   IZLoggingObject = interface (IZInterface)
     ['{67681CC9-53D4-4350-B6C0-423ECFD88B48}']
-
-    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent;
+    function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent;
   end;
 
 

@@ -606,7 +606,7 @@ begin
     CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoInitPrepStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
   end;
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(ASQL), length(ASQL)) <> 0) then
+  if (FPlainDriver.PrepareStmt(FStmtHandle, Pointer(ASQL), length(ASQL)) <> 0) then
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoPrepareStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
       exit;

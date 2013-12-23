@@ -177,6 +177,7 @@ type
     function GetLocateUpdates: TZLocateUpdatesMode;
 
     procedure AddBatch(const SQL: string); virtual;
+    procedure AddBatchRequest(const SQL: string); virtual;
     procedure ClearBatch; virtual;
     function ExecuteBatch: TIntegerDynArray; virtual;
 
@@ -188,7 +189,7 @@ type
     procedure ClearWarnings; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; virtual;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; virtual;
-    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; virtual;
+    function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; virtual;
   end;
 
   {** Implements Abstract Prepared SQL Statement. }
@@ -197,7 +198,9 @@ type
 
   TZAbstractPreparedStatement = class(TZAbstractStatement, IZPreparedStatement)
   private
-    FInParamValues: TZVariantDynArray;
+    FInParamValuesArray: array of TZVariantDynArray;
+    FInParamValuesIndex: Integer;
+    //FInParamValues: TZVariantDynArray;
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
@@ -208,23 +211,23 @@ type
     FCachedQueryUni: TUnicodeDynArray;
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
+    function GetInParamValues: TZVariantDynArray;
+    procedure SetInParamValues(const Values: TZVariantDynArray);
   protected
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
     procedure UnPrepareInParameters; virtual;
 
-    procedure SetInParamCount(NewParamCount: Integer); virtual;
+    procedure SetInParamCount(const NewParamCount: Integer); virtual;
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); virtual;
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
     function GetInParamLogValue(Value: TZVariant): RawByteString;
 
     property ExecCount: Integer read FExecCount;
-    property InParamValues: TZVariantDynArray
-      read FInParamValues write FInParamValues;
-    property InParamTypes: TZSQLTypeArray
-      read FInParamTypes write FInParamTypes;
+    property InParamValues: TZVariantDynArray read GetInParamValues write SetInParamValues;
+    property InParamTypes: TZSQLTypeArray read FInParamTypes write FInParamTypes;
     property InParamDefaultValues: TStringDynArray
       read FInParamDefaultValues write FInParamDefaultValues;
     property InParamCount: Integer read FInParamCount write FInParamCount;
@@ -294,7 +297,7 @@ type
     function GetMetaData: IZResultSetMetaData; virtual;
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
-    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; override;
+    function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
   TZAbstractRealPreparedStatement = class(TZAbstractPreparedStatement)
@@ -431,7 +434,7 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
-    function CreateLogEvent(Category: TZLoggingCategory): TZLoggingEvent; override;
+    function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
 implementation
@@ -857,8 +860,8 @@ begin
     result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, '');
   end;
 
-function TZAbstractStatement.CreateLogEvent(Category: TZLoggingCategory
-  ): TZLoggingEvent;
+function TZAbstractStatement.CreateLogEvent(
+  const Category: TZLoggingCategory ): TZLoggingEvent;
 begin
   case Category of
     lcPrepStmt, lcExecute:
@@ -1142,6 +1145,18 @@ end;
 }
 procedure TZAbstractStatement.AddBatch(const SQL: string);
 begin
+  AddBatchRequest(SQL);
+end;
+
+{**
+  Adds an SQL command to the current batch of commmands for this
+  <code>Statement</code> object. This method is optional.
+
+  @param sql typically this is a static SQL <code>INSERT</code> or
+  <code>UPDATE</code> statement
+}
+procedure TZAbstractStatement.AddBatchRequest(const SQL: string);
+begin
   FBatchQueries.Add(SQL);
 end;
 
@@ -1249,7 +1264,8 @@ begin
   inherited Create(Connection, Info);
   FClientVariantManger := Connection.GetClientVariantManager;
   {$IFDEF UNICODE}WSQL{$ELSE}ASQL{$ENDIF} := SQL;
-  FInParamCount := 0;
+  SetLength(FInParamValuesArray, 1); //init one row space
+  FInParamValuesIndex := 0;
   SetInParamCount(0);
   FPrepared := False;
   FExecCount := 0;
@@ -1381,6 +1397,16 @@ begin
   Result := ExecutePrepared;
 end;
 
+function TZAbstractPreparedStatement.GetInParamValues: TZVariantDynArray;
+begin
+  Result := FInParamValuesArray[FInParamValuesIndex];
+end;
+
+procedure TZAbstractPreparedStatement.SetInParamValues(const Values: TZVariantDynArray);
+begin
+  FInParamValuesArray[FInParamValuesIndex] := Values;
+end;
+
 {**
   Return a VariantManager which supports client encoded RawByteStrings
   @returns IZClientVariantManager
@@ -1416,16 +1442,16 @@ end;
   Sets a new parameter count and initializes the buffers.
   @param NewParamCount a new parameters count.
 }
-procedure TZAbstractPreparedStatement.SetInParamCount(NewParamCount: Integer);
+procedure TZAbstractPreparedStatement.SetInParamCount(const NewParamCount: Integer);
 var
   I: Integer;
 begin
-  SetLength(FInParamValues, NewParamCount);
+  SetLength(FInParamValuesArray[FInParamValuesIndex], NewParamCount);
   SetLength(FInParamTypes, NewParamCount);
   SetLength(FInParamDefaultValues, NewParamCount);
   for I := FInParamCount to NewParamCount - 1 do
   begin
-    FInParamValues[I] := NullVariant;
+    FInParamValuesArray[FInParamValuesIndex][i] := NullVariant;
     FInParamTypes[I] := stUnknown;
 
     FInParamDefaultValues[I] := '';
@@ -1446,7 +1472,7 @@ begin
     SetInParamCount(ParameterIndex);
 
   FInParamTypes[ParameterIndex - 1] := SQLType;
-  FInParamValues[ParameterIndex - 1] := Value;
+  FInParamValuesArray[FInParamValuesIndex][ParameterIndex - 1] := Value;
 end;
 
 {**
@@ -1458,10 +1484,11 @@ end;
 procedure TZAbstractPreparedStatement.LogPrepStmtMessage(Category: TZLoggingCategory;
   const Msg: RawByteString = '');
 begin
-  if msg <> '' then
-    DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
-  else
-    DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId));
+  if DriverManager.HasLoggingListener then
+    if msg <> '' then
+      DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+Msg)
+    else
+      DriverManager.LogMessage(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId));
 end;
 
 
@@ -1474,7 +1501,7 @@ begin
       vtBytes:
         begin
           SetLength(Result, Length(VBytes)*2);
-          ZBinToHex(PAnsiChar(VBytes), PAnsiChar(Result), Length(VBytes));
+          ZBinToHex(Pointer(VBytes), PAnsiChar(Result), Length(VBytes));
         end;
       vtInteger : result := IntToRaw(VInteger);
       vtFloat : result := FloatToRaw(VFloat);
@@ -2091,6 +2118,8 @@ end;
 }
 procedure TZAbstractPreparedStatement.AddBatchPrepared;
 begin
+  SetLength(FInParamValuesArray, Length(FInParamValuesArray)+1);
+  Inc(FInParamValuesIndex);
 end;
 
 {**
@@ -2130,7 +2159,7 @@ begin
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
 
-    //init Result
+    Result := ''; //init Result
     for I := 0 to High(FCachedQueryUni) do
       Result := Result + FCachedQueryUni[i];
   end
@@ -2138,8 +2167,8 @@ begin
     Result := inherited GetUnicodeEncodedSQL(SQL);
 end;
 
-function TZAbstractPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
-  ): TZLoggingEvent;
+function TZAbstractPreparedStatement.CreateLogEvent(
+  const Category: TZLoggingCategory): TZLoggingEvent;
 var
   I : integer;
   LogString : RawByteString;
@@ -3226,8 +3255,8 @@ begin
     Result := Execute(PrepareWideSQLQuery);
 end;
 
-function TZEmulatedPreparedStatement.CreateLogEvent(Category: TZLoggingCategory
-  ): TZLoggingEvent;
+function TZEmulatedPreparedStatement.CreateLogEvent(
+  const Category: TZLoggingCategory): TZLoggingEvent;
 begin
   Result:=nil; // All logic happens using non-prepared statements, so we don't need to log the 'empty' prepare, unprepare, ...
 end;

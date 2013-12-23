@@ -557,7 +557,9 @@ type
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
     function GetLocateUpdates: TZLocateUpdatesMode;
 
-    procedure AddBatch(const SQL: string);
+    procedure AddBatch(const SQL: string); deprecated;
+    procedure AddBatchRequest(const SQL: string);
+
     procedure ClearBatch;
     function ExecuteBatch: TIntegerDynArray;
 
