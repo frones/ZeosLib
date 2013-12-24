@@ -66,7 +66,7 @@ type
   protected
     function GetSupportedProtocols: string; override;
   published
-    procedure Test789879;
+    procedure Test789879D;
     procedure Test841559;
     procedure Test843655;
     procedure Test865441;
@@ -87,7 +87,7 @@ begin
   Result := pl_all_interbase;
 end;
 
-procedure TZTestDbcInterbaseBugReport.Test789879;
+procedure TZTestDbcInterbaseBugReport.Test789879D;
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -107,6 +107,7 @@ begin
     UpdateFloat(1, 1.14);
     InsertRow;
   end;
+
   ResultSet := nil;
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM TABLE789879');

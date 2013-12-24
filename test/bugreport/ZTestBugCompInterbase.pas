@@ -73,7 +73,7 @@ type
     function GetSupportedProtocols: string; override;
   published
     procedure Test750912;
-    procedure Test789879;
+    procedure Test789879D;
     procedure Test833489;
     procedure Test841559;
     procedure Test843655;
@@ -392,7 +392,7 @@ end;
 {**
   Float->Numeric problem
 }
-procedure ZTestCompInterbaseBugReport.Test789879;
+procedure ZTestCompInterbaseBugReport.Test789879D;
 var
   Query: TZQuery;
 begin
