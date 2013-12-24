@@ -148,7 +148,7 @@ type
 
   { TZMySQLPreparedStatement }
 
-  TZMySQLPreparedStatement = class(TZAbstractRealPreparedStatement,
+  TZMySQLPreparedStatement = class(TZAbstractPreparedStatement,
     IZMySQLPreparedStatement)
   private
     FHandle: PZMySQLConnect;

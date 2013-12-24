@@ -108,7 +108,7 @@ type
   end;
   {$ENDIF}
 
-  TZPostgreSQLPreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FRawPlanName: RawByteString;
     FPostgreSQLConnection: IZPostgreSQLConnection;

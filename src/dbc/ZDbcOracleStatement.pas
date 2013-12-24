@@ -89,7 +89,7 @@ type
   end;
 
   {** Implements Prepared SQL Statement. }
-  TZOraclePreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZOraclePreparedStatement = class(TZAbstractPreparedStatement)
   private
     FHandle: POCIStmt;
     FErrorHandle: POCIError;

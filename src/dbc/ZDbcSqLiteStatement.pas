@@ -99,7 +99,7 @@ type
   {$ENDIF}
 
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
@@ -291,6 +291,7 @@ begin
   begin
     Result := True;
     LastResultSet := CreateResultSet(StmtHandle, ErrorCode);
+    FOpenResultset := Pointer(LastResultset);
   end
   else { Processes regular query. }
   begin
@@ -663,6 +664,7 @@ begin
   begin
     Result := True;
     LastResultSet := CreateResultSet(FStmtHandle, FErrorCode);
+    FOpenResultset := Pointer(LastResultset);
   end
   { Processes regular query. }
   else

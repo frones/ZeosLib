@@ -66,7 +66,7 @@ type
 
   { TZInterbase6PreparedStatement }
 
-  TZInterbase6PreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZInterbase6PreparedStatement = class(TZAbstractPreparedStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;

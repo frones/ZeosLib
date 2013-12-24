@@ -236,6 +236,8 @@ type
     property CachedQueryUni: TUnicodeDynArray read FCachedQueryUni;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
+    procedure SetASQL(const Value: RawByteString); override;
+    procedure SetWSQL(const Value: ZWideString); override;
   public
     constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     destructor Destroy; override;
@@ -298,12 +300,6 @@ type
     function GetRawEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): RawByteString; override;
     function GetUnicodeEncodedSQL(const SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}): ZWideString; override;
     function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; override;
-  end;
-
-  TZAbstractRealPreparedStatement = class(TZAbstractPreparedStatement)
-  protected
-    procedure SetASQL(const Value: RawByteString); override;
-    procedure SetWSQL(const Value: ZWideString); override;
   end;
 
   {** Implements Abstract Callable SQL statement. }
@@ -2189,15 +2185,14 @@ begin
   end;
 end;
 
-{ TZAbstractRealPreparedStatement }
-procedure TZAbstractRealPreparedStatement.SetASQL(const Value: RawByteString);
+procedure TZAbstractPreparedStatement.SetASQL(const Value: RawByteString);
 begin
   if ( ASQL <> Value ) and Prepared then
     Unprepare;
   inherited SetASQL(Value);
 end;
 
-procedure TZAbstractRealPreparedStatement.SetWSQL(const Value: ZWideString);
+procedure TZAbstractPreparedStatement.SetWSQL(const Value: ZWideString);
 begin
   if ( WSQL <> Value ) and Prepared then
     Unprepare;
