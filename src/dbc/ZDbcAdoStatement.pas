@@ -686,7 +686,7 @@ begin
         ClientVarManager.SetAsBoolean(Result, Temp);
       stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong:
         ClientVarManager.SetAsInteger(Result, Temp);
-      stFloat, stDouble, stBigDecimal:
+      stFloat, stDouble, stCurrency, stBigDecimal:
         ClientVarManager.SetAsFloat(Result, Temp);
       stGUID:
         ClientVarManager.SetAsString(Result, Temp);

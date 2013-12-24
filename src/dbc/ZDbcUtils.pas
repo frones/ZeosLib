@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
-  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer;
+  ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -158,10 +158,16 @@ function WideStringStream(const AString: WideString): TStream;
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   const NeedNCharDetection: Boolean = False): TRawDynArray;
+
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 
+{$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
+  OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
+  const PAramTypes: array of ShortInt);
+{$IFEND}
 
 implementation
 
@@ -712,5 +718,79 @@ begin
     {$ENDIF}
 end;
 
+{$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
+  OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
+  const ParamTypes: array of ShortInt);
+var
+  ParamIndex, I: Integer;
+  HasRows: Boolean;
+  SupportsMoveAbsolute: Boolean;
+begin
+  SupportsMoveAbsolute := ResultSet.GetType <> rtForwardOnly;
+  if SupportsMoveAbsolute then ResultSet.BeforeFirst;
+  HasRows := ResultSet.Next;
+
+  I := 1;
+  for ParamIndex := 0 to OutParamCount - 1 do
+  begin
+    if not (ParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
+      Continue;
+
+    if I > ResultSet.GetMetadata.GetColumnCount then
+      Break;
+
+    if (not HasRows) or (ResultSet.IsNull(I)) then
+      OutParamValues[ParamIndex] := NullVariant
+    else
+      case ResultSet.GetMetadata.GetColumnType(I) of
+        stBoolean:
+          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
+        stByte:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
+        stShort:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
+        stWord:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
+        stSmall:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
+        stLongword:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
+        stInteger:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
+        stULong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
+        stLong:
+          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
+        stBytes:
+          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
+        stFloat:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
+        stDouble:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
+        stCurrency:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetCurrency(I));
+        stBigDecimal:
+          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
+        stString, stAsciiStream:
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+        stUnicodeString, stUnicodeStream:
+          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
+        stDate:
+          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetDate(I));
+        stTime:
+          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTime(I));
+        stTimestamp:
+          OutParamValues[ParamIndex] := EncodeDateTime(ResultSet.GetTimestamp(I));
+        stBinaryStream:
+          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
+        else
+          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
+      end;
+    Inc(I);
+  end;
+  if SupportsMoveAbsolute then ResultSet.BeforeFirst;
+end;
+{$IFEND}
 end.
 

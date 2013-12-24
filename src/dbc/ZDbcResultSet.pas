@@ -740,6 +740,8 @@ begin
     FColumnInfo.Free;
   end;
   FColumnsInfo.Clear;
+  if (FStatement <> nil) then
+    FStatement.FreeOpenResultSetReference;
   FStatement := nil;
 end;
 

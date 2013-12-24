@@ -1025,7 +1025,8 @@ begin
   InParams := GenerateParamsStr( High( InParamValues) + 1);
   if InParams <> '' then
     InParams := '(' + InParams + ')';
-  Result := 'call ' + ZPlainString(SQL) + InParams;
+  Result := 'call ' + ConSettings^.ConvFuncs.ZStringToRaw(SQL,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP) + InParams;
 end;
 
 end.

@@ -135,7 +135,7 @@ type
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
+      ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   public
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); override;
     procedure RegisterParamType(ParameterIndex: integer; ParamType: Integer); override;
@@ -685,7 +685,7 @@ begin
 end;
 
 procedure TZOracleCallableStatement.RegisterParamTypeAndName(const ParameterIndex: integer;
-  const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
+  ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
 var
   iPos: Integer;
   ProcName: String;

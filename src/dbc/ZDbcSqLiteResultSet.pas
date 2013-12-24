@@ -296,8 +296,6 @@ end;
 }
 procedure TZSQLiteResultSet.Close;
 begin
-  if not FFinalizeHandle  and (Statement <> nil) then
-    (Statement as IZSQLiteCAPIPreparedStatement).FreeReference;
   inherited Close;
   FreeHandle;
 end;

@@ -848,13 +848,15 @@ end;
 procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
+  FUpdateSqlData.UpdateString(ColumnIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
 end;
 
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateString(ColumnIndex, ZPlainString(Value));
+  FUpdateSqlData.UpdateString(ColumnIndex,
+    ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TBytes);

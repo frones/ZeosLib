@@ -173,7 +173,6 @@ uses
   is also automatically closed when it is garbage collected.
 }
 procedure TZInterbase6XSQLDAResultSet.Close;
-var stmt: IZInterbase6PreparedStatement;
 begin
   if FStmtHandle <> 0 then
   begin
@@ -183,8 +182,6 @@ begin
     { Free allocate sql statement }
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
   end;
-  if (Statement <> nil) and Supports(Statement, IZInterbase6PreparedStatement, stmt) then
-    stmt.FreeReference;
   inherited Close;
 end;
 

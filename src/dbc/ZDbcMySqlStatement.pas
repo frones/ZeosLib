@@ -191,11 +191,11 @@ type
     FHandle: PZMySQLConnect;
     FQueryHandle: PZMySQLResult;
     FUseResult: Boolean;
-    FParamNames: array [0..1024] of String;
-    FParamTypeNames: array [0..1024] of String;
+    FParamNames: array [0..1024] of RawByteString;
+    FParamTypeNames: array [0..1024] of RawByteString;
     FUseDefaults: Boolean;
     function GetCallSQL: RawByteString;
-    function GetOutParamSQL: String;
+    function GetOutParamSQL: RawByteString;
     function GetSelectFunctionSQL: RawByteString;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
     function GetStmtHandle : PZMySqlPrepStmt;
@@ -203,9 +203,8 @@ type
     procedure ClearResultSets; override;
     procedure BindInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
-    procedure FetchOutParams(ResultSet: IZResultSet);
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
+      ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -966,7 +965,7 @@ function TZMySQLCallableStatement.GetCallSQL: RawByteString;
       if I > 0 then
         Result := Result + ', ';
       if FDBParamTypes[i] in [1, 2, 3, 4] then
-        Result := Result + '@'+ZPlainString(FParamNames[I])
+        Result := Result + '@'+FParamNames[i];
     end;
   end;
 
@@ -977,11 +976,12 @@ begin
     InParams := GenerateParamsStr(OutParamCount)
   else
     InParams := GenerateParamsStr(InParamCount);
-  Result := 'CALL '+ZPlainString(SQL)+'('+InParams+')';
+  Result := 'CALL '+ConSettings^.ConvFuncs.ZStringToRaw(SQL,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'('+InParams+')';
 end;
 
-function TZMySQLCallableStatement.GetOutParamSQL: String;
-  function GenerateParamsStr(Count: integer): string;
+function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
+  function GenerateParamsStr(Count: integer): RawByteString;
   var
     I: integer;
   begin
@@ -1006,9 +1006,9 @@ function TZMySQLCallableStatement.GetOutParamSQL: String;
   end;
 
 var
-  OutParams: String;
+  OutParams: RawByteString;
 begin
-  OutParams := GenerateParamsStr(Self.OutParamCount-Length(InParamValues));
+  OutParams := GenerateParamsStr(OutParamCount-Length(InParamValues));
   Result := 'SELECT '+ OutParams;
 end;
 
@@ -1028,7 +1028,8 @@ var
   InParams: RawByteString;
 begin
   InParams := GenerateInParamsStr;
-  Result := 'SELECT '+ZPlainString(SQL)+'('+InParams+')';
+  Result := 'SELECT '+ConSettings^.ConvFuncs.ZStringToRaw(SQL,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'('+InParams+')';
   Result := Result + ' AS ReturnValue';
 end;
 
@@ -1136,11 +1137,9 @@ begin
     begin
       if FDBParamTypes[i] in [1, 3] then //ptInputOutput
         if ExecQuery = '' then
-          ExecQuery := 'SET @'+ConSettings^.ConvFuncs.ZStringToRaw(FParamNames[i],
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+' = '+PrepareAnsiSQLParam(I)
+          ExecQuery := 'SET @'+FParamNames[i]+' = '+PrepareAnsiSQLParam(I)
         else
-          ExecQuery := ExecQuery + ', @'+ConSettings^.ConvFuncs.ZStringToRaw(FParamNames[i],
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+' = '+PrepareAnsiSQLParam(I);
+          ExecQuery := ExecQuery + ', @'+FParamNames[i]+' = '+PrepareAnsiSQLParam(I);
       Inc(i);
     end;
   if not (ExecQuery = '') then
@@ -1182,103 +1181,35 @@ begin
     Result := NativeResultSet;
 end;
 
-{**
-  Sets output parameters from a ResultSet
-  @param Value a IZResultSet object.
-}
-procedure TZMySQLCallableStatement.FetchOutParams(ResultSet: IZResultSet);
-var
-  ParamIndex, I: Integer;
-  HasRows: Boolean;
-begin
-  ResultSet.BeforeFirst;
-  HasRows := ResultSet.Next;
-
-  I := 1;
-  for ParamIndex := 0 to OutParamCount - 1 do
-  begin
-    if not (FDBParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
-      Continue;
-    if I > ResultSet.GetMetadata.GetColumnCount then
-      Break;
-
-    if (not HasRows) or (ResultSet.IsNull(I)) then
-      OutParamValues[ParamIndex] := NullVariant
-    else
-      case ResultSet.GetMetadata.GetColumnType(I) of
-        stBoolean:
-          OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
-        stByte:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetByte(I));
-        stShort:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetShort(I));
-        stWord:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetWord(I));
-        stSmall:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetSmall(I));
-        stLongword:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetUInt(I));
-        stInteger:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
-        stULong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
-        stLong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
-        stBytes:
-          OutParamValues[ParamIndex] := EncodeBytes(ResultSet.GetBytes(I));
-        stFloat:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetFloat(I));
-        stDouble:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetDouble(I));
-        stBigDecimal:
-          OutParamValues[ParamIndex] := EncodeFloat(ResultSet.GetBigDecimal(I));
-        stString, stAsciiStream:
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-        stUnicodeString, stUnicodeStream:
-          OutParamValues[ParamIndex] := EncodeUnicodeString(ResultSet.GetUnicodeString(I));
-        stDate:
-          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetDate(I));
-        stTime:
-          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTime(I));
-        stTimestamp:
-          OutParamValues[ParamIndex] := ZVariant.EncodeDateTime(ResultSet.GetTimestamp(I));
-        stBinaryStream:
-          OutParamValues[ParamIndex] := EncodeInterface(ResultSet.GetBlob(I));
-        else
-          OutParamValues[ParamIndex] := EncodeString(ResultSet.GetString(I));
-      end;
-    Inc(I);
-  end;
-  ResultSet.BeforeFirst;
-end;
-
 procedure TZMySQLCallableStatement.RegisterParamTypeAndName(const ParameterIndex:integer;
-      const ParamTypeName, ParamName: String; Const ColumnSize, Precision: Integer);
+  ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
 begin
-  FParamNames[ParameterIndex] := ParamName;
-  if ( Pos('char', LowerCase(ParamTypeName)) > 0 ) or
-     ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-    FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToStr(ColumnSize)+')'
+  FParamNames[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(ParamName,
+    ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  ParamTypeName := LowerCase(ParamTypeName);
+  if ( Pos('char', ParamTypeName) > 0 ) or
+     ( Pos('set', ParamTypeName) > 0 ) then
+    FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
   else
-    if ( Pos('set', LowerCase(ParamTypeName)) > 0 ) then
-      FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToStr(ColumnSize)+')'
+    if ( Pos('set', ParamTypeName) > 0 ) then
+      FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
     else
-      if ( Pos('datetime', LowerCase(ParamTypeName)) > 0 ) or
-         ( Pos('timestamp', LowerCase(ParamTypeName)) > 0 ) then
+      if ( Pos('datetime', ParamTypeName) > 0 ) or
+         ( Pos('timestamp', ParamTypeName) > 0 ) then
         FParamTypeNames[ParameterIndex] := 'DATETIME'
       else
-        if ( Pos('date', LowerCase(ParamTypeName)) > 0 ) then
+        if ( Pos('date', ParamTypeName) > 0 ) then
           FParamTypeNames[ParameterIndex] := 'DATE'
         else
-          if ( Pos('time', LowerCase(ParamTypeName)) > 0 ) then
+          if ( Pos('time', ParamTypeName) > 0 ) then
             FParamTypeNames[ParameterIndex] := 'TIME'
           else
-            if ( Pos('int', LowerCase(ParamTypeName)) > 0 ) or
-               ( Pos('year', LowerCase(ParamTypeName)) > 0 ) then
+            if ( Pos('int', ParamTypeName) > 0 ) or
+               ( Pos('year', ParamTypeName) > 0 ) then
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
-              if ( Pos('binary', LowerCase(ParamTypeName)) > 0 ) then
-                FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToStr(ColumnSize)+')'
+              if ( Pos('binary', ParamTypeName) > 0 ) then
+                FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToRaw(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';
 end;
@@ -1442,12 +1373,12 @@ begin
     BindInParameters;
     ExecuteUpdate(GetCallSQL);
     if OutParamCount > 0 then
-      Result := ExecuteQuery(ZPlainString(GetOutParamSQL)) //Get the Last Resultset
+      Result := ExecuteQuery(GetOutParamSQL) //Get the Last Resultset
     else
       Result := GetLastResultSet;
   end;
   if Assigned(Result) then
-    FetchOutParams(Result);
+    AssignOutParamValuesFromResultSet(Result, OutParamValues, OutParamCount , FDBParamTypes);
 end;
 
 {**
@@ -1466,14 +1397,14 @@ begin
   begin
     TrimInParameters;
     Result := ExecuteUpdate(GetSelectFunctionSQL);
-    FetchOutParams(LastResultSet);
+    AssignOutParamValuesFromResultSet(LastResultSet, OutParamValues, OutParamCount , FDBParamTypes);
   end
   else
   begin
     BindInParameters;
     Result := ExecuteUpdate(GetCallSQL);
     if OutParamCount > 0 then
-      FetchOutParams(ExecuteQuery(ZPlainString(GetOutParamSQL))); //Get the Last Resultset
+      AssignOutParamValuesFromResultSet(ExecuteQuery(GetOutParamSQL), OutParamValues, OutParamCount , FDBParamTypes);
     Inc(Result, LastUpdateCount);
   end;
 end;

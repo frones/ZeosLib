@@ -462,12 +462,14 @@ begin
   if HostName <> '' then
   begin
     if Port <> 3050 then
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database))
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database),
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
     else
-      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(HostName + ':' + Database))
+      {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + ':' + Database),
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
   end
   else
-    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ZPlainString(Database));
+    {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.Database);
 
   try
     { Create new db if needed }
@@ -811,7 +813,7 @@ begin
       {$IFDEF UNICODE}
       Result := GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39)
       {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(ZPlainString(Value), #39, #39#39, [rfReplaceAll])+#39), ConSettings^.ClientCodePage^.CP)
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetDriver.GetTokenizer.GetEscapeString(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39), ConSettings^.ClientCodePage^.CP)
       {$ENDIF}
   else
     if StartsWith(Value, ZWideString('''')) and EndsWith(Value, ZWideString('''')) then
@@ -820,7 +822,7 @@ begin
       {$IFDEF UNICODE}
       Result := #39+StringReplace(Value, #39, #39#39, [rfReplaceAll])+#39;
       {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToUnicode(#39+StringReplace(ZPlainString(Value), #39, #39#39, [rfReplaceAll])+#39, ConSettings^.ClientCodePage^.CP);
+      Result := ConSettings^.ConvFuncs.ZRawToUnicode(#39+StringReplace(ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), #39, #39#39, [rfReplaceAll])+#39, ConSettings^.ClientCodePage^.CP);
       {$ENDIF}
 end;
 {**

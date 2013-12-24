@@ -110,8 +110,8 @@
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
     {$DEFINE WITH_FPC_STRING_CONVERSATION} //After string conversations to RawByteString like AnsiZoUTF8 the results are equal to original value
     {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}
-    {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //Hack for *nix systems where i couldn't locate this define )):
     {$DEFINE MISS_RBS_SETSTRING_OVERLOAD} //SetString overload for RawByteString is missing
+    {$IFNDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //Hack for *nix systems where i couldn't locate this define )):
       {$DEFINE FPC_HAS_BUILTIN_WIDESTR_MANAGER}
     {$ENDIF}
   {$IFEND}

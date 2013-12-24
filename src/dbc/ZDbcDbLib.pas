@@ -368,9 +368,9 @@ begin
     begin
       S := Info.Values['codepage'];
       if S <> '' then
-        GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(ZPlainString(S)));
+        GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(NotEmptyStringToASCII7(S)));
       GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
-      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(ZPlainString(Password)));
+      GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(AnsiString(Password)));
         LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
     end;
 
@@ -440,11 +440,11 @@ begin
   LogMessage := 'USE '+ ConSettings^.Database;
   if FProvider = dpMsSQL then
   begin
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(AnsiString(Database))) <> DBSUCCEED then
+    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ConSettings^.Database)) <> DBSUCCEED then
       CheckDBLibError(lcConnect, LogMessage);
   end
   else
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ZPlainString(Database))) <> DBSUCCEED then
+    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ConSettings^.Database)) <> DBSUCCEED then
       CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
@@ -620,7 +620,7 @@ end;
 
 procedure TZDBLibConnection.InternalSetTransactionIsolation(Level: TZTransactIsolationLevel);
 const
-  IL: array[TZTransactIsolationLevel, 0..1] of RawByteString = (('READ COMMITTED', '1'), ('READ UNCOMMITTED', '0'), ('READ COMMITTED', '1'), ('REPEATABLE READ', '2'), ('SERIALIZABLE', '3'));
+  IL: array[TZTransactIsolationLevel, 0..1] of {$IFDEF FPC}AnsiString{$ELSE}RawByteString{$ENDIF} = (('READ COMMITTED', '1'), ('READ UNCOMMITTED', '0'), ('READ COMMITTED', '1'), ('REPEATABLE READ', '2'), ('SERIALIZABLE', '3'));
 var
   Index: Integer;
 begin
