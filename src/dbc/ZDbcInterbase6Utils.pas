@@ -245,7 +245,7 @@ function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
   const Dialect: Word; const SQL: RawByteString; const ConSettings: PZConSettings;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
 procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const Dialect: Word; const SQL: RawByteString;
+  const Dialect: Word; const SQL: RawByteString;
   var StmtHandle: TISC_STMT_HANDLE; const SqlData: IZSQLDA;
   const ConSettings: PZConSettings); overload;
 procedure PrepareParameters(const PlainDriver: IZInterbasePlainDriver;
@@ -399,7 +399,7 @@ const
 implementation
 
 uses
-  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZEncoding
+  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -855,7 +855,7 @@ end;
    @param SqlData a interbase sql result data
 }
 procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const Dialect: Word; const SQL: RawByteString;
+  const Dialect: Word; const SQL: RawByteString;
   var StmtHandle: TISC_STMT_HANDLE; const SqlData: IZSQLDA;
   const ConSettings: PZConSettings);
 var

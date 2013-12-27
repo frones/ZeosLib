@@ -158,7 +158,7 @@ function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVaria
 
 implementation
 
-uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZEncoding, ZSysUtils;
+uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcUtils, ZSysUtils;
 
 {**
    Return ZSQLType from PostgreSQL type name

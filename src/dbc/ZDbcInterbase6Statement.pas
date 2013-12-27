@@ -228,7 +228,7 @@ begin
     if StatementType in [stSelect, stExecProc] then
       begin
         FResultXSQLDA := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
-        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+        PrepareResultSqlData(GetPlainDriver, GetDialect,
           ASQL, StmtHandle, FResultXSQLDA, ConSettings);
       end;
   end;
@@ -469,7 +469,7 @@ begin
     { Prepare statement }
     FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
       GetDBHandle, GetTrHandle, GetDialect, ProcSql, ConSettings, FStmtHandle);
-    PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+    PrepareResultSqlData(GetPlainDriver, GetDialect,
       ProcSql, FStmtHandle, FResultSQLData, ConSettings);
     PrepareParameters(GetPlainDriver, ProcSql, GetDialect, FStmtHandle, FParamSQLData, ConSettings);
   end;

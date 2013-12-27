@@ -61,7 +61,7 @@ uses
   Windows,
 {$ENDIF}
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
-  ZClasses, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZVariant,
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZVariant,
   ZCompatibility;
 
 type
@@ -1249,7 +1249,7 @@ begin
     stBytes: FRawTemp := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
       begin
-        System.Move(GetBytes(ColumnIndex, IsNull)[0], GUID, 16);
+        System.Move(GetBytes(ColumnIndex, IsNull)[0], GUID{%H-}, 16);
         {$IFDEF UNICODE}
         FRawTemp := ConSettings^.ConvFuncs.ZStringToRaw(GUIDToString(GUID), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
         {$ELSE}
@@ -1338,7 +1338,7 @@ begin
     stBytes: Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(BytesToStr(GetBytes(ColumnIndex, IsNull)));
     stGUID:
       begin
-        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
         Result := GUIDToString(GUID);
       end;
     stDate: Result := FormatDateTime('yyyy-mm-dd',
@@ -1392,7 +1392,7 @@ begin
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
       begin
-        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
         {$IFDEF UNICODE}
         Result := AnsiString(GUIDToString(GUID));
         {$ELSE}
@@ -1460,7 +1460,7 @@ begin
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
       begin
-        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
         Result := ConSettings^.ConvFuncs.ZStringToUTF8(GUIDToString(GUID), ConSettings^.CTRL_CP);
       end;
     //stString, stUnicodeString: do not handle here!
@@ -1526,7 +1526,7 @@ begin
     stBytes: Result := BytesToStr(GetBytes(ColumnIndex, IsNull));
     stGUID:
       begin
-        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
         Result := ConSettings^.ConvFuncs.ZStringToRaw(GUIDToString(GUID), ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
       end;
     stDate: Result := DateTimeToRawSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
@@ -1596,7 +1596,7 @@ begin
       end;
     stGUID:
       begin
-        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
         FUniTemp := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
     stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
@@ -1657,7 +1657,7 @@ begin
       end;
     stGUID:
       begin
-        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID, 16);
+        System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
         Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
     stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^,
@@ -2317,7 +2317,7 @@ begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
           BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.RawSQLDateToDateTime(AnsiBuffer, BufLen,
-           ConSettings^.ReadFormatSettings, Failed);
+           ConSettings^.ReadFormatSettings, Failed{%H-});
           if Failed then
             Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ZSysUtils.RawSQLTimeStampToDateTime(
               AnsiBuffer, BufLen, ConSettings^.ReadFormatSettings, Failed));
@@ -2385,7 +2385,7 @@ begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc;
           BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^;
           Result := ZSysUtils.RawSQLTimeToDateTime(AnsiBuffer, BufLen,
-            ConSettings^.ReadFormatSettings, Failed);
+            ConSettings^.ReadFormatSettings, Failed{%H-});
           if Failed then
             Result := Frac(ZSysUtils.RawSQLTimeStampToDateTime(AnsiBuffer,
               BufLen, ConSettings^.ReadFormatSettings, Failed));
@@ -2449,7 +2449,7 @@ begin
           Result := ZSysUtils.RawSQLTimeStampToDateTime(
             PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PAnsiInc,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^^,
-                ConSettings^.ReadFormatSettings, Failed)
+                ConSettings^.ReadFormatSettings, Failed{%H-})
         else
           Result := ZSysUtils.UnicodeSQLTimeStampToDateTime(
             PPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^+PWideInc,
@@ -3389,7 +3389,7 @@ begin
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF UNICODE}UnicodeSQLDateToDateTime{$ELSE}RawSQLDateToDateTime{$ENDIF}(
-            PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
+            PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
@@ -3412,13 +3412,9 @@ begin
             PChar(Value), Length(Value), ConSettings^.DisplayFormatSettings, Failed);
     stAsciiStream, stUnicodeStream:
       begin
-        TempBlob := GetBlob(ColumnIndex, IsNull);
+        TempBlob := GetBlob(ColumnIndex, IsNull{%H-});
         if TempBlob.IsClob then
-          {$IFDEF UNICODE}
           TempBlob.SetUnicodeString(Value)
-          {$ELSE}
-          TempBlob.SetUnicodeString(ConSettings^.ConvFuncs.ZStringToRaw(Value, ConSettings.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-          {$ENDIF}
         else
           GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
       end;
@@ -3486,7 +3482,7 @@ begin
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
             RawSQLDateToDateTime (Value.P, Value.Len,
-              ConSettings^.DisplayFormatSettings, Failed);
+              ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
@@ -3509,7 +3505,7 @@ begin
             ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream:
       begin
-        Blob := GetBlob(ColumnIndex, IsNull);
+        Blob := GetBlob(ColumnIndex, IsNull{%H-});
         if Blob.IsClob then
           Blob.SetPAnsiChar(Value.P, ConSettings^.ClientCodePage^.CP, Value.Len)
         else
@@ -3573,7 +3569,7 @@ begin
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin
-        Blob := GetBlob(ColumnIndex, IsNull);
+        Blob := GetBlob(ColumnIndex, IsNull{%H-});
         if Blob.IsClob then
           Blob.SetPWideChar(Value.P, Value.Len)
         else
@@ -3594,7 +3590,7 @@ begin
     stDate:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
-          UnicodeSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed);
+          UnicodeSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
@@ -3700,7 +3696,7 @@ begin
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
             RawSQLDateToDateTime (Pointer(Value), Length(Value),
-              ConSettings^.DisplayFormatSettings, Failed);
+              ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
@@ -3722,7 +3718,7 @@ begin
           RawSQLTimeStampToDateTime(Pointer(Value), Length(Value),
             ConSettings^.DisplayFormatSettings, Failed);
     stUnicodeStream, stAsciiStream, stBinaryStream:
-      GetBlob(ColumnIndex, IsNull).SetString(Value);
+      GetBlob(ColumnIndex, IsNull{%H-}).SetString(Value);
   end;
 end;
 
@@ -3761,7 +3757,7 @@ begin
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin
-        Blob := GetBlob(ColumnIndex, IsNull);
+        Blob := GetBlob(ColumnIndex, IsNull{%H-});
         if Blob.IsClob then
           Blob.SetUnicodeString(Value)
         else
@@ -3783,7 +3779,7 @@ begin
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           UnicodeSQLDateToDateTime(PWideChar(Value), Length(Value),
-            ConSettings^.DisplayFormatSettings, Failed);
+            ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex - 1] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
@@ -3831,7 +3827,7 @@ begin
     FBuffer.Columns[FColumnOffsets[ColumnIndex - 1]] := bIsNotNull;
     case FColumnTypes[ColumnIndex - 1] of
       stBytes,stGUID: InternalSetBytes(FBuffer, ColumnIndex, Value);
-      stBinaryStream: GetBlob(ColumnIndex, IsNull).SetBytes(Value);
+      stBinaryStream: GetBlob(ColumnIndex, IsNull{%H-}).SetBytes(Value);
       else
         SetString(ColumnIndex, String(BytesToStr(Value)));
     end;

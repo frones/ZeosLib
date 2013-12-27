@@ -3819,7 +3819,7 @@ begin
   Result := False;
 end;
 
-function TZAbstractBlob.GetRawByteString: RawByteString;
+function TZAbstractBlob.{%H-}GetRawByteString: RawByteString;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
@@ -3829,7 +3829,7 @@ begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetAnsiString: AnsiString;
+function TZAbstractBlob.{%H-}GetAnsiString: AnsiString;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
@@ -3839,7 +3839,7 @@ begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetUTF8String: UTF8String;
+function TZAbstractBlob.{%H-}GetUTF8String: UTF8String;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
@@ -3854,7 +3854,7 @@ begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetUnicodeString: ZWideString;
+function TZAbstractBlob.{%H-}GetUnicodeString: ZWideString;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
@@ -3864,27 +3864,27 @@ begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetRawByteStream: TStream;
+function TZAbstractBlob.{%H-}GetRawByteStream: TStream;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetAnsiStream: TStream;
+function TZAbstractBlob.{%H-}GetAnsiStream: TStream;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetUTF8Stream: TStream;
+function TZAbstractBlob.{%H-}{%H-}GetUTF8Stream: TStream;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetUnicodeStream: TStream;
+function TZAbstractBlob.{%H-}GetUnicodeStream: TStream;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
+function TZAbstractBlob.{%H-}GetPAnsiChar(const CodePage: Word): PAnsiChar;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
@@ -3894,7 +3894,7 @@ begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
 
-function TZAbstractBlob.GetPWideChar: PWideChar;
+function TZAbstractBlob.{%H-}GetPWideChar: PWideChar;
 begin
   raise Exception.Create(Format(cSOperationIsNotAllowed3, ['binary']));
 end;
