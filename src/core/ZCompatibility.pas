@@ -57,17 +57,11 @@ interface
 
 uses
   Variants,
-  {$IFDEF WITH_LCONVENCODING}
-  LConvEncoding,
-  {$ENDIF}
 {$IFDEF FPC}
   {$IFDEF UNIX}
     dynlibs,
   {$endif}
 {$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}
-  WideStrUtils,
-  {$ENDIF}
   {$If defined(MSWINDOWS) and not defined(FPC)}
   Windows,
   {$IFEND}
@@ -312,14 +306,6 @@ type
   {$ENDIF}
 
 
-{$IF not Declared(DetectUTF8Encoding)}
-{$DEFINE ZDetectUTF8Encoding}
-Type
-  TEncodeType = (etUSASCII, etUTF8, etANSI);
-
-function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType;
-{$IFEND}
-
 {$IFNDEF WITH_CHARINSET}
 function CharInSet(const C: AnsiChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; overload; {$IFDEF WITH_INLINE}Inline;{$ENDIF}
@@ -334,17 +320,24 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
 {$ENDIF}
 
-procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
+procedure CopyZFormatSettings(Source, {%H-}Dest: TZFormatSettings);
+
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
+procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+{$IFDEF WITH_RAWBYTESTRING}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
+{$ENDIF}
 
 var
   ClientCodePageDummy: TZCodepage =
     (Name: ''; ID: 0; CharWidth: 1; Encoding: ceAnsi;
-      CP: $ffff; ZAlias: '');
+      CP: $ffff; ZAlias: ''{%H-});
 
   ConSettingsDummy: TZConSettings =
     (AutoEncode: False;
       CPType: {$IFDEF DELPHI}{$IFDEF UNICODE}cCP_UTF16{$ELSE}cGET_ACP{$ENDIF}{$ELSE}cCP_UTF8{$ENDIF};
-      ClientCodePage: @ClientCodePageDummy;
+      ClientCodePage: {%H-}@ClientCodePageDummy;
       DisplayFormatSettings:
         (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
@@ -379,112 +372,12 @@ var
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;
       {$ENDIF}
-    );
+    {%H-});
+
+var
+  ZDefaultSystemCodePage: Word;
 
 implementation
-
-uses ZEncoding;
-
-{$IFDEF ZDetectUTF8Encoding}
-function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType; //EgonHugeist: Detect a valid UTF8Sequence
-var
-  I, Len: Integer;
-  Source: PAnsiChar;
-
-  function P(Pos: Integer = 0): Byte;
-  begin
-    Result := Byte(Source[Pos]);
-  end;
-
-  procedure IncPos(X: Integer = 1);
-  begin
-    inc(Source, X);
-    inc(i, X);
-  end;
-begin
-  Result := etUSASCII;
-  if Ansi = '' then Exit;
-
-  Len := Length(Ansi);
-  Source := PAnsiChar(Ansi);
-
-  // skip US-ASCII Chars they are allways valid.
-  I := 0;
-  while ( I <= Len ) do
-  begin
-    if P >= $80 then break;
-    IncPos;
-  end;
-
-  if i > Len then exit; //US ACII
-
-  //No US-Ascii at all.
-  while I < Len do
-  begin
-    case p of
-      $00..$7F: //Ascii
-        IncPos;
-
-      $C2..$DF: // non-overlong 2-byte
-        if (I+1 < Len)
-            and (P(1) in [$80..$BF]) then
-          IncPos(2)
-        else
-          break;
-
-      $E0: // excluding overlongs
-        if (I+2 < Len)
-            and (P(1) in [$A0..$BF])
-            and (P(2) in [$80..$BF]) then
-          IncPos(3)
-        else
-          break;
-
-      $E1..$EF: // straight 3-byte & excluding surrogates
-        if (i+2 < Len)
-            and (P(1) in [$80..$BF])
-            and (P(2) in [$80..$BF]) then
-          IncPos(3)
-        else
-          break;
-
-      $F0: // planes 1-3
-        if (i+3 < Len)
-            and (P(1) in [$90..$BF])
-            and (P(2) in [$80..$BF])
-            and (P(3) in [$80..$BF]) then
-          IncPos(4)
-        else
-          break;
-
-      $F1..$F3: // planes 4-15
-        if (i+3 < Len)
-            and (P(1) in [$80..$BF])
-            and (P(2) in [$80..$BF])
-            and (P(3) in [$80..$BF]) then
-          IncPos(4)
-        else
-          break;
-
-      $F4: // plane 16
-        if (i+3 < Len)
-            and (P(1) in [$80..$8F])
-            and (P(2) in [$80..$BF])
-            and (P(3) in [$80..$BF]) then
-          IncPos(4)
-        else
-          break;
-    else
-      break;
-    end;
-  end;
-
-  if i = Len then
-    Result := etUTF8  //UTF8
-  else
-    Result := etANSI; //Ansi
-end;
-{$ENDIF}
 
 procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
 begin
@@ -522,7 +415,7 @@ begin
       if Info.values['controls_cp'] = 'CP_UTF8' then
       begin
         ConSettings.CPType := cCP_UTF8;
-        ConSettings.CTRL_CP := zCP_UTF8;
+        ConSettings.CTRL_CP := 65001;
       end
       else
         if Info.values['controls_cp'] = 'CP_UTF16' then
@@ -550,7 +443,7 @@ begin
         begin
           {$IFDEF FPC}
           ConSettings.CPType := cCP_UTF8;
-          ConSettings.CTRL_CP := zCP_UTF8;
+          ConSettings.CTRL_CP := 65001;
           {$ELSE}
           ConSettings.CPType := cGET_ACP;
           ConSettings.CTRL_CP := GetACP;
@@ -627,7 +520,6 @@ end;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 var
   P,PE : PChar;
-
 begin
   Result:=AnsiLowerCase(S);
   P:=PChar(pointer(Result));
@@ -664,14 +556,58 @@ end;
 {$UNDEF ZUTF8ToString}
 {$ENDIF}
 
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
+begin
+  SetString(Dest, Src, Len);
+end;
+
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
+begin
+  if ( Len = 0 ) or ( Src = nil ) then
+    Exit
+  else
+  begin
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    Dest := '';
+    SetLength(Dest, Len);
+    Move(Src^, Pointer(Dest)^, Len);
+    {$ELSE}
+    SetString(Dest, Src, Len);
+    {$ENDIF}
+  end;
+end;
+
+procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+begin
+  Dest := ''; //speeds up for SetLength
+  if ( Len = 0 ) or ( Src = nil ) then
+    Exit
+  else
+  begin
+    SetLength(Dest, Len div 2);
+    Move(Src^, Pointer(Dest)^, Len);
+  end;
+end;
+
+{$IFDEF WITH_RAWBYTESTRING}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
+begin
+  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+  Dest := '';
+  SetLength(Dest, Len);
+  Move(Src^, Pointer(Dest)^, Len);
+  {$ELSE}
+  SetString(Dest, Src, Len);
+  {$ENDIF}
+end;
+{$ENDIF}
+
 
 initialization
   case ConSettingsDummy.CPType of
     cCP_UTF16, cGET_ACP: ConSettingsDummy.CTRL_CP := ZDefaultSystemCodePage;
-    cCP_UTF8: ConSettingsDummy.CTRL_CP := zCP_UTF8;
+    cCP_UTF8: ConSettingsDummy.CTRL_CP := 65001;
   end;
-  SetConvertFunctions(@ConSettingsDummy);
-  
 end.
 
 

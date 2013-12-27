@@ -58,7 +58,7 @@ uses
 {$IFNDEF UNIX}
   Windows,
 {$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils, Types,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils,
   SyncObjs,
   ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,
   ZMessages, ZVariant;
@@ -891,7 +891,7 @@ begin
         if (FConnectionPool.FConnections[I] <> nil) and
            (not FConnectionPool.FSlotsInUse[I]) and
            (FConnectionPool.FConnectionsReturnTimes[I] <> 0) and
-           (MilliSecondsBetween(FConnectionPool.FConnectionsReturnTimes[I], Now) > FConnectionPool.FConnectionTimeout * 1000) then
+           (MilliSecondsBetween(FConnectionPool.FConnectionsReturnTimes[I], Now) {%H-}> FConnectionPool.FConnectionTimeout * 1000) then
              FConnectionPool.FConnections[I] := nil;
     finally
       FConnectionPool.FCriticalSection.Leave;

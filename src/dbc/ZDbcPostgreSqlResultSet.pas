@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility;
@@ -403,7 +403,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result.P := GetBuffer(ColumnIndex, Result.Len);
+  Result.P := GetBuffer(ColumnIndex, Result{%H-}.Len);
 end;
 
 {**
@@ -419,7 +419,7 @@ function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 var
   Len: Cardinal;
 begin
-  Result := GetBuffer(ColumnIndex, Len);
+  Result := GetBuffer(ColumnIndex, Len{%H-});
 end;
 
 {**
@@ -436,7 +436,7 @@ var
   Len: Cardinal;
   Buffer: PAnsiChar;
 begin
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if LastWasNull then
     Result := ''
   else
@@ -477,7 +477,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if LastWasNull then
     Result := 0
   else
@@ -501,7 +501,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if LastWasNull then
     Result := 0
   else
@@ -525,7 +525,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if LastWasNull then
     Result := 0
   else
@@ -549,7 +549,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if LastWasNull then
     Result := 0
   else
@@ -573,7 +573,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if LastWasNull then
     Result := 0
   else
@@ -597,7 +597,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -622,7 +622,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -648,7 +648,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -692,14 +692,14 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
   else
   begin
     if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-      Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+      Result := RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
     else
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
         RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
@@ -724,13 +724,13 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
   else
     if not (Len > ConSettings^.ReadFormatSettings.TimeFormatLen) and ( ( ConSettings^.ReadFormatSettings.TimeFormatLen - Len) <= 4 )then
-      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
     else
       Result := Frac(RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
 end;
@@ -754,12 +754,12 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
   else
-    Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+    Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-});
 end;
 
 {**
@@ -807,7 +807,7 @@ begin
             if FCachedLob then
             begin
               Len := FPlainDriver.DecodeBYTEA(RowNo-1, ColumnIndex-1,
-                FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer(Buffer));
+                FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer({%H-}Buffer));
               Result := TZAbstractBlob.CreateWithData(Buffer, Len);
               FreeMem(Buffer, Len);
             end
@@ -948,7 +948,7 @@ begin
         Inc(OffSet, ReadNum);
         ReallocMem(FBlobData, OffSet);
         if ReadNum > 0 then
-          System.Move(Buffer^, Pointer(NativeUInt(FBlobData)+NativeUInt(OffSet-ReadNum))^, ReadNum);
+          System.Move(Buffer^, {%H-}Pointer({%H-}NativeUInt(FBlobData)+NativeUInt(OffSet-ReadNum))^, ReadNum);
       until ReadNum < FChunk_Size;
       BlobSize := OffSet;
       FPlainDriver.CloseLargeObject(FHandle, BlobHandle);
@@ -998,7 +998,7 @@ begin
     else
       Size := FChunk_Size;
     FPlainDriver.WriteLargeObject(FHandle, BlobHandle,
-      Pointer(NativeUInt(Buffer) + NativeUInt(Position)), Size);
+      {%H-}Pointer({%H-}NativeUInt(Buffer) + NativeUInt(Position)), Size);
     CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcOther, 'Write Large Object',nil);
     Inc(Position, Size);
   end;
@@ -1028,7 +1028,7 @@ begin
   Clear;
   Updated := False;
   BlobSize := FPlainDriver.DecodeBytea(FRowNo, FColumnIndex,
-    FIs_bytea_output_hex, FHandle, FQueryHandle, Buffer);
+    FIs_bytea_output_hex, FHandle, FQueryHandle, Buffer{%H-});
   BlobData := Buffer;
   inherited ReadLob; //don't forget this!! or lob will read again.. eg. Transaction?
 end;

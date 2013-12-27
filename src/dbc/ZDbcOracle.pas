@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainOracleDriver, ZDbcLogging,
   ZTokenizer, ZDbcGenericResolver, ZURL, ZGenericSqlAnalyser,
   ZPlainOracleConstants;
@@ -165,7 +165,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZDbcUtils,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }

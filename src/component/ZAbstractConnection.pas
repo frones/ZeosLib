@@ -109,7 +109,7 @@ type
     {$ENDIF}
     function GetVersion: string;
     procedure SetUseMetadata(AValue: Boolean);
-    procedure SetVersion(const Value: string);
+    procedure SetVersion(const {%H-}Value: string);
     procedure SetControlsCodePage(const Value: TZControlsCodePage);
   protected
     FURL: TZURL;
@@ -1670,7 +1670,7 @@ function TZAbstractConnection.ExecuteDirect(SQL : String) : boolean;
 var
   dummy : Integer;
 begin
-  result:= ExecuteDirect(SQL,dummy);
+  result:= ExecuteDirect(SQL,dummy{%H-});
 end;
 
 {**

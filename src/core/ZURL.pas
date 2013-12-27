@@ -466,7 +466,7 @@ var
   Param, Value: String;
 begin
   for i := 0 to Values.Count -1 do
-    if GetParamAndValue(Values[i], Param, Value) then
+    if GetParamAndValue(Values[i], Param{%H-}, Value{%H-}) then
       FProperties.Values[Param] := Value
     else
       FProperties.Add(Values[i]);

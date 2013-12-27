@@ -138,8 +138,7 @@ uses
 {$ENDIF}
   OleDB, ComObj,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  {$IFNDEF UNICODE}ZEncoding,{$ENDIF}
-  ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
+  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
 constructor TZAdoStatement.Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string;

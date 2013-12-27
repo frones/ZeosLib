@@ -57,7 +57,7 @@ interface
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
-  ZDbcInterbase6ResultSet, ZPlainFirebirdInterbaseConstants, ZCompatibility,
+  ZPlainFirebirdInterbaseConstants, ZCompatibility,
   ZDbcLogging, ZVariant, ZMessages;
 
 type
@@ -123,7 +123,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver;
+uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver, ZDbcInterbase6ResultSet;
 
 { TZInterbase6PreparedStatement }
 
@@ -155,7 +155,7 @@ end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager, InParamValues,
+  BindSQLDAInParameters(ClientVarManager, InParamValues,
     InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings, FCodePageArray);
   inherited BindInParameters;
 end;
@@ -477,7 +477,7 @@ end;
 
 procedure TZInterbase6CallableStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager,
+  BindSQLDAInParameters(ClientVarManager,
     InParamValues, InParamTypes, InParamCount, FParamSQLData, ConSettings, FCodePageArray);
   inherited BindInParameters;
 end;

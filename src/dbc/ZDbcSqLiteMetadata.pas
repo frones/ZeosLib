@@ -134,13 +134,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
+    function SupportsResultSetType(const _Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(const _Type: TZResultSetType;
+      const Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
 
     // maxima:
@@ -208,7 +208,7 @@ type
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
-    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+    function UncachedGetTables(const Catalog: string; const {%H-}SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
 //    function UncachedGetSchemas: IZResultSet; override;  -> not implemented
 //    function UncachedGetCatalogs: IZResultSet; override;  -> not implemented
@@ -1058,7 +1058,7 @@ end;
   @see Connection
 }
 function TZSQLiteDatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
+  const Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := True;
 end;
@@ -1110,7 +1110,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZSQLiteDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
+  const _Type: TZResultSetType): Boolean;
 begin
   Result := _Type = rtForwardOnly;
 end;
@@ -1124,7 +1124,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZSQLiteDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+  const _Type: TZResultSetType; const Concurrency: TZResultSetConcurrency): Boolean;
 begin
   Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
 end;
@@ -1348,7 +1348,7 @@ begin
         Result.UpdateString(3, TableNamePattern);
         Result.UpdateRawByteString(4, GetRawByteString(2));
         Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(3),
-          UndefinedVarcharAsStringLength, Precision, Decimals, ConSettings.CPType)));
+          UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
 
         { Defines a table name. }
         Temp := UpperCase(GetString(3));

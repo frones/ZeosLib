@@ -56,12 +56,15 @@ interface
 {$I ZCore.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Math,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING}
   LConvEncoding,
   {$ENDIF}
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
+  {$IFEND}
+  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+  Math,
   {$IFEND}
   ZCompatibility;
 
@@ -338,9 +341,9 @@ function ZConvertStringToAnsi(const Src: String; const StringCP: Word): AnsiStri
 function ZConvertStringToAnsiWithAutoEncode(const Src: String; const StringCP: Word): AnsiString;
 function ZConvertAnsiToString(const Src: AnsiString; const StringCP: Word): String;
 function ZConvertUnicodeToString(const Src: ZWideString; const StringCP: Word): String;
-function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString; const StringCP: Word): String;
+function ZConvertUnicodeToString_CPUTF8(const Src: ZWideString; const {%H-}StringCP: Word): String;
 function ZConvertStringToUnicode(const Src: String; const StringCP: Word): ZWideString;
-function ZConvertString_CPUTF8ToUnicode(const Src: String; const StringCP: Word): ZWideString;
+function ZConvertString_CPUTF8ToUnicode(const Src: String; const {%H-}StringCP: Word): ZWideString;
 function ZConvertStringToUnicodeWithAutoEncode(const Src: String; const StringCP: Word): ZWideString;
 {move functions for the String types}
 function ZMoveAnsiRecToUTF8(const Src: TZAnsiRec; const RawCP: Word): UTF8String;
@@ -404,6 +407,18 @@ function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
 function GetValidatedUnicodeStream(const Ansi: RawByteString;
   ConSettings: PZConSettings; FromDB: Boolean): TStream; overload;
 
+{$IF not Declared(DetectUTF8Encoding)}
+{$DEFINE ZDetectUTF8Encoding}
+Type
+  TEncodeType = (etUSASCII, etUTF8, etANSI);
+
+function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType;
+{$IFEND}
+
+{ Message-Helpers }
+function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString;
+function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
+
 var
   ZDefaultSystemCodePage: Word;
 
@@ -411,7 +426,7 @@ var
 implementation
 
 uses SysUtils, Types {$IFDEF WITH_WIDESTRUTILS},WideStrUtils{$ENDIF},
-  ZSysUtils, ZFastCode;
+  ZFastCode; //StrLen referenced
 
 {$IFDEF FPC}
   {$HINTS OFF}
@@ -529,13 +544,13 @@ begin
   else
     if CP = zCP_NONE  then
     begin
-      ZSetString(Value.P, Value.Len, S);
+      ZSetString(Value.P, Value.Len, S{%H-});
       Result := ZUnknownRawToUnicodeWithAutoEncode(S, CP); //bring nearest results..
     end
     else
       {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
       begin
-        wlen := Min(Value.Len * 2, High(Integer)-1);
+        wlen := Min(Integer(Value.Len) * 2, High(Integer)-1);
         Result := ''; //speeds up SetLength x2
         SetLength(result, wlen); //oversized
         {$IFDEF WITH_UNICODEFROMLOCALECHARS}
@@ -647,7 +662,7 @@ begin
     else
     {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
     begin
-      ULen := Min(Value.Len * 4, High(Integer)-1);
+      ULen := Min(Integer(Value.Len) * 4, High(Integer)-1);
       setlength(Result, ulen); //oversized
       {$IFDEF WITH_UNICODEFROMLOCALECHARS}
       ulen := LocaleCharsFromUnicode(CP, 0, Value.P, Value.Len, PAnsiChar(Result), ulen, NIL, NIL); // Convert Unicode down to Ansi
@@ -696,7 +711,7 @@ end;
       Result := '';
       {$IFDEF MSWINDOWS}
       if Value.Len = 0 then Exit;
-      ULen := Min(Value.Len * 4, High(Integer)-1);
+      ULen := Min(Integer(Value.Len) * 4, High(Integer)-1);
       setlength(Result, ulen); //oversized
       ulen := WideCharToMultiByte(CP,0, Value.P, Value.Len, PAnsiChar(Result), ulen, nil, nil); // Convert Wide down to Ansi
       setlength(Result, ulen); //expected size
@@ -1200,15 +1215,14 @@ begin
   end;
 end;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 function ZConvertRawToString(const Src: RawByteString;
   const RawCP, StringCP: Word): String;
 {$IF not defined(UNICODE) and not defined(WITH_LCONVENCODING)}
 var
   US: ZWideString; //COM based. So localize the String to avoid Buffer overrun
+  {$IFDEF WITH_RAWBYTESTRING}
   Raw: RawByteString;
+  {$ENDIF}
 {$IFEND}
 begin
   if Src = '' then
@@ -1256,15 +1270,19 @@ begin
       else
         Result := Src;
     end;
-  {$ELSE}
-    {$IFDEF UNICODE}
-    Result := ZRawToUnicode(Src, RawCP);
     {$ELSE}
-    US := ZRawToUnicode(Src, RawCP);
-    Raw := ZUnicodeToRaw(US, StringCP);
-    ZSetString(Pointer(Raw), Length(Raw), Result);
+      {$IFDEF UNICODE}
+      Result := ZRawToUnicode(Src, RawCP);
+      {$ELSE}
+        US := ZRawToUnicode(Src, RawCP);
+        {$IFDEF WITH_RAWBYTESTRING}
+        Raw := ZUnicodeToRaw(US, StringCP);
+        ZSetString(Pointer(Raw), Length(Raw), Result);
+        {$ELSE}
+        Result := ZUnicodeToRaw(US, StringCP);
+        {$ENDIF}
+      {$ENDIF}
     {$ENDIF}
-  {$ENDIF}
   end;
 end;
 
@@ -1490,7 +1508,7 @@ begin
       if ZDefaultSystemCodePage = zCP_UTF8 then
       begin
         Tmp := ZWideString(Src);
-        Result := ZWideString(Src);
+        Result := UTF8Encode(Src);
       end
       else
         Result := Src;
@@ -1544,7 +1562,7 @@ begin
   {$ELSE}
     {$IFDEF WITH_RAWBYTESTRING}
     Tmp := ZUnicodeToRaw(Src, StringCP);
-    ZSetString(Pointer(Tmp), Length(Tmp), Result);
+    ZSetString(Pointer(Tmp), Length(Tmp), Result{%H-});
     {$ELSE WITH_RAWBYTESTRING}
     Result := ZUnicodeToRaw(Src, StringCP);
     {$ENDIF WITH_RAWBYTESTRING}
@@ -1639,7 +1657,7 @@ begin
       begin
         Result := '';
         SetLength(Result, Src.Len);
-        System.Move(Src.P^, PAnsiChar(Result)^, Src.Len);
+        System.Move(Src.P^, Pointer(Result)^, Src.Len);
       end;
       {$ELSE}
       SetString(Result, Src.P, Src.Len);
@@ -1670,7 +1688,7 @@ end;
 function ZMoveRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(Pointer(Src), Length(Src), Result);
+  System.SetString(Result, PAnsiChar(Src), Length(Src));
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -1688,7 +1706,7 @@ end;
 function ZMoveUTF8ToAnsi(const Src: UTF8String): AnsiString;
 begin
   {$IFDEF WITH_RAWBYTESTRING}
-  ZSetString(Pointer(Src), Length(Src), Result);
+  System.SetString(Result, PAnsiChar(Src), Length(Src));
   {$ELSE}
   Result := Src;
   {$ENDIF}
@@ -2271,8 +2289,169 @@ begin
   end;
 end;
 
+{$IFDEF ZDetectUTF8Encoding}
+function DetectUTF8Encoding(Ansi: RawByteString): TEncodeType; //EgonHugeist: Detect a valid UTF8Sequence
+var
+  I, Len: Integer;
+  Source: PAnsiChar;
+
+  function P(Pos: Integer = 0): Byte;
+  begin
+    Result := Byte(Source[Pos]);
+  end;
+
+  procedure IncPos(X: Integer = 1);
+  begin
+    inc(Source, X);
+    inc(i, X);
+  end;
+begin
+  Result := etUSASCII;
+  if Ansi = '' then Exit;
+
+  Len := Length(Ansi);
+  Source := PAnsiChar(Ansi);
+
+  // skip US-ASCII Chars they are allways valid.
+  I := 0;
+  while ( I <= Len ) do
+  begin
+    if P >= $80 then break;
+    IncPos;
+  end;
+
+  if i > Len then exit; //US ACII
+
+  //No US-Ascii at all.
+  while I < Len do
+  begin
+    case p of
+      $00..$7F: //Ascii
+        IncPos;
+
+      $C2..$DF: // non-overlong 2-byte
+        if (I+1 < Len)
+            and (P(1) in [$80..$BF]) then
+          IncPos(2)
+        else
+          break;
+
+      $E0: // excluding overlongs
+        if (I+2 < Len)
+            and (P(1) in [$A0..$BF])
+            and (P(2) in [$80..$BF]) then
+          IncPos(3)
+        else
+          break;
+
+      $E1..$EF: // straight 3-byte & excluding surrogates
+        if (i+2 < Len)
+            and (P(1) in [$80..$BF])
+            and (P(2) in [$80..$BF]) then
+          IncPos(3)
+        else
+          break;
+
+      $F0: // planes 1-3
+        if (i+3 < Len)
+            and (P(1) in [$90..$BF])
+            and (P(2) in [$80..$BF])
+            and (P(3) in [$80..$BF]) then
+          IncPos(4)
+        else
+          break;
+
+      $F1..$F3: // planes 4-15
+        if (i+3 < Len)
+            and (P(1) in [$80..$BF])
+            and (P(2) in [$80..$BF])
+            and (P(3) in [$80..$BF]) then
+          IncPos(4)
+        else
+          break;
+
+      $F4: // plane 16
+        if (i+3 < Len)
+            and (P(1) in [$80..$8F])
+            and (P(2) in [$80..$BF])
+            and (P(3) in [$80..$BF]) then
+          IncPos(4)
+        else
+          break;
+    else
+      break;
+    end;
+  end;
+
+  if i = Len then
+    Result := etUTF8  //UTF8
+  else
+    Result := etANSI; //Ansi
+end;
+{$ENDIF}
+
+{$IFDEF UNICODE}
+function ConvertZMsgToRaw(const AMessage: String; Const MsgCP, RawCP: Word): RawByteString;
+begin
+  Result := ZUnicodeToRaw(AMessage, RawCP);
+end;
+
+function ConvertEMsgToRaw(const AMessage: String; Const RawCP: Word): RawByteString;
+begin
+  Result := ZUnicodeToRaw(AMessage, RawCP);
+end;
+{$ELSE !UNICODE}
+function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}MsgCP, RawCP: Word): RawByteString;
+var
+  AnsiRec: TZAnsiRec;
+begin
+  {$IFDEF LCL}
+  RawCP := zCP_UTF8;
+  {$ENDIF}
+  if ZCompatibleCodePages(RawCP, MsgCP) then
+  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
+  begin
+    Result := ''; //satisfy compiler
+    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
+  end
+  {$ELSE !WITH_RAWBYTESTRING}
+  Result := AMessage
+  {$ENDIF WITH_RAWBYTESTRING}
+  else
+  begin
+    AnsiRec.Len := Length(AMessage);
+    AnsiRec.P := PAnsiChar(AMessage);
+    Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, MsgCP), RawCP);
+  end;
+end;
+
+function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF}RawCP: Word): RawByteString;
+var
+  AnsiRec: TZAnsiRec;
+begin
+  {$IFDEF LCL}
+  RawCP := zCP_UTF8;
+  {$ENDIF}
+  if ZCompatibleCodePages(RawCP, ZDefaultSystemCodePage) then
+  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
+  begin
+    Result := ''; //satisfy compiler
+    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
+  end
+  {$ELSE !WITH_RAWBYTESTRING}
+  Result := AMessage
+  {$ENDIF WITH_RAWBYTESTRING}
+  else
+  begin
+    AnsiRec.Len := Length(AMessage);
+    AnsiRec.P := PAnsiChar(AMessage);
+    Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, ZDefaultSystemCodePage), RawCP);
+  end;
+end;
+{$ENDIF UNICODE}
+
 initialization
   SetDefaultSystemCodePage;
-
+  SetConvertFunctions(@ConSettingsDummy);
 end.
 

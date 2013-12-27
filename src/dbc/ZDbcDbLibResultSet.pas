@@ -296,7 +296,10 @@ var Tmp: RawByteString;
 begin
   case TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType of
     stAsciiStream, stUnicodeStream:
-      Result := ZConvertRawToString(tmp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      begin
+        Tmp := InternalGetString(ColumnIndex);
+        Result := ZConvertRawToString(tmp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      end;
     stString, stUnicodeString:
       if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnCodePage = zCP_NONE then
       begin

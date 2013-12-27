@@ -821,7 +821,7 @@ begin
   Result := GetMoreResults;
 
   if FPLainDriver.dbHasRetStat(FHandle) then
-    SoftVarManager.SetAsInteger(Temp, FPlainDriver.dbRetStatus(FHandle))
+    Temp := EncodeInteger(FPlainDriver.dbRetStatus(FHandle))
   else
     Temp := NullVariant;
   OutParamValues[0] := Temp; //set function RETURN_VALUE

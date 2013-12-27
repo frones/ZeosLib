@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZCompatibility, ZPlainDriver;
+uses {$IFDEF OLDFPC}ZClasses, {$ENDIF}ZCompatibility, ZPlainDriver;
 
 const
   WINDOWS_DLL_LOCATION   = 'libpq.dll';
@@ -365,25 +365,25 @@ type
 //* Simple synchronous query */
   TPQexec          = function(Handle: PPGconn; Query: PAnsiChar): PPGresult; cdecl;
   TPQexecParams    = function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; {%H-}paramValues: TPQparamValues;
+        {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
         resultFormat: Integer): PPGresult; cdecl;
   TPQprepare        = function(Handle: PPGconn; stmtName: PAnsichar;
         query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): PPGresult; cdecl;
   TPQexecPrepared   = function(Handle: PPGconn; stmtName: PAnsichar;
-        nParams: Integer; paramValues: TPQparamValues; paramLengths: TPQparamLengths;
-        paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult; cdecl;
+        nParams: Integer; {%H-}paramValues: TPQparamValues; {%H-}paramLengths: TPQparamLengths;
+        {%H-}paramFormats: TPQparamFormats; resultFormat: Integer): PPGresult; cdecl;
 //* Interface for multiple-result or asynchronous queries */
   TPQsendQuery      = function(Handle: PPGconn; query: PAnsiChar): Integer; cdecl;
   TPQsendQueryParams= function(Handle: PPGconn; command: PAnsichar;
-        nParams: Integer; paramTypes: TPQparamTypes; paramValues: TPQparamValues;
-        paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
+        nParams: Integer; paramTypes: TPQparamTypes; {%H-}paramValues: TPQparamValues;
+        {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
         resultFormat: Integer): Integer; cdecl;
   TPQsendPrepare    = function(Handle: PPGconn; stmtName: PAnsichar;
         query: PAnsiChar; nParams: Integer; paramTypes: TPQparamTypes): Integer; cdecl;
   TPQsendQueryPrepared = function(Handle: PPGconn; stmtName: PAnsichar;
-         nParams: Integer; paramValues: TPQparamValues;
-         paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
+         nParams: Integer; {%H-}paramValues: TPQparamValues;
+         {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer; cdecl;
   TPQgetResult     = function(Handle: PPGconn): PPGresult;  cdecl;
 //* Describe prepared statements and portals */
@@ -710,9 +710,9 @@ type
     function EncodeBYTEA(const Value: RawByteString; Handle: PZPostgreSQLConnect;
       Quoted: Boolean = True): RawByteString;
     function DecodeBYTEA(const value: RawByteString; const Is_bytea_output_hex: Boolean;
-      Handle: PZPostgreSQLConnect): RawByteString; overload;
+      {%H-}Handle: PZPostgreSQLConnect): RawByteString; overload;
     function DecodeBYTEA(const RowNo, ColumnIndex: Integer;
-      const Is_bytea_output_hex: Boolean; const Handle: PZPostgreSQLConnect;
+      const Is_bytea_output_hex: Boolean; const {%H-}Handle: PZPostgreSQLConnect;
       const QueryHandle: PZPostgreSQLResult; Var Buffer: Pointer): Cardinal; overload;
 
     function SupportsEncodeBYTEA: Boolean;

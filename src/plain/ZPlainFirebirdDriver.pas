@@ -62,7 +62,7 @@ interface
 {$ENDIF}
 
 uses Types,
-  ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader,
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver, ZPlainLoader,
   ZPlainFirebirdInterbaseConstants;
 
 const

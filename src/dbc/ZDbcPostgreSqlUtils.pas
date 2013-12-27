@@ -113,8 +113,8 @@ function EncodeBinaryString(const Value: AnsiString): AnsiString;
   @param Value the regular string.
   @return the encoded string.
 }
-function PGEscapeString(Handle: Pointer; const Value: RawByteString;
-    ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString;
+function PGEscapeString({%H-}Handle: Pointer; const Value: RawByteString;
+    ConSettings: PZConSettings; {%H-}WasEncoded: Boolean = False): RawByteString;
 
 {**
   Converts an string from escape PostgreSQL format.
@@ -158,8 +158,7 @@ function PGPrepareAnsiSQLParam(Value: TZVariant; ClientVarManager: IZClientVaria
 
 implementation
 
-uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZEncoding, ZSysUtils,
-     ZDbcPostgreSqlStatement;
+uses ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZEncoding, ZSysUtils;
 
 {**
    Return ZSQLType from PostgreSQL type name

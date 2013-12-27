@@ -135,7 +135,7 @@ type
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+      ParamTypeName: String; const ParamName: String; Const {%H-}ColumnSize, {%H-}Precision: Integer);
   public
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); override;
     procedure RegisterParamType(ParameterIndex: integer; ParamType: Integer); override;
@@ -776,7 +776,7 @@ var
               AnsiRec.P := CurrentVar.Data;// .Data;
               outParamValues[Index] := EncodeString(ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP));
               {$ELSE}
-              ZSetString(CurrentVar.Data, L, RawTemp);
+              ZSetString(CurrentVar.Data, L, RawTemp{%H-});
               outParamValues[Index] := EncodeString(ConSettings.ConvFuncs.ZRawToString(RawTemp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
               {$ENDIF}
             end;
@@ -789,11 +789,11 @@ var
           FPlainDriver.DateTimeGetDate(
             OracleConnection.GetConnectionHandle ,
             FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-            Year, Month, Day);
+            Year{%H-}, Month{%H-}, Day{%H-});
           FPlainDriver.DateTimeGetTime(
             OracleConnection.GetConnectionHandle ,
             FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-            Hour, Min, Sec,MSec);
+            Hour{%H-}, Min{%H-}, Sec{%H-},MSec{%H-});
           dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
           outParamValues[Index] := EncodeDateTime(dTmp);
         end;
@@ -842,6 +842,7 @@ var
   var
     I: integer;
   begin
+    Result := '';
     for I := 0 to Count - 1 do
     begin
       if ( FDBParamTypes[I] = 4 ) then //ptResult

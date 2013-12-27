@@ -59,7 +59,7 @@ uses
   {$IFNDEF FPC}
   Windows, //need for inline
   {$ENDIF}
-  Classes, SysUtils, Types, ZCompatibility, ZClasses, ZSysUtils;
+  Classes, SysUtils, ZCompatibility, ZClasses;
 
 const
   {** Precision for float values comparison }
@@ -199,7 +199,7 @@ type
     function GetAsAnsiString(const Value: TZVariant): AnsiString;
     function GetAsUTF8String(const Value: TZVariant): UTF8String;
     function GetAsRawByteString(const Value: TZVariant): RawByteString; overload;
-    function GetAsRawByteString(const Value: TZVariant; const RawCP: Word): RawByteString; overload; virtual;
+    function GetAsRawByteString(const {%H-}Value: TZVariant; const {%H-}RawCP: Word): RawByteString; overload; virtual;
     function GetAsCharRec(const Value: TZVariant): TZCharRec; overload;
     function GetAsUnicodeString(const Value: TZVariant): ZWideString;
     function GetAsDateTime(const Value: TZVariant): TDateTime;
@@ -463,7 +463,7 @@ implementation
 
 uses
   Variants, Math, {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings, {$ENDIF}
-  ZMessages, ZEncoding, ZFastCode;
+  ZMessages, ZEncoding, ZFastCode, ZSysUtils;
 
 { TZDefaultVariantManager }
 
@@ -524,7 +524,7 @@ end;
 }
 function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.Clone(const Value: TZVariant): TZVariant;
 begin
-  Assign(Value, Result);
+  Assign(Value, Result{%H-});
 end;
 
 {**
@@ -935,7 +935,7 @@ begin
           Result := 0;
       end;
     vtPointer:
-      Result := sign(NativeInt(Value1.VPointer) - GetAsInteger(Value2));
+      Result := sign({%H-}NativeInt(Value1.VPointer) - GetAsInteger(Value2));
     else
       Result := 0;
   end;
@@ -1046,7 +1046,7 @@ begin
   Result := Convert(Value, vtRawByteString).VRawByteString;
 end;
 
-function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.GetAsRawByteString(const Value: TZVariant;
+function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.{%H-}GetAsRawByteString(const Value: TZVariant;
   const RawCP: Word): RawByteString;
 begin
   RaiseUnsupportedOperation
@@ -1463,7 +1463,7 @@ function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManag
   Value2: TZVariant): TZVariant;
 begin
   case Value1.VType of
-    vtNull: SetNull(Result);
+    vtNull: SetNull(Result{%H-});
     vtBoolean: Result := EncodeBoolean(Value1.VBoolean or GetAsBoolean(Value2));
     vtInteger: Result := EncodeInteger(Value1.VInteger or GetAsInteger(Value2));
     vtUInteger: Result := EncodeUInteger(Value1.VInteger or GetAsUInteger(Value2));
@@ -1678,7 +1678,7 @@ begin
         vtDateTime:
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
-          Result.VInteger := NativeInt(Value.VPointer);
+          Result.VInteger := Int64({%H-}NativeInt(Value.VPointer));
         vtInterface:
           RaiseTypeMismatchError;
       end;
@@ -1715,7 +1715,7 @@ begin
         vtDateTime:
           Result.VUInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
-          Result.VUInteger := NativeUInt(Value.VPointer);
+          Result.VUInteger := {%H-}NativeUInt(Value.VPointer);
         vtInterface:
           RaiseTypeMismatchError;
       end;
@@ -1764,7 +1764,10 @@ begin
           else
             Result.VString := 'FALSE';
         vtBytes:
-          ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result.VString);
+          begin
+
+            ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
+          end;
         vtInteger:
           Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VInteger);
         vtUInteger:
@@ -1778,7 +1781,7 @@ begin
         vtUTF8String:
           Result.VString := ZUTF8ToString(Value.VUTF8String, FSystemCodePage);
         vtUnicodeString:
-          Result.VString := Value.VUnicodeString; //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
+          Result.VString := {$IFNDEF UNICODE}String{$ENDIF}(Value.VUnicodeString); //hint: VarArrayOf(['Test']) returns allways varOleStr which is type WideString don't change that again
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
           begin
@@ -2000,9 +2003,9 @@ begin
         vtBoolean:
           RaiseTypeMismatchError;
         vtInteger:
-          Result.VPointer := Pointer(Value.VInteger);
+          Result.VPointer := {%H-}Pointer(Value.VInteger);
         vtUInteger:
-          Result.VPointer := Pointer(Value.VUInteger);
+          Result.VPointer := {%H-}Pointer(Value.VUInteger);
         else
           RaiseTypeMismatchError;
       end;
@@ -2749,7 +2752,7 @@ begin
     vtDateTime: Result := Value.VDateTime;
     vtPointer:
     {$ifdef fpc}
-        Result := NativeInt(Value.VPointer);
+        Result := {%H-}NativeInt(Value.VPointer);
     {$else}
         Result := NativeUInt(Value.VPointer);
     {$endif}

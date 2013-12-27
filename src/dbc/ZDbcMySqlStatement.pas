@@ -204,7 +204,7 @@ type
     procedure BindInParameters; override;
     function CreateResultSet(const SQL: string): IZResultSet;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
-      ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
+      ParamTypeName: String; const ParamName: String; Const ColumnSize, {%H-}Precision: Integer);
   public
     constructor Create(PlainDriver: IZMySQLPlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings;
@@ -235,7 +235,7 @@ implementation
 
 uses
   Types, Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
-  ZDbcResultSetMetadata, ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZEncoding,
+  ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZEncoding,
   ZDbcResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLStatement }
@@ -603,12 +603,16 @@ begin
   FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
   if (FStmtHandle = nil) then
   begin
-    CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoInitPrepStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
+    CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt,
+      ConvertZMsgToRaw(SFailedtoInitPrepStmt, ZMessages.cCodePage,
+        ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
   end;
   if (FPlainDriver.PrepareStmt(FStmtHandle, Pointer(ASQL), length(ASQL)) <> 0) then
     begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SFailedtoPrepareStmt, ConSettings^.ClientCodePage^.CP), ConSettings);
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt,
+        ConvertZMsgToRaw(SFailedtoPrepareStmt,
+        ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), ConSettings);
       exit;
     end;
   LogPrepStmtMessage(lcPrepStmt, ASQL);
@@ -769,7 +773,9 @@ begin
 
   if (FPlainDriver.BindParameters(FStmtHandle, FParamBindBuffer.GetBufferAddress) <> 0) then
   begin
-    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SBindingFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
+    checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt,
+      ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
+      ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
   end;
   inherited BindInParameters;
@@ -790,7 +796,9 @@ begin
             PieceSize := TempBlob.Length - OffSet;
           if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
           begin
-            checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt, ConvertZMsgToRaw(SBindingFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
+            checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt,
+              ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
+              ConSettings^.ClientCodePage^.CP), ConSettings);
             exit;
           end;
           Inc(OffSet, PieceSize);
@@ -842,7 +850,8 @@ begin
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
       checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
-        ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+        ConSettings^.ClientCodePage^.CP), ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer);
@@ -874,7 +883,8 @@ begin
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
       checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
-        ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP),
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+          ConSettings^.ClientCodePage^.CP),
         ConSettings);
     except
       if Assigned(FParamBindBuffer) then
@@ -918,7 +928,9 @@ begin
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt, ConvertZMsgToRaw(SPreparedStmtExecFailure, ConSettings^.ClientCodePage^.CP), ConSettings);
+      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+          ConSettings^.ClientCodePage^.CP), ConSettings);
     except
       if Assigned(FParamBindBuffer) then
         FreeAndNil(FParamBindBuffer); //MemLeak closed
@@ -981,7 +993,7 @@ begin
 end;
 
 function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
-  function GenerateParamsStr(Count: integer): RawByteString;
+  function GenerateParamsStr: RawByteString;
   var
     I: integer;
   begin
@@ -1008,7 +1020,7 @@ function TZMySQLCallableStatement.GetOutParamSQL: RawByteString;
 var
   OutParams: RawByteString;
 begin
-  OutParams := GenerateParamsStr(OutParamCount-Length(InParamValues));
+  OutParams := GenerateParamsStr;
   Result := 'SELECT '+ OutParams;
 end;
 

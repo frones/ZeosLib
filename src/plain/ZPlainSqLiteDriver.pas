@@ -55,8 +55,8 @@ interface
 
 {$I ZPlain.inc}
 
-uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
-  ZClasses, ZCompatibility, ZPlainDriver;
+uses SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver;
 
 const
   WINDOWS_DLL_LOCATION = 'sqlite.dll';
@@ -768,9 +768,6 @@ begin
 end;
 
 function TZSQLiteBaseDriver.ErrorString(db: Psqlite; code: Integer): RawByteString;
-var
-  ErrorMessage: RawByteString;
-  ErrorString: RawByteString;
 begin
   if code = SQLITE_OK then
   begin
@@ -785,7 +782,6 @@ begin
   end;
 
   if ( db = nil ) or ( @SQLite_API.sqlite_errstr = nil ) then
-  begin
     case code of
       SQLITE_OK:         Result := 'not an error';
       SQLITE_ERROR:      Result := 'SQL logic error or missing database';
@@ -816,15 +812,9 @@ begin
       SQLITE_NOTADB:     Result := 'file is encrypted or is not a database';
     else
       Result := 'unknown error';
-    end;
-
-    exit;
-  end
+    end
   else
-  begin
-    ErrorString := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(SQLite_API.sqlite_errstr(code));
-    Result := ErrorString + ': ' + ErrorMessage;
-  end;
+    Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(SQLite_API.sqlite_errstr(code));
 end;
 
 function TZSQLiteBaseDriver.Execute(db: Psqlite; const sql: PAnsiChar;

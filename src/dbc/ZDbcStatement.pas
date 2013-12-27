@@ -347,7 +347,7 @@ type
     function GetLastResultSet: IZResultSet; virtual;
     function BOR: Boolean; virtual;
     function EOR: Boolean; virtual;
-    function GetResultSetByIndex(const Index: Integer): IZResultSet; virtual;
+    function GetResultSetByIndex(const {%H-}Index: Integer): IZResultSet; virtual;
     function GetResultSetCount: Integer; virtual;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
@@ -410,8 +410,8 @@ type
     property LastStatement: IZStatement read FLastStatement write SetLastStatement;
 
     function CreateExecStatement: IZStatement; virtual; abstract;
-    function PrepareWideSQLParam(ParamIndex: Integer): ZWideString; virtual;
-    function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; virtual;
+    function PrepareWideSQLParam({%H-}ParamIndex: Integer): ZWideString; virtual;
+    function PrepareAnsiSQLParam({%H-}ParamIndex: Integer): RawByteString; virtual;
     function GetExecStatement: IZStatement;
     procedure TokenizeSQLQueryRaw;
     procedure TokenizeSQLQueryUni;
@@ -430,7 +430,7 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
-    function CreateLogEvent(const Category: TZLoggingCategory): TZLoggingEvent; override;
+    function CreateLogEvent(const {%H-}Category: TZLoggingCategory): TZLoggingEvent; override;
   end;
 
 implementation
