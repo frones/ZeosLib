@@ -1294,7 +1294,7 @@ end;
 { IZFirebirdD20PlainDriver }
 function TZFirebirdD20PlainDriver.Clone: IZPlainDriver;
 begin
-  TZFirebirdD20PlainDriver.Create;
+  Result := TZFirebirdD20PlainDriver.Create;
 end;
 
 constructor TZFirebirdD20PlainDriver.Create;
