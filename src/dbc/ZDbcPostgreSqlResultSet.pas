@@ -249,7 +249,7 @@ begin
       begin
         SchemaName := TableInfo^.Schema;
         TableName := TableInfo^.Name;
-        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I)];
+        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I) - 1];
       end;
       ColumnLabel := ZDbcString(FPlainDriver.GetFieldName(FQueryHandle, I));
       ColumnDisplaySize := 0;

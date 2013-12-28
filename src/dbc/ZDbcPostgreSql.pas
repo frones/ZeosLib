@@ -266,11 +266,11 @@ var
 begin
   RawOID := IntToStr(TblOid);
 
-  SQL := 'select pc.relname, pns.nspname, (select max(attnum) '+
-    'from pg_catalog.pg_attribute where attrelid = pc.oid) as colcount from '+
-    'pg_catalog.pg_class pc '+
-    'join pg_catalog.pg_namespace pns on pc.relnamespace = pns.oid '+
-    'where pc.oid = '+RawOID;
+  SQL := 'select pc.relname, pns.nspname, pa.attnum, pa.attname from ' +
+    'pg_catalog.pg_class pc ' +
+    'join pg_catalog.pg_namespace pns on pc.relnamespace = pns.oid ' +
+    'join pg_catalog.pg_attribute pa on pa.attrelid = pc.oid ' +
+    'where pc.oid = ' + RawOID + ' and pa.attnum > 0';
 
   QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsichar(ZPlainString(SQL)));
   CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
@@ -282,17 +282,10 @@ begin
     TblInfo.OID := TblOid;
     TblInfo.Name := GetString(0, 0);
     TblInfo.Schema := GetString(0, 1);
-    SetLength(TblInfo.ColNames, GetInt(0, 2)+1);
-    FPlainDriver.Clear(QueryHandle);
+    SetLength(TblInfo.ColNames, FPlainDriver.GetRowCount(QueryHandle));
 
-    SQL := 'select attnum, attname from pg_catalog.pg_attribute '+
-      'where attrelid = '+RawOID+' and attnum > 0';
-
-    QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsichar(ZPlainString(SQL)));
-    CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
-    DriverManager.LogMessage(lcExecute, FPlainDriver.GetProtocol, SQL);
     for I := 0 to FPlainDriver.GetRowCount(QueryHandle)-1 do
-      TblInfo.ColNames[GetInt(I, 0)-1] := GetString(i, 1);
+      TblInfo.ColNames[GetInt(I, 2)-1] := GetString(i, 3);
     FPlainDriver.Clear(QueryHandle);
 
     Index := Length(FTblInfo);
