@@ -63,6 +63,7 @@ procedure loadmessages();
 
 resourcestring
 
+  cSLibraryNotCompatible = 'Client-Library s% found but could not be loaded. Check compile-target and library compatibility!';
 // -> ms, 09/05/2005
 {$IFDEF PORTUGUESE}
   cSSQLError1 = 'Erro SQL: %s';
@@ -1766,6 +1767,7 @@ var
 
   STokenizerIsNotDefined: String;
   SLibraryNotFound: String;
+  SLibraryNotCompatible: String;
   SEncodeDateIsNotSupported: String;
   SEncodeTimeIsNotSupported: String;
   SEncodeTimestampIsNotSupported: String;
@@ -1932,6 +1934,7 @@ begin
 
   STokenizerIsNotDefined := cSTokenizerIsNotDefined;
   SLibraryNotFound := cSLibraryNotFound;
+  SLibraryNotCompatible := cSLibraryNotCompatible;
   SEncodeDateIsNotSupported := cSEncodeDateIsNotSupported;
   SEncodeTimeIsNotSupported := cSEncodeTimeIsNotSupported;
   SEncodeTimestampIsNotSupported := cSEncodeTimestampIsNotSupported;

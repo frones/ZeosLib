@@ -517,13 +517,16 @@ end;
 procedure TZSQLiteConnection.Close;
 var
   LogMessage: string;
+  ErrorCode: Integer;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
 
-  GetPlainDriver.Close(FHandle);
+  LogMessage := 'DISCONNECT FROM "'+Database+'"';
+  ErrorCode := GetPlainDriver.Close(FHandle);
+  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil,
+    lcOther, LogMessage);
   FHandle := nil;
-  LogMessage := Format('DISCONNECT FROM "%s"', [Database]);
   if Assigned(DriverManager) then
     DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   inherited Close;

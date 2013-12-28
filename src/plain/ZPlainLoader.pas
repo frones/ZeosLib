@@ -234,13 +234,19 @@ begin
     end;
 
   if not Loaded then
-    raise Exception.Create(Format(SLibraryNotFound, [TriedLocations]));
+    if (Length(FLocations) > 0) and FileExists(FLocations[High(FLocations)]) then
+      raise Exception.Create(Format(SLibraryNotCompatible, [TriedLocations]))
+    else
+      raise Exception.Create(Format(SLibraryNotFound, [TriedLocations]));
   Result := True;
 end;
 
 function TZNativeLibraryLoader.LoadNativeLibraryStrict(Location: String): Boolean;
 begin
   If not ZLoadLibrary(Location) then
+    if FileExists(Location) then
+      raise Exception.Create(Format(SLibraryNotCompatible, [Location]))
+    else
       raise Exception.Create(Format(SLibraryNotFound, [Location]));
   Result := True;
 end;
