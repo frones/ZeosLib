@@ -104,6 +104,7 @@ type
   private
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
+    FUseDefaults: Boolean;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
@@ -154,6 +155,7 @@ type
     FStmtHandle: PZMySqlPrepStmt;
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
+    FUseDefaults: Boolean;
 
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
@@ -190,6 +192,7 @@ type
     FUseResult: Boolean;
     FParamNames: array [0..1024] of String;
     FParamTypeNames: array [0..1024] of String;
+    FUseDefaults: Boolean;
     function GetCallSQL: RawByteString;
     function GetOutParamSQL: String;
     function GetSelectFunctionSQL: RawByteString;
@@ -481,6 +484,7 @@ begin
   FHandle := Handle;
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
 end;
 
 {**
@@ -511,9 +515,9 @@ begin
 
   Value := InParamValues[ParamIndex];
   if DefVarManager.IsNull(Value) then
-    if (InParamDefaultValues[ParamIndex] <> '') and
-      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := ZPlainString(InParamDefaultValues[ParamIndex])
+    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
     else
       Result := 'NULL'
   else
@@ -598,6 +602,7 @@ begin
   ResultSetType := rtScrollInsensitive;
 
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
 
   Prepare;
 end;
@@ -691,6 +696,11 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
+{mdaems : merge of previous fix failed because of ClientVarManager
+          copying in the code with FUseDefaults to not forget it when rev 3000 gets merged in.
+    if (InParamValues[I].VType = vtNull) and FUseDefaults and (InParamDefaultValues[I] <> '') then
+      ClientVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2)); //extract quotes
+}
     MyType := GetFieldType(InParamValues[I]);
     case MyType of
       FIELD_TYPE_VARCHAR:
@@ -1064,9 +1074,9 @@ begin
 
   Value := InParamValues[ParamIndex];
   if DefVarManager.IsNull(Value) then
-    if (InParamDefaultValues[ParamIndex] <> '') and
-      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
-      Result := RawByteString(InParamDefaultValues[ParamIndex])
+    if FUseDefaults and (InParamDefaultValues[ParamIndex] <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(InParamDefaultValues[ParamIndex],
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
     else
       Result := 'NULL'
   else
@@ -1303,6 +1313,7 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
+  FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'))
 end;
 
 {**
