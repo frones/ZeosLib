@@ -166,6 +166,8 @@ type
     constructor Create(PlainDriver: IZMySQLPlainDriver; Handle: PZMySQLConnect;
       Statement: IZMysqlStatement; Metadata: IZResultSetMetadata);
 
+    function FormWhereClause(Columns: TObjectList;
+      OldRowAccessor: TZRowAccessor): string; override;
     procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
 
@@ -1548,6 +1550,72 @@ begin
   end;
 end;
 
+{**
+  Forms a where clause for UPDATE or DELETE DML statements.
+  @param Columns a collection of key columns.
+  @param OldRowAccessor an accessor object to old column values.
+}
+function TZMySQLCachedResolver.FormWhereClause(Columns: TObjectList;
+  OldRowAccessor: TZRowAccessor): string;
+var
+  I, N: Integer;
+  Current: TZResolverParameter;
+begin
+  Result := '';
+  N := Columns.Count - WhereColumns.Count;
+
+  for I := 0 to WhereColumns.Count - 1 do
+  begin
+    Current := TZResolverParameter(WhereColumns[I]);
+    if Result <> '' then
+      Result := Result + ' AND ';
+
+    Result := Result + IdentifierConvertor.Quote(Current.ColumnName);
+    if OldRowAccessor.IsNull(Current.ColumnIndex) then
+    begin
+      if not (Metadata.IsNullable(Current.ColumnIndex) = ntNullable) then
+        case OldRowAccessor.GetColumnType(Current.ColumnIndex) of
+          stDate:
+            if I > 0 then
+            begin
+              Current := TZResolverParameter(WhereColumns[I-1]);
+              Result := Result+ '=''0000-00-00'' OR '+Result + ' IS NULL';
+              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
+              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+            end;
+          stTime:
+            if I > 0 then
+            begin
+              Current := TZResolverParameter(WhereColumns[I-1]);
+              Result := Result+ '=''00:00:00'' OR '+Result + ' IS NULL';
+              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
+              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+            end;
+          stTimeStamp:
+            if I > 0 then
+            begin
+              Current := TZResolverParameter(WhereColumns[I-1]);
+              Result := Result+ '=''0000-00-00 00:00:00'' OR '+Result + ' IS NULL';
+              Columns.Add(TZResolverParameter.Create(Current.ColumnIndex,
+              Current.ColumnName, Current.ColumnType, Current.NewValue, ''));
+            end;
+          else
+            Result := Result + ' IS NULL';
+        end
+      else
+        Result := Result + ' IS NULL ';
+      Columns.Delete(N);
+    end
+    else
+    begin
+      Result := Result + '=?';
+      Inc(N);
+    end;
+  end;
+
+  if Result <> '' then
+    Result := ' WHERE ' + Result;
+end;
 {**
   Posts updates to database.
   @param Sender a cached result set object.
