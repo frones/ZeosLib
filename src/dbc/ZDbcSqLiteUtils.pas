@@ -147,12 +147,14 @@ begin
   if StartsWith(TypeName, 'BOOL') then
     Result := stBoolean
   else if TypeName = 'TINYINT' then
-    Result := stByte
+    Result := stShort
   else if TypeName = 'SMALLINT' then
     Result := stShort
   else if TypeName = 'MEDIUMINT' then
     Result := stInteger
-  else if StartsWith(TypeName, 'INT') then
+  else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('INTEGER') then
+    Result := stLong //http://www.sqlite.org/autoinc.html
+  else if StartsWith(TypeName, {$IFDEF UNICODE}RawByteString{$ENDIF}('INT')) then
     Result := stInteger
   else if TypeName = 'BIGINT' then
     Result := stLong
