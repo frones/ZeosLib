@@ -224,6 +224,7 @@ type
       const Value: TZVariant); virtual;
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
     function GetInParamLogValue(Value: TZVariant): RawByteString;
+    function GetOmitComments: Boolean; virtual;
 
     property ExecCount: Integer read FExecCount;
     property InParamValues: TZVariantDynArray read GetInParamValues write SetInParamValues;
@@ -2136,7 +2137,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetOmitComments);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryRaw) do
@@ -2153,7 +2154,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected);
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetOmitComments);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryUni) do
@@ -2197,6 +2198,11 @@ begin
   if ( WSQL <> Value ) and Prepared then
     Unprepare;
   inherited SetWSQL(Value);
+end;
+
+function TZAbstractPreparedStatement.GetOmitComments: Boolean;
+begin
+  Result := False;
 end;
 
 { TZAbstractCallableStatement }
@@ -3009,9 +3015,9 @@ end;
 function TZEmulatedPreparedStatement.GetExecStatement: IZStatement;
 begin
   if ExecStatement = nil then
-  begin
     ExecStatement := CreateExecStatement;
-
+  if ExecStatement <> nil then //set new options if required
+  begin
     ExecStatement.SetMaxFieldSize(GetMaxFieldSize);
     ExecStatement.SetMaxRows(GetMaxRows);
     ExecStatement.SetEscapeProcessing(EscapeProcessing);
@@ -3033,9 +3039,10 @@ end;
 procedure TZEmulatedPreparedStatement.TokenizeSQLQueryRaw;
 begin
   if Length(FCachedQueryRaw) = 0 then
-    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
+    FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
+        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      FNeedNCharDetection);
+      GetOmitComments, FNeedNCharDetection);
 end;
 
 {**
@@ -3045,9 +3052,10 @@ end;
 procedure TZEmulatedPreparedStatement.TokenizeSQLQueryUni;
 begin
   if Length(FCachedQueryUni) = 0 then
-    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
+    FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
+        {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      FNeedNCharDetection);
+      GetOmitComments, FNeedNCharDetection);
 end;
 
 {**

@@ -157,11 +157,11 @@ function WideStringStream(const AString: WideString): TStream;
 
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  const NeedNCharDetection: Boolean = False): TRawDynArray;
+  const OmitComments: Boolean; const NeedNCharDetection: Boolean = False): TRawDynArray;
 
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
+  const OmitComments: Boolean; const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 
 {$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
@@ -593,7 +593,7 @@ end;
 }
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  const NeedNCharDetection: Boolean = False): TRawDynArray;
+  const OmitComments: Boolean; const NeedNCharDetection: Boolean = False): TRawDynArray;
 var
   I: Integer;
   Temp: RawByteString;
@@ -617,9 +617,12 @@ var
   end;
 begin
   ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or ConSettings^.AutoEncode then
+  if ParamFound or ConSettings^.AutoEncode or OmitComments then
   begin
-    Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
+    if OmitComments then
+      Tokens := Tokenizer.TokenizeBuffer(SQL, [toSkipComments, toUnifyWhitespaces])
+    else
+      Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
     Temp := '';
     SQL := '';
     NextIsNChar := False;
@@ -672,7 +675,7 @@ end;
 }
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
-  const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
+  const OmitComments: Boolean; const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 var
   I: Integer;
   Tokens: TZTokenDynArray;
@@ -695,9 +698,12 @@ var
   end;
 begin
   ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or ConSettings^.AutoEncode then
+  if ParamFound or ConSettings^.AutoEncode or OmitComments then
   begin
-    Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
+    if OmitComments then
+      Tokens := Tokenizer.TokenizeBuffer(SQL, [toSkipComments, toUnifyWhitespaces])
+    else
+      Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
 
     Temp := '';
     SQL := '';

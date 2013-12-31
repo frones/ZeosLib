@@ -124,6 +124,7 @@ type
     function PrepareAnsiSQLQuery: RawByteString;
     function GetDeallocateSQL: RawByteString; virtual; abstract;
     function GetPrepareSQLPrefix: RawByteString; virtual; abstract;
+    function GetOmitComments: Boolean; override;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
@@ -475,7 +476,7 @@ begin
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
-  FRawPlanName := IntToRaw(Hash(ASQL)+Cardinal(FStatementId)+{%H-}NativeUInt(FConnectionHandle));
+  FRawPlanName := IntToRaw(Hash(ASQL))+IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle));
 end;
 
 function TZPostgreSQLPreparedStatement.CreateResultSet(QueryHandle: Pointer): IZResultSet;
@@ -498,6 +499,8 @@ begin
   end
   else
     Result := NativeResultSet;
+  if Result <> nil then
+    FOpenResultSet := Pointer(Result);
 end;
 
 {**
@@ -537,6 +540,11 @@ begin
   Result := nil;
 
   Prepare;
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
   if Prepared  then
     if Findeterminate_datatype then
       QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
@@ -548,10 +556,7 @@ begin
   else
     QueryHandle := ExecuteInternal(ASQL, eicExecute);
   if QueryHandle <> nil then
-  begin
-    Result := CreateResultSet(QueryHandle);
-    FOpenResultSet := Pointer(Result);
-  end
+    Result := CreateResultSet(QueryHandle)
   else
     Result := nil;
   inherited ExecuteQueryPrepared;
@@ -656,9 +661,17 @@ procedure TZPostgreSQLPreparedStatement.Prepare;
 var
   TempSQL: RawByteString;
   N, I: Integer;
+  S: String;
+  RealPrepareable: Boolean;
 begin
   if not Prepared then
   begin
+    S := UpperCase(Copy(TrimLeft(SQL), 1, 8));
+    //RealPrepared stmts:
+      //http://www.postgresql.org/docs/9.1/static/sql-prepare.html
+    RealPrepareable := (S = 'SELECT') or (S = 'INSERT') or (S = 'UPDATE') or
+      (S = 'DELETE') or (S = 'VALUES');
+
     TempSQL := GetPrepareSQLPrefix;
     N := 0;
     for I := 0 to High(CachedQueryRaw) do
@@ -671,14 +684,27 @@ begin
 
   { EgonHugeist: assume automated Prepare after third execution. That's the way
     the JDBC Drivers go too... }
-    if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
+    if RealPrepareable then
     begin
-      QueryHandle := ExecuteInternal(TempSQL, eicPrepStmt);
-      if not (Findeterminate_datatype) then
-        FPlainDriver.Clear(QueryHandle);
+      if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
+      begin
+        QueryHandle := ExecuteInternal(TempSQL, eicPrepStmt);
+        if not (Findeterminate_datatype) then
+          FPlainDriver.Clear(QueryHandle);
+        inherited Prepare;
+      end
+    end
+    else
+    begin
+      Findeterminate_datatype := True;
       inherited Prepare;
     end;
   end;
+end;
+
+function TZPostgreSQLPreparedStatement.GetOmitComments: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TZPostgreSQLPreparedStatement.Unprepare;
@@ -734,11 +760,11 @@ begin
       end;
     eicUnprepStmt:
       if Assigned(FConnectionHandle) then
-        begin
-          Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
-          CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
-            lcUnprepStmt, ASQL, Result);
-        end
+      begin
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+        CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
+          lcUnprepStmt, ASQL, Result);
+      end
       else Result := nil;
     else
       begin
@@ -809,7 +835,6 @@ begin
           FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
         if not Findeterminate_datatype then
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-        Exit;
       end;
     eicExecPrepStmt:
       begin
