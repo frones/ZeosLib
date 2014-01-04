@@ -64,6 +64,8 @@ uses
 type
   TEICategory = (eicExecute, eicPrepStmt, eicExecPrepStmt, eicUnprepStmt);
 
+  { TZPostgreSQLPreparedStatement }
+
   TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FRawPlanName: RawByteString;
@@ -83,7 +85,9 @@ type
     function GetOmitComments: Boolean; override;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings);
+      Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
+      Connection: IZPostgreSQLConnection; Info: TStrings); overload;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -189,7 +193,15 @@ begin
   FRawPlanName := IntToRaw(Hash(ASQL))+IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle));
 end;
 
-function TZPostgreSQLPreparedStatement.CreateResultSet(QueryHandle: Pointer): IZResultSet;
+constructor TZPostgreSQLPreparedStatement.Create(
+  PlainDriver: IZPostgreSQLPlainDriver; Connection: IZPostgreSQLConnection; Info: TStrings
+  );
+begin
+  Create(PlainDriver, Connection, SQL, Info);
+end;
+
+function TZPostgreSQLPreparedStatement.CreateResultSet(
+  QueryHandle: PZPostgreSQLResult): IZResultSet;
 var
   NativeResultSet: TZPostgreSQLResultSet;
   CachedResultSet: TZCachedResultSet;
