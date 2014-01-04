@@ -388,7 +388,7 @@ function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZInterbase6Statement.Create(Self, Info);
+  Result := TZInterbase6PreparedStatement.Create(Self, Info);
 end;
 
 {**
