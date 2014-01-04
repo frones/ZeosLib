@@ -155,7 +155,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils, ZDbcInterbase6Statement;
+  ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils;
 
 { TZInterbase6XSQLDAResultSet }
 
@@ -1575,7 +1575,7 @@ begin
       if L > 0 then
       begin
         while ((sqldata+l-1)^ = ' ') do dec(l); {last char = #0}
-        ZSetString(sqldata, l, Result);
+        ZSetString(sqldata, l, Result{%H-});
       end
       else
         Result := '';

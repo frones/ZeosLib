@@ -153,7 +153,7 @@ implementation
 
 uses
   ComObj, OleDB, Variants,
-  ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZEncoding;
+  ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils;
 
 {**
   Converts an ADO native types into string related.
@@ -518,7 +518,7 @@ begin
             end
             else
             begin
-              B := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), zCP_UTF16, Connection.GetConSettings);
+              B := TZAbstractClob.CreateWithStream(GetValidatedUnicodeStream(B.GetBuffer, B.Length, Connection.GetConSettings, False), 1200{zCP_UTF16}, Connection.GetConSettings);
               SoftVarManager.SetAsUnicodeString(RetValue, B.GetUnicodeString);
               TmpSQLType := stUnicodeString;
             end;

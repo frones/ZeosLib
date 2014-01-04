@@ -443,13 +443,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean;
     function SupportsOpenStatementsAcrossRollback: Boolean;
     function SupportsTransactions: Boolean;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const Level: TZTransactIsolationLevel):
       Boolean;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean;
     function SupportsDataManipulationTransactionsOnly: Boolean;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean;
+    function SupportsResultSetType(const _Type: TZResultSetType): Boolean;
+    function SupportsResultSetConcurrency(const _Type: TZResultSetType;
+      const Concurrency: TZResultSetConcurrency): Boolean;
     function SupportsBatchUpdates: Boolean;
     function SupportsNonEscapedSearchStrings: Boolean;
     function SupportsMilliseconds: Boolean;
@@ -557,7 +557,9 @@ type
     procedure SetLocateUpdates(Value: TZLocateUpdatesMode);
     function GetLocateUpdates: TZLocateUpdatesMode;
 
-    procedure AddBatch(const SQL: string);
+    procedure AddBatch(const SQL: string); deprecated;
+    procedure AddBatchRequest(const SQL: string);
+
     procedure ClearBatch;
     function ExecuteBatch: TIntegerDynArray;
 

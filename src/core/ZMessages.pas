@@ -59,39 +59,39 @@ interface
 
 {$I ZCore.inc}
 
-uses ZEncoding, ZCompatibility;
+uses ZCompatibility;
 
 procedure loadmessages();
 
 const
 {$IFDEF PORTUGUESE}
-  cCodePage = ZEncoding.zCP_WIN1252;
+  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !PORTUGUESE}
 {$IFDEF DUTCH}
-  cCodePage = ZEncoding.zCP_WIN1252;
+  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !DUTCH}
 {$IFDEF GERMAN}
-  cCodePage = ZEncoding.zCP_WIN1252;
+  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !GERMAN}
 {$IFDEF SPANISH}
-  cCodePage = ZEncoding.zCP_WIN1252;
+  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !SPANISH}
 {$IFDEF ROMANA}
-  cCodePage = ZEncoding.zCP_WIN1252;
+  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !ROMANA}
 {$IFDEF INDONESIAN}
-  cCodePage = ZEncoding.zCP_us_ascii;
+  cCodePage = 20127; {US-ASCII (7-bit)}
 {$ELSE !INDONESIAN}
 {$IFDEF RUSSIAN}
-  cCodePage = ZEncoding.zCP_WIN1251;
+  cCodePage = 1251; {Microsoft Windows Codepage 1251 (Cyrl)}
 {$ELSE !RUSSIAN}
 {$IFDEF CZECH}
-  cCodePage = ZEncoding.zCP_WIN1250;
+  cCodePage = 1250; {Microsoft Windows Codepage 1250 (East European)}
 {$ELSE !CZECH}
 {$IFDEF POLISH}
-  cCodePage = ZEncoding.zCP_WIN1250;
+  cCodePage = 1250; {Microsoft Windows Codepage 1250 (East European)}
 {$ELSE !POLISH}
-cCodePage = ZEncoding.zCP_us_ascii;
+cCodePage = 20127; {US-ASCII (7-bit)}
 {$ENDIF POLISH} // POLISH
 {$ENDIF CZECH} // CZECH
 {$ENDIF RUSSIAN}
@@ -1940,74 +1940,9 @@ var
 
   SRowBufferWidthExceeded: String;
 
-  function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
-  function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
-
 implementation
 
-uses ZSysUtils;
-
-{$IFDEF UNICODE}
-function ConvertZMsgToRaw(const AMessage: String; Const RawCP: Word): RawByteString;
-begin
-  ZUnicodeToRaw(AMessage, RawCP);
-end;
-
-function ConvertEMsgToRaw(const AMessage: String; Const RawCP: Word): RawByteString;
-begin
-  ZUnicodeToRaw(AMessage, RawCP);
-end;
-{$ELSE !UNICODE}
-function ConvertZMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
-var
-  AnsiRec: TZAnsiRec;
-begin
-  {$IFDEF LCL}
-  RawCP := zCP_UTF8;
-  {$ENDIF}
-  if ZCompatibleCodePages(RawCP, MessageCodePage) then
-  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
-  begin
-    Result := ''; //satisfy compiler
-    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
-  end
-  {$ELSE !WITH_RAWBYTESTRING}
-  Result := AMessage
-  {$ENDIF WITH_RAWBYTESTRING}
-  else
-  begin
-    AnsiRec.Len := Length(AMessage);
-    AnsiRec.P := PAnsiChar(AMessage);
-    Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, MessageCodePage), RawCP);
-  end;
-end;
-
-function ConvertEMsgToRaw(const AMessage: String; {$IFNDEF LCL}Const{$ENDIF} RawCP: Word): RawByteString;
-var
-  AnsiRec: TZAnsiRec;
-begin
-  {$IFDEF LCL}
-  RawCP := zCP_UTF8;
-  {$ENDIF}
-  if ZCompatibleCodePages(RawCP, ZDefaultSystemCodePage) then
-  {$IFDEF WITH_RAWBYTESTRING} //fpc2.7up
-  begin
-    Result := ''; //satisfy compiler
-    ZSetString(PAnsiChar(AMessage), Length(AMessage), Result);
-  end
-  {$ELSE !WITH_RAWBYTESTRING}
-  Result := AMessage
-  {$ENDIF WITH_RAWBYTESTRING}
-  else
-  begin
-    AnsiRec.Len := Length(AMessage);
-    AnsiRec.P := PAnsiChar(AMessage);
-    Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, ZDefaultSystemCodePage), RawCP);
-  end;
-end;
-{$ENDIF UNICODE}
-
-procedure loadmessages();
+procedure loadmessages;
 begin
   MessageCodePage := cCodePage;
 

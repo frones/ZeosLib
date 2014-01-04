@@ -57,8 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcOracleUtils, ZDbcConnection, ZURL,
-  ZDbcCachedResultSet, ZDbcCache;
+  ZCompatibility, ZDbcOracleUtils;
 
 type
 
@@ -135,13 +134,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
+    function SupportsResultSetType(const _Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(const _Type: TZResultSetType;
+      const Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
     function SupportsNonEscapedSearchStrings: Boolean; override;
 
@@ -207,18 +206,18 @@ type
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
-    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+    function UncachedGetTables(const {%H-}Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function UncachedGetSchemas: IZResultSet; override;
 //    function UncachedGetCatalogs: IZResultSet; override; -> Not implemented
     function UncachedGetTableTypes: IZResultSet; override;
     function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; override;
-    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
+    function UncachedGetTablePrivileges(const {%H-}Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string): IZResultSet; override;
-    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
+    function UncachedGetColumnPrivileges(const {%H-}Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+    function UncachedGetPrimaryKeys(const {%H-}Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
 //    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
 //      const Table: string): IZResultSet; override;
@@ -1051,7 +1050,7 @@ end;
   @see Connection
 }
 function TZOracleDatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
+  const Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := True;
 end;
@@ -1103,7 +1102,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZOracleDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
+  const _Type: TZResultSetType): Boolean;
 begin
   Result := _Type = rtForwardOnly;
 end;
@@ -1117,7 +1116,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZOracleDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+  const _Type: TZResultSetType; const Concurrency: TZResultSetConcurrency): Boolean;
 begin
   Result := (_Type = rtForwardOnly) and (Concurrency = rcReadOnly);
 end;

@@ -291,7 +291,7 @@ begin
   if LengthPointer = nil then
     Len := 0
   else
-    Len  := PULong(NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^;
+    Len  := {%H-}PULong({%H-}NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^;
   Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
   LastWasNull := Result = nil;
 end;
@@ -393,12 +393,12 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   Result := (Buffer = nil);
   if not Result and (TZAbstractResultSetMetadata(Metadata).
     GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
   begin
-    Result := ( RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed) = 0 ) and
+    Result := ( RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-}) = 0 ) and
       (RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed) = 0);
   end;
 end;
@@ -417,7 +417,7 @@ function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 var
   Len: ULong;
 begin
-  Result.P := GetBuffer(ColumnIndex, Len);
+  Result.P := GetBuffer(ColumnIndex, Len{%H-});
   Result.Len := Len;
 end;
 
@@ -434,7 +434,7 @@ function TZMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 var
   Len: ULong;
 begin
-  Result := GetBuffer(ColumnIndex, Len);
+  Result := GetBuffer(ColumnIndex, Len{%H-});
 end;
 
 {**
@@ -451,7 +451,7 @@ var
   Len: ULong;
   Buffer: PAnsiChar;
 begin
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   Result := '';
   if not LastWasNull then
     ZSetString(Buffer, Len, Result);
@@ -491,7 +491,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -516,7 +516,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -541,7 +541,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -566,7 +566,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -591,7 +591,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -616,7 +616,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -642,7 +642,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
@@ -668,7 +668,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   SetLength(Result, Len);
   if Len > 0 then
@@ -693,14 +693,14 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
   else
   begin
     if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-      Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
+      Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed{%H-})
     else
       Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
         RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
@@ -726,14 +726,14 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
   else
   begin
     if (Buffer+2)^ = ':' then //possible date if Len = 10 then
-      Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed)
+      Result := RawSQLTimeToDateTime(Buffer,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
     else
       Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed));
   end;
@@ -758,13 +758,13 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
     Result := 0
   else
     if (Buffer+2)^ = ':' then
-      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+      Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
     else
       if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
         Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
@@ -791,7 +791,7 @@ begin
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
   Result := nil;
-  Buffer := GetBuffer(ColumnIndex, Len);
+  Buffer := GetBuffer(ColumnIndex, Len{%H-});
   if not LastWasNull then
     case GetMetaData.GetColumnType(ColumnIndex) of
       stBytes, stBinaryStream:

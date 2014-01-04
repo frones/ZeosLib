@@ -58,7 +58,7 @@ interface
 uses
   ZCompatibility, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainASADriver, ZTokenizer, ZDbcGenericResolver,
-  ZURL, ZPlainDriver, ZGenericSqlAnalyser, ZPlainASAConstants;
+  ZURL, ZGenericSqlAnalyser, ZPlainASAConstants;
 
 type
   {** Implements a ASA Database Driver. }

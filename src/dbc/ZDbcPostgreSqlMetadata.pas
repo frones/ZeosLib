@@ -58,8 +58,8 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility, ZDbcPostgreSqlUtils,
-  ZDbcConnection, ZSelectSchema;
+  ZDbcIntfs, ZDbcMetadata, ZCompatibility, ZDbcPostgreSqlUtils,
+  ZSelectSchema;
 
 type
   {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. } 
@@ -165,13 +165,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
+    function SupportsResultSetType(const _Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(const _Type: TZResultSetType;
+      const Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
 
     // maxima:
@@ -270,7 +270,7 @@ type
       const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
       const ForeignTable: string): IZResultSet; override;
     function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; override;
+      Unique: Boolean; {%H-}Approximate: Boolean): IZResultSet; override;
      function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; override;
     function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
@@ -291,7 +291,7 @@ type
 implementation
 
 uses
-  ZFastCode, ZMessages, ZDbcUtils, ZDbcPostgreSql;
+  ZFastCode, ZMessages, ZSysUtils, ZDbcUtils, ZDbcPostgreSql;
 
 { TZPostgreSQLDatabaseInfo }
 
@@ -1177,7 +1177,7 @@ end;
   @see Connection
 }
 function TZPostgreSQLDatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
+  const Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := (Level = tiSerializable) or (Level = tiReadCommitted);
 end;
@@ -1229,7 +1229,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZPostgreSQLDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
+  const _Type: TZResultSetType): Boolean;
 begin
   Result := _Type = rtScrollInsensitive;
 end;
@@ -1243,7 +1243,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZPostgreSQLDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+  const _Type: TZResultSetType; const Concurrency: TZResultSetConcurrency): Boolean;
 begin
   Result := (_Type = rtScrollInsensitive) and (Concurrency = rcReadOnly);
 end;
@@ -3027,8 +3027,8 @@ begin
 
           //<unnamed>\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
           //for Postgresql 7.3
-          //$1\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
-          //$2\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
+          {%H-}//$1\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
+          {%H-}//$2\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
 
           Advance := 4 + (KeySequence - 1) * 2;
           PutSplitStringEx(List, Targs, '\000');

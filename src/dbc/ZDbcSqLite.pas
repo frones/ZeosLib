@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcConnection, ZPlainSqLiteDriver, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZURL, ZCompatibility;
 

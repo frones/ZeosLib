@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZPlainFirebirdDriver, ZPlainDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs,
   ZDbcConnection, ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging,
   ZDbcInterbase6Utils, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser,
@@ -457,7 +457,7 @@ begin
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
 
-  DPB := GenerateDPB(Info, FDPBLength, FDialect);
+  DPB := GenerateDPB(Info, FDPBLength{%H-}, FDialect);
 
   if HostName <> '' then
   begin

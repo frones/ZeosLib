@@ -135,13 +135,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; override;
+    function SupportsResultSetType(const {%H-}_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(const {%H-}_Type: TZResultSetType;
+      const {%H-}Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
 
     // maxima:
@@ -251,7 +251,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcASAUtils, ZDbcUtils, ZSysUtils;
+uses ZFastCode, ZDbcASAUtils, ZSysUtils;
 
 { TZASADatabaseInfo }
 
@@ -1127,7 +1127,7 @@ end;
   @see Connection
 }
 function TZASADatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
+  const Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := True;
 end;
@@ -1179,7 +1179,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZASADatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
+  const _Type: TZResultSetType): Boolean;
 begin
   Result := True;
 end;
@@ -1193,7 +1193,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZASADatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+  const _Type: TZResultSetType; const Concurrency: TZResultSetConcurrency): Boolean;
 begin
   Result := True;
 end;

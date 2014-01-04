@@ -72,7 +72,7 @@ type
   TZExpressionQuoteState = class (TZQuoteState)
   public
     function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
 
     function EncodeString(const Value: string; QuoteChar: Char): string; override;
     function DecodeString(const Value: string; QuoteChar: Char): string; override;
@@ -171,7 +171,7 @@ begin
     FloatPoint := LastChar = '.';
     if FloatPoint then
     begin
-      Stream.Read(TempChar, 1 * SizeOf(Char));
+      Stream.Read(TempChar{%H-}, 1 * SizeOf(Char));
       Result.Value := Result.Value + TempChar;
     end;
   end;
@@ -234,7 +234,7 @@ begin
   Result.Value := FirstChar;
   LastChar := #0;
 
-  while Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, 1 * SizeOf(Char)) > 0 do
   begin
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
     begin
@@ -300,7 +300,7 @@ begin
 
   if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar, 1 * SizeOf(Char));
+    ReadNum := Stream.Read(ReadChar{%H-}, 1 * SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;

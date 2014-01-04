@@ -169,10 +169,36 @@ procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   const PAramTypes: array of ShortInt);
 {$IFEND}
 
+{**
+  GetValidatedTextStream the incoming Stream for his given Memory and
+  returns a valid UTF8/Ansi StringStream
+  @param Stream the Stream with the unknown format and data
+  @return a valid utf8 encoded stringstram
+}
+function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings): RawByteString; overload;
+
+function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings; ToCP: Word): RawByteString; overload;
+
+function GetValidatedAnsiString(const Ansi: RawByteString;
+  ConSettings: PZConSettings; const FromDB: Boolean): RawByteString; overload;
+
+{**
+  GetValidatedUnicodeStream the incoming Stream for his given Memory and
+  returns a valid Unicode/Widestring Stream
+  @param Buffer the pointer to the Data
+  @return a valid Unicode encoded stringstram
+}
+function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings; FromDB: Boolean): TStream; overload;
+
+function GetValidatedUnicodeStream(const Ansi: RawByteString;
+  ConSettings: PZConSettings; FromDB: Boolean): TStream; overload;
+
 implementation
 
-uses ZMessages, ZSysUtils, ZEncoding, ZMatchPattern
-  {$IFDEF USE_FAST_CHARPOS},ZFastCode{$ENDIF};
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -792,5 +818,238 @@ begin
   if SupportsMoveAbsolute then ResultSet.BeforeFirst;
 end;
 {$IFEND}
+
+function TestEncoding(const Bytes: TByteDynArray; const Size: Cardinal;
+  const ConSettings: PZConSettings): TZCharEncoding;
+begin
+  Result := ceDefault;
+  {EgonHugeist:
+    Step one: Findout, wh at's comming in! To avoid User-Bugs as good as possible
+      it is possible that a PAnsiChar OR a PWideChar was written into
+      the Stream!!!  And these chars could be trunced with changing the
+      Stream.Size.
+      I know this can lead to pain with two byte ansi chars, but what else can i do?
+    step two: detect the encoding }
+
+  if ( ZFastCode.StrLen(PAnsiChar(Bytes)) {%H-}< Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
+    result := ceUTF16
+  else
+    if ConSettings.AutoEncode then
+      case DetectUTF8Encoding(PAnsichar(Bytes)) of
+        etUSASCII: Result := ceDefault; //Exact!
+        etAnsi:
+          { Sure this isn't right in all cases!
+            Two/four byte WideChars causing the same result!
+            Leads to pain! Is there a way to get a better test?
+            I've to start from the premise the function which calls this func
+            should decide wether ansi or unicode}
+          Result := ceAnsi;
+        etUTF8: Result := ceUTF8; //Exact!
+      end
+    else
+      Result := ceDefault
+end;
+
+{**
+  GetValidatedTextStream the incoming Stream for his given Memory and
+  returns a valid UTF8/Ansi StringStream
+  @param Stream the Stream with the unknown format and data
+  @return a valid utf8 encoded stringstram
+}
+{$WARNINGS OFF}
+function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings): RawByteString;
+var
+  US: ZWideString;
+  Bytes: TByteDynArray;
+begin
+  if Size = 0 then
+    Result := ''
+  else
+  begin
+    SetLength(Bytes, Size +2);
+    System.move(Buffer^, Pointer(Bytes)^, Size);
+    case TestEncoding(Bytes, Size, ConSettings) of
+      ceDefault: Result := PAnsiChar(Bytes);
+      ceAnsi:
+        if ConSettings.ClientCodePage.Encoding = ceAnsi then
+          if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
+            Result := PAnsiChar(Bytes)  //should be exact
+          else
+            {$IFDEF WITH_LCONVENCODING}
+            Result := Consettings^.PlainConvertFunc(AnsiToUTF8(PAnsiChar(Bytes)))  //no other possibility
+            {$ELSE}
+            Result := ZUnicodeToRaw(ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
+            {$ENDIF}
+        else  //Database expects UTF8
+          if ( ConSettings.CTRL_CP = zCP_UTF8) then
+            Result := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
+          else
+            {$IFDEF WITH_LCONVENCODING}
+            Result := AnsiToUTF8(PAnsiChar(Bytes));
+            {$ELSE}
+            Result := UTF8Encode(ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP));
+            {$ENDIF}
+      ceUTF8:
+        if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
+          {$IFDEF WITH_LCONVENCODING}
+          Result := Consettings.PlainConvertFunc(String(PAnsiChar(Bytes)))
+          {$ELSE}
+          Result := ZUnicodeToRaw(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
+          {$ENDIF}
+         else //UTF8 Expected
+           Result := PAnsiChar(Bytes);
+      ceUTF16:
+        begin
+          SetLength(US, Size div 2);
+          System.Move(Bytes[0], US[1], Size);
+          if ConSettings.ClientCodePage.Encoding = ceAnsi then
+            {$IFDEF WITH_LCONVENCODING}
+            Result := Consettings.PlainConvertFunc(UTF8Encode(US))
+            {$ELSE}
+            Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP)
+            {$ENDIF}
+          else
+            Result := UTF8Encode(US);
+        end;
+      else
+        Result := '';
+    end;
+  end;
+end;
+{$WARNINGS ON}
+
+function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings; ToCP: Word): RawByteString;
+var DB_CP: Word;
+begin
+  DB_CP := ConSettings.ClientCodePage.CP;
+  ConSettings.ClientCodePage.CP := ToCP;
+  Result := GetValidatedAnsiStringFromBuffer(Buffer, Size, ConSettings);
+  ConSettings.ClientCodePage.CP := DB_CP;
+end;
+
+function GetValidatedAnsiString(const Ansi: RawByteString;
+  ConSettings: PZConSettings; const FromDB: Boolean): RawByteString;
+begin
+  if FromDB then
+    if ( ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP ) or not ConSettings.AutoEncode then
+      Result := Ansi
+    else
+      {$IFDEF WITH_LCONVENCODING}
+      Result := Consettings.DbcConvertFunc(Ansi)
+      {$ELSE}
+      Result := ZUnicodeToRaw(ZRawToUnicode(Ansi, ConSettings^.ClientCodePage^.CP), ConSettings^.CTRL_CP)
+      {$ENDIF}
+  else
+    Result := ''; // not done yet  and not needed. Makes the compiler happy
+end;
+
+{**
+  GetValidatedUnicodeStream the incoming Stream for his given Memory and
+  returns a valid Unicode/Widestring Stream
+  @param Stream the Stream with the unknown format and data
+  @return a valid Unicode encoded stringstram
+}
+function GetValidatedUnicodeStream(const Buffer: Pointer; Size: Cardinal;
+  ConSettings: PZConSettings; FromDB: Boolean): TStream;
+var
+  Len: Integer;
+  US: ZWideString;
+  Bytes: TByteDynArray;
+
+  procedure SetFromWide;
+  begin
+    SetLength(US, Size div 2);
+    System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
+  end;
+begin
+  Result := nil;
+  US := '';
+  if Assigned(Buffer) and ( Size > 0 ) then
+  begin
+    SetLength(Bytes, Size +2);
+    System.move(Buffer^, Pointer(Bytes)^, Size);
+    if FromDB then //do not check encoding twice
+      Result := GetValidatedUnicodeStream(PAnsiChar(Bytes), ConSettings, FromDB)
+    else
+      case TestEncoding(Bytes, Size, ConSettings) of
+        ceDefault:
+          case Consettings.ClientCodePage.Encoding of
+            ceUTF8: US := UTF8ToString(PAnsiChar(Bytes));
+            ceAnsi:
+              {$IFDEF WITH_LCONVENCODING}
+              US := ZWideString(PAnsiChar(Bytes)); //cast means random success
+              {$ELSE}
+              if ( ConSettings.CTRL_CP = zCP_UTF8) then
+                US := ZWideString(PAnsiChar(Bytes)) //random success
+              else
+                US := ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP);
+             {$ENDIF}
+            end;
+        ceAnsi: //We've to start from the premisse we've got a Unicode string i there
+          begin
+            SetLength(US, Size div 2);
+            System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
+          end;
+        ceUTF8: US := UTF8ToString(PAnsiChar(Bytes));
+        ceUTF16:
+          begin
+            SetLength(US, Size div 2);
+            System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
+          end;
+      end;
+
+    Len := Length(US)*2;
+    if not Assigned(Result) and (Len > 0) then
+    begin
+      Result := TMemoryStream.Create;
+      Result.Size := Len;
+      System.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
+      Result.Position := 0;
+    end;
+  end;
+end;
+
+function GetValidatedUnicodeStream(const Ansi: RawByteString;
+  ConSettings: PZConSettings; FromDB: Boolean): TStream;
+var
+  Len: Integer;
+  US: ZWideString;
+begin
+  Result := nil;
+  if Ansi <> '' then
+  begin
+    if FromDB then
+      {$IFDEF WITH_LCONVENCODING}
+      US := UTF8ToString(Consettings.DbcConvertFunc(Ansi))
+      {$ELSE}
+      US := ZRawToUnicode(Ansi, ConSettings.ClientCodePage.CP)
+      {$ENDIF}
+    else
+      case DetectUTF8Encoding(Ansi) of
+        etUSASCII, etUTF8: US := UTF8ToString(Ansi);
+        etAnsi:
+          {$IFDEF WITH_LCONVENCODING}
+          US := ZWideString(Ansi); //random success
+          {$ELSE}
+          if ( ConSettings.CTRL_CP = zCP_UTF8) then
+            US := ZWideString(Ansi) //random success
+          else
+            US := ZRawToUnicode(Ansi, ConSettings.CTRL_CP);
+         {$ENDIF}
+      end;
+
+    Len := Length(US)*2;
+    if Len > 0 then
+    begin
+      Result := TMemoryStream.Create;
+      Result.Size := Len;
+      System.Move(Pointer(US)^, TMemoryStream(Result).Memory^, Len);
+      Result.Position := 0;
+    end;
+  end;
+end;
+
 end.
 

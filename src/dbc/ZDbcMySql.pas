@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcIntfs, ZDbcConnection, ZPlainMySqlDriver, ZPlainDriver,
   ZURL, ZDbcLogging, ZTokenizer, ZGenericSqlAnalyser, ZPlainMySqlConstants;
 
@@ -137,7 +137,7 @@ var
 implementation
 
 uses
-  ZMessages, ZSysUtils, ZDbcUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
+  ZMessages, ZSysUtils, ZDbcMySqlStatement, ZMySqlToken, ZFastCode,
   ZDbcMySqlUtils, ZDbcMySqlMetadata, ZMySqlAnalyser, TypInfo, Math,
   ZEncoding;
 

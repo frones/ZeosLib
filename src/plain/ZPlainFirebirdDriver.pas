@@ -62,7 +62,7 @@ interface
 {$ENDIF}
 
 uses Types,
-  ZClasses, ZCompatibility, ZPlainDriver, ZPlainLoader,
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCompatibility, ZPlainDriver, ZPlainLoader,
   ZPlainFirebirdInterbaseConstants;
 
 const
@@ -1314,7 +1314,7 @@ end;
 { IZFirebirdD20PlainDriver }
 function TZFirebirdD20PlainDriver.Clone: IZPlainDriver;
 begin
-  TZFirebirdD20PlainDriver.Create;
+  Result := TZFirebirdD20PlainDriver.Create;
 end;
 
 constructor TZFirebirdD20PlainDriver.Create;

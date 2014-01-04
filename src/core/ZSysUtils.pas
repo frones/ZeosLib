@@ -559,13 +559,6 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
-{$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
-{$ENDIF}
-
 function NotEmptyASCII7ToString(const Src: RawByteString): string; overload;
 function NotEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
 function NotEmptyStringToASCII7(const Src: string): RawByteString; overload;
@@ -599,7 +592,7 @@ procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal); ov
 
 implementation
 
-uses DateUtils, Math, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+uses DateUtils, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZFastCode;
 
 
@@ -911,7 +904,7 @@ begin
   Result := Def;
   if Assigned(Buffer) then
   begin
-    Result := ValRawExt(Buffer, '.', InvalidPos);
+    Result := ValRawExt(Buffer, '.', InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
         Result := RawToFloatDef(Buffer, ',', Def)
@@ -996,7 +989,7 @@ begin
   Result := Def;
   if Assigned(Buffer) then
   begin
-    Result := ValUnicodeExt(Buffer, WideChar('.'), InvalidPos);
+    Result := ValUnicodeExt(Buffer, WideChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
       if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
         Result := UnicodeToFloatDef(Buffer, WideChar(','), Def)
@@ -1390,7 +1383,7 @@ begin
   Result := '';
   L := Length(Value);
   SetLength(Result, L);
-  System.Move(Pointer(Value)^, PAnsiChar(Result)^, L);
+  System.Move(Pointer(Value)^, Pointer(Result)^, L);
   {$ELSE}
   SetString(Result, PAnsiChar(@Value[0]), Length(Value))
   {$ENDIF}
@@ -1703,7 +1696,7 @@ var
       end;
       if MPos > 2 then //float ValueTmp
       begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code));
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(ValRawExt(Value, '.', Code{%H-}));
         Failed := Code <> 0;
         if Failed then  Exit;
       end;
@@ -2167,7 +2160,7 @@ var
 
       if (MPos > 2) and ( DotCount = 1) then //float value
       begin
-        Result := ValRawExt(Value, '.', Code);
+        Result := ValRawExt(Value, '.', Code{%H-});
         Failed := Code <> 0;
         if Failed then
           Result := 0;
@@ -2375,7 +2368,7 @@ var
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   YearSet := False;
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result, PA);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-}, PA);
 
   I := ConFormatSettings.DateFormatLen-1;
   DateFormat := ConFormatSettings.PDateFormat;
@@ -2489,7 +2482,7 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result, PA);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-}, PA);
   ZSet := False;
 
   I := ConFormatSettings.TimeFormatLen-1;
@@ -2617,7 +2610,7 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result, PA);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-}, PA);
   ZSet := False;
   YearSet := False;
 
@@ -3026,47 +3019,6 @@ begin
            ZFastCode.IntToStr(SubVersion);
 end;
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
-begin
-  SetString(Dest, Src, Len);
-end;
-
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  SetLength(Dest, Len);
-  Move(Src^, Pointer(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, Len);
-  {$ENDIF}
-end;
-
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: ZWideString); overload;
-begin
-  Dest := ''; //speeds up for SetLength
-  if ( Len = 0 ) or ( Src = nil ) then
-    Exit
-  else
-  begin
-    SetLength(Dest, Len div 2);
-    Move(Src^, Pointer(Dest)^, Len);
-  end;
-end;
-
-{$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  SetLength(Dest, Len);
-  Move(Src^, Pointer(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, Len);
-  {$ENDIF}
-end;
-{$ENDIF}
-
 function NotEmptyASCII7ToString(const Src: RawByteString): string;
 {$IFDEF UNICODE}
 var i, l: integer;
@@ -3093,7 +3045,12 @@ var i: integer;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  System.SetString(result, nil, Len);
+  if Result = '' then
+    System.SetString(Result,nil, Len)
+  else
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (Len = PLongInt(NativeInt(Result) - 4)^)) then { length }
+      System.SetString(Result,nil, Len);
   for i := 0 to Len-1 do
     PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   {$ELSE}

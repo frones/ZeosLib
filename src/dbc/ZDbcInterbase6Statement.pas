@@ -57,7 +57,7 @@ interface
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZDbcIntfs, ZDbcStatement, ZDbcInterbase6, ZDbcInterbase6Utils,
-  ZDbcInterbase6ResultSet, ZPlainFirebirdInterbaseConstants, ZCompatibility,
+  ZPlainFirebirdInterbaseConstants, ZCompatibility,
   ZDbcLogging, ZVariant, ZMessages;
 
 type
@@ -66,7 +66,7 @@ type
 
   { TZInterbase6PreparedStatement }
 
-  TZInterbase6PreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZInterbase6PreparedStatement = class(TZAbstractPreparedStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FStatusVector: TARRAY_ISC_STATUS;
@@ -123,7 +123,7 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver;
+uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver, ZDbcInterbase6ResultSet;
 
 { TZInterbase6PreparedStatement }
 
@@ -155,7 +155,7 @@ end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager, InParamValues,
+  BindSQLDAInParameters(ClientVarManager, InParamValues,
     InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings, FCodePageArray);
   inherited BindInParameters;
 end;
@@ -228,7 +228,7 @@ begin
     if StatementType in [stSelect, stExecProc] then
       begin
         FResultXSQLDA := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
-        PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+        PrepareResultSqlData(GetPlainDriver, GetDialect,
           ASQL, StmtHandle, FResultXSQLDA, ConSettings);
       end;
   end;
@@ -469,7 +469,7 @@ begin
     { Prepare statement }
     FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
       GetDBHandle, GetTrHandle, GetDialect, ProcSql, ConSettings, FStmtHandle);
-    PrepareResultSqlData(GetPlainDriver, GetDBHandle, GetDialect,
+    PrepareResultSqlData(GetPlainDriver, GetDialect,
       ProcSql, FStmtHandle, FResultSQLData, ConSettings);
     PrepareParameters(GetPlainDriver, ProcSql, GetDialect, FStmtHandle, FParamSQLData, ConSettings);
   end;
@@ -477,7 +477,7 @@ end;
 
 procedure TZInterbase6CallableStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(FIBConnection.GetPlainDriver, ClientVarManager,
+  BindSQLDAInParameters(ClientVarManager,
     InParamValues, InParamTypes, InParamCount, FParamSQLData, ConSettings, FCodePageArray);
   inherited BindInParameters;
 end;

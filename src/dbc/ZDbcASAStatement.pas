@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils, ZDbcASAResultSet,
-  ZPlainASADriver, ZCompatibility, ZDbcLogging, ZVariant, ZMessages;
+  ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils,
+  ZPlainASADriver, ZCompatibility, ZDbcLogging, ZVariant;
 
 type
 
@@ -133,9 +133,9 @@ type
     function GetWarnings: EZSQLWarning; override;
     procedure ClearWarnings; override;
     function GetMoreResults: Boolean; override;
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
+    function ExecuteQuery(const {%H-}SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const {%H-}SQL: RawByteString): Integer; override;
+    function Execute(const {%H-}SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -144,7 +144,8 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, ZPlainASAConstants, ZDbcResultSet, Types;
+uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
+  ZDbcResultSet;
 
 { TZASAStatement }
 
@@ -287,8 +288,8 @@ begin
         Result := false
       else
       begin
-        SQLData := TZASAResultSet(LastResultSet).SQLData;
-        DescribeCursor( FASAConnection, TZASASQLDA( SQLData), CursorName, '');
+        SQLData := TZASAResultSet(Pointer(LastResultSet)).SQLData;
+        DescribeCursor( FASAConnection, TZASASQLDA(Pointer(SQLData)), CursorName, '');
       end;
     end;
   end;
@@ -452,7 +453,7 @@ begin
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
       else
-        DescribeCursor( FASAConnection, TZASASQLDA( FSQLData), CursorName, '');
+        DescribeCursor( FASAConnection, TZASASQLDA(Pointer(FSQLData)), CursorName, '');
     end;
   end;
 end;
@@ -564,7 +565,7 @@ begin
     Closed := false;
     try
       if FMoreResults then
-        DescribeCursor( FASAConnection, TZASASQLDA( FSQLData), Cursor, '');
+        DescribeCursor( FASAConnection, TZASASQLDA(Pointer(FSQLData)), Cursor, '');
 
       LastUpdateCount := -1;
       Result := GetCachedResultSet( SQL, Self,
@@ -720,7 +721,7 @@ begin
       if GetDBHandle.sqlcode = SQLE_PROCEDURE_COMPLETE then
         Result := false
       else
-        DescribeCursor( FASAConnection, TZASASQLDA( FSQLData), CursorName, '');
+        DescribeCursor( FASAConnection, TZASASQLDA( Pointer(FSQLData)), CursorName, '');
     end;
   end;
 end;
@@ -849,7 +850,7 @@ begin
       Closed := false;
       try
         if FMoreResults then
-          DescribeCursor( FASAConnection, TZASASQLDA( FSQLData), Cursor, ASQL);
+          DescribeCursor( FASAConnection, TZASASQLDA( Pointer(FSQLData)), Cursor, ASQL);
 
         LastUpdateCount := -1;
         Result := GetCachedResultSet( Self.SQL, Self,
@@ -987,7 +988,7 @@ begin
       stBinaryStream:
         begin
           GetMem( P, PZASABlobStruct( Value.GetData.sqlvar[I].sqlData).untrunc_len);
-          Value.ReadBlobToMem( I, P, L);
+          Value.ReadBlobToMem( I, P, L{%H-});
           if Value.GetFieldSqlType(I) = stBinaryStream then
             TempBlob := TZAbstractBlob.CreateWithData(P, L)
           else
@@ -1011,6 +1012,7 @@ function TZASACallableStatement.GetProcedureSql: RawByteString;
   var
     I: integer;
   begin
+    Result := '';
     for I := 0 to Count - 1 do
     begin
       if Result <> '' then

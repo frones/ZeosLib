@@ -118,8 +118,7 @@ type
     procedure FetchRowCount; virtual;
 
   protected
-    procedure SetInParamCount(NewParamCount: Integer); override;
-
+    procedure SetInParamCount(const NewParamCount: Integer); override;
   public
     constructor Create(Connection: IZConnection; ProcName: string; Info: TStrings);
 
@@ -822,7 +821,7 @@ begin
   Result := GetMoreResults;
 
   if FPLainDriver.dbHasRetStat(FHandle) then
-    SoftVarManager.SetAsInteger(Temp, FPlainDriver.dbRetStatus(FHandle))
+    Temp := EncodeInteger(FPlainDriver.dbRetStatus(FHandle))
   else
     Temp := NullVariant;
   OutParamValues[0] := Temp; //set function RETURN_VALUE
@@ -987,7 +986,7 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'EXEC '+ ASQL);
 end;
 
-procedure TZDBLibCallableStatement.SetInParamCount(NewParamCount: Integer);
+procedure TZDBLibCallableStatement.SetInParamCount(const NewParamCount: Integer);
 begin
   inherited SetInParamCount(NewParamCount);
 

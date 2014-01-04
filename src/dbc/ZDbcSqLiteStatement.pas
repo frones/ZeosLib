@@ -99,7 +99,7 @@ type
   {$ENDIF}
 
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
@@ -131,7 +131,7 @@ type
 implementation
 
 uses
-  Types{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}, ZDbcSqLiteUtils,
+  {$IFDEF WITH_UNITANSISTRINGS} AnsiStrings,{$ENDIF} ZDbcSqLiteUtils,
   ZDbcSqLiteResultSet, ZSysUtils, ZEncoding, ZMessages, ZDbcCachedResultSet,
   ZDbcUtils;
 
@@ -217,7 +217,7 @@ begin
     if FPlainDriver.column_count(StmtHandle) > 0 then
       Result := CreateResultSet(StmtHandle, ErrorCode)
     else
-      FPlainDriver.Finalize(StmtHandle); //finalize handle else: Databae is locked happens on close connection
+      FPlainDriver.Finalize(StmtHandle); //finalize handle else: Database is locked happens on close connection
   except
     FPlainDriver.Finalize(StmtHandle);
     raise;
@@ -241,7 +241,7 @@ var
   ErrorMessage: PAnsichar;
 begin
   ASQL := SQL; //preprepares SQL
-  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage);
+  ErrorCode := FPlainDriver.Execute(FHandle, PAnsiChar(ASQL), nil, nil,ErrorMessage{%H-});
   CheckSQLiteError(FPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, ASQL, ConSettings);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   Result := FPlainDriver.Changes(FHandle);
@@ -291,6 +291,7 @@ begin
   begin
     Result := True;
     LastResultSet := CreateResultSet(StmtHandle, ErrorCode);
+    FOpenResultset := Pointer(LastResultset);
   end
   else { Processes regular query. }
   begin
@@ -663,6 +664,7 @@ begin
   begin
     Result := True;
     LastResultSet := CreateResultSet(FStmtHandle, FErrorCode);
+    FOpenResultset := Pointer(LastResultset);
   end
   { Processes regular query. }
   else

@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(DELPHI) and defined(MSWINDOWS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcConnection, ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer,
   ZGenericSqlAnalyser, ZURL, ZPlainDriver, ZCompatibility;
@@ -221,7 +221,7 @@ var
 implementation
 
 uses
-  ZFastCode, ZMessages, ZSysUtils, ZDbcUtils, ZDbcPostgreSqlStatement,
+  ZFastCode, ZMessages, ZSysUtils, ZDbcPostgreSqlStatement,
   ZDbcPostgreSqlUtils, ZDbcPostgreSqlMetadata, ZPostgreSqlToken,
   ZPostgreSqlAnalyser, ZEncoding;
 
@@ -614,7 +614,7 @@ end;
 function TZPostgreSQLConnection.EncodeBinary(const Value: TBytes): RawByteString;
 var Temp: RawByteString;
 begin
-  ZSetString(PAnsiChar(Value), Length(Value), Temp);
+  ZSetString(PAnsiChar(Value), Length(Value), Temp{%H-});
   Result := EncodeBinary(Temp);
 end;
 {**
@@ -1242,8 +1242,8 @@ end;
 function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TBytes): String;
 var Tmp: RawByteString;
 begin
-  ZSetString(PAnsiChar(Value), Length(Value), Tmp);
-  Result := String(EncodeBinary(Tmp));
+  ZSetString(PAnsiChar(Value), Length(Value), Tmp{%H-});
+  Result := PosEmptyASCII7ToString(EncodeBinary(Tmp));
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;
@@ -1258,9 +1258,11 @@ end;
 }
 function TZPostgreSQLConnection.GetEscapeString(const Value: ZWideString): ZWideString;
 begin
-  Result := GetPlainDriver.EscapeString(FHandle, Value, ConSettings);
+  Result := ConSettings^.ConvFuncs.ZRawToUnicode(GetPlainDriver.EscapeString(FHandle, ConSettings.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP), ConSettings), ConSettings^.ClientCodePage^.CP);
+  {$IFDEF UNICODE}
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
+  {$ENDIF}
 end;
 
 function TZPostgreSQLConnection.GetEscapeString(const Value: RawByteString): RawByteString;

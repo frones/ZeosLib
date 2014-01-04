@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types, Contnrs{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Contnrs{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcResultSetMetadata, ZPlainSqLiteDriver,
   ZCompatibility, ZDbcCache, ZDbcCachedResultSet, ZDbcGenericResolver;
@@ -137,7 +137,7 @@ implementation
 
 uses
   ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
-  ZVariant, ZDbcSqLiteStatement
+  ZVariant
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -220,7 +220,7 @@ begin
       TypeName := FPlainDriver.column_decltype(FStmtHandle, i);
       if TypeName = nil then
         ColumnType := ConvertSQLiteTypeToSQLType(FPlainDriver.column_type_AsString(FStmtHandle, i),
-          FUndefinedVarcharAsStringLength, FieldPrecision, FieldDecimals,
+          FUndefinedVarcharAsStringLength, FieldPrecision{%H-}, FieldDecimals{%H-},
           ConSettings.CPType)
       else
         ColumnType := ConvertSQLiteTypeToSQLType(TypeName,
@@ -701,7 +701,7 @@ begin
         Len := ZFastCode.StrLen(Buffer);
 
         if (Len = ConSettings^.ReadFormatSettings.DateFormatLen) then
-          Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed)
+          Result := RawSQLDateToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed{%H-})
         else
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
             RawSQLTimeStampToDateTime(Buffer,  Len, ConSettings^.ReadFormatSettings, Failed));
@@ -745,7 +745,7 @@ begin
         Len := ZFastCode.StrLen(Buffer);
 
         if ((Buffer)+2)^ = ':' then //possible date if Len = 10 then
-          Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed)
+          Result := RawSQLTimeToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
         else
           Result := Frac(RawSQLTimeStampToDateTime(Buffer, Len,
             ConSettings^.ReadFormatSettings, Failed));
@@ -789,7 +789,7 @@ begin
         Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
         Len := ZFastCode.StrLen(Buffer);
 
-        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed);
+        Result := RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-});
       end;
       LastWasNull := Result = 0;
     end;

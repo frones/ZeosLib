@@ -61,9 +61,9 @@ uses
     Comobj,
   {$ENDIF}
 {$ENDIF}
-  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcConnection, ZDbcIntfs, ZCompatibility, ZDbcLogging, ZPlainDbLibDriver,
-  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL, ZPlainDriver;
+  ZPlainDbLibConstants, ZTokenizer, ZGenericSqlAnalyser, ZURL;
 
 type
   TDBLibProvider = (dpMsSQL, dpSybase);
@@ -156,7 +156,7 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
   ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding,
-  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF FPC}, ZClasses{$ENDIF};
+  ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF OLDFPC}, ZClasses{$ENDIF};
 
 { TZDBLibDriver }
 

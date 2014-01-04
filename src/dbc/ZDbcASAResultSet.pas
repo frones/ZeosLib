@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZPlainASADriver, ZCompatibility,
   ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZVariant;
@@ -984,7 +984,7 @@ var
   Len: Cardinal;
 begin
   inherited Create;
-  SQLData.ReadBlobToMem(ColId, Buffer, Len);
+  SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-});
   BlobSize := Len;
   BlobData := Buffer;
 end;
@@ -999,7 +999,7 @@ begin
   inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   InternalClear;
 
-  SQLData.ReadBlobToMem(ColId, Buffer, Len, False);
+  SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-}, False);
   (PAnsiChar(Buffer)+NativeUInt(Len))^ := #0; //add leading terminator
   BlobData := Buffer;
   BlobSize := Len+1;

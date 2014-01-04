@@ -268,7 +268,7 @@ function RandomString( Len: integer): string;
 implementation
 
 uses Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding;
+  ZFastCode, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcUtils;
 
 { TZASASQLDA }
 
@@ -1248,7 +1248,7 @@ begin
       DT_DOUBLE      : Result := PDouble(sqldata)^ <> 0;
       DT_VARCHAR:
          begin
-           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s{%H-});
            Result := RawToInt(s) = 1;
          end;
       DT_TINYINT,
@@ -1287,7 +1287,7 @@ begin
       DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s{%H-});
            Result := RawToInt(s);
          end;
       DT_TINYINT,
@@ -1429,7 +1429,7 @@ begin
       DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s{%H-});
            Result := RawToInt(s);
          end;
       DT_TINYINT,
@@ -1468,7 +1468,7 @@ begin
       DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s{%H-});
            Result := StrToInt64({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(s));
          end;
       DT_TINYINT,
@@ -1568,7 +1568,7 @@ begin
       DT_DOUBLE      : Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( PDouble(sqldata)^);
       DT_VARCHAR:
          begin
-           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s);
+           ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s{%H-});
            Result := RawToInt(s);
          end;
       DT_TINYINT,
@@ -1636,7 +1636,7 @@ begin
   CheckRange(Index);
   with FSQLDA.sqlvar[Index] do
   begin
-    VarClear(Result);
+    VarClear(Result{%H-});
     if (sqlind^ < 0) then
        Exit;
 

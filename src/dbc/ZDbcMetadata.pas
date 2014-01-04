@@ -99,8 +99,8 @@ type
   {** Implements Virtual ResultSet. }
   TZVirtualResultSet = class(TZAbstractCachedResultSet, IZVirtualResultSet)
   protected
-    procedure CalculateRowDefaults(RowAccessor: TZRowAccessor); override;
-    procedure PostRowUpdates(OldRowAccessor, NewRowAccessor: TZRowAccessor);
+    procedure CalculateRowDefaults({%H-}RowAccessor: TZRowAccessor); override;
+    procedure PostRowUpdates({%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
       override;
   public
     constructor CreateWithStatement(const SQL: string; Statement: IZStatement;
@@ -113,7 +113,6 @@ type
   {** Implements Abstract Database Metadata. }
 
   { TZAbstractDatabaseMetadata }
-
   TZAbstractDatabaseMetadata = class(TContainedObject, IZDatabaseMetadata)
   private
     FConnection: Pointer;
@@ -153,48 +152,48 @@ type
       write FCachedResultSets;
     property IC: IZIdentifierConvertor read FIC;
   protected
-    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; virtual;
+    function UncachedGetTables(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}TableNamePattern: string; const {%H-}Types: TStringDynArray): IZResultSet; virtual;
     function UncachedGetSchemas: IZResultSet; virtual;
     function UncachedGetCatalogs: IZResultSet; virtual;
     function UncachedGetTableTypes: IZResultSet; virtual;
-    function UncachedGetColumns(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const ColumnNamePattern: string): IZResultSet; virtual;
-    function UncachedGetTablePrivileges(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string): IZResultSet; virtual;
-    function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
-      const Table: string; const ColumnNamePattern: string): IZResultSet; virtual;
+    function UncachedGetColumns(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}TableNamePattern: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
+    function UncachedGetTablePrivileges(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}TableNamePattern: string): IZResultSet; virtual;
+    function UncachedGetColumnPrivileges(const {%H-}Catalog: string; const {%H-}Schema: string;
+      const {%H-}Table: string; const {%H-}ColumnNamePattern: string): IZResultSet; virtual;
 
-    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; virtual;
-    function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; virtual;
-    function UncachedGetExportedKeys(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; virtual;
-    function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
-      const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
-      const ForeignTable: string): IZResultSet; virtual;
-    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
-      Unique: Boolean; Approximate: Boolean): IZResultSet; virtual;
-    function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
-      const SequenceNamePattern: string): IZResultSet; virtual;
-    function UncachedGetTriggers(const Catalog: string; const SchemaPattern: string;
-      const TableNamePattern: string; const TriggerNamePattern: string): IZResultSet; virtual; //EgonHugeist
-    function UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
-      TableNamePattern, ColumnNamePattern: string): IZResultSet; virtual; //EgonHugeist
+    function UncachedGetPrimaryKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
+      const {%H-}Table: string): IZResultSet; virtual;
+    function UncachedGetImportedKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
+      const {%H-}Table: string): IZResultSet; virtual;
+    function UncachedGetExportedKeys(const {%H-}Catalog: string; const {%H-}Schema: string;
+      const {%H-}Table: string): IZResultSet; virtual;
+    function UncachedGetCrossReference(const {%H-}PrimaryCatalog: string; const {%H-}PrimarySchema: string;
+      const {%H-}PrimaryTable: string; const {%H-}ForeignCatalog: string; const {%H-}ForeignSchema: string;
+      const {%H-}ForeignTable: string): IZResultSet; virtual;
+    function UncachedGetIndexInfo(const {%H-}Catalog: string; const {%H-}Schema: string; const {%H-}Table: string;
+      {%H-}Unique: Boolean; {%H-}Approximate: Boolean): IZResultSet; virtual;
+    function UncachedGetSequences(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}SequenceNamePattern: string): IZResultSet; virtual;
+    function UncachedGetTriggers(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}TableNamePattern: string; const {%H-}TriggerNamePattern: string): IZResultSet; virtual; //EgonHugeist
+    function UncachedGetCollationAndCharSet(const {%H-}Catalog, {%H-}SchemaPattern,
+      {%H-}TableNamePattern, {%H-}ColumnNamePattern: string): IZResultSet; virtual; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; virtual; //EgonHugeist
-    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string): IZResultSet; virtual;
-    function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
-      const ProcedureNamePattern: string; const ColumnNamePattern: string):
+    function UncachedGetProcedures(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}ProcedureNamePattern: string): IZResultSet; virtual;
+    function UncachedGetProcedureColumns(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}ProcedureNamePattern: string; const {%H-}ColumnNamePattern: string):
       IZResultSet; virtual;
     function UncachedGetBestRowIdentifier(const Catalog: string; const Schema: string;
-      const Table: string; Scope: Integer; Nullable: Boolean): IZResultSet; virtual;
-    function UncachedGetVersionColumns(const Catalog: string; const Schema: string;
-      const Table: string): IZResultSet; virtual;
+      const Table: string; {%H-}Scope: Integer; {%H-}Nullable: Boolean): IZResultSet; virtual;
+    function UncachedGetVersionColumns(const {%H-}Catalog: string; const {%H-}Schema: string;
+      const {%H-}Table: string): IZResultSet; virtual;
     function UncachedGetTypeInfo: IZResultSet; virtual;
-    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
-      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; virtual;
+    function UncachedGetUDTs(const {%H-}Catalog: string; const {%H-}SchemaPattern: string;
+      const {%H-}TypeNamePattern: string; const {%H-}Types: TIntegerDynArray): IZResultSet; virtual;
   public
     constructor Create(Connection: TZAbstractConnection; const Url: TZURL); virtual;
     destructor Destroy; override;
@@ -332,7 +331,7 @@ type
     function SupportsAlterTableWithDropColumn: Boolean; virtual;
     function SupportsColumnAliasing: Boolean; virtual;
     function SupportsConvert: Boolean; virtual;
-    function SupportsConvertForTypes(FromType: TZSQLType; ToType: TZSQLType):
+    function SupportsConvertForTypes({%H-}FromType: TZSQLType; {%H-}ToType: TZSQLType):
       Boolean; virtual;
     function SupportsTableCorrelationNames: Boolean; virtual;
     function SupportsDifferentTableCorrelationNames: Boolean; virtual;
@@ -382,13 +381,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; virtual;
     function SupportsOpenStatementsAcrossRollback: Boolean; virtual;
     function SupportsTransactions: Boolean; virtual;
-    function SupportsTransactionIsolationLevel(Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
       Boolean; virtual;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; virtual;
     function SupportsDataManipulationTransactionsOnly: Boolean; virtual;
-    function SupportsResultSetType(_Type: TZResultSetType): Boolean; virtual;
-    function SupportsResultSetConcurrency(_Type: TZResultSetType;
-      Concurrency: TZResultSetConcurrency): Boolean; virtual;
+    function SupportsResultSetType(const {%H-}_Type: TZResultSetType): Boolean; virtual;
+    function SupportsResultSetConcurrency(const {%H-}_Type: TZResultSetType;
+      const {%H-}Concurrency: TZResultSetConcurrency): Boolean; virtual;
     function SupportsBatchUpdates: Boolean; virtual;
     function SupportsNonEscapedSearchStrings: Boolean; virtual;
     function SupportsMilliSeconds: Boolean; virtual;
@@ -1677,7 +1676,7 @@ end;
   @see Connection
 }
 function TZAbstractDatabaseInfo.SupportsTransactionIsolationLevel(
-  Level: TZTransactIsolationLevel): Boolean;
+  const Level: TZTransactIsolationLevel): Boolean;
 begin
   Result := True;
 end;
@@ -1729,7 +1728,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAbstractDatabaseInfo.SupportsResultSetType(
-  _Type: TZResultSetType): Boolean;
+  const _Type: TZResultSetType): Boolean;
 begin
   Result := True;
 end;
@@ -1743,7 +1742,7 @@ end;
   @return <code>true</code> if so; <code>false</code> otherwise
 }
 function TZAbstractDatabaseInfo.SupportsResultSetConcurrency(
-  _Type: TZResultSetType; Concurrency: TZResultSetConcurrency): Boolean;
+  const _Type: TZResultSetType; const Concurrency: TZResultSetConcurrency): Boolean;
 begin
   Result := True;
 end;
@@ -2133,8 +2132,6 @@ end;
 }
 function TZAbstractDatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
-const
-  Spaces = '';
 var
   WorkPattern: string;
 begin

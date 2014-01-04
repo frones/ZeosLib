@@ -58,7 +58,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZVariant, ZDbcIntfs, ZDbcCache, ZDbcCachedResultSet, ZCompatibility,
-  ZSelectSchema, ZClasses, ZCollections;
+  ZSelectSchema, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZCollections;
 
 type
 
@@ -154,7 +154,7 @@ type
     function FormWhereClause(Columns: TObjectList;
       OldRowAccessor: TZRowAccessor): string; virtual;
     function FormInsertStatement(Columns: TObjectList;
-      NewRowAccessor: TZRowAccessor): string;
+      {%H-}NewRowAccessor: TZRowAccessor): string;
     function FormUpdateStatement(Columns: TObjectList;
       OldRowAccessor, NewRowAccessor: TZRowAccessor): string;
     function FormDeleteStatement(Columns: TObjectList;
@@ -168,10 +168,10 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); virtual;
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet;
-      UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
+      {%H-}UpdateType: TZRowUpdateType;
+      {%H-}OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
-    procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor); //FOS+ 07112006
+    procedure RefreshCurrentRow(Sender: IZCachedResultSet;{%H-}RowAccessor: TZRowAccessor); //FOS+ 07112006
 
   end;
 

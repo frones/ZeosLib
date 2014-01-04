@@ -299,7 +299,7 @@ type
     property DoNotCloseResultset: Boolean read FDoNotCloseResultset;
   protected
     { Abstracts methods }
-    procedure InternalAddRecord(Buffer: Pointer; Append: Boolean); override;
+    procedure InternalAddRecord({%H-}Buffer: Pointer; {%H-}Append: Boolean); override;
     procedure InternalDelete; override;
     procedure InternalPost; override;
     {$IFNDEF FPC}
@@ -328,7 +328,7 @@ type
 {$IFDEF WITH_FTDATASETSUPPORT}
     function CreateNestedDataSet(DataSetField: TDataSetField): TDataSet; override;
 {$ENDIF}
-    procedure CloseBlob(Field: TField); override;
+    procedure CloseBlob({%H-}Field: TField); override;
     function CreateStatement(const SQL: string; Properties: TStrings):
       IZPreparedStatement; virtual;
     function CreateResultSet(const SQL: string; MaxRows: Integer):
@@ -419,7 +419,7 @@ type
     function PSGetQuoteChar: string; override;
     function PSGetKeyFields: string; override;
     function PSExecuteStatement(const ASQL: string; AParams: TParams;
-      ResultSet: Pointer = nil): Integer; override;
+      {%H-}ResultSet: Pointer = nil): Integer; override;
     procedure PSSetCommandText(const CommandText: string); override;
     {$ENDIF}
     function PSGetUpdateException(E: Exception;
@@ -427,8 +427,8 @@ type
     function PSIsSQLBased: Boolean; override;
     function PSIsSQLSupported: Boolean; override;
     procedure PSReset; override;
-    function PSUpdateRecord(UpdateKind: TUpdateKind;
-      Delta: TDataSet): Boolean; override;
+    function PSUpdateRecord({%H-}UpdateKind: TUpdateKind;
+      {%H-}Delta: TDataSet): Boolean; override;
     procedure PSExecute; override;
     function PSGetParams: TParams; override;
     procedure PSSetParams(AParams: TParams); override;
@@ -781,7 +781,7 @@ var
   UTF8: UTF8String;
   L: Integer;
 begin
-  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result);
+  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result{%H-});
   if Result then
     Buffer^ := #0
   else
@@ -798,7 +798,7 @@ var
   L: Integer;
   Ansi: AnsiString;
 begin
-  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result);
+  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result{%H-});
   if Result then
     Buffer^ := #0
   else
@@ -815,7 +815,7 @@ var
   Ansirec: TZAnsiRec;
   L: Integer;
 begin
-  Ansirec := RowAccessor.GetAnsiRec(ColumnIndex, Result);
+  Ansirec := RowAccessor.GetAnsiRec(ColumnIndex, Result{%H-});
   if Result then
     Buffer^ := #0
   else
@@ -1659,7 +1659,7 @@ var
   WideRec: TZWideRec;
   {$ENDIF}
 begin
-  if GetActiveBuffer(RowBuffer) then
+  if GetActiveBuffer(RowBuffer{%H-}) then
   begin
     {$IFNDEF WITH_ZSTRINGFIELDS}
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
@@ -1676,7 +1676,7 @@ begin
           begin
             if Field.DataType <> ftTime then
               DateTimeToNative(Field.DataType,
-                RowAccessor.GetTimestamp(ColumnIndex, Result), Buffer)
+                RowAccessor.GetTimestamp(ColumnIndex, Result{%H-}), Buffer)
             else
               DateTimeToNative(Field.DataType,
                 RowAccessor.GetTime(ColumnIndex, Result), Buffer);
@@ -1801,7 +1801,7 @@ begin
   if not (State in dsWriteModes) then
     DatabaseError(SNotEditing, Self);
 
-  if GetActiveBuffer(RowBuffer) then
+  if GetActiveBuffer(RowBuffer{%H-}) then
   begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;
@@ -3343,7 +3343,7 @@ begin
 
   Result := nil;
   if (Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}])
-    and GetActiveBuffer(RowBuffer) then
+    and GetActiveBuffer(RowBuffer{%H-}) then
   begin
     ColumnIndex := DefineFieldIndex(FieldsLookupTable, Field);
     RowAccessor.RowBuffer := RowBuffer;

@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
   ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
   ZDbcPostgreSql;
 
@@ -108,7 +108,7 @@ type
   end;
   {$ENDIF}
 
-  TZPostgreSQLPreparedStatement = class(TZAbstractRealPreparedStatement)
+  TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
   private
     FRawPlanName: RawByteString;
     FPostgreSQLConnection: IZPostgreSQLConnection;
@@ -202,8 +202,8 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZTokenizer, ZEncoding, ZDbcUtils;
+  ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
+  ZEncoding, ZDbcUtils;
 
 { TZPostgreSQLStatement }
 
@@ -475,7 +475,7 @@ begin
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
-  FRawPlanName := IntToRaw(Hash(ASQL)+Cardinal(FStatementId)+NativeUInt(FConnectionHandle));
+  FRawPlanName := IntToRaw(Hash(ASQL)+Cardinal(FStatementId)+{%H-}NativeUInt(FConnectionHandle));
 end;
 
 function TZPostgreSQLPreparedStatement.CreateResultSet(QueryHandle: Pointer): IZResultSet;

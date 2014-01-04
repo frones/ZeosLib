@@ -59,7 +59,7 @@ uses
   SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Types,
   ZDbcIntfs, ZDbcStatement, ZPlainFirebirdDriver, ZCompatibility,
   ZPlainFirebirdInterbaseConstants, ZDbcCachedResultSet, ZDbcLogging, ZMessages,
-  ZVariant, ZTokenizer;
+  ZVariant;
 
 type
   { Interbase Statement Type }
@@ -245,17 +245,16 @@ function PrepareStatement(const PlainDriver: IZInterbasePlainDriver;
   const Dialect: Word; const SQL: RawByteString; const ConSettings: PZConSettings;
   var StmtHandle: TISC_STMT_HANDLE): TZIbSqlStatementType;
 procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const Dialect: Word; const SQL: RawByteString;
+  const Dialect: Word; const SQL: RawByteString;
   var StmtHandle: TISC_STMT_HANDLE; const SqlData: IZSQLDA;
   const ConSettings: PZConSettings); overload;
 procedure PrepareParameters(const PlainDriver: IZInterbasePlainDriver;
   const SQL: RawByteString; const Dialect: Word; var StmtHandle: TISC_STMT_HANDLE;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings);
-procedure BindSQLDAInParameters(const PlainDriver: IZInterbasePlainDriver;
-  const ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
-  const InParamTypes: TZSQLTypeArray; const InParamCount: Integer;
-  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
-  const CodePageArray: TWordDynArray);
+procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
+  InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
+  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
+  const ConSettings: PZConSettings; const CodePageArray: TWordDynArray);
 procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
   StatementHandle: TISC_STMT_HANDLE; Options : Word);
 function GetStatementType(const PlainDriver: IZInterbasePlainDriver;
@@ -400,7 +399,7 @@ const
 implementation
 
 uses
-  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZEncoding
+  ZFastCode, Variants, ZSysUtils, Math, ZDbcInterbase6, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -856,7 +855,7 @@ end;
    @param SqlData a interbase sql result data
 }
 procedure PrepareResultSqlData(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const Dialect: Word; const SQL: RawByteString;
+  const Dialect: Word; const SQL: RawByteString;
   var StmtHandle: TISC_STMT_HANDLE; const SqlData: IZSQLDA;
   const ConSettings: PZConSettings);
 var
@@ -988,11 +987,10 @@ begin
   ParamSqlData.InitFields(True);
 end;
 
-procedure BindSQLDAInParameters(const PlainDriver: IZInterbasePlainDriver;
-  const ClientVarManager: IZClientVariantManager; InParamValues: TZVariantDynArray;
-  const InParamTypes: TZSQLTypeArray; const InParamCount: Integer;
-  const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
-  const CodePageArray: TWordDynArray);
+procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
+  InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
+  const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
+  const ConSettings: PZConSettings; const CodePageArray: TWordDynArray);
 var
   I, CP: Integer;
   TempBlob: IZBlob;
@@ -1172,7 +1170,7 @@ begin
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
 
   { get blob info }
-  GetBlobInfo(PlainDriver, BlobHandle, BlobInfo, ConSettings);
+  GetBlobInfo(PlainDriver, BlobHandle, BlobInfo{%H-}, ConSettings);
   BlobSize := BlobInfo.TotalSize;
   Size := BlobSize;
 
@@ -2556,7 +2554,7 @@ begin
     if (CurPos + SegLen > Len) then
       SegLen := Len - CurPos;
     if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
-      Pointer(NativeUInt(Buffer)+NativeUInt(CurPos))) > 0 then
+      Pointer({%H-}NativeUInt(Buffer)+NativeUInt(CurPos))) > 0 then
       CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
     Inc(CurPos, SegLen);
   end;

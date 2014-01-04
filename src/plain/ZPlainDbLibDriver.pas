@@ -226,7 +226,7 @@ type
     function dbSetLApp(Login: PLOGINREC; AppName: PAnsiChar): RETCODE;
     function dbSetLNatLang(Login: PLOGINREC; NatLangName: PAnsiChar): RETCODE;
     function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE;
-    function dbSetLSecure(Login: PLOGINREC): RETCODE;
+    function dbSetLSecure({%H-}Login: PLOGINREC): RETCODE;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
@@ -267,7 +267,7 @@ type
     function dbRetData(dbProc: PDBPROCESS; RetNum: DBINT): Pointer;
     function dbRetLen(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
     function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
-    function dbrbuf(Proc: PDBPROCESS): DBINT;
+    function dbrbuf({%H-}Proc: PDBPROCESS): DBINT;
     function dbdataready(Proc: PDBPROCESS): LongBool;
   end;
 
@@ -289,11 +289,11 @@ type
 
     function dbDead(dbProc: PDBPROCESS): Boolean; override;
     procedure dbLoginFree(Login: PLOGINREC); override;
-    function dbSetLCharSet(Login: PLOGINREC; CharsetName: PAnsiChar): RETCODE; override;
+    function dbSetLCharSet({%H-}Login: PLOGINREC; {%H-}CharsetName: PAnsiChar): RETCODE; override;
     function dbSetLSecure(Login: PLOGINREC): RETCODE; override;
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; override;
     function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
-    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; Int_Param: DBINT = -1): RETCODE; override;
+    function dbSetOpt(dbProc: PDBPROCESS; Option: DBINT; Char_Param: PAnsiChar = nil; {%H-}Int_Param: DBINT = -1): RETCODE; override;
     function dbClose(dbProc: PDBPROCESS): RETCODE; override;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; override;
 
@@ -382,7 +382,7 @@ type
     constructor Create; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    function dbsetlversion(Login: PLOGINREC): RETCODE; override;
+    function dbsetlversion({%H-}Login: PLOGINREC): RETCODE; override;
     function dbsetversion: RETCODE; override;
   end;
 
