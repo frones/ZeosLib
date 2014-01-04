@@ -282,6 +282,12 @@ begin
   if not Prepared then
     Prepare;
 
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
+
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
     FInVars, InParamValues, ChunkSize);
@@ -296,6 +302,7 @@ begin
     LastResultSet := CreateOracleResultSet(FPlainDriver, Self,
       SQL, Handle, ErrorHandle);
     Result := LastResultSet <> nil;
+    FOpenResultSet := Pointer(LastResultSet);
   end
   else
   begin
@@ -326,6 +333,12 @@ begin
   if not Prepared then
     Prepare;
 
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
+
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
     FInVars, InParamValues,ChunkSize);
@@ -333,6 +346,8 @@ begin
   { Executes the statement and gets a resultset. }
   Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
     Handle, ErrorHandle);
+
+  FOpenResultSet := Pointer(Result);
 
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
 
@@ -358,6 +373,12 @@ begin
   { Prepares a statement. }
   if not Prepared then
     Prepare;
+
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
 
   { Loads binded variables with values. }
   LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
