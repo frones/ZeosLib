@@ -61,6 +61,9 @@ uses
 
 type
   {** Implements a test case for . }
+
+  { TZGenericTestDbcResultSet }
+
   TZGenericTestDbcResultSet = class(TZAbstractDbcSQLTestCase)
   private
   protected
@@ -74,6 +77,7 @@ type
     procedure TestStoredResultSet;
     procedure TestLastQuery;
     procedure TestNotNullValues;
+    procedure TestConcurrency;
   end;
 
 implementation
@@ -1019,6 +1023,34 @@ begin
   finally
     if Assigned(Statement) then
       Statement.Close;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestConcurrency;
+var
+  Statement: IZStatement;
+  ResultSet1: IZResultSet;
+  ResultSet2: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+
+  try
+    ResultSet1 := Statement.ExecuteQuery('select * from people');
+    ResultSet2 := Statement.ExecuteQuery('select * from equipment');
+    try
+      Check(ResultSet1.Next);
+      Check(ResultSet2.Next);
+      Check(ResultSet1.Next);
+      Check(ResultSet2.Next);
+      Check(ResultSet1.Next);
+      Check(ResultSet2.Next);
+    finally
+      ResultSet1.Close;
+      ResultSet2.Close;
+    end;
+  finally
+    Statement.Close;
   end;
 end;
 

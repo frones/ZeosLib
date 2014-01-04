@@ -462,7 +462,7 @@ function TZOracleConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZOracleStatement.Create(GetPlainDriver, Self, Info);
+  Result := TZOraclePreparedStatement.Create(GetPlainDriver, Self, '', Info);
 end;
 
 {**

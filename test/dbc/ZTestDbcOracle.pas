@@ -72,7 +72,6 @@ type
     procedure TestResultSet;
     procedure TestLongObjects;
     procedure TestPreparedStatement;
-    procedure TestConcurrecy;
     procedure TestEmptyBlob;
     procedure TestNumbers;
     procedure TestLargeBlob;
@@ -606,38 +605,6 @@ begin
     PStatement := Connection.PrepareStatement(
     'DELETE FROM string_values WHERE s_id=' + IntToStr(TEST_ROW_ID));
     PStatement.ExecuteUpdatePrepared;
-  end;
-end;
-
-
-{**
-  Runs a test for concurrent data read.
-}
-procedure TZTestDbcOracleCase.TestConcurrecy;
-var
-  Statement: IZStatement;
-  ResultSet1: IZResultSet;
-  ResultSet2: IZResultSet;
-begin
-  Statement := Connection.CreateStatement;
-  CheckNotNull(Statement);
-
-  try
-    ResultSet1 := Statement.ExecuteQuery('select * from people');
-    ResultSet2 := Statement.ExecuteQuery('select * from equipment');
-    try
-      Check(ResultSet1.Next);
-      Check(ResultSet2.Next);
-      Check(ResultSet1.Next);
-      Check(ResultSet2.Next);
-      Check(ResultSet1.Next);
-      Check(ResultSet2.Next);
-    finally
-      ResultSet1.Close;
-      ResultSet2.Close;
-    end;
-  finally
-    Statement.Close;
   end;
 end;
 
