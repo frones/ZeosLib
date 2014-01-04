@@ -257,7 +257,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Нndice de texto "%s" da variбvel de limite nгo existe';
   cSBindVarOutOfRange      = 'Нndice da variбvel de limite fora de alcance: %d';
   cSFailedToBindResults    = 'A Aplicaзгo falhou ao tratar o result set';
-
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'O mйtodo RefreshRow somente й suportado com um update object';
   cSMustBeInBrowseMode = 'A Operaзгo й permitida somente no modo dsBrowse';
@@ -422,6 +422,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Tekst index van bound variable bestaat niet: "%s"';
   cSBindVarOutOfRange      = 'Bound variable index buiten bereik: %d';
   cSFailedToBindResults    = 'Binding van resultaat mislukt';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'De refreshrow methode is enkel ondersteund vooreen update object';
   cSMustBeInBrowseMode = 'Bewerking is enkel toegestaan in dsBROWSE status';
@@ -588,6 +589,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   cSBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
   cSFailedToBindResults    = 'Translate: Application failed to bind to the result set';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   cSMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -753,6 +755,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   cSBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
   cSFailedToBindResults    = 'Translate: Application failed to bind to the result set';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   cSMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -918,6 +921,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Translate: Bound variable text index "%s" does not exist';
   cSBindVarOutOfRange      = 'Translate: Bound variable index out of range: %d';
   cSFailedToBindResults    = 'Translate: Application failed to bind to the result set';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'TRANSLATE: The refreshrow method is only supported with an update object';
   cSMustBeInBrowseMode = 'TRANSLATE: Operation is only allowed in dsBROWSE state';
@@ -1080,6 +1084,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Teks variabel indeks "%s" tidak ada';
   cSBindVarOutOfRange      = 'Variabel indeks diluar jangkauan: %d';
   cSFailedToBindResults    = 'Aplikasi gagal pada penggabungan ke Resultset';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'Metode RefreshRow hanya didukung oleh obyek Update';
   cSMustBeInBrowseMode = 'Operasi hanya diperbolehkan pada status dsBrowse';
@@ -1245,6 +1250,7 @@ resourcestring
   cSBoundVarStrIndexMissing                 = 'Ограничение на текст с индексом "%s" не существует';
   cSBindVarOutOfRange                       = 'Индекс ограничения вышел за границы : %d';
   cSFailedToBindResults                     = 'Неудалось связать(bind) результат выполнения';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
   cSRefreshRowOnlySupportedWithUpdateObject = 'Метод обновления строки (RefreshRow) поддерживается только при обновлении объекта';
   cSMustBeInBrowseMode                      = 'Операция поддерживает только в режиме просмотра (dsBROWSE)';
@@ -1411,6 +1417,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Index textovй promмnй "%s" neexistuje';
   cSBindVarOutOfRange      = 'Index promenй je mimo rozsah: %d';
   cSFailedToBindResults    = 'Aplikace selhala pшi zнskбvбnн vэsledkщ dotazu';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
 //FOS+ 07112006
   cSRefreshRowOnlySupportedWithUpdateObject = 'Metoda "refreshrow" je podporovбna pouze v "update object"';
@@ -1579,6 +1586,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Nie istnieje zmienna licznikowa "%s"';
   cSBindVarOutOfRange      = 'Wartoњж zmiennej licznikowej poza zakresem: %d';
   cSFailedToBindResults    = 'Bі№d aplikacji podczas і№czenia do wynikуw zapytania';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
 //FOS+ 07112006
   cSRefreshRowOnlySupportedWithUpdateObject = 'Metoda refreshrow jest obsіugiwana tylko przez obiekt typu "update"';
@@ -1744,6 +1752,7 @@ resourcestring
   cSBoundVarStrIndexMissing = 'Bound variable text index "%s" does not exist';
   cSBindVarOutOfRange      = 'Bound variable index out of range: %d';
   cSFailedToBindResults    = 'Application failed to bind to the result set';
+  cSPreviousResultStillOpen = 'Previous resultset of this statement is still open';
 
 //FOS+ 07112006
   cSRefreshRowOnlySupportedWithUpdateObject = 'The refreshrow method is only supported with an update object';
@@ -1929,6 +1938,7 @@ var
   SBoundVarStrIndexMissing: String;
   SBindVarOutOfRange: String;
   SFailedToBindResults: String;
+  SPreviousResultStillOpen: String;
 
 
   SRefreshRowOnlySupportedWithUpdateObject: String;
@@ -2098,7 +2108,7 @@ begin
   SBoundVarStrIndexMissing := cSBoundVarStrIndexMissing;
   SBindVarOutOfRange := cSBindVarOutOfRange;
   SFailedToBindResults := cSFailedToBindResults;
-
+  SPreviousResultStillOpen := cSPreviousResultStillOpen;
 
   SRefreshRowOnlySupportedWithUpdateObject := cSRefreshRowOnlySupportedWithUpdateObject;
   SMustBeInBrowseMode := cSMustBeInBrowseMode;
