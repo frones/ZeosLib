@@ -58,7 +58,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
-  ZPlainDriver;
+  ZPlainDriver, ZDbcUtils;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -211,6 +211,7 @@ type
     FCachedQueryUni: TUnicodeDynArray;
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
+    FIsPraparable: Boolean;
     function GetInParamValues: TZVariantDynArray;
     procedure SetInParamValues(const Values: TZVariantDynArray);
   protected
@@ -225,6 +226,7 @@ type
     procedure LogPrepStmtMessage(Category: TZLoggingCategory; const Msg: RawByteString = '');
     function GetInParamLogValue(Value: TZVariant): RawByteString;
     function GetOmitComments: Boolean; virtual;
+    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
 
     property ExecCount: Integer read FExecCount;
     property InParamValues: TZVariantDynArray read GetInParamValues write SetInParamValues;
@@ -237,6 +239,7 @@ type
     property CachedQueryUni: TUnicodeDynArray read FCachedQueryUni;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
+    property IsPreparable: Boolean read FIsPraparable;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
   public
@@ -436,7 +439,7 @@ type
 
 implementation
 
-uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections, ZDbcUtils,
+uses ZFastCode, ZSysUtils, ZMessages, ZDbcResultSet, ZCollections,
   ZEncoding;
 
 var
@@ -2137,7 +2140,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetOmitComments);
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryRaw) do
@@ -2154,7 +2157,7 @@ begin
   begin
     {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF} := SQL;
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni({$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
-      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetOmitComments);
+      Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected, GetCompareFirstKeywordStrings, @FIsPraparable);
 
     Result := ''; //init Result
     for I := 0 to High(FCachedQueryUni) do
@@ -2203,6 +2206,11 @@ end;
 function TZAbstractPreparedStatement.GetOmitComments: Boolean;
 begin
   Result := False;
+end;
+
+function TZAbstractPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
+begin
+  Result := nil;
 end;
 
 { TZAbstractCallableStatement }
@@ -3042,7 +3050,7 @@ begin
     FCachedQueryRaw := ZDbcUtils.TokenizeSQLQueryRaw(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      GetOmitComments, FNeedNCharDetection);
+      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
 
 {**
@@ -3055,7 +3063,7 @@ begin
     FCachedQueryUni := ZDbcUtils.TokenizeSQLQueryUni(
         {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF}, ConSettings,
       Connection.GetDriver.GetTokenizer, FIsParamIndex, FNCharDetected,
-      GetOmitComments, FNeedNCharDetection);
+      GetCompareFirstKeywordStrings, @FIsPraparable, FNeedNCharDetection);
 end;
 
 {**

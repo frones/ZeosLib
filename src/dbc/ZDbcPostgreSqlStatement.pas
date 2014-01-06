@@ -59,7 +59,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainPostgreSqlDriver,
   ZCompatibility, ZVariant, ZDbcGenericResolver, ZDbcCachedResultSet,
-  ZDbcPostgreSql;
+  ZDbcPostgreSql, ZDbcUtils;
 
 type
   TEICategory = (eicExecute, eicPrepStmt, eicExecPrepStmt, eicUnprepStmt);
@@ -82,7 +82,7 @@ type
     function PrepareAnsiSQLQuery: RawByteString;
     function GetDeallocateSQL: RawByteString; virtual; abstract;
     function GetPrepareSQLPrefix: RawByteString; virtual; abstract;
-    function GetOmitComments: Boolean; override;
+    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
@@ -170,7 +170,9 @@ implementation
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZSysUtils, ZFastCode, ZMessages, ZDbcPostgreSqlResultSet, ZDbcPostgreSqlUtils,
-  ZEncoding, ZDbcUtils;
+  ZEncoding;
+
+var PGPreparableTokens: TPreparablePrefixTokens;
 
 { TZPostgreSQLPreparedStatement }
 
@@ -190,7 +192,6 @@ begin
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
-  FRawPlanName := IntToRaw(Hash(ASQL))+IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle));
 end;
 
 constructor TZPostgreSQLPreparedStatement.Create(
@@ -383,17 +384,10 @@ procedure TZPostgreSQLPreparedStatement.Prepare;
 var
   TempSQL: RawByteString;
   N, I: Integer;
-  S: String;
-  RealPrepareable: Boolean;
 begin
   if not Prepared then
   begin
-    S := UpperCase(Copy(TrimLeft(SQL), 1, 8));
-    //RealPrepared stmts:
-      //http://www.postgresql.org/docs/9.1/static/sql-prepare.html
-    RealPrepareable := (S = 'SELECT') or (S = 'INSERT') or (S = 'UPDATE') or
-      (S = 'DELETE') or (S = 'VALUES');
-
+    FRawPlanName := IntToRaw(Hash(ASQL))+IntToRaw(FStatementId)+IntToRaw({%H-}NativeUInt(FConnectionHandle));
     TempSQL := GetPrepareSQLPrefix;
     N := 0;
     for I := 0 to High(CachedQueryRaw) do
@@ -404,43 +398,33 @@ begin
       end else
         TempSQL := TempSQL + CachedQueryRaw[i];
 
-  { EgonHugeist: assume automated Prepare after third execution. That's the way
-    the JDBC Drivers go too... }
-    if RealPrepareable then
-    begin
-      if ( N > 0 ) or ( ExecCount > 2 ) then //prepare only if Params are available or certain executions expected
-      begin
-        QueryHandle := ExecuteInternal(TempSQL, eicPrepStmt);
-        if not (Findeterminate_datatype) then
-          FPlainDriver.Clear(QueryHandle);
-        inherited Prepare;
-      end
-    end
+    if IsPreparable then //detected after tokenizing the query
+      QueryHandle := ExecuteInternal(TempSQL, eicPrepStmt)
     else
-    begin
       Findeterminate_datatype := True;
-      inherited Prepare;
-    end;
+    inherited Prepare; //we need this step always for Set(A/W)SQL overloads if SQL changes
   end;
 end;
 
-function TZPostgreSQLPreparedStatement.GetOmitComments: Boolean;
+function TZPostgreSQLPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
 begin
-  Result := True;
+{ RealPrepared stmts:
+  http://www.postgresql.org/docs/9.1/static/sql-prepare.html }
+  Result := PGPreparableTokens;
 end;
 
 procedure TZPostgreSQLPreparedStatement.Unprepare;
 begin
   if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
   begin
-    inherited Unprepare;
-    if (not Findeterminate_datatype)  then
+    if not Findeterminate_datatype then
     begin
       QueryHandle := ExecuteInternal(GetDeallocateSQL, eicUnprepStmt);
       FPlainDriver.Clear(QueryHandle);
       FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
     end;
   end;
+  inherited Unprepare;
 end;
 
 { TZPostgreSQLClassicPreparedStatement }
@@ -469,10 +453,18 @@ begin
     eicPrepStmt:
       begin
         Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
-        Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
-          FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
+        try
+          Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
+            FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
+        except
+          Unprepare; //free cached query tokens
+          raise;     // handle exception
+        end;
         if not Findeterminate_datatype then
+        begin
+          FPlainDriver.Clear(QueryHandle);
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
+        end;
       end;
     eicExecPrepStmt:
       begin
@@ -553,10 +545,18 @@ begin
       begin
         Result := FPlainDriver.Prepare(FConnectionHandle, FPRawPlanName,
           PAnsiChar(SQL), InParamCount, nil);
-        Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
-          FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
+        try
+          Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
+            FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
+        except
+          Unprepare; //free cached query tokens
+          raise;     // handle exception
+        end;
         if not Findeterminate_datatype then
+        begin
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
+          FPlainDriver.Clear(QueryHandle);
+        end;
       end;
     eicExecPrepStmt:
       begin
@@ -630,7 +630,7 @@ var
   end;
 
 begin
-  if InParamCount <> High(FPQparamValues)+1 then
+  if InParamCount <> Length(FPQparamValues) then
     raise EZSQLException.Create(SInvalidInputParameterCount);
 
   for ParamIndex := 0 to InParamCount -1 do
@@ -1006,7 +1006,16 @@ begin
     in [stUnknown, stBinaryStream, stUnicodeStream]);
 end;
 
+initialization
 
+{ RealPrepared stmts:
+  http://www.postgresql.org/docs/9.1/static/sql-prepare.html }
+SetLength(PGPreparableTokens, 5);
+PGPreparableTokens[0].MatchingGroup := 'SELECT';
+PGPreparableTokens[1].MatchingGroup := 'INSERT';
+PGPreparableTokens[2].MatchingGroup := 'UPDATE';
+PGPreparableTokens[3].MatchingGroup := 'DELETE';
+PGPreparableTokens[4].MatchingGroup := 'VALUES';
 
 end.
 
