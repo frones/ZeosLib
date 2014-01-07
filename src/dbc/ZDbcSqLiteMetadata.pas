@@ -1305,6 +1305,7 @@ var
   Temp: string;
   Precision, Decimals: Integer;
   Temp_scheme: string;
+  ResSet: IZResultSet;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1313,8 +1314,10 @@ begin
   else
     Temp_scheme := SchemaPattern +'.';
 
-  with GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern])) do
+  ResSet := GetConnection.CreateStatement.ExecuteQuery(
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern]));
+  if ResSet <> nil then
+    with ResSet do
   begin
     while Next do
     begin
@@ -1353,7 +1356,7 @@ begin
       Result.UpdateNull(12);
       if Trim(GetString(5)) <> '' then
         Result.UpdateString(13, GetString(5))
-//          Result.UpdateString(13, '''' + GetString(5) + '''')
+  //          Result.UpdateString(13, '''' + GetString(5) + '''')
       else Result.UpdateNull(13);
       Result.UpdateNull(14);
       Result.UpdateNull(15);
@@ -1596,7 +1599,7 @@ function TZSQLiteDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
-  ResultSet: IZResultSet;
+  MainResultSet, ResultSet: IZResultSet;
   Temp_scheme: string;
 begin
     Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
@@ -1606,16 +1609,17 @@ begin
     else
       Temp_scheme := Schema +'.';
 
-    with GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table])) do
+    MainResultSet := GetConnection.CreateStatement.ExecuteQuery(
+      Format('PRAGMA %s index_list(''%s'')', [Temp_scheme, Table]));
+    if MainResultSet<>nil then
     begin
-      while Next do
+      while MainResultSet.Next do
       begin
-        if (Pos(' autoindex ', String(GetString(2))) = 0)
-          and ((Unique = False) or (GetInt(3) = 0)) then
+        if (Pos(' autoindex ', String(MainResultSet.GetString(2))) = 0)
+          and ((Unique = False) or (MainResultSet.GetInt(3) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
-            Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,GetString(2)]));
+            Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,MainResultSet.GetString(2)]));
           while ResultSet.Next do
           begin
             Result.MoveToInsertRow;
@@ -1625,9 +1629,9 @@ begin
             else Result.UpdateNull(1);
             Result.UpdateNull(2);
             Result.UpdateString(3, Table);
-            Result.UpdateBoolean(4, GetInt(3) = 0);
+            Result.UpdateBoolean(4, MainResultSet.GetInt(3) = 0);
             Result.UpdateNull(5);
-            Result.UpdateString(6, GetString(2));
+            Result.UpdateString(6, MainResultSet.GetString(2));
             Result.UpdateNull(7);
             Result.UpdateInt(8, ResultSet.GetInt(1) + 1);
             Result.UpdateString(9, ResultSet.GetString(3));
@@ -1641,7 +1645,7 @@ begin
           ResultSet.Close;
         end;
       end;
-      Close;
+      MainResultSet.Close;
     end;
 end;
 

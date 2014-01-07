@@ -136,7 +136,7 @@ implementation
 
 uses
   ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZMatchPattern, ZEncoding,
-  ZDbcLogging;
+  ZDbcLogging, ZDbcSqLiteStatement;
 
 { TZSQLiteResultSetMetadata }
 
@@ -300,11 +300,13 @@ begin
       lcOther, 'FINALIZE SQLite VM');
   end
   else
-  begin
-    ErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
-    FFetchingReady := True;
-  end;
+    if FStmtHandle <> nil then
+    begin
+      ErrorCode := FPlainDriver.reset(FStmtHandle);
+      FStmtHandle := nil;
+      CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode, nil, lcBindPrepStmt, 'Reset Prepared Stmt');
+      FFetchingReady := True;
+    end;
 end;
 
 {**
@@ -321,7 +323,10 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZSQLiteResultSet.Close;
+var stmt: IZSQLiteCAPIPreparedStatement;
 begin
+  if Assigned(Statement) and Supports(Statement, IZSQLiteCAPIPreparedStatement, stmt) then
+    stmt.FreeReference;
   inherited Close;
   FreeHandle;
 end;

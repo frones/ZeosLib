@@ -523,12 +523,12 @@ begin
     Exit;
 
   LogMessage := 'DISCONNECT FROM "'+Database+'"';
+  if Assigned(DriverManager) then
+    DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   ErrorCode := GetPlainDriver.Close(FHandle);
   CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil,
     lcOther, LogMessage);
   FHandle := nil;
-  if Assigned(DriverManager) then
-    DriverManager.LogMessage(lcDisconnect, PlainDriver.GetProtocol, LogMessage);
   inherited Close;
 end;
 

@@ -97,19 +97,27 @@ type
   end;
   {$ENDIF}
 
+  IZSQLiteCAPIPreparedStatement = Interface(IZPreparedStatement)
+    ['{CA05874D-E817-4523-B0AF-DBCDD0CF85CA}']
+    Procedure FreeReference;
+  end;
   {** Implements CAPI Prepared SQL Statement. }
-  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement)
+  TZSQLiteCAPIPreparedStatement = class(TZAbstractPreparedStatement,
+    IZSQLiteCAPIPreparedStatement)
   private
     FErrorCode: Integer;
     FHandle: Psqlite;
     FStmtHandle: Psqlite3_stmt;
     FPlainDriver: IZSQLitePlainDriver;
+    FOpenResultSet: Pointer;
     function CreateResultSet(const SQL: string; StmtHandle: Psqlite_vm;
        ColumnCount: Integer; ColumnNames: PPAnsiChar;
        ColumnValues: PPAnsiChar): IZResultSet;
   protected
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
+    procedure FreeReference;
+  protected //abstaction overrides
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
@@ -439,6 +447,7 @@ begin
   CachedResultSet.SetConcurrency(GetResultSetConcurrency);
 
   Result := CachedResultSet;
+  FOpenResultSet := Pointer(Result);
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.SetASQL(const Value: RawByteString);
@@ -453,6 +462,11 @@ begin
   if ( WSQL <> Value ) and Prepared then
     Unprepare;
   inherited SetWSQL(Value);
+end;
+
+procedure TZSQLiteCAPIPreparedStatement.FreeReference;
+begin
+  FOpenResultSet := nil;
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.PrepareInParameters;
@@ -609,7 +623,6 @@ end;
 
 procedure TZSQLiteCAPIPreparedStatement.Unprepare;
 begin
-  ClearParameters;
   if Assigned(FStmtHandle) then
     FErrorCode := FPlainDriver.Finalize(FStmtHandle)
   else
@@ -633,6 +646,10 @@ begin
   ColumnNames := nil;
   ColumnCount := 0;
   try
+    if FOpenResultSet <> nil then
+      IZResultSet(FOpenResultSet).Close; // reset stmt
+    FOpenResultSet := nil;
+
     BindInParameters;
     FErrorCode := FPlainDriver.Step(FStmtHandle, ColumnCount,
       ColumnValues, ColumnNames);
@@ -667,6 +684,9 @@ begin
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
     LastUpdateCount := Result;
   end;
+  { Autocommit statement. }
+  if Connection.GetAutoCommit then
+    Connection.Commit;
 end;
 
 function TZSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
@@ -711,7 +731,7 @@ begin
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
   end;
   { Autocommit statement. }
-  if Connection.GetAutoCommit then
+  if not Result and Connection.GetAutoCommit then
     Connection.Commit;
 
   inherited ExecutePrepared;

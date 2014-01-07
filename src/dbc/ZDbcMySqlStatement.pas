@@ -696,11 +696,9 @@ begin
 
   For I := 0 to InParamCount - 1 do
   begin
-{mdaems : merge of previous fix failed because of ClientVarManager
-          copying in the code with FUseDefaults to not forget it when rev 3000 gets merged in.
-    if (InParamValues[I].VType = vtNull) and FUseDefaults and (InParamDefaultValues[I] <> '') then
-      ClientVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2)); //extract quotes
-}
+    if (InParamValues[I].VType = vtNull) and (InParamDefaultValues[I] <> '') and
+      StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true')) then
+        SoftVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2));
     MyType := GetFieldType(InParamValues[I]);
     case MyType of
       FIELD_TYPE_VARCHAR:
