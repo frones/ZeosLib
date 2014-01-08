@@ -207,9 +207,9 @@ procedure CheckOracleError(const PlainDriver: IZOraclePlainDriver;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-  Statement: IZStatement; LogSQL: string; Handle: POCIStmt;
-  ErrorHandle: POCIError): IZResultSet; overload;
+function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
+  const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
+  const ErrorHandle: POCIError): IZResultSet; overload;
 
 {**
   Creates an Oracle result set based on the current settings.
@@ -780,9 +780,9 @@ end;
   Creates an Oracle result set based on the current settings.
   @return a created result set object.
 }
-function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
-  Statement: IZStatement; LogSQL: string; Handle: POCIStmt;
-  ErrorHandle: POCIError): IZResultSet;
+function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
+  const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
+  const ErrorHandle: POCIError): IZResultSet; overload;
 var
   NativeResultSet: TZOracleResultSet;
   CachedResultSet: TZCachedResultSet;
