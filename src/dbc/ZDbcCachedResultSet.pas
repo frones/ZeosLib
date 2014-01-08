@@ -2280,7 +2280,10 @@ var
   I: Integer;
   TempRow: PZRowBuffer;
 begin
-  Result := FResultSet.Next;
+  if Assigned(FResultSet) then
+    Result := FResultSet.Next
+  else
+    Result := False;
   if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then
     Exit;
 
