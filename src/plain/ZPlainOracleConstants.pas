@@ -396,6 +396,93 @@ const
   OCI_ATTR_OBJ_SCHEMA           = 135; // schema name
   OCI_ATTR_OBJ_ID               = 136; // top level schema object id
 
+  OCI_ATTR_TRANS_TIMEOUT        = 142; // transaction timeout
+  OCI_ATTR_SERVER_STATUS        = 143; // state of the server handle
+  OCI_ATTR_STATEMENT            = 144; // statement txt in stmt hdl
+
+  OCI_ATTR_DEQCOND              = 146; // dequeue condition
+  OCI_ATTR_RESERVED_2           = 147; // reserved
+
+
+  OCI_ATTR_SUBSCR_RECPT         = 148; // recepient of subscription
+  OCI_ATTR_SUBSCR_RECPTPROTO    = 149; // protocol for recepient
+
+  { For values 150 - 151, see DirPathAPI attribute section in this file }
+
+  OCI_ATTR_LDAP_HOST            = 153; //LDAP host to connect to
+  OCI_ATTR_LDAP_PORT            = 154; //LDAP port to connect to
+  OCI_ATTR_BIND_DN              = 155; //bind DN
+  OCI_ATTR_LDAP_CRED            = 156; //credentials to connect to LDAP
+  OCI_ATTR_WALL_LOC             = 157; // client wallet location
+  OCI_ATTR_LDAP_AUTH            = 158; // LDAP authentication method
+  OCI_ATTR_LDAP_CTX             = 159; // LDAP adminstration context DN
+  OCI_ATTR_SERVER_DNS           = 160; // list of registration server DNs
+
+  OCI_ATTR_DN_COUNT             = 161; // the number of server DNs
+  OCI_ATTR_SERVER_DN            = 162; // server DN attribute
+
+  OCI_ATTR_MAXCHAR_SIZE         = 163; // max char size of data
+
+  OCI_ATTR_CURRENT_POSITION     = 164; // for scrollable result sets
+
+// Added to get attributes for ref cursor to statement handle
+  OCI_ATTR_RESERVED_3           = 165; // reserved
+  OCI_ATTR_RESERVED_4           = 166; // reserved
+
+// For value 167, see DirPathAPI attribute section in this file
+
+  OCI_ATTR_DIGEST_ALGO          = 168; // digest algorithm
+  OCI_ATTR_CERTIFICATE          = 169; // certificate
+  OCI_ATTR_SIGNATURE_ALGO       = 170; // signature algorithm
+  OCI_ATTR_CANONICAL_ALGO       = 171; // canonicalization algo.
+  OCI_ATTR_PRIVATE_KEY          = 172; // private key
+  OCI_ATTR_DIGEST_VALUE         = 173; // digest value
+  OCI_ATTR_SIGNATURE_VAL        = 174; // signature value
+  OCI_ATTR_SIGNATURE            = 175; // signature
+
+// attributes for setting OCI stmt caching specifics in svchp
+  OCI_ATTR_STMTCACHESIZE        = 176; // size of the stm cache
+
+// --------------------------- Connection Pool Attributes ------------------
+  OCI_ATTR_CONN_NOWAIT          = 178;
+  OCI_ATTR_CONN_BUSY_COUNT      = 179;
+  OCI_ATTR_CONN_OPEN_COUNT      = 180;
+  OCI_ATTR_CONN_TIMEOUT         = 181;
+  OCI_ATTR_STMT_STATE           = 182;
+  OCI_ATTR_CONN_MIN             = 183;
+  OCI_ATTR_CONN_MAX             = 184;
+  OCI_ATTR_CONN_INCR            = 185;
+
+// For value 187, see DirPathAPI attribute section in this file
+
+  OCI_ATTR_NUM_OPEN_STMTS       = 188; // open stmts in session
+  OCI_ATTR_DESCRIBE_NATIVE      = 189; // get native info via desc
+
+  OCI_ATTR_BIND_COUNT           = 190; // number of bind postions
+  OCI_ATTR_HANDLE_POSITION      = 191; // pos of bind/define handle
+  OCI_ATTR_RESERVED_5           = 192; // reserverd
+  OCI_ATTR_SERVER_BUSY          = 193; // call in progress on server
+
+// For value 194, see DirPathAPI attribute section in this file
+
+// notification presentation for recipient
+  OCI_ATTR_SUBSCR_RECPTPRES     = 195;
+  OCI_ATTR_TRANSFORMATION       = 196; // AQ message transformation
+
+  OCI_ATTR_ROWS_FETCHED         = 197; // rows fetched in last call
+
+// --------------------------- Snapshot attributes -------------------------
+  OCI_ATTR_SCN_BASE             = 198; // snapshot base
+  OCI_ATTR_SCN_WRAP             = 199; // snapshot wrap
+
+// --------------------------- Miscellanous attributes ---------------------
+  OCI_ATTR_RESERVED_6           = 200; // reserved
+  OCI_ATTR_READONLY_TXN         = 201; // txn is readonly
+  OCI_ATTR_RESERVED_7           = 202; // reserved
+  OCI_ATTR_ERRONEOUS_COLUMN     = 203; // position of erroneous col
+  OCI_ATTR_RESERVED_8           = 204; // reserved
+  OCI_ATTR_ASM_VOL_SPRT         = 205; // ASM volume supported?
+
   // for inheritance - part 2
   OCI_ATTR_IS_FINAL_TYPE        = 279; //is final type ?
   OCI_ATTR_IS_INSTANTIABLE_TYPE = 280; //is instantiable type ?
@@ -526,12 +613,15 @@ const
   { OCI Statement Execute mode }
   OCI_BATCH_MODE        = $01;    // batch the oci statement for execution
   OCI_EXACT_FETCH       = $02;    // fetch the exact rows specified
-  OCI_SCROLLABLE_CURSOR = $08;    // cursor scrollable
+  OCI_STMT_SCROLLABLE_READONLY = $08;    // cursor scrollable
   OCI_DESCRIBE_ONLY     = $10;    // only describe the statement
   OCI_COMMIT_ON_SUCCESS = $20;    // commit, if successful execution
   OCI_NON_BLOCKING      = $40;    // non-blocking
   OCI_BATCH_ERRORS      = $80;    // batch errors in array dmls
   OCI_PARSE_ONLY        = $100;   // only parse the statement
+  OCI_SHOW_DML_WARNINGS = $400;   // return OCI_SUCCESS_WITH_INFO for delete/update w/no where clause
+  OCI_RESULT_CACHE      = $20000; // hint to use query caching
+  OCI_NO_RESULT_CACHE   = $40000; // hint to bypass query caching
 
   OCI_DATA_AT_EXEC    = $02;      // data at execute time
   OCI_DYNAMIC_FETCH   = $02;      // fetch dynamically
@@ -807,6 +897,9 @@ type
 
   TOCIStmtFetch = function(stmtp: POCIStmt; errhp: POCIError; nrows: ub4;
     orientation: ub2; mode: ub4): sword; cdecl;
+
+  TOCIStmtFetch2 = function(stmtp: POCIStmt; errhp: POCIError; const nrows: ub4;
+    const orientation: ub2; const fetchOffset: sb4; const mode: ub4): sword; cdecl;
 
   TOCIDefineByPos = function(stmtp: POCIStmt; var defnpp: POCIDefine;
     errhp: POCIError; position: ub4; valuep: Pointer; value_sz: sb4; dty: ub2;
@@ -7649,6 +7742,7 @@ type
     OCIParamGet:            TOCIParamGet;
     OCIAttrGet:             TOCIAttrGet;
     OCIStmtFetch:           TOCIStmtFetch;
+    OCIStmtFetch2:          TOCIStmtFetch2;
     OCIDefineByPos:         TOCIDefineByPos;
     OCIDefineArrayOfStruct: TOCIDefineArrayOfStruct;
     OCIBindByPos:           TOCIBindByPos;

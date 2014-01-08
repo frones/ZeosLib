@@ -116,6 +116,8 @@ type
       errhp: POCIError): sword;
     function StmtFetch(stmtp: POCIStmt; errhp: POCIError; nrows: ub4;
       orientation: ub2; mode: ub4): sword;
+    function StmtFetch2(stmtp: POCIStmt; errhp: POCIError; const nrows: ub4;
+      const orientation: ub2; const fetchOffset: sb4; const mode: ub4): sword;
     function DefineByPos(stmtp: POCIStmt; var defnpp: POCIDefine;
       errhp: POCIError; position: ub4; valuep: Pointer; value_sz: sb4; dty: ub2;
       indp: Pointer; rlenp: Pointer; rcodep: Pointer; mode: ub4): sword;
@@ -648,6 +650,8 @@ type
       errhp: POCIError): sword;
     function StmtFetch(stmtp: POCIStmt; errhp: POCIError; nrows: ub4;
       orientation: ub2; mode: ub4): sword;
+    function StmtFetch2(stmtp: POCIStmt; errhp: POCIError; const nrows: ub4;
+      const orientation: ub2; const fetchOffset: sb4; const mode: ub4): sword;
     function DefineByPos(stmtp: POCIStmt; var defnpp: POCIDefine;
       errhp: POCIError; position: ub4; valuep: Pointer; value_sz: sb4; dty: ub2;
       indp: Pointer; rlenp: Pointer; rcodep: Pointer; mode: ub4): sword;
@@ -1469,6 +1473,7 @@ begin
     @OracleAPI.OCIStmtPrepare     := GetAddress('OCIStmtPrepare');
     @OracleAPI.OCIStmtExecute     := GetAddress('OCIStmtExecute');
     @OracleAPI.OCIStmtFetch       := GetAddress('OCIStmtFetch');
+    @OracleAPI.OCIStmtFetch2      := GetAddress('OCIStmtFetch2');
     @OracleAPI.OCIStmtGetPieceInfo := GetAddress('OCIStmtGetPieceInfo');
     @OracleAPI.OCIStmtSetPieceInfo := GetAddress('OCIStmtSetPieceInfo');
     @OracleAPI.OCIParamGet        := GetAddress('OCIParamGet');
@@ -2682,6 +2687,12 @@ function TZOracle9iPlainDriver.StmtFetch(stmtp: POCIStmt; errhp: POCIError;
   nrows: ub4; orientation: ub2; mode: ub4): sword;
 begin
   Result := OracleAPI.OCIStmtFetch(stmtp, errhp, nrows, orientation, mode);
+end;
+
+function TZOracle9iPlainDriver.StmtFetch2(stmtp: POCIStmt; errhp: POCIError;
+  const nrows: ub4; const orientation: ub2; const fetchOffset: sb4; const mode: ub4): sword;
+begin
+  Result := OracleAPI.OCIStmtFetch2(stmtp, errhp, nrows, orientation, fetchOffset, mode);
 end;
 
 function TZOracle9iPlainDriver.StmtGetPieceInfo(stmtp: POCIStmt;
