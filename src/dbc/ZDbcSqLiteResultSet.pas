@@ -261,7 +261,7 @@ end;
 }
 procedure TZSQLiteResultSet.FreeHandle;
 begin
-  if FFinalizeHandle then //
+  if FFinalizeHandle then
   begin
     if Assigned(FStmtHandle) then
       CheckSQLiteError(FPlainDriver, FStmtHandle,

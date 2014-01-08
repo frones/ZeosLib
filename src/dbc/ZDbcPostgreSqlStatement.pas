@@ -555,7 +555,7 @@ begin
         if not Findeterminate_datatype then
         begin
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-          FPlainDriver.Clear(QueryHandle);
+          FPlainDriver.Clear(Result);
         end;
       end;
     eicExecPrepStmt:
