@@ -429,8 +429,8 @@ var
   CachedResolver: TZInterbase6CachedResolver;
   CachedResultSet: TZCachedResultSet;
 begin
-  if (Statement.GetResultSetConcurrency <> rcReadOnly)
-     or (Statement.GetResultSetType <> rtForwardOnly) then
+  if (Statement.GetResultSetConcurrency = rcUpdatable)
+    or (Statement.GetResultSetType <> rtForwardOnly) then
   begin
     CachedResolver  := TZInterbase6CachedResolver.Create(Statement,  NativeResultSet.GetMetadata);
     CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL,
