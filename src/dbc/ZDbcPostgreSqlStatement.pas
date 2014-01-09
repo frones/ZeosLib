@@ -462,7 +462,7 @@ begin
         end;
         if not Findeterminate_datatype then
         begin
-          FPlainDriver.Clear(QueryHandle);
+          FPlainDriver.Clear(Result);
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         end;
       end;
