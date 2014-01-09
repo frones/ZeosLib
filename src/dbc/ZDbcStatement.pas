@@ -858,7 +858,7 @@ begin
     result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId)+' : '+ Msg, 0, '')
   else
     result := TZLoggingEvent.Create(Category, ConSettings^.Protocol, 'Statement '+IntToRaw(FStatementId), 0, '');
-  end;
+end;
 
 function TZAbstractStatement.CreateLogEvent(
   const Category: TZLoggingCategory ): TZLoggingEvent;
