@@ -595,8 +595,6 @@ begin
   MaxTestMode := 0;
   if ProtocolInProtocols(self.Protocol,pl_all_postgresql) then
     MaxTestMode := 1;
-  if ProtocolInProtocols(self.Protocol,pl_all_sqlite) then
-    MaxTestMode := 1;
   For TestMode := 1 to MaxTestMode do
   begin
     //writeln('create TestMode_'+IntToStr(TestMode));

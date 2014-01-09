@@ -274,7 +274,7 @@ begin
     if FStmtHandle <> nil then
     begin
       CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
-        nil, lcBindPrepStmt, 'Reset Prepared Stmt', ConSettings);
+        nil, lcOther, 'Reset Prepared Stmt', ConSettings);
       FStmtHandle := nil;
     end;
     FErrorCode := SQLITE_DONE;

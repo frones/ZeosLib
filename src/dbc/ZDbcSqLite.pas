@@ -416,15 +416,7 @@ function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
     Open;
-  {$IFDEF ZEOS_TEST_ONLY}
-  Case GetTestMode of
-    0:
-  {$ENDIF}
-      Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
-  {$IFDEF ZEOS_TEST_ONLY}
-    1: Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
-  end;
-  {$ENDIF}
+  Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
 end;
 
 {**
