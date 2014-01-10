@@ -987,7 +987,7 @@ end;
 function TZSQLiteBaseDriver.Prepare_v2(db: Psqlite; const zSql: PAnsiChar; nBytes: Integer;
   out ppStmt: Psqlite3_stmt; pzTail: PPAnsichar): Integer;
 begin
-  Result := SQLite_API.sqlite_prepare(db, zSql, nBytes, ppStmt, pzTail);
+  Result := SQLite_API.sqlite_prepare_v2(db, zSql, nBytes, ppStmt, pzTail);
 end;
 
 function TZSQLiteBaseDriver.Prepare16(db: Psqlite; const zSql: PWideChar; nBytes: Integer;
