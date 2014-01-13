@@ -88,7 +88,7 @@ type
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+    function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
     function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
     function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
     function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
@@ -126,6 +126,26 @@ type
     function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
     function dbdataready(Proc: PDBPROCESS): LongBool;
     function GetVariables: TDBVariables;
+    { BCP functions }
+    function bcp_batch(const Proc: PDBPROCESS): DBINT;
+    function bcp_bind(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
+      VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer): RETCODE;
+    function bcp_colfmt(Proc: PDBPROCESS; FileColumn: Integer; FileType: Byte;
+      FilePrefixLen: Integer; FileColLen: DBINT; FileTerm: PByte; FileTermLen,
+      TableColumn: Integer): RETCODE;
+    function bcp_collen(Proc: PDBPROCESS; VarLen: DBINT; TableColumn: Integer): RETCODE;
+    function bcp_colptr(Proc: PDBPROCESS; ColPtr: PByte; TableColumn: Integer): RETCODE;
+    function bcp_columns(Proc: PDBPROCESS; FileColCount: Integer): RETCODE;
+    function bcp_control(Proc: PDBPROCESS; Field: Integer; Value: DBINT): RETCODE;
+    function bcp_done(Proc: PDBPROCESS): DBINT;
+    function bcp_exec(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE;
+    function bcp_init(Proc: PDBPROCESS; TableName, hFile, ErrFile: PAnsiChar;
+      Direction: Integer): RETCODE;
+    function bcp_moretext(Proc: PDBPROCESS; Size: DBINT; Text: PByte): RETCODE;
+    function bcp_readfmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
+    function bcp_sendrow(Proc: PDBPROCESS): RETCODE;
+    function bcp_setl(Login: PLOGINREC; Enable: LongBool): RETCODE;
+    function bcp_writefmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
   end;
 
   TZDBLibAbstractPlainDriver = class(TZAbstractPlainDriver, IZPlainDriver)
@@ -158,7 +178,7 @@ type
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE; virtual; abstract;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS; virtual;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+    function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
     function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE;
     function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
     function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
@@ -197,6 +217,26 @@ type
     function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
     function dbdataready(Proc: PDBPROCESS): LongBool; virtual; abstract;
     function dbrbuf(Proc: PDBPROCESS): DBINT;
+    { BCP functions }
+    function bcp_batch(const Proc: PDBPROCESS): DBINT;
+    function bcp_bind(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
+      VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer): RETCODE;
+    function bcp_colfmt(Proc: PDBPROCESS; FileColumn: Integer; FileType: Byte;
+      FilePrefixLen: Integer; FileColLen: DBINT; FileTerm: PByte; FileTermLen,
+      TableColumn: Integer): RETCODE;
+    function bcp_collen(Proc: PDBPROCESS; VarLen: DBINT; TableColumn: Integer): RETCODE;
+    function bcp_colptr(Proc: PDBPROCESS; ColPtr: PByte; TableColumn: Integer): RETCODE;
+    function bcp_columns(Proc: PDBPROCESS; FileColCount: Integer): RETCODE;
+    function bcp_control(Proc: PDBPROCESS; Field: Integer; Value: DBINT): RETCODE;
+    function bcp_done(Proc: PDBPROCESS): DBINT;
+    function bcp_exec(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE;
+    function bcp_init(Proc: PDBPROCESS; TableName, hFile, ErrFile: PAnsiChar;
+      Direction: Integer): RETCODE;
+    function bcp_moretext(Proc: PDBPROCESS; Size: DBINT; Text: PByte): RETCODE;
+    function bcp_readfmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
+    function bcp_sendrow(Proc: PDBPROCESS): RETCODE;
+    function bcp_setl(Login: PLOGINREC; Enable: LongBool): RETCODE;
+    function bcp_writefmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
   end;
 
   {** Implements a dblib driver for Sybase ASE 12.5 }
@@ -230,7 +270,7 @@ type
     function dbSetMaxprocs(MaxProcs: SmallInt): RETCODE;
     function dbOpen(Login: PLOGINREC; Host: PAnsiChar): PDBPROCESS;
     function dbCancel(dbProc: PDBPROCESS): RETCODE;
-    function dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+    function dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
     function dbSqlExec(dbProc: PDBPROCESS; Async: Boolean=False): RETCODE; virtual;
     function dbSqlExecSync(dbProc: PDBPROCESS): RETCODE;
     function dbSqlExecAsync(dbProc: PDBPROCESS): RETCODE;
@@ -269,6 +309,26 @@ type
     function dbRetType(dbProc: PDBPROCESS; RetNum: DBINT): DBINT;
     function dbrbuf({%H-}Proc: PDBPROCESS): DBINT;
     function dbdataready(Proc: PDBPROCESS): LongBool;
+    { BCP functions }
+    function bcp_batch(const Proc: PDBPROCESS): DBINT;
+    function bcp_bind(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
+      VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer): RETCODE;
+    function bcp_colfmt(Proc: PDBPROCESS; FileColumn: Integer; FileType: Byte;
+      FilePrefixLen: Integer; FileColLen: DBINT; FileTerm: PByte; FileTermLen,
+      TableColumn: Integer): RETCODE;
+    function bcp_collen(Proc: PDBPROCESS; VarLen: DBINT; TableColumn: Integer): RETCODE;
+    function bcp_colptr(Proc: PDBPROCESS; ColPtr: PByte; TableColumn: Integer): RETCODE;
+    function bcp_columns(Proc: PDBPROCESS; FileColCount: Integer): RETCODE;
+    function bcp_control(Proc: PDBPROCESS; Field: Integer; Value: DBINT): RETCODE;
+    function bcp_done(Proc: PDBPROCESS): DBINT;
+    function bcp_exec(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE;
+    function bcp_init(Proc: PDBPROCESS; TableName, hFile, ErrFile: PAnsiChar;
+      Direction: Integer): RETCODE;
+    function bcp_moretext(Proc: PDBPROCESS; Size: DBINT; Text: PByte): RETCODE;
+    function bcp_readfmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
+    function bcp_sendrow(Proc: PDBPROCESS): RETCODE;
+    function bcp_setl(Login: PLOGINREC; Enable: LongBool): RETCODE;
+    function bcp_writefmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
   end;
 
   {** Implements a dblib driver for MSSql7 }
@@ -839,7 +899,7 @@ begin
   Result := DBLibAPI.dbcancel(dbProc);
 end;
 
-function TZDBLibBasePlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+function TZDBLibBasePlainDriver.dbCmd(const dbProc: PDBPROCESS; const Cmd: PAnsiChar): RETCODE;
 begin
   Result := DBLibAPI.dbcmd(dbProc, Cmd);
 end;
@@ -999,6 +1059,90 @@ begin
   Result := DBINT(dbdataready(Proc));
 end;
 
+{ BCP functions }
+function TZDBLibBasePlainDriver.bcp_batch(const Proc: PDBPROCESS): DBINT;
+begin
+  Result := DBLibAPI.bcp_batch(Proc);
+end;
+
+function TZDBLibBasePlainDriver.bcp_bind(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
+  VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer): RETCODE;
+begin
+  Result := DBLibAPI.bcp_bind(Proc, VarAddr, PrefixLen, VarLen, Terminator,
+    TermLen, Typ, TableColumn);
+end;
+
+function TZDBLibBasePlainDriver.bcp_colfmt(Proc: PDBPROCESS; FileColumn: Integer; FileType: Byte;
+  FilePrefixLen: Integer; FileColLen: DBINT; FileTerm: PByte; FileTermLen,
+  TableColumn: Integer): RETCODE;
+begin
+  Result := DBLibAPI.bcp_colfmt(Proc, FileColumn, FileType, FilePrefixLen,
+    FileColLen, FileTerm, FileTermLen, TableColumn);
+end;
+
+function TZDBLibBasePlainDriver.bcp_collen(Proc: PDBPROCESS; VarLen: DBINT; TableColumn: Integer): RETCODE;
+begin
+  Result := DBLibAPI.bcp_collen(Proc, VarLen, TableColumn);
+end;
+
+function TZDBLibBasePlainDriver.bcp_colptr(Proc: PDBPROCESS; ColPtr: PByte; TableColumn: Integer): RETCODE;
+begin
+  Result := DBLibAPI.bcp_colptr(Proc, ColPtr, TableColumn);
+end;
+
+function TZDBLibBasePlainDriver.bcp_columns(Proc: PDBPROCESS; FileColCount: Integer): RETCODE;
+begin
+  Result := DBLibAPI.bcp_columns(Proc, FileColCount);
+end;
+
+function TZDBLibBasePlainDriver.bcp_control(Proc: PDBPROCESS; Field: Integer;
+  Value: DBINT): RETCODE;
+begin
+  Result := DBLibAPI.bcp_control(Proc, Field, Value);
+end;
+
+function TZDBLibBasePlainDriver.bcp_done(Proc: PDBPROCESS): DBINT;
+begin
+  Result := DBLibAPI.bcp_done(Proc);
+end;
+
+function TZDBLibBasePlainDriver.bcp_exec(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE;
+begin
+  Result := DBLibAPI.bcp_exec(Proc, RowsCopied);
+end;
+
+function TZDBLibBasePlainDriver.bcp_init(Proc: PDBPROCESS; TableName, hFile,
+  ErrFile: PAnsiChar; Direction: Integer): RETCODE;
+begin
+  Result := DBLibAPI.bcp_init(Proc, TableName, hFile, ErrFile, Direction);
+end;
+
+function TZDBLibBasePlainDriver.bcp_moretext(Proc: PDBPROCESS; Size: DBINT;
+  Text: PByte): RETCODE;
+begin
+  Result := DBLibAPI.bcp_moretext(Proc, Size, Text);
+end;
+
+function TZDBLibBasePlainDriver.bcp_readfmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
+begin
+  Result := DBLibAPI.bcp_readfmt(Proc, FileName);
+end;
+
+function TZDBLibBasePlainDriver.bcp_sendrow(Proc: PDBPROCESS): RETCODE;
+begin
+  Result := DBLibAPI.bcp_sendrow(Proc);
+end;
+
+function TZDBLibBasePlainDriver.bcp_setl(Login: PLOGINREC; Enable: LongBool): RETCODE;
+begin
+  Result := DBLibAPI.bcp_setl(Login, Enable);
+end;
+
+function TZDBLibBasePlainDriver.bcp_writefmt(Proc: PDBPROCESS;
+  FileName: PAnsiChar): RETCODE;
+begin
+  Result := DBLibAPI.bcp_writefmt(Proc, FileName);
+end;
 
 { TZDBLibSybaseASE125PlainDriver }
 
@@ -1019,6 +1163,7 @@ begin
     @SybaseAPI.scan_xact             := GetAddress('scan_xact');
     @SybaseAPI.start_xact            := GetAddress('start_xact');
     @SybaseAPI.stat_xact             := GetAddress('stat_xact');
+    {bcp function}
     @SybaseAPI.bcp_batch             := GetAddress('bcp_batch');
     @SybaseAPI.bcp_bind              := GetAddress('bcp_bind');
     @SybaseAPI.bcp_colfmt            := GetAddress('bcp_colfmt');
@@ -1032,7 +1177,9 @@ begin
     @SybaseAPI.bcp_moretext          := GetAddress('bcp_moretext');
     @SybaseAPI.bcp_readfmt           := GetAddress('bcp_readfmt');
     @SybaseAPI.bcp_sendrow           := GetAddress('bcp_sendrow');
+    @SybaseAPI.bcp_setl              := GetAddress('bcp_setl');
     @SybaseAPI.bcp_writefmt          := GetAddress('bcp_writefmt');
+    { core function }
     @SybaseAPI.dbadata               := GetAddress('dbadata');
     @SybaseAPI.dbadlen               := GetAddress('dbadlen');
     @SybaseAPI.dbaltbind             := GetAddress('dbaltbind');
@@ -1051,6 +1198,7 @@ begin
     @SybaseAPI.dbclrbuf              := GetAddress('dbclrbuf');
     @SybaseAPI.dbclropt              := GetAddress('dbclropt');
     @SybaseAPI.dbcmd                 := GetAddress('dbcmd');
+    @SybaseAPI.dbfcmd                := GetAddress('dbfcmd');
     @SybaseAPI.dbcmdrow              := GetAddress('dbcmdrow');
     @SybaseAPI.dbcolbrowse           := GetAddress('dbcolbrowse');
     @SybaseAPI.dbcollen              := GetAddress('dbcollen');
@@ -1316,7 +1464,8 @@ begin
   Result := SybaseAPI.dbcancel(dbProc);
 end;
 
-function TZDBLibSybaseASE125PlainDriver.dbCmd(dbProc: PDBPROCESS; Cmd: PAnsiChar): RETCODE;
+function TZDBLibSybaseASE125PlainDriver.dbCmd(const dbProc: PDBPROCESS;
+  const Cmd: PAnsiChar): RETCODE;
 begin
   Result := SybaseAPI.dbcmd(dbProc, Cmd);
 end;
@@ -1501,6 +1650,91 @@ end;
 function TZDBLibSybaseASE125PlainDriver.dbdataready(Proc: PDBPROCESS): LongBool;
 begin
   Result := Proc <> nil;
+end;
+
+{ BCP functions }
+function TZDBLibSybaseASE125PlainDriver.bcp_batch(const Proc: PDBPROCESS): DBINT;
+begin
+  Result := SybaseAPI.bcp_batch(Proc);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_bind(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
+  VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer): RETCODE;
+begin
+  Result := SybaseAPI.bcp_bind(Proc, VarAddr, PrefixLen, VarLen, Terminator,
+    TermLen, Typ, TableColumn);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_colfmt(Proc: PDBPROCESS; FileColumn: Integer; FileType: Byte;
+  FilePrefixLen: Integer; FileColLen: DBINT; FileTerm: PByte; FileTermLen,
+  TableColumn: Integer): RETCODE;
+begin
+  Result := SybaseAPI.bcp_colfmt(Proc, FileColumn, FileType, FilePrefixLen,
+    FileColLen, FileTerm, FileTermLen, TableColumn);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_collen(Proc: PDBPROCESS; VarLen: DBINT; TableColumn: Integer): RETCODE;
+begin
+  Result := SybaseAPI.bcp_collen(Proc, VarLen, TableColumn);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_colptr(Proc: PDBPROCESS; ColPtr: PByte; TableColumn: Integer): RETCODE;
+begin
+  Result := SybaseAPI.bcp_colptr(Proc, ColPtr, TableColumn);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_columns(Proc: PDBPROCESS; FileColCount: Integer): RETCODE;
+begin
+  Result := SybaseAPI.bcp_columns(Proc, FileColCount);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_control(Proc: PDBPROCESS; Field: Integer;
+  Value: DBINT): RETCODE;
+begin
+  Result := SybaseAPI.bcp_control(Proc, Field, Value);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_done(Proc: PDBPROCESS): DBINT;
+begin
+  Result := SybaseAPI.bcp_done(Proc);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_exec(Proc: PDBPROCESS; RowsCopied: PDBINT): RETCODE;
+begin
+  Result := SybaseAPI.bcp_exec(Proc, RowsCopied);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_init(Proc: PDBPROCESS; TableName, hFile,
+  ErrFile: PAnsiChar; Direction: Integer): RETCODE;
+begin
+  Result := SybaseAPI.bcp_init(Proc, TableName, hFile, ErrFile, Direction);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_moretext(Proc: PDBPROCESS; Size: DBINT;
+  Text: PByte): RETCODE;
+begin
+  Result := SybaseAPI.bcp_moretext(Proc, Size, Text);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_readfmt(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE;
+begin
+  Result := SybaseAPI.bcp_readfmt(Proc, FileName);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_sendrow(Proc: PDBPROCESS): RETCODE;
+begin
+  Result := SybaseAPI.bcp_sendrow(Proc);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_setl(Login: PLOGINREC; Enable: LongBool): RETCODE;
+begin
+  Result := SybaseAPI.bcp_setl(Login, Enable);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.bcp_writefmt(Proc: PDBPROCESS;
+  FileName: PAnsiChar): RETCODE;
+begin
+  Result := SybaseAPI.bcp_writefmt(Proc, FileName);
 end;
 
 {TZDBLibMSSQL7PlainDriver}

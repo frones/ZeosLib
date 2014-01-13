@@ -1246,7 +1246,7 @@ type
   (* LOGINREC manipulation *)
   Tdbsetlname = function(Login: PLOGINREC; Value: PAnsiChar; Item: Integer): RETCODE; cdecl;
 { BCP functions }
-  Tbcp_batch = function(Proc: PDBPROCESS): DBINT; cdecl;
+  Tbcp_batch = function(const Proc: PDBPROCESS): DBINT; cdecl;
   Tbcp_bind = function(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
     VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer):
     RETCODE; cdecl;
@@ -1479,7 +1479,7 @@ type
   TSybstat_xact = function(Proc: PDBPROCESS; CommId: DBINT): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
 { BCP functions }
-  TSybbcp_batch = function(Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_batch = function(const Proc: PDBPROCESS): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_bind = function(Proc: PDBPROCESS; VarAddr: PByte; PrefixLen: Integer;
     VarLen: DBINT; Terminator: PByte; TermLen, Typ, TableColumn: Integer):
     RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -1501,6 +1501,7 @@ type
     RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_readfmt = function(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_sendrow = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybbcp_setl = function(Login: PLOGINREC; Enable: LongBool): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybbcp_writefmt = function(Proc: PDBPROCESS; FileName: PAnsiChar): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
 { Standard DB-Library functions }
@@ -1681,6 +1682,7 @@ type
     bcp_sendrow           : Tbcp_sendrow;
     bcp_setl              : Tbcp_setl;
     bcp_writefmt          : Tbcp_writefmt;
+
     dbadata               : Tdbadata;
     dbadlen               : Tdbadlen;
     dbaltbind             : Tdbaltbind;
@@ -1954,6 +1956,7 @@ type
     bcp_moretext          : TSybbcp_moretext;
     bcp_readfmt           : TSybbcp_readfmt;
     bcp_sendrow           : TSybbcp_sendrow;
+    bcp_setl              : TSybbcp_setl;
     bcp_writefmt          : TSybbcp_writefmt;
 
   { Standard DB-Library functions }
