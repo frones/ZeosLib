@@ -1413,12 +1413,12 @@ begin
               if AnsiRec.Len > 0 then
                 while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do dec(AnsiRec.Len);
               if sqlsubtype > High(FCodePageArray) then
-                ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
+                Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
+                  Result := ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
                 else
-                  ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
+                  Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
               Exit;
             end;
           SQL_VARYING :
@@ -1426,12 +1426,12 @@ begin
               AnsiRec.P := PISC_VARYING(sqldata).str;
               AnsiRec.Len := PISC_VARYING(sqldata).strlen;
               if sqlsubtype > High(FCodePageArray) then
-                ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
+                Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
+                  Result := ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
                 else
-                  ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
+                  Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
               Exit;
             end;
           SQL_BLOB      :

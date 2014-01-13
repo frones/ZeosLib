@@ -78,6 +78,7 @@ type
     procedure TestLastQuery;
     procedure TestNotNullValues;
     procedure TestConcurrency;
+    procedure TestStringGetter;
   end;
 
 implementation
@@ -1053,6 +1054,77 @@ begin
     Statement.Close;
   end;
 end;
+
+{$WARNINGS OFF}
+procedure TZGenericTestDbcResultSet.TestStringGetter;
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+
+  try
+    ResultSet := Statement.ExecuteQuery('select * from people');
+    try
+      Check(ResultSet.Next);
+      CheckEquals('Vasia Pupkin', ResultSet.GetString(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiString(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetUTF8String(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetRawByteString(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetUnicodeString(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiRec(3).P);
+      CheckEquals('Vasia Pupkin', ResultSet.GetPChar(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(3));
+      Check(ResultSet.Next);
+      CheckEquals('Andy Karto', ResultSet.GetString(3));
+      CheckEquals('Andy Karto', ResultSet.GetAnsiString(3));
+      CheckEquals('Andy Karto', ResultSet.GetUTF8String(3));
+      CheckEquals('Andy Karto', ResultSet.GetRawByteString(3));
+      CheckEquals('Andy Karto', ResultSet.GetUnicodeString(3));
+      CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(3));
+      CheckEquals('Andy Karto', ResultSet.GetAnsiRec(3).P);
+      CheckEquals('Andy Karto', ResultSet.GetPChar(3));
+      CheckEquals('Andy Karto', ResultSet.GetPWideChar(3));
+      Check(ResultSet.Next);
+      CheckEquals('Kristen Sato', ResultSet.GetString(3));
+      CheckEquals('Kristen Sato', ResultSet.GetAnsiString(3));
+      CheckEquals('Kristen Sato', ResultSet.GetUTF8String(3));
+      CheckEquals('Kristen Sato', ResultSet.GetRawByteString(3));
+      CheckEquals('Kristen Sato', ResultSet.GetUnicodeString(3));
+      CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(3));
+      CheckEquals('Kristen Sato', ResultSet.GetAnsiRec(3).P);
+      CheckEquals('Kristen Sato', ResultSet.GetPChar(3));
+      CheckEquals('Kristen Sato', ResultSet.GetPWideChar(3));
+      Check(ResultSet.Next);
+      CheckEquals('Aleksey Petrov', ResultSet.GetString(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiString(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetUTF8String(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetRawByteString(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetUnicodeString(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiRec(3).P);
+      CheckEquals('Aleksey Petrov', ResultSet.GetPChar(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(3));
+      Check(ResultSet.Next);
+      CheckEquals('Yan Pater', ResultSet.GetString(3));
+      CheckEquals('Yan Pater', ResultSet.GetAnsiString(3));
+      CheckEquals('Yan Pater', ResultSet.GetUTF8String(3));
+      CheckEquals('Yan Pater', ResultSet.GetRawByteString(3));
+      CheckEquals('Yan Pater', ResultSet.GetUnicodeString(3));
+      CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(3));
+      CheckEquals('Yan Pater', ResultSet.GetAnsiRec(3).P);
+      CheckEquals('Yan Pater', ResultSet.GetPChar(3));
+      CheckEquals('Yan Pater', ResultSet.GetPWideChar(3));
+    finally
+      ResultSet.Close;
+    end;
+  finally
+    Statement.Close;
+  end;
+end;
+{$WARNINGS ON}
 
 initialization
   RegisterTest('dbc',TZGenericTestDbcResultSet.Suite);
