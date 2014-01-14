@@ -616,7 +616,7 @@ end;
 
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
 begin
-  FErrorCode := FPlainDriver.Prepare(FHandle, PAnsiChar(ASQL), Length(ASQL), FStmtHandle, nil);
+  FErrorCode := FPlainDriver.Prepare_v2(FHandle, PAnsiChar(ASQL), Length(ASQL), FStmtHandle, nil);
   CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, SSQL);
   inherited Prepare;
 end;
