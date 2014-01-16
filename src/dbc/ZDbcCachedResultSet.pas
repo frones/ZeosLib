@@ -1942,7 +1942,7 @@ begin
     RaiseForwardOnlyException;
 {$ENDIF}
 
-  if (Row >= 0) and (Row <= LastRowNo + 1) then
+  if not Closed and (Row >= 0) and (Row <= LastRowNo + 1) then
   begin
     RowNo := Row;
     if (Row >= 1) and (Row <= LastRowNo) then
