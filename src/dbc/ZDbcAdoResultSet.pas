@@ -279,7 +279,7 @@ end;
 function TZAdoResultSet.Next: Boolean;
 begin
   Result := False;
-  if FAdoRecordSet.BOF and FAdoRecordSet.EOF then
+  if (FAdoRecordSet = nil) or (FAdoRecordSet.BOF and FAdoRecordSet.EOF) then
     Exit;
   if FAdoRecordSet.BOF then
     FAdoRecordSet.MoveFirst

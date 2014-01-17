@@ -63,7 +63,6 @@ uses
   ZPlainOracleConstants;
 
 type
-
   {** Implements Oracle ResultSet. }
   TZOracleAbstractResultSet = class(TZAbstractResultSet)
   private
@@ -571,14 +570,11 @@ end;
     value returned is <code>false</code>
 }
 function TZOracleAbstractResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
-var
-  Temp: string;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Temp := PosEmptyASCII7ToString(GetAsStringValue(ColumnIndex, nil));
-  Result := (StrToIntDef(Temp, 0) <> 0) or StrToBoolEx(Temp);
+  Result := StrToBoolEx(GetAsStringValue(ColumnIndex, nil));
 end;
 
 {**
@@ -1137,14 +1133,11 @@ end;
   is also automatically closed when it is garbage collected.
 }
 procedure TZOracleResultSet.Close;
-var
-  ps: IZPreparedStatement;
 begin
   if assigned(FOutVars) then // else no statement anyways
     FreeOracleSQLVars(FPlainDriver, FOutVars, FConnection.GetConnectionHandle, FErrorHandle, ConSettings);
   { prepared statement own handles, so dont free them }
-  if not Supports(GetStatement, IZPreparedStatement, ps) then
-     FreeOracleStatementHandles(FPlainDriver, FStmtHandle, FErrorHandle);
+  FStmtHandle := nil;
   inherited Close;
 end;
 
@@ -1169,15 +1162,51 @@ var
 begin
   { Checks for maximum row. }
   Result := False;
-  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) then
+  if (RowNo > LastRowNo) or ((MaxRows > 0) and (RowNo >= MaxRows)) or (FStmtHandle = nil) then
     Exit;
 
-  if RowNo = 0 then
-    Status := FPlainDriver.StmtExecute(FConnection.GetContextHandle, FStmtHandle,
-      FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT)
-  else
-    Status := FPlainDriver.StmtFetch(FStmtHandle, FErrorHandle,
-      1, OCI_FETCH_NEXT, OCI_DEFAULT);
+
+  {if Self.ResultSetType = rtForwardOnly then}
+    if RowNo = 0 then
+      Status := FPlainDriver.StmtExecute(FConnection.GetContextHandle, FStmtHandle,
+        FErrorHandle, 1, 0, nil, nil, OCI_DEFAULT)
+    else
+      Status := FPlainDriver.StmtFetch2(FStmtHandle, FErrorHandle,
+        1, OCI_FETCH_NEXT, 0, OCI_DEFAULT)
+  ;{else}
+{ http://docs.oracle.com/cd/B10501_01/appdev.920/a96584/oci04sql.htm#420200
+Increasing Scrollable Cursor Performance
+Response time is improved if you use OCI client-side prefetch buffers.
+After calling OCIStmtExecute() for a scrollable cursor, call OCIStmtFetch2()
+using OCI_FETCH_LAST to obtain the size of the result set.
+Then set OCI_ATTR_PREFETCH_ROWS to about 20% of that size, and set OCI_PREFETCH_MEMORY
+if the result set uses a large amount of memory.}
+    {if RowNo = 0 then
+    begin
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.StmtExecute(FConnection.GetContextHandle, FStmtHandle,
+          FErrorHandle, 1, 0, nil, nil, OCI_STMT_SCROLLABLE_READONLY),
+            lcOther, 'FETCH ROW', ConSettings);
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.StmtFetch2(FStmtHandle, FErrorHandle,
+          1, OCI_FETCH_LAST, 0, OCI_DEFAULT), lcOther, 'FETCH ROW', ConSettings);
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.AttrGet(FStmtHandle, OCI_HTYPE_STMT, @Status, nil,
+          OCI_ATTR_CURRENT_POSITION, FErrorHandle), lcOther, 'FETCH ROW', ConSettings);
+      if Status > 0 then
+      begin
+        MaxRows := Status;
+        Status := Max(100, Status div 4); //setting 25%
+        FPlainDriver.AttrSet(FStmtHandle, OCI_HTYPE_STMT, @Status, SizeOf(ub4),
+          OCI_ATTR_PREFETCH_ROWS, FErrorHandle);
+        Status := FPlainDriver.StmtFetch2(FStmtHandle, FErrorHandle,
+          1, OCI_FETCH_FIRST, Status, OCI_DEFAULT);
+      end;
+    end
+    else
+      Status := FPlainDriver.StmtFetch2(FStmtHandle, FErrorHandle,
+        1, OCI_FETCH_NEXT, 0, OCI_DEFAULT);}
+
   if not (Status in [OCI_SUCCESS, OCI_NO_DATA]) then
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'FETCH ROW', ConSettings);
 

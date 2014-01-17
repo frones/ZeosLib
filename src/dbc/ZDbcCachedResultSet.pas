@@ -1942,7 +1942,7 @@ begin
     RaiseForwardOnlyException;
 {$ENDIF}
 
-  if (Row >= 0) and (Row <= LastRowNo + 1) then
+  if not Closed and (Row >= 0) and (Row <= LastRowNo + 1) then
   begin
     RowNo := Row;
     if (Row >= 1) and (Row <= LastRowNo) then
@@ -2280,7 +2280,10 @@ var
   I: Integer;
   TempRow: PZRowBuffer;
 begin
-  Result := FResultSet.Next;
+  if Assigned(FResultSet) then
+    Result := FResultSet.Next
+  else
+    Result := False;
   if not Result or ((MaxRows > 0) and (LastRowNo >= MaxRows)) then
     Exit;
 

@@ -189,7 +189,7 @@ type
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString); overload;
-    procedure LogMessage(Category: TZLoggingCategory; Sender: IZLoggingObject); overload;
+    procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
     procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
     function ConstructURL(const Protocol, HostName, Database,
@@ -1036,7 +1036,7 @@ type
     FLoggingListeners: IZCollection;
     FHasLoggingListener: Boolean;
     FURL: TZURL;
-    procedure LogEvent(Event: TZLoggingEvent);
+    procedure LogEvent(const Event: TZLoggingEvent);
   public
     constructor Create;
     destructor Destroy; override;
@@ -1063,7 +1063,7 @@ type
 
     procedure LogMessage(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString); overload;
-    procedure LogMessage(Category: TZLoggingCategory; Sender: IZLoggingObject); overload;
+    procedure LogMessage(const Category: TZLoggingCategory; const Sender: IZLoggingObject); overload;
     procedure LogError(Category: TZLoggingCategory; const Protocol: RawByteString;
       const Msg: RawByteString; ErrorCode: Integer; const Error: RawByteString);
 
@@ -1290,7 +1290,7 @@ end;
   @param ErrorCode an error code.
   @param Error an error message.
 }
-procedure TZDriverManager.LogEvent(Event: TZLoggingEvent);
+procedure TZDriverManager.LogEvent(const Event: TZLoggingEvent);
 var
   I: Integer;
   Listener: IZLoggingListener;
@@ -1321,8 +1321,8 @@ begin
   LogError(Category, Protocol, Msg, 0, '');
 end;
 
-procedure TZDriverManager.LogMessage(Category: TZLoggingCategory;
-  Sender: IZLoggingObject);
+procedure TZDriverManager.LogMessage(const Category: TZLoggingCategory;
+  const Sender: IZLoggingObject);
 var
   Event: TZLoggingEvent;
 begin
@@ -1330,7 +1330,10 @@ begin
     Exit;
   Event := Sender.CreateLogEvent(Category);
   If Assigned(Event) then
+  begin
     LogEvent(Event);
+    Event.Free;
+  end;
 end;
 
 {**

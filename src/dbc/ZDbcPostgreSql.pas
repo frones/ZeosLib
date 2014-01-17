@@ -756,7 +756,18 @@ function TZPostgreSQLConnection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
     Open;
-  Result := TZPostgreSQLStatement.Create(GetPlainDriver, Self, Info);
+  {$IFDEF ZEOS_TEST_ONLY}
+  Case GetTestMode of
+    0:
+  {$ENDIF}
+      if GetServerMajorVersion >= 8 then
+        Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, '', Info)
+      else
+        Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, '', Info);
+  {$IFDEF ZEOS_TEST_ONLY}
+    1: Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, '', Info);
+  end;
+  {$ENDIF}
 end;
 
 {**
@@ -803,7 +814,6 @@ begin
         Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
   {$IFDEF ZEOS_TEST_ONLY}
     1: Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
-    2: Result := TZPostgreSQLEmulatedPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
   end;
   {$ENDIF}
 end;

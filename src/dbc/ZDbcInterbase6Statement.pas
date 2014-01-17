@@ -193,22 +193,14 @@ begin
   FIBConnection := Connection as IZInterbase6Connection;
   FCodePageArray := (FIBConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
-  ResultSetType := rtScrollInsensitive;
+  ResultSetType := rtForwardOnly;
   StmtHandle := 0;
-
-  Prepare;
 end;
 
 constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
   Info: TStrings);
 begin
-  inherited Create(Connection,'', Info);
-
-  FIBConnection := Connection as IZInterbase6Connection;
-  FCodePageArray := (FIBConnection.GetIZPlainDriver as IZInterbasePlainDriver).GetCodePageArray;
-  FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
-  ResultSetType := rtScrollInsensitive;
-  StmtHandle := 0;
+  Create(Connection,'', Info);
 end;
 
 destructor TZInterbase6PreparedStatement.Destroy;

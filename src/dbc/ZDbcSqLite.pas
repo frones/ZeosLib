@@ -97,8 +97,6 @@ type
     procedure StartTransactionSupport;
     function GetUndefinedVarcharAsStringLength: Integer;
   public
-    destructor Destroy; override;
-
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
@@ -236,14 +234,6 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZSQLiteConnection.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
   Set encryption key for a database
   @param Key the key used to encrypt your database.
   @return error code from SQLite Key function.
@@ -287,57 +277,64 @@ var
   ErrorMessage: PAnsiChar;
   LogMessage: RawByteString;
   SQL: RawByteString;
-  Timeout_ms: Integer;
+  TmpInt: Integer;
 begin
   if not Closed then
     Exit;
   ErrorMessage := '';
 
-  LogMessage := 'CONNECT TO "'+NotEmptyStringToAscii7(Database)+'" AS USER "'+PosEmptyStringToAscii7(User)+'"';
+  LogMessage := 'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"';
 
-{$IFDEF UNICODE}
-  FHandle := GetPlainDriver.Open(PAnsiChar(UTF8String(Database)), 0, ErrorMessage);
-{$ELSE}
-  FHandle := GetPlainDriver.Open(PAnsiChar(Database), 0, ErrorMessage);
-{$ENDIF}
+  SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Database);
+  FHandle := GetPlainDriver.Open(Pointer(SQL), 0, ErrorMessage);
 
   if FHandle = nil then
-  begin
     CheckSQLiteError(GetPlainDriver, FHandle, SQLITE_ERROR, ErrorMessage,
       lcConnect, LogMessage, ConSettings);
-  end;
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   { Turn on encryption if requested }
   if StrToBoolEx(Info.Values['encrypted']) then
   begin
-    {$IFDEF UNICODE}
-    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(UTF8String(Password)), Length(UTF8String(Password)));
-    {$ELSE}
-    ErrorCode := GetPlainDriver.Key(FHandle, PAnsiChar(Password), Length(Password));
-    {$ENDIF}
+    SQL := {$IFDEF UNICODE}UTF8String{$ENDIF}(Password);
+    ErrorCode := GetPlainDriver.Key(FHandle, Pointer(SQL), Length(SQL));
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil, lcConnect, 'SQLite.Key', ConSettings);
   end;
 
   { Set busy timeout if requested }
-  Timeout_ms := StrToIntDef(Info.Values['busytimeout'], -1);
-  if Timeout_ms >= 0 then
+  TmpInt := StrToIntDef(Info.Values['busytimeout'], -1);
+  if TmpInt >= 0 then
+    GetPlainDriver.BusyTimeout(FHandle, TmpInt);
+
+  { pimp performance }
+  SQL := 'PRAGMA cache_size = '+IntToRaw(StrToIntDef(Info.Values['cache_size'], 10000));
+  ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
+  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+
+  if Info.Values['synchronous'] <> '' then
   begin
-    GetPlainDriver.BusyTimeout(FHandle, Timeout_ms);
+    SQL := 'PRAGMA synchronous = '+NotEmptyStringToAscii7(Info.Values['synchronous']);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+  end;
+
+  if Info.Values['locking_mode'] <> '' then
+  begin
+    SQL := 'PRAGMA locking_mode = '+NotEmptyStringToAscii7(Info.Values['locking_mode']);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
   end;
 
   try
     if ( FClientCodePage <> '' ) then
     begin
-        SQL := 'PRAGMA encoding = '''+NotEmptyStringToAscii7(FClientCodePage)+'''';
-        ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
-          nil, nil, ErrorMessage);
-        CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+      SQL := 'PRAGMA encoding = '''+NotEmptyStringToAscii7(FClientCodePage)+'''';
+      ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
+      CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
     end;
 
     SQL := 'PRAGMA show_datatypes = ON';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL),
-      nil, nil, ErrorMessage);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
 
     if Info.Values['foreign_keys'] <> '' then
@@ -346,7 +343,7 @@ begin
         SQL := 'PRAGMA foreign_keys = 1'
       else
         SQL := 'PRAGMA foreign_keys = 0';
-      ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil, ErrorMessage);
+      ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
       CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, SQL);
     end;
@@ -416,15 +413,7 @@ function TZSQLiteConnection.CreatePreparedStatement(const SQL: string;
 begin
   if IsClosed then
     Open;
-  {$IFDEF ZEOS_TEST_ONLY}
-  Case GetTestMode of
-    0:
-  {$ENDIF}
-      Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
-  {$IFDEF ZEOS_TEST_ONLY}
-    1: Result := TZSQLitePreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
-  end;
-  {$ENDIF}
+  Result := TZSQLiteCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info, FHandle);
 end;
 
 {**
@@ -440,10 +429,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'BEGIN TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
-      ErrorMessage);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
   end;
 end;
 
@@ -469,10 +458,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'COMMIT TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
-      ErrorMessage);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
 
     StartTransactionSupport;
   end;
@@ -495,10 +484,10 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
-      ErrorMessage);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol, SQL);
 
     StartTransactionSupport;
   end;
@@ -521,12 +510,12 @@ begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
 
-  LogMessage := 'DISCONNECT FROM "'+ConSettings.Database+'"';
+  LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
   ErrorCode := GetPlainDriver.Close(FHandle);
   CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, nil,
     lcOther, LogMessage, ConSettings);
   FHandle := nil;
-  if Assigned(DriverManager) then
+  if Assigned(DriverManager) and DriverManager.HasLoggingListener then //thread save
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
   inherited Close;
 end;
@@ -569,8 +558,7 @@ begin
   begin
     ErrorMessage := '';
     SQL := 'ROLLBACK TRANSACTION';
-    ErrorCode := GetPlainDriver.Execute(FHandle, PAnsiChar(SQL), nil, nil,
-      ErrorMessage);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
   end;

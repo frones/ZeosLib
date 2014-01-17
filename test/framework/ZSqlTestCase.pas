@@ -197,7 +197,7 @@ type
     {$IFNDEF FPC}
     procedure RunWithFixture(TestResult: TTestResult); override;
     {$ELSE}
-    procedure Run(TestResult: TTestResult); override;
+    procedure {%H-}Run(TestResult: TTestResult); override;
     {$ENDIF}
 
     function IsProtocolValid(Config: TZConnectionConfig): Boolean; virtual;
@@ -594,8 +594,6 @@ begin
   // Test Modes
   MaxTestMode := 0;
   if ProtocolInProtocols(self.Protocol,pl_all_postgresql) then
-    MaxTestMode := 2;
-  if ProtocolInProtocols(self.Protocol,pl_all_sqlite) then
     MaxTestMode := 1;
   For TestMode := 1 to MaxTestMode do
   begin

@@ -59,6 +59,13 @@ uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
   ZCompatibility, ZDbcIntfs, ZDbcResultSetMetadata, ZTokenizer, ZVariant;
 
+type
+  TPreparablePrefixToken = Record
+    MatchingGroup: String;
+    ChildMatches: TStringDynArray;
+  end;
+  TPreparablePrefixTokens = array of TPreparablePrefixToken;
+
 {**
   Resolves a connection protocol and raises an exception with protocol
   is not supported.
@@ -157,10 +164,12 @@ function WideStringStream(const AString: WideString): TStream;
 
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TRawDynArray;
 
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 
 {$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
@@ -593,9 +602,10 @@ end;
 }
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TRawDynArray;
 var
-  I: Integer;
+  I, C, N: Integer;
   Temp: RawByteString;
   NextIsNChar, ParamFound: Boolean;
   Tokens: TZTokenDynArray;
@@ -617,15 +627,43 @@ var
   end;
 begin
   ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or ConSettings^.AutoEncode then
+  if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
   begin
     Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
     Temp := '';
     SQL := '';
     NextIsNChar := False;
-
+    N := -1;
+    CompareSuccess^ := False;
     for I := 0 to High(Tokens) do
     begin
+      {check if we've a preparable statement. If ComparePrefixTokens = nil then
+        comparing is not required or already done }
+      if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
+        if N = -1 then
+        begin
+          for C := 0 to high(ComparePrefixTokens) do
+            if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then
+            begin
+              if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
+                CompareSuccess^ := True
+              else
+                N := C; //save group
+              Break;
+            end;
+          if N = -1 then //no sub-tokens ?
+            ComparePrefixTokens := nil; //stop compare sequence
+        end
+        else
+        begin //we already got a group
+          for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+            if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then
+            begin
+              CompareSuccess^ := True;
+              Break;
+            end;
+          ComparePrefixTokens := nil; //stop compare sequence
+        end;
       SQL := SQL + Tokens[I].Value;
       if ParamFound and (Tokens[I].Value = '?') then
       begin
@@ -672,9 +710,10 @@ end;
 }
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
+  ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
 var
-  I: Integer;
+  I, C, N: Integer;
   Tokens: TZTokenDynArray;
   Temp: ZWideString;
   NextIsNChar, ParamFound: Boolean;
@@ -695,15 +734,43 @@ var
   end;
 begin
   ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
-  if ParamFound or ConSettings^.AutoEncode then
+  if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
   begin
     Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
 
     Temp := '';
     SQL := '';
     NextIsNChar := False;
+    N := -1;
     for I := 0 to High(Tokens) do
     begin
+      {check if we've a preparable statement. If ComparePrefixTokens = nil then
+        comparing is not required or already done }
+      if (Tokens[I].TokenType = ttWord) and Assigned(ComparePrefixTokens) then
+        if N = -1 then
+        begin
+          for C := 0 to high(ComparePrefixTokens) do
+            if ComparePrefixTokens[C].MatchingGroup = UpperCase(Tokens[I].Value) then
+            begin
+              if Length(ComparePrefixTokens[C].ChildMatches) = 0 then
+                CompareSuccess^ := True
+              else
+                N := C; //save group
+              Break;
+            end;
+          if N = -1 then //no sub-tokens ?
+            ComparePrefixTokens := nil; //stop compare sequence
+        end
+        else
+        begin //we already got a group
+          for C := 0 to high(ComparePrefixTokens[N].ChildMatches) do
+            if ComparePrefixTokens[N].ChildMatches[C] = UpperCase(Tokens[I].Value) then
+            begin
+              CompareSuccess^ := True;
+              Break;
+            end;
+          ComparePrefixTokens := nil; //stop compare sequence
+        end;
       SQL := SQL + Tokens[I].Value;
       if ParamFound and (Tokens[I].Value = '?') then
       begin

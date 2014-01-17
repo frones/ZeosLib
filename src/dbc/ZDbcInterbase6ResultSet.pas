@@ -181,6 +181,7 @@ begin
     FIZSQLDA := nil;
     { Free allocate sql statement }
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
+    FStmtHandle := 0;
   end;
   inherited Close;
 end;
@@ -527,6 +528,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
   TempDate: TCTimeStructure;
+  AnsiRec: TZAnsiRec;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
@@ -551,9 +554,19 @@ begin
               Word(TempDate.tm_mon + 1), Word(TempDate.tm_mday));
           end;
         SQL_TYPE_TIME : Result := 0;
-          else
-            Result := Trunc(GetDouble(ColumnIndex -1));
+        SQL_TEXT, SQL_VARYING:
+          begin
+            AnsiRec := GetAnsiRec(ColumnIndex);
+            if AnsiRec.Len = ConSettings^.ReadFormatSettings.DateFormatLen then
+              Result := RawSQLDateToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+                RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed));
+            LastWasNull := Result = 0;
           end;
+        else
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetDouble(ColumnIndex -1));
+        end;
    {$IFOPT D+}
   {$R+}
   {$ENDIF}
@@ -1096,6 +1109,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
   TempDate: TCTimeStructure;
+  Failed: Boolean;
+  AnsiRec: TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1120,6 +1135,14 @@ begin
             Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
               Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10));
           end;
+        SQL_TEXT, SQL_VARYING:
+          begin
+            AnsiRec := GetAnsiRec(ColumnIndex);
+            if (AnsiRec.P+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(AnsiRec.P,AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              Result := Frac(RawSQLTimeStampToDateTime(AnsiRec.P,AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed));
+          end;
         else
           Result := Frac(GetDouble(ColumnIndex -1));
         end;
@@ -1140,6 +1163,8 @@ end;
 }
 function TZInterbase6XSQLDAResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
+  Failed: Boolean;
+  AnsiRec: TZAnsiRec;
   TempDate: TCTimeStructure;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1170,6 +1195,17 @@ begin
             FPlainDriver.isc_decode_sql_time(PISC_TIME(sqldata), @TempDate);
             Result := SysUtils.EncodeTime(Word(TempDate.tm_hour), Word(TempDate.tm_min),
               Word(TempDate.tm_sec),  Word((PISC_TIME(sqldata)^ mod 10000) div 10));
+          end;
+        SQL_TEXT, SQL_VARYING:
+          begin
+            AnsiRec := GetAnsiRec(ColumnIndex);
+            if (AnsiRec.P+2)^ = ':' then
+              Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - AnsiRec.Len) <= 4 then
+                Result := RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed)
+              else
+                Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed);
           end;
         else
           Result := GetDouble(ColumnIndex -1);
@@ -1275,7 +1311,7 @@ begin
             end;
           SQL_BLOB      :
             Begin
-              FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
+              FBlobTemp := GetBlob(ColumnIndex+1);  //localize interface to keep pointer alive
               if FBlobTemp.IsClob then
               begin
                 Result.P := FBlobTemp.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
@@ -1377,12 +1413,12 @@ begin
               if AnsiRec.Len > 0 then
                 while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do dec(AnsiRec.Len);
               if sqlsubtype > High(FCodePageArray) then
-                ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
+                Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
+                  Result := ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
                 else
-                  ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
+                  Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
               Exit;
             end;
           SQL_VARYING :
@@ -1390,12 +1426,12 @@ begin
               AnsiRec.P := PISC_VARYING(sqldata).str;
               AnsiRec.Len := PISC_VARYING(sqldata).strlen;
               if sqlsubtype > High(FCodePageArray) then
-                ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
+                Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
+                  Result := ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
                 else
-                  ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
+                  Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
               Exit;
             end;
           SQL_BLOB      :
@@ -1430,6 +1466,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetString(ColumnIndex: Integer): String;
 var
   SubType: SmallInt;
+  SQLCode: SmallInt;
+  AnsiRec: TZAnsiRec;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1439,23 +1477,121 @@ begin
     Result := ''
   else
   begin
-    SubType := GetIbSqlSubType(ColumnIndex -1);
-    if SubType > High(FCodePageArray) then
-      {$IFDEF UNICODE}
-      Result := ZAnsiRecToUnicode(GetAnsiRec(ColumnIndex),
-        ConSettings^.ClientCodePage^.CP)
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex),
-        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
-      {$ENDIF}
-    else
-      {$IFDEF UNICODE}
-      Result := ZAnsiRecToUnicode(GetAnsiRec(ColumnIndex),
-        FCodePageArray[SubType]);
-      {$ELSE}
-      Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex),
-        FCodePageArray[SubType], ConSettings^.CTRL_CP);
-      {$ENDIF}
+    ColumnIndex := ColumnIndex -1;
+    AnsiRec.P := nil;
+    {$R-}
+    with FXSQLDA.sqlvar[ColumnIndex] do
+    begin
+      if (sqlind <> nil) and (sqlind^ = -1) then
+           Exit;
+      SQLCode := (sqltype and not(1));
+
+      if (sqlscale < 0)  then
+      begin
+        case SQLCode of
+          SQL_SHORT  : Result := FloatToStr(PSmallInt(sqldata)^ / IBScaleDivisor[sqlscale]);
+          SQL_LONG   : Result := FloatToStr(PInteger(sqldata)^  / IBScaleDivisor[sqlscale]);
+          SQL_INT64,
+          SQL_QUAD   : Result := FloatToStr(PInt64(sqldata)^    / IBScaleDivisor[sqlscale]);
+          SQL_DOUBLE : Result := FloatToStr(PDouble(sqldata)^);
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+        end;
+      end
+      else
+        case SQLCode of
+          SQL_DOUBLE    : Result := FloatToStr(PDouble(sqldata)^);
+          SQL_LONG      : Result := ZFastCode.IntToStr(PInteger(sqldata)^);
+          SQL_D_FLOAT,
+          SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
+          SQL_BOOLEAN   :
+            if Boolean(PSmallint(sqldata)^) = True then
+              Result := 'YES'
+            else
+              Result := 'NO';
+          SQL_SHORT     : Result := ZFastCode.IntToStr(PSmallint(sqldata)^);
+          SQL_INT64     : Result := ZFastCode.IntToStr(PInt64(sqldata)^);
+          SQL_TEXT      :
+            begin
+              AnsiRec.P := sqldata;
+              // Trim only trailing spaces. TrimRight also removes other characters)
+              AnsiRec.Len := sqllen;
+              if AnsiRec.Len > 0 then
+                while ((AnsiRec.P+AnsiRec.Len-1)^ = ' ') do dec(AnsiRec.Len);
+              SubType := GetIbSqlSubType(ColumnIndex);
+              if SubType > High(FCodePageArray) then
+                {$IFDEF UNICODE}
+                Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP)
+                {$ELSE}
+                begin
+                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
+                    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+                end
+                {$ENDIF}
+              else
+                {$IFDEF UNICODE}
+                Result := ZAnsiRecToUnicode(AnsiRec, FCodePageArray[SubType]);
+                {$ELSE}
+                begin
+                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
+                    FCodePageArray[SubType], ConSettings^.CTRL_CP);
+                end;
+                {$ENDIF}
+            end;
+          SQL_VARYING :
+            begin
+              AnsiRec.P := PISC_VARYING(sqldata).str;
+              AnsiRec.Len := PISC_VARYING(sqldata).strlen;
+              SubType := GetIbSqlSubType(ColumnIndex);
+              if SubType > High(FCodePageArray) then
+                {$IFDEF UNICODE}
+                Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP)
+                {$ELSE}
+                begin
+                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
+                    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+                end
+                {$ENDIF}
+              else
+                {$IFDEF UNICODE}
+                Result := ZAnsiRecToUnicode(AnsiRec, FCodePageArray[SubType]);
+                {$ELSE}
+                begin
+                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
+                    FCodePageArray[SubType], ConSettings^.CTRL_CP);
+                end;
+                {$ENDIF}
+            end;
+          SQL_BLOB      :
+            Begin
+              FBlobTemp := GetBlob(ColumnIndex+1);  //localize interface to keep pointer alive
+              if FBlobTemp.IsClob then
+                {$IFDEF UNICODE}
+                Result := FBlobTemp.GetUnicodeString
+                {$ELSE}
+                Result := ConSettings^.ConvFuncs.ZRawToString(FBlobTemp.GetRawByteString,
+                  ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+                {$ENDIF}
+              else
+                {$IFDEF UNICODE}
+                Result := PosEmptyASCII7ToUnicodeString(FBlobTemp.GetRawByteString);
+                {$ELSE}
+                Result := FBlobTemp.GetRawByteString;
+                {$ENDIF}
+            End;
+        else
+          raise EZIBConvertError.Create(Format(SErrorConvertionField,
+            [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
+        end;
+    end;
+    {$IFOPT D+}
+  {$R+}
+  {$ENDIF}
   end;
 end;
 
@@ -1511,7 +1647,7 @@ var
 begin
   { Checks for maximum row. }
   Result := False;
-  if (MaxRows > 0) and (LastRowNo >= MaxRows) then
+  if (MaxRows > 0) and (LastRowNo >= MaxRows) or (FStmtHandle = 0) then
     Exit;
 
   { Fetch row. }
@@ -1624,63 +1760,64 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   ColumnsInfo.Clear;
-  for I := 0 to FXSQLDA.sqld {FieldCount} - 1 do
-  begin
-    ColumnInfo := TZColumnInfo.Create;
-    with ColumnInfo do
+  if FXSQLDA.sqld > 0 then  //keep track we have a column to avoid range issues see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=10595
+    for I := 0 to FXSQLDA.sqld {FieldCount} - 1 do
     begin
-      ColumnName := FIZSQLDA.GetFieldSqlName(I);
-      TableName := FIZSQLDA.GetFieldRelationName(I);
-      ColumnLabel := FIZSQLDA.GetFieldAliasName(I);
-      FieldSqlType := FIZSQLDA.GetFieldSqlType(I);
-      ColumnType := FieldSqlType;
-
-      if FieldSqlType in [stString, stUnicodeString] then
+      ColumnInfo := TZColumnInfo.Create;
+      with ColumnInfo do
       begin
-        CP := GetIbSqlSubType(I);
-        if CP > High(FCodePageArray) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
-          //see test Bug#886194, we retrieve 565 as CP...
-          ColumnCodePage := ConSettings^.ClientCodePage^.CP
-        else
-          ColumnCodePage := FCodePageArray[CP];
-      end
-      else
-        if FieldSqlType in [stAsciiStream, stUnicodeStream] then
-          ColumnCodePage := ConSettings^.ClientCodePage^.CP
-        else
-          ColumnCodePage := zCP_NONE;
+        ColumnName := FIZSQLDA.GetFieldSqlName(I);
+        TableName := FIZSQLDA.GetFieldRelationName(I);
+        ColumnLabel := FIZSQLDA.GetFieldAliasName(I);
+        FieldSqlType := FIZSQLDA.GetFieldSqlType(I);
+        ColumnType := FieldSqlType;
 
-      if FieldSqlType in [stBytes, stString, stUnicodeString] then
-      begin
-        MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
-        if (FIZSQLDA.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
+        if FieldSqlType in [stString, stUnicodeString] then
         begin
-          if not ( FieldSQLType = stBytes ) then
-            if ConSettings.ClientCodePage^.ID = CS_NONE then
+          CP := GetIbSqlSubType(I);
+          if CP > High(FCodePageArray) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
+            //see test Bug#886194, we retrieve 565 as CP...
+            ColumnCodePage := ConSettings^.ClientCodePage^.CP
           else
-            ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
-          Precision := MaxLenghtBytes;
+            ColumnCodePage := FCodePageArray[CP];
         end
         else
-          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
-            ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
+          if FieldSqlType in [stAsciiStream, stUnicodeStream] then
+            ColumnCodePage := ConSettings^.ClientCodePage^.CP
+          else
+            ColumnCodePage := zCP_NONE;
+
+        if FieldSqlType in [stBytes, stString, stUnicodeString] then
+        begin
+          MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
+          if (FIZSQLDA.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
+          begin
+            if not ( FieldSQLType = stBytes ) then
+              if ConSettings.ClientCodePage^.ID = CS_NONE then
+            else
+              ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
+            Precision := MaxLenghtBytes;
+          end
+          else
+            Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+              ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
+        end;
+
+        ReadOnly := (FIZSQLDA.GetFieldRelationName(I) = '') or (FIZSQLDA.GetFieldSqlName(I) = '')
+          or (FIZSQLDA.GetFieldSqlName(I) = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
+
+        if FIZSQLDA.IsNullable(I) then
+          Nullable := ntNullable
+        else
+          Nullable := ntNoNulls;
+
+        Scale := FIZSQLDA.GetFieldScale(I);
+        AutoIncrement := False;
+        //Signed := False;
+        //CaseSensitive := True;
       end;
-
-      ReadOnly := (FIZSQLDA.GetFieldRelationName(I) = '') or (FIZSQLDA.GetFieldSqlName(I) = '')
-        or (FIZSQLDA.GetFieldSqlName(I) = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
-
-      if FIZSQLDA.IsNullable(I) then
-        Nullable := ntNullable
-      else
-        Nullable := ntNoNulls;
-
-      Scale := FIZSQLDA.GetFieldScale(I);
-      AutoIncrement := False;
-      //Signed := False;
-      //CaseSensitive := True;
+      ColumnsInfo.Add(ColumnInfo);
     end;
-    ColumnsInfo.Add(ColumnInfo);
-  end;
   inherited Open;
 end;
 

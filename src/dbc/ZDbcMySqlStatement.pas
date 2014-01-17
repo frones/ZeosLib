@@ -58,7 +58,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
-  ZPlainMySqlConstants, ZCompatibility, ZDbcLogging;
+  ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils;
 
 type
 
@@ -157,7 +157,7 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
     FUseDefaults: Boolean;
-
+    FPreparablePrefixTokens: TPreparablePrefixTokens;
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
 
@@ -168,6 +168,7 @@ type
     function GetStmtHandle : PZMySqlPrepStmt;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
+    function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
   public
     property StmtHandle: PZMySqlPrepStmt read GetStmtHandle;
     constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection;
@@ -234,9 +235,21 @@ type
 implementation
 
 uses
-  Types, Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet, ZSysUtils,
-  ZMessages, ZDbcCachedResultSet, ZDbcUtils, ZEncoding,
-  ZDbcResultSet{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  Types, Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet,
+  ZSysUtils, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+
+var
+  MySQL41PreparableTokens: TPreparablePrefixTokens;
+  MySQL50PreparableTokens: TPreparablePrefixTokens;
+  MySQL5015PreparableTokens: TPreparablePrefixTokens;
+  MySQL5023PreparableTokens: TPreparablePrefixTokens;
+  MySQL51PreparableTokens: TPreparablePrefixTokens absolute MySQL5015PreparableTokens; //equals
+  MySQL5110PreparableTokens: TPreparablePrefixTokens absolute MySQL5023PreparableTokens; //equals
+  MySQL5112PreparableTokens: TPreparablePrefixTokens;
+  MySQL55PreparableTokens: TPreparablePrefixTokens absolute MySQL5112PreparableTokens; //equals
+  MySQL56PreparableTokens: TPreparablePrefixTokens absolute MySQL55PreparableTokens; //equals
+  MySQL568PreparableTokens: TPreparablePrefixTokens;
 
 { TZMySQLStatement }
 
@@ -577,6 +590,29 @@ constructor TZMySQLPreparedStatement.Create(
   PlainDriver: IZMySQLPlainDriver; Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
+  if PlainDriver.GetClientVersion      < 40100 then
+    FPreparablePrefixTokens := nil
+  else if PlainDriver.GetClientVersion < 50000 then
+    FPreparablePrefixTokens := MySQL41PreparableTokens
+  else if PlainDriver.GetClientVersion < 50015 then
+    FPreparablePrefixTokens := MySQL50PreparableTokens
+  else if PlainDriver.GetClientVersion < 50023 then
+    FPreparablePrefixTokens := MySQL5015PreparableTokens
+  else if PlainDriver.GetClientVersion < 50100 then
+    FPreparablePrefixTokens := MySQL5023PreparableTokens
+  else if PlainDriver.GetClientVersion < 50110 then
+    FPreparablePrefixTokens := MySQL51PreparableTokens
+  else if PlainDriver.GetClientVersion < 50112 then
+    FPreparablePrefixTokens := MySQL5110PreparableTokens
+  else if PlainDriver.GetClientVersion < 50500 then
+    FPreparablePrefixTokens := MySQL5112PreparableTokens
+  else if PlainDriver.GetClientVersion < 50600 then
+    FPreparablePrefixTokens := MySQL55PreparableTokens
+  else if PlainDriver.GetClientVersion < 50608 then
+    FPreparablePrefixTokens := MySQL56PreparableTokens
+  else
+    FPreparablePrefixTokens := MySQL568PreparableTokens;
+
   inherited Create(Connection, SQL, Info);
   FMySQLConnection := Connection as IZMySQLConnection;
   FHandle := FMysqlConnection.GetConnectionHandle;
@@ -813,6 +849,11 @@ begin
   // Empty : Mysql can't prepare datastructures before the actual parameters are known, because the
   // number/datatype of parameters isn't returned by the server.
   inherited UnPrepareInParameters;
+end;
+
+function TZMysqlPreparedStatement.GetCompareFirstKeywordStrings: TPreparablePrefixTokens;
+begin
+  Result := FPreparablePrefixTokens;
 end;
 
 function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
@@ -1563,6 +1604,7 @@ constructor TZMySQLAbstractBindBuffer.Create(PlainDriver: IZMysqlPlainDriver;
 begin
   inherited Create;
   FBindOffsets := PlainDriver.GetBindOffsets;
+
   if FBindOffsets.buffer_type=0 then
     raise EZSQLException.Create('Unknown dll version : '+ZFastCode.IntToStr(PlainDriver.GetClientVersion));
   FPColumnArray := @ColumnArray;
@@ -1689,4 +1731,315 @@ begin
   PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;
 end;
 
+initialization
+
+{ preparable statements: }
+
+{ http://dev.mysql.com/doc/refman/4.1/en/sql-syntax-prepared-statements.html }
+SetLength(MySQL41PreparableTokens, 13);
+MySQL41PreparableTokens[0].MatchingGroup := 'ALTER';
+  SetLength(MySQL41PreparableTokens[0].ChildMatches, 1);
+  MySQL41PreparableTokens[0].ChildMatches[0] := 'TABLE';
+MySQL41PreparableTokens[1].MatchingGroup := 'COMMIT';
+MySQL41PreparableTokens[2].MatchingGroup := 'CREATE';
+  SetLength(MySQL41PreparableTokens[2].ChildMatches, 2);
+  MySQL41PreparableTokens[2].ChildMatches[0] := 'INDEX';
+  MySQL41PreparableTokens[2].ChildMatches[1] := 'TABLE';
+MySQL41PreparableTokens[3].MatchingGroup := 'DROP';
+  SetLength(MySQL41PreparableTokens[3].ChildMatches, 2);
+  MySQL41PreparableTokens[3].ChildMatches[0] := 'INDEX';
+  MySQL41PreparableTokens[3].ChildMatches[1] := 'TABLE';
+MySQL41PreparableTokens[4].MatchingGroup := 'DELETE';
+MySQL41PreparableTokens[5].MatchingGroup := 'DO';
+MySQL41PreparableTokens[6].MatchingGroup := 'INSERT';
+MySQL41PreparableTokens[7].MatchingGroup := 'RENAME';
+  SetLength(MySQL41PreparableTokens[7].ChildMatches, 1);
+  MySQL41PreparableTokens[7].ChildMatches[0] := 'TABLE';
+MySQL41PreparableTokens[8].MatchingGroup := 'REPLACE';
+MySQL41PreparableTokens[9].MatchingGroup := 'SELECT';
+MySQL41PreparableTokens[10].MatchingGroup := 'SET';
+MySQL41PreparableTokens[11].MatchingGroup := 'SHOW';
+MySQL41PreparableTokens[12].MatchingGroup := 'UPDATE';
+
+{ http://dev.mysql.com/doc/refman/5.0/en/sql-syntax-prepared-statements.html }
+SetLength(MySQL50PreparableTokens, 15);
+MySQL50PreparableTokens[0].MatchingGroup := 'ALTER';
+  SetLength(MySQL50PreparableTokens[0].ChildMatches, 1);
+  MySQL50PreparableTokens[0].ChildMatches[0] := 'TABLE';
+MySQL50PreparableTokens[1].MatchingGroup := 'CALL';
+MySQL50PreparableTokens[2].MatchingGroup := 'COMMIT';
+MySQL50PreparableTokens[3].MatchingGroup := 'CREATE';
+  SetLength(MySQL50PreparableTokens[3].ChildMatches, 2);
+  MySQL50PreparableTokens[3].ChildMatches[0] := 'INDEX';
+  MySQL50PreparableTokens[3].ChildMatches[1] := 'TABLE';
+MySQL50PreparableTokens[4].MatchingGroup := 'DROP';
+  SetLength(MySQL50PreparableTokens[4].ChildMatches, 2);
+  MySQL50PreparableTokens[4].ChildMatches[0] := 'INDEX';
+  MySQL50PreparableTokens[4].ChildMatches[1] := 'TABLE';
+MySQL50PreparableTokens[5].MatchingGroup := 'DELETE';
+MySQL50PreparableTokens[6].MatchingGroup := 'DO';
+MySQL50PreparableTokens[7].MatchingGroup := 'INSERT';
+MySQL50PreparableTokens[8].MatchingGroup := 'RENAME';
+  SetLength(MySQL50PreparableTokens[8].ChildMatches, 1);
+  MySQL50PreparableTokens[8].ChildMatches[0] := 'TABLE';
+MySQL50PreparableTokens[9].MatchingGroup := 'REPLACE';
+MySQL50PreparableTokens[10].MatchingGroup := 'SELECT';
+MySQL50PreparableTokens[11].MatchingGroup := 'SET';
+MySQL50PreparableTokens[12].MatchingGroup := 'SHOW';
+MySQL50PreparableTokens[13].MatchingGroup := 'TRUNCATE';
+  SetLength(MySQL50PreparableTokens[13].ChildMatches, 1);
+  MySQL50PreparableTokens[13].ChildMatches[0] := 'TABLE';
+MySQL50PreparableTokens[14].MatchingGroup := 'UPDATE';
+
+SetLength(MySQL5015PreparableTokens, 15);
+MySQL5015PreparableTokens[0].MatchingGroup := 'ALTER';
+  SetLength(MySQL5015PreparableTokens[0].ChildMatches, 1);
+  MySQL5015PreparableTokens[0].ChildMatches[0] := 'TABLE';
+MySQL5015PreparableTokens[1].MatchingGroup := 'CALL';
+MySQL5015PreparableTokens[2].MatchingGroup := 'COMMIT';
+MySQL5015PreparableTokens[3].MatchingGroup := 'CREATE';
+  SetLength(MySQL5015PreparableTokens[3].ChildMatches, 3);
+  MySQL5015PreparableTokens[3].ChildMatches[0] := 'INDEX';
+  MySQL5015PreparableTokens[3].ChildMatches[1] := 'TABLE';
+  MySQL5015PreparableTokens[3].ChildMatches[2] := 'VIEW';
+MySQL5015PreparableTokens[4].MatchingGroup := 'DROP';
+  SetLength(MySQL5015PreparableTokens[4].ChildMatches, 3);
+  MySQL5015PreparableTokens[4].ChildMatches[0] := 'INDEX';
+  MySQL5015PreparableTokens[4].ChildMatches[1] := 'TABLE';
+  MySQL5015PreparableTokens[4].ChildMatches[2] := 'VIEW';
+MySQL5015PreparableTokens[5].MatchingGroup := 'DELETE';
+MySQL5015PreparableTokens[6].MatchingGroup := 'DO';
+MySQL5015PreparableTokens[7].MatchingGroup := 'INSERT';
+MySQL5015PreparableTokens[8].MatchingGroup := 'RENAME';
+  SetLength(MySQL5015PreparableTokens[8].ChildMatches, 1);
+  MySQL5015PreparableTokens[8].ChildMatches[0] := 'TABLE';
+MySQL5015PreparableTokens[9].MatchingGroup := 'REPLACE';
+MySQL5015PreparableTokens[10].MatchingGroup := 'SELECT';
+MySQL5015PreparableTokens[11].MatchingGroup := 'SET';
+MySQL5015PreparableTokens[12].MatchingGroup := 'SHOW';
+MySQL5015PreparableTokens[13].MatchingGroup := 'TRUNCATE';
+  SetLength(MySQL5015PreparableTokens[13].ChildMatches, 1);
+  MySQL5015PreparableTokens[13].ChildMatches[0] := 'TABLE';
+MySQL5015PreparableTokens[14].MatchingGroup := 'UPDATE';
+
+SetLength(MySQL5023PreparableTokens, 18);
+MySQL5023PreparableTokens[0].MatchingGroup := 'ALTER';
+  SetLength(MySQL5023PreparableTokens[0].ChildMatches, 1);
+  MySQL5023PreparableTokens[0].ChildMatches[0] := 'TABLE';
+MySQL5023PreparableTokens[1].MatchingGroup := 'CALL';
+MySQL5023PreparableTokens[2].MatchingGroup := 'COMMIT';
+MySQL5023PreparableTokens[3].MatchingGroup := 'CREATE';
+  SetLength(MySQL5023PreparableTokens[3].ChildMatches, 3);
+  MySQL5023PreparableTokens[3].ChildMatches[0] := 'INDEX';
+  MySQL5023PreparableTokens[3].ChildMatches[1] := 'TABLE';
+  MySQL5023PreparableTokens[3].ChildMatches[2] := 'VIEW';
+MySQL5023PreparableTokens[4].MatchingGroup := 'DROP';
+  SetLength(MySQL5023PreparableTokens[4].ChildMatches, 3);
+  MySQL5023PreparableTokens[4].ChildMatches[0] := 'INDEX';
+  MySQL5023PreparableTokens[4].ChildMatches[1] := 'TABLE';
+  MySQL5023PreparableTokens[4].ChildMatches[2] := 'VIEW';
+MySQL5023PreparableTokens[5].MatchingGroup := 'DELETE';
+MySQL5023PreparableTokens[6].MatchingGroup := 'DO';
+MySQL5023PreparableTokens[7].MatchingGroup := 'INSERT';
+MySQL5023PreparableTokens[8].MatchingGroup := 'RENAME';
+  SetLength(MySQL5023PreparableTokens[8].ChildMatches, 1);
+  MySQL5023PreparableTokens[8].ChildMatches[0] := 'TABLE';
+MySQL5023PreparableTokens[9].MatchingGroup := 'REPLACE';
+MySQL5023PreparableTokens[10].MatchingGroup := 'SELECT';
+MySQL5023PreparableTokens[11].MatchingGroup := 'SET';
+MySQL5023PreparableTokens[12].MatchingGroup := 'SHOW';
+MySQL5023PreparableTokens[13].MatchingGroup := 'TRUNCATE';
+  SetLength(MySQL5023PreparableTokens[13].ChildMatches, 1);
+  MySQL5023PreparableTokens[13].ChildMatches[0] := 'TABLE';
+MySQL5023PreparableTokens[14].MatchingGroup := 'UPDATE';
+MySQL5023PreparableTokens[15].MatchingGroup := 'ANALYZE';
+  SetLength(MySQL5023PreparableTokens[15].ChildMatches, 1);
+  MySQL5023PreparableTokens[15].ChildMatches[0] := 'TABLE';
+MySQL5023PreparableTokens[16].MatchingGroup := 'OPTIMIZE';
+  SetLength(MySQL5023PreparableTokens[16].ChildMatches, 1);
+  MySQL5023PreparableTokens[16].ChildMatches[0] := 'TABLE';
+MySQL5023PreparableTokens[17].MatchingGroup := 'REPAIR';
+  SetLength(MySQL5023PreparableTokens[17].ChildMatches, 1);
+  MySQL5023PreparableTokens[17].ChildMatches[0] := 'TABLE';
+
+{http://dev.mysql.com/doc/refman/5.1/en/sql-syntax-prepared-statements.html}
+SetLength(MySQL5112PreparableTokens, 30);
+MySQL5112PreparableTokens[0].MatchingGroup := 'ALTER';
+  SetLength(MySQL5112PreparableTokens[0].ChildMatches, 1);
+  MySQL5112PreparableTokens[0].ChildMatches[0] := 'TABLE';
+MySQL5112PreparableTokens[1].MatchingGroup := 'CALL';
+MySQL5112PreparableTokens[2].MatchingGroup := 'COMMIT';
+MySQL5112PreparableTokens[3].MatchingGroup := 'CREATE';
+  SetLength(MySQL5112PreparableTokens[3].ChildMatches, 5);
+  MySQL5112PreparableTokens[3].ChildMatches[0] := 'INDEX';
+  MySQL5112PreparableTokens[3].ChildMatches[1] := 'TABLE';
+  MySQL5112PreparableTokens[3].ChildMatches[2] := 'VIEW';
+  MySQL5112PreparableTokens[3].ChildMatches[3] := 'DATABASE';
+  MySQL5112PreparableTokens[3].ChildMatches[4] := 'USER';
+MySQL5112PreparableTokens[4].MatchingGroup := 'DROP';
+  SetLength(MySQL5112PreparableTokens[4].ChildMatches, 5);
+  MySQL5112PreparableTokens[4].ChildMatches[0] := 'INDEX';
+  MySQL5112PreparableTokens[4].ChildMatches[1] := 'TABLE';
+  MySQL5112PreparableTokens[4].ChildMatches[2] := 'VIEW';
+  MySQL5112PreparableTokens[4].ChildMatches[3] := 'DATABASE';
+  MySQL5112PreparableTokens[4].ChildMatches[4] := 'USER';
+MySQL5112PreparableTokens[5].MatchingGroup := 'DELETE';
+MySQL5112PreparableTokens[6].MatchingGroup := 'DO';
+MySQL5112PreparableTokens[7].MatchingGroup := 'INSERT';
+MySQL5112PreparableTokens[8].MatchingGroup := 'RENAME';
+  SetLength(MySQL5112PreparableTokens[8].ChildMatches, 3);
+  MySQL5112PreparableTokens[8].ChildMatches[0] := 'TABLE';
+  MySQL5112PreparableTokens[8].ChildMatches[1] := 'DATABASE';
+  MySQL5112PreparableTokens[8].ChildMatches[2] := 'USER';
+MySQL5112PreparableTokens[9].MatchingGroup := 'REPLACE';
+MySQL5112PreparableTokens[10].MatchingGroup := 'SELECT';
+MySQL5112PreparableTokens[11].MatchingGroup := 'SET';
+MySQL5112PreparableTokens[12].MatchingGroup := 'SHOW';
+MySQL5112PreparableTokens[13].MatchingGroup := 'TRUNCATE';
+  SetLength(MySQL5112PreparableTokens[13].ChildMatches, 1);
+  MySQL5112PreparableTokens[13].ChildMatches[0] := 'TABLE';
+MySQL5112PreparableTokens[14].MatchingGroup := 'UPDATE';
+MySQL5112PreparableTokens[15].MatchingGroup := 'ANALYZE';
+  SetLength(MySQL5112PreparableTokens[15].ChildMatches, 1);
+  MySQL5112PreparableTokens[15].ChildMatches[0] := 'TABLE';
+MySQL5112PreparableTokens[16].MatchingGroup := 'OPTIMIZE';
+  SetLength(MySQL5112PreparableTokens[16].ChildMatches, 1);
+  MySQL5112PreparableTokens[16].ChildMatches[0] := 'TABLE';
+MySQL5112PreparableTokens[17].MatchingGroup := 'REPAIR';
+  SetLength(MySQL5112PreparableTokens[17].ChildMatches, 1);
+  MySQL5112PreparableTokens[17].ChildMatches[0] := 'TABLE';
+MySQL5112PreparableTokens[18].MatchingGroup := 'CACHE';
+  SetLength(MySQL5112PreparableTokens[18].ChildMatches, 1);
+  MySQL5112PreparableTokens[18].ChildMatches[0] := 'INDEX';
+MySQL5112PreparableTokens[19].MatchingGroup := 'CHANGE';
+  SetLength(MySQL5112PreparableTokens[19].ChildMatches, 1);
+  MySQL5112PreparableTokens[19].ChildMatches[0] := 'MASTER';
+MySQL5112PreparableTokens[20].MatchingGroup := 'CHECKSUM';
+  SetLength(MySQL5112PreparableTokens[20].ChildMatches, 2);
+  MySQL5112PreparableTokens[20].ChildMatches[0] := 'TABLE';
+  MySQL5112PreparableTokens[20].ChildMatches[1] := 'TABLES';
+MySQL5112PreparableTokens[21].MatchingGroup := 'FLUSH';
+  SetLength(MySQL5112PreparableTokens[21].ChildMatches, 10);
+  MySQL5112PreparableTokens[21].ChildMatches[0] := 'TABLE';
+  MySQL5112PreparableTokens[21].ChildMatches[1] := 'TABLES';
+  MySQL5112PreparableTokens[21].ChildMatches[2] := 'HOSTS';
+  MySQL5112PreparableTokens[21].ChildMatches[3] := 'PRIVILEGES';
+  MySQL5112PreparableTokens[21].ChildMatches[4] := 'LOGS';
+  MySQL5112PreparableTokens[21].ChildMatches[5] := 'STATUS';
+  MySQL5112PreparableTokens[21].ChildMatches[6] := 'MASTER';
+  MySQL5112PreparableTokens[21].ChildMatches[7] := 'SLAVE';
+  MySQL5112PreparableTokens[21].ChildMatches[8] := 'DES_KEY_FILE';
+  MySQL5112PreparableTokens[21].ChildMatches[9] := 'USER_RESOURCES';
+MySQL5112PreparableTokens[22].MatchingGroup := 'GRANT';
+MySQL5112PreparableTokens[23].MatchingGroup := 'INSTALL';
+  SetLength(MySQL5112PreparableTokens[23].ChildMatches, 1);
+  MySQL5112PreparableTokens[23].ChildMatches[0] := 'PLUGIN';
+MySQL5112PreparableTokens[24].MatchingGroup := 'KILL';
+MySQL5112PreparableTokens[25].MatchingGroup := 'LOAD';
+  SetLength(MySQL5112PreparableTokens[25].ChildMatches, 1);
+  MySQL5112PreparableTokens[25].ChildMatches[0] := 'INDEX'; //+INTO CACHE
+MySQL5112PreparableTokens[26].MatchingGroup := 'RESET';
+  SetLength(MySQL5112PreparableTokens[26].ChildMatches, 3);
+  MySQL5112PreparableTokens[26].ChildMatches[0] := 'MASTER';
+  MySQL5112PreparableTokens[26].ChildMatches[1] := 'SLAVE';
+  MySQL5112PreparableTokens[26].ChildMatches[2] := 'QUERY'; //+CACHE
+MySQL5112PreparableTokens[27].MatchingGroup := 'REVOKE';
+MySQL5112PreparableTokens[28].MatchingGroup := 'SLAVE';
+  SetLength(MySQL5112PreparableTokens[28].ChildMatches, 2);
+  MySQL5112PreparableTokens[28].ChildMatches[0] := 'START';
+  MySQL5112PreparableTokens[28].ChildMatches[1] := 'STOP';
+MySQL5112PreparableTokens[29].MatchingGroup := 'UNINSTALL';
+  SetLength(MySQL5112PreparableTokens[29].ChildMatches, 1);
+  MySQL5112PreparableTokens[29].ChildMatches[0] := 'PLUGIN';
+
+{http://dev.mysql.com/doc/refman/5.6/en/sql-syntax-prepared-statements.html}
+SetLength(MySQL568PreparableTokens, 30);
+MySQL568PreparableTokens[0].MatchingGroup := 'ALTER';
+  SetLength(MySQL568PreparableTokens[0].ChildMatches, 2);
+  MySQL568PreparableTokens[0].ChildMatches[0] := 'TABLE';
+  MySQL568PreparableTokens[0].ChildMatches[1] := 'USER';
+MySQL568PreparableTokens[1].MatchingGroup := 'CALL';
+MySQL568PreparableTokens[2].MatchingGroup := 'COMMIT';
+MySQL568PreparableTokens[3].MatchingGroup := 'CREATE';
+  SetLength(MySQL568PreparableTokens[3].ChildMatches, 5);
+  MySQL568PreparableTokens[3].ChildMatches[0] := 'INDEX';
+  MySQL568PreparableTokens[3].ChildMatches[1] := 'TABLE';
+  MySQL568PreparableTokens[3].ChildMatches[2] := 'VIEW';
+  MySQL568PreparableTokens[3].ChildMatches[3] := 'DATABASE';
+  MySQL568PreparableTokens[3].ChildMatches[4] := 'USER';
+MySQL568PreparableTokens[4].MatchingGroup := 'DROP';
+  SetLength(MySQL568PreparableTokens[4].ChildMatches, 5);
+  MySQL568PreparableTokens[4].ChildMatches[0] := 'INDEX';
+  MySQL568PreparableTokens[4].ChildMatches[1] := 'TABLE';
+  MySQL568PreparableTokens[4].ChildMatches[2] := 'VIEW';
+  MySQL568PreparableTokens[4].ChildMatches[3] := 'DATABASE';
+  MySQL568PreparableTokens[4].ChildMatches[4] := 'USER';
+MySQL568PreparableTokens[5].MatchingGroup := 'DELETE';
+MySQL568PreparableTokens[6].MatchingGroup := 'DO';
+MySQL568PreparableTokens[7].MatchingGroup := 'INSERT';
+MySQL568PreparableTokens[8].MatchingGroup := 'RENAME';
+  SetLength(MySQL568PreparableTokens[8].ChildMatches, 3);
+  MySQL568PreparableTokens[8].ChildMatches[0] := 'TABLE';
+  MySQL568PreparableTokens[8].ChildMatches[1] := 'DATABASE';
+  MySQL568PreparableTokens[8].ChildMatches[2] := 'USER';
+MySQL568PreparableTokens[9].MatchingGroup := 'REPLACE';
+MySQL568PreparableTokens[10].MatchingGroup := 'SELECT';
+MySQL568PreparableTokens[11].MatchingGroup := 'SET';
+MySQL568PreparableTokens[12].MatchingGroup := 'SHOW';
+MySQL568PreparableTokens[13].MatchingGroup := 'TRUNCATE';
+  SetLength(MySQL568PreparableTokens[13].ChildMatches, 1);
+  MySQL568PreparableTokens[13].ChildMatches[0] := 'TABLE';
+MySQL568PreparableTokens[14].MatchingGroup := 'UPDATE';
+MySQL568PreparableTokens[15].MatchingGroup := 'ANALYZE';
+  SetLength(MySQL568PreparableTokens[15].ChildMatches, 1);
+  MySQL568PreparableTokens[15].ChildMatches[0] := 'TABLE';
+MySQL568PreparableTokens[16].MatchingGroup := 'OPTIMIZE';
+  SetLength(MySQL568PreparableTokens[16].ChildMatches, 1);
+  MySQL568PreparableTokens[16].ChildMatches[0] := 'TABLE';
+MySQL568PreparableTokens[17].MatchingGroup := 'REPAIR';
+  SetLength(MySQL568PreparableTokens[17].ChildMatches, 1);
+  MySQL568PreparableTokens[17].ChildMatches[0] := 'TABLE';
+MySQL568PreparableTokens[18].MatchingGroup := 'CACHE';
+  SetLength(MySQL568PreparableTokens[18].ChildMatches, 1);
+  MySQL568PreparableTokens[18].ChildMatches[0] := 'INDEX';
+MySQL568PreparableTokens[19].MatchingGroup := 'CHANGE';
+  SetLength(MySQL568PreparableTokens[19].ChildMatches, 1);
+  MySQL568PreparableTokens[19].ChildMatches[0] := 'MASTER';
+MySQL568PreparableTokens[20].MatchingGroup := 'CHECKSUM';
+  SetLength(MySQL568PreparableTokens[20].ChildMatches, 2);
+  MySQL568PreparableTokens[20].ChildMatches[0] := 'TABLE';
+  MySQL568PreparableTokens[20].ChildMatches[1] := 'TABLES';
+MySQL568PreparableTokens[21].MatchingGroup := 'FLUSH';
+  SetLength(MySQL568PreparableTokens[21].ChildMatches, 10);
+  MySQL568PreparableTokens[21].ChildMatches[0] := 'TABLE';
+  MySQL568PreparableTokens[21].ChildMatches[1] := 'TABLES';
+  MySQL568PreparableTokens[21].ChildMatches[2] := 'HOSTS';
+  MySQL568PreparableTokens[21].ChildMatches[3] := 'PRIVILEGES';
+  MySQL568PreparableTokens[21].ChildMatches[4] := 'LOGS';
+  MySQL568PreparableTokens[21].ChildMatches[5] := 'STATUS';
+  MySQL568PreparableTokens[21].ChildMatches[6] := 'MASTER';
+  MySQL568PreparableTokens[21].ChildMatches[7] := 'SLAVE';
+  MySQL568PreparableTokens[21].ChildMatches[8] := 'DES_KEY_FILE';
+  MySQL568PreparableTokens[21].ChildMatches[9] := 'USER_RESOURCES';
+MySQL568PreparableTokens[22].MatchingGroup := 'GRANT';
+MySQL568PreparableTokens[23].MatchingGroup := 'INSTALL';
+  SetLength(MySQL568PreparableTokens[23].ChildMatches, 1);
+  MySQL568PreparableTokens[23].ChildMatches[0] := 'PLUGIN';
+MySQL568PreparableTokens[24].MatchingGroup := 'KILL';
+MySQL568PreparableTokens[25].MatchingGroup := 'LOAD';
+  SetLength(MySQL568PreparableTokens[25].ChildMatches, 1);
+  MySQL568PreparableTokens[25].ChildMatches[0] := 'INDEX'; //+INTO CACHE
+MySQL568PreparableTokens[26].MatchingGroup := 'RESET';
+  SetLength(MySQL568PreparableTokens[26].ChildMatches, 3);
+  MySQL568PreparableTokens[26].ChildMatches[0] := 'MASTER';
+  MySQL568PreparableTokens[26].ChildMatches[1] := 'SLAVE';
+  MySQL568PreparableTokens[26].ChildMatches[2] := 'QUERY'; //+CACHE
+MySQL568PreparableTokens[27].MatchingGroup := 'REVOKE';
+MySQL568PreparableTokens[28].MatchingGroup := 'SLAVE';
+  SetLength(MySQL568PreparableTokens[28].ChildMatches, 2);
+  MySQL568PreparableTokens[28].ChildMatches[0] := 'START';
+  MySQL568PreparableTokens[28].ChildMatches[1] := 'STOP';
+MySQL568PreparableTokens[29].MatchingGroup := 'UNINSTALL';
+  SetLength(MySQL568PreparableTokens[29].ChildMatches, 1);
+  MySQL568PreparableTokens[29].ChildMatches[0] := 'PLUGIN';
 end.

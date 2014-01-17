@@ -102,7 +102,7 @@ type
     procedure AddChildAlerter(Child: TZPgEventAlerter);
     procedure RemoveChildAlerter(Child: TZPgEventAlerter);
     procedure HandleNotify(Notify: PZPostgreSQLNotify); //launching OnNotify event fo Self and all child components (if event name is matched)
-    procedure SetChildEvents     (Value: TStrings);
+    procedure SetChildEvents     ({%H-}Value: TStrings);
     procedure RefreshEvents; //gathering all events from all child components (no duplicates), also propagating these events "down" to our processor
   public
     constructor Create     (AOwner: TComponent); override;

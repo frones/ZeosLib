@@ -63,32 +63,9 @@ uses
 
 type
 
-  {** Defines a Oracle specific statement. }
-  IZOracleStatement = interface(IZStatement)
-    ['{8644E5B6-1E0F-493F-B6AC-40D70CCEA13A}']
-
-    function GetStatementHandle: POCIStmt;
-  end;
-
-  {** Implements Generic Oracle Statement. }
-  TZOracleStatement = class(TZAbstractStatement, IZOracleStatement)
-  private
-    FPrefetchCount: Integer;
-    FPlainDriver: IZOraclePlainDriver;
-
-  public
-    constructor Create(PlainDriver: IZOraclePlainDriver;
-      Connection: IZConnection; Info: TStrings);
-    destructor Destroy; override;
-
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-
-    function GetStatementHandle: POCIStmt;
-  end;
-
   {** Implements Prepared SQL Statement. }
+
+  { TZOraclePreparedStatement }
   TZOraclePreparedStatement = class(TZAbstractPreparedStatement)
   private
     FHandle: POCIStmt;
@@ -97,16 +74,20 @@ type
     FInVars: PZSQLVars;
     FPrefetchCount: Integer;
     function ConvertToOracleSQLQuery: RawByteString;
+    function CreateResultSet: IZResultSet;
   protected
-    property Handle: POCIStmt read FHandle write FHandle;
-    property ErrorHandle: POCIError read FErrorHandle write FErrorHandle;
+    procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
     property InVars: PZSQLVars read FInVars write FInVars;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
-      Connection: IZConnection; const SQL: string; Info: TStrings);
+      Connection: IZConnection; const SQL: string; Info: TStrings); overload;
+    constructor Create(PlainDriver: IZOraclePlainDriver;
+      Connection: IZConnection; Info: TStrings); overload;
 
     procedure Close; override;
     procedure Prepare; override;
+    procedure Unprepare; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -114,6 +95,8 @@ type
 
     function GetStatementHandle: POCIStmt;
   end;
+  TZOracleStatement = class(TZAbstractPreparedStatement);
+
 
   TZOracleCallableStatement = class(TZAbstractCallableStatement,
     IZParamNamedCallableStatement)
@@ -156,158 +139,6 @@ uses
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFDEF UNICODE}, ZEncoding{$ENDIF}, ZDbcUtils;
 
-{ TZOracleStatement }
-
-{**
-  Constructs this object and assignes the main properties.
-  @param PlainDriver a Oracle plain driver.
-  @param Connection a database connection object.
-  @param Info a statement parameters.
-  @param Handle a connection handle pointer.
-}
-constructor TZOracleStatement.Create(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; Info: TStrings);
-begin
-  inherited Create(Connection, Info);
-  FPlainDriver := PlainDriver;
-  ResultSetType := rtForwardOnly;
-  FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOracleStatement.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
-  Executes an SQL statement that returns a single <code>ResultSet</code> object.
-  @param sql typically this is a static SQL <code>SELECT</code> statement
-  @return a <code>ResultSet</code> object that contains the data produced by the
-    given query; never <code>null</code>
-}
-function TZOracleStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-var
-  Handle: POCIStmt;
-  ErrorHandle: POCIError;
-begin
-  AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
-  ASQL := SQL;
-  try
-    PrepareOracleStatement(FPlainDriver, ASQL, Handle, ErrorHandle, FPrefetchCount, ConSettings);
-    Result := CreateOracleResultSet(FPlainDriver, Self, Self.SQL,
-      Handle, ErrorHandle);
-  except
-    FreeOracleStatementHandles(FPlainDriver, Handle, ErrorHandle);
-    raise;
-  end;
-
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-end;
-
-{**
-  Executes an SQL <code>INSERT</code>, <code>UPDATE</code> or
-  <code>DELETE</code> statement. In addition,
-  SQL statements that return nothing, such as SQL DDL statements,
-  can be executed.
-
-  @param sql an SQL <code>INSERT</code>, <code>UPDATE</code> or
-    <code>DELETE</code> statement or an SQL statement that returns nothing
-  @return either the row count for <code>INSERT</code>, <code>UPDATE</code>
-    or <code>DELETE</code> statements, or 0 for SQL statements that return nothing
-}
-function TZOracleStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
-var
-  Handle: POCIStmt;
-  ErrorHandle: POCIError;
-begin
-  AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
-  ASQL := SQL;
-  try
-    PrepareOracleStatement(FPlainDriver, ASQL, Handle, ErrorHandle,
-      FPrefetchcount, ConSettings);
-    ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-      ASQL, Handle, ErrorHandle, ConSettings, Connection.GetAutoCommit);
-    Result := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
-  finally
-    FreeOracleStatementHandles(FPlainDriver, Handle, ErrorHandle);
-  end;
-
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-
-  { Autocommit statement. done by ExecuteOracleStatement}
-end;
-
-{**
-  Executes an SQL statement that may return multiple results.
-  Under some (uncommon) situations a single SQL statement may return
-  multiple result sets and/or update counts.  Normally you can ignore
-  this unless you are (1) executing a stored procedure that you know may
-  return multiple results or (2) you are dynamically executing an
-  unknown SQL string.  The  methods <code>execute</code>,
-  <code>getMoreResults</code>, <code>getResultSet</code>,
-  and <code>getUpdateCount</code> let you navigate through multiple results.
-
-  The <code>execute</code> method executes an SQL statement and indicates the
-  form of the first result.  You can then use the methods
-  <code>getResultSet</code> or <code>getUpdateCount</code>
-  to retrieve the result, and <code>getMoreResults</code> to
-  move to any subsequent result(s).
-
-  @param sql any SQL statement
-  @return <code>true</code> if the next result is a <code>ResultSet</code> object;
-  <code>false</code> if it is an update count or there are no more results
-}
-function TZOracleStatement.Execute(const SQL: RawByteString): Boolean;
-var
-  Handle: POCIStmt;
-  ErrorHandle: POCIError;
-  StatementType: ub2;
-begin
-  Result := False;
-  AllocateOracleStatementHandles(FPlainDriver, Connection, Handle, ErrorHandle);
-  ASQL := SQL;
-  try
-    PrepareOracleStatement(FPlainDriver, ASQL, Handle, ErrorHandle,
-      FPrefetchCount, ConSettings);
-
-    StatementType := 0;
-    FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
-      OCI_ATTR_STMT_TYPE, ErrorHandle);
-
-    if StatementType = OCI_STMT_SELECT then
-    begin
-      LastResultSet := CreateOracleResultSet(FPlainDriver, Self,
-        Self.SQL, Handle, ErrorHandle);
-      Result := LastResultSet <> nil;
-    end
-    else
-    begin
-      ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-        ASQL, Handle, ErrorHandle, ConSettings, Connection.GetAutoCommit);
-      LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
-    end;
-  finally
-    if not Result then
-      FreeOracleStatementHandles(FPlainDriver, Handle, ErrorHandle);
-  end;
-
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-
-  { Autocommit statement. done by ExecuteOracleStatement}
-end;
-
-{**
-  Gets statement handle.
-  @return statement handle.
-}
-function TZOracleStatement.GetStatementHandle: POCIStmt;
-begin
-  Result := nil;
-end;
-
 { TZOraclePreparedStatement }
 
 {**
@@ -326,6 +157,12 @@ begin
   ResultSetType := rtForwardOnly;
   ASQL := ConvertToOracleSQLQuery;
   FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
+end;
+
+constructor TZOraclePreparedStatement.Create(PlainDriver: IZOraclePlainDriver;
+  Connection: IZConnection; Info: TStrings);
+begin
+  Create(PlainDriver, Connection, '', Info);
 end;
 
 {**
@@ -352,14 +189,43 @@ begin
   {$ENDIF}
 end;
 
+function TZOraclePreparedStatement.CreateResultSet: IZResultSet;
+begin
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
+  Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle);
+  FOpenResultSet := Pointer(Result);
+end;
+
+{**
+  Binds the input parameters
+}
+procedure TZOraclePreparedStatement.BindInParameters;
+begin
+  { Loads binded variables with values. }
+  LoadOracleVars(FPlainDriver, Connection, FErrorHandle,
+    FInVars, InParamValues,ChunkSize);
+
+  inherited BindInParameters;
+end;
+
+{**
+  Removes eventual structures for binding input parameters.
+}
+procedure TZOraclePreparedStatement.UnPrepareInParameters;
+begin
+  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
+end;
+
 {**
   Closes this statement and frees all resources.
 }
 procedure TZOraclePreparedStatement.Close;
 begin
   inherited Close;
-  FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
-  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
 end;
 
 {**
@@ -376,12 +242,10 @@ begin
   begin
     { Allocates statement handles. }
     if (FHandle = nil) or (FErrorHandle = nil) then
-    begin
       AllocateOracleStatementHandles(FPlainDriver, Connection,
         FHandle, FErrorHandle);
-    end;
 
-    PrepareOracleStatement(FPlainDriver, ASQL, Handle, ErrorHandle,
+    PrepareOracleStatement(FPlainDriver, ASQL, FHandle, FErrorHandle,
       FPrefetchCount, ConSettings);
 
     AllocateOracleSQLVars(FInVars, InParamCount);
@@ -402,7 +266,7 @@ begin
       else TypeCode := SQLT_STR;
 
       InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
-        InParamTypes[I], TypeCode, 1024);
+        InParamTypes[I], TypeCode, 1024*32);
 
         if InParamTypes[I] in [stString, stUnicodeString] then
       Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
@@ -416,11 +280,17 @@ begin
         OCI_DEFAULT);
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
     end;
-
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     inherited Prepare;
   end;
 end;
+
+procedure TZOraclePreparedStatement.UnPrepare;
+begin
+  FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
+  inherited Unprepare;
+end;
+
+
 
 {**
   Executes the SQL query in this <code>PreparedStatement</code> object
@@ -439,30 +309,32 @@ begin
   if not Prepared then
     Prepare;
 
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues, ChunkSize);
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
+
+  BindInParameters;
 
   StatementType := 0;
-  FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
-    OCI_ATTR_STMT_TYPE, ErrorHandle);
+  FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @StatementType, nil,
+    OCI_ATTR_STMT_TYPE, FErrorHandle);
 
   if StatementType = OCI_STMT_SELECT then
   begin
     { Executes the statement and gets a resultset. }
-    LastResultSet := CreateOracleResultSet(FPlainDriver, Self,
-      SQL, Handle, ErrorHandle);
+    LastResultSet := CreateResultSet;
     Result := LastResultSet <> nil;
   end
   else
   begin
     { Executes the statement and gets a result. }
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-      ASQL, Handle, ErrorHandle, ConSettings, Connection.GetAutoCommit);
-    LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
+    LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
   end;
-
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  inherited ExecutePrepared;
 
   { Unloads binded variables with values. }
   UnloadOracleVars(FInVars);
@@ -483,15 +355,11 @@ begin
   if not Prepared then
     Prepare;
 
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues,ChunkSize);
+  BindInParameters;
 
   { Executes the statement and gets a resultset. }
-  Result := CreateOracleResultSet(FPlainDriver, Self, SQL,
-    Handle, ErrorHandle);
-
-  DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  Result := CreateResultSet;
+  inherited ExecuteQueryPrepared;
 
   { Unloads binded variables with values. }
   UnloadOracleVars(FInVars);
@@ -516,20 +384,24 @@ begin
   if not Prepared then
     Prepare;
 
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver, Connection, ErrorHandle,
-    FInVars, InParamValues, ChunkSize);
+  if FOpenResultSet <> nil then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
 
+  BindInParameters;
   try
     StatementType := 0;
-    FPlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @StatementType, nil,
-      OCI_ATTR_STMT_TYPE, ErrorHandle);
+    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @StatementType, nil,
+      OCI_ATTR_STMT_TYPE, FErrorHandle);
 
     if StatementType = OCI_STMT_SELECT then
     begin
+      Result := -1;
+
       { Executes the statement and gets a resultset. }
-      ResultSet := CreateOracleResultSet(FPlainDriver, Self,
-        SQL, Handle, ErrorHandle);
+      ResultSet := CreateResultSet;
       try
         while ResultSet.Next do;
         LastUpdateCount := ResultSet.GetRow;
@@ -542,11 +414,10 @@ begin
       { Executes the statement and gets a result. }
       ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
         ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
-      LastUpdateCount := GetOracleUpdateCount(FPlainDriver, Handle, ErrorHandle);
+      LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     end;
     Result := LastUpdateCount;
-
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    inherited ExecuteUpdatePrepared;
   finally
     { Unloads binded variables with values. }
     UnloadOracleVars(FInVars);
