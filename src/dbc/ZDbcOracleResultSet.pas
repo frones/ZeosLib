@@ -244,7 +244,7 @@ begin
   CheckClosed;
   if (RowNo < 1) or (RowNo > LastRowNo) then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
-  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.ActualNum) then
+  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.AllocNum) then
   begin
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
@@ -920,6 +920,7 @@ var
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
   TempColumnNameLen, CSForm: Integer;
+  FConnectionHandle: POCIEnv;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -928,6 +929,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   Connection := GetStatement.GetConnection as IZOracleConnection;
+  FConnectionHandle := Connection.GetConnectionHandle;
 
   CheckOracleError(FPlainDriver, FErrorHandle,
     FPlainDriver.StmtExecute(Connection.GetContextHandle, FStmtHandle,
@@ -937,10 +939,9 @@ begin
   FPlainDriver.AttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount, nil,
     OCI_ATTR_PARAM_COUNT, FErrorHandle);
   AllocateOracleSQLVars(FOutVars, ColumnCount);
-  FOutVars.ActualNum := ColumnCount;
 
   { Allocates memory for result set }
-  for I := 1 to FOutVars.ActualNum do
+  for I := 1 to FOutVars.AllocNum do
   begin
     CurrentVar := @FOutVars.Variables[I];
     CurrentVar.Handle := nil;
@@ -1048,7 +1049,7 @@ begin
       CurrentVar.CodePage := High(Word);
 
 
-    InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
+    InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
     if CurrentVar.ColType in [stString, stUnicodeString] then
@@ -1072,7 +1073,7 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FOutVars.ActualNum do
+  for I := 1 to FOutVars.AllocNum do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
@@ -1238,7 +1239,6 @@ begin
 
   Result := nil;
   AllocateOracleSQLVars(Result, J);
-  Result.ActualNum := J;
   SetLength(FFieldNames, J);
 
   for I := 1 to Length(OracleParams) do
@@ -1267,7 +1267,7 @@ begin
   Connection := GetStatement.GetConnection;
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FOutVars.ActualNum do
+  for I := 1 to FOutVars.AllocNum do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
@@ -1357,12 +1357,11 @@ begin
   if FOutVars <> nil then
   begin
     { Frees allocated memory for output variables }
-    for I := 1 to FOutVars.ActualNum do
+    for I := 1 to FOutVars.AllocNum do
     begin
       CurrentVar := @FOutVars.Variables[I];
       if CurrentVar.Data <> nil then
       begin
-        CurrentVar.DupData := nil;
         FreeMem(CurrentVar.Data);
         CurrentVar.Data := nil;
       end;

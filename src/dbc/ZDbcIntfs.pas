@@ -582,7 +582,7 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; const Value: Byte);
     procedure SetShort(ParameterIndex: Integer; const Value: ShortInt);

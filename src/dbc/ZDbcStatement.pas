@@ -212,9 +212,10 @@ type
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
     FIsPraparable: Boolean;
-    function GetInParamValues: TZVariantDynArray;
+    function GetInParamValues: TZVariantDynArray; overload;
     procedure SetInParamValues(const Values: TZVariantDynArray);
   protected
+    function GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray; overload; //need this after property..
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -240,6 +241,7 @@ type
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
+    property LastInParamValuesIndex: Integer read FInParamValuesIndex;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
   public
@@ -266,7 +268,7 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
+    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType); virtual;
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); virtual;
     procedure SetByte(ParameterIndex: Integer; const Value: Byte); virtual;
     procedure SetShort(ParameterIndex: Integer; const Value: ShortInt); virtual;
@@ -1402,6 +1404,11 @@ begin
   Result := FInParamValuesArray[FInParamValuesIndex];
 end;
 
+function TZAbstractPreparedStatement.GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray;
+begin
+  Result := FInParamValuesArray[BatchIndex];
+end;
+
 procedure TZAbstractPreparedStatement.SetInParamValues(const Values: TZVariantDynArray);
 begin
   FInParamValuesArray[FInParamValuesIndex] := Values;
@@ -1576,7 +1583,7 @@ end;
   @param sqlType the SQL type code defined in <code>java.sql.Types</code>
 }
 procedure TZAbstractPreparedStatement.SetNull(ParameterIndex: Integer;
-  SQLType: TZSQLType);
+  const SQLType: TZSQLType);
 begin
   SetInParam(ParameterIndex, SQLType, NullVariant);
 end;
@@ -2033,14 +2040,24 @@ procedure TZAbstractPreparedStatement.SetValue(ParameterIndex: Integer;
   const Value: TZVariant);
 var
   SQLType: TZSQLType;
+  TempBlob: IZBlob;
 begin
   case Value.VType of
     vtBoolean: SQLType := stBoolean;
     vtInteger: SQLType := stLong;
+    vtUInteger: SQLType := stULong;
     vtFloat: SQLType := stBigDecimal;
     vtUnicodeString: SQLType := stUnicodeString;
     vtDateTime: SQLType := stTimestamp;
     vtBytes: SQLType := stBytes;
+    vtInterface:
+      if Supports(Value.VInterface, IZBlob, TempBlob) then
+        if TempBlob.IsClob then
+          SQLType := stAsciiStream
+        else
+          SQLType := stBinaryStream
+      else
+        SQLType := stString; //???
   else
     SQLType := stString;
   end;

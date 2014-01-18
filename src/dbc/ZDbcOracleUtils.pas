@@ -62,6 +62,8 @@ uses
 
 const
   MAX_SQLVAR_LIMIT = 1024;
+  Max_OCI_String_Size = 1024*32;
+
 
 type
   {** Declares SQL Object }
@@ -96,7 +98,6 @@ type
     Define:    POCIHandle;
     BindHandle: POCIBind;
     Data:      Pointer;
-    DupData:   Pointer;
     DataType:  ub2;
     DataSize:  ub2;
     Length:    Integer;
@@ -108,11 +109,11 @@ type
     Blob:      IZBlob;
     CodePage:  Word;
     _Obj:      POCIObject;
+    FreeMem:   Boolean;
   end;
 
   TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     AllocNum:  ub4;
-    ActualNum: ub4;
     Variables: array[1..MAX_SQLVAR_LIMIT] of TZSQLVar;
   end;
   PZSQLVars = ^TZSQLVars;
@@ -154,9 +155,10 @@ procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
   @param OracleType a correspondent Oracle type.
   @param DataSize a length for string variables.
 }
-procedure InitializeOracleVar(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; var Variable: PZSQLVar;
-  DataType: TZSQLType; OracleType: ub2; DataSize: Integer);
+procedure InitializeOracleVar(const PlainDriver: IZOraclePlainDriver;
+  const ConnectionHandle: POCIEnv; var Variable: PZSQLVar;
+  const DataType: TZSQLType; OracleType: ub2; const DataSize: Integer;
+  const DoAllocMem: Boolean = True);
 
 {**
   Loads Oracle variables binded to SQL statement with data.
@@ -272,8 +274,8 @@ procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
   @returns a number of updates.
 }
-function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
-  Handle: POCIStmt; ErrorHandle: POCIError): ub4;
+function GetOracleUpdateCount(const PlainDriver: IZOraclePlainDriver;
+  const Handle: POCIStmt; const ErrorHandle: POCIError): ub4;
 
 function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
   ParamHandle: POCIParam; stmt_handle: POCIHandle; obj: POCIObject; Level: ub2): POCIObject;
@@ -315,7 +317,6 @@ begin
   GetMem(Variables, Size);
   FillChar(Variables^, Size, 0);
   Variables^.AllocNum := Count;
-  Variables^.ActualNum := 0;
 end;
 
 {**
@@ -347,7 +348,6 @@ var
       DisposeObject(Obj.next_subtype);
       Obj.next_subtype := nil;
     end;
-    //CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.tdo, 0), lcOther, 'OCIObjectFree', ConSettings);;
     if Obj.Level = 0 then
     begin
       {Unpin tdo}
@@ -362,29 +362,24 @@ begin
   if Variables <> nil then
   begin
     { Frees allocated memory for output variables }
-    for I := 1 to Variables.ActualNum do
+    for I := 1 to Variables.AllocNum do
     begin
       CurrentVar := @Variables.Variables[I];
       if Assigned(CurrentVar._Obj) then
       begin
         DisposeObject(CurrentVar._Obj);
-        //PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar._Obj.obj_type);
-        //PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.obj_value, 0);
         CurrentVar._Obj := nil;
       end;
       if CurrentVar.Data <> nil then
       begin
         if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
-        begin
           PlainDriver.DescriptorFree(PPOCIDescriptor(CurrentVar.Data)^,
-            OCI_DTYPE_LOB);
-        end
+            OCI_DTYPE_LOB)
         else if CurrentVar.TypeCode = SQLT_TIMESTAMP then
-        begin
           PlainDriver.DescriptorFree(PPOCIDescriptor(CurrentVar.Data)^,
             OCI_DTYPE_TIMESTAMP);
-        end;
-        FreeMem(CurrentVar.Data);
+        if CurrentVar.FreeMem then
+          FreeMem(CurrentVar.Data);
         CurrentVar.Data := nil;
       end;
     end;
@@ -404,14 +399,13 @@ end;
   @param DataSize a length for string variables.
 }
 
-procedure InitializeOracleVar(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; var Variable: PZSQLVar;
-  DataType: TZSQLType; OracleType: ub2; DataSize: Integer);
+procedure InitializeOracleVar(const PlainDriver: IZOraclePlainDriver;
+  const ConnectionHandle: POCIEnv; var Variable: PZSQLVar;
+  const DataType: TZSQLType; OracleType: ub2; const DataSize: Integer;
+  const DoAllocMem: Boolean = True);
 var
   Length: Integer;
-  OracleConnection: IZOracleConnection;
 begin
-  OracleConnection := Connection as IZOracleConnection;
   Variable.ColType := DataType;
   Variable.TypeCode := OracleType;
   Variable.DataSize := DataSize;
@@ -422,7 +416,7 @@ begin
         Variable.TypeCode := SQLT_INT;
         Length := SizeOf(LongInt);
       end;
-    stFloat, stDouble, stLongWord, stUlong, stLong, stCurrency:
+    stFloat, stDouble, stLongWord, stUlong, stLong, stCurrency, stBigDecimal:
       begin
         Variable.TypeCode := SQLT_FLT;
         Length := SizeOf(Double);
@@ -459,18 +453,16 @@ begin
   end;
 
   Variable.Length := Length;
-  GetMem(Variable.Data, Variable.Length);
+  if DoAllocMem then
+    ReallocMem(Variable.Data, Variable.Length);
+  Variable.FreeMem := DoAllocMem;
   if Variable.TypeCode in [SQLT_BIN, SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
-  begin
-    PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
-      PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil);
-  end
+    PlainDriver.DescriptorAlloc(ConnectionHandle,
+      PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil)
   else
     if Variable.TypeCode = SQLT_TIMESTAMP then
-    begin
-      PlainDriver.DescriptorAlloc(OracleConnection.GetConnectionHandle,
+      PlainDriver.DescriptorAlloc(ConnectionHandle,
         PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_TIMESTAMP, 0, nil);
-    end;
 end;
 
 {**
@@ -500,18 +492,15 @@ var
   ConSettings: PZConSettings;
   CharRec: TZCharRec;
 begin
+
   OracleConnection := Connection as IZOracleConnection;
   ClientVarManager := Connection.GetClientVariantManager;
   ConSettings := Connection.GetConSettings;
-  for I := 0 to Variables.ActualNum - 1 do
+  for I := 0 to Variables.AllocNum - 1 do
   begin
     CurrentVar := @Variables.Variables[I + 1];
-    CurrentVar.DupData := CurrentVar.Data;
     if (high(Values)<I) or ClientVarManager.IsNull(Values[I]) then
-    begin
-      CurrentVar.Indicator := -1;
-      //CurrentVar.Data := nil;
-    end
+      CurrentVar.Indicator := -1
     else
     begin
       CurrentVar.Indicator := 0;
@@ -521,9 +510,10 @@ begin
         SQLT_FLT:
           PDouble(CurrentVar.Data)^ := ClientVarManager.GetAsFloat(Values[I]);
         SQLT_STR:
+          if CurrentVar.FreeMem then //no mem is allocated. data is just a pointer to a locale string of TZCharRec
           begin
             CharRec := ClientVarManager.GetAsCharRec(Values[i], ConSettings^.ClientCodePage^.CP);
-            CurrentVar.DataSize := Math.Min(CharRec.Len, 1024)+1; //need the leading $0, because oracle expects it
+            CurrentVar.DataSize := Math.Min(CharRec.Len, Max_OCI_String_Size)+1; //need the leading $0, because oracle expects it
             System.Move(CharRec.P^, CurrentVar.Data^, CurrentVar.DataSize);
             (PAnsiChar(CurrentVar.Data)+CurrentVar.DataSize-1)^ := #0; //improve  StrLCopy...
           end;
@@ -630,11 +620,15 @@ var
   I: Integer;
   CurrentVar: PZSQLVar;
 begin
-  for I := 1 to Variables.ActualNum do
+  for I := 1 to Variables.AllocNum do
   begin
     CurrentVar := @Variables.Variables[I];
     CurrentVar.Blob := nil;
-    CurrentVar.Data := CurrentVar.DupData;
+    if not CurrentVar.FreeMem then
+    begin
+      CurrentVar.Data := nil;
+      CurrentVar.FreeMem := True;
+    end;
   end;
 end;
 
@@ -923,8 +917,8 @@ end;
   @param ErrorHandle a holder for Error handle.
   @returns a number of updates.
 }
-function GetOracleUpdateCount(PlainDriver: IZOraclePlainDriver;
-  Handle: POCIStmt; ErrorHandle: POCIError): ub4;
+function GetOracleUpdateCount(const PlainDriver: IZOraclePlainDriver;
+  const Handle: POCIStmt; const ErrorHandle: POCIError): ub4;
 begin
   Result := 0;
   PlainDriver.AttrGet(Handle, OCI_HTYPE_STMT, @Result, nil,
@@ -994,8 +988,7 @@ var
         @name, @len, OCI_ATTR_SCHEMA_NAME, FConnection.GetErrorHandle),
       lcOther, 'OCIAttrGet(OCI_ATTR_SCHEMA_NAME) of OCI_DTYPE_PARAM', ConSettings);
 
-    SetLength(temp, len+1);
-    temp := {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(temp), name, len);
+    ZSetString(name, len, temp);
     Obj.type_schema := ConSettings^.ConvFuncs.ZRawToString(temp,
       ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
@@ -1005,8 +998,7 @@ var
         @name, @len, OCI_ATTR_NAME, FConnection.GetErrorHandle),
       lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM', ConSettings);
 
-    SetLength(temp, len+1);
-    temp := {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(temp), name, len);
+    ZSetString(name, len, temp);
     Obj.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
       ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
@@ -1070,8 +1062,7 @@ var
             @name, @len, OCI_ATTR_NAME, FConnection.GetErrorHandle),
           lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM(Element)', ConSettings);
 
-        SetLength(temp, len+1);
-        temp := {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(PAnsiChar(temp), name, len);
+        ZSetString(name, len, temp);
         Fld.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 
