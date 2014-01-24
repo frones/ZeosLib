@@ -165,12 +165,12 @@ function WideStringStream(const AString: WideString): TStream;
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
-  const NeedNCharDetection: Boolean = False): TRawDynArray;
+  const NeedNCharDetection: Boolean = False): TRawByteStringDynArray;
 
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
-  const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
+  const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 
 {$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
@@ -603,7 +603,7 @@ end;
 function TokenizeSQLQueryRaw(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
-  const NeedNCharDetection: Boolean = False): TRawDynArray;
+  const NeedNCharDetection: Boolean = False): TRawByteStringDynArray;
 var
   I, C, N: Integer;
   Temp: RawByteString;
@@ -711,7 +711,7 @@ end;
 function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}RawByteString{$ELSE}String{$IFEND}; Const ConSettings: PZConSettings;
   const Tokenizer: IZTokenizer; var IsParamIndex, IsNCharIndex: TBooleanDynArray;
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
-  const NeedNCharDetection: Boolean = False): TUnicodeDynArray;
+  const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 var
   I, C, N: Integer;
   Tokens: TZTokenDynArray;

@@ -66,9 +66,7 @@ uses
   Windows,
   {$IFEND}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  {$IFNDEF HAVE_TBYTES}
   Types,
-  {$ENDIF}
   SysUtils;
 
 type
@@ -127,6 +125,7 @@ type
   {$ENDIF}
 
   TObjectDynArray       = array of TObject;
+
 {$IFDEF FPC}
 type
   TDBScreenCursor = (dcrDefault, dcrHourGlass, dcrSQLWait, dcrOther);
@@ -193,6 +192,67 @@ type
 
   ZWideString = {$IFDEF PWIDECHAR_IS_PUNICODECHAR}UnicodeString{$ELSE}WideString{$ENDIF};
 
+  {$IF not declared(TBooleanDynArray)}
+  TBooleanDynArray        = array of Boolean;
+  {$IFEND}
+  {$IF not declared(TByteDynArray)}
+  TByteDynArray           = array of Byte;
+  {$IFEND}
+  {$IF not declared(TShortIntDynArray)}
+  TShortIntDynArray       = array of ShortInt;
+  {$IFEND}
+  {$IF not declared(TWordDynArray)}
+  TWordDynArray           = array of Word;
+  {$IFEND}
+  {$IF not declared(TSmallIntDynArray)}
+  TSmallIntDynArray       = array of SmallInt;
+  {$IFEND}
+  {$IF not declared(TLongWordDynArray)}
+  TLongWordDynArray       = array of LongWord;
+  {$IFEND}
+  {$IF not declared(TIntegerDynArray)}
+  TIntegerDynArray        = array of LongInt;
+  {$IFEND}
+  {$IF not declared(TCardinalDynArray)}
+  TCardinalDynArray       = array of Cardinal;
+  {$IFEND}
+  {$IF not declared(TUInt64DynArray)}
+  TUInt64DynArray         = array of UInt64;
+  {$IFEND}
+  {$IF not declared(TInt64DynArray)}
+  TInt64DynArray          = array of Int64;
+  {$IFEND}
+  {$IF not declared(TSingleDynArray)}
+  TSingleDynArray         = array of Single;
+  {$IFEND}
+  {$IF not declared(TDoubleDynArray)}
+  TDoubleDynArray         = array of Double;
+  {$IFEND}
+  {$IF not declared(TCurrencyDynArray)}
+  TCurrencyDynArray       = array of Currency;
+  {$IFEND}
+  {$IF not declared(TExtendedDynArray)}
+  TExtendedDynArray       = array of Extended;
+  {$IFEND}
+  {$IF not declared(TDateTimeDynArray)}
+  TDateTimeDynArray       = array of TDateTime;
+  {$IFEND}
+  {$IF not declared(TUTF8StringDynArray)}
+  TUTF8StringDynArray     = array of UTF8String;
+  {$IFEND}
+  {$IF not declared(TAnsiStringDynArray)}
+  TAnsiStringDynArray     = array of AnsiString;
+  {$IFEND}
+  {$IF not declared(TRawByteStringDynArray)}
+  TRawByteStringDynArray  = array of RawByteString;
+  {$IFEND}
+  {$IF not declared(TUnicodeStringDynArray)}
+  TUnicodeStringDynArray  = array of ZWideString;
+  {$IFEND}
+  {$IF not declared(TStringDynArray)}
+  TStringDynArray  = array of String;
+  {$IFEND}
+  TZCharRecDynArray = array of TZCharRec;
 type
   {declare move or converter functions for the String Types}
   TZAnsiRecToUTF8 = function(const Src: TZAnsiRec; const RawCP: Word): UTF8String;
@@ -297,9 +357,6 @@ type
     procedure SetConSettingsFromInfo(Info: TStrings);
     property ConSettings: PZConSettings read FConSettings write FConSettings;
   end;
-
-  TRawDynArray = array of RawByteString;
-  TUnicodeDynArray = array of ZWideString;
 
   {$IFDEF WITH_LCONVENCODING}
   function NoConvert(const s: string): string;

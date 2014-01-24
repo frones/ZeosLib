@@ -553,15 +553,15 @@ type
   public
     constructor Create;
 
-    function Open(const filename: PAnsiChar; mode: Integer;
-      var errmsg: PAnsiChar): Psqlite;
+    function Open(const filename: PAnsiChar; {%H-}mode: Integer;
+      var {%H-}errmsg: PAnsiChar): Psqlite;
     function Close(db: Psqlite): Integer;
     function Execute(db: Psqlite; const sql: PAnsiChar;
       sqlite_callback: Tsqlite_callback; arg: Pointer;
       var errmsg: PAnsiChar): Integer;
     function LastInsertRowId(db: Psqlite): Int64;
     function Changes(db: Psqlite): Integer;
-    function LastStatementChanges(db: Psqlite): Integer;
+    function LastStatementChanges({%H-}db: Psqlite): Integer;
     function ErrorString(db: Psqlite; code: Integer): RawByteString;
     procedure Interrupt(db: Psqlite);
     function Complete(const sql: PAnsiChar): Integer;
@@ -577,14 +577,14 @@ type
     function LibVersion: PAnsiChar;
     function LibEncoding: PAnsiChar;
 
-    function CreateFunction(db: Psqlite; const zName: PAnsiChar;
-      nArg: Integer; callback: Tsqlite_function_callback;
-      pUserData: Pointer): Integer; virtual;
-    function CreateAggregate(db: Psqlite; const zName: PAnsiChar;
-      nArg: Integer; callback: Tsqlite_function_callback;
-      finalize: Tsqlite_finalize_callback; pUserData: Pointer): Integer;
-    function FunctionType(db: Psqlite; const zName: PAnsiChar;
-      datatype: Integer): Integer;
+    function CreateFunction({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
+      {%H-}nArg: Integer; {%H-}callback: Tsqlite_function_callback;
+      {%H-}pUserData: Pointer): Integer; virtual;
+    function CreateAggregate({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
+      {%H-}nArg: Integer; {%H-}callback: Tsqlite_function_callback;
+      {%H-}finalize: Tsqlite_finalize_callback; {%H-}pUserData: Pointer): Integer;
+    function FunctionType({%H-}db: Psqlite; const {%H-}zName: PAnsiChar;
+      {%H-}datatype: Integer): Integer;
     function SetResultString(func: Psqlite_func; const arg: PAnsiChar;
       len: Integer): PAnsiChar;
     procedure SetResultInt(func: Psqlite_func; arg: Integer);
@@ -666,8 +666,8 @@ type
     function CommitHook(db: Psqlite; callback: Tsqlite_simple_callback;
       ptr: Pointer): Pointer;
 
-    function OpenEncrypted(const zFilename: PAnsiChar; const pKey: PAnsiChar;
-      nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
+    function OpenEncrypted(const {%H-}zFilename: PAnsiChar; const {%H-}pKey: PAnsiChar;
+      {%H-}nKey: Integer; var pErrcode: Integer; var pzErrmsg: PAnsiChar): Psqlite;
     function ReKey(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
     function Key(db: Psqlite; const pKey: Pointer; nKey: Integer): Integer;
   end;

@@ -76,7 +76,17 @@ type
   {** Defines variant types. }
   TZVariantType = (vtNull, vtBoolean, vtInteger, vtUInteger, vtFloat, vtBytes,
     vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtUnicodeString, //String Types
-    vtDateTime, vtPointer, vtInterface, vtCharRec);
+    vtDateTime, vtPointer, vtInterface, vtCharRec,
+    vtArray{a dynamic array of [vtNull ... vtCharRec]} );
+
+  TZArray = Record
+    VArray: Pointer; { Pointer to a Dynamic Array of X}
+    VArrayType: Byte; {ord of TZSQLType}
+    VArrayVariantType: TZVariantType; { better way to determine vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtUnicodeString, vtCharRec}
+    VIsNullArray: Pointer; { Pointer to a Dynamic Array of a possible NULL indicator, might be integers or boolean types}
+    VIsNullArrayType: Byte; {ord of TZSQLType}
+    VIsNullArrayVariantType: TZVariantType; { better way to determine vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtUnicodeString, vtCharRec}
+  end;
 
   {** Defines a variant structure. }
   TZVariant = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
@@ -96,6 +106,7 @@ type
       vtDateTime: (VDateTime: TDateTime);
       vtPointer: (VPointer: Pointer);
       vtCharRec: (VCharRec: TZCharRec);
+      vtArray: (VArray: TZArray);
   end;
 
   PZVariant = ^TZVariant;
@@ -133,6 +144,7 @@ type
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
     function GetAsInterface(const Value: TZVariant): IZInterface;
+    function GetAsArray(const Value: TZVariant): TZArray;
 
     procedure SetAsBoolean(var Value: TZVariant; const Data: Boolean);
     procedure SetAsBytes(var Value: TZVariant; const Data: TBytes);
@@ -148,6 +160,7 @@ type
     procedure SetAsDateTime(var Value: TZVariant; const Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; const Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; const Data: IZInterface);
+    procedure SetAsArray(var Value: TZVariant; const Data: TZArray);
 
     function OpAdd(const Value1, Value2: TZVariant): TZVariant;
     function OpSub(const Value1, Value2: TZVariant): TZVariant;
@@ -205,6 +218,7 @@ type
     function GetAsDateTime(const Value: TZVariant): TDateTime;
     function GetAsPointer(const Value: TZVariant): Pointer;
     function GetAsInterface(const Value: TZVariant): IZInterface;
+    function GetAsArray(const Value: TZVariant): TZArray;
 
     procedure SetAsBoolean(var Value: TZVariant; const Data: Boolean);
     procedure SetAsBytes(var Value: TZVariant; const Data: TBytes);
@@ -220,6 +234,7 @@ type
     procedure SetAsDateTime(var Value: TZVariant; const Data: TDateTime);
     procedure SetAsPointer(var Value: TZVariant; const Data: Pointer);
     procedure SetAsInterface(var Value: TZVariant; const Data: IZInterface);
+    procedure SetAsArray(var Value: TZVariant; const Data: TZArray);
 
     function OpAdd(const Value1, Value2: TZVariant): TZVariant;
     function OpSub(const Value1, Value2: TZVariant): TZVariant;
@@ -446,6 +461,13 @@ function EncodePointer(const Value: Pointer): TZVariant; {$IFDEF WITH_INLINE}inl
   @returns an encoded custom variant.
 }
 function EncodeInterface(const Value: IZInterface): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
+{**
+  Encodes an TZArray into a custom variant.
+  @param Value an interface value to be encoded.
+  @returns an encoded custom variant.
+}
+function EncodeArray(const Value: TZArray): TZVariant; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 var
   {** Declares a default variant manager with strict convertion rules. }
@@ -1102,6 +1124,17 @@ begin
 end;
 
 {**
+  Gets a variant to TZArray value.
+  @param Value a variant to be converted.
+  @param a result value.
+}
+function {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.GetAsArray(
+  const Value: TZVariant): TZArray;
+begin
+  Result := Convert(Value, vtArray).VArray;
+end;
+
+{**
   Assignes a boolean value to variant.
   @param Value a variant to store the value.
   @param Data a value to be assigned.
@@ -1253,6 +1286,17 @@ procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantMana
   const Data: IZInterface);
 begin
   Value := EncodeInterface(Data);
+end;
+
+{**
+  Assignes a TZArray value to variant.
+  @param Value a variant to store the value.
+  @param Data a value to be assigned.
+}
+procedure {$IFDEF ZEOS_TEST_ONLY}TZDefaultVariantManager{$ELSE}TZSoftVariantManager{$ENDIF}.SetAsArray(var Value: TZVariant;
+  const Data: TZArray);
+begin
+  Value := EncodeArray(Data);
 end;
 
 {**
@@ -1596,9 +1640,7 @@ begin
             Result.VBoolean := StrToBoolEx(Convert(Value, vtRawByteString).VRawByteString);
         vtDateTime:
           Result.VBoolean := Value.VDateTime <> 0;
-        vtPointer:
-          RaiseTypeMismatchError;
-        vtInterface:
+        else
           RaiseTypeMismatchError;
       end;
     vtBytes:
@@ -1679,7 +1721,7 @@ begin
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
           Result.VInteger := Int64({%H-}NativeInt(Value.VPointer));
-        vtInterface:
+        else
           RaiseTypeMismatchError;
       end;
     vtUInteger:
@@ -2977,6 +3019,16 @@ function EncodeInterface(const Value: IZInterface): TZVariant;
 begin
   Result.VType := vtInterface;
   Result.VInterface := Value;
+end;
+
+{**
+  Creates an TZArray variant.
+  @param Value a value to be assigned.
+}
+function EncodeArray(const Value: TZArray): TZVariant;
+begin
+  Result.VType := vtArray;
+  Result.VArray := Value;
 end;
 
 initialization

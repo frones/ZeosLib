@@ -119,7 +119,7 @@ type
   TZOracleCallableResultSet = Class(TZOracleAbstractResultSet)
   private
     FFieldNames: TStringDynArray;
-    function PrepareOracleOutVars(Statement: IZStatement; InVars: PZSQLVars;
+    function PrepareOracleOutVars(InVars: PZSQLVars;
       const OracleParams: TZOracleParams): PZSQLVars;
   protected
     procedure Open; override;
@@ -490,7 +490,7 @@ begin
             Status := FPlainDriver.DateTimeGetDate(
               Connection.GetConnectionHandle,
               FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Year, Month, Day);
+              Year{%H-}, Month{%H-}, Day{%H-});
             // attention : this code handles all timestamps on 01/01/0001 as a pure time value
             // reason : oracle doesn't have a pure time datatype so all time comparisons compare
             //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
@@ -507,7 +507,7 @@ begin
             Status := FPlainDriver.DateTimeGetTime(
               Connection.GetConnectionHandle,
               FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Hour, Minute, Second, Millis);
+              Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
             if Status = OCI_SUCCESS then
             begin
               Millis := Round(Millis / 1000000);
@@ -521,7 +521,7 @@ begin
       begin
         AnsiRec := GetAnsiRec(ColumnIndex);
         Result := ZSysUtils.RawSQLTimeStampToDateTime(AnsiRec.P,
-          AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed);
+          AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-});
       end;
     end;
   end
@@ -1227,8 +1227,8 @@ if the result set uses a large amount of memory.}
 end;
 
 { TZOracleCallableResultSet }
-function TZOracleCallableResultSet.PrepareOracleOutVars(Statement: IZStatement;
-  InVars: PZSQLVars; const OracleParams: TZOracleParams): PZSQLVars;
+function TZOracleCallableResultSet.PrepareOracleOutVars(InVars: PZSQLVars;
+  const OracleParams: TZOracleParams): PZSQLVars;
 var
   I, J: Integer;
 begin
@@ -1262,9 +1262,7 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   CurrentVar: PZSQLVar;
-  Connection: IZConnection;
 begin
-  Connection := GetStatement.GetConnection;
   { Fills the column info. }
   ColumnsInfo.Clear;
   for I := 1 to FOutVars.AllocNum do
@@ -1330,7 +1328,7 @@ constructor TZOracleCallableResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; OutVars: PZSQLVars; const OracleParams: TZOracleParams);
 begin
-  FOutVars := PrepareOracleOutVars(Statement, OutVars, OracleParams);
+  FOutVars := PrepareOracleOutVars(OutVars, OracleParams);
   inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle);
   FConnection := Statement.GetConnection as IZOracleConnection;
   MaxRows := 1;
@@ -1577,8 +1575,6 @@ begin
 end;
 
 procedure TZOracleClob.ReadLob;
-const
-  MemDelta = 1 shl 12;  // read page (2^...)
 var
   Status: Integer;
   Buf: PByteArray;
