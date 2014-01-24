@@ -988,7 +988,7 @@ var
         @name, @len, OCI_ATTR_SCHEMA_NAME, FConnection.GetErrorHandle),
       lcOther, 'OCIAttrGet(OCI_ATTR_SCHEMA_NAME) of OCI_DTYPE_PARAM', ConSettings);
 
-    ZSetString(name, len, temp);
+    ZSetString(name, len, temp{%H-});
     Obj.type_schema := ConSettings^.ConvFuncs.ZRawToString(temp,
       ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
 

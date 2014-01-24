@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcSQLiteUtils, ZDbcConnection, ZURL;
+  ZCompatibility, ZDbcSQLiteUtils;
 
 type
 

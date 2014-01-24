@@ -312,6 +312,9 @@ type
     procedure SetDoubleArray(ParameterIndex: Integer; const Value: TDoubleDynArray); virtual;
     procedure SetCurrencyArray(ParameterIndex: Integer; const Value: TCurrencyDynArray); virtual;
     procedure SetExtendedArray(ParameterIndex: Integer; const Value: TExtendedDynArray); virtual;
+    procedure SetDateArray(ParameterIndex: Integer; const Value: TDateTimeDynArray); virtual;
+    procedure SetTimeArray(ParameterIndex: Integer; const Value: TDateTimeDynArray); virtual;
+    procedure SetTimeStampArray(ParameterIndex: Integer; const Value: TDateTimeDynArray); virtual;
     procedure SetStringArray(ParameterIndex: Integer; const Value: TStringDynArray); virtual;
     procedure SetAnsiStringArray(ParameterIndex: Integer; const Value: TAnsiStringDynArray); virtual;
     procedure SetUTF8StringArray(ParameterIndex: Integer; const Value: TUTF8StringDynArray); virtual;
@@ -2341,6 +2344,60 @@ begin
   V.VArray.VArray := Value;
   V.VArray.VArrayType := Ord(stBigDecimal);
   SetInParam(ParameterIndex, stBigDecimal, V);
+end;
+
+{**
+  Sets the designated parameter to a <code>TDateTimeDynArray</code> value.
+  The driver converts this to an SQL <code>Array of Date</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetDateArray(ParameterIndex: Integer;
+  const Value: TDateTimeDynArray);
+var V: TZVariant;
+begin
+  V.VType := vtArray;
+  V.VArray.VArray := Value;
+  V.VArray.VArrayType := Ord(stDate);
+  SetInParam(ParameterIndex, stDate, V);
+end;
+
+{**
+  Sets the designated parameter to a <code>TDateTimeDynArray</code> value.
+  The driver converts this to an SQL <code>Array of Time</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetTimeArray(ParameterIndex: Integer;
+  const Value: TDateTimeDynArray);
+var V: TZVariant;
+begin
+  V.VType := vtArray;
+  V.VArray.VArray := Value;
+  V.VArray.VArrayType := Ord(stTime);
+  SetInParam(ParameterIndex, stTime, V);
+end;
+
+{**
+  Sets the designated parameter to a <code>TDateTimeDynArray</code> value.
+  The driver converts this to an SQL <code>Array of TimeStamps</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetTimeStampArray(ParameterIndex: Integer;
+  const Value: TDateTimeDynArray);
+var V: TZVariant;
+begin
+  V.VType := vtArray;
+  V.VArray.VArray := Value;
+  V.VArray.VArrayType := Ord(stTimeStamp);
+  SetInParam(ParameterIndex, stTimeStamp, V);
 end;
 
 {**

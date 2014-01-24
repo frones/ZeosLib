@@ -252,6 +252,12 @@ type
   {$IF not declared(TStringDynArray)}
   TStringDynArray  = array of String;
   {$IFEND}
+  {$IF not declared(TBytesDynArray)}
+  TBytesDynArray  = array of TBytes;
+  {$IFEND}
+  {$IF not declared(TInterfaceDynArray)}
+  TInterfaceDynArray  = array of IInterface;
+  {$IFEND}
   TZCharRecDynArray = array of TZCharRec;
 type
   {declare move or converter functions for the String Types}
