@@ -103,7 +103,14 @@ type
       vtInteger: (VInteger: Int64);
       vtUInteger: (VUInteger: UInt64);
       vtFloat: (VFloat: Extended);
+      //CBuilder 2006/2007
+      //[BCC32 Error] Zvariant.hpp(81): E2019 'TZVariant:: :: :: ()' cannot be declared in an anonymous union
+      //See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=3795&start=180
+      {$IF defined(BDS4_UP) and not defined(UNICODE)}
+      vtDateTime: (VDateTime: Double);
+      {$ELSE}
       vtDateTime: (VDateTime: TDateTime);
+      {$IFEND}
       vtPointer: (VPointer: Pointer);
       vtCharRec: (VCharRec: TZCharRec);
       vtArray: (VArray: TZArray);
