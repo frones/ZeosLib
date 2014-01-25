@@ -113,6 +113,7 @@ type
     DeleteStatement   : IZPreparedStatement;
 
     FUpdateStatements : TZHashMap;
+    FValidateUpdateCount : Boolean;
   protected
     procedure CopyResolveParameters(FromList, ToList: TObjectList);
     function ComposeFullTableName(Catalog, Schema, Table: string): string;
@@ -232,6 +233,10 @@ begin
   InsertStatement := nil;
   FUpdateStatements := TZHashMap.Create;
   DeleteStatement := nil;
+
+  // if Property ValidateUpdateCount isn't set : assume it's true
+  FValidateUpdateCount := (FStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
+                        or StrToBoolEx(FStatement.GetParameters.Values['ValidateUpdateCount']);
 
 end;
 
@@ -884,13 +889,10 @@ begin
   if SQL <> '' then
   begin
     FillStatement(Statement, SQLParams, OldRowAccessor, NewRowAccessor);
-    // if Property ValidateUpdateCount isn't set : assume it's true
-    lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
-                          or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
     lUpdateCount := Statement.ExecuteUpdatePrepared;
     {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
-    if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
+    if  (FValidateUpdateCount) and (lUpdateCount <> 1   ) then
       raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
     {$ENDIF}
   end;
