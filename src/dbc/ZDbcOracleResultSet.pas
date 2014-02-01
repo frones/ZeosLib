@@ -134,7 +134,6 @@ type
   {** Represents an interface, specific for Oracle blobs. }
   IZOracleBlob = interface(IZBlob)
     ['{3D861AAC-B263-42F1-B359-2A188D1D986A}']
-    function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
     procedure ReadLob;
     procedure WriteLob;
@@ -160,7 +159,6 @@ type
       const ChunkSize: Integer; const ConSettings: PZConSettings);
     destructor Destroy; override;
 
-    function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
     procedure ReadLob; override;
     procedure WriteLob; override;
@@ -187,7 +185,6 @@ type
       const ConSettings: PZConSettings; const CodePage: Word);
     destructor Destroy; override;
 
-    function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
     procedure ReadLob; override;
     procedure WriteLob; override;
@@ -1417,15 +1414,6 @@ begin
 end;
 
 {**
-  Gets the lob locator reference.
-  @return the lob locator reference.
-}
-function TZOracleBlob.GetLobLocator: POCILobLocator;
-begin
-  Result := FLobLocator;
-end;
-
-{**
   Creates a temporary blob.
 }
 procedure TZOracleBlob.CreateBlob;
@@ -1554,11 +1542,6 @@ begin
   if FTemporary then
     FPlainDriver.LobFreeTemporary(FContextHandle, FErrorHandle, FLobLocator);
   inherited Destroy;
-end;
-
-function TZOracleClob.GetLobLocator: POCILobLocator;
-begin
-  Result := FLobLocator;
 end;
 
 {**
