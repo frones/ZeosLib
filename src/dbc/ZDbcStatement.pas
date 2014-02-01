@@ -204,6 +204,7 @@ type
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
+    FInitialArrayCount: Integer;
     FPrepared : Boolean;
     FExecCount: Integer;
     FClientVariantManger: IZClientVariantManager;
@@ -242,6 +243,7 @@ type
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
     property LastInParamValuesIndex: Integer read FInParamValuesIndex;
+    property ArrayCount: Integer read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
   public
@@ -299,29 +301,7 @@ type
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); virtual;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
     procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
-    procedure SetBooleanArray(ParameterIndex: Integer; const Value: TBooleanDynArray); virtual;
-    procedure SetByteArray(ParameterIndex: Integer; const Value: TByteDynArray); virtual;
-    procedure SetShortIntArray(ParameterIndex: Integer; const Value: TShortIntDynArray); virtual;
-    procedure SetWordArray(ParameterIndex: Integer; const Value: TWordDynArray); virtual;
-    procedure SetSmallIntArray(ParameterIndex: Integer; const Value: TSmallIntDynArray); virtual;
-    procedure SetLongWordArray(ParameterIndex: Integer; const Value: TLongWordDynArray); virtual;
-    procedure SetLongIntArray(ParameterIndex: Integer; const Value: TIntegerDynArray); virtual;
-    procedure SetUInt64Array(ParameterIndex: Integer; const Value: TUInt64DynArray); virtual;
-    procedure SetInt64Array(ParameterIndex: Integer; const Value: TInt64DynArray); virtual;
-    procedure SetSingleArray(ParameterIndex: Integer; const Value: TSingleDynArray); virtual;
-    procedure SetDoubleArray(ParameterIndex: Integer; const Value: TDoubleDynArray); virtual;
-    procedure SetCurrencyArray(ParameterIndex: Integer; const Value: TCurrencyDynArray); virtual;
-    procedure SetExtendedArray(ParameterIndex: Integer; const Value: TExtendedDynArray); virtual;
-    procedure SetDateArray(ParameterIndex: Integer; const Value: TDateTimeDynArray); virtual;
-    procedure SetTimeArray(ParameterIndex: Integer; const Value: TDateTimeDynArray); virtual;
-    procedure SetTimeStampArray(ParameterIndex: Integer; const Value: TDateTimeDynArray); virtual;
-    procedure SetStringArray(ParameterIndex: Integer; const Value: TStringDynArray); virtual;
-    procedure SetAnsiStringArray(ParameterIndex: Integer; const Value: TAnsiStringDynArray); virtual;
-    procedure SetUTF8StringArray(ParameterIndex: Integer; const Value: TUTF8StringDynArray); virtual;
-    procedure SetRawByteStringArray(ParameterIndex: Integer; const Value: TRawByteStringDynArray); virtual;
-    procedure SetCharRecArray(ParameterIndex: Integer; const Value: TZCharRecDynArray); virtual;
-    procedure SetArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
-    procedure SetUnicodeStringArray(ParameterIndex: Integer; const Value: TUnicodeStringDynArray); virtual;
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
     procedure ClearParameters; virtual;
 
@@ -1295,6 +1275,7 @@ begin
   SetInParamCount(0);
   FPrepared := False;
   FExecCount := 0;
+  FInitialArrayCount := 0;
 end;
 
 {**
@@ -2100,400 +2081,14 @@ end;
 }
 procedure TZAbstractPreparedStatement.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
-var V: TZVariant;
 begin
   if InParamCount < ParameterIndex then
     raise Exception.Create('Set Array-Value first');
-  V := InParamValues[ParameterIndex];
-  if V.VType <> vtArray then
+  if InParamValues[ParameterIndex-1].VType <> vtArray then
     raise Exception.Create('No Array bound before!');
-  V.VArray.VIsNullArray := @Value;
-  V.VArray.VIsNullArrayType := Ord(SQLType);
-  V.VArray.VIsNullArrayVariantType := VariantType;
-end;
-
-{**
-  Sets the designated parameter to a <code>TBooleanDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Boolean</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetBooleanArray(ParameterIndex: Integer;
-  const Value: TBooleanDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stBoolean);
-  SetInParam(ParameterIndex, stBoolean, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TByteDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Byte</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetByteArray(ParameterIndex: Integer;
-  const Value: TByteDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stByte);
-  SetInParam(ParameterIndex, stByte, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TShortIntDynArray</code> value.
-  The driver converts this to an SQL <code>Array of ShortInt</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetShortIntArray(ParameterIndex: Integer;
-  const Value: TShortIntDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stShort);
-  SetInParam(ParameterIndex, stShort, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TWordDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Word</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetWordArray(ParameterIndex: Integer;
-  const Value: TWordDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stWord);
-  SetInParam(ParameterIndex, stWord, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TSmallIntDynArray</code> value.
-  The driver converts this to an SQL <code>Array of SmallInt</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetSmallIntArray(ParameterIndex: Integer;
-  const Value: TSmallIntDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stSmall);
-  SetInParam(ParameterIndex, stSmall, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TLongWordDynArray</code> value.
-  The driver converts this to an SQL <code>Array of LongWord</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetLongWordArray(ParameterIndex: Integer;
-  const Value: TLongWordDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stLongWord);
-  SetInParam(ParameterIndex, stLongWord, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TIntegerDynArray</code> value.
-  The driver converts this to an SQL <code>Array of LongInt</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetLongIntArray(ParameterIndex: Integer;
-  const Value: TIntegerDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stInteger);
-  SetInParam(ParameterIndex, stInteger, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TInt64DynArray</code> value.
-  The driver converts this to an SQL <code>Array of Int64</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetInt64Array(ParameterIndex: Integer;
-  const Value: TInt64DynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stLong);
-  SetInParam(ParameterIndex, stLong, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TUInt64DynArray</code> value.
-  The driver converts this to an SQL <code>Array of UInt64</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetUInt64Array(ParameterIndex: Integer;
-  const Value: TUInt64DynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stULong);
-  SetInParam(ParameterIndex, stULong, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TSingleDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Single</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetSingleArray(ParameterIndex: Integer;
-  const Value: TSingleDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stFloat);
-  SetInParam(ParameterIndex, stFloat, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TDoubleDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Double</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetDoubleArray(ParameterIndex: Integer;
-  const Value: TDoubleDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stDouble);
-  SetInParam(ParameterIndex, stDouble, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TCurrencyDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Currency</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetCurrencyArray(ParameterIndex: Integer;
-  const Value: TCurrencyDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stCurrency);
-  SetInParam(ParameterIndex, stCurrency, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TExtendedDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Extended</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetExtendedArray(ParameterIndex: Integer;
-  const Value: TExtendedDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stBigDecimal);
-  SetInParam(ParameterIndex, stBigDecimal, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TDateTimeDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Date</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetDateArray(ParameterIndex: Integer;
-  const Value: TDateTimeDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stDate);
-  SetInParam(ParameterIndex, stDate, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TDateTimeDynArray</code> value.
-  The driver converts this to an SQL <code>Array of Time</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetTimeArray(ParameterIndex: Integer;
-  const Value: TDateTimeDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stTime);
-  SetInParam(ParameterIndex, stTime, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TDateTimeDynArray</code> value.
-  The driver converts this to an SQL <code>Array of TimeStamps</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetTimeStampArray(ParameterIndex: Integer;
-  const Value: TDateTimeDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayType := Ord(stTimeStamp);
-  SetInParam(ParameterIndex, stTimeStamp, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TStringDynArray</code> value.
-  The driver converts this to an SQL <code>Array of String</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetStringArray(ParameterIndex: Integer;
-  const Value: TStringDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayVariantType := vtString;
-  V.VArray.VArrayType := Ord(stString);
-  SetInParam(ParameterIndex, stString, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TAnsiStringDynArray</code> value.
-  The driver converts this to an SQL <code>Array of AnsiString</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetAnsiStringArray(ParameterIndex: Integer;
-  const Value: TAnsiStringDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayVariantType := vtAnsiString;
-  V.VArray.VArrayType := Ord(stString);
-  SetInParam(ParameterIndex, stString, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TUTF8StringDynArray</code> value.
-  The driver converts this to an SQL <code>Array of UTF8String</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetUTF8StringArray(ParameterIndex: Integer;
-  const Value: TUTF8StringDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayVariantType := vtUTF8String;
-  V.VArray.VArrayType := Ord(stString);
-  SetInParam(ParameterIndex, stString, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TRawByteStringDynArray</code> value.
-  The driver converts this to an SQL <code>Array of RawByteString</code> value
-  when it sends it to the database. The RBS encoding MUST be equal to
-  client encoding.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetRawByteStringArray(ParameterIndex: Integer;
-  const Value: TRawByteStringDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayVariantType := vtRawByteString;
-  V.VArray.VArrayType := Ord(stString);
-  SetInParam(ParameterIndex, stString, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TZCharRecDynArray</code> value.
-  The driver converts this to an SQL <code>Array of TZCharRec</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetCharRecArray(ParameterIndex: Integer;
-  const Value: TZCharRecDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayVariantType := vtCharRec;
-  V.VArray.VArrayType := Ord(stString);
-  SetInParam(ParameterIndex, stString, V);
+  InParamValues[ParameterIndex-1].VArray.VIsNullArray := Pointer(Value);
+  InParamValues[ParameterIndex-1].VArray.VIsNullArrayType := Ord(SQLType);
+  InParamValues[ParameterIndex-1].VArray.VIsNullArrayVariantType := VariantType;
 end;
 
 {**
@@ -2502,38 +2097,93 @@ end;
   when it sends it to the database.
 
   @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param A dynamic array of X.
   @param SQLType the TZSQLType of the value
   @param VariantType the TZVariantType SubType of the value
-  @param x the parameter value
 }
-procedure TZAbstractPreparedStatement.SetArray(ParameterIndex: Integer;
-  const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
-var V: TZVariant;
+procedure TZAbstractPreparedStatement.SetDataArray(ParameterIndex: Integer;
+  const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
+var
+  V: TZVariant;
+  {using mem entry of ZData is faster then casting}
+  ZBooleanArray: TBooleanDynArray absolute Value;
+  ZByteArray: TByteDynArray absolute Value;
+  ZShortIntArray: TShortIntDynArray absolute Value;
+  ZWordArray: TWordDynArray absolute Value;
+  ZSmallIntArray: TSmallIntDynArray absolute Value;
+  ZLongWordArray: TLongWordDynArray absolute Value;
+  ZIntegerArray: TIntegerDynArray absolute Value;
+  ZInt64Array: TInt64DynArray absolute Value;
+  ZUInt64Array: TUInt64DynArray absolute Value;
+  ZSingleArray: TSingleDynArray absolute Value;
+  ZDoubleArray: TDoubleDynArray absolute Value;
+  ZCurrencyArray: TCurrencyDynArray absolute Value;
+  ZExtendedArray: TExtendedDynArray absolute Value;
+  ZDateTimeArray: TDateTimeDynArray absolute Value;
+  ZRawByteStringArray: TRawByteStringDynArray absolute Value;
+  ZUnicodeStringArray: TUnicodeStringDynArray absolute Value;
+  ZCharRecArray: TZCharRecDynArray absolute Value;
+  ZBytesArray: TBytesDynArray absolute Value;
+  ZInterfaceArray: TInterfaceDynArray absolute Value;
+  ZGUIDArray: TGUIDDynArray absolute Value;
+
+  procedure AssertLength(const Len: Integer);
+  begin
+    if ParameterIndex = 1 then
+      FInitialArrayCount := Len
+    else
+      if Len <> FInitialArrayCount then
+        raise Exception.Create('Array count does not equal with initial count!');
+  end;
 begin
+  case SQLType of
+    stUnknown:        raise Exception.Create('Invalid SQLType for Array binding!');
+    stBoolean:        AssertLength(Length(ZBooleanArray));
+    stByte:           AssertLength(Length(ZByteArray));
+    stShort:          AssertLength(Length(ZShortIntArray));
+    stWord:           AssertLength(Length(ZWordArray));
+    stSmall:          AssertLength(Length(ZSmallIntArray));
+    stLongWord:       AssertLength(Length(ZLongWordArray));
+    stInteger:        AssertLength(Length(ZIntegerArray));
+    stULong:          AssertLength(Length(ZUInt64Array));
+    stLong:           AssertLength(Length(ZInt64Array));
+    stFloat:          AssertLength(Length(ZSingleArray));
+    stDouble:         AssertLength(Length(ZDoubleArray));
+    stCurrency:       AssertLength(Length(ZCurrencyArray));
+    stBigDecimal:     AssertLength(Length(ZExtendedArray));
+    stString:
+      case VariantType of
+        vtString:         AssertLength(Length({$IFDEF UNICODE}ZUnicodeStringArray{$ELSE}ZRawByteStringArray{$ENDIF}));
+        vtAnsiString:     AssertLength(Length(ZRawByteStringArray));
+        vtUTF8String:     AssertLength(Length(ZRawByteStringArray));
+        vtRawByteString:  AssertLength(Length(ZRawByteStringArray));
+        vtCharRec:        AssertLength(Length(ZCharRecArray));
+        else
+          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+      end;
+    stUnicodeString:
+      case VariantType of
+        vtUnicodeString:  AssertLength(Length(ZUnicodeStringArray));
+        vtCharRec:        AssertLength(Length(ZCharRecArray));
+        else
+          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+      end;
+    stBytes:          AssertLength(Length(ZBytesArray));
+    stGUID:           AssertLength(Length(ZGUIDArray));
+    stDate,
+    stTime,
+    stTimestamp:      AssertLength(Length(ZDateTimeArray));
+    stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
+    stDataSet: ;
+    stAsciiStream,
+    stUnicodeStream,
+    stBinaryStream:   AssertLength(Length(ZInterfaceArray));
+  end;
   V.VType := vtArray;
-  V.VArray.VArray := @Value;
+  V.VArray.VArray := Pointer(Value);
   V.VArray.VArrayVariantType := VariantType;
   V.VArray.VArrayType := Ord(SQLType);
   SetInParam(ParameterIndex, SQLType, V);
-end;
-
-{**
-  Sets the designated parameter to a <code>TUnicodeStringDynArray</code> value.
-  The driver converts this to an SQL <code>Array of UnicodeString</code> value
-  when it sends it to the database.
-
-  @param parameterIndex the first parameter is 1, the second is 2, ...
-  @param x the parameter value
-}
-procedure TZAbstractPreparedStatement.SetUnicodeStringArray(ParameterIndex: Integer;
-  const Value: TUnicodeStringDynArray);
-var V: TZVariant;
-begin
-  V.VType := vtArray;
-  V.VArray.VArray := Value;
-  V.VArray.VArrayVariantType := vtUnicodeString;
-  V.VArray.VArrayType := Ord(stUnicodeString);
-  SetInParam(ParameterIndex, stUnicodeString, V);
 end;
 
 {**
@@ -2554,6 +2204,7 @@ begin
     SetDefaultValue(I, '');
   end;
   SetInParamCount(0);
+  FInitialArrayCount := 0;
 end;
 
 {**

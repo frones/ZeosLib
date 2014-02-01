@@ -246,9 +246,9 @@ type
       objtyp: ub1; dschp: POCIDescribe): sword;
     function Break(svchp: POCISvcCtx; errhp:POCIError): sword;
     function Reset(svchp: POCISvcCtx; errhp:POCIError): sword;
-    function DescriptorAlloc(parenth: POCIEnv; var descpp: POCIDescriptor;
-      htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword;
-    function DescriptorFree(descp: Pointer; htype: ub4): sword;
+    function DescriptorAlloc(const parenth: POCIEnv; var descpp: POCIDescriptor;
+      const htype: ub4; const xtramem_sz: integer; usrmempp: Pointer): sword;
+    function DescriptorFree(const descp: Pointer; const htype: ub4): sword;
 
     function DateTimeAssign(hndl: POCIEnv; err: POCIError;
       const from: POCIDateTime;_to: POCIDateTime): sword;
@@ -780,9 +780,9 @@ type
       objtyp: ub1; dschp: POCIDescribe): sword;
     function Break(svchp: POCISvcCtx; errhp:POCIError): sword;
     function Reset(svchp: POCISvcCtx; errhp:POCIError): sword;
-    function DescriptorAlloc(parenth: POCIEnv; var descpp: POCIDescriptor;
-      htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword;
-    function DescriptorFree(descp: Pointer; htype: ub4): sword;
+    function DescriptorAlloc(const parenth: POCIEnv; var descpp: POCIDescriptor;
+      const htype: ub4; const xtramem_sz: integer; usrmempp: Pointer): sword;
+    function DescriptorFree(const descp: Pointer; const htype: ub4): sword;
 
     function DateTimeAssign(hndl: POCIEnv; err: POCIError;
       const from: POCIDateTime;_to: POCIDateTime): sword;
@@ -2029,16 +2029,16 @@ begin
     objnm_len, objptr_typ, info_level, objtyp, dschp);
 end;
 
-function TZOracle9iPlainDriver.DescriptorAlloc(parenth: POCIEnv;
-  var descpp: POCIDescriptor; htype: ub4; xtramem_sz: integer;
+function TZOracle9iPlainDriver.DescriptorAlloc(const parenth: POCIEnv;
+  var descpp: POCIDescriptor; const htype: ub4; const xtramem_sz: integer;
   usrmempp: Pointer): sword;
 begin
-  Result := OracleAPI.OCIDescriptorAlloc(parenth, descpp, htype,
+  Result := OracleAPI.OCIDescriptorAlloc(parenth, descpp{%H-}, htype,
     xtramem_sz, usrmempp);
 end;
 
-function TZOracle9iPlainDriver.DescriptorFree(descp: Pointer;
-  htype: ub4): sword;
+function TZOracle9iPlainDriver.DescriptorFree(const descp: Pointer;
+  const htype: ub4): sword;
 begin
   Result := OracleAPI.OCIDescriptorFree(descp, htype);
 end;
@@ -3159,4 +3159,5 @@ begin
 end;
 
 end.
+
 

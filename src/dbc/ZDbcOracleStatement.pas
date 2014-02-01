@@ -75,6 +75,13 @@ type
     FPrefetchCount: Integer;
     FStatementType: ub2;
     FConnectionHandle: POCIEnv;
+    {some temporary array for array bindings}
+    FNullIndicators: array of array of sb2;
+    FLengthIndicators: array of array of ub2;
+    FDescriptors: TDesciptorRecArray;
+    FIntegerValues: array of TIntegerDynArray;
+    FInt64Values: array of TInt64DynArray;
+    FDoubleValues: Array of TDoubleDynArray;
     function ConvertToOracleSQLQuery: RawByteString;
     function CreateResultSet: IZResultSet;
   protected
@@ -90,6 +97,8 @@ type
 
     procedure Prepare; override;
     procedure Unprepare; override;
+
+    procedure ClearParameters; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -137,9 +146,9 @@ type
 implementation
 
 uses
-  ZFastCode, ZTokenizer, ZDbcOracle, ZDbcOracleResultSet
-  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
-  {$IFDEF UNICODE}, ZEncoding{$ENDIF}, ZDbcUtils;
+  Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  ZFastCode, ZTokenizer, ZDbcOracle, ZDbcOracleResultSet,
+  ZEncoding, ZDbcUtils;
 
 { TZOraclePreparedStatement }
 
@@ -216,11 +225,817 @@ end;
 }
 procedure TZOraclePreparedStatement.BindInParameters;
 var
-  I: Integer;
+  I, J: Integer;
   CurrentVar: PZSQLVar;
   Status: Integer;
   CharRec: TZCharRec;
+  OCIData: Pointer;
+  {using mem entry of OCIData is faster then casting}
+  BooleanArray: TBooleanDynArray absolute OCIData;
+  ByteArray: TByteDynArray absolute OCIData;
+  ShortIntArray: TShortIntDynArray absolute OCIData;
+  WordArray: TWordDynArray absolute OCIData;
+  SmallIntArray: TSmallIntDynArray absolute OCIData;
+  LongWordArray: TLongWordDynArray absolute OCIData;
+  IntegerArray: TIntegerDynArray absolute OCIData;
+  Int64Array: TInt64DynArray absolute OCIData;
+  UInt64Array: TUInt64DynArray absolute OCIData;
+  SingleArray: TSingleDynArray absolute OCIData;
+  DoubleArray: TDoubleDynArray absolute OCIData;
+  CurrencyArray: TCurrencyDynArray absolute OCIData;
+  ExtendedArray: TExtendedDynArray absolute OCIData;
+  RawByteStringArray: TRawByteStringDynArray absolute OCIData;
+  UnicodeStringArray: TUnicodeStringDynArray absolute OCIData;
+  CharRecArray: TZCharRecDynArray absolute OCIData;
+  PointerArray: TPointerDynArray absolute OCIData;
+  InterfaceArray: TInterfaceDynArray absolute OCIData;
+
+  TempRawByteStringArray: TRawByteStringDynArray;
+
+  PNullIndicator: Pointer;
+  NullIndicator: array of sb2 absolute PNullIndicator;
+  PLengthIndicator: Pointer;
+  LengthIndicator: array of ub2 absolute PLengthIndicator;
+
+  ZData: Pointer;
+  {using mem entry of ZData is faster then casting}
+  ZBooleanArray: TBooleanDynArray absolute ZData;
+  ZByteArray: TByteDynArray absolute ZData;
+  ZShortIntArray: TShortIntDynArray absolute ZData;
+  ZWordArray: TWordDynArray absolute ZData;
+  ZSmallIntArray: TSmallIntDynArray absolute ZData;
+  ZLongWordArray: TLongWordDynArray absolute ZData;
+  ZInt64Array: TInt64DynArray absolute ZData;
+  ZUInt64Array: TUInt64DynArray absolute ZData;
+  ZSingleArray: TSingleDynArray absolute ZData;
+  ZCurrencyArray: TCurrencyDynArray absolute ZData;
+  ZExtendedArray: TExtendedDynArray absolute ZData;
+  ZDateTimeArray: TDateTimeDynArray absolute ZData;
+  ZRawByteStringArray: TRawByteStringDynArray absolute ZData;
+  ZAnsiStringArray: TAnsiStringDynArray absolute ZData;
+  ZUTF8StringArray: TUTF8StringDynArray absolute ZData;
+  ZStringArray: TStringDynArray absolute ZData;
+  ZUnicodeStringArray: TUnicodeStringDynArray absolute ZData;
+  ZCharRecArray: TZCharRecDynArray absolute ZData;
+  ZBytesArray: TBytesDynArray absolute ZData;
+  ZInterfaceArray: TInterfaceDynArray absolute ZData;
+  ZGUIDArray: TGUIDDynArray absolute ZData;
+
+  ZVariant: TZVariant;
+  UsedMem: Int64;
+  TmpStrLen: Cardinal;
+  WideRec: TZWideRec;
+  AnsiRec: TZAnsiRec;
+  WS: ZWideString; //temp val to avoid overrun if WideString
+  Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  WriteTempBlob: IZOracleBlob;
+  TempBlob: IZBlob;
+  OracleConnection: IZOracleConnection;
+  LobBuffer: Pointer;
+  CharBuffer: PAnsiChar;
+  AnsiTemp: RawByteString;
+  Label SkipStringAssembling, StringAssembling;
+
 begin
+  if (InParamCount > 0) and (InParamValues[0].VType = vtArray) then
+  begin
+    { array DML binding}
+    UsedMem := 0;
+    OracleConnection := Connection as IZOracleConnection;
+    SetLength(FNullIndicators,InParamCount);
+    SetLength(FLengthIndicators, InParamCount);
+    SetLength(FDescriptors, InParamCount);
+    for i := 0 to InParamCount -1 do
+      SetLength(FNullIndicators[i], ArrayCount);
+    for I := 0 to InParamCount - 1 do
+    begin
+      CurrentVar := @FInVars.Variables[I + 1];
+      CurrentVar.Handle := nil;
+
+      ZVariant := InParamValues[i];
+      {build null indicators first}
+      PNullIndicator := FNullIndicators[i];
+      PLengthIndicator := nil;
+      OCIData := ZVariant.VArray.VIsNullArray; //temp the pointer to get the absolute arrays of X
+      if ZVariant.VArray.VIsNullArray = nil then //no null values.. So let's build the indicators
+        for J := 0 to ArrayCount -1 do
+          NullIndicator[j] := 0
+      else
+        for J := 0 to ArrayCount -1 do
+          case TZSQLType(ZVariant.VArray.VIsNullArrayType) of
+            stBoolean:
+              if BooleanArray[J] = False then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stByte:
+              if ByteArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stShort:
+              if ShortIntArray[j] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stWord:
+              if WordArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stSmall:
+              if SmallIntArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stLongWord:
+              if LongWordArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stInteger:
+              if IntegerArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stULong:
+              if UInt64Array[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stLong:
+              if Int64Array[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stFloat:
+              if SingleArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stDouble:
+              if DoubleArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stCurrency:
+              if CurrencyArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stBigDecimal:
+              if ExtendedArray[J] = 0 then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+            stUnicodeString:
+              if ZVariant.VArray.VIsNullArrayVariantType = vtUnicodeString then
+                if StrToBoolEx(UnicodeStringArray[J], True) = False then
+                  NullIndicator[j] := 0 //not null
+                else
+                  NullIndicator[j] := -1 //null
+              else
+                if StrToBoolEx(PWideChar(CharRecArray[J].P), True) = False then
+                  NullIndicator[j] := 0 //not null
+                else
+                  NullIndicator[j] := -1; //null
+            stString:
+              if ZVariant.VArray.VIsNullArrayVariantType = vtCharRec then
+                if StrToBoolEx(PAnsiChar(CharRecArray[J].P), True) = False then
+                  NullIndicator[j] := 0 //not null
+                else
+                  NullIndicator[j] := -1 //null
+              else
+                if StrToBoolEx(RawByteStringArray[J], True) = False then
+                  NullIndicator[j] := 0 //not null
+                else
+                  NullIndicator[j] := -1; //null
+            stAsciiStream, stUnicodeStream, stBinaryStream:
+              if (InterfaceArray[J] <> nil) or not (InterfaceArray[J] as IZBLob).IsEmpty then
+                NullIndicator[j] := 0 //not null
+              else
+                NullIndicator[j] := -1; //null
+        end;
+      ZData := ZVariant.VArray.VArray;
+      case InParamTypes[I] of
+        stBoolean: //Oracle doesn't support booleans so lets use integers and OCI converts it..
+          begin
+            SetLength(FIntegerValues, Length(FIntegerValues)+1);
+            SetLength(FIntegerValues[High(FIntegerValues)], ArrayCount);
+            OCIData := Pointer(FIntegerValues[High(FIntegerValues)]);
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              IntegerArray[J] := Ord(ZBooleanArray[j]); //convert Boolean to integer
+            CurrentVar.Length := 4;
+            CurrentVar.TypeCode := SQLT_INT;
+          end;
+        stByte:
+          begin
+            SetLength(FIntegerValues, Length(FIntegerValues)+1);
+            SetLength(FIntegerValues[High(FIntegerValues)], ArrayCount);
+            OCIData := FIntegerValues[High(FIntegerValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              IntegerArray[J] := ZByteArray[j]; //convert byte to integer
+            CurrentVar.Length := 4;
+            CurrentVar.TypeCode := SQLT_INT;
+          end;
+        stShort:
+          begin
+            SetLength(FIntegerValues, Length(FIntegerValues)+1);
+            SetLength(FIntegerValues[High(FIntegerValues)], ArrayCount);
+            OCIData := FIntegerValues[High(FIntegerValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              IntegerArray[J] := ZShortIntArray[j]; //convert shortint to integer
+            CurrentVar.Length := 4;
+            CurrentVar.TypeCode := SQLT_INT;
+          end;
+        stWord:
+          begin
+            SetLength(FIntegerValues, Length(FIntegerValues)+1);
+            SetLength(FIntegerValues[High(FIntegerValues)], ArrayCount);
+            OCIData := FIntegerValues[High(FIntegerValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              IntegerArray[J] := ZWordArray[j]; //convert shortint to integer
+            CurrentVar.Length := 4;
+            CurrentVar.TypeCode := SQLT_INT;
+          end;
+        stSmall:
+          begin
+            SetLength(FIntegerValues, Length(FIntegerValues)+1);
+            SetLength(FIntegerValues[High(FIntegerValues)], ArrayCount);
+            OCIData := FIntegerValues[High(FIntegerValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              IntegerArray[J] := ZSmallIntArray[j]; //convert shortint to integer
+            CurrentVar.Length := 4;
+            CurrentVar.TypeCode := SQLT_INT;
+          end;
+        stLongWord:
+          //since 11.2 we can use Int64 types too
+          if Connection.GetClientVersion >= 11002000 then
+          begin
+            SetLength(FInt64Values, Length(FInt64Values)+1);
+            SetLength(FInt64Values[High(FInt64Values)], ArrayCount);
+            OCIData := FInt64Values[High(FInt64Values)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              Int64Array[J] := ZLongWordArray[j]; //convert LongWord to Int64
+            CurrentVar.Length := 8;
+            CurrentVar.TypeCode := SQLT_INT;
+          end
+          else
+          begin
+            SetLength(FDoubleValues, Length(FDoubleValues)+1);
+            SetLength(FDoubleValues[High(FDoubleValues)], ArrayCount);
+            OCIData := FDoubleValues[High(FDoubleValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              DoubleArray[J] := ZLongWordArray[j]; //convert LongWord to double
+            CurrentVar.Length := 8;
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stInteger: { no conversion required }
+          begin
+            OCIData := ZData;
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            CurrentVar.Length := 4;
+            CurrentVar.TypeCode := SQLT_INT;
+          end;
+        stULong: //conversion required below 11.2
+          //since 11.2 we can use Int64 types too
+          if Connection.GetClientVersion >= 11002000 then
+          begin
+            SetLength(FInt64Values, Length(FInt64Values)+1);
+            SetLength(FInt64Values[High(FInt64Values)], ArrayCount);
+            OCIData := FInt64Values[High(FInt64Values)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              Int64Array[J] := ZUInt64Array[j]; //convert UInt64 to Double. Range???? Better to use strings?
+            CurrentVar.Length := 8;
+            CurrentVar.TypeCode := SQLT_INT;
+          end
+          else
+          begin
+            SetLength(FDoubleValues, Length(FDoubleValues)+1);
+            SetLength(FDoubleValues[High(FDoubleValues)], ArrayCount);
+            OCIData := FDoubleValues[High(FDoubleValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              DoubleArray[J] := ZUInt64Array[j]; //convert UInt64 to double. Range?????? Better to use strings?
+            CurrentVar.Length := 8;
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stLong: //conversion required below 11.2
+          //since 11.2 we can use Int64 types too
+          if Connection.GetClientVersion >= 11002000 then
+          begin
+            OCIData := ZData;
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            CurrentVar.Length := 8;
+            CurrentVar.TypeCode := SQLT_INT;
+          end
+          else
+          begin
+            SetLength(FDoubleValues, Length(FDoubleValues)+1);
+            SetLength(FDoubleValues[High(FDoubleValues)], ArrayCount);
+            OCIData := FDoubleValues[High(FDoubleValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              DoubleArray[J] := ZInt64Array[j]; //convert UInt64 to double. Range???? Better to use strings?
+            CurrentVar.Length := 8;
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stFloat: //conversion required
+          begin
+            SetLength(FDoubleValues, Length(FDoubleValues)+1);
+            SetLength(FDoubleValues[High(FDoubleValues)], ArrayCount);
+            OCIData := FDoubleValues[High(FDoubleValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              DoubleArray[J] := ZSingleArray[j]; //convert UInt64 to double. Range?????? Better to use strings?
+            CurrentVar.Length := SizeOf(Double);
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stDouble:
+          begin
+            OCIData := ZData;
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            CurrentVar.Length := SizeOf(Double);
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stCurrency: //conversion required
+          begin
+            SetLength(FDoubleValues, Length(FDoubleValues)+1);
+            SetLength(FDoubleValues[High(FDoubleValues)], ArrayCount);
+            OCIData := FDoubleValues[High(FDoubleValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              DoubleArray[J] := ZCurrencyArray[j]; //convert Currency to double.
+            CurrentVar.Length := SizeOf(Double);
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stBigDecimal: //conversion required
+          begin
+            SetLength(FDoubleValues, Length(FDoubleValues)+1);
+            SetLength(FDoubleValues[High(FDoubleValues)], ArrayCount);
+            OCIData := FDoubleValues[High(FDoubleValues)];
+            {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              DoubleArray[J] := ZExtendedArray[j]; //convert Extended to double. Range?????? Better to use strings?
+            CurrentVar.Length := SizeOf(Double);
+            CurrentVar.TypeCode := SQLT_FLT;
+          end;
+        stString:
+          begin
+            SetLength(FLengthIndicators[i], ArrayCount);
+            PLengthIndicator := FLengthIndicators[i];
+            case TZVariantType(ZVariant.VArray.VArrayVariantType) of
+              vtString:
+                begin
+                  SetLength(TempRawByteStringArray, ArrayCount);
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                    begin
+                      TmpStrLen := {%H-}PLongInt(NativeInt(ZStringArray[j]) - 4)^;  //for D7..< 2005 Length() isn't inlined!
+                      if TmpStrLen = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                      end
+                      else
+                      begin
+                        TempRawByteStringArray[j] := ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[j], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):
+                        TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                      end
+                    end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                end;
+              vtAnsiString:
+                begin
+                  SetLength(TempRawByteStringArray, ArrayCount);
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                      if Length(ZAnsiStringArray[j]) = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                      end
+                      else
+                      begin
+                        TempRawByteStringArray[j] := ConSettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[j], ConSettings^.ClientCodePage^.CP);
+                        TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                      end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                end;
+              vtUTF8String:
+                if ZCompatibleCodePages(ZCharRecArray[0].CP, ConSettings^.ClientCodePage^.CP) then
+                begin
+                  SetLength(TempRawByteStringArray, ArrayCount);
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                      if Length(ZUTF8StringArray[j]) = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                      end
+                      else
+                      begin
+                        TempRawByteStringArray[j] := ZUTF8StringArray[j];//virtually no move, just inc refcount of string
+                        TmpStrLen := {%H-}PLongInt(NativeInt(ZUTF8StringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                      end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                end
+                else
+                begin
+                  SetLength(TempRawByteStringArray, ArrayCount);
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                      if Length(ZUTF8StringArray[j]) = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                      end
+                      else
+                      begin
+                        TempRawByteStringArray[j] := ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[j], ConSettings^.ClientCodePage^.CP);
+                        TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                      end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                end;
+              vtRawByteString:
+                begin
+                  SetLength(TempRawByteStringArray, ArrayCount);
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                    begin
+                      TmpStrLen := {%H-}PLongInt(NativeInt(ZRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                      if TmpStrLen = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                      end
+                      else
+                      begin
+                        TempRawByteStringArray[j] := ZRawByteStringArray[j]; //virtually no move, just inc refcount of string
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                      end
+                    end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                end;
+              vtCharRec:
+                {in array bindings we assume all codepages are equal!}
+                if ZCompatibleCodePages(ZCharRecArray[0].CP, ConSettings^.ClientCodePage^.CP) then
+                begin
+                  //let's avoid localized strings -> use faster way Zeos way (direct addessing of RowBuffer f.e.)
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                      if ZCharRecArray[j].Len = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                      end
+                      else
+                      begin
+                        LengthIndicator[J] := ZCharRecArray[j].Len; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, LengthIndicator[J]);//OCI expects equal mem blocks array[xx][y] including trailing #0
+                      end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                  {now build the huge string including the #0's because OCI expects it}
+                  Inc(CurrentVar.Length); //Left space for trailing #0
+                  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+                  System.SetLength(InParamValues[I].VRawByteString, CurrentVar.Length*ArrayCount); //alloc mem as static blocks
+                  {$ELSE}
+                  System.SetString(InParamValues[I].VRawByteString, nil, CurrentVar.Length*ArrayCount); //alloc mem as static blocks
+                  {$ENDIF}
+                  CharBuffer := Pointer(InParamValues[I].VRawByteString);
+                  for J := 0 to ArrayCount -1 do
+                  begin
+                    if NullIndicator[j] = 0 then
+                    begin
+                      Inc(LengthIndicator[J]); //indicate length including trailing #0
+                      System.Move(ZCharRecArray[j].P^, CharBuffer^, LengthIndicator[J]);
+                    end
+                    else
+                      CharBuffer^ := #0;  //add a trailing $0 byte for empty or null strings
+                    Inc(CharBuffer, CurrentVar.Length);
+                  end;
+                  goto SkipStringAssembling;
+                end
+                else
+                  if ZCompatibleCodePages(ZCharRecArray[0].CP, zCP_UTF16) then
+                    for j := 0 to ArrayCount -1 do
+                      if NullIndicator[j] = 0 then //not NULL
+                        if ZCharRecArray[j].Len = 0 then
+                        begin
+                          //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                          NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                          LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        end
+                        else
+                        begin
+                          WideRec.Len := ZCharRecArray[j].Len;
+                          WideRec.P := ZCharRecArray[j].P;
+                          TempRawByteStringArray[j] := ZWideRecToRaw(WideRec,ConSettings^.ClientCodePage^.CP); //convert to client encoding
+                          TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                          LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                          CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                        end
+                      else
+                        LengthIndicator[J] := 0 //help OCI by giving the length so they can move instead of using StrPLCopy
+                  else
+                    for j := 0 to ArrayCount -1 do
+                      if NullIndicator[j] = 0 then //not NULL
+                        if ZCharRecArray[j].Len = 0 then
+                        begin
+                          //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                          NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                          LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        end
+                        else
+                        begin
+                          AnsiRec.Len := ZCharRecArray[j].Len;
+                          AnsiRec.P := ZCharRecArray[j].P;
+                          WS := ZAnsiRecToUnicode(AnsiRec, ZCharRecArray[j].CP); //localize ?WideString? to avoid overrun
+                          TempRawByteStringArray[j] := ZUnicodeToRaw(WS, ConSettings^.ClientCodePage^.CP); //convert to client encoding
+                          TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                          LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                          CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen); //OCI expects equal mem blocks array[xx][y] including trailing #0
+                        end
+                      else
+                        LengthIndicator[J] := 0 //help OCI by giving the length so they can move instead of using StrPLCopy
+              else
+                raise Exception.Create('Unsupported String Variant');
+            end;
+StringAssembling:
+            Inc(CurrentVar.Length); //left space for trailing #0
+            {now build the huge string including the #0's because OCI expects it}
+            {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+            System.SetLength(InParamValues[I].VRawByteString, CurrentVar.Length*ArrayCount); //alloc mem
+            {$ELSE}
+            System.SetString(InParamValues[I].VRawByteString, nil, CurrentVar.Length*ArrayCount); //alloc mem as static blocks
+            {$ENDIF}
+            CharBuffer := Pointer(InParamValues[I].VRawByteString);
+            for J := 0 to ArrayCount -1 do
+            begin
+              if NullIndicator[j] = 0 then
+              begin
+                Inc(LengthIndicator[J]); //indicate length including trailing #0
+                System.Move(Pointer(TempRawByteStringArray[j])^, CharBuffer^, LengthIndicator[J]); //including trailing #0
+              end
+              else
+                CharBuffer^ := #0;  //add a trailing $0 byte for empty or null strings
+              Inc(CharBuffer, CurrentVar.Length);
+            end;
+SkipStringAssembling:
+            {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+            OCIData := Pointer(InParamValues[I].VRawByteString);
+            CurrentVar.TypeCode := SQLT_STR;
+          end;
+        stUnicodeString:
+          begin
+            SetLength(FLengthIndicators[i], ArrayCount);
+            PLengthIndicator := FLengthIndicators[i];
+            SetLength(TempRawByteStringArray, ArrayCount);
+            case TZVariantType(ZVariant.VArray.VArrayVariantType) of
+              vtUnicodeString:
+                begin
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                    begin
+                      TmpStrLen := {%H-}PLongInt(NativeInt(ZUnicodeStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                      if TmpStrLen = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0;
+                      end
+                      else
+                      begin
+                        TempRawByteStringArray[j] := ZUnicodeToRaw(ZUnicodeStringArray[j], ConSettings^.ClientCodePage^.CP); //convert UTF16 to client-encoding
+                        TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen);
+                      end
+                    end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                  goto StringAssembling;
+                end;
+              vtCharRec:
+                begin
+                  for j := 0 to ArrayCount -1 do
+                    if NullIndicator[j] = 0 then //not NULL
+                      if ZCharRecArray[j].Len = 0 then
+                      begin
+                        //Oracle doesn't support empty strings. OCI convert empty string to NULL silently
+                        NullIndicator[j] := -1; //so let's skip processing and set value to NULL
+                        LengthIndicator[J] := 0;
+                      end
+                      else
+                      begin
+                        WideRec.Len := ZCharRecArray[j].Len;
+                        WideRec.P := ZCharRecArray[j].P;
+                        TempRawByteStringArray[j] := ZWideRecToRaw(WideRec,ConSettings^.ClientCodePage^.CP); //convert to client encoding
+                        TmpStrLen := {%H-}PLongInt(NativeInt(TempRawByteStringArray[j]) - 4)^; //for D7..< 2005 Length() isn't inlined!
+                        LengthIndicator[J] := TmpStrLen; //help OCI by giving the length so they can move instead of using StrPLCopy
+                        CurrentVar.Length := Max(CurrentVar.Length, TmpStrLen);
+                      end
+                    else
+                      LengthIndicator[J] := 0; //help OCI by giving the length so they can move instead of using StrPLCopy
+                  goto StringAssembling;
+                end;
+              else
+                raise Exception.Create('Unsupported String Variant');
+            end;
+          end;
+        stBytes:
+          begin
+            SetLength(FLengthIndicators[i], ArrayCount);
+            PLengthIndicator := FLengthIndicators[i]; //make absolute var running
+            CurrentVar.Length := 0;
+            {first calc new size of Blocks Array[x][Length,Data] }
+            for J := 0 to ArrayCount -1 do
+              if NullIndicator[j] = 0 then //not NULL
+              begin
+                LengthIndicator[j] := Length(ZBytesArray[j]);
+                CurrentVar.Length := Max(CurrentVar.Length, SizeOf(Integer)+LengthIndicator[j]);
+              end
+              else
+                LengthIndicator[j] := 0;
+            System.SetLength(InParamValues[I].VBytes, CurrentVar.Length*ArrayCount); //alloc mem
+            CharBuffer := Pointer(InParamValues[I].VBytes);
+            {now let's move mem... }
+            for J := 0 to ArrayCount -1 do
+            begin
+              PInteger(CharBuffer)^ := LengthIndicator[j]; //give OCI length of byte array
+              if NullIndicator[j] = 0 then //not null
+                System.Move(Pointer(ZBytesArray[j])^, (CharBuffer+SizeOf(Integer))^, LengthIndicator[J]);
+              Inc(CharBuffer, CurrentVar.Length); //set new entry Pointer
+            end;
+            {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+            PLengthIndicator := nil; //do not set an own indicator!
+            OCIData := Pointer(InParamValues[I].VBytes);
+            CurrentVar.TypeCode := SQLT_LVB;
+          end;
+        stGUID: //AFIAK OCI doesn't support GUID fields so let's convert them to stings
+          begin
+            SetLength(FLengthIndicators[i], ArrayCount);
+            PLengthIndicator := FLengthIndicators[i];
+            {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+            System.SetLength(InParamValues[I].VRawByteString, 39*ArrayCount); //alloc mem
+            {$ELSE}
+            System.SetString(InParamValues[I].VRawByteString, nil, 39*ArrayCount); //alloc mem as static blocks
+            {$ENDIF}
+            OCIData := Pointer(InParamValues[I].VRawByteString);
+            CharBuffer := OCIData;
+            SetLength(TempRawByteStringArray, ArrayCount*39);
+            CurrentVar.Length := 39;
+            for J := 0 to ArrayCount -1 do
+            begin
+              if NullIndicator[j] = 0 then //not NULL
+              begin
+                System.Move(Pointer({$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[j])))^, CharBuffer^, 39);
+                LengthIndicator[j] := 39;
+              end
+              else
+                LengthIndicator[j] := 0;
+              Inc(CharBuffer, 39);
+            end;
+            goto SkipStringAssembling;
+          end;
+        stDate, stTime, stTimeStamp:
+          begin
+            CurrentVar.Length :=  SizeOf(POCIDateTime);
+            FDescriptors[I].htype := OCI_DTYPE_TIMESTAMP; //need a fast way to dealloc the descriptors again
+            SetLength(FDescriptors[I].Descriptors, ArrayCount);
+            OCIData := FDescriptors[I].Descriptors;
+
+            {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              if NullIndicator[j] = 0 then //not NULL
+              begin
+                if PointerArray[j] = nil then //alloc new FDescriptors only! They are consitent until we free them
+                  FPlainDriver.DescriptorAlloc(FConnectionHandle,
+                    PointerArray[j], OCI_DTYPE_TIMESTAMP, 0, nil);
+                DecodeDate(ZDateTimeArray[j], Year, Month, Day);
+                DecodeTime(ZDateTimeArray[j], Hour, Min, Sec, MSec);
+                CheckOracleError(FPlainDriver, FErrorHandle,
+                  FPlainDriver.DateTimeConstruct(FConnectionHandle,
+                    FErrorHandle, PointerArray[j], //direct addressing descriptore to array. So we don't need to free the mem again
+                    Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0),
+                  lcOther, 'OCIDateTimeConstruct', ConSettings);
+              end
+              else
+                if PointerArray[j] <> nil then
+                begin
+                  FPlainDriver.DescriptorFree(PointerArray[j], OCI_DTYPE_TIMESTAMP);
+                  PointerArray[j] := nil;
+                end;
+            CurrentVar.TypeCode := SQLT_TIMESTAMP;
+            CurrentVar.Length :=  SizeOf(POCIDateTime);
+          end;
+        stArray, stDataSet: ; //no idea yet
+        stAsciiStream, stUnicodeStream, stBinaryStream:
+          begin
+            CurrentVar.Length :=  SizeOf(POCIDescriptor);
+            FDescriptors[I].htype := OCI_DTYPE_LOB; //need a fast way to dealloc the descriptors again
+            SetLength(FDescriptors[I].Descriptors, ArrayCount);
+            SetLength(FDescriptors[I].Lobs, ArrayCount);
+            OCIData := FDescriptors[I].Descriptors;
+
+            {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+            for J := 0 to ArrayCount -1 do
+              if (NullIndicator[j] = 0) and (ZInterfaceArray[J] <> nil) and
+                 not (ZInterfaceArray[J] as IZBlob).IsEmpty then
+              begin //not null
+                if PointerArray[j] = nil then //alloc new FDescriptors only! They are consitent until we free them
+                  FPlainDriver.DescriptorAlloc(FConnectionHandle,
+                    PointerArray[j], OCI_DTYPE_LOB, 0, nil);
+                if TZSQLType(ZVariant.VArray.VArrayType) = stBinaryStream then
+                begin
+                  CurrentVar.TypeCode := SQLT_BLOB;
+                  TempBlob := ZInterfaceArray[j] as IZBlob;
+                  WriteTempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
+                    OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                    PointerArray[j], ChunkSize, ConSettings);
+                  WriteTempBlob.CreateBlob;
+                  WriteTempBlob.WriteLobFromBuffer(TempBlob.GetBuffer, TempBlob.Length);
+                end
+                else
+                begin
+                  CurrentVar.TypeCode := SQLT_CLOB;
+                  TempBlob := ZInterfaceArray[J] as IZBlob;
+                  if TempBlob.IsClob then
+                  begin
+                    WriteTempBlob := TZOracleClob.Create(FPlainDriver,
+                      nil, 0, OracleConnection.GetConnectionHandle,
+                      OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                      PointerArray[j], ChunkSize, ConSettings,
+                      ConSettings^.ClientCodePage^.CP);
+                    WriteTempBlob.CreateBlob;
+                    LobBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+                    WriteTempBlob.WriteLobFromBuffer(LobBuffer, TempBlob.Length);
+                  end
+                  else
+                  begin
+                    AnsiTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                        TempBlob.Length, Connection.GetConSettings);
+                    LobBuffer := Pointer(AnsiTemp);
+                    WriteTempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
+                      OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
+                      OracleConnection.GetErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
+                      ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+                    WriteTempBlob.CreateBlob;
+                    WriteTempBlob.WriteLobFromBuffer(LobBuffer, {%H-}PLongInt(NativeInt(AnsiTemp) - 4)^);
+                  end;
+                end;
+                FDescriptors[I].Lobs[j] := WriteTempBlob; //ref interface to keep OCILob alive otherwise OCIFreeLobTemporary will be called
+              end
+              else
+                if PointerArray[j] <> nil then
+                begin
+                  FPlainDriver.DescriptorFree(PointerArray[j], OCI_DTYPE_LOB);
+                  PointerArray[j] := nil;
+                end;
+          end;
+      end;
+      if UsedMem > High(Cardinal) then
+        raise Exception.Create('Memory out of bounds! OCI-Limit = 4GB -1Byte');
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
+          FErrorHandle, I + 1, OCIData, CurrentVar.Length,
+          CurrentVar.TypeCode, PNullIndicator, PLengthIndicator, nil, 0, nil,
+          OCI_DEFAULT),
+        lcExecute, ASQL, ConSettings);
+    end
+  end
+  else
+  begin
+    { single row execution}
     for I := 0 to InParamCount - 1 do
     begin
       CurrentVar := @FInVars.Variables[I + 1];
@@ -269,10 +1084,10 @@ begin
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
     end;
 
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver, Connection, FErrorHandle,
-    FInVars, InParamValues,ChunkSize);
-
+    { Loads binded variables with values. }
+    LoadOracleVars(FPlainDriver, Connection, FErrorHandle,
+      FInVars, InParamValues,ChunkSize);
+  end;
   inherited BindInParameters;
 end;
 
@@ -280,10 +1095,33 @@ end;
   Removes eventual structures for binding input parameters.
 }
 procedure TZOraclePreparedStatement.UnPrepareInParameters;
+var
+  I, J: Integer;
 begin
-  FreeOracleSQLVars(FPlainDriver, FInVars, FConnectionHandle, FErrorHandle, ConSettings);
+  if ArrayCount = 0 then
+    FreeOracleSQLVars(FPlainDriver, FInVars, FConnectionHandle, FErrorHandle, ConSettings)
+  else
+  begin
+    for i := 0 to high(FDescriptors) do
+      if FDescriptors[I].htype > 0 then
+        for J := 0 to ArrayCount -1 do
+          if FDescriptors[I].Descriptors[J] <> nil then
+            FPlainDriver.DescriptorFree(FDescriptors[I].Descriptors[J], FDescriptors[I].htype);
+    SetLength(FDescriptors, 0);
+    SetLength(FNullIndicators, 0);
+    SetLength(FLengthIndicators, 0);
+    SetLength(FIntegerValues, 0);
+    SetLength(FInt64Values, 0);
+    SetLength(FDoubleValues, 0);
+  end;
 end;
 
+procedure TZOraclePreparedStatement.ClearParameters;
+begin
+  UnPrepareInParameters;
+
+  inherited ClearParameters;
+end;
 {**
   Prepares an SQL statement
 }
@@ -345,13 +1183,17 @@ begin
   begin
     { Executes the statement and gets a result. }
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit,
+      Max(1, ArrayCount));
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
   end;
   inherited ExecutePrepared;
 
   { Unloads binded variables with values. }
-  UnloadOracleVars(FInVars);
+  if ArrayCount = 0 then
+    UnloadOracleVars(FInVars, ArrayCount)
+  else
+    UnloadOracleVars(FDescriptors, ArrayCount)
 
   { Autocommit statement. done by ExecuteOracleStatement}
 end;
@@ -374,7 +1216,10 @@ begin
   inherited ExecuteQueryPrepared;
 
   { Unloads binded variables with values. }
-  UnloadOracleVars(FInVars);
+  if ArrayCount = 0 then
+    UnloadOracleVars(FInVars, ArrayCount)
+  else
+    UnloadOracleVars(FDescriptors, ArrayCount)
 end;
 
 {**
@@ -419,14 +1264,17 @@ begin
     begin
       { Executes the statement and gets a result. }
       ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-        ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
+        ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit,Max(1, ArrayCount));
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     end;
     Result := LastUpdateCount;
     inherited ExecuteUpdatePrepared;
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FInVars);
+    if ArrayCount = 0 then
+      UnloadOracleVars(FInVars, ArrayCount)
+    else
+      UnloadOracleVars(FDescriptors, ArrayCount)
   end;
 
   { Autocommit statement. done by ExecuteOracleStatement}
@@ -814,13 +1662,13 @@ begin
 
   try
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit, 1);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     FetchOutParamsFromOracleVars;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FInVars);
+    UnloadOracleVars(FInVars, 0)
   end;
 
   { Autocommit statement. done by ExecuteOracleStatement}
@@ -839,7 +1687,7 @@ begin
 
   try
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit);
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit, 1);
     FetchOutParamsFromOracleVars;
     LastResultSet := CreateOracleResultSet(FPlainDriver, Self, Self.SQL,
       FHandle, FErrorHandle, FInVars, FOracleParams);
@@ -847,7 +1695,7 @@ begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FInVars);
+    UnloadOracleVars(FInVars, 0);
   end;
 end;
 

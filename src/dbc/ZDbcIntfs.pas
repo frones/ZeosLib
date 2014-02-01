@@ -613,6 +613,8 @@ type
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType;
       const Value: IZBlob);
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
     procedure ClearParameters;
 

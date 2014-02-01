@@ -130,6 +130,13 @@ type
   End;
   TZOracleParams = array of TZOracleParam;
 
+  TDesciptorRec = record
+    htype: sb4; //Indicate C/BLOB or TimeStamps
+    Descriptors: TPointerDynArray; //allocated descriptors
+    Lobs: TInterfaceDynArray; //PlaceHolder to keep lob refcount > 0
+  end;
+  TDesciptorRecArray = array of TDesciptorRec;
+
 {**
   Allocates memory for Oracle SQL Variables.
   @param Variables a pointer to array of variables.
@@ -141,6 +148,9 @@ procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
   Frees memory Oracle SQL Variables from the memory.
   @param PlainDriver an Oracle plain driver.
   @param Variables a pointer to array of variables.
+  @param Handle a OCIEnvironment pointer
+  @param ErrorHandle the OCI ErrorHandle
+  @param ConSetttings the Pointer to the TZConSettings record
 }
 procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
   var Variables: PZSQLVars; const Handle: POCIEnv; const ErrorHandle: POCIError;
@@ -173,9 +183,10 @@ procedure LoadOracleVars(const PlainDriver: IZOraclePlainDriver;
 
 {**
   Unloads Oracle variables binded to SQL statement with data.
-  @param Variables Oracle variable holders.
+  @param Variables Oracle variable holders or array of TDesciptorRec.
+  @param ArrayCount count of bound arrays
 }
-procedure UnloadOracleVars(Variables: PZSQLVars);
+procedure UnloadOracleVars(var Variables; const ArrayCount: Integer);
 
 {**
   Convert string Oracle field type to SQLType
@@ -265,7 +276,8 @@ procedure PrepareOracleStatement(const PlainDriver: IZOraclePlainDriver;
 procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
   const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
   const Handle: POCIStmt; const ErrorHandle: POCIError;
-  const ConSettings: PZConSettings; const AutoCommit: Boolean);
+  const ConSettings: PZConSettings; const AutoCommit: Boolean;
+  const Iters: Integer);
 
 {**
   Gets a number of updates made by executed Oracle statement.
@@ -323,6 +335,9 @@ end;
   Frees memory Oracle SQL Variables from the memory.
   @param PlainDriver an Oracle plain driver.
   @param Variables a pointer to array of variables.
+  @param Handle a OCIEnvironment pointer
+  @param ErrorHandle the OCI ErrorHandle
+  @param ConSetttings the Pointer to the TZConSettings record
 }
 procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
   var Variables: PZSQLVars; const Handle: POCIEnv; const ErrorHandle: POCIError;
@@ -615,21 +630,29 @@ end;
   Unloads Oracle variables binded to SQL statement with data.
   @param Variables Oracle variable holders.
 }
-procedure UnloadOracleVars(Variables: PZSQLVars);
+procedure UnloadOracleVars(var Variables; const ArrayCount: Integer);
 var
-  I: Integer;
+  I, J: Integer;
   CurrentVar: PZSQLVar;
+  SQLVars: PZSQLVars absolute Variables;
+  DescriptorsArray: TDesciptorRecArray absolute Variables;
 begin
-  for I := 1 to Variables.AllocNum do
-  begin
-    CurrentVar := @Variables.Variables[I];
-    CurrentVar.Blob := nil;
-    if not CurrentVar.FreeMem then
+  if ArrayCount = 0 then
+    for I := 1 to SQLVars.AllocNum do
     begin
-      CurrentVar.Data := nil;
-      CurrentVar.FreeMem := True;
-    end;
-  end;
+      CurrentVar := @SQLVars.Variables[I];
+      CurrentVar.Blob := nil;
+      if not CurrentVar.FreeMem then
+      begin
+        CurrentVar.Data := nil;
+        CurrentVar.FreeMem := True;
+      end;
+    end
+  else
+    for i := 0 to High(DescriptorsArray) do
+      if (DescriptorsArray[i].htype = OCI_DTYPE_LOB) then
+        for j := 0 to ArrayCount -1 do
+          DescriptorsArray[i].Lobs[j] := nil;
 end;
 
 {**
@@ -896,17 +919,18 @@ end;
 procedure ExecuteOracleStatement(const PlainDriver: IZOraclePlainDriver;
   const ContextHandle: POCISvcCtx; const LogSQL: RawByteString;
   const Handle: POCIStmt; const ErrorHandle: POCIError;
-  const ConSettings: PZConSettings; const AutoCommit: Boolean);
+  const ConSettings: PZConSettings; const AutoCommit: Boolean;
+  const Iters: Integer);
 begin
   if AutoCommit then
     CheckOracleError(PlainDriver, ErrorHandle,
       PlainDriver.StmtExecute(ContextHandle,
-        Handle, ErrorHandle, 1, 0, nil, nil, OCI_COMMIT_ON_SUCCESS),
+        Handle, ErrorHandle, Iters, 0, nil, nil, OCI_COMMIT_ON_SUCCESS),
       lcExecute, LogSQL, ConSettings)
   else
     CheckOracleError(PlainDriver, ErrorHandle,
       PlainDriver.StmtExecute(ContextHandle,
-        Handle, ErrorHandle, 1, 0, nil, nil, OCI_DEFAULT),
+        Handle, ErrorHandle, Iters, 0, nil, nil, OCI_DEFAULT),
       lcExecute, LogSQL, ConSettings);
 end;
 

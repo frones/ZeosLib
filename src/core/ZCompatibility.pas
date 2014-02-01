@@ -258,6 +258,12 @@ type
   {$IF not declared(TInterfaceDynArray)}
   TInterfaceDynArray  = array of IInterface;
   {$IFEND}
+  {$IF not declared(TGUIDDynArray)}
+  TGUIDDynArray  = array of TGUID;
+  {$IFEND}
+  {$IF not declared(TPointerDynArray)}
+  TPointerDynArray  = array of Pointer;
+  {$IFEND}
   TZCharRecDynArray = array of TZCharRec;
 type
   {declare move or converter functions for the String Types}
