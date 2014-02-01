@@ -1569,7 +1569,6 @@ var
 
   procedure DoRead(const csid: ub2; const csfrm: ub1);
   begin
-    FillChar(Buf^, FChunkSize+1, #0);
     ReadNumChars := 0;
     Status := FPlainDriver.LobRead(FContextHandle,FErrorHandle, FLobLocator,
       ReadNumChars, Offset + 1, Buf, FChunkSize, nil, nil, csid, csfrm);
