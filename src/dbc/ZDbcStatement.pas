@@ -2106,79 +2106,41 @@ procedure TZAbstractPreparedStatement.SetDataArray(ParameterIndex: Integer;
 var
   V: TZVariant;
   {using mem entry of ZData is faster then casting}
-  ZBooleanArray: TBooleanDynArray absolute Value;
-  ZByteArray: TByteDynArray absolute Value;
-  ZShortIntArray: TShortIntDynArray absolute Value;
-  ZWordArray: TWordDynArray absolute Value;
-  ZSmallIntArray: TSmallIntDynArray absolute Value;
-  ZLongWordArray: TLongWordDynArray absolute Value;
-  ZIntegerArray: TIntegerDynArray absolute Value;
-  ZInt64Array: TInt64DynArray absolute Value;
-  ZUInt64Array: TUInt64DynArray absolute Value;
-  ZSingleArray: TSingleDynArray absolute Value;
-  ZDoubleArray: TDoubleDynArray absolute Value;
-  ZCurrencyArray: TCurrencyDynArray absolute Value;
-  ZExtendedArray: TExtendedDynArray absolute Value;
-  ZDateTimeArray: TDateTimeDynArray absolute Value;
-  ZRawByteStringArray: TRawByteStringDynArray absolute Value;
-  ZUnicodeStringArray: TUnicodeStringDynArray absolute Value;
-  ZCharRecArray: TZCharRecDynArray absolute Value;
-  ZBytesArray: TBytesDynArray absolute Value;
-  ZInterfaceArray: TInterfaceDynArray absolute Value;
-  ZGUIDArray: TGUIDDynArray absolute Value;
+  ZArray: Pointer absolute Value;
 
   procedure AssertLength(const Len: Integer);
   begin
-    if ParameterIndex = 1 then
+    if (ParameterIndex = 1) or ((ParameterIndex > 1) and (InParamValues[ParameterIndex -1].VArray.VArray = nil))  then
       FInitialArrayCount := Len
     else
       if Len <> FInitialArrayCount then
         raise Exception.Create('Array count does not equal with initial count!');
   end;
 begin
-  case SQLType of
-    stUnknown:        raise Exception.Create('Invalid SQLType for Array binding!');
-    stBoolean:        AssertLength(Length(ZBooleanArray));
-    stByte:           AssertLength(Length(ZByteArray));
-    stShort:          AssertLength(Length(ZShortIntArray));
-    stWord:           AssertLength(Length(ZWordArray));
-    stSmall:          AssertLength(Length(ZSmallIntArray));
-    stLongWord:       AssertLength(Length(ZLongWordArray));
-    stInteger:        AssertLength(Length(ZIntegerArray));
-    stULong:          AssertLength(Length(ZUInt64Array));
-    stLong:           AssertLength(Length(ZInt64Array));
-    stFloat:          AssertLength(Length(ZSingleArray));
-    stDouble:         AssertLength(Length(ZDoubleArray));
-    stCurrency:       AssertLength(Length(ZCurrencyArray));
-    stBigDecimal:     AssertLength(Length(ZExtendedArray));
-    stString:
-      case VariantType of
-        vtString:         AssertLength(Length({$IFDEF UNICODE}ZUnicodeStringArray{$ELSE}ZRawByteStringArray{$ENDIF}));
-        vtAnsiString:     AssertLength(Length(ZRawByteStringArray));
-        vtUTF8String:     AssertLength(Length(ZRawByteStringArray));
-        vtRawByteString:  AssertLength(Length(ZRawByteStringArray));
-        vtCharRec:        AssertLength(Length(ZCharRecArray));
-        else
-          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-      end;
-    stUnicodeString:
-      case VariantType of
-        vtUnicodeString:  AssertLength(Length(ZUnicodeStringArray));
-        vtCharRec:        AssertLength(Length(ZCharRecArray));
-        else
-          raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-      end;
-    stBytes:          AssertLength(Length(ZBytesArray));
-    stGUID:           AssertLength(Length(ZGUIDArray));
-    stDate,
-    stTime,
-    stTimestamp:      AssertLength(Length(ZDateTimeArray));
-    stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
-    stDataSet: ;
-    stAsciiStream,
-    stUnicodeStream,
-    stBinaryStream:   AssertLength(Length(ZInterfaceArray));
-  end;
+  if ZArray <> nil then
+    case SQLType of
+      stUnknown:        raise Exception.Create('Invalid SQLType for Array binding!');
+      stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
+      stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
+      stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
+        AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+      stString:
+        case VariantType of
+          vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
+            AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+          else
+            raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+        end;
+      stUnicodeString:
+        case VariantType of
+          vtUnicodeString, vtCharRec:
+            AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+          else
+            raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+        end;
+      stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
+      stDataSet: ;
+    end;
   V.VType := vtArray;
   V.VArray.VArray := Pointer(Value);
   V.VArray.VArrayVariantType := VariantType;
