@@ -876,8 +876,10 @@ begin
     else
       Result := TZOracleClob.Create(FPlainDriver, nil, 0,
         FConnection.GetConnectionHandle, FConnection.GetContextHandle,
-        FConnection.GetErrorHandle, LobLocator, FChunkSize, FConnection.GetConSettings,
-        FConnection.GetConSettings^.ClientCodePage^.CP);
+        FConnection.GetErrorHandle, LobLocator, FChunkSize, ConSettings,
+        ConSettings^.ClientCodePage^.CP);
+    (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
+
   end
   else
     if CurrentVar.TypeCode=SQLT_NTY then
@@ -1464,6 +1466,7 @@ begin
         until Offset < Cap;
       except
         FreeMem(Buf);
+        Buf := nil;
         raise;
       end;
     finally
@@ -1497,7 +1500,7 @@ end;
 }
 procedure TZOracleBlob.InternalSetData(AData: Pointer; ASize: Integer);
 begin
-  Clear;
+  InternalClear;
   BlobData := AData;
   BlobSize := ASize;
 end;
@@ -1604,12 +1607,15 @@ begin
         (PAnsiChar(FBlobData)+NativeUInt(OffSet))^ := #0;
       except
         FreeMem(Buf);
+        Buf := nil;
         raise;
       end;
     finally
       { Closes large object or file. }
       Status := FPlainDriver.LobClose(FContextHandle, FErrorHandle, FLobLocator);
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
+      if Buf <> nil then
+        FreeMem(Buf);
     end;
   end;
   inherited ReadLob;
