@@ -833,37 +833,77 @@ begin
         vtBoolean, vtInteger, vtFloat, vtBytes, vtDateTime:
           begin
             Result.VString := Convert(Value, vtString).VString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
-            Result.VCharRec.P := PChar(Result.VString);
+            if Pointer(Result.VString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PChar(Result.VString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
+            end;
           end;
         vtString:
           begin
             Result.VString := Value.VString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
             Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
-            Result.VCharRec.P := PChar(Result.VString);
+            if Pointer(Result.VString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PChar(Result.VString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
+            end;
           end;
         vtAnsiString:
           begin
             Result.VAnsiString := Value.VAnsiString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := ZDefaultSystemCodePage;
-            Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+            if Pointer(Result.VAnsiString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL call of PChar conversion
+            end;
           end;
         vtUTF8String:
           begin
             Result.VUTF8String := Value.VUTF8String;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := zCP_UTF8;
-            Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+            if Pointer(Result.VUTF8String) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL call of PChar conversion
+            end;
           end;
         vtUnicodeString:
           begin
             Result.VUnicodeString := Value.VUnicodeString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := zCP_UTF16;
-            Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+            if Pointer(Result.VUnicodeString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL call of PWideChar conversion
+            end;
           end;
         vtCharRec:
           Result.VCharRec := Value.VCharRec;
@@ -2076,37 +2116,77 @@ begin
         vtBoolean, vtInteger, vtUInteger, vtFloat, vtBytes, vtDateTime:
           begin
             Result.VString := Convert(Value, vtString).VString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
-            Result.VCharRec.P := PChar(Result.VString);
+            if Pointer(Result.VString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PChar(Result.VString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
+            end;
           end;
         vtString:
           begin
             Result.VString := Value.VString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
-            Result.VCharRec.P := PChar(Result.VString);
+            if Pointer(Result.VString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PChar(Result.VString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
+            end;
           end;
         vtAnsiString:
           begin
             Result.VAnsiString := Value.VAnsiString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := ZDefaultSystemCodePage;
-            Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+            if Pointer(Result.VAnsiString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL call of PAnsiChar conversion
+            end;
           end;
         vtUTF8String:
           begin
             Result.VUTF8String := Value.VUTF8String;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := zCP_UTF8;
-            Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+            if Pointer(Result.VUTF8String) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL call of PAnsiChar conversion
+            end;
           end;
         vtUnicodeString:
           begin
             Result.VUnicodeString := Value.VUnicodeString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := zCP_UTF16;
-            Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+            if Pointer(Result.VUnicodeString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL call of PWideChar conversion
+            end;
           end;
         vtCharRec:
           Result.VCharRec := Value.VCharRec;
@@ -2395,45 +2475,93 @@ begin
             if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
             begin
               Result.VRawByteString := Convert(Value, vtRawByteString).VRawByteString;
-              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
               Result.VCharRec.CP := FConSettings^.ClientCodePage^.CP;
-              Result.VCharRec.P := PAnsiChar(Result.VRawByteString);
+              if Pointer(Result.VRawByteString) = nil then
+              begin
+                Result.VCharRec.Len := 0;
+                Result.VCharRec.P := PAnsiChar(Result.VRawByteString); //avoid nil result
+              end
+              else
+              begin
+                Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+                Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
+              end;
             end
             else
             begin
               Result.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
-              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
               Result.VCharRec.CP := zCP_UTF16;
-              Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+              if Pointer(Result.VUnicodeString) = nil then
+              begin
+                Result.VCharRec.Len := 0;
+                Result.VCharRec.P := PWideChar(Result.VUnicodeString); //avoid nil result
+              end
+              else
+              begin
+                Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+                Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL conversion to PAnsiChar
+              end;
             end;
           end;
         vtString:
           begin
             Result.VString := Value.VString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := {$IFDEF UNICODE}zCP_UTF16{$ELSE}ZDefaultSystemCodePage{$ENDIF};
-            Result.VCharRec.P := PChar(Result.VString);
+            if Pointer(Result.VString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PChar(Result.VString); //avoid nil result
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.P := Pointer(Result.VString); //avoid RTL conversion to PAnsiChar
+            end;
           end;
         vtAnsiString:
           begin
             Result.VAnsiString := Value.VAnsiString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := ZDefaultSystemCodePage;
-            Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+            if Pointer(Result.VAnsiString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PAnsiChar(Result.VAnsiString); //avoid nil result
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL conversion to PAnsiChar
+            end;
           end;
         vtUTF8String:
           begin
             Result.VUTF8String := Value.VUTF8String;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := zCP_UTF8;
-            Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+            if Pointer(Result.VUTF8String) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PAnsiChar(Result.VUTF8String); //avoid nil result
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL conversion to PAnsiChar
+            end;
           end;
         vtUnicodeString:
           begin
             Result.VUnicodeString := Value.VUnicodeString;
-            Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.VCharRec.CP := zCP_UTF16;
-            Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+            if Pointer(Result.VUnicodeString) = nil then
+            begin
+              Result.VCharRec.Len := 0;
+              Result.VCharRec.P := PWideChar(Result.VUnicodeString); //avoid nil result
+            end
+            else
+            begin
+              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL conversion to PWideChar
+            end;
           end;
         vtCharRec:
           Result.VCharRec := Value.VCharRec;
@@ -2530,22 +2658,32 @@ begin
         if ZCompatibleCodePages(CodePage, zCP_UTF16) then
         begin
           Value.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
-          Result.Len := {%H-}PLongInt(NativeInt(Value.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
-          if Result.Len = 0 then
-            Result.P := PWideChar(Value.VUnicodeString) //Pointer Result would be nil
-          else //avoid RTL conversion to PWideChar
-            Result.P := Pointer(Value.VUnicodeString);
+          if Pointer(Value.VUnicodeString) = nil then
+          begin
+            Result.P := PWideChar(Value.VUnicodeString); //Pointer Result would be nil
+            Result.Len := 0;
+          end
+          else
+          begin
+            Result.Len := {%H-}PLongInt(NativeInt(Value.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+            Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
+          end;
         end
         else
           goto AsRBS;
     vtUTF8String:
       if CodePage = zCP_UTF8 then
       begin
-        Result.Len := {%H-}PLongInt(NativeInt(Value.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
-        if Result.Len = 0 then
-          Result.P := PAnsiChar(Value.VUTF8String)
-        else //avoid RTL conversion to PAnsiChar
-          Result.P := Pointer(Value.VUTF8String)
+        if Pointer(Value.VUTF8String) = nil then
+        begin
+          Result.P := PAnsiChar(Value.VUTF8String); //Pointer Result would be nil
+          Result.Len := 0;
+        end
+        else
+        begin
+          Result.Len := {%H-}PLongInt(NativeInt(Value.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+          Result.P := Pointer(Value.VUTF8String); //avoid RTL conversion to PAnsiChar
+        end;
       end
       else
         goto AsRBS;
@@ -2553,11 +2691,16 @@ begin
       AsRBS:
       begin
         Value.VRawByteString := GetAsRawByteString(Value, CodePage);
-        Result.Len := {%H-}PLongInt(NativeInt(Value.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
-        if Result.Len = 0 then
-          Result.P := PAnsiChar(Value.VRawByteString) //Pointer Result would be nil
-        else //avoid RTL conversion to PAnsiChar
-          Result.P := Pointer(Value.VRawByteString)
+        if Pointer(Value.VRawByteString) = nil then
+        begin
+          Result.P := PAnsiChar(Value.VRawByteString); //Pointer Result would be nil
+          Result.Len := 0;
+        end
+        else
+        begin
+          Result.Len := {%H-}PLongInt(NativeInt(Value.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+          Result.P := Pointer(Value.VRawByteString); //avoid RTL conversion to PAnsiChar
+        end;
       end;
   end;
 end;
