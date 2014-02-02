@@ -139,8 +139,8 @@ create table not_null_values
 create table "Case_Sensitive" (
 cs_id                 INTEGER                        not null,
 "Cs_Data1"            INTEGER,
-"cs_data1"            INTEGER,
-"cs data1"            INTEGER,
+"cs_data2"            INTEGER,
+"cs data3"            INTEGER,
 primary key (cs_id)
 );
 
@@ -152,6 +152,17 @@ cs_id                 INTEGER                        not null,
 "CS_DATA1"            INTEGER,
 "CS_Data2"            INTEGER,
 "Cs_Data3"            INTEGER,
+primary key (cs_id)
+);
+
+/*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table "Spaced Names" (
+cs_id                 INTEGER                        not null,
+"Cs Data1"            INTEGER,
+"cs data2"            INTEGER,
+"cS data3"            INTEGER,
 primary key (cs_id)
 );
 

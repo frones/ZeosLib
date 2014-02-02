@@ -769,9 +769,9 @@ begin
   begin
     TableRef := SelectSchema.Tables[I];
     if Assigned(FieldRef) then
-      Found := ReadColumnByName(FieldRef.Field, TableRef, ColumnInfo)
+      Found := ReadColumnByName(FMetadata.GetIdentifierConvertor.ExtractQuote(FieldRef.Field), TableRef, ColumnInfo)
     else
-      Found := ReadColumnByName(ColumnInfo.ColumnLabel, TableRef, ColumnInfo);
+      Found := ReadColumnByName(FMetadata.GetIdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel), TableRef, ColumnInfo);
     Inc(I);
   end;
 end;

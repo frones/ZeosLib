@@ -46,6 +46,9 @@ go
 drop table high_load
 go
 
+drop table "Spaced Names"
+go
+
 /*
 drop procedure abtest
 go */

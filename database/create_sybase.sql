@@ -134,6 +134,13 @@ go
 
 if exists (select 1
             from  sysobjects
+           where  id = object_id('"Spaced Names"')
+            and   type = 'U')
+   drop table string_values
+go
+
+if exists (select 1
+            from  sysobjects
            where  id = object_id('case_sensitive')
             and   type = 'U')
    drop table string_values
@@ -337,6 +344,18 @@ cs_id                 INTEGER                        not null,
 "Cs_Data1"            INTEGER		null,
 "cs_data1"            INTEGER		null,
 "cs data1"            INTEGER		null,
+primary key (cs_id)
+)
+go
+
+/*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table "Spaced Names" (
+cs_id                 INTEGER                        not null,
+"Cs Data1"            INTEGER,
+"cs data1"            INTEGER,
+"cS data1"            INTEGER,
 primary key (cs_id)
 )
 go

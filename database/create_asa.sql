@@ -141,8 +141,8 @@ create table not_null_values
 /*create table "Case_Sensitive" (
 cs_id                 INTEGER                        not null	default autoincrement,
 "Cs_Data1"            INTEGER,
-"cs_data1"            INTEGER,
-"cs data1"            INTEGER,
+"cs_data2"            INTEGER,
+"cs data3"            INTEGER,
 primary key (cs_id)
 );*/
 
@@ -156,6 +156,17 @@ cs_id                 INTEGER                        not null	default autoincrem
 "Cs_Data3"            INTEGER,
 primary key (cs_id)
 );*/
+
+/*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table "Spaced Names" (
+cs_id                 INTEGER                        not null,
+"Cs Data1"            INTEGER,
+"cs data2"            INTEGER,
+"cS data3"            INTEGER,
+primary key (cs_id)
+);
 
 /*==============================================================*/
 /* Table : high_load                                            */
