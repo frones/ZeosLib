@@ -494,6 +494,14 @@ uses
   Variants, Math, {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings, {$ENDIF}
   ZMessages, ZEncoding, ZFastCode, ZSysUtils;
 
+const
+  EmptyUnicodeString = ZWideString('');
+  EmptyAnsiString = AnsiString('');
+
+var
+  PEmptyUnicodeString: PWideChar;
+  PEmptyAnsiString: PAnsiChar;
+
 { TZDefaultVariantManager }
 
 {**
@@ -779,7 +787,7 @@ begin
             {$IFDEF WITH_RAWBYTESTRING}
             ZWideString(Value.VUTF8String);
             {$ELSE}
-            UTF8ToString(PAnsiChar(Value.VUTF8String));
+            UTF8ToString(Value.VUTF8String);
             {$ENDIF}
         vtUnicodeString:
           Result.VUnicodeString := Value.VUnicodeString;
@@ -867,7 +875,7 @@ begin
             if Pointer(Result.VAnsiString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+              Result.VCharRec.P := PEmptyAnsiString;
             end
             else
             begin
@@ -882,7 +890,7 @@ begin
             if Pointer(Result.VUTF8String) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+              Result.VCharRec.P := PEmptyAnsiString;
             end
             else
             begin
@@ -897,7 +905,7 @@ begin
             if Pointer(Result.VUnicodeString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+              Result.VCharRec.P := PEmptyUnicodeString;
             end
             else
             begin
@@ -1826,18 +1834,18 @@ begin
         vtString:
           Result.VFloat := SqlStrToFloatDef(PChar(Value.VString), 0);
         vtAnsiString:
-          Result.VFloat := RawToFloatDef(PAnsiChar(Value.VAnsiString), '.', 0);
+          Result.VFloat := RawToFloatDef(Pointer(Value.VAnsiString), '.', 0);
         vtUTF8String:
-          Result.VFloat := RawToFloatDef(PAnsiChar(Value.VUTF8String), '.', 0);
+          Result.VFloat := RawToFloatDef(Pointer(Value.VUTF8String), '.', 0);
         vtRawByteString:
-          Result.VFloat := RawToFloatDef(PAnsiChar(Value.VRawByteString), '.', 0);
+          Result.VFloat := RawToFloatDef(Pointer(Value.VRawByteString), '.', 0);
         vtUnicodeString:
-          Result.VFloat := UnicodeToFloatDef(PWideChar(Value.VUnicodeString), WideChar('.'), 0);
+          Result.VFloat := UnicodeToFloatDef(Pointer(Value.VUnicodeString), WideChar('.'), 0);
         vtCharRec:
           if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-            Result.VFloat := UnicodeToFloatDef(PWideChar(Value.VCharRec.P), WideChar('.'), 0)
+            Result.VFloat := UnicodeToFloatDef(Value.VCharRec.P, WideChar('.'), 0)
           else
-            Result.VFloat := RawToFloatDef(PAnsiChar(Value.VCharRec.P), '.', 0);
+            Result.VFloat := RawToFloatDef(Value.VCharRec.P, '.', 0);
         vtDateTime:
           Result.VFloat := Value.VDateTime;
         else
@@ -2029,7 +2037,7 @@ begin
         vtAnsiString:
           Result.VUnicodeString := ZWideString(Value.VAnsiString);
         vtUTF8String:
-          Result.VUnicodeString := {$IFDEF UNICODE}UTF8ToString{$ELSE}UTF8Decode{$ENDIF}(PAnsiChar(Value.VUTF8String));
+          Result.VUnicodeString := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Value.VUTF8String);
         vtUnicodeString:
           Result.VUnicodeString := Value.VUnicodeString;
         vtCharRec:
@@ -2150,7 +2158,7 @@ begin
             if Pointer(Result.VAnsiString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PAnsiChar(Result.VAnsiString);
+              Result.VCharRec.P := PEmptyAnsiString;
             end
             else
             begin
@@ -2165,7 +2173,7 @@ begin
             if Pointer(Result.VUTF8String) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PAnsiChar(Result.VUTF8String);
+              Result.VCharRec.P := PEmptyAnsiString;
             end
             else
             begin
@@ -2180,7 +2188,7 @@ begin
             if Pointer(Result.VUnicodeString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PWideChar(Result.VUnicodeString);
+              Result.VCharRec.P := PEmptyUnicodeString;
             end
             else
             begin
@@ -2443,7 +2451,7 @@ begin
         vtAnsiString:
           Result.VUnicodeString := ZWideString(Value.VAnsiString);
         vtUTF8String:
-          Result.VUnicodeString := {$IFDEF UNICODE}UTF8ToString{$ELSE}UTF8Decode{$ENDIF}(PAnsiChar(Value.VUTF8String));
+          Result.VUnicodeString := {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Value.VUTF8String);
         vtRawByteString:
           Result.VUnicodeString := FConSettings^.ConvFuncs.ZRawToUnicode(Value.VRawByteString, FConSettings^.ClientCodePage^.CP);
         vtUnicodeString:
@@ -2479,7 +2487,7 @@ begin
               if Pointer(Result.VRawByteString) = nil then
               begin
                 Result.VCharRec.Len := 0;
-                Result.VCharRec.P := PAnsiChar(Result.VRawByteString); //avoid nil result
+                Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
               end
               else
               begin
@@ -2494,7 +2502,7 @@ begin
               if Pointer(Result.VUnicodeString) = nil then
               begin
                 Result.VCharRec.Len := 0;
-                Result.VCharRec.P := PWideChar(Result.VUnicodeString); //avoid nil result
+                Result.VCharRec.P := PEmptyUnicodeString; //avoid nil result
               end
               else
               begin
@@ -2525,7 +2533,7 @@ begin
             if Pointer(Result.VAnsiString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PAnsiChar(Result.VAnsiString); //avoid nil result
+              Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
             end
             else
             begin
@@ -2540,7 +2548,7 @@ begin
             if Pointer(Result.VUTF8String) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PAnsiChar(Result.VUTF8String); //avoid nil result
+              Result.VCharRec.P := PEmptyAnsiString; //avoid nil result
             end
             else
             begin
@@ -2555,7 +2563,7 @@ begin
             if Pointer(Result.VUnicodeString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PWideChar(Result.VUnicodeString); //avoid nil result
+              Result.VCharRec.P := PEmptyUnicodeString; //avoid nil result
             end
             else
             begin
@@ -2660,7 +2668,7 @@ begin
           Value.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
           if Pointer(Value.VUnicodeString) = nil then
           begin
-            Result.P := PWideChar(Value.VUnicodeString); //Pointer Result would be nil
+            Result.P := PEmptyUnicodeString; //Pointer Result would be nil
             Result.Len := 0;
           end
           else
@@ -2676,7 +2684,7 @@ begin
       begin
         if Pointer(Value.VUTF8String) = nil then
         begin
-          Result.P := PAnsiChar(Value.VUTF8String); //Pointer Result would be nil
+          Result.P := PEmptyAnsiString; //Pointer Result would be nil
           Result.Len := 0;
         end
         else
@@ -2693,7 +2701,7 @@ begin
         Value.VRawByteString := GetAsRawByteString(Value, CodePage);
         if Pointer(Value.VRawByteString) = nil then
         begin
-          Result.P := PAnsiChar(Value.VRawByteString); //Pointer Result would be nil
+          Result.P := PEmptyAnsiString; //Pointer Result would be nil
           Result.Len := 0;
         end
         else
@@ -3186,6 +3194,9 @@ initialization
   {$ENDIF ZEOS_TEST_ONLY}
   SoftVarManager := TZSoftVariantManager.Create;
   NullVariant    := EncodeNull;
+
+  PEmptyUnicodeString := PWideChar(EmptyUnicodeString);
+  PEmptyAnsiString := PAnsiChar(EmptyAnsiString);
 finalization
   {$IFDEF ZEOS_TEST_ONLY}
   DefVarManager  := nil;

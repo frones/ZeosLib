@@ -120,9 +120,6 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
-    {$IFDEF ZEOS_TEST_ONLY}
-    constructor Create(const ZUrl: TZURL);
-    {$ENDIF}
   end;
 
 var
@@ -586,13 +583,6 @@ function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
   Result := PlainDriver as IZSQLitePlainDriver;
 end;
-
-{$IFDEF ZEOS_TEST_ONLY}
-constructor TZSQLiteConnection.Create(const ZUrl: TZURL);
-begin
-  inherited Create(ZUrl);
- end;
- {$ENDIF}
 
 function TZSQLiteConnection.GetHostVersion: Integer;
 begin
