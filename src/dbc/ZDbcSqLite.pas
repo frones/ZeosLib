@@ -312,18 +312,18 @@ begin
   CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
 
   if Info.Values['synchronous'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_synchronous
-    SQL := 'PRAGMA synchronous = '+NotEmptyStringToAscii7(Info.Values['synchronous'])
-  else
-    SQL := 'PRAGMA synchronous = 0'; //we use fastest access by default
-  ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
-  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+  begin  //0 brings best performance
+    SQL := 'PRAGMA synchronous = '+NotEmptyStringToAscii7(Info.Values['synchronous']);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+  end;
 
   if Info.Values['locking_mode'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_locking_mode
-    SQL := 'PRAGMA locking_mode = '+NotEmptyStringToAscii7(Info.Values['locking_mode'])
-  else
-    SQL := 'PRAGMA locking_mode = EXCLUSIVE'; //we use fastest access by default
-  ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
-  CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+  begin //EXCLUSIVE brings best performance
+    SQL := 'PRAGMA locking_mode = '+NotEmptyStringToAscii7(Info.Values['locking_mode']);
+    ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
+    CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
+  end;
 
   try
     if ( FClientCodePage <> '' ) then
