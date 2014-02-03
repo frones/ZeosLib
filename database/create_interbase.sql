@@ -139,8 +139,8 @@ create table not_null_values
 create table "Case_Sensitive" (
 cs_id                 INTEGER                        not null,
 "Cs_Data1"            INTEGER,
-"cs_data2"            INTEGER,
-"cs data3"            INTEGER,
+"cs_data1"            INTEGER,
+"cs data1"            INTEGER,
 primary key (cs_id)
 );
 
