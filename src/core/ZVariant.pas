@@ -845,7 +845,7 @@ begin
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PChar(Result.VString);
+              Result.VCharRec.P := {$IFDEF UNICODE}PEmptyUnicodeString{$ELSE}PEmptyAnsiString{$ENDIF};
             end
             else
             begin
@@ -860,7 +860,7 @@ begin
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PChar(Result.VString);
+              Result.VCharRec.P := {$IFDEF UNICODE}PEmptyUnicodeString{$ELSE}PEmptyAnsiString{$ENDIF};
             end
             else
             begin
@@ -1832,7 +1832,7 @@ begin
         vtFloat:
           Result.VFloat := Value.VFloat;
         vtString:
-          Result.VFloat := SqlStrToFloatDef(PChar(Value.VString), 0);
+          Result.VFloat := SqlStrToFloatDef(PChar(Pointer(Value.VString)), 0);
         vtAnsiString:
           Result.VFloat := RawToFloatDef(Pointer(Value.VAnsiString), '.', 0);
         vtUTF8String:
@@ -2128,7 +2128,7 @@ begin
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PChar(Result.VString);
+              Result.VCharRec.P := {$IFDEF UNICODE}PEmptyUnicodeString{$ELSE}PEmptyAnsiString{$ENDIF};
             end
             else
             begin
@@ -2143,7 +2143,7 @@ begin
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PChar(Result.VString);
+              Result.VCharRec.P := {$IFDEF UNICODE}PEmptyUnicodeString{$ELSE}PEmptyAnsiString{$ENDIF};
             end
             else
             begin
@@ -2518,7 +2518,7 @@ begin
             if Pointer(Result.VString) = nil then
             begin
               Result.VCharRec.Len := 0;
-              Result.VCharRec.P := PChar(Result.VString); //avoid nil result
+              Result.VCharRec.P := {$IFDEF UNICODE}PEmptyUnicodeString{$ELSE}PEmptyAnsiString{$ENDIF}; //avoid nil result
             end
             else
             begin
