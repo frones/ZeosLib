@@ -213,9 +213,14 @@ begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
+      ColumnName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.column_origin_name(FStmtHandle, i),
+        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.column_name(FStmtHandle, i),
         ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-      TableName := '';
+      TableName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.column_table_name(FStmtHandle, i),
+        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+      SchemaName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.column_database_name(FStmtHandle, i),
+        ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ReadOnly := False;
       TypeName := FPlainDriver.column_decltype(FStmtHandle, i);
       if TypeName = nil then
