@@ -140,7 +140,6 @@
         <DCCReference Include="..\..\src\core\ZExpression.pas"/>
         <DCCReference Include="..\..\src\core\ZExprParser.pas"/>
         <DCCReference Include="..\..\src\core\ZExprToken.pas"/>
-        <DCCReference Include="..\..\src\core\ZFastCode.pas"/>
         <DCCReference Include="..\..\src\core\ZMatchPattern.pas"/>
         <DCCReference Include="..\..\src\core\ZSysUtils.pas"/>
         <DCCReference Include="..\..\src\core\ZTokenizer.pas"/>
