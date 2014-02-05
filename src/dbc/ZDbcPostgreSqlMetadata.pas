@@ -62,13 +62,13 @@ uses
   ZSelectSchema;
 
 type
-  {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. } 
-  TZPostgreSQLIdentifierConvertor = class (TZDefaultIdentifierConvertor) 
-  protected 
-    function IsSpecialCase(const Value: string): Boolean; override; 
-  public 
-    function IsQuoted(const Value: string): Boolean; override; 
-    function Quote(const Value: string): string; override; 
+  {** Implements a PostgreSQL Case Sensitive/Unsensitive identifier convertor. }
+  TZPostgreSQLIdentifierConvertor = class (TZDefaultIdentifierConvertor)
+  protected
+    function IsSpecialCase(const Value: string): Boolean; override;
+  public
+    function IsQuoted(const Value: string): Boolean; override;
+    function Quote(const Value: string): string; override;
     function ExtractQuote(const Value: string): string; override; 
   end; 
  
@@ -3459,25 +3459,27 @@ var
   QuoteDelim: string;
 begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
-  Result := Value; 
-  if (QuoteDelim <> '') and (Value <> '') then 
-    if (copy(Value,1,1)=QuoteDelim) and 
-       (copy(Value,length(Value),1)=QuoteDelim) then 
-    begin 
-      Result:=copy(Value,2,length(Value)-2); 
-      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]); 
-    end; 
- 
-end; 
- 
-function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean; 
-var 
-  QuoteDelim: string; 
-begin 
+  Result := Value;
+  if (QuoteDelim <> '') and (Value <> '') then
+    if (Value[1]=QuoteDelim[1]) and
+      (Value[PLongInt(NativeUInt(Value) - 4)^{fast Length()}]=QuoteDelim[1]) then
+    begin
+      Result:=copy(Value,2,length(Value)-2);
+      Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]);
+    end
+    else
+      Result := AnsiLowerCase(Value);
+
+end;
+
+function TZPostgreSQLIdentifierConvertor.IsQuoted(const Value: string): Boolean;
+var
+  QuoteDelim: string;
+begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
   Result := (QuoteDelim <> '') and (Value <> '') and
-            (copy(Value,1,1)=QuoteDelim) and
-            (copy(Value,length(Value),1)=QuoteDelim);
+            (Value[1]=QuoteDelim[1]) and
+            (Value[PLongInt(NativeUInt(Value) - 4)^{fast Length()}]=QuoteDelim[1]);
 end;
 
 function TZPostgreSQLIdentifierConvertor.IsSpecialCase(
