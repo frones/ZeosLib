@@ -215,7 +215,7 @@ type
     function GetUnicodeStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBinaryStream(Const ColumnIndex: Integer; var IsNull: Boolean): TStream;
     function GetBlob(Const ColumnIndex: Integer; var IsNull: Boolean): IZBlob;
-    function GetDataSet(Const ColumnIndex: Integer; var IsNull: Boolean): IZDataSet;
+    function GetDataSet(Const ColumnIndex: Integer; var {%H-}IsNull: Boolean): IZDataSet;
     function GetValue(Const ColumnIndex: Integer): TZVariant;
 
     //---------------------------------------------------------------------
@@ -3414,7 +3414,11 @@ begin
       begin
         TempBlob := GetBlob(ColumnIndex, IsNull{%H-});
         if TempBlob.IsClob then
+          {$IF defined(DELPHI) or defined(UNICODE)}
           TempBlob.SetUnicodeString(Value)
+          {$ELSE}
+          TempBlob.SetUTF8String(ConSettings^.ConvFuncs.ZStringToUTF8(Value, ConSettings^.CTRL_CP))
+          {$IFEND}
         else
           GetBlob(ColumnIndex, IsNull).SetBytes(StrToBytes(Value));
       end;

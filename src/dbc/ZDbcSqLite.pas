@@ -120,9 +120,6 @@ type
 
     function ReKey(const Key: string): Integer;
     function Key(const Key: string): Integer;
-    {$IFDEF ZEOS_TEST_ONLY}
-    constructor Create(const ZUrl: TZURL);
-    {$ENDIF}
   end;
 
 var
@@ -311,15 +308,15 @@ begin
   ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
   CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
 
-  if Info.Values['synchronous'] <> '' then
-  begin
+  if Info.Values['synchronous'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_synchronous
+  begin  //0 brings best performance
     SQL := 'PRAGMA synchronous = '+NotEmptyStringToAscii7(Info.Values['synchronous']);
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
   end;
 
-  if Info.Values['locking_mode'] <> '' then
-  begin
+  if Info.Values['locking_mode'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_locking_mode
+  begin //EXCLUSIVE brings best performance
     SQL := 'PRAGMA locking_mode = '+NotEmptyStringToAscii7(Info.Values['locking_mode']);
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
@@ -586,13 +583,6 @@ function TZSQLiteConnection.GetPlainDriver: IZSQLitePlainDriver;
 begin
   Result := PlainDriver as IZSQLitePlainDriver;
 end;
-
-{$IFDEF ZEOS_TEST_ONLY}
-constructor TZSQLiteConnection.Create(const ZUrl: TZURL);
-begin
-  inherited Create(ZUrl);
- end;
- {$ENDIF}
 
 function TZSQLiteConnection.GetHostVersion: Integer;
 begin

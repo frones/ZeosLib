@@ -755,8 +755,8 @@ var
   Found: Boolean;
 begin
   { Initializes single columns with specified table. }
-  FieldRef := SelectSchema.LinkFieldByIndexAndShortName(
-    ColumnIndex, ColumnInfo.ColumnLabel);
+  FieldRef := SelectSchema.LinkFieldByIndexAndShortName(ColumnIndex,
+    ColumnInfo.ColumnLabel, IdentifierConvertor);
   ReadColumnByRef(FieldRef, ColumnInfo);
   if ColumnInfo.ColumnName <> '' then
     Exit;
@@ -769,9 +769,9 @@ begin
   begin
     TableRef := SelectSchema.Tables[I];
     if Assigned(FieldRef) then
-      Found := ReadColumnByName(FieldRef.Field, TableRef, ColumnInfo)
+      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(FieldRef.Field), TableRef, ColumnInfo)
     else
-      Found := ReadColumnByName(ColumnInfo.ColumnLabel, TableRef, ColumnInfo);
+      Found := ReadColumnByName(IdentifierConvertor.ExtractQuote(ColumnInfo.ColumnLabel), TableRef, ColumnInfo);
     Inc(I);
   end;
 end;

@@ -119,7 +119,7 @@ type
   TZOracleCallableResultSet = Class(TZOracleAbstractResultSet)
   private
     FFieldNames: TStringDynArray;
-    function PrepareOracleOutVars(Statement: IZStatement; InVars: PZSQLVars;
+    function PrepareOracleOutVars(InVars: PZSQLVars;
       const OracleParams: TZOracleParams): PZSQLVars;
   protected
     procedure Open; override;
@@ -134,7 +134,6 @@ type
   {** Represents an interface, specific for Oracle blobs. }
   IZOracleBlob = interface(IZBlob)
     ['{3D861AAC-B263-42F1-B359-2A188D1D986A}']
-    function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
     procedure ReadLob;
     procedure WriteLob;
@@ -160,7 +159,6 @@ type
       const ChunkSize: Integer; const ConSettings: PZConSettings);
     destructor Destroy; override;
 
-    function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
     procedure ReadLob; override;
     procedure WriteLob; override;
@@ -187,7 +185,6 @@ type
       const ConSettings: PZConSettings; const CodePage: Word);
     destructor Destroy; override;
 
-    function GetLobLocator: POCILobLocator;
     procedure CreateBlob;
     procedure ReadLob; override;
     procedure WriteLob; override;
@@ -244,7 +241,7 @@ begin
   CheckClosed;
   if (RowNo < 1) or (RowNo > LastRowNo) then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
-  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.ActualNum) then
+  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.AllocNum) then
   begin
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
@@ -490,7 +487,7 @@ begin
             Status := FPlainDriver.DateTimeGetDate(
               Connection.GetConnectionHandle,
               FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Year, Month, Day);
+              Year{%H-}, Month{%H-}, Day{%H-});
             // attention : this code handles all timestamps on 01/01/0001 as a pure time value
             // reason : oracle doesn't have a pure time datatype so all time comparisons compare
             //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
@@ -507,7 +504,7 @@ begin
             Status := FPlainDriver.DateTimeGetTime(
               Connection.GetConnectionHandle,
               FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Hour, Minute, Second, Millis);
+              Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
             if Status = OCI_SUCCESS then
             begin
               Millis := Round(Millis / 1000000);
@@ -521,7 +518,7 @@ begin
       begin
         AnsiRec := GetAnsiRec(ColumnIndex);
         Result := ZSysUtils.RawSQLTimeStampToDateTime(AnsiRec.P,
-          AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed);
+          AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-});
       end;
     end;
   end
@@ -879,8 +876,10 @@ begin
     else
       Result := TZOracleClob.Create(FPlainDriver, nil, 0,
         FConnection.GetConnectionHandle, FConnection.GetContextHandle,
-        FConnection.GetErrorHandle, LobLocator, FChunkSize, FConnection.GetConSettings,
-        FConnection.GetConSettings^.ClientCodePage^.CP);
+        FConnection.GetErrorHandle, LobLocator, FChunkSize, ConSettings,
+        ConSettings^.ClientCodePage^.CP);
+    (Result as IZOracleBlob).ReadLob; //nasty: we've got only one descriptor if we fetch the rows. Loading on demand isn't possible
+
   end
   else
     if CurrentVar.TypeCode=SQLT_NTY then
@@ -920,6 +919,7 @@ var
   ColumnCount: ub4;
   TempColumnName: PAnsiChar;
   TempColumnNameLen, CSForm: Integer;
+  FConnectionHandle: POCIEnv;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -928,6 +928,7 @@ begin
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
 
   Connection := GetStatement.GetConnection as IZOracleConnection;
+  FConnectionHandle := Connection.GetConnectionHandle;
 
   CheckOracleError(FPlainDriver, FErrorHandle,
     FPlainDriver.StmtExecute(Connection.GetContextHandle, FStmtHandle,
@@ -937,10 +938,9 @@ begin
   FPlainDriver.AttrGet(FStmtHandle, OCI_HTYPE_STMT, @ColumnCount, nil,
     OCI_ATTR_PARAM_COUNT, FErrorHandle);
   AllocateOracleSQLVars(FOutVars, ColumnCount);
-  FOutVars.ActualNum := ColumnCount;
 
   { Allocates memory for result set }
-  for I := 1 to FOutVars.ActualNum do
+  for I := 1 to FOutVars.AllocNum do
   begin
     CurrentVar := @FOutVars.Variables[I];
     CurrentVar.Handle := nil;
@@ -1048,7 +1048,7 @@ begin
       CurrentVar.CodePage := High(Word);
 
 
-    InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
+    InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
     if CurrentVar.ColType in [stString, stUnicodeString] then
@@ -1072,7 +1072,7 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FOutVars.ActualNum do
+  for I := 1 to FOutVars.AllocNum do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
@@ -1226,8 +1226,8 @@ if the result set uses a large amount of memory.}
 end;
 
 { TZOracleCallableResultSet }
-function TZOracleCallableResultSet.PrepareOracleOutVars(Statement: IZStatement;
-  InVars: PZSQLVars; const OracleParams: TZOracleParams): PZSQLVars;
+function TZOracleCallableResultSet.PrepareOracleOutVars(InVars: PZSQLVars;
+  const OracleParams: TZOracleParams): PZSQLVars;
 var
   I, J: Integer;
 begin
@@ -1238,7 +1238,6 @@ begin
 
   Result := nil;
   AllocateOracleSQLVars(Result, J);
-  Result.ActualNum := J;
   SetLength(FFieldNames, J);
 
   for I := 1 to Length(OracleParams) do
@@ -1262,12 +1261,10 @@ var
   I: Integer;
   ColumnInfo: TZColumnInfo;
   CurrentVar: PZSQLVar;
-  Connection: IZConnection;
 begin
-  Connection := GetStatement.GetConnection;
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FOutVars.ActualNum do
+  for I := 1 to FOutVars.AllocNum do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
@@ -1330,7 +1327,7 @@ constructor TZOracleCallableResultSet.Create(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
   ErrorHandle: POCIError; OutVars: PZSQLVars; const OracleParams: TZOracleParams);
 begin
-  FOutVars := PrepareOracleOutVars(Statement, OutVars, OracleParams);
+  FOutVars := PrepareOracleOutVars(OutVars, OracleParams);
   inherited Create(PlainDriver, Statement, SQL, StmtHandle, ErrorHandle);
   FConnection := Statement.GetConnection as IZOracleConnection;
   MaxRows := 1;
@@ -1357,12 +1354,11 @@ begin
   if FOutVars <> nil then
   begin
     { Frees allocated memory for output variables }
-    for I := 1 to FOutVars.ActualNum do
+    for I := 1 to FOutVars.AllocNum do
     begin
       CurrentVar := @FOutVars.Variables[I];
       if CurrentVar.Data <> nil then
       begin
-        CurrentVar.DupData := nil;
         FreeMem(CurrentVar.Data);
         CurrentVar.Data := nil;
       end;
@@ -1420,15 +1416,6 @@ begin
 end;
 
 {**
-  Gets the lob locator reference.
-  @return the lob locator reference.
-}
-function TZOracleBlob.GetLobLocator: POCILobLocator;
-begin
-  Result := FLobLocator;
-end;
-
-{**
   Creates a temporary blob.
 }
 procedure TZOracleBlob.CreateBlob;
@@ -1479,6 +1466,7 @@ begin
         until Offset < Cap;
       except
         FreeMem(Buf);
+        Buf := nil;
         raise;
       end;
     finally
@@ -1512,7 +1500,7 @@ end;
 }
 procedure TZOracleBlob.InternalSetData(AData: Pointer; ASize: Integer);
 begin
-  Clear;
+  InternalClear;
   BlobData := AData;
   BlobSize := ASize;
 end;
@@ -1559,11 +1547,6 @@ begin
   inherited Destroy;
 end;
 
-function TZOracleClob.GetLobLocator: POCILobLocator;
-begin
-  Result := FLobLocator;
-end;
-
 {**
   Creates a temporary blob.
 }
@@ -1578,8 +1561,6 @@ begin
 end;
 
 procedure TZOracleClob.ReadLob;
-const
-  MemDelta = 1 shl 12;  // read page (2^...)
 var
   Status: Integer;
   Buf: PByteArray;
@@ -1588,7 +1569,6 @@ var
 
   procedure DoRead(const csid: ub2; const csfrm: ub1);
   begin
-    FillChar(Buf^, FChunkSize+1, #0);
     ReadNumChars := 0;
     Status := FPlainDriver.LobRead(FContextHandle,FErrorHandle, FLobLocator,
       ReadNumChars, Offset + 1, Buf, FChunkSize, nil, nil, csid, csfrm);
@@ -1626,12 +1606,15 @@ begin
         (PAnsiChar(FBlobData)+NativeUInt(OffSet))^ := #0;
       except
         FreeMem(Buf);
+        Buf := nil;
         raise;
       end;
     finally
       { Closes large object or file. }
       Status := FPlainDriver.LobClose(FContextHandle, FErrorHandle, FLobLocator);
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcOther, 'Close Large Object', FConSettings);
+      if Buf <> nil then
+        FreeMem(Buf);
     end;
   end;
   inherited ReadLob;

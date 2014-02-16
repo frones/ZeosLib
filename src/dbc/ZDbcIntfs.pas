@@ -582,7 +582,7 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType);
+    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType);
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean);
     procedure SetByte(ParameterIndex: Integer; const Value: Byte);
     procedure SetShort(ParameterIndex: Integer; const Value: ShortInt);
@@ -613,6 +613,8 @@ type
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType;
       const Value: IZBlob);
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant);
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 
     procedure ClearParameters;
 

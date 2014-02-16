@@ -77,6 +77,7 @@ type
     procedure TestLargeBlob;
     procedure TestDateWithTime;
     procedure TestFKError;
+    procedure TestArrayBindings;
 (*
     procedure TestDefaultValues;
 *)
@@ -85,7 +86,7 @@ type
 
 implementation
 
-uses Types, ZTestConsts, ZTestCase;
+uses Types, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant;
 
 { TZTestDbcOracleCase }
 
@@ -607,6 +608,325 @@ begin
     PStatement.ExecuteUpdatePrepared;
   end;
 end;
+
+{$WARNINGS OFF} //implizit string conversion of...
+procedure TZTestDbcOracleCase.TestArrayBindings;
+var
+  PStatement: IZPreparedStatement;
+  hl_idArray: TIntegerDynArray;
+  stBooleanArray: TBooleanDynArray;
+  stByteArray: TByteDynArray;
+  stShortArray: TShortIntDynArray;
+  stLongArray: TInt64DynArray;
+  stIntegerArray: TIntegerDynArray;
+  stFloatArray: TSingleDynArray;
+  stDoubleArray: TDoubleDynArray;
+  stBigDecimalArray: TExtendedDynArray;
+  stStringArray: TRawByteStringDynArray;
+  stUnicodeStringArray: TUnicodeStringDynArray;
+  stBytesArray: TBytesDynArray;
+  stDateArray: TDateTimeDynArray;
+  stTimeArray: TDateTimeDynArray;
+  stTimeStampArray: TDateTimeDynArray;
+  stGUIDArray: TGUIDDynArray;
+  stAsciiStreamArray: TZCharRecDynArray;
+  stUnicodeStreamArray: TUTF8StringDynArray;
+  stBinaryStreamArray: TInterfaceDynArray;
+  stBooleanNullArray: array of TBooleanDynArray;
+  stByteNullArray: array of TByteDynArray;
+  stShortNullArray: array of TShortIntDynArray;
+  stWordNullArray: array of TWordDynArray;
+  stSmallNullArray: array of TSmallIntDynArray;
+  stLongWordNullArray: array of TLongWordDynArray;
+  stIntegerNullArray: array of TIntegerDynArray;
+  stULongNullArray: array of TUInt64DynArray;
+  stLongNullArray: array of TInt64DynArray;
+  stFloatNullArray: array of TSingleDynArray;
+  stDoubleNullArray: array of TDoubleDynArray;
+  stCurrencyNullArray: array of TCurrencyDynArray;
+  stBigDecimalNullArray: array of TExtendedDynArray;
+  stStringNullArray: array of TRawByteStringDynArray;
+  stUnicodeStringNullArray: array of TUnicodeStringDynArray;
+  I, J: Integer;
+
+  procedure PrepareSomeData;
+  var I: Integer;
+  begin
+    SetLength(hl_idArray, 50);
+    SetLength(stBooleanArray, 50);
+    SetLength(stByteArray, 50);
+    SetLength(stShortArray, 50);
+    SetLength(stLongArray, 50);
+    SetLength(stIntegerArray, 50);
+    SetLength(stFloatArray, 50);
+    SetLength(stDoubleArray, 50);
+    SetLength(stBigDecimalArray, 50);
+    SetLength(stStringArray, 50);
+    SetLength(stUnicodeStringArray, 50);
+    SetLength(stBytesArray, 50);
+    SetLength(stDateArray, 50);
+    SetLength(stTimeArray, 50);
+    SetLength(stTimeStampArray, 50);
+    SetLength(stGUIDArray, 50);
+    SetLength(stAsciiStreamArray, 50);
+    SetLength(stUnicodeStreamArray, 50);
+    SetLength(stBinaryStreamArray, 50);
+    for i := 0 to 49 do
+    begin
+      hl_idArray[i] := I;
+      stBooleanArray[i] := Boolean(Random(1));
+      stByteArray[i] := Random(255);
+      stShortArray[i] := I;
+      stLongArray[I] := I;
+      stIntegerArray[I] := I;
+      stFloatArray[i] := RandomFloat(-5000, 5000);
+      stDoubleArray[i] := RandomFloat(-5000, 5000);
+      stBigDecimalArray[i] := RandomFloat(-5000, 5000);
+      stStringArray[i] := RandomStr(Random(99)+1);
+      stUnicodeStringArray[i] := RandomStr(Random(254+1));
+      stBytesArray[i] := RandomBts(50);
+      stDateArray[i] := Trunc(Now);
+      stTimeArray[i] := Frac(Now);
+      stTimeStampArray[i] := Now;
+      stGUIDArray[i] := RandomGUID;
+      stAsciiStreamArray[i].Len := Length(stStringArray[i]);
+      stAsciiStreamArray[i].P := Pointer(stStringArray[i]);
+      stAsciiStreamArray[i].CP := Connection.GetConSettings^.ClientCodePage^.CP; {safe we're passing ASCII7 only to the raws}
+      stUnicodeStreamArray[i] := RandomStr(MaxPerformanceLobSize);
+      stBinaryStreamArray[i] := TZAbstractBlob.Create;
+      (stBinaryStreamArray[i] as IZBlob).SetBytes(RandomBts(MaxPerformanceLobSize));
+    end;
+  end;
+begin
+  PStatement := Connection.PrepareStatement(
+  'insert into high_load(hl_id, stBoolean, stByte, stShort, stInteger, stLong, '+
+    'stFloat, stDouble, stBigDecimal, stString, stUnicodeString, stBytes,'+
+    'stDate, stTime, stTimestamp, stGUID, stAsciiStream, stUnicodeStream, '+
+    'stBinaryStream) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+  CheckNotNull(PStatement);
+  PrepareSomeData;
+  PStatement.SetDataArray(1, hl_idArray, stInteger);
+  PStatement.SetDataArray(2, stBooleanArray, stBoolean);
+  PStatement.SetDataArray(3, stByteArray, stByte);
+  PStatement.SetDataArray(4, stShortArray, stShort);
+  PStatement.SetDataArray(5, stIntegerArray, stInteger);
+  PStatement.SetDataArray(6, stLongArray, stLong);
+  PStatement.SetDataArray(7, stFloatArray, stFloat);
+  PStatement.SetDataArray(8, stDoubleArray, stDouble);
+  PStatement.SetDataArray(9, stBigDecimalArray, stBigDecimal);
+  PStatement.SetDataArray(10, stStringArray, stString, vtRawByteString);
+  PStatement.SetDataArray(11, stUnicodeStringArray, stUnicodeString, vtUnicodeString);
+  PStatement.SetDataArray(12, stBytesArray, stBytes);
+  PStatement.SetDataArray(13, stDateArray, stDate);
+  PStatement.SetDataArray(14, stTimeArray, stTime);
+  PStatement.SetDataArray(15, stTimeStampArray, stTimeStamp);
+  PStatement.SetDataArray(16, stGUIDArray, stGUID);
+  PStatement.SetDataArray(17, stAsciiStreamArray, stString, vtCharRec);
+  PStatement.SetDataArray(18, stUnicodeStreamArray, stString, vtUTF8String);
+  PStatement.SetDataArray(19, stBinaryStreamArray, stBinaryStream);
+
+  for i := 1 to 19 do
+    case TZSQLType(Random(14)+1) of
+      stBoolean:
+        begin
+          SetLength(stBooleanNullArray, Length(stBooleanNullArray) +1);
+          SetLength(stBooleanNullArray[High(stBooleanNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stBooleanNullArray[High(stBooleanNullArray)][J] := False
+            else
+              stBooleanNullArray[High(stBooleanNullArray)][J] := Boolean(Random(1));
+          PStatement.SetNullArray(I, stBoolean, stBooleanNullArray[High(stBooleanNullArray)]);
+        end;
+      stByte:
+        begin
+          SetLength(stByteNullArray, Length(stByteNullArray)+1);
+          SetLength(stByteNullArray[High(stByteNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stByteNullArray[High(stByteNullArray)][J] := Ord(False)
+            else
+              stByteNullArray[High(stByteNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stByte, stByteNullArray[High(stByteNullArray)]);
+        end;
+      stShort:
+        begin
+          SetLength(stShortNullArray, Length(stShortNullArray)+1);
+          SetLength(stShortNullArray[High(stShortNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stShortNullArray[High(stShortNullArray)][J] := 0
+            else
+              stShortNullArray[High(stShortNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stShort, stShortNullArray[High(stShortNullArray)]);
+        end;
+      stWord:
+        begin
+          SetLength(stWordNullArray, Length(stWordNullArray)+1);
+          SetLength(stWordNullArray[High(stWordNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stWordNullArray[High(stWordNullArray)][j] := 0
+            else
+              stWordNullArray[High(stWordNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stWord, stWordNullArray[High(stWordNullArray)]);
+        end;
+      stSmall:
+        begin
+          SetLength(stSmallNullArray, Length(stSmallNullArray)+1);
+          SetLength(stSmallNullArray[High(stSmallNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stSmallNullArray[High(stSmallNullArray)][J] := 0
+            else
+              stSmallNullArray[High(stSmallNullArray)][J] := -Random(2);
+          PStatement.SetNullArray(I, stSmall, stSmallNullArray[High(stSmallNullArray)]);
+        end;
+      stLongWord:
+        begin
+          SetLength(stLongWordNullArray, Length(stLongWordNullArray)+1);
+          SetLength(stLongWordNullArray[High(stLongWordNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stLongWordNullArray[High(stLongWordNullArray)][J] := 0
+            else
+              stLongWordNullArray[High(stLongWordNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stLongWord, stLongWordNullArray[High(stLongWordNullArray)]);
+        end;
+      stInteger:
+        begin
+          SetLength(stIntegerNullArray, Length(stIntegerNullArray)+1);
+          SetLength(stIntegerNullArray[High(stIntegerNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stIntegerNullArray[High(stIntegerNullArray)][J] := 0
+            else
+              stIntegerNullArray[High(stIntegerNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stInteger, stIntegerNullArray[High(stIntegerNullArray)]);
+        end;
+      stULong:
+        begin
+          SetLength(stULongNullArray, Length(stULongNullArray)+1);
+          SetLength(stULongNullArray[High(stULongNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stULongNullArray[High(stULongNullArray)][J] := 0
+            else
+              stULongNullArray[High(stULongNullArray)][J] := Random(2);
+          PStatement.SetNullArray(I, stULong, stULongNullArray[High(stULongNullArray)]);
+        end;
+      stLong:
+        begin
+          SetLength(stLongNullArray, Length(stLongNullArray) +1);
+          SetLength(stLongNullArray[High(stLongNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stLongNullArray[High(stLongNullArray)][J] := 0
+            else
+              stLongNullArray[High(stLongNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stLong, stLongNullArray[High(stLongNullArray)]);
+        end;
+      stFloat:
+        begin
+          SetLength(stFloatNullArray, Length(stFloatNullArray)+1);
+          SetLength(stFloatNullArray[High(stFloatNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stFloatNullArray[High(stFloatNullArray)][J] := 0
+            else
+              stFloatNullArray[High(stFloatNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stFloat, stFloatNullArray[High(stFloatNullArray)]);
+        end;
+      stDouble:
+        begin
+          SetLength(stDoubleNullArray, Length(stDoubleNullArray)+1);
+          SetLength(stDoubleNullArray[high(stDoubleNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stDoubleNullArray[high(stDoubleNullArray)][J] := 0
+            else
+              stDoubleNullArray[high(stDoubleNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stDouble, stDoubleNullArray[high(stDoubleNullArray)]);
+        end;
+      stCurrency:
+        begin
+          SetLength(stCurrencyNullArray, Length(stCurrencyNullArray)+1);
+          SetLength(stCurrencyNullArray[High(stCurrencyNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stCurrencyNullArray[High(stCurrencyNullArray)][J] := 0
+            else
+              stCurrencyNullArray[High(stCurrencyNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stCurrency, stCurrencyNullArray[High(stCurrencyNullArray)]);
+        end;
+      stBigDecimal:
+        begin
+          SetLength(stBigDecimalNullArray, Length(stBigDecimalNullArray)+1);
+          SetLength(stBigDecimalNullArray[High(stBigDecimalNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stBigDecimalNullArray[High(stBigDecimalNullArray)][J] := 0
+            else
+              stBigDecimalNullArray[High(stBigDecimalNullArray)][J] := Random(2)-1;
+          PStatement.SetNullArray(I, stBigDecimal, stBigDecimalNullArray[High(stBigDecimalNullArray)]);
+        end;
+      {stString:
+        begin
+          SetLength(stStringNullArray, Length(stStringNullArray)+1);
+          SetLength(stStringNullArray[High(stStringNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
+            else
+              if Random(2) = 0 then
+                stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
+              else
+                stStringNullArray[High(stStringNullArray)][J] := 'TRUE';
+          PStatement.SetNullArray(I, stString, stStringNullArray[High(stStringNullArray)], vtRawByteString);
+        end;}
+      stUnicodeString:
+        begin
+          SetLength(stUnicodeStringNullArray, Length(stUnicodeStringNullArray)+1);
+          SetLength(stUnicodeStringNullArray[High(stUnicodeStringNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stUnicodeStringNullArray[High(stUnicodeStringNullArray)][J] := 'FALSE'
+            else
+              if Random(2) = 0 then
+                stUnicodeStringNullArray[High(stUnicodeStringNullArray)][J] := 'FALSE'
+              else
+                stUnicodeStringNullArray[High(stUnicodeStringNullArray)][J] := 'TRUE';
+          PStatement.SetNullArray(I, stUnicodeString, stUnicodeStringNullArray[High(stUnicodeStringNullArray)], vtUnicodeString);
+        end;
+      else
+        begin
+          SetLength(stStringNullArray, Length(stStringNullArray)+1);
+          SetLength(stStringNullArray[High(stStringNullArray)], 50);
+          for J := 0 to 49 do
+            if I = 1 then
+              stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
+            else
+              if Random(2) = 0 then
+                stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
+              else
+                stStringNullArray[High(stStringNullArray)][J] := 'TRUE';
+          PStatement.SetNullArray(I, stString, stStringNullArray[High(stStringNullArray)], vtRawByteString);
+        end;
+      {stBytes:
+      stGUID:
+      stDate:
+      stTime:
+      stTimestamp:
+      stArray:
+      stDataSet:
+      stAsciiStream:
+      stUnicodeStream:
+      stBinaryStream:}
+    end;
+  PStatement.ExecuteUpdatePrepared;
+  //SetLength(stShortNullArray, 0);
+end;
+{$WARNINGS ON} //implizit string conversion of...
 
 initialization
   RegisterTest('dbc',TZTestDbcOracleCase.Suite);

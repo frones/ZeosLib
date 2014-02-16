@@ -39,6 +39,7 @@
 {                                                         }
 {                                 Zeos Development Group. }
 {********************************************************@}
+ {$DEFINE ZEOS_TEST_ONLY}
 //common compilation directives
 {$DEFINE ZEOS72UP}
 {$DEFINE SUPPORTS_UINT64_CONSTS}      // compiler supports integer constants with 20 digits

@@ -57,7 +57,7 @@ interface
 
 uses
   Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
-  ZCompatibility, ZDbcSQLiteUtils, ZDbcConnection, ZURL;
+  ZCompatibility, ZDbcSQLiteUtils;
 
 type
 
@@ -204,6 +204,7 @@ type
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
+    function DecomposeObjectString(const S: String): String; override;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
     function UncachedGetTables(const Catalog: string; const {%H-}SchemaPattern: string;
@@ -1128,6 +1129,22 @@ end;
 { TZSQLiteDatabaseMetadata }
 
 {**
+  Decomposes a object name, AnsiQuotedStr or NullText
+  @param S the object string
+  @return a non-quoted string
+}
+function TZSQLiteDatabaseMetadata.DecomposeObjectString(const S: String): String;
+begin
+  if S = '' then
+    Result := S
+  else
+    if IC.IsQuoted(S) then
+       Result := IC.ExtractQuote(S)
+    else
+      Result := s;
+end;
+
+{**
   Constructs a database information object and returns the interface to it. Used
   internally by the constructor.
   @return the database information object interface
@@ -1296,6 +1313,7 @@ var
   Precision, Decimals, UndefinedVarcharAsStringLength: Integer;
   Temp_scheme: string;
   ResSet: IZResultSet;
+  TempTableNamePattern: String;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1306,8 +1324,9 @@ begin
 
   UndefinedVarcharAsStringLength := (GetConnection as IZSQLiteConnection).GetUndefinedVarcharAsStringLength;
 
+  TempTableNamePattern := NormalizePatternCase(TableNamePattern);
   ResSet := GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TableNamePattern]));
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TempTableNamePattern]));
   if ResSet <> nil then
     with ResSet do
     begin
@@ -1318,7 +1337,7 @@ begin
           Result.UpdateString(1, SchemaPattern)
         else Result.UpdateNull(1);
         Result.UpdateNull(2);
-        Result.UpdateString(3, TableNamePattern);
+        Result.UpdateString(3, TempTableNamePattern);
         Result.UpdateRawByteString(4, GetRawByteString(2));
         Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(3),
           UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));

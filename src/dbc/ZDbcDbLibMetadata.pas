@@ -1212,7 +1212,6 @@ end;
 {**
   Decomposes a object name, AnsiQuotedStr or NullText
   @param S the object string
-  @param NullText the "NULL"-Text
   @return 'null' if S is '' or S if s is already Quoted or AnsiQuotedStr(S, #39)
 }
 function TZDbLibBaseDatabaseMetadata.DecomposeObjectString(const S: String): String;

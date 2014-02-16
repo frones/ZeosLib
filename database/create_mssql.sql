@@ -241,11 +241,11 @@ go*/
 /*==============================================================*/
 /* Table : Spaced Names                                         */
 /*==============================================================*/
-create table [spaced names] (
+create table [Spaced Names] (
 cs_id                 INTEGER           not null,
-"Cs Data1"            INTEGER		null,
-"cs data2"            INTEGER		null,
-"Cs data3"            INTEGER		null,
+"Cs Data1"            INTEGER,
+"cs data2"            INTEGER,
+"cS data3"            INTEGER,
 primary key (cs_id)
 )
 go

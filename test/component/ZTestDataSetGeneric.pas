@@ -95,6 +95,7 @@ type
     procedure TestDoubleFloatParams;
     procedure TestClobEmptyString;
     procedure TestLobModes;
+    procedure TestSpaced_Names;
   end;
 
   TZGenericTestDbcResultSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -1771,6 +1772,104 @@ begin
       TextStreamE.Free;
     if Assigned(TempConnection) then
       TempConnection.Free;
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestSpaced_Names;
+var
+  Query: TZQuery;
+  function GetNonQuotedAlias(const Value: String): String;
+  begin
+    if StartsWith(Protocol, 'postgresql') then
+      Result := LowerCase(Value)
+    else
+      if StartsWith(Protocol, 'oracle') or StartsWith(Protocol, 'firebird') or
+         StartsWith(Protocol, 'interbase') then
+        Result := UpperCase(Value)
+      else
+        Result := Value;
+  end;
+begin
+  Query := CreateQuery;
+  Connection.Connect;
+  try
+    { test generic field names }
+    Query.SQL.Text := 'select * from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+    Query.Open;
+    CheckEquals('Cs Data1', Query.Fields[1].DisplayName);
+    CheckEquals('cs data2', Query.Fields[2].DisplayName);
+    CheckEquals('cS data3', Query.Fields[3].DisplayName);
+    Query.Insert;
+    Query.Fields[0].AsInteger := TEST_ROW_ID;
+    Query.Fields[1].AsInteger := TEST_ROW_ID+1;
+    Query.Fields[2].AsInteger := TEST_ROW_ID+2;
+    Query.Fields[3].AsInteger := TEST_ROW_ID+3;
+    Query.Post;
+    Query.Insert;
+    Query.FieldByName('cs_id').AsInteger := TEST_ROW_ID+1;
+    Query.FieldByName('Cs Data1').AsInteger := TEST_ROW_ID+1;
+    Query.FieldByName('cs data2').AsInteger := TEST_ROW_ID+2;
+    Query.FieldByName('cS data3').AsInteger := TEST_ROW_ID+3;
+    Query.Post;
+    { test alias names without spaces and quoting rules }
+    Query.SQL.Text := 'select cs_id, '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs Data1')+' as CsData1, '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs data2')+' as csdata2, '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS data3')+' as cSdata3 from '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+    Query.Open;
+    CheckEquals(GetNonQuotedAlias('CsData1'), Query.Fields[1].DisplayName);
+    CheckEquals(GetNonQuotedAlias('csdata2'), Query.Fields[2].DisplayName);
+    CheckEquals(GetNonQuotedAlias('cSdata3'), Query.Fields[3].DisplayName);
+    Query.Insert;
+    Query.FieldByName('cs_id').AsInteger := TEST_ROW_ID+2;
+    Query.FieldByName(GetNonQuotedAlias('CsData1')).AsInteger := TEST_ROW_ID+1;
+    Query.FieldByName(GetNonQuotedAlias('csdata2')).AsInteger := TEST_ROW_ID+2;
+    Query.FieldByName(GetNonQuotedAlias('cSdata3')).AsInteger := TEST_ROW_ID+3;
+    Query.Post;
+    { test alias names without spaces but with quoting rules }
+    Query.SQL.Text := 'select cs_id, '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs Data1')+' as '+
+        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('CsData1')+', '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs data2')+' as '+
+        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('csdata2')+', '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS data3')+' as '+
+        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cSdata3')+
+       ' from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+    Query.Open;
+    CheckEquals('CsData1', Query.Fields[1].DisplayName);
+    CheckEquals('csdata2', Query.Fields[2].DisplayName);
+    CheckEquals('cSdata3', Query.Fields[3].DisplayName);
+    Query.Insert;
+    Query.FieldByName('cs_id').AsInteger := TEST_ROW_ID+3;
+    Query.FieldByName('CsData1').AsInteger := TEST_ROW_ID+1;
+    Query.FieldByName('csdata2').AsInteger := TEST_ROW_ID+2;
+    Query.FieldByName('cSdata3').AsInteger := TEST_ROW_ID+3;
+    Query.Post;
+    { test alias names with spaces and quoting rules }
+    Query.SQL.Text := 'select cs_id, '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs Data1')+' as '+
+        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Cs  Data1')+', '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs data2')+' as '+
+        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cs  data2')+', '+
+      Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS data3')+' as '+
+        Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('cS  data3')+
+       ' from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names');
+    Query.Open;
+    CheckEquals('Cs  Data1', Query.Fields[1].DisplayName);
+    CheckEquals('cs  data2', Query.Fields[2].DisplayName);
+    CheckEquals('cS  data3', Query.Fields[3].DisplayName);
+    Query.Insert;
+    Query.FieldByName('cs_id').AsInteger := TEST_ROW_ID+4;
+    Query.FieldByName('Cs  Data1').AsInteger := TEST_ROW_ID+1;
+    Query.FieldByName('cs  data2').AsInteger := TEST_ROW_ID+2;
+    Query.FieldByName('cS  data3').AsInteger := TEST_ROW_ID+3;
+    Query.Post;
+  finally
+    Query.SQL.Text := 'delete from '+Connection.DbcConnection.GetMetadata.GetIdentifierConvertor.Quote('Spaced Names')+
+      ' where cs_id > '+IntToStr(TEST_ROW_ID-1);
+    Query.ExecSQL;
     Query.Free;
   end;
 end;

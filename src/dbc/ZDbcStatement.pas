@@ -204,17 +204,19 @@ type
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
+    FInitialArrayCount: Integer;
     FPrepared : Boolean;
     FExecCount: Integer;
     FClientVariantManger: IZClientVariantManager;
-    FCachedQueryRaw: TRawDynArray;
-    FCachedQueryUni: TUnicodeDynArray;
+    FCachedQueryRaw: TRawByteStringDynArray;
+    FCachedQueryUni: TUnicodeStringDynArray;
     FNCharDetected: TBooleanDynArray;
     FIsParamIndex: TBooleanDynArray;
     FIsPraparable: Boolean;
-    function GetInParamValues: TZVariantDynArray;
+    function GetInParamValues: TZVariantDynArray; overload;
     procedure SetInParamValues(const Values: TZVariantDynArray);
   protected
+    function GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray; overload; //need this after property..
     function GetClientVariantManger: IZClientVariantManager;
     procedure PrepareInParameters; virtual;
     procedure BindInParameters; virtual;
@@ -235,11 +237,13 @@ type
       read FInParamDefaultValues write FInParamDefaultValues;
     property InParamCount: Integer read FInParamCount write FInParamCount;
     property ClientVarManager: IZClientVariantManager read FClientVariantManger;
-    property CachedQueryRaw: TRawDynArray read FCachedQueryRaw;
-    property CachedQueryUni: TUnicodeDynArray read FCachedQueryUni;
+    property CachedQueryRaw: TRawByteStringDynArray read FCachedQueryRaw;
+    property CachedQueryUni: TUnicodeStringDynArray read FCachedQueryUni;
     property IsParamIndex: TBooleanDynArray read FIsParamIndex;
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
+    property LastInParamValuesIndex: Integer read FInParamValuesIndex;
+    property ArrayCount: Integer read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
   public
@@ -266,7 +270,7 @@ type
 
     procedure SetDefaultValue(ParameterIndex: Integer; const Value: string);
 
-    procedure SetNull(ParameterIndex: Integer; SQLType: TZSQLType); virtual;
+    procedure SetNull(ParameterIndex: Integer; const SQLType: TZSQLType); virtual;
     procedure SetBoolean(ParameterIndex: Integer; const Value: Boolean); virtual;
     procedure SetByte(ParameterIndex: Integer; const Value: Byte); virtual;
     procedure SetShort(ParameterIndex: Integer; const Value: ShortInt); virtual;
@@ -296,6 +300,8 @@ type
     procedure SetBinaryStream(ParameterIndex: Integer; const Value: TStream); virtual;
     procedure SetBlob(ParameterIndex: Integer; const SQLType: TZSQLType; const Value: IZBlob); virtual;
     procedure SetValue(ParameterIndex: Integer; const Value: TZVariant); virtual;
+    procedure SetNullArray(ParameterIndex: Integer; const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull); virtual;
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); virtual;
 
     procedure ClearParameters; virtual;
 
@@ -1269,6 +1275,7 @@ begin
   SetInParamCount(0);
   FPrepared := False;
   FExecCount := 0;
+  FInitialArrayCount := 0;
 end;
 
 {**
@@ -1400,6 +1407,11 @@ end;
 function TZAbstractPreparedStatement.GetInParamValues: TZVariantDynArray;
 begin
   Result := FInParamValuesArray[FInParamValuesIndex];
+end;
+
+function TZAbstractPreparedStatement.GetBatchInParamValues(const BatchIndex: Integer): TZVariantDynArray;
+begin
+  Result := FInParamValuesArray[BatchIndex];
 end;
 
 procedure TZAbstractPreparedStatement.SetInParamValues(const Values: TZVariantDynArray);
@@ -1576,7 +1588,7 @@ end;
   @param sqlType the SQL type code defined in <code>java.sql.Types</code>
 }
 procedure TZAbstractPreparedStatement.SetNull(ParameterIndex: Integer;
-  SQLType: TZSQLType);
+  const SQLType: TZSQLType);
 begin
   SetInParam(ParameterIndex, SQLType, NullVariant);
 end;
@@ -2033,18 +2045,107 @@ procedure TZAbstractPreparedStatement.SetValue(ParameterIndex: Integer;
   const Value: TZVariant);
 var
   SQLType: TZSQLType;
+  TempBlob: IZBlob;
 begin
   case Value.VType of
     vtBoolean: SQLType := stBoolean;
     vtInteger: SQLType := stLong;
+    vtUInteger: SQLType := stULong;
     vtFloat: SQLType := stBigDecimal;
     vtUnicodeString: SQLType := stUnicodeString;
     vtDateTime: SQLType := stTimestamp;
     vtBytes: SQLType := stBytes;
+    vtArray: SQLType := TZSQLType(Value.VArray.VArrayType);
+    vtInterface:
+      if Supports(Value.VInterface, IZBlob, TempBlob) then
+        if TempBlob.IsClob then
+          SQLType := stAsciiStream
+        else
+          SQLType := stBinaryStream
+      else
+        SQLType := stString; //???
   else
     SQLType := stString;
   end;
   SetInParam(ParameterIndex, SQLType, Value);
+end;
+
+{**
+  Sets the designated parameter to a <code>T???DynArray</code> value.
+  The driver converts this to an SQL <code>Array of X</code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param x the TZSQLType
+  @param x the parameter value
+}
+procedure TZAbstractPreparedStatement.SetNullArray(ParameterIndex: Integer;
+  const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
+begin
+  if InParamCount < ParameterIndex then
+    raise Exception.Create('Set Array-Value first');
+  if InParamValues[ParameterIndex-1].VType <> vtArray then
+    raise Exception.Create('No Array bound before!');
+  InParamValues[ParameterIndex-1].VArray.VIsNullArray := Pointer(Value);
+  InParamValues[ParameterIndex-1].VArray.VIsNullArrayType := Ord(SQLType);
+  InParamValues[ParameterIndex-1].VArray.VIsNullArrayVariantType := VariantType;
+end;
+
+{**
+  Sets the designated parameter to a <code>Array of ???</code> value.
+  The driver converts this to an SQL <code>Array of </code> value
+  when it sends it to the database.
+
+  @param parameterIndex the first parameter is 1, the second is 2, ...
+  @param A dynamic array of X.
+  @param SQLType the TZSQLType of the value
+  @param VariantType the TZVariantType SubType of the value
+}
+procedure TZAbstractPreparedStatement.SetDataArray(ParameterIndex: Integer;
+  const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
+var
+  V: TZVariant;
+  {using mem entry of ZData is faster then casting}
+  ZArray: Pointer absolute Value;
+
+  procedure AssertLength(const Len: Integer);
+  begin
+    if (ParameterIndex = 1) or ((ParameterIndex > 1) and (InParamValues[ParameterIndex -1].VArray.VArray = nil))  then
+      FInitialArrayCount := Len
+    else
+      if Len <> FInitialArrayCount then
+        raise Exception.Create('Array count does not equal with initial count!');
+  end;
+begin
+  if ZArray <> nil then
+    case SQLType of
+      stUnknown:        raise Exception.Create('Invalid SQLType for Array binding!');
+      stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
+      stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
+      stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
+        AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+      stString:
+        case VariantType of
+          vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
+            AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+          else
+            raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+        end;
+      stUnicodeString:
+        case VariantType of
+          vtUnicodeString, vtCharRec:
+            AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+          else
+            raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+        end;
+      stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
+      stDataSet: ;
+    end;
+  V.VType := vtArray;
+  V.VArray.VArray := Pointer(Value);
+  V.VArray.VArrayVariantType := VariantType;
+  V.VArray.VArrayType := Ord(SQLType);
+  SetInParam(ParameterIndex, SQLType, V);
 end;
 
 {**
@@ -2065,6 +2166,7 @@ begin
     SetDefaultValue(I, '');
   end;
   SetInParamCount(0);
+  FInitialArrayCount := 0;
 end;
 
 {**

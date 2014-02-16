@@ -186,6 +186,17 @@ create table cargo
 );
 
 /*==============================================================*/
+/* Table : Spaced Names                                         */
+/*==============================================================*/
+create table `Spaced Names` (
+cs_id                 INTEGER                        not null,
+`Cs Data1`            INTEGER,
+`cs data2`            INTEGER,
+`cS data3`            INTEGER,
+primary key (cs_id)
+);
+
+/*==============================================================*/
 /* Table : high_load                                            */
 /*==============================================================*/
 create table high_load (

@@ -104,14 +104,6 @@ type
     function GetRecordCount: Integer;
     procedure SkipTest;
 
-    { Random values generators. }
-    function RandomStr(Length: Integer): string;
-    function RandomBts(Length: Integer): TBytes;
-    function RandomInt(MinValue, MaxValue: Integer): Integer;
-    function RandomFloat(MinValue, MaxValue: Double): Double;
-    function RandomGUIDString: String;
-    function RandomGUIDBytes: TBytes;
-
     { Tests table preparation methods. }
     procedure PopulateTable(TableName: string; PrimaryKey: string;
       RecordCount: Integer; ForeignKey: string; ForeignKeyRange: Integer);
@@ -270,15 +262,10 @@ type
 var
   PerformanceResultProcessor: TZPerformanceResultProcessor;
 
-const
-  MaxPerformanceLobSize = 10000;
-  CharRange = 126{~}-32{Space};
-
-
 implementation
 
 uses
-  {$IFDEF WITH_FTGUID}ComObj, ActiveX,{$ENDIF} Math,
+  Math,
   ZSysUtils, ZTestConfig, ZTestConsts, ZDatasetUtils, ZClasses, ZDbcUtils;
 
 { TZPerformanceSQLTestCase }
@@ -364,97 +351,6 @@ procedure TZPerformanceSQLTestCase.PrintLn(_Message: string);
 begin
 //  Status(_Message)
   System.Writeln(_Message);
-end;
-
-{**
-  Generates a random float value between MinValue and MaxValue.
-  @param MinValue a minimum limit value.
-  @param MaxValue a maximum limit value.
-  @return a random generated value.
-}
-function TZPerformanceSQLTestCase.RandomFloat(MinValue,
-  MaxValue: Double): Double;
-begin
-  Result := (MinValue * 100 + Random(Trunc((MaxValue - MinValue) * 100))) / 100;
-end;
-
-function TZPerformanceSQLTestCase.RandomGUIDString: String;
-{$IFDEF WITH_FTGUID}
-var GUID: TGUID;
-{$ENDIF}
-begin
-  {$IFDEF WITH_FTGUID}
-  if CoCreateGuid(GUID) = S_OK then
-    Result := GUIDToString(GUID)
-  else
-  {$ENDIF}
-    Result := '{BAF24A92-C8CE-4AB4-AEBC-3D4A9BCB0946}';
-end;
-
-function TZPerformanceSQLTestCase.RandomGUIDBytes: TBytes;
-{$IFDEF WITH_FTGUID}
-var GUID: TGUID;
-{$ENDIF}
-begin
-  SetLength(Result, 16);
-  {$IFDEF WITH_FTGUID}
-  if CoCreateGuid(GUID) = S_OK then
-    System.Move(Pointer(@GUID)^, Pointer(Result)^, 16)
-  else
-  {$ENDIF}
-    Result := RandomBts(16);
-end;
-
-{**
-  Generates a random integer value between MinValue and MaxValue.
-  @param MinValue a minimum limit value.
-  @param MaxValue a maximum limit value.
-  @return a random generated value.
-}
-function TZPerformanceSQLTestCase.RandomInt(MinValue,
-  MaxValue: Integer): Integer;
-begin
-  Result := MinValue + Random(MaxValue - MinValue);
-end;
-
-{**
-  Generates a random string with the specified length.
-  @param Length a string length (default is 32).
-  @return a random generated value.
-}
-function TZPerformanceSQLTestCase.RandomStr(Length: Integer): string;
-var
-  I: Integer;
-  PResult: PChar;
-begin
-
-  Result := '';
-  if Length <= 0 then
-    Length := 32
-  else
-    Length := Min(MaxPerformanceLobSize, Length);
-  SetLength(Result, Length);
-  PResult := PChar(Result);
-  for I := 0 to Length-1 do
-    (PResult+i)^ := Chr(Random(CharRange)+32{min Space});
-end;
-
-{**
-  Generates a random binary value with the specified length.
-  @param Length a ByteArray length (default is 32).
-  @return a random generated value.
-}
-function TZPerformanceSQLTestCase.RandomBts(Length: Integer): TBytes;
-var
-  I: Integer;
-begin
-  if Length <= 0 then
-    Length := 32
-  else
-    Length := Min(MaxPerformanceLobSize, Length);
-  SetLength(Result, Length);
-  for I := 1 to Length do
-    Result[i-1] := Ord(Random(255));
 end;
 
 {**
