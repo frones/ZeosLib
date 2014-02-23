@@ -54,8 +54,8 @@ unit ZTestDbcCachedResultSet;
 interface
 {$I ZDbc.inc}
 uses
-  Types, SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Contnrs,
-  ZDbcCachedResultSet, ZClasses, ZCollections, ZDbcIntfs,
+  SysUtils, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Contnrs,
+  ZDbcCachedResultSet, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZDbcIntfs,
   ZSysUtils, ZDbcResultSet, ZDbcCache, Classes, ZDbcResultSetMetadata,
   ZCompatibility, ZTestConsts, ZDbcMetadata, ZTestCase;
 
@@ -111,13 +111,13 @@ type
   TZEmptyResolver = class(TInterfacedObject, IZCachedResolver)
   public
     procedure CalculateDefaults(Sender: IZCachedResultSet;
-      RowAccessor: TZRowAccessor);
-    procedure PostUpdates(Sender: IZCachedResultSet; UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor);
+      {%H-}RowAccessor: TZRowAccessor);
+    procedure PostUpdates(Sender: IZCachedResultSet; {%H-}UpdateType: TZRowUpdateType;
+      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor);
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet;
-      UpdateType: TZRowUpdateType;
-      OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
+      {%H-}UpdateType: TZRowUpdateType;
+      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(Sender: IZCachedResultSet;RowAccessor: TZRowAccessor);
   end;

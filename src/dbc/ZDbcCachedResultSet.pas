@@ -103,7 +103,6 @@ type
     procedure DisposeCachedUpdates;
     procedure RevertRecord;
     procedure MoveToInitialRow;
-    procedure RefreshRow; // FOS+ 071106
   end;
 
   {** Implements cached ResultSet. }
@@ -254,7 +253,7 @@ type
     procedure MoveToInsertRow; override;
     procedure MoveToCurrentRow; override;
 
-    function CompareRows(Row1, Row2: Integer; const ColumnIndices: TIntegerDynArray;
+    function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
       const ColumnDirs: TBooleanDynArray): Integer; override;
 
     //---------------------------------------------------------------------
@@ -2223,7 +2222,7 @@ end;
   @param ColumnIndices column indices to compare.
   @param ColumnDirs compare direction for each columns.
 }
-function TZAbstractCachedResultSet.CompareRows(Row1, Row2: Integer;
+function TZAbstractCachedResultSet.CompareRows(Row1, Row2: NativeInt;
   const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray): Integer;
 var
   RowBuffer1, RowBuffer2: PZRowBuffer;

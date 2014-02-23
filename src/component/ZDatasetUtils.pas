@@ -310,7 +310,9 @@ begin
       Result := ftWord;
     stInteger:
       Result := ftInteger;
-    stLongWord, stLong, stULong:
+    stLongWord:
+      Result := {$IFDEF WITH_FTLONGWORD}ftLongWord{$ELSE}ftLargeInt{$ENDIF};
+    stLong, stULong:
       Result := ftLargeInt;
     {$IFDEF WITH_FTSINGLE}
     stFloat:
@@ -1420,7 +1422,7 @@ begin
         Result := ResultSet.GetTimestamp(Field1.FieldNo) = Field2.AsDateTime;
       ftWideString:
         Result := ResultSet.GetUnicodeString(Field1.FieldNo) =
-          Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsString{$ENDIF};
+          Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsWideString{$ENDIF};
       else
         Result := ResultSet.GetString(Field1.FieldNo) = Field2.AsString;
     end;
@@ -1502,10 +1504,8 @@ end;
   @param Fields a collection of TDataset fields in initial order.
   @returns a fields lookup table.
 }
-{$IFDEF WITH_ZSTRINGFIELDS}
 type
-  TZHackStringField = Class(TZStringField); //access protected proprty
-{$ENDIF WITH_ZSTRINGFIELDS}
+  THackZField = Class(TZField); //access protected property
 function CreateFieldsLookupTable(Fields: TFields): TIntegerDynArray;
 var
   I: Integer;
@@ -1514,10 +1514,8 @@ begin
   for I := 0 to Fields.Count - 1 do
   begin
     Result[I] := Integer(Fields[I]);
-    {$IFDEF WITH_ZSTRINGFIELDS}
-    if Fields[i] is TZStringField then
-      TZHackStringField(Fields[i]).FieldIndex := I+1;
-    {$ENDIF WITH_ZSTRINGFIELDS}
+    if Fields[i] is TZField then
+      THackZField(Fields[i]).FieldIndex := I+1;
   end;
 end;
 
@@ -1785,7 +1783,7 @@ procedure SetStatementParam(Index: Integer;
 var
   Stream: TStream;
   TempBytes: TBytes;
-  {$IFDEF WITH_ASBYTES}Bts: TBytes;{$ENDIF}
+  {$IFDEF TPARAM_HAS_ASBYTES}Bts: TBytes;{$ENDIF}
   {$IFDEF WITHOUT_VARBYTESASSTRING}V: Variant;{$ENDIF}
 begin
   if Param.IsNull then
@@ -1835,7 +1833,7 @@ begin
       {$ENDIF}
       ftBytes, ftVarBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         begin
-          {$IFDEF WITH_ASBYTES}
+          {$IFDEF TPARAM_HAS_ASBYTES}
           Bts := Param.AsBytes;
           SetLength(TempBytes, High(Bts)+1);
           System.Move(PAnsichar(Bts)^, PAnsichar(TempBytes)^, High(Bts)+1);

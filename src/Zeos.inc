@@ -55,9 +55,11 @@
  {$DEFINE WITH_ASCURRENCY}      // Has AsCurrency.
  {$DEFINE WITH_ASVARIANT}
  {$DEFINE WITH_IPROVIDER}       // Turn on IProviderSupport interface
+ {$DEFINE WITH_IPROVIDERSUPPORT_GUID} //IProviderSupport GUID is available
  {$DEFINE WITH_CHECKFIELDCOMPATIBILITY}
  {$DEFINE WITH_WIDEMEMO}        // Have WIDEMEMO,  For Delphi we turn these off if not applicable
  {$DEFINE WITH_FTWIDESTRING}    // Have ftwidestring, For Delphi we turn these off if not applicable
+ {$DEFINE WITH_FTFIXEDWIDECHAR} // Have ftFixedWideChar
  {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
  {$DEFINE WITH_DBTABLES}        // Have the BDE DBTables Unit
  {$DEFINE WITH_INLINE_ANSICOMPARETEXT}
@@ -68,6 +70,25 @@
  {$DEFINE USE_FAST_TRUNC}       // use Fascode Trunc(): Int64 functions
  {$DEFINE USE_FAST_CHARPOS}     // use Fascode CharPos function
  {$DEFINE HAVE_TBYTES}          // Compiler has TBytes. For newer Delphi RTTI Generic Array of <Byte>
+ {$DEFINE WITH_VIRTUAL_GETHASCONSTRAINTS} //TField has virtual methode GetHasConstraints
+ {$DEFINE WITH_TOBJECTFIELD}    //unit DB contains TObjectField implementation
+ {$DEFINE WITH_VIRTUAL_SETFIELDKIND} //TField has virtual methode SetFieldKind
+ {$DEFINE WITH_TARRAYFIELD}     //unit DB contains TArrayField 
+ {$DEFINE WITH_TDATASETFIELD}   //unit DB contains TDataSetField
+ {$DEFINE WITH_VIRTUAL_TFIELD_BIND}    //TField has virtual Methode Bind()
+ {$DEFINE WITH_OBJECTVIEW}      //TDataSet has ObjectView property
+ {$DEFINE WITH_FIELDDEFLIST}    //TDataSet has TFieldDefList
+ {$DEFINE WITH_OBJECTFIELDTYPES}//unit db has set of TFieldTypes for TObjectFields
+ {$DEFINE TFIELDDEF_HAS_CHILDEFS} //TFieldDef has ChildDefs(TFieldDefs)
+ {$DEFINE TFIELDEFS_OWNER_IS_TPERSISTENT} //TFieldDefs Owner is TPersistent
+ {$DEFINE WITH_VIRTUAL_DEFCHANGED} //TDataSet has virtual DefChanged Methode
+ {$DEFINE WITH_TFIELD_PARENTFIELD} //TField has public ParentField(TField) property
+ {$DEFINE WITH_SPARSEARRAYS}    //TDataSet has SparseArrays property
+ {$DEFINE WITH_NESTEDDATASETS}  //TDataSet has property NestedDataSets: TList read GetNestedDataSets;
+ {$DEFINE WITH_DATASETFIELD}    //TDataSet has property SetDataSetField
+ {$DEFINE WITH_NESTEDDATASETCLASS} //TDataSet has property NestedDataSetclass
+ {$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure
+ {$DEFINE WITH_FIELD_VALIDATELOOKUPINFO} //TField has private ValidateLookupInfo() procedure
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -236,7 +257,8 @@
   {$DEFINE WITH_FTBYTE}                 // ftByte is supported
   {$DEFINE WITH_FTEXTENDED}             // ftExtended is supported
   {$DEFINE WITH_FTLONGWORD}             // ftLongWord is supported
-  {$DEFINE WITH_ASBYTES}                // AsBytes is supported
+  {$DEFINE TPARAM_HAS_ASBYTES}          // TParam.AsBytes is supported
+  {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
   {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
   {$DEFINE WITH_DEFAULTSYSTEMCODEPAGE}  // determine the AnsiString CP
   {$DEFINE WITH_UNITANSISTRINGS}        // Have unit AnsiStrings
@@ -247,6 +269,8 @@
   {$DEFINE WITH_ASANSISTRING}           // T(Wide)StringField supports AsAnsiString property
   {$DEFINE WITH_INC_PBYTE_SUPPORT}      // Compiler supports incrementing PByte-Pointer
   {$DEFINE WITH_PARAM_ASLARGEINT}       // TParam.AsLargint is supported
+  {$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
+  {$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
@@ -273,6 +297,7 @@
   {$UNDEF WITH_FTWIDESTRING}    // D7 doesn't support TField.AsWideString
   {$UNDEF WITH_WIDEFIELDS}      // absolutely no TWide-Fields support
   {$UNDEF WITH_CLASS_VARS}      // absolutely no Class var/method support
+  {$UNDEF WITH_FTFIXEDWIDECHAR} // D/ doesn't support ftFixedWideChar
   {$IFNDEF VER170BELOW} //D2005 supports inline
     {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
   {$ENDIF}

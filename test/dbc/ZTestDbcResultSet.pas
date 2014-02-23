@@ -54,8 +54,9 @@ unit ZTestDbcResultSet;
 interface
 {$I ZDbc.inc}
 uses
-  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils, Types,
-  ZDbcIntfs, ZClasses, ZCollections, ZSysUtils, ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestCase;
+  {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Classes, SysUtils,
+  ZDbcIntfs, {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZSysUtils,
+  ZDbcResultSet, ZCompatibility, ZTestConsts, ZTestCase;
 
 type
 
@@ -117,9 +118,9 @@ begin
   CheckEquals(Stream1.Size, Stream2.Size, 'Stream sizes are not equal');
 
   Stream1.Position := 0;
-  ReadNum1 := Stream1.Read(Buffer1, 1024);
+  ReadNum1 := Stream1.Read(Buffer1{%H-}, 1024);
   Stream2.Position := 0;
-  ReadNum2 := Stream2.Read(Buffer2, 1024);
+  ReadNum2 := Stream2.Read(Buffer2{%H-}, 1024);
 
   CheckEquals(ReadNum1, ReadNum2, 'Read sizes are not equal.');
   Result := CompareMem(@Buffer1, @Buffer2, ReadNum1);
@@ -167,7 +168,7 @@ begin
 
   StreamOut := Blob.GetStream;
   Check(CompareStreams(StreamIn, StreamOut), 'StreamIn = StreamOut');
-  ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
+  ReadNum := StreamOut.Read(Buffer{%H-}, BINARY_BUFFER_SIZE);
   StreamOut.Free;
   StreamIn.Free;
 
@@ -216,7 +217,7 @@ begin
 
   StreamOut := BlobClone.GetStream;
   Check(CompareStreams(StreamIn, StreamOut), 'StreamIn = StreamOut');
-  ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
+  ReadNum := StreamOut.Read(Buffer{%H-}, BINARY_BUFFER_SIZE);
   StreamOut.Free;
   StreamIn.Free;
 
@@ -252,7 +253,7 @@ begin
 
   StreamOut := Blob.GetStream;
   Check(CompareStreams(StreamIn, StreamOut), 'StreamIn = StreamOut');
-  ReadNum := StreamOut.Read(Buffer, BINARY_BUFFER_SIZE);
+  ReadNum := StreamOut.Read(Buffer{%H-}, BINARY_BUFFER_SIZE);
   StreamIn.Free;
   StreamOut.Free;
 

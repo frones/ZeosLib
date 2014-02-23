@@ -147,7 +147,7 @@ implementation
 
 uses
   Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  ZFastCode, ZTokenizer, ZDbcOracle, ZDbcOracleResultSet,
+  ZFastCode, ZDbcOracle, ZDbcOracleResultSet,
   ZEncoding, ZDbcUtils;
 
 { TZOraclePreparedStatement }

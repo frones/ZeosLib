@@ -232,7 +232,7 @@ type
     procedure AfterLast; virtual;
     function First: Boolean; virtual;
     function Last: Boolean; virtual;
-    function GetRow: Integer; virtual;
+    function GetRow: NativeInt; virtual;
     function MoveAbsolute(Row: Integer): Boolean; virtual;
     function MoveRelative(Rows: Integer): Boolean; virtual;
     function Previous: Boolean; virtual;
@@ -341,7 +341,7 @@ type
     procedure MoveToInsertRow; virtual;
     procedure MoveToCurrentRow; virtual;
 
-    function CompareRows(Row1, Row2: Integer; const ColumnIndices: TIntegerDynArray;
+    function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
       const ColumnDirs: TBooleanDynArray): Integer; virtual;
 
     function GetStatement: IZStatement; virtual;
@@ -2237,7 +2237,7 @@ end;
   second number 2, and so on.
   @return the current row number; <code>0</code> if there is no current row
 }
-function TZAbstractResultSet.GetRow: Integer;
+function TZAbstractResultSet.GetRow: NativeInt;
 begin
   Result := FRowNo;
 end;
@@ -3631,7 +3631,7 @@ end;
   @param ColumnIndices column indices to compare.
   @param ColumnDirs compare direction for each columns.
 }
-function TZAbstractResultSet.CompareRows(Row1, Row2: Integer;
+function TZAbstractResultSet.CompareRows(Row1, Row2: NativeInt;
   const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray): Integer;
 var
   I: Integer;

@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZURL,
-  ZCompatibility, ZDbcConnection, ZSelectSchema;
+  Types, Classes, SysUtils, ZSysUtils, ZDbcIntfs, ZDbcMetadata,
+  ZCompatibility, ZSelectSchema;
 
 type
 
@@ -133,13 +133,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(const Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(const _Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(const _Type: TZResultSetType;
-      const Concurrency: TZResultSetConcurrency): Boolean; override;
+    function SupportsResultSetType(const {%H-}_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(const {%H-}_Type: TZResultSetType;
+      const {%H-}Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
 
     // maxima:
@@ -301,7 +301,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcUtils, ZDbcDbLibUtils;
+uses ZFastCode, ZDbcDbLibUtils;
 
 { TZDbLibDatabaseInfo }
 

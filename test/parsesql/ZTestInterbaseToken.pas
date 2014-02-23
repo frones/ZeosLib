@@ -55,7 +55,8 @@ unit ZTestInterbaseToken;
 
 interface
 {$I ZParseSql.inc}
-uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZClasses, ZTokenizer,
+uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZTokenizer,
   ZInterbaseToken, ZTestTokenizer;
 
 type

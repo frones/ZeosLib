@@ -68,10 +68,10 @@ type
     FErrorCounter: Integer;
   public
     procedure DataSetCalcFields(Dataset: TDataSet);
-    procedure DataSetBeforeScroll(Dataset: TDataSet);
-    procedure DataSetAfterScroll(Dataset: TDataSet);
-    procedure DataSetOnError(DataSet: TDataSet;
-      E: EDatabaseError; var Action: TDataAction);
+    procedure DataSetBeforeScroll({%H-}Dataset: TDataSet);
+    procedure DataSetAfterScroll({%H-}Dataset: TDataSet);
+    procedure DataSetOnError({%H-}DataSet: TDataSet;
+      {%H-}E: EDatabaseError; var Action: TDataAction);
   published
     procedure Test707309;
     procedure Test707364;

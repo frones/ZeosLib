@@ -58,7 +58,7 @@ interface
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZPlainASADriver, ZCompatibility,
+  ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZDbcASA, ZCompatibility,
   ZDbcResultSetMetadata, ZDbcASAUtils, ZMessages, ZVariant;
 
 type

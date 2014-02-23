@@ -201,7 +201,7 @@ var
   Tokens: TStrings;
   TokenType: TZTokenType;
   TokenValue: string;
-  TokenIndex, LastStmtEndingIndex, iPos: Integer;
+  TokenIndex, iPos: Integer;
   SQL, Temp: string;
   EndOfStatement: Boolean;
   Extract: Boolean;
@@ -224,8 +224,6 @@ var
     TokenValue := Tokens[TokenIndex];
     TokenType := TZTokenType({$IFDEF FPC}Pointer({$ENDIF}
       Tokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
-    if TokenValue = Delimiter  then
-      LastStmtEndingIndex := TokenIndex;
     Inc(TokenIndex);
   end;
 
