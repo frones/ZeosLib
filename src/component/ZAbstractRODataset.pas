@@ -6033,8 +6033,8 @@ begin
     stInteger: Result := Integer(Value);
     stLong: Result := Int64(Value);
     stULong: Result := UInt64(Value);
-    stString: Result := RawToInt64(RawByteString(Value));
-    stUnicodeString: Result := UnicodeToInt64(ZWideString(Value));
+    stString: Result := RawToInt64Def(RawByteString(Value), 0);
+    stUnicodeString: Result := UnicodeToInt64Def(ZWideString(Value), 0);
     stBoolean: Result := Ord(Boolean(Value));
     stFloat: Result := Round(Single(Value));
     stDouble: Result := Round(Double(Value));
@@ -6057,8 +6057,8 @@ begin
     stLongWord: Result := LongWord(Value);
     stInteger: Result := Integer(Value);
     stLong: Result := Int64(Value);
-    stString: Result := RawToUInt64(RawByteString(Value));
-    stUnicodeString: Result := UnicodeToUInt64(ZWideString(Value));
+    stString: Result := RawToUInt64Def(RawByteString(Value), 0);
+    stUnicodeString: Result := UnicodeToUInt64Def(ZWideString(Value),0);
     stBoolean: Result := Ord(Boolean(Value));
     stFloat: Result := Round(Single(Value));
     stDouble: Result := Round(Double(Value));
@@ -6081,8 +6081,8 @@ begin
     stLongWord: Result := LongWord(Value);
     stInteger: Result := Integer(Value);
     stLong: Result := Int64(Value);
-    stString: Result := RawToUInt64(RawByteString(Value));
-    stUnicodeString: Result := UnicodeToUInt64(ZWideString(Value));
+    stString: Result := RawToUInt64Def(RawByteString(Value), 0);
+    stUnicodeString: Result := UnicodeToUInt64Def(ZWideString(Value), 0);
     stBoolean: Result := Ord(Boolean(Value));
     stFloat: Result := Single(Value);
     stDouble: Result := Double(Value);
