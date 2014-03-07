@@ -670,9 +670,9 @@ end;
   var
     ulen: Integer;
   {$ELSE}             //2013-10-13 mse
-  var
     {$IF defined(PWIDECHAR_IS_PUNICODECHAR) and not defined(FPC_HAS_BUILTIN_WIDESTR_MANAGER)}
-    WS: UnicodeString;
+    var
+      WS: UnicodeString;
     {$IFEND}
   {$ENDIF}
   begin

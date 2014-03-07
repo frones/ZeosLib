@@ -242,7 +242,11 @@ var
 
 var
   {$IFDEF FPC}
-  StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
+    {$IFDEF cpuarm}
+    StrLen: function(Str: PChar): sizeint;
+    {$ELSE}
+    StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
+    {$ENDIF}
   {$ELSE}
   StrLen: function(const Str: PAnsiChar): Cardinal;
   {$ENDIF}
@@ -282,11 +286,7 @@ function IntToUnicode(Value: UInt64; Const Negative: Boolean = False): ZWideStri
 
 
 function RawToInt(const Value: RawByteString): Integer;
-function RawToInt64(const Value: RawByteString): Int64;
-function RawToUInt64(const Value: RawByteString): UInt64;
 function UnicodeToInt(const Value: ZWideString): Integer;
-function UnicodeToInt64(const Value: ZWideString): Int64;
-function UnicodeToUInt64(const Value: ZWideString): UInt64;
 function RawToIntDef(const S: RawByteString; const Default: Integer) : Integer; overload;
 function RawToIntDef(const S: PAnsiChar; const Default: Integer) : Integer; overload;
 function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer; overload;
@@ -2459,7 +2459,7 @@ function IntToRaw(Value: Byte; Const Negative: Boolean = False): RawByteString;
 var
   Digits         : Integer;
   P              : PByte;
-  NewLen, OldLen : Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   if Value >= 100 then
     Digits := 3
@@ -2469,12 +2469,16 @@ begin
     else
       Digits := 1;
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -2483,6 +2487,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2521,7 +2526,7 @@ var
   J, K           : Word;
   Digits         : Integer;
   P              : PByte;
-  NewLen, OldLen: Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   if Value >= 10000 then
     Digits := 5
@@ -2531,12 +2536,16 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -2545,6 +2554,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2575,7 +2585,7 @@ var
   J, K           : Cardinal;
   Digits         : Integer;
   P              : PByte;
-  NewLen, OldLen: Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   if Value >= 10000 then
     if Value >= 1000000 then
@@ -2591,12 +2601,16 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -2605,6 +2619,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -3013,7 +3028,7 @@ var
   I32, J32, K32, L32 : Cardinal;
   Digits             : Byte;
   P                  : PByte;
-  NewLen, OldLen    : Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF}      : Integer;
 begin
   if (Negative and (Value <= High(Integer))) or
      (not Negative and (Value <= High(Cardinal))) then
@@ -3043,12 +3058,16 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
   if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3057,6 +3076,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -3135,7 +3155,7 @@ function IntToUnicode(Value: Byte; Const Negative: Boolean): ZWideString;
 var
   Digits         : Integer;
   P              : PWideChar;
-  NewLen, OldLen : Integer;
+  NewLen {$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   if Value >= 100 then
     Digits := 3
@@ -3145,12 +3165,16 @@ begin
     else
       Digits := 1;
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3159,6 +3183,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := WideChar('-');
   Inc(P, Ord(Negative));
@@ -3190,7 +3215,7 @@ var
   J, K           : Word;
   Digits         : Integer;
   P              : PWideChar;
-  NewLen, OldLen : Integer;
+  NewLen {$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   if Value >= 10000 then
     Digits := 5
@@ -3200,12 +3225,16 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3214,6 +3243,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := WideChar('-');
   Inc(P, Ord(Negative));
@@ -3249,7 +3279,7 @@ var
   J, K           : Cardinal;
   Digits         : Integer;
   P              : PByte;
-  NewLen, OldLen : Integer;
+  NewLen {$IFNDEF FPC}, OldLen{$ENDIF} : Integer;
 begin
   if Value >= 10000 then
     if Value >= 1000000 then
@@ -3265,12 +3295,16 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  if Result {%H-}= '' then
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
+  if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3279,6 +3313,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   PWord(P)^ := Word('-');
   Inc(P, Ord(Negative)*2);
@@ -3336,7 +3371,7 @@ var
   I32, J32, K32, L32 : Cardinal;
   Digits             : Byte;
   P                  : PWideChar;
-  NewLen, OldLen     : Integer;
+  NewLen{$IFNDEF FPC}, OldLen{$ENDIF}             : Integer;
 begin
   if (Negative and (Value <= High(Integer))) or
      (not Negative and (Value <= High(Cardinal))) then
@@ -3366,12 +3401,16 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
+  {$IFDEF FPC}
+  Result := '';
+  SetLength(Result, NewLen);
+  {$ELSE}
   if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeUInt(Result) - 4)^ { length }
+    if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+      OldLen := PLongInt(NativeInt(Result) - 4)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3380,6 +3419,7 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
+  {$ENDIF}
   P := Pointer(Result);
   P^ := '-';
   Inc(P, Ord(Negative));
@@ -4821,19 +4861,6 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-function RawToInt64(const Value: RawByteString) : Int64;
-var
-  E: Integer;
-begin
-  {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValInt64_JOH_IA32_8_a(Value, E);
-  {$ELSE}
-  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(Value), E{%H-});
-  {$IFEND}
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
-end;
-
 function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64;
 var
   E: Integer;
@@ -4848,15 +4875,6 @@ var
 begin
   Result := ValUInt64_JOH_PAS_8_a_raw(S, E{%H-});
   if E <> 0 then Result := Default;
-end;
-
-function RawToUInt64(const Value: RawByteString) : UInt64;
-var
-  E: Integer;
-begin
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(Value), E{%H-});
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
 function RawToUInt64Def(const S: RawByteString; const Default: Cardinal) : UInt64;
@@ -4993,19 +5011,6 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-function UnicodeToInt64(const Value: ZWideString) : Int64;
-var
-  E: Integer;
-begin
-  {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(Value)), E{%H-});
-  {$ELSE}
-  Result := ValInt64_JOH_PAS_8_a_unicode(Pointer(Value), E);
-  {$ENDIF}
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
-end;
-
 function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64;
 var
   E: Integer;
@@ -5016,19 +5021,6 @@ begin
   Result := ValInt64_JOH_PAS_8_a_unicode(S, E);
   {$ENDIF}
   if E <> 0 then Result := Default;
-end;
-
-function UnicodeToUInt64(const Value: ZWideString) : UInt64;
-var
-  E: Integer;
-begin
-  {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(Value)), E{%H-});
-  {$ELSE}
-  Result := ValUInt64_JOH_PAS_8_a_unicode(Pointer(Value), E);
-  {$ENDIF}
-  if E <> 0 then
-    raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
 function UnicodeToUInt64Def(const S: ZWideString; const Default: Integer) : UInt64;
@@ -6516,4 +6508,4 @@ else
   CharPos := CharPos_Sha_Pas_2_b;
 {$ENDIF}
 
-end.
+end.
