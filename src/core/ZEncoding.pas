@@ -58,7 +58,8 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   {$IFDEF WITH_LCONVENCODING}
-  LConvEncoding,
+  {$MACRO ON}
+   LCLVersion, LConvEncoding,
   {$ENDIF}
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
@@ -289,6 +290,14 @@ function ZWideRecToString(const Value: TZWideRec; const CP: Word): String; {$IF 
 
 {converter functions for the String-types}
 {$IFDEF WITH_LCONVENCODING}
+  {$MACRO ON}
+  {$IF declared(lcl_fullversion)}
+    {$if defined(FPC) AND (lcl_fullversion>=1000000)} //Lazarus >= 1.0.0 with delphi fix.
+      {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
+    {$ifend}
+  {$ELSE}
+    {$ERROR lcl_fullversion isn't defined!}
+  {$ifend}
 function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 function ZConvertUTF8ToRaw28591(Const Src: UTF8String; const CP: Word): RawByteString;
 function ZConvertRaw28592ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
@@ -315,8 +324,10 @@ function ZConvertRaw437ToUTF8(const Src: RawByteString; const CP: Word): UTF8Str
 function ZConvertUTF8ToRaw437(Const Src: UTF8String; const CP: Word): RawByteString;
 function ZConvertRaw850ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 function ZConvertUTF8ToRaw850(Const Src: UTF8String; const CP: Word): RawByteString;
+{$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
 function ZConvertRaw852ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 function ZConvertUTF8ToRaw852(Const Src: UTF8String; const CP: Word): RawByteString;
+{$ENDIF}
 function ZConvertRaw866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 function ZConvertUTF8ToRaw866(Const Src: UTF8String; const CP: Word): RawByteString;
 function ZConvertRaw874ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
@@ -458,8 +469,10 @@ begin
       Result := UTF8Decode(CP437ToUTF8(S));
     850: //CP850
       Result := UTF8Decode(CP850ToUTF8(S));
+    {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
     852: //CP852
       Result := UTF8Decode(CP852ToUTF8(S));
+    {$ENDIF}
     866: //CP866
       Result := UTF8Decode(CP866ToUTF8(S));
     874: //CP874
@@ -578,8 +591,10 @@ begin
       Result := UTF8ToCP437(UTF8Encode(US));
     850: //CP850
       Result := UTF8ToCP850(UTF8Encode(US));
+    {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
     852: //CP852
       Result := UTF8ToCP852(UTF8Encode(US));
+    {$ENDIF}
     866: //CP866
       Result := UTF8ToCP866(UTF8Encode(US));
     874: //CP874
@@ -873,6 +888,7 @@ begin
   Result := UTF8ToCP850(PAnsiChar(Src));
 end;
 
+{$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
 function ZConvertRaw852ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
   Result := CP852ToUTF8(PAnsiChar(Src));
@@ -882,6 +898,7 @@ function ZConvertUTF8ToRaw852(Const Src: UTF8String; const CP: Word): RawByteStr
 begin
   Result := UTF8ToCP852(PAnsiChar(Src));
 end;
+{$ENDIF}
 
 function ZConvertRaw866ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 begin
@@ -1005,11 +1022,13 @@ begin
           DbcConvert := @CP850ToUTF8;
           PlainConvert := @UTF8ToCP850;
         end;
+      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
       852: //CP852
         begin
           DbcConvert := @CP852ToUTF8;
           PlainConvert := @UTF8ToCP852;
         end;
+      {$ENDIF}
       866: //CP866
         begin
           DbcConvert := @CP866ToUTF8;
@@ -1192,8 +1211,10 @@ begin
         Result := CP437ToUTF8(Src);
       850: //CP850
         Result := CP850ToUTF8(Src);
+      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
       852: //CP852
         Result := CP852ToUTF8(Src);
+      {$ENDIF}
       866: //CP866
         Result := CP866ToUTF8(Src);
       874: //CP874
@@ -1259,8 +1280,10 @@ begin
         Result := UTF8ToCP437(Src);
       850: //CP850
         Result := UTF8ToCP850(Src);
+      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
       852: //CP852
         Result := UTF8ToCP852(Src);
+      {$ENDIF}
       866: //CP866
         Result := UTF8ToCP866(Src);
       874: //CP874
@@ -1872,11 +1895,13 @@ begin
             ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw850ToUTF8;
             ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw850;
           end;
+        {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
         852:    //CP852
           begin
             ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw852ToUTF8;
             ConSettings^.ConvFuncs.ZUTF8ToRaw := @ZConvertUTF8ToRaw852;
           end;
+        {$ENDIF}
         866:    //CP866
           begin
             ConSettings^.ConvFuncs.ZRawToUTF8 := @ZConvertRaw866ToUTF8;
