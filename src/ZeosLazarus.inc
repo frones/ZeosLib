@@ -80,8 +80,11 @@
        {$DEFINE WITH_WIDEFIELDS}      // Wide-fields are supported (common define for ftWideString/ftWideMemo)
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
        {$DEFINE FPC2_6UP}
-       {$DEFINE HAVE_TBYTES}         // TBytes is supported    
     {$IFEND}
+
+    {$IF FPC_FULLVERSION>=20602}
+       {$DEFINE HAVE_TBYTES}         // TBytes is declared only in FPC 2.6.2 instead of 2.6.0 as declared...
+    {$ENDIF}
 
     {$IFDEF LCL}
       {$DEFINE WITH_LCONVENCODING} //Only available for Lazarus
@@ -111,8 +114,6 @@
     {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
     {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
     {$DEFINE TFIELD_HAS_ASLARGEINT}  // TFIeld.AsLargeInt is supported
-  {$IFEND}
-  {$IF FPC_FULLVERSION>20700}
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF
