@@ -141,12 +141,16 @@
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE PatchSystemMove} //replaces System.Move by FastCode-Project Move proc
   {$UNDEF HAVE_TBYTES} //D2006 doesn't have TBytes
+  {$DEFINE WITH_IPROViDERSUPPORT2} //TDataSet supports WideString based IProviderSupport2
+  {$DEFINE WITH_DEPRECATED_EXTRACTFIELDNAME} //DB.pas proc ExtractFieldName String overload is deprecated}
   {EH since D2006 FastCode proc FillChar is already included}
 {$ENDIF}
 
 // Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
 {$IF defined(VER185) or defined(VER190)}
+  {$DEFINE WITH_IPROViDERSUPPORT2} //TDataSet supports WideString based IProviderSupport2
   {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE WITH_DEPRECATED_EXTRACTFIELDNAME} //DB.pas proc ExtractFieldName String overload is deprecated}
   {EH: Since D2007 the fast move Procs of FastCode-project are allready included}
 {$IFEND}
 

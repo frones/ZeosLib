@@ -3631,7 +3631,9 @@ end;
 {**
   Initializes new record with master fields.
 }
-{$WARNINGS OFF}
+{$IFDEF WITH_DEPRECATED_EXTRACTFIELDNAME}
+  {$WARNINGS OFF}
+{$ENDIF}
 procedure TZAbstractRODataset.DoOnNewRecord;
 var
   I: Integer;
@@ -3682,7 +3684,9 @@ begin
   end;
   inherited DoOnNewRecord;
 end;
-{$WARNINGS ON}
+{$IFDEF WITH_DEPRECATED_EXTRACTFIELDNAME}
+  {$WARNINGS ON}
+{$ENDIF}
 
 {**
   Gets a list of index field names.
@@ -5174,6 +5178,9 @@ begin
   end;
 end;
 
+{$IFDEF WITH_DEPRECATED_EXTRACTFIELDNAME}
+  {$WARNINGS OFF}
+{$ENDIF}
 procedure TZAbstractRODataset.CreateFields;
 var
   I: Integer;
@@ -5229,6 +5236,10 @@ begin
   end
   else inherited CreateFields;
 end;
+{$IFDEF WITH_DEPRECATED_EXTRACTFIELDNAME}
+  {$WARNINGS ON}
+{$ENDIF}
+
 
 {**
   Reset the calculated (includes fkLookup) fields
