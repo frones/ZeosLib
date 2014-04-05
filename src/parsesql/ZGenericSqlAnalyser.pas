@@ -480,7 +480,7 @@ var
   ReadField: Boolean;
   HadWhitespace : Boolean;
   LastWasBracketSection: Boolean;
-  NextIsAlias: Boolean;
+  CurrentUpperIs_AS: Boolean; //place holder to avoid compare the token twice
 
   procedure ClearElements;
   begin
@@ -540,7 +540,6 @@ var
 begin
   TokenIndex := 1;
   SkipOptionTokens(SelectTokens, TokenIndex, Self.SelectOptions);
-  NextIsAlias := False; //satify compiler (:
 
   ClearElements;
   while TokenIndex < SelectTokens.Count do
@@ -551,11 +550,9 @@ begin
       SelectTokens.Objects[TokenIndex]{$IFDEF FPC}){$ENDIF});
 
     { Switches to alias part. }
-    if (CurrentType = ttWhitespace) or (CurrentUpper = 'AS') then
-    begin
-      NextIsAlias := NextIsAlias or (CurrentUpper = 'AS');
-      ReadField := ReadField and (Field = '') and not NextIsAlias;
-    end
+    CurrentUpperIs_AS := (CurrentUpper = 'AS');
+    if (CurrentType = ttWhitespace) or CurrentUpperIs_AS then
+      ReadField := ReadField and (Field = '') and not CurrentUpperIs_AS
     { Reads field. }
     else if ReadField and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier) or
       (CurrentValue = '*')) then
@@ -570,19 +567,14 @@ begin
     begin
     end
     { Reads alias. }
-    else if not ReadField and NextIsAlias and (CurrentType in [ttWord, ttQuotedIdentifier]) then
-    begin
-      NextIsAlias := False;
-      Alias := CurrentValue;
-    end
+    else if not ReadField and (CurrentType in [ttWord, ttQuotedIdentifier]) then
+      Alias := CurrentValue
     { Ends field reading. }
     else if CurrentValue = ',' then
     begin
       if Field <> '' then
-      begin
         SelectSchema.AddField(TZFieldRef.Create(True, Catalog, Schema, Table,
           Field, Alias, nil));
-      end;
       ClearElements;
     end
     { Skips till the next field. }
@@ -616,8 +608,7 @@ begin
       end;
       if Alias <> '' then
       begin
-        SelectSchema.AddField(TZFieldRef.Create(False, '', '', '', '',
-          Alias, nil));
+        SelectSchema.AddField(TZFieldRef.Create(False, '', '', '', '', Alias, nil));
         ClearElements;
       end;
       Dec(TokenIndex); // go back 1 token(Because of Inc in next lines)
