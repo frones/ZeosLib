@@ -129,8 +129,8 @@ type
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
-    function LinkFieldByIndexAndShortName(
-      ColumnIndex: Integer; const Field: string): TZFieldRef;
+    function LinkFieldByIndexAndShortName(const ColumnIndex: Integer; const Field: string;
+      const Convertor: IZIdentifierConvertor): TZFieldRef;
 
     function GetFieldCount: Integer;
     function GetTableCount: Integer;
@@ -166,8 +166,8 @@ type
     function FindTableByShortName(const Table: string): TZTableRef;
     function FindFieldByShortName(const Field: string): TZFieldRef;
 
-    function LinkFieldByIndexAndShortName(
-      ColumnIndex: Integer; const Field: string): TZFieldRef;
+    function LinkFieldByIndexAndShortName(const ColumnIndex: Integer; const Field: string;
+      const Convertor: IZIdentifierConvertor): TZFieldRef;
 
     function GetFieldCount: Integer;
     function GetTableCount: Integer;
@@ -371,8 +371,8 @@ end;
   @param Field a table field name or alias.
   @return a found field reference object or <code>null</code> otherwise.
 }
-function TZSelectSchema.LinkFieldByIndexAndShortName(
-  ColumnIndex: Integer; const Field: string): TZFieldRef;
+function TZSelectSchema.LinkFieldByIndexAndShortName(const ColumnIndex: Integer;
+  const Field: string; const Convertor: IZIdentifierConvertor): TZFieldRef;
 var
   I: Integer;
   Current: TZFieldRef;
@@ -398,7 +398,7 @@ begin
   for I := 0 to FFields.Count - 1 do
   begin
     Current := TZFieldRef(FFields[I]);
-    if not Current.Linked and (Current.Alias = Field) then
+    if not Current.Linked and ((Current.Alias = Field) or (Current.Alias = Convertor.Quote(Field))) then
     begin
       Result := Current;
       Result.Linked := True;

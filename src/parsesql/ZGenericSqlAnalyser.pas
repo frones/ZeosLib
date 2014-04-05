@@ -480,6 +480,7 @@ var
   ReadField: Boolean;
   HadWhitespace : Boolean;
   LastWasBracketSection: Boolean;
+  NextIsAlias: Boolean;
 
   procedure ClearElements;
   begin
@@ -539,6 +540,7 @@ var
 begin
   TokenIndex := 1;
   SkipOptionTokens(SelectTokens, TokenIndex, Self.SelectOptions);
+  NextIsAlias := False; //satify compiler (:
 
   ClearElements;
   while TokenIndex < SelectTokens.Count do
@@ -551,7 +553,8 @@ begin
     { Switches to alias part. }
     if (CurrentType = ttWhitespace) or (CurrentUpper = 'AS') then
     begin
-      ReadField := ReadField and (Field = '') and (CurrentUpper <> 'AS');
+      NextIsAlias := NextIsAlias or (CurrentUpper = 'AS');
+      ReadField := ReadField and (Field = '') and not NextIsAlias;
     end
     { Reads field. }
     else if ReadField and ((CurrentType = ttWord) or (CurrentType = ttQuotedIdentifier) or
@@ -567,8 +570,9 @@ begin
     begin
     end
     { Reads alias. }
-    else if not ReadField and (CurrentType = ttWord) then
+    else if not ReadField and NextIsAlias and (CurrentType in [ttWord, ttQuotedIdentifier]) then
     begin
+      NextIsAlias := False;
       Alias := CurrentValue;
     end
     { Ends field reading. }
