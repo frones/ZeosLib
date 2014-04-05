@@ -300,7 +300,7 @@ procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Po
 implementation
 
 uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
-  ZDbcGenericResolver, ZDbcUtils, ZEncoding
+  ZDbcUtils, ZEncoding
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**

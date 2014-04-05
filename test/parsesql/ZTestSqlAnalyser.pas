@@ -55,7 +55,8 @@ unit ZTestSqlAnalyser;
 
 interface
 {$I ZParseSql.inc}
-uses Contnrs, ZClasses, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZTokenizer, ZGenericSqlAnalyser,
+uses Contnrs, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF},
+  {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZTokenizer, ZGenericSqlAnalyser,
   ZSelectSchema, ZTestCase;
 
 type
@@ -102,7 +103,7 @@ type
 
 implementation
 
-uses Classes, SysUtils, ZCollections, ZGenericSqlToken,
+uses Classes, SysUtils, ZGenericSqlToken,
 {$IFDEF ENABLE_DBLIB}ZSybaseToken, ZSybaseAnalyser, {$ENDIF}
 {$IFDEF ENABLE_INTERBASE}ZInterbaseToken, ZInterbaseAnalyser, {$ENDIF}
 ZCompatibility;

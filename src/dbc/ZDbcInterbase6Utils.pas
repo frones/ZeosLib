@@ -2077,7 +2077,7 @@ begin
                       end;
       SQL_TIMESTAMP : begin
                         FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata));
-                        PISC_TIMESTAMP(sqldata).timestamp_time :=PISC_TIMESTAMP(sqldata).timestamp_time + msec*10;
+                        PISC_TIMESTAMP(sqldata).timestamp_time :=PISC_TIMESTAMP(sqldata).timestamp_time {%H-}+ msec*10;
                       end;
       else
         raise EZIBConvertError.Create(SInvalidState);

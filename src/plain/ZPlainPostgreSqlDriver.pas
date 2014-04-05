@@ -89,7 +89,7 @@ type
 
   TZPostgreSQLFieldCode=( // FirmOS
             PG_DIAG_SEVERITY=ord('S'),
-            PG_DIAG_SQLSTATE=ord('C'),
+            PG_DIAG_SQLSTATE=ord('C'){%H-},
             PG_DIAG_MESSAGE_PRIMARY=ord('M'),
             PG_DIAG_MESSAGE_DETAIL=ord('D'),
             PG_DIAG_MESSAGE_HINT=ord('H'),

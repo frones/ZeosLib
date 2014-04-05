@@ -151,7 +151,7 @@ type
 implementation
 
 uses Classes, ZSysUtils, ZDbcIntfs,
-  ZCompatibility, ZVariant, Types;
+  ZCompatibility, ZVariant;
 
 
 { TZTestStoredProcedure }
@@ -847,7 +847,12 @@ begin
   CheckEquals('P25', StoredProc.Fields[24].DisplayName);
   TempBytes :=StrToBytes(RawByteString('121415'));
   SetLength(TempBytes, StoredProc.Fields[24].Size);
-  CheckEquals(TempBytes, {$IFDEF WITH_ASBYTES}TBytes(StoredProc.Fields[24].AsBytes){$ELSE}StrToBytes(StoredProc.Fields[24].AsString){$ENDIF});
+  CheckEquals(TempBytes,
+    {$IFDEF TPARAM_HAS_ASBYTES}
+    TBytes(StoredProc.Fields[24].AsBytes)
+    {$ELSE}
+    StrToBytes(StoredProc.Fields[24].AsString)
+    {$ENDIF});
   CheckEquals(ord(ftBytes), ord(StoredProc.Fields[24].DataType));
 
   CheckEquals('P26', StoredProc.Fields[25].DisplayName);

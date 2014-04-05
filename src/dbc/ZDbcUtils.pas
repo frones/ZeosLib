@@ -172,7 +172,7 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 
-{$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const PAramTypes: array of ShortInt);
@@ -811,7 +811,7 @@ begin
     {$ENDIF}
 end;
 
-{$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const ParamTypes: array of ShortInt);

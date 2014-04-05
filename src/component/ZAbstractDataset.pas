@@ -692,7 +692,7 @@ end;
 }
 procedure TZAbstractDataset.RefreshCurrentRow(const RefreshDetails:Boolean);
 var
-    RowNo: integer;
+    RowNo: NativeInt;
     i: Integer;
     ostate:TDataSetState;
 begin
@@ -701,7 +701,7 @@ begin
     if CachedResultSet <> nil then
     begin
       UpdateCursorPos;
-      RowNo := Integer(CurrentRows[CurrentRow - 1]);
+      RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1]);
       CachedResultSet.MoveAbsolute(RowNo);
       CachedResultSet.RefreshRow;
       if not (State in [dsInactive]) then

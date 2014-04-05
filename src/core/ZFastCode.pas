@@ -242,7 +242,11 @@ var
 
 var
   {$IFDEF FPC}
-  StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
+    {$IFDEF cpuarm}
+    StrLen: function(Str: PChar): sizeint;
+    {$ELSE}
+    StrLen: function(Str: PAnsiChar): {$IFDEF cpui386}LongInt{$ELSE}Int64{$ENDIF};
+    {$ENDIF}
   {$ELSE}
   StrLen: function(const Str: PAnsiChar): Cardinal;
   {$ENDIF}
@@ -6504,4 +6508,4 @@ else
   CharPos := CharPos_Sha_Pas_2_b;
 {$ENDIF}
 
-end.
+end.

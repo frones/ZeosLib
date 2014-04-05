@@ -786,7 +786,7 @@ type
     procedure AfterLast;
     function First: Boolean;
     function Last: Boolean;
-    function GetRow: Integer;
+    function GetRow: NativeInt;
     function MoveAbsolute(Row: Integer): Boolean;
     function MoveRelative(Rows: Integer): Boolean;
     function Previous: Boolean;
@@ -900,7 +900,7 @@ type
 //    function Compare(Row: Integer; CaseInsensitive, PartialKey: Boolean):
 //      Boolean;
 
-    function CompareRows(Row1, Row2: Integer; const ColumnIndices: TIntegerDynArray;
+    function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
       const ColumnDirs: TBooleanDynArray): Integer;
 
     function GetStatement: IZStatement;

@@ -292,13 +292,11 @@ end;
   Memory leak, when client cannot connect to server
 }
 procedure TZTestDbcMySQLBugReport.Test924861;
-var
-  Connection: IZConnection;  // Attention : local Connection
 begin
   if SkipForReason(srClosedBug) then Exit;
 
   try
-    Connection := DriverManager.GetConnection('zdbc:mysql://xxx:12345/db');
+    DriverManager.GetConnection('zdbc:mysql://xxx:12345/db');
     Fail('Incorrect processing of wrong connection URL.');
   except
     // Ignore.

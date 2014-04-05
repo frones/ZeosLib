@@ -83,7 +83,7 @@ type
     procedure Close; override;
     function Next: Boolean; override;
     function MoveAbsolute(Row: Integer): Boolean; override;
-    function GetRow: Integer; override;
+    function GetRow: NativeInt; override;
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
@@ -333,7 +333,7 @@ end;
   second number 2, and so on.
   @return the current row number; <code>0</code> if there is no current row
 }
-function TZAdoResultSet.GetRow: Integer;
+function TZAdoResultSet.GetRow: NativeInt;
 begin
   if FAdoRecordSet.EOF or FAdoRecordSet.BOF then
     Result := -1

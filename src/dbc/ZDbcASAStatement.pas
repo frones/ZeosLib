@@ -58,7 +58,7 @@ interface
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFNDEF HAVE_TBYTES}Types,{$ENDIF}
   ZDbcIntfs, ZDbcStatement, ZDbcASA, ZDbcASAUtils,
-  ZPlainASADriver, ZCompatibility, ZDbcLogging, ZVariant;
+  ZCompatibility, ZDbcLogging, ZVariant;
 
 type
 

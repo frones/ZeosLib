@@ -65,7 +65,9 @@ uses
   {$If defined(MSWINDOWS) and not defined(FPC)}
   Windows,
   {$IFEND}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  Classes,
+  {$IFDEF MSEgui}mclasses,{$ENDIF}
+  {$IFDEF WITH_LCONVENCODING} LConvEncoding,{$ENDIF}
   Types,
   SysUtils;
 

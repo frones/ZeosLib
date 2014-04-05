@@ -43,6 +43,12 @@
 
 {$DEFINE PUREPASCAL}
 
+{$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
+{$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
+{$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure
+{$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
+{$DEFINE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
+
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
   {$MODE DELPHI}
@@ -74,8 +80,11 @@
        {$DEFINE WITH_WIDEFIELDS}      // Wide-fields are supported (common define for ftWideString/ftWideMemo)
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
        {$DEFINE FPC2_6UP}
-       {$DEFINE HAVE_TBYTES}         // TBytes is supported
     {$IFEND}
+
+    {$IF FPC_FULLVERSION>=20602}
+       {$DEFINE HAVE_TBYTES}         // TBytes is declared only in FPC 2.6.2 instead of 2.6.0 as declared...
+    {$ENDIF}
 
     {$IFDEF LCL}
       {$DEFINE WITH_LCONVENCODING} //Only available for Lazarus
@@ -103,8 +112,8 @@
   {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
-  {$IFEND}
-  {$IF FPC_FULLVERSION>20700}
+    {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
+    {$DEFINE TFIELD_HAS_ASLARGEINT}  // TFIeld.AsLargeInt is supported
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF

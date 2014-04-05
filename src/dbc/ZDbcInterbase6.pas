@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Contnrs,
-  ZPlainFirebirdDriver, ZPlainDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs,
+  ZPlainFirebirdDriver, ZCompatibility, ZDbcUtils, ZDbcIntfs,
   ZDbcConnection, ZPlainFirebirdInterbaseConstants, ZSysUtils, ZDbcLogging,
   ZDbcInterbase6Utils, ZDbcGenericResolver, ZTokenizer, ZGenericSqlAnalyser,
   ZURL;
