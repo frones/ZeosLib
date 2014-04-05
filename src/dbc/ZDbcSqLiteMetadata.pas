@@ -204,7 +204,7 @@ type
   {** Implements SQLite Database Metadata. }
   TZSQLiteDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
-    function DeComposeObjectString(const S: String): String;
+    function DeComposeObjectString(const S: String): String; reintroduce;
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-28
 
     function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
