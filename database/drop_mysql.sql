@@ -24,3 +24,5 @@ drop table IF EXISTS string_values;
 drop table IF EXISTS not_null_values;
 drop table IF EXISTS cargo;
 drop table IF EXISTS high_load;
+drop table IF EXISTS `Spaced Names`;
+
