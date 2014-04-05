@@ -30,7 +30,12 @@ package ZComponentDesign;
 
 requires
   dbrtl,
-  designide;
+  designide,
+  ZParseSql,
+  ZCore,
+  ZPlain,
+  ZDbc,
+  ZComponent;
 
 contains
   ZPropertyEditor in '..\..\src\component\ZPropertyEditor.pas',
