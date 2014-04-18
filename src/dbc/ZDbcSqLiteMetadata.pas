@@ -1323,6 +1323,7 @@ var
   Precision, Decimals: Integer;
   Temp_scheme: string;
   ResSet: IZResultSet;
+  TempTableNamePattern: String;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1331,8 +1332,9 @@ begin
   else
     Temp_scheme := SchemaPattern +'.';
 
+  TempTableNamePattern := NormalizePatternCase(TableNamePattern);
   ResSet := GetConnection.CreateStatement.ExecuteQuery(
-    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, DecomposeObjectString(TableNamePattern)]));
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TempTableNamePattern]));
   if ResSet <> nil then
     with ResSet do
   begin
@@ -1343,7 +1345,7 @@ begin
         Result.UpdateString(1, SchemaPattern)
       else Result.UpdateNull(1);
       Result.UpdateNull(2);
-      Result.UpdateString(3, TableNamePattern);
+      Result.UpdateString(3, TempTableNamePattern);
       Result.UpdateString(4, GetString(2));
       Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetString(3),
         Precision, Decimals, ConSettings.CPType)));
