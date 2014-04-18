@@ -72,6 +72,10 @@
        {$DEFINE FPC2_6UP}
     {$IFEND}
 
+    {$IF FPC_FULLVERSION>=20602}
+       {$DEFINE HAVE_TBYTES}         // TBytes is declared only in FPC 2.6.2 instead of 2.6.0 as declared...
+    {$ENDIF}
+
     {$IFDEF LCL}
       {$DEFINE WITH_LCONVENCODING} //Only available for Lazarus
     {$ENDIF}
@@ -98,8 +102,6 @@
   {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
-  {$IFEND}
-  {$IF FPC_FULLVERSION>20700}
     {$UNDEF WITH_FPC_BOF_BUG}
     {$UNDEF WITH_FPC_MODIFIED_BUG}
     {$DEFINE WITH_RAWBYTESTRING}          // Have RawByteString CP $FFFFF

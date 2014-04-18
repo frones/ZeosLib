@@ -58,7 +58,8 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Math,
   {$IFDEF WITH_LCONVENCODING}
-  LConvEncoding,
+  {$MACRO ON}
+   LCLVersion, LConvEncoding,
   {$ENDIF}
   {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
@@ -279,6 +280,16 @@ function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {converter functions for the String-types}
+{$IFDEF WITH_LCONVENCODING}
+  {$MACRO ON}
+  {$IF declared(lcl_fullversion)}
+    {$if defined(FPC) AND (lcl_fullversion>=1000000)} //Lazarus >= 1.0.0 with delphi fix.
+      {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
+    {$ifend}
+  {$ELSE}
+    {$ERROR lcl_fullversion isn't defined!}
+  {$ifend}
+{$ENDIF}
 function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 function ZConvertRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;
@@ -435,8 +446,10 @@ begin
       Result := UTF8Decode(CP437ToUTF8(PAnsiChar(S)));
     850: //CP850
       Result := UTF8Decode(CP850ToUTF8(PAnsiChar(S)));
+    {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
     852: //CP852
       Result := UTF8Decode(CP852ToUTF8(PAnsiChar(S)));
+    {$ENDIF}
     866: //CP866
       Result := UTF8Decode(CP866ToUTF8(PAnsiChar(S)));
     874: //CP874
@@ -524,8 +537,10 @@ begin
       Result := UTF8ToCP437(UTF8Encode(US));
     850: //CP850
       Result := UTF8ToCP850(UTF8Encode(US));
+    {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
     852: //CP852
       Result := UTF8ToCP852(UTF8Encode(US));
+    {$ENDIF}
     866: //CP866
       Result := UTF8ToCP866(UTF8Encode(US));
     874: //CP874
@@ -713,11 +728,13 @@ begin
           DbcConvert := @CP850ToUTF8;
           PlainConvert := @UTF8ToCP850;
         end;
+      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
       852: //CP852
         begin
           DbcConvert := @CP852ToUTF8;
           PlainConvert := @UTF8ToCP852;
         end;
+      {$ENDIF}
       866: //CP866
         begin
           DbcConvert := @CP866ToUTF8;
@@ -1024,8 +1041,10 @@ begin
         Result := CP437ToUTF8(PAnsiChar(sUTF8));
       850: //CP850
         Result := CP850ToUTF8(PAnsiChar(sUTF8));
+      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
       852: //CP852
         Result := CP852ToUTF8(PAnsiChar(sUTF8));
+      {$ENDIF}
       866: //CP866
         Result := CP866ToUTF8(PAnsiChar(sUTF8));
       874: //CP874
@@ -1090,8 +1109,10 @@ begin
         sUTF8 := UTF8ToCP437(Src);
       850: //CP850
         sUTF8 := UTF8ToCP850(Src);
+      {$IFDEF LCONVENCODING_HAS_CP852_FUNCTIONS}
       852: //CP852
         sUTF8 := UTF8ToCP852(Src);
+      {$ENDIF}
       866: //CP866
         sUTF8 := UTF8ToCP866(Src);
       874: //CP874
