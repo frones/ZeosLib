@@ -78,6 +78,8 @@ uses
 {$ENDIF}
 {$ENDIF}
   DesignIntf,
+  SysUtils,                                     // **** Pitfiend addition, required to be able to put info in the delphi ide splash screen and about box 
+  ToolsAPI,                                     //
 {$ENDIF}
 {$ENDIF}
   Classes, ZConnection, ZAbstractConnection, ZDataset, ZSqlUpdate, ZSqlProcessor,
@@ -90,6 +92,12 @@ uses
   Registers components in a component palette.
 }
 procedure Register;
+{$IFNDEF FPC}                                   // **** Pitfiend addition start
+{$IF DECLARED(IOTAAboutBoxServices)}            //   this allow to put a nice and pro entry in the delphi ide splash screen and about box
+var                                             //
+  AboutSvcs: IOTAAboutBoxServices;              //
+{$IFEND}                                        //
+{$ENDIF}                                        // **** Pitfiend addition end
 begin
   RegisterComponents(ZEOS_DB_PALETTE, [
     TZConnection, TZReadOnlyQuery, TZQuery, TZTable, TZUpdateSQL,
@@ -98,90 +106,65 @@ begin
     {$IFDEF ENABLE_INTERBASE}, TZIBEventAlerter {$ENDIF}
     {$IFDEF ENABLE_POSTGRESQL}, TZPgEventAlerter{$ENDIF}]) ;
 
+  {$IFDEF WITH_ZSTRINGFIELDS}
+  RegisterClasses([TZWideStringField, TZStringField]);
+  {$ENDIF}
+{$IFNDEF FPC}                                   // **** Pitfiend addition start
+{$IF DECLARED(IOTAAboutBoxServices)}
+    if Assigned(SplashScreenServices) then
+       SplashScreenServices.AddPluginBitmap('ZEOSLib Open Source Database Objects', 0); // to have a nice icon, a .res file must be included, then replace 0 by loadbitmap(HInstance, 'RESOURCENAME') 
+    if (BorlandIDEServices<>nil) and supports(BorlandIDEServices, IOTAAboutBoxServices, AboutSvcs) then
+       AboutSvcs.AddPluginInfo('ZEOSLib', 'ZEOSLib'+sLineBreak+'OpenSource database components collection'+sLineBreak+sLineBreak+'Forum:http://zeoslib.sourceforge.net', 0, False, 'OpenSource'); // replace 0 by loadbitmap(HInstance, 'RESOURCENAME')
+{$IFEND}
+{$ENDIF}                                        // **** Pitfiend addition end
+
 {$IFDEF WITH_PROPERTY_EDITOR}
 
-  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'ClientCodepage',
-    TZClientCodePagePropertyEditor); {EgonHugeist}
-  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Protocol',
-    TZProtocolPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Database',
-    TZDatabasePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Catalog',
-    TZCatalogPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'LibraryLocation',
-    TZLibLocationPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'ClientCodepage', TZClientCodePagePropertyEditor); {EgonHugeist}
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Protocol', TZProtocolPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Database', TZDatabasePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'Catalog', TZCatalogPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnection, 'LibraryLocation', TZLibLocationPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Protocol',
-    TZProtocolPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Database',
-    TZConnectionGroupPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog',
-    TZGroupedConnectionCatalogPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'LibraryLocation',
-    TZConnectionGroupLibLocationPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Protocol', TZProtocolPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'Database', TZConnectionGroupPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZGroupedConnection, 'Catalog', TZGroupedConnectionCatalogPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZConnectionGroup, 'LibraryLocation', TZConnectionGroupLibLocationPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'LinkedFields',
-    TZDataFieldPropertyEditor); {renamed by bangfauzan}
-  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'MasterFields',
-    TZMasterFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SortedFields',
-    TZDataFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SequenceField',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'LinkedFields', TZDataFieldPropertyEditor); {renamed by bangfauzan}
+  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'MasterFields', TZMasterFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SortedFields', TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZQuery, 'SequenceField', TZDataFieldPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'LinkedFields',
-    TZDataFieldPropertyEditor); {renamed by bangfauzan}
-  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'MasterFields',
-    TZMasterFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'SortedFields',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'LinkedFields', TZDataFieldPropertyEditor); {renamed by bangfauzan}
+  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'MasterFields', TZMasterFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZReadOnlyQuery, 'SortedFields', TZDataFieldPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZTable, 'TableName',
-    TZTableNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZTable, 'LinkedFields',
-    TZDataFieldPropertyEditor); {renamed by bangfauzan}
-  RegisterPropertyEditor(TypeInfo(string), TZTable, 'MasterFields',
-    TZMasterFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZTable, 'SortedFields',
-    TZDataFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZTable, 'SequenceField',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZTable, 'TableName', TZTableNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZTable, 'LinkedFields', TZDataFieldPropertyEditor); {renamed by bangfauzan}
+  RegisterPropertyEditor(TypeInfo(string), TZTable, 'MasterFields', TZMasterFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZTable, 'SortedFields', TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZTable, 'SequenceField', TZDataFieldPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZStoredProc, 'StoredProcName',
-    TZProcedureNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZStoredProc, 'SortedFields',
-    TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZStoredProc, 'StoredProcName', TZProcedureNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZStoredProc, 'SortedFields', TZDataFieldPropertyEditor);
 
-  RegisterPropertyEditor(TypeInfo(string), TZSequence, 'SequenceName',
-    TZSequenceNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSequence, 'SequenceName', TZSequenceNamePropertyEditor);
 
 {$IFDEF USE_METADATA}
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'Catalog',
-    TZCatalogProperty);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ColumnName',
-    TZColumnNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignCatalog',
-    TZCatalogProperty);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignSchema',
-    TZSchemaPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignTableName',
-    TZTableNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'LinkedFields',
-    TZDataFieldPropertyEditor); {renamed by bangfauzan}
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'MasterFields',
-    TZMasterFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ProcedureName',
-    TZProcedureNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'Schema',
-    TZSchemaPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'SequenceName',
-    TZSequenceNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'SortedFields',
-    TZDataFieldPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'TableName',
-    TZTableNamePropertyEditor);
-  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'TypeName',
-    TZTypeNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'Catalog', TZCatalogProperty);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ColumnName', TZColumnNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignCatalog', TZCatalogProperty);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignSchema', TZSchemaPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ForeignTableName', TZTableNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'LinkedFields', TZDataFieldPropertyEditor); {renamed by bangfauzan}
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'MasterFields', TZMasterFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'ProcedureName', TZProcedureNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'Schema', TZSchemaPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'SequenceName', TZSequenceNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'SortedFields', TZDataFieldPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'TableName', TZTableNamePropertyEditor);
+  RegisterPropertyEditor(TypeInfo(string), TZSQLMetadata, 'TypeName', TZTypeNamePropertyEditor);
 {$ENDIF}
 {$IFDEF FPC}
   RegisterComponentEditor(TZUpdateSQL, TZUpdateSQLEditor);
