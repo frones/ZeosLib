@@ -27,7 +27,8 @@ BEGIN
   FOR rec in (select OBJECT_NAME 
                 from user_objects
                where object_type = 'TYPE'
-                 and upper(OBJECT_NAME) in ('ADDRESS_TAB', 'ADDRESS_T')) LOOP
+                 and upper(OBJECT_NAME) in ('ADDRESS_TAB', 'ADDRESS_T')
+               order by object_name desc) LOOP
     execute immediate('DROP TYPE '||rec.object_name);
   END LOOP;
 
