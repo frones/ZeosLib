@@ -471,7 +471,14 @@ begin
     ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
     ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
   end;
-  CopyZFormatSettings(ConSettings^.ReadFormatSettings, ConSettings^.WriteFormatSettings);
+  { EH:
+  http://technet.microsoft.com/en-us/library/ms180878%28v=sql.105%29.aspx
+   Using DATE and DATETIME in ISO 8601 format is multi-language supported:
+   DATE Un-separated
+   DATETIME as YYYY-MM-DDTHH:NN:SS
+  }
+  ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
+  ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);
 
   InternalSetTransactionIsolation(GetTransactionIsolation);
