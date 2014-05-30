@@ -391,7 +391,7 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
 {$ENDIF}
 
-procedure CopyZFormatSettings(Source, {%H-}Dest: TZFormatSettings);
+procedure CopyZFormatSettings(const Source: TZFormatSettings; var Dest: TZFormatSettings);
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
@@ -450,7 +450,7 @@ var
 
 implementation
 
-procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
+procedure CopyZFormatSettings(const Source: TZFormatSettings; var Dest: TZFormatSettings);
 begin
   Dest.DateFormat := Source.DateFormat;
   Dest.DateFormatLen := Source.DateFormatLen;

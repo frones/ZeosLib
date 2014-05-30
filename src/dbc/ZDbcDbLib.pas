@@ -438,14 +438,8 @@ begin
   InternalLogin;
 
   LogMessage := 'USE '+ ConSettings^.Database;
-  if FProvider = dpMsSQL then
-  begin
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ConSettings^.Database)) <> DBSUCCEED then
-      CheckDBLibError(lcConnect, LogMessage);
-  end
-  else
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ConSettings^.Database)) <> DBSUCCEED then
-      CheckDBLibError(lcConnect, LogMessage);
+  if GetPlainDriver.dbUse(FHandle, Pointer(ConSettings^.Database)) <> DBSUCCEED then
+    CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   LogMessage := 'set textlimit=2147483647';
@@ -652,8 +646,6 @@ begin
   else
     ConSettings^.ReadFormatSettings.DateFormat := 'YYYY/MM/DD';
   ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' HH:NN:SS:ZZZ';
-  ConSettings^.ReadFormatSettings.PDateFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateFormat);
-  ConSettings^.ReadFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateTimeFormat);
 end;
 
 function TZDBLibConnection.DetermineMSServerCollation: String;
