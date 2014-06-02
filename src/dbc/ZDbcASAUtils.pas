@@ -1589,7 +1589,27 @@ end;
 }
 function TZASASQLDA.GetTime(const Index: Integer): TDateTime;
 begin
-  Result := Frac( GetTimestamp( Index));
+  //Result := Frac( GetTimestamp( Index)); //Frac makes some rounding issues
+  CheckRange( Index);
+  with FSQLDA.sqlvar[Index] do
+  begin
+    Result := 0;
+    if (sqlind^ < 0) then
+       Exit;
+
+    case sqlType and $FFFE of
+      DT_TIMESTAMP_STRUCT:
+        begin
+          Result :=  EncodeTime( PZASASQLDateTime( sqlData).Hour,
+                                PZASASQLDateTime( sqlData).Minute,
+                                PZASASQLDateTime( sqlData).Second,
+                                PZASASQLDateTime( sqlData).MicroSecond div 1000);
+        end;
+    else
+      CreateException( Format( SErrorConvertionField,
+        [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
+    end;
+  end;
 end;
 
 {**
@@ -1774,6 +1794,8 @@ begin
         GetMem( Buffer, Length)
       else
         GetMem( Buffer, Length +1);
+      if Length = 0 then
+        Exit;
       ReadBlob( Index, Buffer, Length);
     end
     else
@@ -1799,7 +1821,7 @@ begin
     if sqlType and $FFFE = DT_LONGVARCHAR then
     begin
       SetLength( Str, PZASABlobStruct( sqlData).untrunc_len);
-      ReadBlob(Index, PAnsiChar(Str), Length(Str));
+      ReadBlob(Index, Pointer(Str), Length(Str));
     end
     else
       CreateException( Format( SErrorConvertionField,
