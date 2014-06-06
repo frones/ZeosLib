@@ -212,9 +212,20 @@ function BufferToBytes(Buffer: Pointer; Length: LongInt): TBytes;
 {**
   Converts a string into boolean value.
   @param Str a RawByteString value.
+  @param CheckInt Check for "0" char too?
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
 function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean; overload;
+
+{**
+  Converts a string into boolean value.
+  @param Str a PAnsiChar value.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+}
+function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
+  const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
 {**
   Converts a string into boolean value.
@@ -222,6 +233,16 @@ function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolea
   @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
 }
 function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean; overload;
+
+{**
+  Converts a string into boolean value.
+  @param Str a PWideChar value.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+}
+function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
+  const IgnoreTrailingSaces: Boolean = True): Boolean; overload;
 
 {**
   Converts a boolean into string value.
@@ -1111,12 +1132,82 @@ end;
 }
 function StrToBoolEx(Str: RawByteString; const CheckInt: Boolean = True): Boolean;
 begin
-  Str := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(Str);
-  if CheckInt then
-    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
-      or (RawToIntDef(Str, 0) <> 0)
-  else
-    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE');
+  Result := StrToBoolEx(PAnsiChar(Pointer(Str)), CheckInt, False);
+end;
+
+{**
+  Converts a string into boolean value.
+  @param Str a PAnsiChar value.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+}
+function StrToBoolEx(Str: PAnsiChar; const CheckInt: Boolean = True;
+  const IgnoreTrailingSaces: Boolean = True): Boolean;
+label SkipSpaces;
+begin
+  Result := False;
+  if Str <> nil then
+    case Str^ of
+      'T', 't': //Check mixed case of 'true' or 't' string
+        begin
+          Inc(Str);
+          case Str^ of
+            #0: Result := True;
+            'R', 'r':
+              begin
+                Inc(Str);
+                case Str^ of
+                  'U', 'u':
+                    begin
+                      Inc(Str);
+                      case Str^ of
+                        'E', 'e':
+                          begin
+                            inc(Str);
+                            case Str^ of
+                              #0: Result := True;
+                              ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+                            end;
+                          end;
+                      end;
+                    end;
+                end;
+              end;
+            ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+          end;
+        end;
+      'Y', 'y': //Check mixed case of 'Yes' or 'y' string
+        begin
+          Inc(Str);
+          case Str^ of
+            #0: Result := True;
+            'E', 'e':
+              begin
+                Inc(Str);
+                case Str^ of
+                  'S', 's':
+                    begin
+                      Inc(Str);
+                      case Str^ of
+                        #0: Result := True;
+                        ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+                      end;
+                    end;
+                end;
+              end;
+            ' ':
+              if IgnoreTrailingSaces then
+              begin
+                SkipSpaces:
+                while Str^ = ' ' do Inc(Str);
+                Result := Str^ = #0;
+              end;
+          end;
+        end;
+      else
+        Result := CheckInt and (RawToIntDef(Str, 0) <> 0);
+    end;
 end;
 
 {**
@@ -1126,12 +1217,82 @@ end;
 }
 function StrToBoolEx(Str: ZWideString; const CheckInt: Boolean = True): Boolean;
 begin
-  Str := {$IFDEF UNICODE}UpperCase{$ELSE}WideUpperCase{$ENDIF}(Str);
-  if CheckInt then
-    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE')
-      or (UnicodeToIntDef(Str, 0) <> 0)
-  else
-    Result := (Str = 'Y') or (Str = 'YES') or (Str = 'T') or (Str = 'TRUE');
+  Result := StrToBoolEx(PWideChar(Pointer(Str)), CheckInt, False);
+end;
+
+{**
+  Converts a string into boolean value.
+  @param Str a PWideChar value.
+  @param CheckInt Check for "0" char too?
+  @param IgnoreTrailingSaces Ignore trailing spaces for fixed char fields f.e.
+  @return <code>True</code> is Str = 'Y'/'YES'/'T'/'TRUE'/<>0
+}
+function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
+  const IgnoreTrailingSaces: Boolean = True): Boolean;
+label SkipSpaces;
+begin
+  Result := False;
+  if Str <> nil then
+    case Str^ of
+      'T', 't': //Check mixed case of 'true' or 't' string
+        begin
+          Inc(Str);
+          case Str^ of
+            #0: Result := True;
+            'R', 'r':
+              begin
+                Inc(Str);
+                case Str^ of
+                  'U', 'u':
+                    begin
+                      Inc(Str);
+                      case Str^ of
+                        'E', 'e':
+                          begin
+                            inc(Str);
+                            case Str^ of
+                              #0: Result := True;
+                              ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+                            end;
+                          end;
+                      end;
+                    end;
+                end;
+              end;
+            ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+          end;
+        end;
+      'Y', 'y': //Check mixed case of 'Yes' or 'y' string
+        begin
+          Inc(Str);
+          case Str^ of
+            #0: Result := True;
+            'E', 'e':
+              begin
+                Inc(Str);
+                case Str^ of
+                  'S', 's':
+                    begin
+                      Inc(Str);
+                      case Str^ of
+                        #0: Result := True;
+                        ' ': if IgnoreTrailingSaces then goto SkipSpaces;
+                      end;
+                    end;
+                end;
+              end;
+            ' ':
+              if IgnoreTrailingSaces then
+              begin
+                SkipSpaces:
+                while Str^ = ' ' do Inc(Str);
+                Result := Str^ = #0;
+              end;
+          end;
+        end;
+      else
+        Result := CheckInt and (UnicodeToIntDef(Str, 0) <> 0);
+    end;
 end;
 
 {**
@@ -2298,7 +2459,7 @@ begin
       Value[Len+2] := WideChar(#39);
       System.Move(Suffix[1], Value[Len+3], Slen*2);
     end;
-    P := PWideChar(Value)+1;
+    P := Pointer(NativeUInt(Value)+2);
   end
   else
   begin
@@ -2310,7 +2471,7 @@ begin
       SetLength(Value, Len+Slen);
       System.Move(Suffix[1], Value[Len+1], Slen*2);
     end;
-    P := PWideChar(Value);
+    P := Pointer(Value);
   end;
 end;
 {$ENDIF}
@@ -2335,7 +2496,7 @@ begin
       Value[Len+2] := AnsiChar(#39);
       System.Move(Suffix[1], Value[Len+3], Slen);
     end;
-    P := PAnsiChar(Value)+1;
+    P := Pointer(NativeUInt(Value)+1);
   end
   else
   begin
@@ -2347,7 +2508,7 @@ begin
       SetLength(Value, Len+Slen);
       System.Move(Suffix[1], Value[Len+1], Slen);
     end;
-    P := PAnsiChar(Value);
+    P := Pointer(Value); //No RTL conversion
   end;
 end;
 {**
@@ -2376,7 +2537,7 @@ begin
     case (DateFormat+i)^ of
       'Y', 'y':
         begin
-          if YearSet then  //Year has eiter two or four digits
+          if YearSet then  //Year has either two or four digits
             (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AYear div 100]
           else
           begin
@@ -2435,7 +2596,7 @@ begin
     case (DateFormat+i)^ of
       'Y', 'y':
         begin
-          if YearSet then //Year has eiter two or four digits
+          if YearSet then //Year has either two or four digits
             (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
           else
           begin
@@ -2620,7 +2781,7 @@ begin
     case (TimeStampFormat+i)^ of
       'Y', 'y':
         begin
-          if YearSet then  //Year has eiter two or four digits
+          if YearSet then  //Year has either two or four digits
             (PWord(@PByteArray(PA)[i-1]))^ := TwoDigitLookupW[AYear div 100]
           else
           begin
@@ -2708,7 +2869,7 @@ begin
     case (TimeStampFormat+i)^ of
       'Y', 'y':
         begin
-          if YearSet then  //Year has eiter two or four digits
+          if YearSet then  //Year has either two or four digits
             (PLongWord(@PWordArray(PW)[i-1]))^ := TwoDigitLookupLW[AYear div 100]
           else
           begin
@@ -2762,7 +2923,7 @@ begin
     end;
 end;
 {$ENDIF FPC}
-{$WARNINGS ON} //suppress D2007 Waring for undefined result
+{$WARNINGS ON} //suppress D2007 Warning for undefined result
 
 
 {**
@@ -3029,8 +3190,8 @@ begin
   if Result = '' then
     System.SetString(Result,nil, l)
   else
-    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
+    if not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeUInt(Result) - 4)^)) then { length }
       System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
@@ -3048,8 +3209,8 @@ begin
   if Result = '' then
     System.SetString(Result,nil, Len)
   else
-    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (Len = PLongInt(NativeInt(Result) - 4)^)) then { length }
+    if not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
+       (Len = PLongInt(NativeUInt(Result) - 4)^)) then { length }
       System.SetString(Result,nil, Len);
   for i := 0 to Len-1 do
     PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
@@ -3068,8 +3229,8 @@ begin
   if Result = '' then
     System.SetString(Result,nil, l)
   else
-    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
+    if not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeUInt(Result) - 4)^)) then { length }
       System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars

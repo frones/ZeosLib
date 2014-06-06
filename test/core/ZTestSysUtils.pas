@@ -297,18 +297,31 @@ end;
 }
 procedure TZTestSysUtilsCase.TestStrToBoolEx;
 begin
-  CheckEquals(True, StrToBoolEx('YES'));
-  CheckEquals(True, StrToBoolEx('Yes'));
-  CheckEquals(True, StrToBoolEx('Y'));
-  CheckEquals(True, StrToBoolEx('TRUE'));
-  CheckEquals(True, StrToBoolEx('True'));
-  CheckEquals(True, StrToBoolEx('T'));
-  CheckEquals(False, StrToBoolEx('FALSE'));
-  CheckEquals(False, StrToBoolEx('False'));
-  CheckEquals(False, StrToBoolEx('F'));
-  CheckEquals(False, StrToBoolEx('NO'));
-  CheckEquals(False, StrToBoolEx('No'));
-  CheckEquals(False, StrToBoolEx('N'));
+  Check(StrToBoolEx(RawByteString('YES')));
+  Check(StrToBoolEx(RawByteString('Yes')));
+  Check(StrToBoolEx(RawByteString('Y')));
+  Check(StrToBoolEx(RawByteString('TRUE')));
+  Check(StrToBoolEx(RawByteString('True')));
+  Check(StrToBoolEx(RawByteString('T')));
+  CheckEquals(False, StrToBoolEx(RawByteString('FALSE')));
+  CheckEquals(False, StrToBoolEx(RawByteString('False')));
+  CheckEquals(False, StrToBoolEx(RawByteString('F')));
+  CheckEquals(False, StrToBoolEx(RawByteString('NO')));
+  CheckEquals(False, StrToBoolEx(RawByteString('No')));
+  CheckEquals(False, StrToBoolEx(RawByteString('N')));
+
+  Check(StrToBoolEx(ZWideString('YES')));
+  Check(StrToBoolEx(ZWideString('Yes')));
+  Check(StrToBoolEx(ZWideString('Y')));
+  Check(StrToBoolEx(ZWideString('TRUE')));
+  Check(StrToBoolEx(ZWideString('True')));
+  Check(StrToBoolEx(ZWideString('T')));
+  CheckEquals(False, StrToBoolEx(ZWideString('FALSE')));
+  CheckEquals(False, StrToBoolEx(ZWideString('False')));
+  CheckEquals(False, StrToBoolEx(ZWideString('F')));
+  CheckEquals(False, StrToBoolEx(ZWideString('NO')));
+  CheckEquals(False, StrToBoolEx(ZWideString('No')));
+  CheckEquals(False, StrToBoolEx(ZWideString('N')));
 end;
 
 {**
