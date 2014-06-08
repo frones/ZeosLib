@@ -133,6 +133,26 @@ implementation
 
 uses ZTestConsts;
 
+const
+  stBooleanIndex        = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  stByteIndex           = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  stShortIndex          = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  stSmallIndex          = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  stIntegerIndex        = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  stLongIndex           = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  stFloatIndex          = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  stDoubleIndex         = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  stBigDecimalIndex     = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  stStringIndex         = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  stBytesIndex          = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  stDateIndex           = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  stTimeIndex           = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  stTimestampIndex      = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  stAsciiStreamIndex    = {$IFDEF GENERIC_INDEX}14{$ELSE}15{$ENDIF};
+  stUnicodeStreamIndex  = {$IFDEF GENERIC_INDEX}15{$ELSE}16{$ENDIF};
+  stBinaryStreamIndex   = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
+
+
 { TZTestRowAccessorCase }
 
 {**
@@ -193,23 +213,23 @@ begin
   Result := TObjectList.Create;
   with Result do
   begin
-    Add(GetColumnsInfo(1, stBoolean, ntNullable, False, True));
-    Add(GetColumnsInfo(2, stByte, ntNullable, False, True));
-    Add(GetColumnsInfo(3, stShort, ntNullable, False, True));
-    Add(GetColumnsInfo(4, stSmall, ntNullable, False, True));
-    Add(GetColumnsInfo(5, stInteger, ntNullable, False, True));
-    Add(GetColumnsInfo(6, stLong, ntNullable, False, True));
-    Add(GetColumnsInfo(7, stFloat, ntNullable, False, True));
-    Add(GetColumnsInfo(8, stDouble, ntNullable, False, True));
-    Add(GetColumnsInfo(9, stBigDecimal, ntNullable, False, True));
-    Add(GetColumnsInfo(10, stString, ntNullable, False, True));
-    Add(GetColumnsInfo(11, stBytes, ntNullable, False, True));
-    Add(GetColumnsInfo(12, stDate, ntNullable, False, True));
-    Add(GetColumnsInfo(13, stTime, ntNullable, False, True));
-    Add(GetColumnsInfo(14, stTimestamp, ntNullable, False, True));
-    Add(GetColumnsInfo(15, stAsciiStream, ntNullable, False, True));
-    Add(GetColumnsInfo(16, stUnicodeStream, ntNullable, False, True));
-    Add(GetColumnsInfo(17, stBinaryStream, ntNullable, False, True));
+    Add(GetColumnsInfo(stBooleanIndex, stBoolean, ntNullable, False, True));
+    Add(GetColumnsInfo(stByteIndex, stByte, ntNullable, False, True));
+    Add(GetColumnsInfo(stShortIndex, stShort, ntNullable, False, True));
+    Add(GetColumnsInfo(stSmallIndex, stSmall, ntNullable, False, True));
+    Add(GetColumnsInfo(stIntegerIndex, stInteger, ntNullable, False, True));
+    Add(GetColumnsInfo(stLongIndex, stLong, ntNullable, False, True));
+    Add(GetColumnsInfo(stFloatIndex, stFloat, ntNullable, False, True));
+    Add(GetColumnsInfo(stDoubleIndex, stDouble, ntNullable, False, True));
+    Add(GetColumnsInfo(stBigDecimalIndex, stBigDecimal, ntNullable, False, True));
+    Add(GetColumnsInfo(stStringIndex, stString, ntNullable, False, True));
+    Add(GetColumnsInfo(stBytesIndex, stBytes, ntNullable, False, True));
+    Add(GetColumnsInfo(stDateIndex, stDate, ntNullable, False, True));
+    Add(GetColumnsInfo(stTimeIndex, stTime, ntNullable, False, True));
+    Add(GetColumnsInfo(stTimestampIndex, stTimestamp, ntNullable, False, True));
+    Add(GetColumnsInfo(stAsciiStreamIndex, stAsciiStream, ntNullable, False, True));
+    Add(GetColumnsInfo(stUnicodeStreamIndex, stUnicodeStream, ntNullable, False, True));
+    Add(GetColumnsInfo(stBinaryStreamIndex, stBinaryStream, ntNullable, False, True));
   end;
 end;
 
@@ -304,17 +324,17 @@ var
 begin
   with RowAccessor do
   begin
-   Blob := GetBlob(15, WasNull{%H-});
+   Blob := GetBlob(stAsciiStreamIndex, WasNull{%H-});
    CheckNotNull(Blob, 'Not Null blob from asciistream field');
    Check(not Blob.IsEmpty, 'Blob from asciistream empty');
    Blob := nil;
 
-   Blob := GetBlob(16, WasNull);
+   Blob := GetBlob(stUnicodeStreamIndex, WasNull);
    CheckNotNull(Blob, 'Not Null blob from unicodestream field');
    Check(not Blob.IsEmpty, 'Blob from unicodestream empty');
    Blob := nil;
 
-   Blob := GetBlob(17, WasNull);
+   Blob := GetBlob(stAsciiStreamIndex, WasNull);
    CheckNotNull(Blob, 'Not Null blob from binarystream field');
    Check(not Blob.IsEmpty, 'Blob from binarystream empty');
    Blob := nil;
@@ -328,128 +348,128 @@ procedure TZTestRowAccessorCase.TestRowAccesorNull;
 begin
   with RowAccessor do
   begin
-   Check(not IsNull(1), 'Not Null boolen column');
-   Check(not IsNull(2), 'Not Null byte column');
-   Check(not IsNull(3), 'Not Null short column');
-   Check(not IsNull(4), 'Not Null small column');
-   Check(not IsNull(5), 'Not Null integer column');
-   Check(not IsNull(6), 'Not Null longint column');
-   Check(not IsNull(7), 'Not Null float column');
-   Check(not IsNull(8), 'Not Null double column');
-   Check(not IsNull(9), 'Not Null bigdecimal column');
-   Check(not IsNull(10), 'Not Null srting column');
-   Check(not IsNull(11), 'Not Null bytearray column');
-   Check(not IsNull(12), 'Not Null date column');
-   Check(not IsNull(13), 'Not Null time column');
-   Check(not IsNull(14), 'Not Null timestamp column');
-   Check(not IsNull(15), 'Not Null aciistream column');
-   Check(not IsNull(16), 'Not Null unicodestream column');
-   Check(not IsNull(17), 'Not Null binarystream column');
+   Check(not IsNull(stBooleanIndex), 'Not Null boolen column');
+   Check(not IsNull(stByteIndex), 'Not Null byte column');
+   Check(not IsNull(stShortIndex), 'Not Null short column');
+   Check(not IsNull(stSmallIndex), 'Not Null small column');
+   Check(not IsNull(stIntegerIndex), 'Not Null integer column');
+   Check(not IsNull(stLongIndex), 'Not Null longint column');
+   Check(not IsNull(stFloatIndex), 'Not Null float column');
+   Check(not IsNull(stDoubleIndex), 'Not Null double column');
+   Check(not IsNull(stBigDecimalIndex), 'Not Null bigdecimal column');
+   Check(not IsNull(stStringIndex), 'Not Null srting column');
+   Check(not IsNull(stBytesIndex), 'Not Null bytearray column');
+   Check(not IsNull(stDateIndex), 'Not Null date column');
+   Check(not IsNull(stTimeIndex), 'Not Null time column');
+   Check(not IsNull(stTimestampIndex), 'Not Null timestamp column');
+   Check(not IsNull(stAsciiStreamIndex), 'Not Null aciistream column');
+   Check(not IsNull(stUnicodeStreamIndex), 'Not Null unicodestream column');
+   Check(not IsNull(stAsciiStreamIndex), 'Not Null binarystream column');
 
    try
-     SetNull(1);
+     SetNull(stBooleanIndex);
    except
      Fail('Incorrect boolean method behavior');
    end;
-   Check(IsNull(1), 'Null boolean column');
+   Check(IsNull(stBooleanIndex), 'Null boolean column');
    try
-     SetNull(2);
+     SetNull(stByteIndex);
    except
      Fail('Incorrect byte method behavior');
    end;
-   Check(IsNull(2), 'Null byte column');
+   Check(IsNull(stByteIndex), 'Null byte column');
    try
-     SetNull(3);
+     SetNull(stShortIndex);
    except
      Fail('Incorrect short method behavior');
    end;
-   Check(IsNull(3), 'Null short column');
+   Check(IsNull(stShortIndex), 'Null short column');
    try
-     SetNull(4);
+     SetNull(stSmallIndex);
    except
      Fail('Incorrect small method behavior');
    end;
-   Check(IsNull(4), 'Null small column');
+   Check(IsNull(stSmallIndex), 'Null small column');
    try
-     SetNull(5);
+     SetNull(stIntegerIndex);
    except
      Fail('Incorrect integer method behavior');
    end;
-   Check(IsNull(5), 'Null integer column');
+   Check(IsNull(stIntegerIndex), 'Null integer column');
    try
-     SetNull(6);
+     SetNull(stLongIndex);
    except
      Fail('Incorrect longint method behavior');
    end;
-   Check(IsNull(6), 'Null longint column');
+   Check(IsNull(stLongIndex), 'Null longint column');
    try
-     SetNull(7);
+     SetNull(stFloatIndex);
    except
      Fail('Incorrect float method behavior');
    end;
-   Check(IsNull(7), 'Null float column');
+   Check(IsNull(stFloatIndex), 'Null float column');
    try
-     SetNull(8);
+     SetNull(stDoubleIndex);
    except
      Fail('Incorrect double method behavior');
    end;
-   Check(IsNull(8), 'Null double column');
+   Check(IsNull(stDoubleIndex), 'Null double column');
    try
-     SetNull(10);
+     SetNull(stStringIndex);
    except
      Fail('Incorrect bigdecimal method behavior');
    end;
-   Check(IsNull(10), 'Null bigdecimal column');
+   Check(IsNull(stStringIndex), 'Null bigdecimal column');
    try
-     SetNull(11);
+     SetNull(stBytesIndex);
    except
      Fail('Incorrect string method behavior');
    end;
-   Check(IsNull(11), 'Null string column');
+   Check(IsNull(stBytesIndex), 'Null string column');
    try
-     SetNull(12);
+     SetNull(stDateIndex);
    except
    Fail('Incorrect bytearray method behavior');
    end;
-   Check(IsNull(12), 'Null bytearray column');
+   Check(IsNull(stDateIndex), 'Null bytearray column');
    try
-     SetNull(13);
+     SetNull(stTimeIndex);
    except
      Fail('Incorrect date method behavior');
    end;
-   Check(IsNull(13), 'Null date column');
+   Check(IsNull(stTimeIndex), 'Null date column');
    try
-     SetNull(14);
+     SetNull(stTimestampIndex);
    except
    Fail('Incorrect time method behavior');
    end;
-   Check(IsNull(14), 'Null time column');
+   Check(IsNull(stTimestampIndex), 'Null time column');
    try
-     SetNull(15);
+     SetNull(stAsciiStreamIndex);
    except
      Fail('Incorrect timestamp method behavior');
    end;
-   Check(IsNull(15), 'Null timestamp column');
+   Check(IsNull(stAsciiStreamIndex), 'Null timestamp column');
    try
-     SetNull(16);
+     SetNull(stUnicodeStreamIndex);
    except
      Fail('Incorrect asciisreeam method behavior');
    end;
-   Check(IsNull(16), 'Null asciisreeam column');
+   Check(IsNull(stUnicodeStreamIndex), 'Null asciisreeam column');
    try
-     SetNull(17);
+     SetNull(stAsciiStreamIndex);
    except
      Fail('Incorrect unicodestream method behavior');
    end;
-   Check(IsNull(17), 'Null unicodestream column');
+   Check(IsNull(stAsciiStreamIndex), 'Null unicodestream column');
    try
-   SetNull(17);
+   SetNull(stAsciiStreamIndex);
    except
      Fail('Incorrect bytestream method behavior');
    end;
-   Check(IsNull(17), 'Null bytestream column');
+   Check(IsNull(stAsciiStreamIndex), 'Null bytestream column');
    try
-     SetBinaryStream(17, FBinaryStream);
+     SetBinaryStream(stAsciiStreamIndex, FBinaryStream);
    except
      Fail('Incorrect SetBinaryStream method behavior');
    end;
@@ -499,7 +519,7 @@ begin
       Fail('Incorrect CopyTo method behavior');
     end;
     Check(Assigned(RowBuffer1),'CopyTo. The RowBuffer1 assigned )');
-    CheckEquals(10, RowBuffer1^.Index, 'CopyTo. The RowBuffer1 Index');
+    CheckEquals(stStringIndex, RowBuffer1^.Index, 'CopyTo. The RowBuffer1 Index');
     CheckEquals(ord(utInserted), ord(RowBuffer1^.UpdateType),
         'CopyTo. The RowBuffer1 UpdateType');
     CheckEquals(1, RowBuffer1^.BookmarkFlag,
@@ -512,7 +532,7 @@ begin
        Fail('Incorrect CopyTo method behavior');
     end;
     Check(Assigned(RowBuffer1),'Clear. The RowBuffer1 assigned )');
-    CheckNotEquals(10, RowBuffer1^.Index, 'Clear. The RowBuffer1 Index');
+    CheckNotEquals(stStringIndex, RowBuffer1^.Index, 'Clear. The RowBuffer1 Index');
     CheckNotEquals(ord(utInserted), ord(RowBuffer1^.UpdateType),
         'Clear. The RowBuffer1 UpdateType');
     CheckNotEquals(1, RowBuffer1^.BookmarkFlag,
@@ -526,13 +546,13 @@ begin
     end;
     Check(Assigned(RowBuffer1), 'MoveTo. The RowBuffer1 assigned');
     Check(Assigned(RowBuffer1),'MoveTo. The RowBuffer1 assigned )');
-    CheckEquals(10, RowBuffer1^.Index, 'MoveTo. The RowBuffer1 Index');
+    CheckEquals(stStringIndex, RowBuffer1^.Index, 'MoveTo. The RowBuffer1 Index');
     CheckEquals(ord(utInserted), ord(RowBuffer1^.UpdateType),
         'MoveTo. The RowBuffer1 UpdateType');
     CheckEquals(1, RowBuffer1^.BookmarkFlag,
         'MoveTo. The RowBuffer1 BookmarkFlag');
 
-    CheckNotEquals(10, RowBuffer^.Index, 'MoveTo. The RowBuffer Index');
+    CheckNotEquals(stStringIndex, RowBuffer^.Index, 'MoveTo. The RowBuffer Index');
     CheckNotEquals(ord(utInserted), ord(RowBuffer^.UpdateType),
         'MoveTo. The RowBuffer UpdateType');
     CheckNotEquals(1, RowBuffer^.BookmarkFlag,
@@ -557,7 +577,7 @@ begin
       Fail('Incorrect Clear method behavior');
     end;
     Check(Assigned(RowAccessor.RowBuffer), 'Clear. The RowBuffer assigned');
-    CheckNotEquals(10, RowBuffer^.Index, 'Clear. The RowBuffer Index');
+    CheckNotEquals(stStringIndex, RowBuffer^.Index, 'Clear. The RowBuffer Index');
     CheckNotEquals(ord(utInserted), ord(RowBuffer^.UpdateType),
         'Clear. The RowBuffer UpdateType');
     CheckNotEquals(1, RowBuffer^.BookmarkFlag,
@@ -586,7 +606,7 @@ begin
   with RowAccessor do
   begin
     try
-      Stream := GetAsciiStream(15, WasNull{%H-});
+      Stream := GetAsciiStream(stAsciiStreamIndex, WasNull{%H-});
       CheckNotNull(Stream, 'AsciiStream');
       Check(CompareStreams(Stream, FAsciiStream), 'AsciiStream');
       Stream.Position := 0;
@@ -608,18 +628,18 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(9, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Byte(FBigDecimal), GetByte(9, WasNull), 0, 'GetByte');
-    CheckEquals(ShortInt(FBigDecimal), GetShort(9, WasNull), 0, 'GetShort');
-    CheckEquals(SmallInt(FBigDecimal), GetSmall(9, WasNull), 0, 'GetSmall');
-    CheckEquals(Integer(FBigDecimal), GetInt(9, WasNull), 0, 'GetInt');
+    CheckEquals(True, GetBoolean(stBigDecimalIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Byte(FBigDecimal), GetByte(stBigDecimalIndex, WasNull), 0, 'GetByte');
+    CheckEquals(ShortInt(FBigDecimal), GetShort(stBigDecimalIndex, WasNull), 0, 'GetShort');
+    CheckEquals(SmallInt(FBigDecimal), GetSmall(stBigDecimalIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(Integer(FBigDecimal), GetInt(stBigDecimalIndex, WasNull), 0, 'GetInt');
 {$IFNDEF VER130BELOW}
-    CheckEquals(Int64(FBigDecimal), GetLong(9, WasNull), 0, 'GetLong');
+    CheckEquals(Int64(FBigDecimal), GetLong(stBigDecimalIndex, WasNull), 0, 'GetLong');
 {$ENDIF}
-//    CheckEquals(FBigDecimal, GetFloat(8, WasNull), 0.001, 'GetFloat');
-//    CheckEquals(FBigDecimal, GetDouble(8, WasNull), 0.001, 'GetDouble');
-    CheckEquals(FBigDecimal, GetBigDecimal(9, WasNull), 0.001, 'GetBigDecimal');
-    CheckEquals(FloatToSQLStr(FBigDecimal), GetString(9, WasNull), 'GetString');
+//    CheckEquals(FBigDecimal, GetFloat(stDoubleIndex, WasNull), 0.001, 'GetFloat');
+//    CheckEquals(FBigDecimal, GetDouble(stDoubleIndex, WasNull), 0.001, 'GetDouble');
+    CheckEquals(FBigDecimal, GetBigDecimal(stBigDecimalIndex, WasNull), 0.001, 'GetBigDecimal');
+    CheckEquals(FloatToSQLStr(FBigDecimal), GetString(stBigDecimalIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -636,7 +656,7 @@ begin
   with RowAccessor do
   begin
     try
-      Stream := GetBinaryStream(17, WasNull{%H-});
+      Stream := GetBinaryStream(stBinaryStreamIndex, WasNull{%H-});
       CheckNotNull(Stream, 'BinaryStream');
       Check(CompareStreams(Stream, FBinaryStream), 'BinaryStream');
       Stream.Position := 0;
@@ -659,16 +679,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(1, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(1, GetByte(1, WasNull), 0, 'GetByte');
-    CheckEquals(1, GetShort(1, WasNull), 0, 'GetShort');
-    CheckEquals(1, GetSmall(1, WasNull), 0, 'GetSmall');
-    CheckEquals(1, GetInt(1, WasNull), 0, 'GetInt');
-    CheckEquals(1, GetLong(1, WasNull), 0, 'GetLong');
-    CheckEquals(1, GetFloat(1, WasNull), 0, 'GetFloat');
-    CheckEquals(1, GetDouble(1, WasNull), 0, 'GetDouble');
-    CheckEquals(1, GetBigDecimal(1, WasNull), 0, 'GetBigDecimal');
-    CheckEquals('True', GetString(1, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stBooleanIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(1, GetByte(stBooleanIndex, WasNull), 0, 'GetByte');
+    CheckEquals(1, GetShort(stBooleanIndex, WasNull), 0, 'GetShort');
+    CheckEquals(1, GetSmall(stBooleanIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(1, GetInt(stBooleanIndex, WasNull), 0, 'GetInt');
+    CheckEquals(1, GetLong(stBooleanIndex, WasNull), 0, 'GetLong');
+    CheckEquals(1, GetFloat(stBooleanIndex, WasNull), 0, 'GetFloat');
+    CheckEquals(1, GetDouble(stBooleanIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(1, GetBigDecimal(stBooleanIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals('True', GetString(stBooleanIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -681,16 +701,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(2, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(FByte, GetByte(2, WasNull), 0, 'GetByte');
-    CheckEquals(ShortInt(FByte), GetShort(2, WasNull), 0, 'GetShort');
-    CheckEquals(SmallInt(FByte), GetSmall(2, WasNull), 0, 'GetSmall');
-    CheckEquals(FByte, GetInt(2, WasNull), 0, 'GetInt');
-    CheckEquals(FByte, GetLong(2, WasNull), 0, 'GetLong');
-    CheckEquals(FByte, GetFloat(2, WasNull), 0, 'GetFloat');
-    CheckEquals(FByte, GetDouble(2, WasNull), 0, 'GetDouble');
-    CheckEquals(FByte, GetBigDecimal(2, WasNull), 0, 'GetBigDecimal');
-    CheckEquals(IntToStr(FByte), GetString(2, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stByteIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(FByte, GetByte(stByteIndex, WasNull), 0, 'GetByte');
+    CheckEquals(ShortInt(FByte), GetShort(stByteIndex, WasNull), 0, 'GetShort');
+    CheckEquals(SmallInt(FByte), GetSmall(stByteIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(FByte, GetInt(stByteIndex, WasNull), 0, 'GetInt');
+    CheckEquals(FByte, GetLong(stByteIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FByte, GetFloat(stByteIndex, WasNull), 0, 'GetFloat');
+    CheckEquals(FByte, GetDouble(stByteIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(FByte, GetBigDecimal(stByteIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals(IntToStr(FByte), GetString(stByteIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -714,9 +734,9 @@ var
 begin
   with RowAccessor do
   begin
-    ByteArray := GetBytes(11, WasNull{%H-});
+    ByteArray := GetBytes(stBytesIndex, WasNull{%H-});
     CheckNotEquals(0, High(ByteArray));
-    CheckEquals(ArrayToString(FByteArray), GetString(11, WasNull),
+    CheckEquals(ArrayToString(FByteArray), GetString(stBytesIndex, WasNull),
       'strings from bytearray equals');
 
     if High(ByteArray) <> High(FByteArray) then
@@ -736,9 +756,9 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(FDate, AnsiSqlDateToDateTime(GetString(12, WasNull{%H-})), 0);
-    CheckEquals(FDate, GetDate(12, WasNull), 0);
-    CheckEquals(FDate, GetTimestamp(12, WasNull), 0);
+    CheckEquals(FDate, AnsiSqlDateToDateTime(GetString(stDateIndex, WasNull{%H-})), 0);
+    CheckEquals(FDate, GetDate(stDateIndex, WasNull), 0);
+    CheckEquals(FDate, GetTimestamp(stDateIndex, WasNull), 0);
   end;
 end;
 
@@ -751,16 +771,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(8, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Byte(Trunc(FDouble)), GetByte(8, WasNull), 0, 'GetByte');
-    CheckEquals(Trunc(FDouble), GetShort(8, WasNull), 0, 'GetShort');
-    CheckEquals(Trunc(FDouble), GetSmall(8, WasNull), 0, 'GetSmall');
-    CheckEquals(Trunc(FDouble), GetInt(8, WasNull), 0, 'GetInt');
-    CheckEquals(Trunc(FDouble), GetLong(8, WasNull), 0, 'GetLong');
-    CheckEquals(FDouble, GetFloat(8, WasNull), 0.001, 'GetFloat');
-    CheckEquals(FDouble, GetDouble(8, WasNull), 0.001, 'GetDouble');
-    CheckEquals(FDouble, GetBigDecimal(8, WasNull), 0.001, 'GetBigDecimal');
-    CheckEquals(FloatToSQLStr(FDouble), GetString(8, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stDoubleIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Byte(Trunc(FDouble)), GetByte(stDoubleIndex, WasNull), 0, 'GetByte');
+    CheckEquals(Trunc(FDouble), GetShort(stDoubleIndex, WasNull), 0, 'GetShort');
+    CheckEquals(Trunc(FDouble), GetSmall(stDoubleIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(Trunc(FDouble), GetInt(stDoubleIndex, WasNull), 0, 'GetInt');
+    CheckEquals(Trunc(FDouble), GetLong(stDoubleIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FDouble, GetFloat(stDoubleIndex, WasNull), 0.001, 'GetFloat');
+    CheckEquals(FDouble, GetDouble(stDoubleIndex, WasNull), 0.001, 'GetDouble');
+    CheckEquals(FDouble, GetBigDecimal(stDoubleIndex, WasNull), 0.001, 'GetBigDecimal');
+    CheckEquals(FloatToSQLStr(FDouble), GetString(stDoubleIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -786,16 +806,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(7, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Trunc(FFloat), GetByte(7, WasNull), 0, 'GetByte');
-    CheckEquals(Trunc(FFloat), GetShort(7, WasNull), 0, 'GetShort');
-    CheckEquals(Trunc(FFloat), GetSmall(7, WasNull), 0, 'GetSmall');
-    CheckEquals(Trunc(FFloat), GetInt(7, WasNull), 0, 'GetInt');
-    CheckEquals(Trunc(FFloat), GetLong(7, WasNull), 0, 'GetLong');
-    CheckEquals(FFloat, GetFloat(7, WasNull), 0.001, 'GetFloat');
-    CheckEquals(FFloat, GetDouble(7, WasNull), 0.001, 'GetDouble');
-    CheckEquals(FFloat, GetBigDecimal(7, WasNull), 0.001, 'GetBigDecimal');
-    CheckEquals(FloatToSQLStr(FFloat), GetString(7, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stFloatIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Trunc(FFloat), GetByte(stFloatIndex, WasNull), 0, 'GetByte');
+    CheckEquals(Trunc(FFloat), GetShort(stFloatIndex, WasNull), 0, 'GetShort');
+    CheckEquals(Trunc(FFloat), GetSmall(stFloatIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(Trunc(FFloat), GetInt(stFloatIndex, WasNull), 0, 'GetInt');
+    CheckEquals(Trunc(FFloat), GetLong(stFloatIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FFloat, GetFloat(stFloatIndex, WasNull), 0.001, 'GetFloat');
+    CheckEquals(FFloat, GetDouble(stFloatIndex, WasNull), 0.001, 'GetDouble');
+    CheckEquals(FFloat, GetBigDecimal(stFloatIndex, WasNull), 0.001, 'GetBigDecimal');
+    CheckEquals(FloatToSQLStr(FFloat), GetString(stFloatIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -808,16 +828,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(5, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Byte(FInt), GetByte(5, WasNull), 0, 'GetByte');
-    CheckEquals(ShortInt(FInt), GetShort(5, WasNull), 0, 'GetShort');
-    CheckEquals(SmallInt(FInt), GetSmall(5, WasNull), 0, 'GetSmall');
-    CheckEquals(FInt, GetInt(5, WasNull), 0, 'GetInt');
-    CheckEquals(FInt, GetLong(5, WasNull), 0, 'GetLong');
-    CheckEquals(FInt, GetFloat(5, WasNull), 1, 'GetFloat');
-    CheckEquals(FInt, GetDouble(5, WasNull), 0, 'GetDouble');
-    CheckEquals(FInt, GetBigDecimal(5, WasNull), 0, 'GetBigDecimal');
-    CheckEquals(IntToStr(FInt), GetString(5, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stIntegerIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Byte(FInt), GetByte(stIntegerIndex, WasNull), 0, 'GetByte');
+    CheckEquals(ShortInt(FInt), GetShort(stIntegerIndex, WasNull), 0, 'GetShort');
+    CheckEquals(SmallInt(FInt), GetSmall(stIntegerIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(FInt, GetInt(stIntegerIndex, WasNull), 0, 'GetInt');
+    CheckEquals(FInt, GetLong(stIntegerIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FInt, GetFloat(stIntegerIndex, WasNull), 1, 'GetFloat');
+    CheckEquals(FInt, GetDouble(stIntegerIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(FInt, GetBigDecimal(stIntegerIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals(IntToStr(FInt), GetString(stIntegerIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -830,16 +850,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(6, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Byte(FLong), GetByte(6, WasNull), 0, 'GetByte');
-    CheckEquals(ShortInt(FLong), GetShort(6, WasNull), 0, 'GetShort');
-    CheckEquals(SmallInt(FLong), GetSmall(6, WasNull), 0, 'GetSmall');
-    CheckEquals(FLong, GetInt(6, WasNull), 0, 'GetInt');
-    CheckEquals(FLong, GetLong(6, WasNull), 0, 'GetLong');
-    CheckEquals(FLong, GetFloat(6, WasNull), 1, 'GetFloat');
-    CheckEquals(FLong, GetDouble(6, WasNull), 0, 'GetDouble');
-    CheckEquals(FLong, GetBigDecimal(6, WasNull), 0, 'GetBigDecimal');
-    CheckEquals(IntToStr(FLong), GetString(6, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stLongIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Byte(FLong), GetByte(stLongIndex, WasNull), 0, 'GetByte');
+    CheckEquals(ShortInt(FLong), GetShort(stLongIndex, WasNull), 0, 'GetShort');
+    CheckEquals(SmallInt(FLong), GetSmall(stLongIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(FLong, GetInt(stLongIndex, WasNull), 0, 'GetInt');
+    CheckEquals(FLong, GetLong(stLongIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FLong, GetFloat(stLongIndex, WasNull), 1, 'GetFloat');
+    CheckEquals(FLong, GetDouble(stLongIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(FLong, GetBigDecimal(stLongIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals(IntToStr(FLong), GetString(stLongIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -870,16 +890,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(3, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Byte(FShort), GetByte(3, WasNull), 0, 'GetByte');
-    CheckEquals(ShortInt(FShort), GetShort(3, WasNull), 0, 'GetShort');
-    CheckEquals(SmallInt(FShort), GetSmall(3, WasNull), 0, 'GetSmall');
-    CheckEquals(FShort, GetInt(3, WasNull), 0, 'GetInt');
-    CheckEquals(FShort, GetLong(3, WasNull), 0, 'GetLong');
-    CheckEquals(FShort, GetFloat(3, WasNull), 0, 'GetFloat');
-    CheckEquals(FShort, GetDouble(3, WasNull), 0, 'GetDouble');
-    CheckEquals(FShort, GetBigDecimal(3, WasNull), 0, 'GetBigDecimal');
-    CheckEquals(IntToStr(FShort), GetString(3, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stShortIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Byte(FShort), GetByte(stShortIndex, WasNull), 0, 'GetByte');
+    CheckEquals(ShortInt(FShort), GetShort(stShortIndex, WasNull), 0, 'GetShort');
+    CheckEquals(SmallInt(FShort), GetSmall(stShortIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(FShort, GetInt(stShortIndex, WasNull), 0, 'GetInt');
+    CheckEquals(FShort, GetLong(stShortIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FShort, GetFloat(stShortIndex, WasNull), 0, 'GetFloat');
+    CheckEquals(FShort, GetDouble(stShortIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(FShort, GetBigDecimal(stShortIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals(IntToStr(FShort), GetString(stShortIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -889,16 +909,16 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(True, GetBoolean(4, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(Byte(FSmall), GetByte(4, WasNull), 0, 'GetByte');
-    CheckEquals(ShortInt(FSmall), GetShort(4, WasNull), 0, 'GetShort');
-    CheckEquals(FSmall, GetSmall(4, WasNull), 0, 'GetSmall');
-    CheckEquals(FSmall, GetInt(4, WasNull), 0, 'GetInt');
-    CheckEquals(FSmall, GetLong(4, WasNull), 0, 'GetLong');
-    CheckEquals(FSmall, GetFloat(4, WasNull), 0, 'GetFloat');
-    CheckEquals(FSmall, GetDouble(4, WasNull), 0, 'GetDouble');
-    CheckEquals(FSmall, GetBigDecimal(4, WasNull), 0, 'GetBigDecimal');
-    CheckEquals(IntToStr(FSmall), GetString(4, WasNull), 'GetString');
+    CheckEquals(True, GetBoolean(stSmallIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(Byte(FSmall), GetByte(stSmallIndex, WasNull), 0, 'GetByte');
+    CheckEquals(ShortInt(FSmall), GetShort(stSmallIndex, WasNull), 0, 'GetShort');
+    CheckEquals(FSmall, GetSmall(stSmallIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(FSmall, GetInt(stSmallIndex, WasNull), 0, 'GetInt');
+    CheckEquals(FSmall, GetLong(stSmallIndex, WasNull), 0, 'GetLong');
+    CheckEquals(FSmall, GetFloat(stSmallIndex, WasNull), 0, 'GetFloat');
+    CheckEquals(FSmall, GetDouble(stSmallIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(FSmall, GetBigDecimal(stSmallIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals(IntToStr(FSmall), GetString(stSmallIndex, WasNull), 'GetString');
   end;
 end;
 
@@ -911,25 +931,25 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(False, GetBoolean(10, WasNull{%H-}), 'GetBoolean');
-    CheckEquals(ShortInt(StrToIntDef(FString, 0)), GetByte(10, WasNull), 0, 'GetByte');
-    CheckEquals(SmallInt(StrToIntDef(FString, 0)), GetSmall(10, WasNull), 0, 'GetSmall');
-    CheckEquals(Integer(StrToIntDef(FString, 0)), GetInt(10, WasNull), 0, 'GetInt');
-    CheckEquals(LongInt(StrToIntDef(FString, 0)), GetLong(10, WasNull), 0, 'GetLong');
-    CheckEquals(StrToFloatDef(FString, 0), GetFloat(10, WasNull), 100, 'GetFloat');
-    CheckEquals(StrToFloatDef(FString, 0), GetDouble(10, WasNull), 0, 'GetDouble');
-    CheckEquals(Int64(StrToInt(FString)), GetBigDecimal(10, WasNull), 0, 'GetBigDecimal');
-    CheckEquals(FString, GetString(10, WasNull), 'GetString');
+    CheckEquals(False, GetBoolean(stStringIndex, WasNull{%H-}), 'GetBoolean');
+    CheckEquals(ShortInt(StrToIntDef(FString, 0)), GetByte(stStringIndex, WasNull), 0, 'GetByte');
+    CheckEquals(SmallInt(StrToIntDef(FString, 0)), GetSmall(stStringIndex, WasNull), 0, 'GetSmall');
+    CheckEquals(Integer(StrToIntDef(FString, 0)), GetInt(stStringIndex, WasNull), 0, 'GetInt');
+    CheckEquals(LongInt(StrToIntDef(FString, 0)), GetLong(stStringIndex, WasNull), 0, 'GetLong');
+    CheckEquals(StrToFloatDef(FString, 0), GetFloat(stStringIndex, WasNull), 100, 'GetFloat');
+    CheckEquals(StrToFloatDef(FString, 0), GetDouble(stStringIndex, WasNull), 0, 'GetDouble');
+    CheckEquals(Int64(StrToInt(FString)), GetBigDecimal(stStringIndex, WasNull), 0, 'GetBigDecimal');
+    CheckEquals(FString, GetString(stStringIndex, WasNull), 'GetString');
 {    Check(ArraysComapre(GetByteArrayFromString(FString),
-       GetBytes(8, WasNull)));}
+       GetBytes(stStringIndex, WasNull)));}
 
     {test time convertion}
-    SetString(10, '1999-01-02 12:01:02');
-    CheckEquals(EncodeDate(1999, 01, 02), GetDate(10, WasNull), 0, 'GetDate');
-    CheckEquals(EncodeTime(12, 01, 02, 0), GetTime(10, WasNull), 3, 'GetTime');
+    SetString(stStringIndex, '1999-01-02 12:01:02');
+    CheckEquals(EncodeDate(1999, 01, 02), GetDate(stStringIndex, WasNull), 0, 'GetDate');
+    CheckEquals(EncodeTime(12, 01, 02, 0), GetTime(stStringIndex, WasNull), stShortIndex, 'GetTime');
     CheckEquals(EncodeDate(1999, 01, 02)+EncodeTime(12,01,02, 0),
-      GetTimestamp(10, WasNull), 3, 'GetTimestamp');
-    SetString(10, FString);
+      GetTimestamp(stStringIndex, WasNull), stShortIndex, 'GetTimestamp');
+    SetString(stStringIndex, FString);
   end;
 end;
 
@@ -942,9 +962,9 @@ var
 begin
   with RowAccessor do
   begin
-    CheckEquals(FTime, AnsiSqlDateToDateTime(GetString(13, WasNull{%H-})), 3, 'GetString');
-    CheckEquals(FTime, GetTime(13, WasNull), 3, 'Getime');
-//    CheckEquals(FTime, GetTimestamp(13, WasNull), 3, 'GetTimestamp');
+    CheckEquals(FTime, AnsiSqlDateToDateTime(GetString(stTimeIndex, WasNull{%H-})), 3, 'GetString');
+    CheckEquals(FTime, GetTime(stTimeIndex, WasNull), 3, 'Getime');
+//    CheckEquals(FTime, GetTimestamp(stTimeIndex, WasNull), 3, 'GetTimestamp');
   end;
 end;
 
@@ -958,9 +978,9 @@ begin
   with RowAccessor do
   begin
     CheckEquals(FormatDateTime('yyyy-mm-dd hh:mm:ss', FTimeStamp),
-        GetString(14, WasNull{%H-}), 'GetString');
-//!!! Rwrite    CheckEquals(DateOf(FTimeStamp), GetDate(14, WasNull), 3, 'GetDate');
-    CheckEquals(FTimeStamp, GetTimestamp(14, WasNull), 3, 'GetTimestamp');
+        GetString(stTimestampIndex, WasNull{%H-}), 'GetString');
+//!!! Rwrite    CheckEquals(DateOf(FTimeStamp), GetDate(stTimestampIndex, WasNull), 3, 'GetDate');
+    CheckEquals(FTimeStamp, GetTimestamp(stTimestampIndex, WasNull), 3, 'GetTimestamp');
   end;
 end;
 
@@ -978,7 +998,7 @@ begin
   with RowAccessor do
   begin
     try
-      Stream := GetUnicodeStream(16, WasNull{%H-});
+      Stream := GetUnicodeStream(stUnicodeStreamIndex, WasNull{%H-});
       CheckNotNull(Stream, 'UnicodeStream');
       Check(CompareStreams(Stream, FUnicodeStream), 'UnicodeStream');
       Stream.Position := 0;
@@ -1000,92 +1020,92 @@ begin
   with RowAccessor do
   begin
     try
-      SetBoolean(1, true);
-      Check(not IsNull(1));
+      SetBoolean(stBooleanIndex, true);
+      Check(not IsNull(stBooleanIndex));
     except
       Fail('Incorrect SetBoolean method behavior');
     end;
     try
-      SetByte(2, FByte);
+      SetByte(stByteIndex, FByte);
     except
       Fail('Incorrect SetByte method behavior');
     end;
     try
-      SetShort(3, FShort);
+      SetShort(stShortIndex, FShort);
     except
       Fail('Incorrect SetShort method behavior');
     end;
     try
-      SetSmall(4, FSmall);
+      SetSmall(stSmallIndex, FSmall);
     except
       Fail('Incorrect SetSmall method behavior');
     end;
     try
-      SetInt(5, FInt);
+      SetInt(stIntegerIndex, FInt);
     except
       Fail('Incorrect SetInt method behavior');
     end;
     try
-      SetLong(6, FLong);
+      SetLong(stLongIndex, FLong);
     except
       Fail('Incorrect SetLong method behavior');
     end;
     try
-      SetFloat(7, FFloat);
+      SetFloat(stFloatIndex, FFloat);
     except
       Fail('Incorrect SetFloat method behavior');
     end;
     try
-      SetDouble(8, FDouble);
+      SetDouble(stDoubleIndex, FDouble);
     except
       Fail('Incorrect SetDouble method behavior');
     end;
     try
-      SetBigDecimal(9, FBigDecimal);
+      SetBigDecimal(stBigDecimalIndex, FBigDecimal);
     except
       Fail('Incorrect SetBigDecimal method behavior');
     end;
     try
-      SetString(10, FString);
+      SetString(stStringIndex, FString);
     except
       Fail('Incorrect SetString method behavior');
     end;
     try
-      SetBytes(11, FByteArray);
+      SetBytes(stBytesIndex, FByteArray);
     except
       Fail('Incorrect SetBytes method behavior');
     end;
     try
-      SetDate(12, FDate);
+      SetDate(stDateIndex, FDate);
     except
       Fail('Incorrect SetDate method behavior');
     end;
     try
-      SetTime(13, FTime);
+      SetTime(stTimeIndex, FTime);
     except
       Fail('Incorrect SetTime method behavior');
     end;
     try
-      SetTimestamp(14, FTimeStamp);
+      SetTimestamp(stTimestampIndex, FTimeStamp);
     except
       Fail('Incorrect SetTimestamp method behavior');
     end;
     try
-      SetAsciiStream(15, FAsciiStream);
+      SetAsciiStream(stAsciiStreamIndex, FAsciiStream);
     except
       Fail('Incorrect SetAsciiStream method behavior');
     end;
     try
-      SetUnicodeStream(16, FUnicodeStream);
+      SetUnicodeStream(stUnicodeStreamIndex, FUnicodeStream);
     except
       Fail('Incorrect SetUnicodeStream method behavior');
     end;
     try
-      SetBinaryStream(17, FBinaryStream);
+      SetBinaryStream(stBinaryStreamIndex, FBinaryStream);
     except
       Fail('Incorrect SetBinaryStream method behavior');
     end;
-    RowBuffer^.Index := 10;
+    RowBuffer^.Index := stStringIndex;
     RowBuffer^.UpdateType := utInserted;
     RowBuffer^.BookmarkFlag := 1;
   end;

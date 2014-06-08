@@ -239,7 +239,6 @@ type
 //      const Table: string): IZResultSet; override;
 //    function UncachedGetTypeInfo: IZResultSet; override;
   public
-    destructor Destroy; override;
   end;
 
 implementation
@@ -1134,14 +1133,6 @@ end;
 { TZOracleDatabaseMetadata }
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZOracleDatabaseMetadata.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
   Constructs a database information object and returns the interface to it. Used
   internally by the constructor.
   @return the database information object interface
@@ -1309,40 +1300,39 @@ var
     ProcName := Source.GetString(ColumnIndexes[9]);
 
     Result.MoveToInsertRow;
-    Result.UpdateNull(1);    //PROCEDURE_CAT
-    Result.UpdateNull(2);    //PROCEDURE_SCHEM
-    Result.UpdateString(3, Source.GetString(ColumnIndexes[1]));    //TABLE_NAME
+    Result.UpdateNull(CatalogNameIndex);    //PROCEDURE_CAT
+    Result.UpdateNull(SchemaNameIndex);    //PROCEDURE_SCHEM
+    Result.UpdateString(ProcColProcedureNameIndex, Source.GetString(ColumnIndexes[1]));
+    ColName := Source.GetString(ColumnIndexes[2]);
+
     if IsResultParam then
-      Result.UpdateInt(5, Ord(pctReturn))
+      Result.UpdateString(ProcColColumnNameIndex, GetNextName('ReturnValue', False))
+    else
+      Result.UpdateString(ProcColColumnNameIndex, GetNextName(ColName, Length(ColName) = 0));
+
+    if IsResultParam then
+      Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctReturn))
     else
       if Source.GetString(ColumnIndexes[3]) = 'IN' then
-        Result.UpdateInt(5, Ord(pctIn))
+        Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctIn))
       else
         if Source.GetString(ColumnIndexes[3]) = 'OUT' then
-          Result.UpdateInt(5, Ord(pctOut))
+          Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctOut))
         else
           if ( Source.GetString(ColumnIndexes[3]) = 'IN/OUT') then
-            Result.UpdateInt(5, Ord(pctInOut))
+            Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctInOut))
           else
-            Result.UpdateInt(5, Ord(pctUnknown));
+            Result.UpdateInt(ProcColColumnTypeIndex, Ord(pctUnknown));
 
-    ColName := Source.GetString(ColumnIndexes[2]);
-    if IsResultParam then
-      Result.UpdateString(4, GetNextName('ReturnValue', False))    //COLUMN_NAME
-    else
-      Result.UpdateString(4, GetNextName(ColName, Length(ColName) = 0));    //COLUMN_NAME
-
-    Result.UpdateInt(6, Ord(ConvertOracleTypeToSQLType(TypeName,
+    Result.UpdateInt(ProcColDataTypeIndex, Ord(ConvertOracleTypeToSQLType(TypeName,
       Source.GetInt(ColumnIndexes[6]),Source.GetInt(ColumnIndexes[7]),
-      ConSettings.CPType))); //DATA_TYPE
-    Result.UpdateString(7,TypeName);    //TYPE_NAME
-    Result.UpdateInt(10, Source.GetInt(ColumnIndexes[6])); //PRECISION
-    Result.UpdateNull(9);    //BUFFER_LENGTH
-    Result.UpdateInt(10, Source.GetInt(ColumnIndexes[7]));
-    Result.UpdateInt(11, 10);
-    //Result.UpdateInt(12, GetInt(ColumnIndexes[8]));
-    Result.UpdateNull(12);
-    Result.UpdateString(12, Source.GetString(ColumnIndexes[6]));
+      ConSettings.CPType)));
+    Result.UpdateString(ProcColTypeNameIndex,TypeName);    //TYPE_NAME
+    Result.UpdateInt(ProcColPrecisionIndex, Source.GetInt(ColumnIndexes[6])); //PRECISION
+    Result.UpdateNull(ProcColLengthIndex);
+    Result.UpdateInt(ProcColScaleIndex, Source.GetInt(ColumnIndexes[7]));
+    Result.UpdateInt(ProcColRadixIndex, 10);
+    Result.UpdateString(ProcColNullableIndex, Source.GetString(ColumnIndexes[6]));
     Result.InsertRow;
   end;
 
@@ -1406,6 +1396,8 @@ var
   end;
 
   procedure GetMoreProcedures;
+  const
+    ObjectNameIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   var
     i: Integer;
     PackageNameCondition: String;
@@ -1417,7 +1409,7 @@ var
     TempSet := IZStmt.ExecuteQuery('select object_name from user_arguments '
                + PackageNameCondition + ' GROUP BY object_name order by object_name');
     while TempSet.Next do
-      Procs.Add(TempSet.GetString(1));
+      Procs.Add(TempSet.GetString(ObjectNameIndex));
     TempSet.Close;
     for i := 0 to Procs.Count -1 do
     begin
@@ -1428,6 +1420,8 @@ var
   end;
 
   function CheckSchema: Boolean;
+  const
+    CountIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   begin
     if TmpSchemaPattern = '' then
       Result := False
@@ -1435,7 +1429,7 @@ var
       with GetConnection.CreateStatement.ExecuteQuery('SELECT COUNT(*) FROM ALL_USERS WHERE '+ConstructNameCondition(TmpSchemaPattern,'username')) do
       begin
         Next;
-        Result := GetInt(1) > 0;
+        Result := GetInt(CountIndex) > 0;
         Close;
       end;
   end;
@@ -1507,6 +1501,13 @@ end;
 
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
+const
+  PROCEDURE_CAT_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  PROCEDURE_SCHEM_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  OBJECT_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  PROCEDURE_OVERLOAD_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   SQL: string;
   LProcedureNamePattern, LSchemaNamePattern: string;
@@ -1530,23 +1531,23 @@ begin
   begin
     while Next do
     begin
-      sName := IC.Quote(GetString(3));
-      if GetString(4) <> '' then
-        sName :=  sName+'.'+IC.Quote(GetString(4));
+      sName := IC.Quote(GetString(OBJECT_NAME_Index));
+      if GetString(PROCEDURE_NAME_Index) <> '' then
+        sName :=  sName+'.'+IC.Quote(GetString(PROCEDURE_NAME_Index));
       Result.MoveToInsertRow;
-      Result.UpdateNull(1);
-      Result.UpdateString(2, GetString(2));
-      Result.UpdateString(3, sName); //PROCEDURE_NAME
-      Result.UpdateString(4, GetString(5)); //PROCEDURE_OVERLOAD
-      Result.UpdateNull(5);
-      Result.UpdateNull(6);
-      Result.UpdateNull(7);
-      if GetString(6) = 'FUNCTION' then
-          Result.UpdateInt(8, Ord(prtReturnsResult))
-        else if GetString(6) = 'PROCDEURE' then
-          Result.UpdateInt(8, Ord(prtNoResult))
+      //Result.UpdateNull(CatalogNameIndex);
+      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(PROCEDURE_SCHEM_Index));
+      Result.UpdateString(ProcedureNameIndex, sName);
+      Result.UpdateAnsiRec(ProcedureOverloadIndex, GetAnsiRec(PROCEDURE_OVERLOAD_Index));
+      //Result.UpdateNull(ProcedureReserverd1Index);
+      //Result.UpdateNull(ProcedureReserverd2Index);
+      //Result.UpdateNull(ProcedureRemarksIndex);
+      if GetString(PROCEDURE_TYPE_Index) = 'FUNCTION' then
+          Result.UpdateByte(ProcedureTypeIndex, Ord(prtReturnsResult))
+        else if GetString(PROCEDURE_TYPE_Index) = 'PROCDEURE' then
+          Result.UpdateByte(ProcedureTypeIndex, Ord(prtNoResult))
         else
-          Result.UpdateInt(8, Ord(prtUnknown)); //Package
+          Result.UpdateByte(ProcedureTypeIndex, Ord(prtUnknown)); //Package
       Result.InsertRow;
     end;
     Close;
@@ -1602,7 +1603,7 @@ begin
   for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateString(1, Types[I]);
+      Result.UpdateString(TableTypeColumnTableTypeIndex, Types[I]);
       Result.InsertRow;
     end;
 end;
@@ -1661,8 +1662,19 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+const
+  OWNER_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  TABLE_NAME_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  COLUMN_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  DATA_TYPE_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  DATA_LENGTH_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  DATA_PRECISION_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  DATA_SCALE_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  NULLABLE_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  DATA_DEFAULT_Index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  COLUMN_ID_Index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
 var
-  SQL: string;
+  SQL, oDataType: string;
   SQLType: TZSQLType;
   OwnerCondition,TableCondition,ColumnCondition: String;
 
@@ -1691,10 +1703,9 @@ begin
   ColumnCondition := ConstructNameCondition(ColumnNamePattern,'COLUMN_NAME');
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  SQL := 'SELECT NULL, OWNER, TABLE_NAME, COLUMN_NAME, NULL, DATA_TYPE,'
-    + ' DATA_LENGTH, NULL, DATA_PRECISION, DATA_SCALE, NULLABLE, NULL,'
-    + ' DATA_DEFAULT, NULL, NULL, NULL, COLUMN_ID, NULLABLE'
-    + ' FROM SYS.ALL_TAB_COLUMNS'
+  SQL := 'SELECT OWNER, TABLE_NAME, COLUMN_NAME, DATA_TYPE,'
+    + ' DATA_LENGTH, DATA_PRECISION, DATA_SCALE, NULLABLE, '
+    + ' DATA_DEFAULT, COLUMN_ID FROM SYS.ALL_TAB_COLUMNS'
     + CreateWhere;
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
@@ -1702,44 +1713,46 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateNull(1);
-      Result.UpdateString(2, GetString(2));
-      Result.UpdateString(3, GetString(3));
-      Result.UpdateString(4, GetString(4));
-      SQLType := ConvertOracleTypeToSQLType(GetString(6), GetInt(9),
-        GetInt(10), ConSettings.CPType);
-      Result.UpdateInt(5, Ord(SQLType));
-      Result.UpdateString(6, GetString(6));
-      Result.UpdateInt(7, GetFieldSize(SQLType, ConSettings, GetInt(7), ConSettings.ClientCodePage.CharWidth)); //FIELD_SIZE
-      Result.UpdateNull(8);
-      Result.UpdateInt(9, GetInt(9));
-      Result.UpdateInt(10, GetInt(10));
+      //Result.UpdateNull(CatalogNameIndex);
+      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(OWNER_Index));
+      Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(TABLE_NAME_Index));
+      Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(COLUMN_NAME_Index));
+      oDataType := GetString(DATA_TYPE_Index);
+      SQLType := ConvertOracleTypeToSQLType(oDataType,
+        GetInt(DATA_PRECISION_Index), GetInt(DATA_SCALE_Index), ConSettings.CPType);
+      Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
+      Result.UpdateAnsiRec(TableColColumnTypeNameIndex, GetAnsiRec(DATA_TYPE_Index));
+      Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings,
+        GetInt(DATA_LENGTH_Index), ConSettings.ClientCodePage.CharWidth));
+      //Result.UpdateNull(TableColColumnBufLengthIndex);
+      Result.UpdateInt(TableColColumnDecimalDigitsIndex, GetInt(DATA_PRECISION_Index));
+      Result.UpdateInt(TableColColumnNumPrecRadixIndex, GetInt(DATA_SCALE_Index));
 
-      if UpperCase(GetString(11)) = 'N' then
+      if UpperCase(GetString(NULLABLE_Index)) = 'N' then
       begin
-        Result.UpdateInt(11, Ord(ntNoNulls));
-        Result.UpdateString(18, 'NO');
+        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
+        Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
       end
       else
       begin
-        Result.UpdateInt(11, Ord(ntNullable));
-        Result.UpdateString(18, 'YES');
+        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+        Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
       end;
 
-      Result.UpdateNull(12);
-      Result.UpdateString(13, GetString(13));
-      Result.UpdateNull(14);
-      Result.UpdateNull(15);
-      Result.UpdateNull(16);
-      Result.UpdateInt(17, GetInt(17));
+      //Result.UpdateNull(TableColColumnRemarksIndex);
+      Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(DATA_DEFAULT_Index));
+      //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
+      //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
+      //Result.UpdateNull(TableColColumnCharOctetLengthIndex);
+      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index){$IFDEF GENERIC_INDEX}-1{$ENDIF});
 
-      Result.UpdateNull(19);   //AUTO_INCREMENT
-      Result.UpdateBoolean(20, //CASE_SENSITIVE
-        IC.IsCaseSensitive(GetString(4)));
-      Result.UpdateBoolean(21, True);  //SEARCHABLE
-      Result.UpdateBoolean(22, not (GetString(6) = 'BFILE'));  //WRITABLE
-      Result.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
-      Result.UpdateBoolean(24, (GetString(6) = 'BFILE')); //READONLY
+      //Result.UpdateNull(TableColColumnAutoIncIndex);
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
+        IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));
+      Result.UpdateBoolean(TableColColumnSearchableIndex, True);
+      Result.UpdateBoolean(TableColColumnWritableIndex, not (oDataType = 'BFILE'));
+      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
+      Result.UpdateBoolean(TableColColumnReadonlyIndex, (oDataType = 'BFILE'));
 
       Result.InsertRow;
     end;
@@ -1993,6 +2006,14 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
+const
+  OWNER_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  TABLE_NAME_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  UNIQUENESS_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  INDEX_NAME_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  COLUMN_POSITION_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  COLUMN_NAME_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  DESCEND_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   SQL: string;
   OwnerCondition,TableCondition: String;
@@ -2016,9 +2037,9 @@ begin
   TableCondition := ConstructNameCondition(Table,'A.TABLE_NAME');
   Result:=inherited UncachedGetIndexInfo(Catalog, Schema, Table, Unique, Approximate);
 
-  SQL := 'SELECT NULL, A.OWNER, A.TABLE_NAME, A.UNIQUENESS, NULL,'
-    + ' A.INDEX_NAME, 3, B.COLUMN_POSITION, B.COLUMN_NAME, B.DESCEND,'
-    + ' 0, 0, NULL FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
+  SQL := 'SELECT A.OWNER, A.TABLE_NAME, A.UNIQUENESS, '
+    + ' A.INDEX_NAME, B.COLUMN_POSITION, B.COLUMN_NAME, B.DESCEND'
+    + ' FROM ALL_INDEXES A, ALL_IND_COLUMNS B'
     + ' WHERE A.OWNER=B.INDEX_OWNER AND A.INDEX_NAME=B.INDEX_NAME'
     + ' AND A.TABLE_OWNER=B.TABLE_OWNER AND A.TABLE_NAME=B.TABLE_NAME'
     + CreateExtraWhere;
@@ -2032,22 +2053,22 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateNull(1);
-      Result.UpdateString(2, GetString(2));
-      Result.UpdateString(3, GetString(3));
-      Result.UpdateBoolean(4,
-        UpperCase(GetString(4)) <> 'UNIQUE');
-      Result.UpdateNull(5);
-      Result.UpdateString(6, GetString(6));
-      Result.UpdateInt(7, GetInt(7));
-      Result.UpdateInt(8, GetInt(8));
-      Result.UpdateString(9, GetString(9));
-      if GetString(10) = 'ASC' then
-        Result.UpdateString(10, 'A')
-      else Result.UpdateString(10, 'D');
-      Result.UpdateInt(11, GetInt(11));
-      Result.UpdateInt(12, GetInt(12));
-      Result.UpdateNull(13);
+      //Result.UpdateNull(CatalogNameIndex);
+      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(OWNER_Index));
+      Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(TABLE_NAME_Index));
+      Result.UpdateBoolean(IndexInfoColNonUniqueIndex,
+        UpperCase(GetString(UNIQUENESS_Index)) <> 'UNIQUE');
+      //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
+      Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, GetAnsiRec(INDEX_NAME_Index));
+      Result.UpdateInt(IndexInfoColTypeIndex, 3);
+      Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(COLUMN_POSITION_Index));
+      Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, GetAnsiRec(COLUMN_NAME_Index));
+      if GetString(DESCEND_Index) = 'ASC' then
+        Result.UpdateString(IndexInfoColAscOrDescIndex, 'A')
+      else Result.UpdateString(IndexInfoColAscOrDescIndex, 'D');
+      Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
+      Result.UpdateInt(IndexInfoColPagesIndex, 0);
+      //Result.UpdateNull(IndexInfoColFilterConditionIndex);
 
       Result.InsertRow;
     end;

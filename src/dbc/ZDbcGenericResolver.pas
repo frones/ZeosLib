@@ -306,7 +306,7 @@ var
   Temp: string;
 begin
   Result := '';
-  for I := 1 to Metadata.GetColumnCount do
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     Temp := ComposeFullTableName(Metadata.GetCatalogName(I),
       Metadata.GetSchemaName(I), Metadata.GetTableName(I));
@@ -349,7 +349,7 @@ var
 begin
   { Precache insert parameters. }
   if InsertColumns.Count = 0 then
-    for I := 1 to Metadata.GetColumnCount do
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) then
       begin
@@ -383,7 +383,7 @@ begin
   { Defines parameters for UpdateAll mode. }
   if UpdateAll then
   begin
-    for I := 1 to Metadata.GetColumnCount do
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) then
@@ -400,7 +400,7 @@ begin
     SetLength(ColumnIndices, 1);
     SetLength(ColumnDirs, 1);
     ColumnDirs[0] := True;
-    for I := 1 to Metadata.GetColumnCount do
+    for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnIndices[0] := I;
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
@@ -436,7 +436,7 @@ begin
 
   { Defines catalog, schema and a table. }
   Table := DefineTableName;
-  for I := 1 to Metadata.GetColumnCount do
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     Table := Metadata.GetTableName(I);
     if Table <> '' then
@@ -453,9 +453,9 @@ begin
     PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(Catalog, Schema, Table);
     while PrimaryKeys.Next do
     begin
-      ColumnName := PrimaryKeys.GetString(4);
+      ColumnName := PrimaryKeys.GetString(ColumnNameIndex);
       Found := False;
-      for I := 1 to Metadata.GetColumnCount do
+      for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
       begin
         if (ColumnName = Metadata.GetColumnName(I))
           and (Table = Metadata.GetTableName(I)) then
@@ -497,7 +497,7 @@ begin
   end;
 
   { Takes a a key all non-blob fields. }
-  for I := 1 to Metadata.GetColumnCount do
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     if CheckKeyColumn(I) then
       WhereColumns.Add(TZResolverParameter.Create(I,
@@ -538,7 +538,7 @@ procedure TZGenericCachedResolver.DefineCalcColumns(Columns: TObjectList;
 var
   I: Integer;
 begin
-  for I := 1 to Metadata.GetColumnCount do
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     if RowAccessor.IsNull(I) and (Metadata.GetTableName(I) <> '')
       and ((Metadata.GetDefaultValue(I) <> '') or (RowAccessor.GetColumnDefaultExpression(I) <> '')) then
@@ -584,61 +584,61 @@ begin
     ColumnIndex := Current.ColumnIndex;
 
     if FCalcDefaults then
-      Statement.SetDefaultValue(I + 1, Metadata.GetDefaultValue(ColumnIndex));
+      Statement.SetDefaultValue(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetDefaultValue(ColumnIndex));
 
     case Metadata.GetColumnType(ColumnIndex) of
       stBoolean:
-        Statement.SetBoolean(I + 1,
+        Statement.SetBoolean(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBoolean(ColumnIndex, WasNull));
       stByte:
-        Statement.SetByte(I + 1, RowAccessor.GetByte(ColumnIndex, WasNull));
+        Statement.SetByte(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetByte(ColumnIndex, WasNull));
       stShort:
-        Statement.SetShort(I + 1, RowAccessor.GetShort(ColumnIndex, WasNull));
+        Statement.SetShort(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetShort(ColumnIndex, WasNull));
       stWord:
-        Statement.SetWord(I + 1, RowAccessor.GetWord(ColumnIndex, WasNull));
+        Statement.SetWord(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetWord(ColumnIndex, WasNull));
       stSmall:
-        Statement.SetSmall(I + 1, RowAccessor.GetSmall(ColumnIndex, WasNull));
+        Statement.SetSmall(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetSmall(ColumnIndex, WasNull));
       stLongWord:
-        Statement.SetUInt(I + 1, RowAccessor.GetUInt(ColumnIndex, WasNull));
+        Statement.SetUInt(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetUInt(ColumnIndex, WasNull));
       stInteger:
-        Statement.SetInt(I + 1, RowAccessor.GetInt(ColumnIndex, WasNull));
+        Statement.SetInt(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetInt(ColumnIndex, WasNull));
       stULong:
-        Statement.SetULong(I + 1, RowAccessor.GetULong(ColumnIndex, WasNull));
+        Statement.SetULong(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetULong(ColumnIndex, WasNull));
       stLong:
-        Statement.SetLong(I + 1, RowAccessor.GetLong(ColumnIndex, WasNull));
+        Statement.SetLong(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetLong(ColumnIndex, WasNull));
       stFloat:
-        Statement.SetFloat(I + 1, RowAccessor.GetFloat(ColumnIndex, WasNull));
+        Statement.SetFloat(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetFloat(ColumnIndex, WasNull));
       stCurrency:
-        Statement.SetCurrency(I + 1, RowAccessor.GetCurrency(ColumnIndex, WasNull));
+        Statement.SetCurrency(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCurrency(ColumnIndex, WasNull));
       stDouble:
-        Statement.SetDouble(I + 1, RowAccessor.GetDouble(ColumnIndex, WasNull));
+        Statement.SetDouble(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDouble(ColumnIndex, WasNull));
       stBigDecimal:
-        Statement.SetBigDecimal(I + 1,
+        Statement.SetBigDecimal(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
       stString, stUnicodeString:
-        Statement.SetCharRec(I +1,
+        Statement.SetCharRec(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetCharRec(ColumnIndex, WasNull));
       stBytes, stGUID:
-        Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
+        Statement.SetBytes(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
       stDate:
-        Statement.SetDate(I + 1, RowAccessor.GetDate(ColumnIndex, WasNull));
+        Statement.SetDate(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
       stTime:
-        Statement.SetTime(I + 1, RowAccessor.GetTime(ColumnIndex, WasNull));
+        Statement.SetTime(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetTime(ColumnIndex, WasNull));
       stTimestamp:
-        Statement.SetTimestamp(I + 1,
+        Statement.SetTimestamp(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           RowAccessor.GetTimestamp(ColumnIndex, WasNull));
       stAsciiStream:
-         Statement.SetBlob(I + 1, stAsciiStream,
+         Statement.SetBlob(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream,
            RowAccessor.GetBlob(ColumnIndex, WasNull));
       stUnicodeStream:
-         Statement.SetBlob(I + 1, stUnicodeStream,
+         Statement.SetBlob(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeStream,
            RowAccessor.GetBlob(ColumnIndex, WasNull));
       stBinaryStream:
-         Statement.SetBlob(I + 1, stBinaryStream,
+         Statement.SetBlob(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream,
            RowAccessor.GetBlob(ColumnIndex, WasNull));
     end;
     if WasNull then
-      Statement.SetNull(I + 1, Metadata.GetColumnType(ColumnIndex))
+      Statement.SetNull(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Metadata.GetColumnType(ColumnIndex))
   end;
 end;
 
@@ -934,9 +934,9 @@ begin
       if ResultSet.Next then
       begin
         Metadata := ResultSet.GetMetadata;
-        for I := 1 to Metadata.GetColumnCount do
+        for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
         begin
-          Current := TZResolverParameter(SQLParams[I - 1]);
+          Current := TZResolverParameter(SQLParams[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
           try
             case Current.ColumnType of
               stBoolean:
@@ -944,12 +944,20 @@ begin
                   ResultSet.GetBoolean(I));
               stByte:
                 RowAccessor.SetByte(Current.ColumnIndex, ResultSet.GetByte(I));
+              stShort:
+                RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetShort(I));
+              stWord:
+                RowAccessor.SetWord(Current.ColumnIndex, ResultSet.GetWord(I));
               stSmall:
                 RowAccessor.SetShort(Current.ColumnIndex, ResultSet.GetSmall(I));
               stInteger:
                 RowAccessor.SetInt(Current.ColumnIndex, ResultSet.GetInt(I));
+              stLongWord:
+                RowAccessor.SetUInt(Current.ColumnIndex, ResultSet.GetUInt(I));
               stLong:
                 RowAccessor.SetLong(Current.ColumnIndex, ResultSet.GetLong(I));
+              stULong:
+                RowAccessor.SetULong(Current.ColumnIndex, ResultSet.GetULong(I));
               stFloat:
                 RowAccessor.SetFloat(Current.ColumnIndex, ResultSet.GetFloat(I));
               stDouble:

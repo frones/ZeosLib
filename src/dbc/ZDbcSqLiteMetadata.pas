@@ -1249,7 +1249,7 @@ begin
   for I := 1 to TableTypeCount do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateUTF8String(1, Types[I]);
+      Result.UpdateUTF8String(TableTypeColumnTableTypeIndex, Types[I]);
       Result.InsertRow;
     end;
 end;
@@ -1308,6 +1308,13 @@ end;
 function TZSQLiteDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+const
+  cid_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  type_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  notnull_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  dflt_value_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   Temp: string;
   Precision, Decimals, UndefinedVarcharAsStringLength: Integer;
@@ -1334,53 +1341,52 @@ begin
       begin
         Result.MoveToInsertRow;
         if SchemaPattern <> '' then
-          Result.UpdateString(1, SchemaPattern)
-        else Result.UpdateNull(1);
-        Result.UpdateNull(2);
-        Result.UpdateString(3, TempTableNamePattern);
-        Result.UpdateRawByteString(4, GetRawByteString(2));
-        Result.UpdateInt(5, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(3),
+          Result.UpdateString(CatalogNameIndex, SchemaPattern)
+        else Result.UpdateNull(CatalogNameIndex);
+        Result.UpdateNull(SchemaNameIndex);
+        Result.UpdateString(TableNameIndex, TempTableNamePattern);
+        Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(name_index));
+        Result.UpdateInt(TableColColumnTypeIndex, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(type_index),
           UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
 
         { Defines a table name. }
-        Temp := UpperCase(GetString(3));
+        Temp := UpperCase(GetString(type_index));
         if Pos('(', Temp) > 0 then
           Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
-        Result.UpdateString(6, Temp);
+        Result.UpdateString(TableColColumnTypeNameIndex, Temp);
 
-        Result.UpdateInt(7, Precision);  //Precision will be converted higher up
-        Result.UpdateNull(8);
-        Result.UpdateInt(9, Decimals);
-        Result.UpdateInt(10, 0);
+        Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
+        Result.UpdateNull(TableColColumnBufLengthIndex);
+        Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
+        Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);
 
-        if GetInt(4) <> 0 then
+        if GetInt(notnull_index) <> 0 then
         begin
-          Result.UpdateInt(11, Ord(ntNoNulls));
-          Result.UpdateRawByteString(18, 'NO');
+          Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
+          Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
         end
         else
         begin
-          Result.UpdateInt(11, Ord(ntNullable));
-          Result.UpdateRawByteString(18, 'YES');
+          Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+          Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
         end;
 
-        Result.UpdateNull(12);
-        if Trim(GetString(5)) <> '' then
-          Result.UpdateAnsiRec(13, GetAnsiRec(5))
+        Result.UpdateNull(TableColColumnRemarksIndex);
+        if Trim(GetString(dflt_value_index)) <> '' then
+          Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(dflt_value_index))
         else
-          Result.UpdateNull(13);
-        Result.UpdateNull(14);
-        Result.UpdateNull(15);
-        Result.UpdateNull(16);
-        Result.UpdateInt(17, GetInt(1) + 1);
+          Result.UpdateNull(TableColColumnColDefIndex);
+        Result.UpdateNull(TableColColumnSQLDataTypeIndex);
+        Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
+        Result.UpdateNull(TableColColumnCharOctetLengthIndex);
+        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
 
-        Result.UpdateBooleanByName('AUTO_INCREMENT',
-          (GetInt(6) = 1) and (Temp = 'INTEGER'));
-        Result.UpdateBooleanByName('CASE_SENSITIVE', False);
-        Result.UpdateBooleanByName('SEARCHABLE', True);
-        Result.UpdateBooleanByName('WRITABLE', True);
-        Result.UpdateBooleanByName('DEFINITELYWRITABLE', True);
-        Result.UpdateBooleanByName('READONLY', False);
+        Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Temp = 'INTEGER'));
+        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
+        Result.UpdateBoolean(TableColColumnSearchableIndex, True);
+        Result.UpdateBoolean(TableColColumnWritableIndex, True);
+        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
+        Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
 
         Result.InsertRow;
       end;
@@ -1412,8 +1418,14 @@ end;
 }
 function TZSQLiteDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
+const
+  cid_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  {%H-}type_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  {%H-}notnull_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  {%H-}dflt_value_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
-  Index: Integer;
   Temp_scheme: string;
 begin
     Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
@@ -1426,24 +1438,20 @@ begin
     with GetConnection.CreateStatement.ExecuteQuery(
       Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
     begin
-      Index := 1;
       while Next do
       begin
-        if GetInt(6) = 0 then
+        if GetInt(pk_index) = 0 then
           Continue;
 
         Result.MoveToInsertRow;
         if Schema <> '' then
-          Result.UpdateString(1, Schema)
-        else Result.UpdateNull(1);
-        Result.UpdateNull(2);
-        Result.UpdateString(3, Table);
-        Result.UpdateAnsiRec(4, GetAnsiRec(2));
-        Result.UpdateInt(5, Index);
-        Result.UpdateNull(6);
-
-        Inc(Index);
-
+          Result.UpdateString(CatalogNameIndex, Schema)
+        else Result.UpdateNull(CatalogNameIndex);
+        Result.UpdateNull(SchemaNameIndex);
+        Result.UpdateString(TableNameIndex, Table);
+        Result.UpdateAnsiRec(PrimaryKeyColumnNameIndex, GetAnsiRec(name_index));
+        Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
+        Result.UpdateNull(PrimaryKeyPKNameIndex);
         Result.InsertRow;
       end;
       Close;
@@ -1498,7 +1506,7 @@ end;
 function TZSQLiteDatabaseMetadata.UncachedGetTypeInfo: IZResultSet;
 const
   MaxTypeCount = 22;
-  TypeNames: array[1..MaxTypeCount] of string = (
+  TypeNames: array[1..MaxTypeCount] of UTF8String = (
     'BOOLEAN', 'TINYINT', 'SMALLINT', 'MEDIUMINT', 'INTEGER',
     'BIGINT', 'REAL', 'FLOAT', 'NUMERIC', 'DECIMAL', 'NUMBER',
     'DOUBLE', 'CHAR', 'VARCHAR', 'BINARY', 'VARBINARY', 'DATE',
@@ -1521,35 +1529,35 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, TypeNames[I]);
-      Result.UpdateInt(2, Ord(TypeCodes[I]));
+      Result.UpdateUTF8String(TypeInfoTypeNameIndex, TypeNames[I]);
+      Result.UpdateInt(TypeInfoDataTypeIndex, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
-        Result.UpdateInt(3, TypePrecision[I])
-      else Result.UpdateNull(3);
+        Result.UpdateInt(TypeInfoPecisionIndex, TypePrecision[I])
+      else Result.UpdateNull(TypeInfoPecisionIndex);
       if TypeCodes[I] in [stString, stBytes, stDate, stTime,
         stTimeStamp, stBinaryStream, stAsciiStream, stUnicodeString] then
       begin
-        Result.UpdateString(4, '''');
-        Result.UpdateString(5, '''');
+        Result.UpdateString(TypeInfoLiteralPrefixIndex, '''');
+        Result.UpdateString(TypeInfoLiteralSuffixIndex, '''');
       end
-      else
+      {else
       begin
-        Result.UpdateNull(4);
-        Result.UpdateNull(5);
-      end;
-      Result.UpdateNull(6);
-      Result.UpdateInt(7, Ord(ntNullable));
-      Result.UpdateBoolean(8, False);
-      Result.UpdateBoolean(9, False);
-      Result.UpdateBoolean(11, False);
-      Result.UpdateBoolean(12, False);
-      Result.UpdateBoolean(12, TypeNames[I] = 'INTEGER');
-      Result.UpdateNull(13);
-      Result.UpdateNull(14);
-      Result.UpdateNull(15);
-      Result.UpdateNull(16);
-      Result.UpdateNull(17);
-      Result.UpdateInt(18, 10);
+        Result.UpdateNull(TypeInfoLiteralPrefixIndex);
+        Result.UpdateNull(TypeInfoLiteralSuffixIndex);
+      end};
+      //Result.UpdateNull(TypeInfoCreateParamsIndex);
+      Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNullable));
+      Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, False);
+      Result.UpdateBoolean(TypeInfoSearchableIndex, False);
+      Result.UpdateBoolean(TypeInfoUnsignedAttributeIndex, False);
+      Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, False);
+      Result.UpdateBoolean(TypeInfoAutoIncrementIndex, TypeNames[I] = 'INTEGER');
+      //Result.UpdateNull(TypeInfoLocaleTypeNameIndex);
+      //Result.UpdateNull(TypeInfoMinimumScaleIndex);
+      //Result.UpdateNull(TypeInfoMaximumScaleIndex);
+      //Result.UpdateNull(TypeInfoSQLDataTypeIndex);
+      //Result.UpdateNull(TypeInfoSQLDateTimeSubIndex);
+      Result.UpdateInt(TypeInfoNumPrecRadix, 10);
 
       Result.InsertRow;
     end;
@@ -1609,6 +1617,13 @@ end;
 function TZSQLiteDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
+const
+  {%H-}main_seq_field_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  main_name_field_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  main_unique_field_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  sub_seqno_field_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  {%H-}sub_cid_field_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  sub_name_field_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   MainResultSet, ResultSet: IZResultSet;
   Temp_scheme: string;
@@ -1626,30 +1641,30 @@ begin
     begin
       while MainResultSet.Next do
       begin
-        if (Pos(' autoindex ', String(MainResultSet.GetString(2))) = 0)
-          and ((Unique = False) or (MainResultSet.GetInt(3) = 0)) then
+        if (Pos(' autoindex ', String(MainResultSet.GetString(main_name_field_index))) = 0)
+          and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
-            Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,MainResultSet.GetString(2)]));
+            Format('PRAGMA %s index_info(''%s'')', [Temp_scheme,MainResultSet.GetString(main_name_field_index)]));
           while ResultSet.Next do
           begin
             Result.MoveToInsertRow;
 
             if Schema <> '' then
-              Result.UpdateString(1, Schema)
-            else Result.UpdateNull(1);
-            Result.UpdateNull(2);
-            Result.UpdateString(3, Table);
-            Result.UpdateBoolean(4, MainResultSet.GetInt(3) = 0);
-            Result.UpdateNull(5);
-            Result.UpdateAnsiRec(6, MainResultSet.GetAnsiRec(2));
-            Result.UpdateNull(7);
-            Result.UpdateInt(8, ResultSet.GetInt(1) + 1);
-            Result.UpdateAnsiRec(9, ResultSet.GetAnsiRec(3));
-            Result.UpdateString(10, 'A');
-            Result.UpdateInt(11, 0);
-            Result.UpdateInt(12, 0);
-            Result.UpdateNull(13);
+              Result.UpdateString(CatalogNameIndex, Schema)
+            else Result.UpdateNull(CatalogNameIndex);
+            Result.UpdateNull(SchemaNameIndex);
+            Result.UpdateString(TableNameIndex, Table);
+            Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
+            Result.UpdateNull(IndexInfoColIndexQualifierIndex);
+            Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, MainResultSet.GetAnsiRec(main_name_field_index));
+            Result.UpdateNull(IndexInfoColTypeIndex);
+            Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF});
+            Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, ResultSet.GetAnsiRec(sub_name_field_index));
+            Result.UpdateString(IndexInfoColAscOrDescIndex, 'A');
+            Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
+            Result.UpdateInt(IndexInfoColPagesIndex, 0);
+            Result.UpdateNull(IndexInfoColFilterConditionIndex);
 
             Result.InsertRow;
           end;
@@ -1698,10 +1713,11 @@ These constant define integer codes that represent the various text encodings su
   for i := 0 to high(Encodings) do
   begin
     Result.MoveToInsertRow;
-    Result.UpdateString(1, Encodings[i].CP); //CHARACTER_SET_NAME
-    Result.UpdateSmall(2, Encodings[i].ID); //CHARACTER_SET_ID
+    Result.UpdateString(CharacterSetsNameIndex, Encodings[i].CP); //CHARACTER_SET_NAME
+    Result.UpdateSmall(CharacterSetsIDIndex, Encodings[i].ID); //CHARACTER_SET_ID
     Result.InsertRow;
   end;
 end;
 
 end.
+

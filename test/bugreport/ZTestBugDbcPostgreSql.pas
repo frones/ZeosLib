@@ -126,7 +126,7 @@ begin
     //GetConnectionUrl + '?oidasblob=true', UserName, Password);
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select reltype from pg_class');
-  CheckEquals(Ord(stBinaryStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+  CheckEquals(Ord(stBinaryStream), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
   ResultSet.Close;
   Statement.Close;
 
@@ -135,7 +135,7 @@ begin
   //  GetConnectionUrl + '?oidasblob=false', UserName, Password);
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select reltype from pg_class');
-  CheckEquals(Ord(stInteger), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+  CheckEquals(Ord(stInteger), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
   ResultSet.Close;
   Statement.Close;
 end;
@@ -286,6 +286,10 @@ end;
   execution SQL query do not contain the aliased fields.
 }
 procedure TZTestDbcPostgreSQLBugReport.Test739444;
+const
+  items_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  total_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  average_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -300,14 +304,14 @@ begin
 
   MetaData := ResultSet.GetMetadata;
   CheckEquals(3, MetaData.GetColumnCount);
-  CheckEquals('items', MetaData.GetColumnLabel(1));
-  CheckEquals('total', MetaData.GetColumnLabel(2));
-  CheckEquals('average', MetaData.GetColumnLabel(3));
+  CheckEquals('items', MetaData.GetColumnLabel(items_index));
+  CheckEquals('total', MetaData.GetColumnLabel(total_index));
+  CheckEquals('average', MetaData.GetColumnLabel(average_index));
 
   ResultSet.Next;
-  CheckEquals(4, ResultSet.GetInt(1));
-  CheckEquals(8434, ResultSet.GetInt(2));
-  CheckEquals(8.5, ResultSet.GetFloat(3), 0.01);
+  CheckEquals(4, ResultSet.GetInt(items_index));
+  CheckEquals(8434, ResultSet.GetInt(total_index));
+  CheckEquals(8.5, ResultSet.GetFloat(average_index), 0.01);
   ResultSet.Close;
   ResultSet := nil;
 end;
@@ -318,6 +322,8 @@ end;
   Empty fields in string concatination expression.
 }
 procedure TZTestDbcPostgreSQLBugReport.Test759184;
+const
+  expr_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -332,8 +338,8 @@ begin
   with ResultSet do
   begin
     Next;
-    CheckEquals('expr', GetMetadata.GetColumnLabel(1));
-    CheckEquals('1Vasia Pupkin', GetString(1));
+    CheckEquals('expr', GetMetadata.GetColumnLabel(expr_index));
+    CheckEquals('1Vasia Pupkin', GetString(expr_index));
   end;
 end;
 
@@ -343,6 +349,10 @@ end;
   Not passing large objects to Postgres DB.
 }
 procedure TZTestDbcPostgreSQLBugReport.Test798336;
+const
+  b_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  b_text_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  b_image_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
@@ -371,9 +381,9 @@ begin
   try
     PreparedStatement := Connection.PrepareStatement(
       'INSERT INTO blob_values (b_id,b_text,b_image) VALUES(?,?,?)');
-    PreparedStatement.SetInt(1, TEST_ROW_ID);
-    PreparedStatement.SetAsciiStream(2, TextStream);
-    PreparedStatement.SetBinaryStream(3, ImageStream);
+    PreparedStatement.SetInt(b_id_index, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(b_text_index, TextStream);
+    PreparedStatement.SetBinaryStream(b_image_index, ImageStream);
     CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
     ResultSet := Statement.ExecuteQuery('SELECT * FROM blob_values'
@@ -406,6 +416,9 @@ end;
   Metadata Query does not support Domains.
 }
 procedure TZTestDbcPostgreSQLBugReport.Test815852;
+const
+  fld1_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld2_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -427,34 +440,32 @@ begin
   Statement.SetResultSetConcurrency(rcReadOnly);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852 ');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  //Client_Character_set sets column-type!!!!
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
   if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
   else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   Statement.ExecuteUpdate('delete from test815852');
 
   Statement.SetResultSetConcurrency(rcUpdatable);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  //Client_Character_set sets column-type!!!!
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
   if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
   else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 123456);
-  ResultSet.UpdateString(2, 'abcdef');
+  ResultSet.UpdateInt(fld1_index, 123456);
+  ResultSet.UpdateString(fld2_index, 'abcdef');
   ResultSet.InsertRow;
 
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from test815852');
   Check(ResultSet.Next);
-  CheckEquals(123456, ResultSet.GetInt(1));
-  CheckEquals('abcdef', ResultSet.GetString(2));
+  CheckEquals(123456, ResultSet.GetInt(fld1_index));
+  CheckEquals('abcdef', ResultSet.GetString(fld2_index));
 
   Statement.ExecuteUpdate('delete from test815852');
 end;
@@ -465,6 +476,9 @@ end;
   Problem with support for schemas.
 }
 procedure TZTestDbcPostgreSQLBugReport.Test815854;
+const
+  fld1_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld2_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -486,34 +500,34 @@ begin
   Statement.SetResultSetConcurrency(rcReadOnly);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780 ');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
   //Client_Character_set sets column-type!!!!
   if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
   else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   Statement.ExecuteUpdate('delete from xyz.test824780');
 
   Statement.SetResultSetConcurrency(rcUpdatable);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_index)));
   //Client_Character_set sets column-type!!!!
   if (Connection.GetConSettings.CPType = cCP_UTF16) then
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)))
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(fld2_index)))
   else
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 123456);
-  ResultSet.UpdateString(2, 'abcdef');
+  ResultSet.UpdateInt(fld1_index, 123456);
+  ResultSet.UpdateString(fld2_index, 'abcdef');
   ResultSet.InsertRow;
 
   ResultSet := Statement.ExecuteQuery('select fld1, fld2 from xyz.test824780');
   Check(ResultSet.Next);
-  CheckEquals(123456, ResultSet.GetInt(1));
-  CheckEquals('abcdef', ResultSet.GetString(2));
+  CheckEquals(123456, ResultSet.GetInt(fld1_index));
+  CheckEquals('abcdef', ResultSet.GetString(fld2_index));
 
   Statement.ExecuteUpdate('delete from xyz.test824780');
 end;
@@ -584,6 +598,10 @@ end;
   Problem is incorrect parsing of the Version#
 }
 procedure TZTestDbcPostgreSQLBugReport.Test1014416;
+const
+  fld1_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld2_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  fld3_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -605,22 +623,22 @@ begin
   Statement.SetResultSetConcurrency(rcReadOnly);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3 from test1014416');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
-  CheckEquals(100, Metadata.GetPrecision(1));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
-  CheckEquals(100, Metadata.GetPrecision(2));
-  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
-  CheckEquals(17, Metadata.GetPrecision(3));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
+  CheckEquals(100, Metadata.GetPrecision(fld1_index));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld2_index)));
+  CheckEquals(100, Metadata.GetPrecision(fld2_index));
+  CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(fld3_index)));
+  CheckEquals(17, Metadata.GetPrecision(fld3_index));
 
   Check(ResultSet.Next);
-  CheckEquals('192.168.100.128/25', ResultSet.GetString(1));
-  CheckEquals('192.168.100.128/25', ResultSet.GetString(2));
-  CheckEquals('08:00:2b:01:02:03', ResultSet.GetString(3));
+  CheckEquals('192.168.100.128/25', ResultSet.GetString(fld1_index));
+  CheckEquals('192.168.100.128/25', ResultSet.GetString(fld2_index));
+  CheckEquals('08:00:2b:01:02:03', ResultSet.GetString(fld3_index));
 
   Check(ResultSet.Next);
-  CheckEquals('2001:4f8:3:ba:2e0:81ff:fe22:d1f1/128', ResultSet.GetString(1));
-  CheckEquals('2001:4f8:3:ba:2e0:81ff:fe22:d1f1', ResultSet.GetString(2));
-  CheckEquals('08:00:2b:01:02:03', ResultSet.GetString(3));
+  CheckEquals('2001:4f8:3:ba:2e0:81ff:fe22:d1f1/128', ResultSet.GetString(fld1_index));
+  CheckEquals('2001:4f8:3:ba:2e0:81ff:fe22:d1f1', ResultSet.GetString(fld2_index));
+  CheckEquals('08:00:2b:01:02:03', ResultSet.GetString(fld3_index));
 
   Check(not ResultSet.Next);
   Statement.Close;
@@ -631,6 +649,8 @@ end;
 can't open table pg_class
 }
 procedure TZTestDbcPostgreSQLBugReport.Test_Mantis0000148;
+const
+  relacl_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -640,7 +660,7 @@ begin
   Statement := Connection.CreateStatement;
   ResultSet := Statement.ExecuteQuery('select relacl from pg_class;');
   ///
-  ResultSet.GetBlob(1);
+  ResultSet.GetBlob(relacl_index);
   Statement.Close;
 end;
 
@@ -659,9 +679,9 @@ begin
   begin
     ResultSet := ExecuteQueryPrepared;
     if Connection.GetConSettings.CPType = cCP_UTF16 then
-      CheckEquals(Ord(stUnicodeStream), Ord(ResultSet.GetMetadata.GetColumnType(1)))
+      CheckEquals(Ord(stUnicodeStream), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)))
     else
-      CheckEquals(Ord(stAsciiStream), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+      CheckEquals(Ord(stAsciiStream), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
     ResultSet := nil;
     Close;
   end;
@@ -675,13 +695,13 @@ begin
   begin
     ResultSet := ExecuteQueryPrepared;
     if Connection.GetConSettings.CPType = cCP_UTF16 then
-      CheckEquals(Ord(stUnicodeString), Ord(ResultSet.GetMetadata.GetColumnType(1)))
+      CheckEquals(Ord(stUnicodeString), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)))
     else
-      CheckEquals(Ord(stString), Ord(ResultSet.GetMetadata.GetColumnType(1)));
+      CheckEquals(Ord(stString), Ord(ResultSet.GetMetadata.GetColumnType(FirstDbcIndex)));
     ResultSet.Next;
-    CheckEquals('', ResultSet.GetString(1));
+    CheckEquals('', ResultSet.GetString(FirstDbcIndex));
     ResultSet.Next;
-    CheckEquals('Test string', ResultSet.GetString(1));
+    CheckEquals('Test string', ResultSet.GetString(FirstDbcIndex));
 
     ResultSet := nil;
     Close;
@@ -694,6 +714,9 @@ begin
 end;
 
 procedure TZTestDbcPostgreSQLBugReportMBCs.Test739514;
+const
+  id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -709,8 +732,8 @@ begin
   with ResultSet do
   begin
     Check(Next);
-    CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
+    CheckEquals(1, ResultSet.GetInt(id_index));
+    CheckEquals('Абракадабра', ResultSet.GetString(fld_index), Connection.GetConSettings);
     MoveToInsertRow;
     UpdateIntByName('id', 2);
 
@@ -723,12 +746,12 @@ begin
   with ResultSet do
   begin
     Check(Next);
-    CheckEquals(1, ResultSet.GetInt(1));
-    CheckEquals('Абракадабра', ResultSet.GetString(2), Connection.GetConSettings);
+    CheckEquals(1, ResultSet.GetInt(id_index));
+    CheckEquals('Абракадабра', ResultSet.GetString(fld_index), Connection.GetConSettings);
 
     Check(Next);
-    CheckEquals(2, ResultSet.GetInt(1));
-    CheckEquals('\Победа\', ResultSet.GetString(2), Connection.GetConSettings);
+    CheckEquals(2, ResultSet.GetInt(id_index));
+    CheckEquals('\Победа\', ResultSet.GetString(fld_index), Connection.GetConSettings);
     Close;
   end;
 

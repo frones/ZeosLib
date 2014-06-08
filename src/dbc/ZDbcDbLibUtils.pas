@@ -126,7 +126,7 @@ function ConvertODBCToSqlType(FieldType: SmallInt;
   CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
-    1, 12, -8, -9: Result := stString;
+    1{char}, 12{varchar}, -8{nchar}, -9{nvarchar}: Result := stString;
     -7{bit}: Result := stBoolean;
 //Bug #889223, bug with tinyint on mssql
 //    -6: Result := stByte;
@@ -136,7 +136,7 @@ begin
     4: Result := stInteger;
     2, 3, 6, 7, 8: Result := stDouble;
     11, 93: Result := stTimestamp;
-    -1, -10: Result := stAsciiStream;
+    -1{text}, -10: Result{ntext} := stAsciiStream;
     -4{image}: Result := stBinaryStream;
     -2{binary},-3{varbinary}: Result := stBytes;
     -11{uniqueidentifier}: Result := stGUID;
@@ -174,7 +174,8 @@ begin
     DBLIBSQLDATETIME: Result := stTimestamp;
     DBLIBSQLTEXT: Result := stAsciiStream;
     DBLIBSQLIMAGE: Result := stBinaryStream;
-    DBLIBSQLBINARY: Result := stBinaryStream;
+    DBLIBSQLBINARY: Result := stBytes;
+    DBLIBSQLVARBINARY: Result := stBytes;
   else
     Result := stUnknown;
   end;

@@ -476,30 +476,223 @@ type
       Const SchemaPattern:String;Const TableNamePattern:String;const Types: TStringDynArray):String;
       deprecated; // (technobot) use TZAbstractDatabaseMetadata.GetTablesCacheKey instead
 
+const
+  CatalogNameIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  SchemaNameIndex  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  TableNameIndex   = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  ColumnNameIndex  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 
+const
+  CollationAndCharSetNameIndex = {$IFNDEF GENERIC_INDEX}6{$ELSE}5{$ENDIF};
 var
-  CharacterSetsColumnsDynArray: TZMetadataColumnDefs; //EgonHugeist
-  CollationCharSetColumnsDynArray: TZMetadataColumnDefs; //EgonHugeist
-  TriggersColumnsDynArray: TZMetadataColumnDefs; //EgonHugeist
+  CharacterSetsColumnsDynArray: TZMetadataColumnDefs;
+const
+  CharacterSetsNameIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  CharacterSetsIDIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+var
+  CollationCharSetColumnsDynArray: TZMetadataColumnDefs;
+const
+  CollationNameIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  CharacterSetNameIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  CharacterSetIDIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  CharacterSetSizeIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+var
+  TriggersColumnsDynArray: TZMetadataColumnDefs;
   TriggersColColumnsDynArray: TZMetadataColumnDefs;
+const
+  ProcedureNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  ProcedureOverloadIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  ProcedureReserverd1Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  ProcedureReserverd2Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  ProcedureRemarksIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  ProcedureTypeIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+var
   ProceduresColumnsDynArray: TZMetadataColumnDefs;
+const
+  ProcColProcedureNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  ProcColColumnNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  ProcColColumnTypeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  ProcColDataTypeIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  ProcColTypeNameIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  ProcColPrecisionIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  ProcColLengthIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  ProcColScaleIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  ProcColRadixIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  ProcColNullableIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  ProcColRemarksIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+var
   ProceduresColColumnsDynArray: TZMetadataColumnDefs;
+const
+  TableColumnsSQLType = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  TableColumnsRemarks = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+var
   TableColumnsDynArray: TZMetadataColumnDefs;
+const
+  SchemaColumnsTableSchemaIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+var
   SchemaColumnsDynArray: TZMetadataColumnDefs;
   CatalogColumnsDynArray: TZMetadataColumnDefs;
+const
+  TableTypeColumnTableTypeIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+var
   TableTypeColumnsDynArray: TZMetadataColumnDefs;
+const
+  TableColColumnTypeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  TableColColumnTypeNameIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  TableColColumnSizeIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  TableColColumnBufLengthIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  TableColColumnDecimalDigitsIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  TableColColumnNumPrecRadixIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  TableColColumnNullableIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  TableColColumnRemarksIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  TableColColumnColDefIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  TableColColumnSQLDataTypeIndex = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  TableColColumnSQLDateTimeSubIndex = {$IFDEF GENERIC_INDEX}14{$ELSE}15{$ENDIF};
+  TableColColumnCharOctetLengthIndex = {$IFDEF GENERIC_INDEX}15{$ELSE}16{$ENDIF};
+  TableColColumnOrdPosIndex = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
+  TableColColumnIsNullableIndex = {$IFDEF GENERIC_INDEX}17{$ELSE}18{$ENDIF};
+  TableColColumnAutoIncIndex = {$IFDEF GENERIC_INDEX}18{$ELSE}19{$ENDIF};
+  TableColColumnCaseSensitiveIndex = {$IFDEF GENERIC_INDEX}19{$ELSE}20{$ENDIF};
+  TableColColumnSearchableIndex = {$IFDEF GENERIC_INDEX}20{$ELSE}21{$ENDIF};
+  TableColColumnWritableIndex = {$IFDEF GENERIC_INDEX}21{$ELSE}22{$ENDIF};
+  TableColColumnDefinitelyWritableIndex = {$IFDEF GENERIC_INDEX}22{$ELSE}23{$ENDIF};
+  TableColColumnReadonlyIndex = {$IFDEF GENERIC_INDEX}23{$ELSE}24{$ENDIF};
+var
   TableColColumnsDynArray: TZMetadataColumnDefs;
+const
+  TableColPrivGrantorIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  TableColPrivGranteeIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  TableColPrivPrivilegeIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  TableColPrivIsGrantableIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+var
   TableColPrivColumnsDynArray: TZMetadataColumnDefs;
+const
+  TablePrivGrantorIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  TablePrivGranteeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  TablePrivPrivilegeIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  TablePrivIsGrantableIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+var
   TablePrivColumnsDynArray: TZMetadataColumnDefs;
+const
+  BestRowIdentScopeIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  BestRowIdentColNameIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  BestRowIdentDataTypeIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  BestRowIdentTypeNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  BestRowIdentColSizeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  BestRowIdentBufLengthIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  BestRowIdentDecimalDigitsIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  BestRowIdentPseudoColumnIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+var
   BestRowIdentColumnsDynArray: TZMetadataColumnDefs;
+const
+  TableColVerScopeIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  TableColVerColNameIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  TableColVerDataTypeIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  TableColVerTypeNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  TableColVerColSizeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  TableColVerBufLengthIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  TableColVerDecimalDigitsIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  TableColVerPseudoColumnIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+var
   TableColVerColumnsDynArray: TZMetadataColumnDefs;
+const
+  PrimaryKeyColumnNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  PrimaryKeyKeySeqIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  PrimaryKeyPKNameIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+var
   PrimaryKeyColumnsDynArray: TZMetadataColumnDefs;
+const
+  ImportedKeyColPKTableCatalogIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  ImportedKeyColPKTableSchemaIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  ImportedKeyColPKTableNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  ImportedKeyColPKColumnNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  ImportedKeyColFKTableCatalogIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  ImportedKeyColFKTableSchemaIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  ImportedKeyColFKTableNameIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  ImportedKeyColFKColumnNameIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  ImportedKeyColKeySeqIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  ImportedKeyColUpdateRuleIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  ImportedKeyColDeleteRuleIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  ImportedKeyColFKNameIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  ImportedKeyColPKNameIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  ImportedKeyColDeferrabilityIndex = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+var
   ImportedKeyColumnsDynArray: TZMetadataColumnDefs;
+const
+  ExportedKeyColPKTableCatalogIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  ExportedKeyColPKTableSchemaIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  ExportedKeyColPKTableNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  ExportedKeyColPKColumnNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  ExportedKeyColFKTableCatalogIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  ExportedKeyColFKTableSchemaIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  ExportedKeyColFKTableNameIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  ExportedKeyColFKColumnNameIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  ExportedKeyColKeySeqIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  ExportedKeyColUpdateRuleIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  ExportedKeyColDeleteRuleIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  ExportedKeyColFKNameIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  ExportedKeyColPKNameIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  ExportedKeyColDeferrabilityIndex = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+var
   ExportedKeyColumnsDynArray: TZMetadataColumnDefs;
+const
+  CrossRefKeyColPKTableCatalogIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  CrossRefKeyColPKTableSchemaIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  CrossRefKeyColPKTableNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  CrossRefKeyColPKColumnNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  CrossRefKeyColFKTableCatalogIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  CrossRefKeyColFKTableSchemaIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  CrossRefKeyColFKTableNameIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  CrossRefKeyColFKColumnNameIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  CrossRefKeyColKeySeqIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  CrossRefKeyColUpdateRuleIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  CrossRefKeyColDeleteRuleIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  CrossRefKeyColFKNameIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  CrossRefKeyColPKNameIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  CrossRefKeyColDeferrabilityIndex = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+var
   CrossRefColumnsDynArray: TZMetadataColumnDefs;
+const
+  TypeInfoTypeNameIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  TypeInfoDataTypeIndex = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  TypeInfoPecisionIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  TypeInfoLiteralPrefixIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  TypeInfoLiteralSuffixIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  TypeInfoCreateParamsIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  TypeInfoNullAbleIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  TypeInfoCaseSensitiveIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  TypeInfoSearchableIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  TypeInfoUnsignedAttributeIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  TypeInfoFixedPrecScaleIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  TypeInfoAutoIncrementIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  TypeInfoLocaleTypeNameIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  TypeInfoMinimumScaleIndex = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  TypeInfoMaximumScaleIndex = {$IFDEF GENERIC_INDEX}14{$ELSE}15{$ENDIF};
+  TypeInfoSQLDataTypeIndex = {$IFDEF GENERIC_INDEX}15{$ELSE}16{$ENDIF};
+  TypeInfoSQLDateTimeSubIndex = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
+  TypeInfoNumPrecRadix = {$IFDEF GENERIC_INDEX}17{$ELSE}18{$ENDIF};
+var
   TypeInfoColumnsDynArray: TZMetadataColumnDefs;
+const
+  IndexInfoColNonUniqueIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  IndexInfoColIndexQualifierIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  IndexInfoColIndexNameIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  IndexInfoColTypeIndex = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  IndexInfoColOrdPositionIndex = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  IndexInfoColColumnNameIndex = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  IndexInfoColAscOrDescIndex = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  IndexInfoColCardinalityIndex = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  IndexInfoColPagesIndex = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  IndexInfoColFilterConditionIndex = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+var
   IndexInfoColumnsDynArray: TZMetadataColumnDefs;
   SequenceColumnsDynArray: TZMetadataColumnDefs;
+const
+  UDTColTypeNameIndex = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  UDTColClassNameIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  UDTColDataTypeIndex = {$IFDEF GENERIC_INDEX}4{$ELSE}4{$ENDIF};
+  UDTColRemarksIndex = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+var
   UDTColumnsDynArray: TZMetadataColumnDefs;
 
 implementation
@@ -2038,7 +2231,7 @@ begin
   while SrcResultSet.Next do
   begin
     DestResultSet.MoveToInsertRow;
-    for I := 1 to Metadata.GetColumnCount do
+    for I := FirstDbcIndex to Metadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}do
     begin
       case Metadata.GetColumnType(I) of
         stBoolean:
@@ -2047,10 +2240,16 @@ begin
           DestResultSet.UpdateByte(I, SrcResultSet.GetByte(I));
         stShort:
           DestResultSet.UpdateShort(I, SrcResultSet.GetShort(I));
+        stWord:
+          DestResultSet.UpdateWord(I, SrcResultSet.GetWord(I));
         stSmall:
           DestResultSet.UpdateSmall(I, SrcResultSet.GetSmall(I));
+        stLongWord:
+          DestResultSet.UpdateUInt(I, SrcResultSet.GetUInt(I));
         stInteger:
           DestResultSet.UpdateInt(I, SrcResultSet.GetInt(I));
+        stULong:
+          DestResultSet.UpdateULong(I, SrcResultSet.GetULong(I));
         stLong:
           DestResultSet.UpdateLong(I, SrcResultSet.GetLong(I));
         stFloat:
@@ -2101,7 +2300,7 @@ begin
   Metadata := ResultSet.GetMetadata;
   ColumnsInfo := TObjectList.Create(True);
   try
-    for I := 1 to Metadata.GetColumnCount do
+    for I := {$IFNDEF GENERIC_INDEX}1{$ELSE}0{$ENDIF} to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
@@ -2272,7 +2471,7 @@ end;
 function TZAbstractDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
+  Result := ConstructVirtualResultSet(ProceduresColumnsDynArray);
 end;
 
 {**
@@ -3159,7 +3358,7 @@ begin
       with GetPrimaryKeys(Catalog, Schema, Table) do
       begin
         while Next do
-          ColumnNames.Add(GetStringByName('COLUMN_NAME'));
+          ColumnNames.Add(GetString(PrimaryKeyColumnNameIndex));
         Close;
       end;
 
@@ -3172,9 +3371,9 @@ begin
           while Next do
           begin
             if IndexName = '' then
-              IndexName := GetStringByName('INDEX_NAME');
-            if GetStringByName('INDEX_NAME') = IndexName then
-              ColumnNames.Add(GetStringByName('COLUMN_NAME'));
+              IndexName := GetString(IndexInfoColIndexNameIndex);
+            if GetString(IndexInfoColIndexNameIndex) = IndexName then
+              ColumnNames.Add(GetString(ColumnNameIndex));
           end;
           Close;
         end;
@@ -3185,22 +3384,22 @@ begin
         while Next do
         begin
           if (ColumnNames.Count <> 0) and (ColumnNames.IndexOf(
-            GetStringByName('COLUMN_NAME')) < 0) then
+            GetString(ColumnNameIndex)) < 0) then
             Continue;
           if (ColumnNames.Count = 0)
-            and (TZSQLType(GetIntByName('DATA_TYPE')) in
+            and (TZSQLType(GetSmall(TableColColumnTypeIndex)) in
             [stBytes, stBinaryStream, stAsciiStream, stUnicodeStream]) then
             Continue;
 
           Result.MoveToInsertRow;
-          Result.UpdateInt(1, Ord(sbrSession));
-          Result.UpdateString(2, GetStringByName('COLUMN_NAME'));
-          Result.UpdateInt(3, GetIntByName('DATA_TYPE'));
-          Result.UpdateString(4, GetStringByName('TYPE_NAME'));
-          Result.UpdateInt(5, GetIntByName('COLUMN_SIZE'));
-          Result.UpdateInt(6, GetIntByName('BUFFER_LENGTH'));
-          Result.UpdateInt(7, GetIntByName('DECIMAL_DIGITS'));
-          Result.UpdateInt(8, Ord(brNotPseudo));
+          Result.UpdateInt(BestRowIdentScopeIndex, Ord(sbrSession));
+          Result.UpdateString(BestRowIdentColNameIndex, GetString(ColumnNameIndex));
+          Result.UpdateSmall(BestRowIdentDataTypeIndex, GetSmall(TableColColumnTypeIndex));
+          Result.UpdateString(BestRowIdentTypeNameIndex, GetString(TableColColumnTypeNameIndex));
+          Result.UpdateInt(BestRowIdentColSizeIndex, GetInt(TableColColumnSizeIndex));
+          Result.UpdateInt(BestRowIdentBufLengthIndex, GetInt(TableColColumnBufLengthIndex));
+          Result.UpdateInt(BestRowIdentDecimalDigitsIndex, GetInt(TableColColumnDecimalDigitsIndex));
+          Result.UpdateInt(BestRowIdentPseudoColumnIndex, Ord(brNotPseudo));
           Result.InsertRow;
         end;
         Close;
@@ -3524,7 +3723,7 @@ end;
 function TZAbstractDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 begin
-    Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
+  Result := ConstructVirtualResultSet(ImportedKeyColumnsDynArray);
 end;
 
 {**
@@ -4281,6 +4480,8 @@ end;
 procedure TZAbstractDatabaseMetadata.FillWildcards;
 begin
   try
+    {SetLength(WildcardsArray,1);
+    WildcardsArray[0]:='%';}
     SetLength(WildcardsArray,2);
     WildcardsArray[0]:='_';
     WildcardsArray[1]:='%';
@@ -4698,13 +4899,11 @@ var
 begin
   Result := True;
   for I := 1 to Length(Value) do
-  begin
     if not CharInSet(Value[I], ['a'..'z','0'..'9','_']) then
     begin
       Result := False;
       Break;
     end;
-  end;
 end;
 
 {**
@@ -4718,13 +4917,11 @@ var
 begin
   Result := True;
   for I := 1 to Length(Value) do
-  begin
     if not CharInSet(Value[I], ['A'..'Z','0'..'9','_']) then
     begin
       Result := False;
       Break;
     end;
-  end;
 end;
 
 {**
@@ -4873,14 +5070,14 @@ end;
 
 const
   CharacterSetsColumnsCount = 2;
-  CharacterSetsColumns: array[1..CharacterSetsColumnsCount]
+  CharacterSetsColumns: array[FirstDbcIndex..CharacterSetsColumnsCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'CHARACTER_SET_NAME'; SQLType: stString; Length: 35),
     (Name: 'CHARACTER_SET_ID'; SQLType: stSmall; Length: 0)
   );
 
   CollationCharSetColumnsCount = 8; //EgonHugeist
-  CollationCharSetColumns: array[1..CollationCharSetColumnsCount]
+  CollationCharSetColumns: array[FirstDbcIndex..CollationCharSetColumnsCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'COLLATION_CATALOG'; SQLType: stString; Length: 35),
     (Name: 'COLLATION_SCHEMA'; SQLType: stString; Length: 35),
@@ -4892,8 +5089,8 @@ const
     (Name: 'CHARACTER_SET_SIZE'; SQLType: stSmall; Length: 0)
   );
 
-  TriggersColumnCount = 8;  //EgonHugeist
-  TriggersColumns: array[1..TriggersColumnCount]
+  TriggersColumnCount = 8;
+  TriggersColumns: array[FirstDbcIndex..TriggersColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TRIGGER_CAT'; SQLType: stString; Length: 255),
     (Name: 'TRIGGER_SCHEM'; SQLType: stString; Length: 255),
@@ -4906,7 +5103,7 @@ const
   );
 
   ProceduresColumnCount = 8;
-  ProceduresColumns: array[1..ProceduresColumnCount]
+  ProceduresColumns: array[FirstDbcIndex..ProceduresColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'PROCEDURE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_SCHEM'; SQLType: stString; Length: 255),
@@ -4919,7 +5116,7 @@ const
   );
 
   ProceduresColColumnCount = 13;
-  ProceduresColColumns: array[1..ProceduresColColumnCount]
+  ProceduresColColumns: array[FirstDbcIndex..ProceduresColColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'PROCEDURE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PROCEDURE_SCHEM'; SQLType: stString; Length: 255),
@@ -4937,7 +5134,7 @@ const
   );
 
   TableColumnCount = 5;
-  TableColumns: array[1..TableColumnCount]
+  TableColumns: array[FirstDbcIndex..TableColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -4947,25 +5144,25 @@ const
   );
 
   SchemaColumnCount = 1;
-  SchemaColumns: array[1..SchemaColumnCount]
+  SchemaColumns: array[FirstDbcIndex..SchemaColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255)
   );
 
   CatalogColumnCount = 1;
-  CatalogColumns: array[1..CatalogColumnCount]
+  CatalogColumns: array[FirstDbcIndex..CatalogColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255)
   );
 
   TableTypeColumnCount = 1;
-  TableTypeColumns: array[1..TableTypeColumnCount]
+  TableTypeColumns: array[FirstDbcIndex..TableTypeColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_TYPE'; SQLType: stString; Length: 255)
   );
 
   TableColColumnCount = 24;
-  TableColColumns: array[1..TableColColumnCount]
+  TableColColumns: array[FirstDbcIndex..TableColColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -4994,7 +5191,7 @@ const
   );
 
   TableColPrivColumnCount = 8;
-  TableColPrivColumns: array[1..TableColPrivColumnCount]
+  TableColPrivColumns: array[FirstDbcIndex..TableColPrivColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5007,7 +5204,7 @@ const
   );
 
   TablePrivColumnCount = 7;
-  TablePrivColumns: array[1..TablePrivColumnCount]
+  TablePrivColumns: array[FirstDbcIndex..TablePrivColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5019,7 +5216,7 @@ const
   );
 
   BestRowIdentColumnCount = 8;
-  BestRowIdentColumns: array[1..BestRowIdentColumnCount]
+  BestRowIdentColumns: array[FirstDbcIndex..BestRowIdentColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'SCOPE'; SQLType: stSmall; Length: 0),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
@@ -5032,7 +5229,7 @@ const
   );
 
   TableColVerColumnCount = 8;
-  TableColVerColumns: array[1..TableColVerColumnCount]
+  TableColVerColumns: array[FirstDbcIndex..TableColVerColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'SCOPE'; SQLType: stSmall; Length: 0),
     (Name: 'COLUMN_NAME'; SQLType: stString; Length: 255),
@@ -5045,7 +5242,7 @@ const
   );
 
   PrimaryKeyColumnCount = 6;
-  PrimaryKeyColumns: array[1..PrimaryKeyColumnCount]
+  PrimaryKeyColumns: array[FirstDbcIndex..PrimaryKeyColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5056,7 +5253,7 @@ const
   );
 
   ImportedKeyColumnCount = 14;
-  ImportedKeyColumns: array[1..ImportedKeyColumnCount]
+  ImportedKeyColumns: array[FirstDbcIndex..ImportedKeyColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'PKTABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PKTABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5075,7 +5272,7 @@ const
   );
 
   ExportedKeyColumnCount = 14;
-  ExportedKeyColumns: array[1..ExportedKeyColumnCount]
+  ExportedKeyColumns: array[FirstDbcIndex..ExportedKeyColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'PKTABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PKTABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5094,7 +5291,7 @@ const
   );
 
   CrossRefColumnCount = 14;
-  CrossRefColumns: array[1..CrossRefColumnCount]
+  CrossRefColumns: array[FirstDbcIndex..CrossRefColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'PKTABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'PKTABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5113,7 +5310,7 @@ const
   );
 
   TypeInfoColumnCount = 18;
-  TypeInfoColumns: array[1..TypeInfoColumnCount]
+  TypeInfoColumns: array[FirstDbcIndex..TypeInfoColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TYPE_NAME'; SQLType: stString; Length: 255),
     (Name: 'DATA_TYPE'; SQLType: stSmall; Length: 0),
@@ -5136,7 +5333,7 @@ const
   );
 
   IndexInfoColumnCount = 13;
-  IndexInfoColumns: array[1..IndexInfoColumnCount]
+  IndexInfoColumns: array[FirstDbcIndex..IndexInfoColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TABLE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TABLE_SCHEM'; SQLType: stString; Length: 255),
@@ -5154,7 +5351,7 @@ const
   );
 
   SequenceColumnCount = 3;
-  SequenceColumns: array[1..SequenceColumnCount]
+  SequenceColumns: array[FirstDbcIndex..SequenceColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef = (
     (Name: 'SEQUENCE_CAT'; SQLType: stString; Length: 255),
     (Name: 'SEQUENCE_SCHEM'; SQLType: stString; Length: 255),
@@ -5162,7 +5359,7 @@ const
   );
 
   UDTColumnCount = 6;
-  UDTColumns: array[1..UDTColumnCount]
+  UDTColumns: array[FirstDbcIndex..UDTColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF}]
     of TZMetadataColumnDef =(
     (Name: 'TYPE_CAT'; SQLType: stString; Length: 255),
     (Name: 'TYPE_SCHEM'; SQLType: stString; Length: 255),
@@ -5177,90 +5374,90 @@ var
 
 initialization
   SetLength(CharacterSetsColumnsDynArray, CharacterSetsColumnsCount);
-  for I := 1 to CharacterSetsColumnsCount do
-    CharacterSetsColumnsDynArray[I - 1] := CharacterSetsColumns[I];
+  for I := FirstDbcIndex to CharacterSetsColumnsCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    CharacterSetsColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := CharacterSetsColumns[I];
 
   SetLength(CollationCharSetColumnsDynArray, CollationCharSetColumnsCount);
-  for I := 1 to CollationCharSetColumnsCount do
-    CollationCharSetColumnsDynArray[I - 1] := CollationCharSetColumns[I];
+  for I := FirstDbcIndex to CollationCharSetColumnsCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    CollationCharSetColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := CollationCharSetColumns[I];
 
   SetLength(TriggersColumnsDynArray, TriggersColumnCount);
-  for I := 1 to TriggersColumnCount do
-    TriggersColumnsDynArray[I - 1] := TriggersColumns[I];
+  for I := FirstDbcIndex to TriggersColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TriggersColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TriggersColumns[I];
 
   SetLength(ProceduresColumnsDynArray, ProceduresColumnCount);
-  for I := 1 to ProceduresColumnCount do
-    ProceduresColumnsDynArray[I - 1] := ProceduresColumns[I];
+  for I := FirstDbcIndex to ProceduresColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    ProceduresColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ProceduresColumns[I];
 
   SetLength(ProceduresColColumnsDynArray, ProceduresColColumnCount);
-  for I := 1 to ProceduresColColumnCount do
-    ProceduresColColumnsDynArray[I - 1] := ProceduresColColumns[I];
+  for I := FirstDbcIndex to ProceduresColColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    ProceduresColColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ProceduresColColumns[I];
 
   SetLength(TableColumnsDynArray, TableColumnCount);
-  for I := 1 to TableColumnCount do
-    TableColumnsDynArray[I - 1] := TableColumns[I];
+  for I := FirstDbcIndex to TableColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TableColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TableColumns[I];
 
   SetLength(SchemaColumnsDynArray, SchemaColumnCount);
-  for I := 1 to SchemaColumnCount do
-    SchemaColumnsDynArray[I - 1] := SchemaColumns[I];
+  for I := FirstDbcIndex to SchemaColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    SchemaColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := SchemaColumns[I];
 
   SetLength(CatalogColumnsDynArray, CatalogColumnCount);
-  for I := 1 to CatalogColumnCount do
-    CatalogColumnsDynArray[I - 1] := CatalogColumns[I];
+  for I := FirstDbcIndex to CatalogColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    CatalogColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := CatalogColumns[I];
 
   SetLength(TableTypeColumnsDynArray, TableTypeColumnCount);
-  for I := 1 to TableTypeColumnCount do
-    TableTypeColumnsDynArray[I - 1] := TableTypeColumns[I];
+  for I := FirstDbcIndex to TableTypeColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TableTypeColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TableTypeColumns[I];
 
   SetLength(TableColColumnsDynArray, TableColColumnCount);
-  for I := 1 to TableColColumnCount do
-    TableColColumnsDynArray[I - 1] := TableColColumns[I];
+  for I := FirstDbcIndex to TableColColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TableColColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TableColColumns[I];
 
   SetLength(TableColPrivColumnsDynArray, TableColPrivColumnCount);
-  for I := 1 to TableColPrivColumnCount do
-    TableColPrivColumnsDynArray[I - 1] := TableColPrivColumns[I];
+  for I := FirstDbcIndex to TableColPrivColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TableColPrivColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TableColPrivColumns[I];
 
   SetLength(TablePrivColumnsDynArray, TablePrivColumnCount);
-  for I := 1 to TablePrivColumnCount do
-    TablePrivColumnsDynArray[I - 1] := TablePrivColumns[I];
+  for I := FirstDbcIndex to TablePrivColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TablePrivColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TablePrivColumns[I];
 
   SetLength(BestRowIdentColumnsDynArray, BestRowIdentColumnCount);
-  for I := 1 to BestRowIdentColumnCount do
-    BestRowIdentColumnsDynArray[I - 1] := BestRowIdentColumns[I];
+  for I := FirstDbcIndex to BestRowIdentColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    BestRowIdentColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := BestRowIdentColumns[I];
 
   SetLength(TableColVerColumnsDynArray, TableColVerColumnCount);
-  for I := 1 to TableColVerColumnCount do
-    TableColVerColumnsDynArray[I - 1] := TableColVerColumns[I];
+  for I := FirstDbcIndex to TableColVerColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TableColVerColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TableColVerColumns[I];
 
   SetLength(PrimaryKeyColumnsDynArray, PrimaryKeyColumnCount);
-  for I := 1 to PrimaryKeyColumnCount do
-    PrimaryKeyColumnsDynArray[I - 1] := PrimaryKeyColumns[I];
+  for I := FirstDbcIndex to PrimaryKeyColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    PrimaryKeyColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := PrimaryKeyColumns[I];
 
   SetLength(ImportedKeyColumnsDynArray, ImportedKeyColumnCount);
-  for I := 1 to ImportedKeyColumnCount do
-    ImportedKeyColumnsDynArray[I - 1] := ImportedKeyColumns[I];
+  for I := FirstDbcIndex to ImportedKeyColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    ImportedKeyColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ImportedKeyColumns[I];
 
   SetLength(ExportedKeyColumnsDynArray, ExportedKeyColumnCount);
-  for I := 1 to ExportedKeyColumnCount do
-    ExportedKeyColumnsDynArray[I - 1] := ExportedKeyColumns[I];
+  for I := FirstDbcIndex to ExportedKeyColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    ExportedKeyColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ExportedKeyColumns[I];
 
   SetLength(CrossRefColumnsDynArray, CrossRefColumnCount);
-  for I := 1 to CrossRefColumnCount do
-    CrossRefColumnsDynArray[I - 1] := CrossRefColumns[I];
+  for I := FirstDbcIndex to CrossRefColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    CrossRefColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := CrossRefColumns[I];
 
   SetLength(TypeInfoColumnsDynArray, TypeInfoColumnCount);
-  for I := 1 to TypeInfoColumnCount do
-    TypeInfoColumnsDynArray[I - 1] := TypeInfoColumns[I];
+  for I := FirstDbcIndex to TypeInfoColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    TypeInfoColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TypeInfoColumns[I];
 
   SetLength(IndexInfoColumnsDynArray, IndexInfoColumnCount);
-  for I := 1 to IndexInfoColumnCount do
-    IndexInfoColumnsDynArray[I - 1] := IndexInfoColumns[I];
+  for I := FirstDbcIndex to IndexInfoColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    IndexInfoColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := IndexInfoColumns[I];
 
   SetLength(SequenceColumnsDynArray, SequenceColumnCount);
-  for I := 1 to SequenceColumnCount do
-    SequenceColumnsDynArray[I - 1] := SequenceColumns[I];
+  for I := FirstDbcIndex to SequenceColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    SequenceColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := SequenceColumns[I];
 
   SetLength(UDTColumnsDynArray, UDTColumnCount);
-  for I := 1 to UDTColumnCount do
-    UDTColumnsDynArray[I - 1] := UDTColumns[I];
+  for I := FirstDbcIndex to UDTColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    UDTColumnsDynArray[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := UDTColumns[I];
 end.

@@ -96,14 +96,18 @@ EgonHugeist:
   Reminder for ?missing? metadata processing.
 }
 procedure ZTestDbcDbLibBugReport.Mantis54Dbc;
+const
+  Key1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  BI_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  F_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var stmnt: IZPreparedStatement;
 begin
   stmnt := Connection.PrepareStatement('select * from mantis54');
   with Stmnt.ExecuteQueryPrepared do
   begin
-    CheckEquals(Ord(stInteger), Ord(GetMetadata.GetColumnType(1)));
-    //CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(2)), 'Int64/LongInt expected'); //Not solvable
-    CheckEquals(Ord(stDouble), Ord(GetMetadata.GetColumnType(3)));
+    CheckEquals(Ord(stInteger), Ord(GetMetadata.GetColumnType(Key1_Index)));
+    //CheckEquals(Ord(stLong), Ord(GetMetadata.GetColumnType(BI_Index)), 'Int64/LongInt expected'); //Not solvable
+    CheckEquals(Ord(stDouble), Ord(GetMetadata.GetColumnType(F_Index)));
     Close;
   end;
   stmnt.Close;

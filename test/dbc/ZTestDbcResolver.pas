@@ -184,6 +184,11 @@ end;
   Runs a test for MySQL Resolver.
 }
 procedure TZTestCachedResolverCase.TestMySqlResolverPosts;
+const
+  department_dep_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  department_dep_shname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  department_dep_address_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -204,23 +209,23 @@ begin
   CheckEquals(False, ResultSet.Next);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, TEST_ROW_ID);
-  ResultSet.UpdateString(2, 'AAA');
-  ResultSet.UpdateString(3, 'BBB');
-  ResultSet.UpdateString(4, 'XXX');
+  ResultSet.UpdateInt(department_dep_id_index, TEST_ROW_ID);
+  ResultSet.UpdateString(department_dep_name_index, 'AAA');
+  ResultSet.UpdateString(department_dep_shname_index, 'BBB');
+  ResultSet.UpdateString(department_dep_address_index, 'XXX');
   ResultSet.InsertRow;
 
   { Updates the row. }
-  ResultSet.UpdateString(4, 'CCC');
+  ResultSet.UpdateString(department_dep_address_index, 'CCC');
   ResultSet.UpdateRow;
 
   { Reads the row and removes it. }
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department ' + WhereClause);
   CheckEquals(True, ResultSet.Next);
-  CheckEquals(TEST_ROW_ID, ResultSet.GetInt(1));
-  CheckEquals('AAA', ResultSet.GetString(2));
-  CheckEquals('BBB', ResultSet.GetString(3));
-  CheckEquals('CCC', ResultSet.GetString(4));
+  CheckEquals(TEST_ROW_ID, ResultSet.GetInt(department_dep_id_index));
+  CheckEquals('AAA', ResultSet.GetString(department_dep_name_index));
+  CheckEquals('BBB', ResultSet.GetString(department_dep_shname_index));
+  CheckEquals('CCC', ResultSet.GetString(department_dep_address_index));
   ResultSet.DeleteRow;
 
   { Checks the removed row. }

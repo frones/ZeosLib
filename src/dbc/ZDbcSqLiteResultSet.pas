@@ -315,7 +315,7 @@ end;
 }
 function TZSQLiteResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  Result := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
 end;
 
 {**
@@ -330,7 +330,7 @@ end;
 }
 function TZSQLiteResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
   begin
     Result.P := nil;
@@ -338,7 +338,7 @@ begin
   end
   else
   begin
-    Result.P := FPlainDriver.column_text(FStmtHandle, ColumnIndex -1);
+    Result.P := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
     Result.Len := ZFastCode.StrLen(Result.P);
   end;
 end;
@@ -354,7 +354,7 @@ end;
 }
 function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
-  Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex -1);
+  Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
   LastWasNull := Result = nil;
 end;
 
@@ -370,7 +370,7 @@ end;
 function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var AnsiRec: TZAnsiRec;
 begin //rewritten because of performance reasons to avoid localized the RBS before
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex -1) = SQLITE_NULL;
+  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
     Result := ''
   else
@@ -403,7 +403,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex-1);
+  Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
   LastWasNull := Buffer = nil;
   if LastWasNull then
     Result := ''
@@ -427,7 +427,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
@@ -460,7 +462,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -485,7 +489,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -510,7 +516,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -535,7 +543,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -560,7 +570,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -585,7 +597,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -610,7 +624,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -636,7 +652,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -662,7 +680,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBytes);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
 
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
@@ -690,7 +710,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
@@ -734,7 +756,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
@@ -779,7 +803,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
@@ -818,15 +844,17 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex-1);
+  {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
 
   LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Exit
   else
     try
-      case GetMetadata.GetColumnType(ColumnIndex+1) of
+      case GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) of
         stAsciiStream, stUnicodeStream:
           begin
             Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
@@ -920,7 +948,7 @@ begin
 
   { Defines an index of autoincrement field. }
   FAutoColumnIndex := 0;
-  for I := 1 to Metadata.GetColumnCount do
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX} - 1{$ENDIF} do
   begin
     if Metadata.IsAutoIncrement(I) and
       (Metadata.GetColumnType(I) in [stByte, stShort, stSmall, stLongWord,
@@ -963,7 +991,7 @@ var
 begin
   inherited;
 
-  if (FAutoColumnIndex > 0) and
+  if (FAutoColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and
      (OldRowAccessor.IsNull(FAutoColumnIndex) or (OldRowAccessor.GetValue(FAutoColumnIndex).VInteger = 0)) then
   begin
     PlainDriver := (Connection as IZSQLiteConnection).GetPlainDriver;

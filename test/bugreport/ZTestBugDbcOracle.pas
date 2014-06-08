@@ -85,6 +85,9 @@ end;
   NUMBER must be froat
 }
 procedure TZTestDbcOracleBugReport.TestNum1;
+const
+  col_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  col_num_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -100,12 +103,12 @@ begin
   begin
     with GetMetadata do
     begin
-      CheckEquals(ord(stInteger), Ord(GetColumnType(1)), 'id column type');
-      CheckEquals(ord(stDouble), Ord(GetColumnType(2)), 'Num column type');
+      CheckEquals(ord(stInteger), Ord(GetColumnType(col_id_Index)), 'id column type');
+      CheckEquals(ord(stDouble), Ord(GetColumnType(col_num_Index)), 'Num column type');
     end;
     CheckEquals(True, Next, 'ResultSet.Next');
-    CheckEquals(1, GetInt(1), 'id value');
-    CheckEquals(54321.0123456789, GetDouble(2), 1E-11, 'Num value');
+    CheckEquals(1, GetInt(col_id_Index), 'id value');
+    CheckEquals(54321.0123456789, GetDouble(col_num_Index), 1E-11, 'Num value');
     Close;
   end;
 end;

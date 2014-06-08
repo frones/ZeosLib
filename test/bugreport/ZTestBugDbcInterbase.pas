@@ -78,7 +78,7 @@ type
 
 implementation
 
-uses ZTestCase, ZTestConsts;
+uses ZTestCase, ZTestConsts, ZDbcMetadata;
 
 { TZTestDbcInterbaseBugReport }
 
@@ -88,6 +88,8 @@ begin
 end;
 
 procedure TZTestDbcInterbaseBugReport.Test789879D;
+const
+  FLD_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -104,7 +106,7 @@ begin
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateFloat(1, 1.14);
+    UpdateFloat(FLD_Index, 1.14);
     InsertRow;
   end;
 
@@ -114,7 +116,7 @@ begin
   with ResultSet do
   begin
     Next;
-    CheckEquals(1.14, GetFloat(1), 0.001);
+    CheckEquals(1.14, GetFloat(FLD_Index), 0.001);
   end;
   ResultSet := nil;
   Statement.Close;
@@ -146,6 +148,10 @@ begin
 end;
 
 procedure TZTestDbcInterbaseBugReport.Test843655;
+const
+  B_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  B_TEXT_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  B_IMAGE_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -175,9 +181,9 @@ begin
     with ResultSet do
     begin
       MoveToInsertRow;
-      UpdateInt(1, TEST_ROW_ID);
-      UpdateAsciiStream(2, StrStream);
-      UpdateBinaryStream(3, BinStream);
+      UpdateInt(B_ID_Index, TEST_ROW_ID);
+      UpdateAsciiStream(B_TEXT_Index, StrStream);
+      UpdateBinaryStream(B_IMAGE_Index, BinStream);
       InsertRow;
       Close;
     end;
@@ -186,8 +192,8 @@ begin
     with ResultSet do
     begin
       CheckEquals(True, Next);
-      StrStream1 := GetAsciiStream(2);
-      BinStream1 := GetBinaryStream(3);
+      StrStream1 := GetAsciiStream(B_TEXT_Index);
+      BinStream1 := GetBinaryStream(B_IMAGE_Index);
       Close;
     end;
     CheckEquals(BinStream, BinStream1, '512 bytes binary stream');
@@ -204,8 +210,8 @@ begin
     with ResultSet do
     begin
       Next;
-      UpdateAsciiStream(2, StrStream);
-      UpdateBinaryStream(3, BinStream);
+      UpdateAsciiStream(B_TEXT_Index, StrStream);
+      UpdateBinaryStream(B_IMAGE_Index, BinStream);
       UpdateRow;
       Close;
     end;
@@ -214,8 +220,8 @@ begin
     with ResultSet do
     begin
       CheckEquals(True, Next);
-      StrStream1 := GetAsciiStream(2);
-      BinStream1 := GetBinaryStream(3);
+      StrStream1 := GetAsciiStream(B_TEXT_Index);
+      BinStream1 := GetBinaryStream(B_IMAGE_Index);
       Close;
     end;
     CheckEquals(BinStream, BinStream1, '1024 bytes binary stream');
@@ -236,6 +242,9 @@ end;
    ZeosLib reports Ex. numeric(3,1) as IntegerField
 }
 procedure TZTestDbcInterbaseBugReport.Test864622;
+const
+  FLD1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  FLD2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -251,12 +260,12 @@ begin
   begin
     with GetMetadata do
     begin
-      CheckEquals(ord(stInteger), Ord(GetColumnType(1)));
-      CheckEquals(ord(stFloat), Ord(GetColumnType(2)));
+      CheckEquals(ord(stInteger), Ord(GetColumnType(FLD1_Index)));
+      CheckEquals(ord(stFloat), Ord(GetColumnType(FLD2_Index)));
     end;
     CheckEquals(True, Next);
-    CheckEquals(1, GetInt(1));
-    CheckEquals(1.2, GetFloat(2), 0.01);
+    CheckEquals(1, GetInt(FLD1_Index));
+    CheckEquals(1.2, GetFloat(FLD2_Index), 0.01);
     Close;
   end;
 end;
@@ -266,6 +275,9 @@ end;
    Error -104 with Field named PASSWORD in Firebird
 }
 procedure TZTestDbcInterbaseBugReport.Test865441;
+const
+  ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  PASSWORD_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -282,8 +294,8 @@ begin
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateInt(1, TEST_ROW_ID);
-    UpdateString(2, 'passwd');
+    UpdateInt(ID_Index, TEST_ROW_ID);
+    UpdateString(PASSWORD_Index, 'passwd');
     InsertRow;
     Close;
   end;
@@ -292,8 +304,8 @@ begin
   with ResultSet do
   begin
     Next;
-    CheckEquals(TEST_ROW_ID, GetInt(1));
-    CheckEquals('passwd', GetString(2));
+    CheckEquals(TEST_ROW_ID, GetInt(ID_Index));
+    CheckEquals('passwd', GetString(PASSWORD_Index));
     Close;
   end;
 
@@ -305,6 +317,11 @@ end;
    Incorrect field type
 }
 procedure TZTestDbcInterbaseBugReport.Test886854;
+const
+  rdb_relation_name = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  rdb_index_name = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  rdb_field_name = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  rdb_field_position = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -331,27 +348,27 @@ begin
     //Client_Character_set sets column-type!!!!
     if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
     begin
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(1)));
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(2)));
-      CheckEquals(ord(stUnicodeString), ord(GetColumnType(3)));
+      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_relation_name)));
+      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_index_name)));
+      CheckEquals(ord(stUnicodeString), ord(GetColumnType(rdb_field_name)));
     end
     else
     begin
-      CheckEquals(ord(stString), ord(GetColumnType(1)));
-      CheckEquals(ord(stString), ord(GetColumnType(2)));
-      CheckEquals(ord(stString), ord(GetColumnType(3)));
+      CheckEquals(ord(stString), ord(GetColumnType(rdb_relation_name)));
+      CheckEquals(ord(stString), ord(GetColumnType(rdb_index_name)));
+      CheckEquals(ord(stString), ord(GetColumnType(rdb_field_name)));
     end;
-    CheckEquals(ord(stSmall), ord(GetColumnType(4)));
+    CheckEquals(ord(stSmall), ord(GetColumnType(rdb_field_position)));
   end;
 
   with ResultSet do
   begin
     Next;
-    CheckEquals('PEOPLE', GetString(1));
+    CheckEquals('PEOPLE', GetString(rdb_relation_name));
     CheckEquals(Copy('RDB$PRIMARY2598', 1, Length('RDB$PRIMARY')),
-      Copy(GetString(2), 1, Length('RDB$PRIMARY')));
-    CheckEquals('P_ID', GetString(3));
-    CheckEquals(0, GetInt(4));
+      Copy(GetString(rdb_index_name), 1, Length('RDB$PRIMARY')));
+    CheckEquals('P_ID', GetString(rdb_field_name));
+    CheckEquals(0, GetInt(rdb_field_position));
     Close;
   end;
 end;
@@ -360,6 +377,11 @@ end;
   Problem store data in database with character set DOS850
 }
 procedure TZTestDbcInterbaseBugReport.Test886914;
+const
+  TABLE886914_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  TABLE886914_DESCRIPTION_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  TABLE886914_FLAG_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  TABLE886914_ID_WhereIndex = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   PreparedStatement: IZPreparedStatement;
@@ -378,10 +400,10 @@ begin
     'UPDATE TABLE886914 SET ID=?, DESCRIPTION=?, FLAG=? WHERE ID=?;');
   with PreparedStatement do
   begin
-    SetInt(1, 2);
-    SetString(2, '');
-    SetString(3, '');
-    SetInt(4, 1);
+    SetInt(TABLE886914_ID_Index, 2);
+    SetString(TABLE886914_DESCRIPTION_Index, '');
+    SetString(TABLE886914_FLAG_Index, '');
+    SetInt(TABLE886914_ID_WhereIndex, 1);
     ExecuteUpdatePrepared;
     Close;
   end;
@@ -391,9 +413,9 @@ begin
   with ResultSet do
   begin
     Next;
-    CheckEquals(2, GetInt(1));
-    CheckEquals('', GetString(2));
-    CheckEquals('', GetString(3));
+    CheckEquals(2, GetInt(TABLE886914_ID_Index));
+    CheckEquals('', GetString(TABLE886914_DESCRIPTION_Index));
+    CheckEquals('', GetString(TABLE886914_FLAG_Index));
     Close;
   end;
 
@@ -414,10 +436,10 @@ begin
   ResultSet := Metadata.GetTables('', '', 'DEPARTMENT', nil);
   with ResultSet do begin
     Check(Next);
-    CheckEquals('', GetString(1));
-    CheckEquals('', GetString(2));
-    CheckEquals('DEPARTMENT', GetString(3));
-    CheckEquals('TABLE', GetString(4));
+    CheckEquals('', GetString(CatalogNameIndex));
+    CheckEquals('', GetString(SchemaNameIndex));
+    CheckEquals('DEPARTMENT', GetString(TableNameIndex));
+    CheckEquals('TABLE', GetString(TableColumnsSQLType));
   end;
   ResultSet.Close;
   ResultSet := nil;
@@ -425,10 +447,10 @@ begin
   ResultSet := Metadata.GetTables('', '', 'DEP_VIEW', nil);
   with ResultSet do begin
     Next;
-    CheckEquals('', GetString(1));
-    CheckEquals('', GetString(2));
-    CheckEquals('DEP_VIEW', GetString(3));
-    CheckEquals('VIEW', GetString(4));
+    CheckEquals('', GetString(CatalogNameIndex));
+    CheckEquals('', GetString(SchemaNameIndex));
+    CheckEquals('DEP_VIEW', GetString(TableNameIndex));
+    CheckEquals('VIEW', GetString(TableColumnsSQLType));
   end;
   ResultSet.Close;
   ResultSet := nil;

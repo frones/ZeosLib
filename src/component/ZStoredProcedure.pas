@@ -117,7 +117,7 @@ type
 implementation
 
 uses
-  ZAbstractRODataset, ZMessages, ZDatasetUtils
+  ZAbstractRODataset, ZMessages, ZDatasetUtils, ZDbcMetadata
   {$IFDEF WITH_ASBYTES}, ZSysUtils{$ENDIF}
   {$IFDEF WITH_INLINE_ANSICOMPARETEXT}, Windows{$ENDIF};
 
@@ -156,18 +156,19 @@ begin
 
   for I := 0 to Params.Count - 1 do
   begin
-    CallableStatement.RegisterParamType( I+1, ord(Params[I].ParamType));
+    CallableStatement.RegisterParamType( I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ord(Params[I].ParamType));
 
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
-      CallableStatement.RegisterOutParameter(I + 1,
+      CallableStatement.RegisterOutParameter(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));
 
     if Supports(CallableStatement, IZParamNamedCallableStatement) and
       Assigned(FMetaResultSet) then
       if FMetaResultSet.Next then
         (CallableStatement as IZParamNamedCallableStatement).RegisterParamTypeAndName(
-          I, FMetaResultSet.GetString(7), Params[i].Name, FMetaResultSet.GetInt(8),
-          FMetaResultSet.GetInt(9));
+          I, FMetaResultSet.GetString(ProcColTypeNameIndex),
+          Params[i].Name, FMetaResultSet.GetInt(ProcColPrecisionIndex),
+          FMetaResultSet.GetInt(ProcColLengthIndex));
   end;
   Result := CallableStatement;
 end;
@@ -198,7 +199,7 @@ begin
     if Params[I].ParamType in [ptResult, ptOutput] then
      Continue;
 
-    SetStatementParam(I+1, Statement, Param);
+    SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, Param);
   end;
 end;
 {$IFDEF FPC}
@@ -227,50 +228,72 @@ begin
     if not (Param.ParamType in [ptResult, ptOutput, ptInputOutput]) then
       Continue;
 
-    if FCallableStatement.IsNull(I + 1) then
+    if FCallableStatement.IsNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) then
       Param.Clear
     else
       case Param.DataType of
         ftBoolean:
-          Param.AsBoolean := FCallableStatement.GetBoolean(I + 1);
+          Param.AsBoolean := FCallableStatement.GetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_FTBYTE}
+        ftByte:
+          Param.AsByte := FCallableStatement.GetByte(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTBYTE}
+        {$IFDEF WITH_FTSHORTINT}
+        ftShortInt:
+          Param.AsShortInt := FCallableStatement.GetShort(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTSHORTINT}
+        {$IFDEF WITH_FTSHORTINT}
+        ftWord:
+          Param.AsWord := FCallableStatement.GetWord(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTSHORTINT}
         ftSmallInt:
-          Param.AsSmallInt := FCallableStatement.GetSmall(I + 1);
+          Param.AsSmallInt := FCallableStatement.GetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_FTLONGWORD}
+        ftLongWord:
+          Param.AsLongWord := FCallableStatement.GetUInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTLONGWORD}
         ftInteger, ftAutoInc:
-          Param.AsInteger := FCallableStatement.GetInt(I + 1);
-        ftFloat:
-          Param.AsFloat := FCallableStatement.GetDouble(I + 1);
+          Param.AsInteger := FCallableStatement.GetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$IFDEF WITH_PARAM_ASLARGEINT}
         ftLargeInt:
-          Param.Value := FCallableStatement.GetLong(I + 1);
+          Param.AsLargeInt := FCallableStatement.GetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF}
+        {$IFDEF WITH_FTSINGLE}
+        ftSingle:
+          Param.AsSingle := FCallableStatement.GetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        {$ENDIF WITH_FTSINGLE}
+        ftFloat:
+          Param.AsFloat := FCallableStatement.GetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftString:
           begin
-            Param.AsString := FCallableStatement.GetString(I + 1);
+            Param.AsString := FCallableStatement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
             {$IFDEF UNICODE}Param.DataType := ftString;{$ENDIF} //Hack: D12_UP sets ftWideString on assigning a UnicodeString
           end;
         ftWideString:
-          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I + 1);
+          {$IFDEF WITH_FTWIDESTRING}Param.AsWideString{$ELSE}Param.Value{$ENDIF} := FCallableStatement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftMemo:
           begin
-            Param.AsMemo := FCallableStatement.GetString(I + 1);
+            Param.AsMemo := FCallableStatement.GetString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
             {$IFDEF UNICODE}Param.DataType := ftMemo;{$ENDIF} //Hack: D12_UP sets ftWideMemo on assigning a UnicodeString
           end;
         {$IFDEF WITH_WIDEMEMO}
         ftWideMemo:
         begin
-          Param.AsWideString := FCallableStatement.GetUnicodeString(I + 1);
+          Param.AsWideString := FCallableStatement.GetUnicodeString(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
           Param.DataType := ftWideMemo;
         end;
         {$ENDIF}
         ftBytes, ftVarBytes:
-          Param.Value := FCallableStatement.GetBytes(I + 1);
+          Param.Value := FCallableStatement.GetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftDate:
-          Param.AsDate := FCallableStatement.GetDate(I + 1);
+          Param.AsDate := FCallableStatement.GetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftTime:
-          Param.AsTime := FCallableStatement.GetTime(I + 1);
+          Param.AsTime := FCallableStatement.GetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftDateTime:
-          Param.AsDateTime := FCallableStatement.GetTimestamp(I + 1);
+          Param.AsDateTime := FCallableStatement.GetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
         ftBlob:
           begin
-            TempBlob := FCallableStatement.GetValue(I +1).VInterface as IZBlob;
+            TempBlob := FCallableStatement.GetValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}).VInterface as IZBlob;
             if not TempBlob.IsEmpty then
               Param.SetBlobData({$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ENDIF}(TempBlob.GetBuffer), TempBlob.Length);
             TempBlob := nil;
@@ -333,10 +356,10 @@ begin
           Params.Clear;
           while FMetaResultSet.Next do
           begin
-            ColumnType := FMetaResultSet.GetIntByName('COLUMN_TYPE');
+            ColumnType := FMetaResultSet.GetInt(ProcColColumnTypeIndex);
             if ColumnType >= 0 then //-1 is result column
-              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetIntByName('DATA_TYPE'))),
-                FMetaResultSet.GetStringByName('COLUMN_NAME'),
+              Params.CreateParam(ConvertDbcToDatasetType(TZSqlType(FMetaResultSet.GetInt(ProcColDataTypeIndex))),
+                FMetaResultSet.GetString(ProcColColumnNameIndex),
                 GetParamType(TZProcedureColumnType(ColumnType)));
           end;
           Params.AssignValues(OldParams);

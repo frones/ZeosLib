@@ -1480,11 +1480,11 @@ end;
 procedure TZAbstractPreparedStatement.SetInParam(ParameterIndex: Integer;
   SQLType: TZSQLType; const Value: TZVariant);
 begin
-  if ParameterIndex >= FInParamCount then
-    SetInParamCount(ParameterIndex);
+  if ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} >= FInParamCount then
+    SetInParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
-  FInParamTypes[ParameterIndex - 1] := SQLType;
-  FInParamValuesArray[FInParamValuesIndex][ParameterIndex - 1] := Value;
+  FInParamTypes[ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := SQLType;
+  FInParamValuesArray[FInParamValuesIndex][ParameterIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
 {**
@@ -1575,9 +1575,9 @@ procedure TZAbstractPreparedStatement.SetDefaultValue(
   ParameterIndex: Integer; const Value: string);
 begin
  if ParameterIndex >= FInParamCount then
-   SetInParamCount(ParameterIndex);
+   SetInParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
-  FInParamDefaultValues[ParameterIndex - 1] := Value;
+  FInParamDefaultValues[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := Value;
 end;
 
 {**
@@ -2082,13 +2082,16 @@ end;
 procedure TZAbstractPreparedStatement.SetNullArray(ParameterIndex: Integer;
   const SQLType: TZSQLType; const Value; const VariantType: TZVariantType = vtNull);
 begin
-  if InParamCount < ParameterIndex then
+  if InParamCount < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} then
     raise Exception.Create('Set Array-Value first');
-  if InParamValues[ParameterIndex-1].VType <> vtArray then
+  {$IFNDEF GENERIC_INDEX}
+  ParameterIndex := ParameterIndex -1;
+  {$ENDIF}
+  if InParamValues[ParameterIndex].VType <> vtArray then
     raise Exception.Create('No Array bound before!');
-  InParamValues[ParameterIndex-1].VArray.VIsNullArray := Pointer(Value);
-  InParamValues[ParameterIndex-1].VArray.VIsNullArrayType := Ord(SQLType);
-  InParamValues[ParameterIndex-1].VArray.VIsNullArrayVariantType := VariantType;
+  InParamValues[ParameterIndex].VArray.VIsNullArray := Pointer(Value);
+  InParamValues[ParameterIndex].VArray.VIsNullArrayType := Ord(SQLType);
+  InParamValues[ParameterIndex].VArray.VIsNullArrayVariantType := VariantType;
 end;
 
 {**
@@ -2110,7 +2113,8 @@ var
 
   procedure AssertLength(const Len: Integer);
   begin
-    if (ParameterIndex = 1) or ((ParameterIndex > 1) and (InParamValues[ParameterIndex -1].VArray.VArray = nil))  then
+    if (ParameterIndex = FirstDbcIndex) or ((ParameterIndex > FirstDbcIndex) and
+       (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}].VArray.VArray = nil))  then
       FInitialArrayCount := Len
     else
       if Len <> FInitialArrayCount then
@@ -2160,7 +2164,7 @@ procedure TZAbstractPreparedStatement.ClearParameters;
 var
   I: Integer;
 begin
-  for I := 1 to FInParamCount do
+  for I := FirstDbcIndex to FInParamCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     SetInParam(I, stUnknown, NullVariant);
     SetDefaultValue(I, '');
@@ -2373,7 +2377,7 @@ begin
   for I := 0 to High(InParamTypes) do
   begin
     if ( InParamTypes[I] = ZDbcIntfs.stUnknown ) then
-     Continue;
+      Continue;
     if (FDBParamTypes[i] in [2, 4]) then //[ptResult, ptOutput]
       continue; //EgonHugeist: Ignore known OutParams! else StatmentInparamCount <> expect ProcedureParamCount
     ParamTypes[ParamCount] := InParamTypes[I];
@@ -2418,10 +2422,10 @@ var
   I: Integer;
 begin
   inherited;
-  for I := 1 to FOutParamCount do
+  for I := 0 to FOutParamCount-1 do
   begin
-    OutParamValues[I - 1] := NullVariant;
-    OutParamTypes[I - 1] := stUnknown;
+    OutParamValues[I] := NullVariant;
+    OutParamTypes[I] := stUnknown;
   end;
   SetOutParamCount(0);
 end;
@@ -2567,17 +2571,17 @@ end;
 procedure TZAbstractCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
-  SetOutParamCount(ParameterIndex);
-  OutParamTypes[ParameterIndex - 1] := TZSQLType(SQLType);
+  SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+  OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZSQLType(SQLType);
 end;
 
 procedure TZAbstractCallableStatement.RegisterParamType(ParameterIndex,
   ParamType: Integer);
 begin
-  if (Length(FDBParamTypes) < ParameterIndex) then
-    SetLength(FDBParamTypes, ParameterIndex);
+  if ({$IFDEF GENERIC_INDEX}High{$ELSE}Length{$ENDIF}(FDBParamTypes) < ParameterIndex) then
+    SetLength(FDBParamTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
-  FDBParamTypes[ParameterIndex - 1] := ParamType;
+  FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := ParamType;
   if not FIsFunction then FIsFunction := ParamType = 4; //ptResult
   if not FHasOutParameter then FHasOutParameter := ParamType in [2,3]; //ptOutput, ptInputOutput
 end;
@@ -2592,13 +2596,13 @@ function TZAbstractCallableStatement.GetOutParam(
 begin
   if Assigned(OutParamValues) then
   begin
-    Result := OutParamValues[ParameterIndex - 1];
+    Result := OutParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
     FLastWasNull := ClientVarManager.IsNull(Result);
   end
   else
   begin
-    Result:=NullVariant;
-    FLastWasNull:=True;
+    Result := NullVariant;
+    FLastWasNull := True;
   end;
 end;
 

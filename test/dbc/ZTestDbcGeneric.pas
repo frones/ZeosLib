@@ -172,6 +172,11 @@ end;
   Tests case sensetive tables
 }
 procedure TZGenericTestDbcResultSet.TestCaseSensitive;
+const
+  cs_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  field1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  field2_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  field3_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Sql: string;
   Statement: IZPreparedStatement;
@@ -199,15 +204,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateInt(1, TEST_ROW_ID);
-    UpdateInt(2, 10);
-    UpdateInt(3, 11);
-    UpdateNull(4);
+    UpdateInt(cs_id_Index, TEST_ROW_ID);
+    UpdateInt(field1_Index, 10);
+    UpdateInt(field2_Index, 11);
+    UpdateNull(field3_Index);
     InsertRow;
   end;
   ResultSet := nil;
@@ -217,7 +222,7 @@ begin
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   CheckNotNull(ResultSet);
   with ResultSet do
@@ -228,7 +233,7 @@ begin
     CheckEquals(11, GetIntByName('cs_data1'));
     CheckEquals(True, IsNullByName('cs data1'));
 
-    UpdateInt(2, 101);
+    UpdateInt(field1_Index, 101);
     UpdateNullByName('cs_data1');
     UpdateIntByName('cs data1', 12);
     ResultSet.UpdateRow;
@@ -241,7 +246,7 @@ begin
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   CheckNotNull(ResultSet);
   with ResultSet do
@@ -261,7 +266,7 @@ begin
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   with ResultSet do
   begin
@@ -275,16 +280,16 @@ begin
   { Inserts row to "Case_Sensitive" table }
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   CheckNotNull(Statement);
   ResultSet := Statement.ExecuteQueryPrepared;
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateInt(1, TEST_ROW_ID);
-    UpdateNull(2);
-    UpdateInt(3, 21);
-    UpdateInt(4, 22);
+    UpdateInt(cs_id_Index, TEST_ROW_ID);
+    UpdateNull(field1_Index);
+    UpdateInt(field2_Index, 21);
+    UpdateInt(field3_Index, 22);
     InsertRow;
   end;
   ResultSet := nil;
@@ -294,7 +299,7 @@ begin
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   CheckNotNull(ResultSet);
   with ResultSet do
@@ -305,7 +310,7 @@ begin
     CheckEquals(21, GetIntByName('CS_Data2'));
     CheckEquals(22, GetIntByName('Cs_Data3'), 0);
 
-    UpdateInt(2, 20);
+    UpdateInt(field1_Index, 20);
     UpdateIntByName('CS_Data2', 212);
     UpdateNullByName('Cs_Data3');
     ResultSet.UpdateRow;
@@ -318,7 +323,7 @@ begin
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   CheckNotNull(ResultSet);
   with ResultSet do
@@ -338,7 +343,7 @@ begin
   Statement := Connection.PrepareStatement(Sql);
   Statement.SetResultSetConcurrency(rcUpdatable);
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(cs_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   with ResultSet do
   begin
@@ -381,6 +386,28 @@ end;
   Checks functionality prepared statement
 }
 procedure TZGenericTestDbcResultSet.TestPreparedStatement;
+const
+  Insert_eq_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Insert_eq_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  Insert_eq_type_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  Insert_eq_cost_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  Insert_eq_date_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  Insert_woff_date_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  Select_eq_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Delete_eq_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Inserted_eq_name_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Inserted_eq_id_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+
+  Insert_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Insert_p_dep_id_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  Insert_p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  Insert_p_begin_work_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  Insert_p_end_work_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  Insert_p_picture_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  Insert_p_resume_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  Insert_p_redundant_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  Select_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Delete_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   Sql: string;
   Statement: IZPreparedStatement;
@@ -402,12 +429,12 @@ begin
   CheckNotNull(Statement);
   with Statement do
   begin
-    SetInt(1, TEST_ROW_ID);
-    SetString(2, 'xyz');
-    SetInt(3, 7);
-    SetDouble(4, 1234.567);
-    SetDate(5, EncodeDate(1999, 8, 5));
-    SetNull(6, stDate);
+    SetInt(Insert_eq_id_Index, TEST_ROW_ID);
+    SetString(Insert_eq_name_Index, 'xyz');
+    SetInt(Insert_eq_type_Index, 7);
+    SetDouble(Insert_eq_cost_Index, 1234.567);
+    SetDate(Insert_eq_date_Index, EncodeDate(1999, 8, 5));
+    SetNull(Insert_woff_date_Index, stDate);
     CheckEquals(False, ExecutePrepared);
     CheckEquals(1, GetUpdateCount);
   end;
@@ -417,7 +444,7 @@ begin
   Statement := Connection.PrepareStatement(
     'SELECT * FROM equipment WHERE eq_id = ?');
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(Select_eq_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   CheckNotNull(ResultSet);
   with ResultSet do
@@ -438,8 +465,8 @@ begin
   CheckNotNull(Statement);
   with Statement do
   begin
-    SetString(1, 'xyz1');
-    SetInt(2, TEST_ROW_ID);
+    SetString(Inserted_eq_name_Index, 'xyz1');
+    SetInt(Inserted_eq_id_Index, TEST_ROW_ID);
     CheckEquals(1, ExecuteUpdatePrepared);
   end;
   Statement := nil;
@@ -450,7 +477,7 @@ begin
   CheckNotNull(Statement);
   with Statement do
   begin
-    SetInt(1, TEST_ROW_ID);
+    SetInt(Delete_eq_id_Index, TEST_ROW_ID);
     CheckEquals(False, ExecutePrepared);
     CheckEquals(1, GetUpdateCount);
   end;
@@ -466,23 +493,23 @@ begin
   { Sets prepared statement parameters values. }
   with Statement do
   begin
-    SetInt(1, TEST_ROW_ID);
-    SetInt(2, 2);
-    SetString(3, 'xyz');
-    SetTime(4, EncodeTime(8, 0, 0, 0));
-    SetTime(5, EncodeTime(17, 30, 0, 0));
+    SetInt(Insert_p_id_Index, TEST_ROW_ID);
+    SetInt(Insert_p_dep_id_Index, 2);
+    SetString(Insert_p_name_Index, 'xyz');
+    SetTime(Insert_p_begin_work_Index, EncodeTime(8, 0, 0, 0));
+    SetTime(Insert_p_end_work_Index, EncodeTime(17, 30, 0, 0));
 
     BinStream := TMemoryStream.Create;
     BinStream.LoadFromFile('../../../database/images/dogs.jpg');
     BinStream.Size := 1024;
-    SetBinaryStream(6, BinStream);
+    SetBinaryStream(Insert_p_picture_Index, BinStream);
 
     StrStream := TMemoryStream.Create;
     StrStream.LoadFromFile('../../../database/text/lgpl.txt');
     StrStream.Size := 1024;
-    SetAsciiStream(7, StrStream);
+    SetAsciiStream(Insert_p_resume_Index, StrStream);
 
-    SetNull(8, stString);
+    SetNull(Insert_p_redundant_Index, stString);
     CheckEquals(False, ExecutePrepared);
     CheckEquals(1, GetUpdateCount);
   end;
@@ -492,7 +519,7 @@ begin
   Statement := Connection.PrepareStatement(
     'SELECT * FROM people WHERE p_id = ?');
   CheckNotNull(Statement);
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(Select_p_id_Index, TEST_ROW_ID);
   ResultSet := Statement.ExecuteQueryPrepared;
   CheckNotNull(ResultSet);
   with ResultSet do
@@ -529,7 +556,7 @@ begin
   CheckNotNull(Statement);
   with Statement do
   begin
-    SetInt(1, TEST_ROW_ID);
+    SetInt(Delete_p_id_Index, TEST_ROW_ID);
     CheckEquals(False, ExecutePrepared);
     CheckEquals(1, GetUpdateCount);
   end;
@@ -1057,6 +1084,8 @@ end;
 
 {$WARNINGS OFF}
 procedure TZGenericTestDbcResultSet.TestStringGetter;
+const
+  p_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -1068,55 +1097,55 @@ begin
     ResultSet := Statement.ExecuteQuery('select * from people');
     try
       Check(ResultSet.Next);
-      CheckEquals('Vasia Pupkin', ResultSet.GetString(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiString(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetUTF8String(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetRawByteString(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetUnicodeString(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiRec(3).P);
-      CheckEquals('Vasia Pupkin', ResultSet.GetPChar(3));
-      CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(3));
+      CheckEquals('Vasia Pupkin', ResultSet.GetString(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiString(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetUTF8String(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetRawByteString(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetUnicodeString(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Vasia Pupkin', ResultSet.GetPChar(p_name_Index));
+      CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
-      CheckEquals('Andy Karto', ResultSet.GetString(3));
-      CheckEquals('Andy Karto', ResultSet.GetAnsiString(3));
-      CheckEquals('Andy Karto', ResultSet.GetUTF8String(3));
-      CheckEquals('Andy Karto', ResultSet.GetRawByteString(3));
-      CheckEquals('Andy Karto', ResultSet.GetUnicodeString(3));
-      CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(3));
-      CheckEquals('Andy Karto', ResultSet.GetAnsiRec(3).P);
-      CheckEquals('Andy Karto', ResultSet.GetPChar(3));
-      CheckEquals('Andy Karto', ResultSet.GetPWideChar(3));
+      CheckEquals('Andy Karto', ResultSet.GetString(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetAnsiString(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetUTF8String(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetRawByteString(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetUnicodeString(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Andy Karto', ResultSet.GetPChar(p_name_Index));
+      CheckEquals('Andy Karto', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
-      CheckEquals('Kristen Sato', ResultSet.GetString(3));
-      CheckEquals('Kristen Sato', ResultSet.GetAnsiString(3));
-      CheckEquals('Kristen Sato', ResultSet.GetUTF8String(3));
-      CheckEquals('Kristen Sato', ResultSet.GetRawByteString(3));
-      CheckEquals('Kristen Sato', ResultSet.GetUnicodeString(3));
-      CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(3));
-      CheckEquals('Kristen Sato', ResultSet.GetAnsiRec(3).P);
-      CheckEquals('Kristen Sato', ResultSet.GetPChar(3));
-      CheckEquals('Kristen Sato', ResultSet.GetPWideChar(3));
+      CheckEquals('Kristen Sato', ResultSet.GetString(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetAnsiString(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetUTF8String(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetRawByteString(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetUnicodeString(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Kristen Sato', ResultSet.GetPChar(p_name_Index));
+      CheckEquals('Kristen Sato', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
-      CheckEquals('Aleksey Petrov', ResultSet.GetString(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiString(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetUTF8String(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetRawByteString(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetUnicodeString(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiRec(3).P);
-      CheckEquals('Aleksey Petrov', ResultSet.GetPChar(3));
-      CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(3));
+      CheckEquals('Aleksey Petrov', ResultSet.GetString(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiString(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetUTF8String(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetRawByteString(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetUnicodeString(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Aleksey Petrov', ResultSet.GetPChar(p_name_Index));
+      CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
-      CheckEquals('Yan Pater', ResultSet.GetString(3));
-      CheckEquals('Yan Pater', ResultSet.GetAnsiString(3));
-      CheckEquals('Yan Pater', ResultSet.GetUTF8String(3));
-      CheckEquals('Yan Pater', ResultSet.GetRawByteString(3));
-      CheckEquals('Yan Pater', ResultSet.GetUnicodeString(3));
-      CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(3));
-      CheckEquals('Yan Pater', ResultSet.GetAnsiRec(3).P);
-      CheckEquals('Yan Pater', ResultSet.GetPChar(3));
-      CheckEquals('Yan Pater', ResultSet.GetPWideChar(3));
+      CheckEquals('Yan Pater', ResultSet.GetString(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetAnsiString(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetUTF8String(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetRawByteString(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetUnicodeString(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Yan Pater', ResultSet.GetPChar(p_name_Index));
+      CheckEquals('Yan Pater', ResultSet.GetPWideChar(p_name_Index));
     finally
       ResultSet.Close;
     end;

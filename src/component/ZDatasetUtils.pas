@@ -495,9 +495,9 @@ begin
     if not (Current.FieldKind in [fkData, fkInternalCalc]) then
       Continue;
 
-    ColumnIndex := Current.FieldNo;
+    ColumnIndex := Current.FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
     FieldIndex := DefineFieldIndex(FieldsLookupTable, Current);
-    if (ColumnIndex < 1) or (ColumnIndex > ColumnCount) then
+    if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > ColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
       Continue;
 
     case Current.DataType of
@@ -588,9 +588,9 @@ begin
     if Current.FieldKind <> fkData then
       Continue;
 
-    ColumnIndex := Current.FieldNo;
+    ColumnIndex := Current.FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
     FieldIndex := DefineFieldIndex(FieldsLookupTable, Current);
-    if (ColumnIndex < 1) or (ColumnIndex > ColumnCount) then
+    if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > ColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
       Continue;
 
 //    if (Current.Required = True) and (WasNull = True) then
@@ -663,12 +663,12 @@ begin
     end;
 
     if WasNull then
-      begin
-        // Performance thing :
-        // The default expression will only be set when necessary : if the value really IS null
-        Resultset.UpdateDefaultExpression(ColumnIndex, RowAccessor.GetColumnDefaultExpression(FieldIndex));
-        ResultSet.UpdateNull(ColumnIndex);
-      end;
+    begin
+      // Performance thing :
+      // The default expression will only be set when necessary : if the value really IS null
+      Resultset.UpdateDefaultExpression(ColumnIndex, RowAccessor.GetColumnDefaultExpression(FieldIndex));
+      ResultSet.UpdateNull(ColumnIndex);
+    end;
   end;
 end;
 
@@ -774,7 +774,7 @@ var
 begin
   for I := 0 to High(FieldRefs) do
   begin
-    ColumnIndex := TField(FieldRefs[I]).FieldNo;
+    ColumnIndex := TField(FieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
     if ColumnIndex >= 0 then
     begin
       case TField(FieldRefs[I]).DataType of
@@ -871,12 +871,12 @@ procedure CopyDataFieldsToVars(const Fields: TObjectDynArray;
 var
   I, ColumnIndex: Integer;
 begin
-  for I := 0 to Length(Fields) - 1 do
+  for I := 0 to High(Fields) do
   begin
     if Fields[I] = nil then
       Continue;
 
-    ColumnIndex := TField(Fields[I]).FieldNo;
+    ColumnIndex := TField(Fields[I]).FieldNo {$IFDEF GENERIC_INDEX}-1{$ENDIF};
     if not ResultSet.IsNull(ColumnIndex) then
     begin
       case TField(Fields[I]).DataType of
@@ -1044,7 +1044,7 @@ begin
 
     if DecodedKeyValues[I].VType = vtNull then
       Continue;
-    CurrentType := ResultSet.GetMetadata.GetColumnType(Current.FieldNo);
+    CurrentType := ResultSet.GetMetadata.GetColumnType(Current.FieldNo{$IFDEF GENERIC_INDEX} -1{$ENDIF});
 
     if PartialKey then
     begin
@@ -1166,7 +1166,7 @@ begin
   Result := True;
   for I := 0 to High(KeyValues) do
   begin
-    ColumnIndex := TField(FieldRefs[I]).FieldNo;
+    ColumnIndex := TField(FieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
 
     if KeyValues[I].VType = vtNull then
     begin
@@ -1369,62 +1369,65 @@ end;
 }
 function CompareKeyFields(Field1: TField; ResultSet: IZResultSet;
   Field2: TField): Boolean;
+var
+  ColumnIndex: Integer;
 begin
   Result := False;
   if Field1.FieldNo >= 1 then
   begin
+    ColumnIndex := Field1.FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
     case Field1.DataType of
       ftBoolean:
-        Result := ResultSet.GetBoolean(Field1.FieldNo) = Field2.AsBoolean;
+        Result := ResultSet.GetBoolean(ColumnIndex) = Field2.AsBoolean;
       {$IFDEF WITH_FTBYTE}ftByte,{$ENDIF}
       {$IFDEF WITH_FTSHORTINT}ftShortInt,{$ENDIF}
       ftSmallInt, ftInteger, ftAutoInc:
-        Result := ResultSet.GetInt(Field1.FieldNo) = Field2.AsInteger;
+        Result := ResultSet.GetInt(ColumnIndex) = Field2.AsInteger;
       {$IFDEF WITH_FTSINGLE}
       ftSingle:
-        Result := Abs(ResultSet.GetFloat(Field1.FieldNo)
+        Result := Abs(ResultSet.GetFloat(ColumnIndex)
           - Field2.AsSingle) < FLOAT_COMPARE_PRECISION_SINGLE;
       {$ENDIF}
       ftFloat:
         begin
-          Result := Abs(ResultSet.GetDouble(Field1.FieldNo)
+          Result := Abs(ResultSet.GetDouble(ColumnIndex)
             - Field2.AsFloat) < FLOAT_COMPARE_PRECISION;
         end;
       {$IFDEF WITH_FTEXTENDED}
       ftExtended:
-        Result := Abs(ResultSet.GetBigDecimal(Field1.FieldNo)
+        Result := Abs(ResultSet.GetBigDecimal(ColumnIndex)
           - Field2.AsExtended) < FLOAT_COMPARE_PRECISION_SINGLE;
       {$ENDIF}
       {$IFDEF WITH_FTLONGWORD}
       ftLongword:
-        Result := ResultSet.GetULong(Field1.FieldNo)
+        Result := ResultSet.GetULong(ColumnIndex)
           = Field2.{$IFDEF TFIELD_HAS_ASLARGEINT}AsLargeInt{$ELSE}AsInteger{$ENDIF};
       {$ENDIF}
       ftLargeInt:
         begin
           if Field2 is TLargeIntField then
-            Result := ResultSet.GetLong(Field1.FieldNo)
+            Result := ResultSet.GetLong(ColumnIndex)
               = TLargeIntField(Field2).AsLargeInt
           else
-            Result := ResultSet.GetInt(Field1.FieldNo) = Field2.AsInteger;
+            Result := ResultSet.GetInt(ColumnIndex) = Field2.AsInteger;
         end;
       ftCurrency:
         begin
-          Result := Abs(ResultSet.GetBigDecimal(Field1.FieldNo)
+          Result := Abs(ResultSet.GetBigDecimal(ColumnIndex)
             - Field2.{$IFDEF WITH_ASCURRENCY}AsCurrency{$ELSE}AsFloat{$ENDIF})
             < FLOAT_COMPARE_PRECISION;
         end;
       ftDate:
-        Result := ResultSet.GetDate(Field1.FieldNo) = Field2.AsDateTime;
+        Result := ResultSet.GetDate(ColumnIndex) = Field2.AsDateTime;
       ftTime:
-        Result := ResultSet.GetTime(Field1.FieldNo) = Field2.AsDateTime;
+        Result := ResultSet.GetTime(ColumnIndex) = Field2.AsDateTime;
       ftDateTime:
-        Result := ResultSet.GetTimestamp(Field1.FieldNo) = Field2.AsDateTime;
+        Result := ResultSet.GetTimestamp(ColumnIndex) = Field2.AsDateTime;
       ftWideString:
-        Result := ResultSet.GetUnicodeString(Field1.FieldNo) =
+        Result := ResultSet.GetUnicodeString(ColumnIndex) =
           Field2.{$IFDEF WITH_ASVARIANT}AsVariant{$ELSE}AsWideString{$ENDIF};
       else
-        Result := ResultSet.GetString(Field1.FieldNo) = Field2.AsString;
+        Result := ResultSet.GetString(ColumnIndex) = Field2.AsString;
     end;
   end;
 end;
@@ -1532,13 +1535,11 @@ var
 begin
   Result := -1;
   for I := 0 to High(FieldsLookupTable) do
-  begin
     if FieldsLookupTable[I] = Integer(Field) then
     begin
-      Result := I + 1;
+      Result := I{$IFNDEF GENERIC_INDEX}+1{$ENDIF};
       Break;
     end;
-  end;
 end;
 
 {**

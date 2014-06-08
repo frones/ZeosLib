@@ -285,7 +285,8 @@ function IntToUnicode(const Value: Int64): ZWideString; overload;
 function IntToUnicode(Value: UInt64; Const Negative: Boolean = False): ZWideString; overload;
 
 
-function RawToInt(const Value: RawByteString): Integer;
+function RawToInt(const Value: RawByteString): Integer; overload;
+function RawToInt(const Value: PAnsiChar): Integer; overload;
 function RawToInt64(const Value: RawByteString): Int64;
 function RawToUInt64(const Value: RawByteString): UInt64;
 function UnicodeToInt(const Value: ZWideString): Integer;
@@ -3462,8 +3463,14 @@ end;
 {$IFEND}
 
 function RawToInt(const Value: RawByteString): Integer;
+begin
+  Result := RawToInt(Pointer(Value));
+end;
+
+{$WARNINGS OFF} {Prevent False Compiler Warning on Digit not being Initialized}
+function RawToInt(const Value: PAnsiChar): Integer;
 {$IF defined (WIN32) and not defined(FPC)}
-//originally wrtten by John O'Harrow
+//originally written by John O'Harrow
 //http://fastcode.sourceforge.net/
 //function StrToInt32_JOH_IA32_7_b(const S: string) : Integer;
 asm
@@ -3768,10 +3775,11 @@ asm
   inc   edx
   jmp   @@HexLoop
 {$ELSE}
-  {$IFDEF UNICODE}
   //function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
   //originally wrtten by John O'Harrow
   //http://fastcode.sourceforge.net/
+  //EgonHugeist:
+  //Patched to use PAnsiChar values only
   const
     AdjustLowercase = Ord('a') - 10;
     AdjustUppercase = Ord('A') - 10;
@@ -3780,7 +3788,8 @@ asm
     Neg, Hex, Valid: Boolean;
     P: PAnsiChar;
   begin
-    P := Pointer(Value);
+    //P := Pointer(Value);
+    P := Value;
     if not Assigned(P) then
       raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
     Neg   := False;
@@ -3853,12 +3862,9 @@ asm
       Result := -Result;
     if (not Valid) or (P^ <> #0) then
       raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
-  {$ELSE}
-  begin
-    Result := StrToInt(Value);
-  {$ENDIF}
 {$IFEND}
 end;
+{$WARNINGS ON}
 
 {$WARNINGS OFF}
 function UnicodeToInt(const Value: ZWideString): Integer;
@@ -3956,9 +3962,10 @@ end;
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValLong_JOH_IA32_8_a(const s: RawByteString; var code: Integer): Longint;
+function ValLong_JOH_IA32_8_a(const s: PAnsiChar; var code: Integer): Longint;
 //fast asm by John O'Harrow see:
 //http://www.fastcode.dk/fastcodeproject/fastcodeproject/61.htm
+//EgonHugeist: Changed in S type from String to PAnsiChar
 asm
   test  eax, eax
   jz    @@Null
@@ -4118,7 +4125,7 @@ begin
           inc(P);
           Valid := True;
         end;
-      if Upcase(P^) = 'X' then
+      if (Ord(P^) or $20) = ord('x') then //Upcase(P^) = 'X'
         begin
           Hex := True;
           inc(P);
@@ -4175,7 +4182,7 @@ var
   E: Integer;
 begin
   {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValLong_JOH_IA32_8_a(S, E);
+  Result := ValLong_JOH_IA32_8_a(Pointer(S), E);
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(Pointer(S), E{%H-});
   {$IFEND}
@@ -4653,7 +4660,7 @@ end;
 {$WARNINGS ON}
 
 {$IF defined(WIN32) and not defined(FPC)}
-function ValInt64_JOH_IA32_8_a(const s: RawByteString; var code: Integer): Int64;
+function ValInt64_JOH_IA32_8_a(const s: PAnsiChar; var code: Integer): Int64;
 asm
   test  eax, eax
   jz    @@Null
@@ -4818,7 +4825,7 @@ var
   E: Integer;
 begin
   {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValInt64_JOH_IA32_8_a(s, E);
+  Result := ValInt64_JOH_IA32_8_a(Pointer(s), E);
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_raw(Pointer(S), E{%H-});
   {$IFEND}
@@ -4830,7 +4837,7 @@ var
   E: Integer;
 begin
   {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValInt64_JOH_IA32_8_a(Value, E);
+  Result := ValInt64_JOH_IA32_8_a(Pointer(Value), E);
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_raw(Pointer(Value), E{%H-});
   {$IFEND}
@@ -4842,7 +4849,11 @@ function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64;
 var
   E: Integer;
 begin
+  {$IF defined(WIN32) and not defined(FPC)}
+  Result := ValInt64_JOH_IA32_8_a(s, E);
+  {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_raw(S, E{%H-});
+  {$IFEND}
   if E <> 0 then Result := Default;
 end;
 
@@ -5231,7 +5242,7 @@ end;
 function ValRawInt(const s: RawByteString; var code: Integer): Integer;
 begin
   {$IF defined(WIN32) and not defined(FPC)}
-  Result := ValLong_JOH_IA32_8_a(s, Code);
+  Result := ValLong_JOH_IA32_8_a(Pointer(s), Code);
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b(Pointer(S), Code);
   {$IFEND}
@@ -6520,4 +6531,4 @@ else
   CharPos := CharPos_Sha_Pas_2_b;
 {$ENDIF}
 
-end.
+end.

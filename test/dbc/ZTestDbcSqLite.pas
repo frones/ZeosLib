@@ -198,6 +198,11 @@ end;
   Runs a test for SQLite DBC PreparedStatement.
 }
 procedure TZTestDbcSQLiteCase.TestPreparedStatement;
+const
+  department_dep_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  department_dep_shname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  department_dep_address_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZPreparedStatement;
   Stream: TStream;
@@ -207,12 +212,12 @@ begin
     + ' VALUES(?,?,?,?)');
   CheckNotNull(Statement);
 
-  Statement.SetInt(1, TEST_ROW_ID);
-  Statement.SetString(2, 'xyz');
-  Statement.SetNull(3, stString);
+  Statement.SetInt(department_dep_id_index, TEST_ROW_ID);
+  Statement.SetString(department_dep_name_index, 'xyz');
+  Statement.SetNull(department_dep_shname_index, stString);
   Stream := TStringStream.Create('abc'#10'def'#13'hg''i');
   try
-    Statement.SetAsciiStream(4, Stream);
+    Statement.SetAsciiStream(department_dep_address_index, Stream);
   finally
     Stream.Free;
   end;
@@ -223,7 +228,7 @@ begin
     'DELETE FROM department WHERE dep_id=?');
   CheckNotNull(Statement);
 
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(department_dep_id_index, TEST_ROW_ID);
   CheckEquals(1, Statement.ExecuteUpdatePrepared);
   Statement.ExecutePrepared;
   CheckEquals(0, Statement.GetUpdateCount);
@@ -233,6 +238,9 @@ end;
   Runs a test for SQLite AutoIncremented fields.
 }
 procedure TZTestDbcSQLiteCase.TestAutoIncFields;
+const
+  cargo_c_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  cargo_c_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -246,13 +254,13 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateString(2, 'xxx');
-  CheckEquals(0, ResultSet.GetInt(1));
-  CheckEquals('xxx', ResultSet.GetString(2));
+  ResultSet.UpdateString(cargo_c_name_index, 'xxx');
+  CheckEquals(0, ResultSet.GetInt(cargo_c_id_index));
+  CheckEquals('xxx', ResultSet.GetString(cargo_c_name_index));
 
   ResultSet.InsertRow;
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals('xxx', ResultSet.GetString(2));
+  Check(ResultSet.GetInt(cargo_c_id_index) <> 0);
+  CheckEquals('xxx', ResultSet.GetString(cargo_c_name_index));
 
   ResultSet.DeleteRow;
 
@@ -265,6 +273,14 @@ end;
   Runs a test for SQLite default values.
 }
 procedure TZTestDbcSQLiteCase.TestDefaultValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -280,17 +296,17 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 1);
+  ResultSet.UpdateInt(D_ID, 1);
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(5), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(6), 3);
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
   CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
+    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
   ResultSet.DeleteRow;
 
@@ -302,6 +318,10 @@ end;
   Runs a test for SQLite empty types.
 }
 procedure TZTestDbcSQLiteCase.TestEmptyTypes;
+const
+  et_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  data1_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  data2_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   PreparedStatement: IZPreparedStatement;
   Statement: IZStatement;
@@ -316,89 +336,88 @@ begin
     'INSERT INTO empty_types(et_id, data1, data2) VALUES(?,?,?)');
   CheckNotNull(PreparedStatement);
 
-  PreparedStatement.SetInt(1, 0);
-  PreparedStatement.SetInt(2, 1);
-  PreparedStatement.SetString(3, 'xyz');
+  PreparedStatement.SetInt(et_id_index, 0);
+  PreparedStatement.SetInt(data1_index, 1);
+  PreparedStatement.SetString(data2_index, 'xyz');
   PreparedStatement.ExecuteUpdatePrepared;
-  PreparedStatement.SetString(1, 'qwe');
-  PreparedStatement.SetString(2, 'asd');
-  PreparedStatement.SetString(3, 'xyzz');
+  PreparedStatement.SetString(et_id_index, 'qwe');
+  PreparedStatement.SetString(data1_index, 'asd');
+  PreparedStatement.SetString(data2_index, 'xyzz');
   PreparedStatement.ExecuteUpdatePrepared;
-  PreparedStatement.SetFloat(1, 1.25);
-  PreparedStatement.SetFloat(2, 2.25);
-  PreparedStatement.SetString(3, 'xyzzz');
+  PreparedStatement.SetFloat(et_id_index, 1.25);
+  PreparedStatement.SetFloat(data1_index, 2.25);
+  PreparedStatement.SetString(data2_index, 'xyzzz');
   PreparedStatement.ExecuteUpdatePrepared;
 
   ResultSet := Statement.ExecuteQuery('SELECT et_id,data1,data2 FROM empty_types where data2=''xyz''');
   CheckNotNull(ResultSet);
 
   ResultSet.Next;
-  CheckEquals(0, ResultSet.GetInt(1));
-  CheckEquals(1, ResultSet.GetInt(2));
+  CheckEquals(0, ResultSet.GetInt(et_id_index));
+  CheckEquals(1, ResultSet.GetInt(data1_index));
 
   ResultSet := Statement.ExecuteQuery('SELECT et_id,data1,data2 FROM empty_types where data2="xyzz"');
   CheckNotNull(ResultSet);
 
   ResultSet.Next;
-  CheckEquals('qwe', ResultSet.GetString(1));
-  CheckEquals('asd', ResultSet.GetString(2));
+  CheckEquals('qwe', ResultSet.GetString(et_id_index));
+  CheckEquals('asd', ResultSet.GetString(data1_index));
 
   ResultSet := Statement.ExecuteQuery('SELECT et_id,data1,data2 FROM empty_types where data2=''xyzzz''');
   CheckNotNull(ResultSet);
 
   ResultSet.Next;
-  CheckEquals(1.25, ResultSet.GetFloat(1));
-  CheckEquals(2.25, ResultSet.GetFloat(2));
+  CheckEquals(1.25, ResultSet.GetFloat(et_id_index));
+  CheckEquals(2.25, ResultSet.GetFloat(data1_index));
 
   ResultSet.Close;
   Statement.Close;
 end;
 
 procedure TZTestDbcSQLiteCase.TestReuseResultsetNative;
+const
+  p_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   PreparedStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
-  Info: TStrings;
 begin
-  Info := TStringList.Create;
-  Info.Add('ForceNativeResultSet=True');
-  PreparedStatement := Connection.PrepareStatementWithParams(
-    'SELECT * FROM PEOPLE WHERE p_id > ?', Info);
+  PreparedStatement := Connection.PrepareStatement(
+    'SELECT * FROM PEOPLE WHERE p_id > ?');
+  PreparedStatement.SetResultSetType(rtScrollInsensitive);
   try
-    PreparedStatement.SetInt(1, 0); //expecting 5 rows
+    PreparedStatement.SetInt(p_id_index, 0); //expecting 5 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(1, ResultSet.GetInt(1));
+    CheckEquals(1, ResultSet.GetInt(p_id_index));
     CheckEquals(True, ResultSet.Next); //fetch second row.
     CheckEquals(True, ResultSet.Next); //fetch third row.
     CheckEquals(True, ResultSet.Next); //fetch fourth row.
     {ignore last row}
-    PreparedStatement.SetInt(1, 1); //expecting 4 rows
+    PreparedStatement.SetInt(p_id_index, 1); //expecting 4 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(2, ResultSet.GetInt(1));
+    CheckEquals(2, ResultSet.GetInt(p_id_index));
     CheckEquals(True, ResultSet.Next); //fetch second row.
     CheckEquals(True, ResultSet.Next); //fetch third row.
     {ignore last row}
 
-    PreparedStatement.SetInt(1, 2); //expecting 3 rows
+    PreparedStatement.SetInt(p_id_index, 2); //expecting 3 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(3, ResultSet.GetInt(1));
+    CheckEquals(3, ResultSet.GetInt(p_id_index));
     while ResultSet.Next do; //full fetch automatically resets handle
 
-    PreparedStatement.SetInt(1, 3); //expecting 2 rows
+    PreparedStatement.SetInt(p_id_index, 3); //expecting 2 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(4, ResultSet.GetInt(1));
+    CheckEquals(4, ResultSet.GetInt(p_id_index));
     while ResultSet.Next do; //full fetch automatically resets handle
 
-    PreparedStatement.SetInt(1, 10); //expecting !0! rows  e.g AB -> no metadata???
+    PreparedStatement.SetInt(p_id_index, 10); //expecting !0! rows  e.g AB -> no metadata???
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckNotNull(ResultSet);
     CheckEquals(False, ResultSet.Next); //fetch first row.
   finally
-    Info.Free;
     if Assigned(ResultSet) then
       ResultSet.Close;
     PreparedStatement.Close;
@@ -406,6 +425,8 @@ begin
 end;
 
 procedure TZTestDbcSQLiteCase.TestReuseResultsetCached;
+const
+  p_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   PreparedStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
@@ -415,32 +436,32 @@ begin
   PreparedStatement := Connection.PrepareStatement(
     'SELECT * FROM PEOPLE WHERE p_id > ?');
   try
-    PreparedStatement.SetInt(1, 0); //expecting 5 rows
+    PreparedStatement.SetInt(p_id_index, 0); //expecting 5 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(1, ResultSet.GetInt(1));
+    CheckEquals(1, ResultSet.GetInt(p_id_index));
     CheckEquals(True, ResultSet.Next); //fetch second row.
     CheckEquals(True, ResultSet.Next); //fetch third row.
     CheckEquals(True, ResultSet.Next); //fetch fourth row.
     {ignore last row}
-    PreparedStatement.SetInt(1, 1); //expecting 4 rows
+    PreparedStatement.SetInt(p_id_index, 1); //expecting 4 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(2, ResultSet.GetInt(1));
+    CheckEquals(2, ResultSet.GetInt(p_id_index));
     CheckEquals(True, ResultSet.Next); //fetch second row.
     CheckEquals(True, ResultSet.Next); //fetch third row.
     {ignore last row}
 
-    PreparedStatement.SetInt(1, 2); //expecting 3 rows
+    PreparedStatement.SetInt(p_id_index, 2); //expecting 3 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(3, ResultSet.GetInt(1));
+    CheckEquals(3, ResultSet.GetInt(p_id_index));
     while ResultSet.Next do; //full fetch automatically resets handle
 
-    PreparedStatement.SetInt(1, 3); //expecting 2 rows
+    PreparedStatement.SetInt(p_id_index, 3); //expecting 2 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
     CheckEquals(True, ResultSet.Next); //fetch first row.
-    CheckEquals(4, ResultSet.GetInt(1));
+    CheckEquals(4, ResultSet.GetInt(p_id_index));
     while ResultSet.Next do; //full fetch automatically resets handle
   finally
     Info.Free;

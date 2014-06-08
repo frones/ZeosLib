@@ -552,9 +552,7 @@ begin
     ParamName := Config.ParamNames[I];
     OldParam := False;{Seqparam:=False;}
     if StrLIComp(PChar(ParamName), 'NEW_', 4) = 0 then
-    begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4)
-    end
     else if StrLIComp(PChar(ParamName), 'OLD_', 4) = 0 then
     begin
       ParamName := Copy(ParamName, 5, Length(ParamName) - 4);
@@ -562,7 +560,7 @@ begin
     end;
 
     ColumnIndex := ResultSet.FindColumn(ParamName);
-    if ColumnIndex > 0 then
+    if ColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0 then
     begin
       if OldParam then
         RowAccessor := OldRowAccessor
@@ -571,76 +569,82 @@ begin
 
       if StrToBoolEx(DefineStatementParameter(
         ResultSet.GetStatement, 'defaults', 'true')) then
-        Statement.SetDefaultValue(I + 1,
+        Statement.SetDefaultValue(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           ResultSet.GetMetadata.GetDefaultValue(ColumnIndex));
 
       case ResultSet.GetMetadata.GetColumnType(ColumnIndex) of
         stBoolean:
-          Statement.SetBoolean(I + 1,
+          Statement.SetBoolean(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
             RowAccessor.GetBoolean(ColumnIndex, WasNull));
         stByte:
-          Statement.SetByte(I + 1, RowAccessor.GetByte(ColumnIndex, WasNull));
+          Statement.SetByte(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetByte(ColumnIndex, WasNull));
         stShort:
-          Statement.SetShort(I + 1, RowAccessor.GetShort(ColumnIndex, WasNull));
+          Statement.SetShort(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetShort(ColumnIndex, WasNull));
+        stWord:
+          Statement.SetWord(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetWord(ColumnIndex, WasNull));
         stSmall:
-          Statement.SetSmall(I + 1, RowAccessor.GetSmall(ColumnIndex, WasNull));
+          Statement.SetSmall(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetSmall(ColumnIndex, WasNull));
+        stLongWord:
+          Statement.SetUInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetUInt(ColumnIndex, WasNull));
         stInteger:
-          Statement.SetInt(I + 1, RowAccessor.GetInt(ColumnIndex, WasNull));
+          Statement.SetInt(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetInt(ColumnIndex, WasNull));
+        stULong:
+          Statement.SetULong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetULong(ColumnIndex, WasNull));
         stLong:
-          Statement.SetLong(I + 1, RowAccessor.GetLong(ColumnIndex, WasNull));
+          Statement.SetLong(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetLong(ColumnIndex, WasNull));
         stFloat:
-          Statement.SetFloat(I + 1, RowAccessor.GetFloat(ColumnIndex, WasNull));
+          Statement.SetFloat(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetFloat(ColumnIndex, WasNull));
         stDouble:
-          Statement.SetDouble(I + 1, RowAccessor.GetDouble(ColumnIndex, WasNull));
+          Statement.SetDouble(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDouble(ColumnIndex, WasNull));
         stCurrency:
-          Statement.SetCurrency(I + 1, RowAccessor.GetCurrency(ColumnIndex, WasNull));
+          Statement.SetCurrency(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCurrency(ColumnIndex, WasNull));
         stBigDecimal:
-          Statement.SetBigDecimal(I + 1,
+          Statement.SetBigDecimal(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
             RowAccessor.GetBigDecimal(ColumnIndex, WasNull));
         stString, stUnicodeString:
-          Statement.SetCharRec(I + 1, RowAccessor.GetCharRec(ColumnIndex, WasNull));
+          Statement.SetCharRec(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetCharRec(ColumnIndex, WasNull));
         stBytes:
-          Statement.SetBytes(I + 1, RowAccessor.GetBytes(ColumnIndex, WasNull));
+          Statement.SetBytes(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetBytes(ColumnIndex, WasNull));
         stDate:
-          Statement.SetDate(I + 1, RowAccessor.GetDate(ColumnIndex, WasNull));
+          Statement.SetDate(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetDate(ColumnIndex, WasNull));
         stTime:
-          Statement.SetTime(I + 1, RowAccessor.GetTime(ColumnIndex, WasNull));
+          Statement.SetTime(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, RowAccessor.GetTime(ColumnIndex, WasNull));
         stTimestamp:
-          Statement.SetTimestamp(I + 1,
+          Statement.SetTimestamp(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
             RowAccessor.GetTimestamp(ColumnIndex, WasNull));
         stAsciiStream:
           begin
             TempBlob := RowAccessor.GetBlob(ColumnIndex, WasNull);
             if not TempBlob.IsEmpty then
-              Statement.SetBlob(I + 1, stAsciiStream, TempBlob)
+              Statement.SetBlob(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream, TempBlob)
             else
-              Statement.SetNull(I + 1, stAsciiStream);
+              Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stAsciiStream);
           end;
         stUnicodeStream:
           begin
             TempBlob := RowAccessor.GetBlob(ColumnIndex, WasNull);
             if not TempBlob.IsEmpty then
-              Statement.SetBlob(I + 1, stUnicodeStream, TempBlob)
+              Statement.SetBlob(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeStream, TempBlob)
             else
-              Statement.SetNull(I + 1, stUnicodeStream);
+              Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stUnicodeStream);
           end;
         stBinaryStream:
           begin
             TempBlob := RowAccessor.GetBlob(ColumnIndex, WasNull);
             if not TempBlob.IsEmpty then
-              Statement.SetBlob(I + 1, stBinaryStream, TempBlob)
+              Statement.SetBlob(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream, TempBlob)
             else
-              Statement.SetNull(I + 1, stBinaryStream);
+              Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, stBinaryStream);
           end;
       end;
       if WasNull then
       begin
-        Statement.SetNull(I + 1,
+        Statement.SetNull(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
           ResultSet.GetMetadata.GetColumnType(ColumnIndex))
       end;
     end
     else
-      SetStatementParam(I+1, Statement, ParamValue);
+      SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ParamValue);
   end;
 end;
 
@@ -653,54 +657,54 @@ end;
 procedure TZUpdateSQL.Apply_RefreshResultSet(const Sender:IZCachedResultSet;
   const RefreshResultSet: IZResultSet; const RefreshRowAccessor: TZRowAccessor);
 var
-    I: Integer;
-    RefreshColumnIndex:integer;
-    RefreshColumnName:String;
-    RefreshColumnType:TZSQLType;
-
+  I: Integer;
+  RefreshColumnIndex: integer;
+  RefreshColumnName: String;
+  RefreshColumnType: TZSQLType;
 begin
-    if Assigned(RefreshResultSet) then begin
-      if not RefreshResultSet.First then begin
-        raise EZDatabaseError.Create(SUpdateSQLNoResult);
-      end;
-      for I := 1 to RefreshResultSet.GetMetadata.GetColumnCount do begin
-        RefreshColumnName:=RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated
-        RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
-        if RefreshColumnIndex=0 then begin
-          continue; // Column not found in Select from Dataset
-        end;
-        if RefreshResultSet.IsNull(I) then begin
-          RefreshRowAccessor.SetNull(RefreshColumnIndex);
-        end else begin
-          RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(I); // Type of Column ?
-          case RefreshColumnType of
-            stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
-            stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
-            stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
-            stWord: RefreshRowAccessor.SetWord(RefreshColumnIndex, RefreshResultSet.GetWord(I));
-            stSmall: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetSmall(I));
-            stLongWord: RefreshRowAccessor.SetUInt(RefreshColumnIndex, RefreshResultSet.GetUInt(I));
-            stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
-            stULong: RefreshRowAccessor.SetULong(RefreshColumnIndex, RefreshResultSet.GetULong(I));
-            stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
-            stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
-            stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
-            stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
-            stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
-            stString, stUnicodeString:
-              if Sender.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-                RefreshRowAccessor.SetAnsiRec(RefreshColumnIndex, RefreshResultSet.GetAnsiRec(I))
-              else
-                RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
-            stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
-            stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
-            stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
-            stTimestamp: RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, RefreshResultSet.GetTimestamp(I));
-            stAsciiStream, stUnicodeStream, stBinaryStream:RefreshRowAccessor.SetBlob(RefreshColumnIndex, RefreshResultSet.GetBlob(I));
-          end;
+  if Assigned(RefreshResultSet) then begin
+    if not RefreshResultSet.First then begin
+      raise EZDatabaseError.Create(SUpdateSQLNoResult);
+    end;
+    for I := FirstDbcIndex to RefreshResultSet.GetMetadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    begin
+      RefreshColumnName := RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated
+      RefreshColumnIndex := Sender.FindColumn(RefreshColumnName); // Is the Column available in the select ?
+      if RefreshColumnIndex = 0 then continue; // Column not found in Select from Dataset
+      if RefreshResultSet.IsNull(I) then
+        RefreshRowAccessor.SetNull(RefreshColumnIndex)
+      else
+      begin
+        RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(I); // Type of Column ?
+        case RefreshColumnType of
+          stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
+          stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
+          stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
+          stWord: RefreshRowAccessor.SetWord(RefreshColumnIndex, RefreshResultSet.GetWord(I));
+          stSmall: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetSmall(I));
+          stLongWord: RefreshRowAccessor.SetUInt(RefreshColumnIndex, RefreshResultSet.GetUInt(I));
+          stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
+          stULong: RefreshRowAccessor.SetULong(RefreshColumnIndex, RefreshResultSet.GetULong(I));
+          stLong: RefreshRowAccessor.SetLong(RefreshColumnIndex, RefreshResultSet.GetLong(I));
+          stFloat: RefreshRowAccessor.SetFloat(RefreshColumnIndex, RefreshResultSet.GetFloat(I));
+          stDouble: RefreshRowAccessor.SetDouble(RefreshColumnIndex, RefreshResultSet.GetDouble(I));
+          stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
+          stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
+          stString, stUnicodeString:
+            if Sender.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+              RefreshRowAccessor.SetAnsiRec(RefreshColumnIndex, RefreshResultSet.GetAnsiRec(I))
+            else
+              RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
+          stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
+          stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
+          stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
+          stTimestamp: RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, RefreshResultSet.GetTimestamp(I));
+          stAsciiStream, stUnicodeStream, stBinaryStream:
+            RefreshRowAccessor.SetBlob(RefreshColumnIndex, RefreshResultSet.GetBlob(I));
         end;
       end;
     end;
+  end;
 end;
 {**
   Calculate default values for the fields.
@@ -779,69 +783,66 @@ begin
       ExecuteStatement := true;
       UpdateAutoIncFields := false;
       case UpdateType of
-           utDeleted:
-             DoBeforeDeleteSQLStatement(Self, I, ExecuteStatement);
-           utInserted:
-             DoBeforeInsertSQLStatement(Self, I, ExecuteStatement);
-           utModified:
-             DoBeforeModifySQLStatement(Self, I, ExecuteStatement);
+        utDeleted:
+          DoBeforeDeleteSQLStatement(Self, I, ExecuteStatement);
+        utInserted:
+          DoBeforeInsertSQLStatement(Self, I, ExecuteStatement);
+        utModified:
+          DoBeforeModifySQLStatement(Self, I, ExecuteStatement);
       end;
       if ExecuteStatement then
       begin
-        lValidateUpdateCount := StrToBoolEx( 
-          Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']); 
+        lValidateUpdateCount := StrToBoolEx(
+          Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
-        lUpdateCount := Statement.ExecuteUpdatePrepared; 
-        if  (lValidateUpdateCount) and (lUpdateCount <> 1) then 
+        lUpdateCount := Statement.ExecuteUpdatePrepared;
+        if  (lValidateUpdateCount) and (lUpdateCount <> 1) then
           raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
 
-       case UpdateType of
-            utDeleted:
-              DoAfterDeleteSQLStatement(Self, I);
-            utInserted:
-              begin
-               DoAfterInsertSQLStatement(Self, I, UpdateAutoIncFields);
-               if CalcDefaultValues and UpdateAutoIncFields then
-                  UpdateAutoIncrementFields(Sender, UpdateType,
-                                            OldRowAccessor, NewRowAccessor, Self);
-              end;
-            utModified:
-              DoAfterModifySQLStatement(Self,I);
-       end;
+        case UpdateType of
+          utDeleted:
+            DoAfterDeleteSQLStatement(Self, I);
+          utInserted:
+            begin
+             DoAfterInsertSQLStatement(Self, I, UpdateAutoIncFields);
+             if CalcDefaultValues and UpdateAutoIncFields then
+                UpdateAutoIncrementFields(Sender, UpdateType,
+                                          OldRowAccessor, NewRowAccessor, Self);
+            end;
+          utModified:
+            DoAfterModifySQLStatement(Self,I);
+        end;
       end;
       {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     end;
 //FOSPATCH
     case UpdateType of
-      utInserted,utModified: begin
-       if FRefreshSql.Text<>'' then begin
-        Refresh_OldSQL:=FRefreshSql.Text;
-        try
-         Config:=FRefreshSQL;
-         if UpdateType=utInserted then begin
-          if Dataset is TZAbstractDataset then begin
-           if FUseSequenceFieldForRefreshSQL then begin
-            if assigned(TZAbstractDataset(DataSet).Sequence) and (TZAbstractDataset(DataSet).SequenceField<>'') then begin
-             Config.Text :=
-               StringReplace(UpperCase(Config.Text),
-                 ':OLD_'+UpperCase(TZAbstractDataset(DataSet).SequenceField),
-                 TZAbstractDataset(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
+      utInserted, utModified:
+        if FRefreshSql.Text <> '' then
+        begin
+          Refresh_OldSQL := FRefreshSql.Text;
+          try
+            Config:=FRefreshSQL;
+            if UpdateType=utInserted then
+              if Dataset is TZAbstractDataset then
+                if FUseSequenceFieldForRefreshSQL then
+                  if (TZAbstractDataset(DataSet).Sequence <> nil) and
+                     (TZAbstractDataset(DataSet).SequenceField<>'') then
+                    Config.Text := StringReplace(UpperCase(Config.Text),
+                      ':OLD_'+UpperCase(TZAbstractDataset(DataSet).SequenceField),
+                      TZAbstractDataset(DataSet).Sequence.GetCurrentValueSQL,[rfReplaceAll]);
+            if CONFIG.StatementCount = 1 then
+            begin
+              Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
+              FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
+              RefreshResultSet:=Statement.ExecuteQueryPrepared;
+              Apply_RefreshResultSet(Sender,RefreshResultSet,NewRowAccessor);
             end;
-           end;
+          finally
+            FRefreshSQL.Text:=Refresh_OldSQL;
           end;
-         end;
-         if CONFIG.StatementCount=1 then begin
-          Statement := Sender.GetStatement.GetConnection.PrepareStatement(Config.Statements[0].SQL);
-          FillStatement(Sender, Statement, Config.Statements[0],OldRowAccessor, NewRowAccessor);
-          RefreshResultSet:=Statement.ExecuteQueryPrepared;
-          Apply_RefreshResultSet(Sender,RefreshResultSet,NewRowAccessor);
-         end;
-        finally
-         FRefreshSQL.Text:=Refresh_OldSQL;
         end;
-      end;
-    end;
-  end;
+    end; {case... }
 //FOSPATCH
 
   finally
@@ -919,10 +920,8 @@ procedure TZUpdateSQL.UpdateAutoIncrementFields(Sender: IZCachedResultSet;
   NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver);
 begin
  with Sender.GetNativeResolver do
- begin
-  UpdateAutoIncrementFields(Sender, UpdateType,
-   OldRowAccessor, NewRowAccessor, Resolver);
- end;
+   UpdateAutoIncrementFields(Sender, UpdateType,
+     OldRowAccessor, NewRowAccessor, Resolver);
 end;
 {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
 

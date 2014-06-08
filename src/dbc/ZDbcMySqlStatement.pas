@@ -332,7 +332,7 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := inherited ExecuteQuery(SQL);
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, Pointer(ASQL)) = 0 then
   begin
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
@@ -359,7 +359,7 @@ var
   HasResultset : Boolean;
 begin
   Result := Inherited ExecuteUpdate(SQL);
-  if FPlainDriver.ExecQuery(FHandle, PAnsichar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, Pointer(ASQL)) = 0 then
   begin
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
@@ -763,7 +763,7 @@ begin
     else
       FColumnArray[I].is_null := 0;
 
-    case FParamBindBuffer.GetBufferType(I+1) of
+    case FParamBindBuffer.GetBufferType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) of
       FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
       FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
       FIELD_TYPE_STRING:
@@ -818,7 +818,7 @@ begin
 
   // Send large blobs in chuncks
   For I := 0 to InParamCount - 1 do
-    if (FParamBindBuffer.GetBufferType(I+1) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB])
+    if (FParamBindBuffer.GetBufferType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB])
       and (GetFieldType(InParamValues[I]) = FIELD_TYPE_BLOB) then
     begin
       TempBlob := (InParamValues[I].VInterface as IZBlob);
@@ -938,18 +938,16 @@ begin
 
     { Process queries with result sets }
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
+  begin
+    FPlainDriver.StorePreparedResult(FStmtHandle);
+    Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
+    if Assigned(FStmtHandle) then
     begin
-      FPlainDriver.StorePreparedResult(FStmtHandle);
-      Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
-      if Assigned(FStmtHandle) then
-        begin
-          FPlainDriver.FreePreparedResult(FStmtHandle);
-          while(FPlainDriver.GetPreparedNextResult(FStmtHandle) = 0) do
-            FPlainDriver.FreePreparedResult(FStmtHandle);
-        end;
-
-    end
-    { Process regular query }
+      FPlainDriver.FreePreparedResult(FStmtHandle);
+      while(FPlainDriver.GetPreparedNextResult(FStmtHandle) = 0) do
+        FPlainDriver.FreePreparedResult(FStmtHandle);
+    end;
+  end { Process regular query }
   else
     Result := FPlainDriver.GetPreparedAffectedRows(FStmtHandle);
   LastUpdateCount := Result;
@@ -1196,7 +1194,7 @@ begin
       Inc(i);
     end;
   if not (ExecQuery = '') then
-    if FPlainDriver.ExecQuery(Self.FHandle, PAnsiChar(ExecQuery)) = 0 then
+    if FPlainDriver.ExecQuery(Self.FHandle, Pointer(ExecQuery)) = 0 then
       DriverManager.LogMessage(lcBindPrepStmt, ConSettings^.Protocol, ExecQuery)
     else
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, ExecQuery, ConSettings);
@@ -1625,12 +1623,12 @@ end;
 
 function TZMySQLAbstractBindBuffer.GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
 begin
-  result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.buffer_type])^;
+  result := PTMysqlFieldTypes(@FbindArray[NativeUInt((ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF})*FBindOffsets.size)+FBindOffsets.buffer_type])^;
 end;
 
 function TZMySQLAbstractBindBuffer.GetBufferIsSigned(ColumnIndex: Integer): Boolean;
 begin
-  result := PByte(@FbindArray[NativeUInt((ColumnIndex-1)*FBindOffsets.size)+FBindOffsets.is_unsigned])^ <> 0;
+  result := PByte(@FbindArray[NativeUInt((ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF})*FBindOffsets.size)+FBindOffsets.is_unsigned])^ = 0;
 end;
 
 { TZMySQLResultSetBindBuffer }
@@ -1642,8 +1640,7 @@ var
   ColOffset: NativeUInt;
 begin
   buffertype := PlainDriver.GetFieldType(FieldHandle);
-  Inc(FAddedColumnCount);
-  With FPColumnArray^[FAddedColumnCount-1] do
+  With FPColumnArray^[FAddedColumnCount] do
   begin
     case buffertype of
       FIELD_TYPE_DATE:        Length := sizeOf(MYSQL_TIME);
@@ -1671,13 +1668,14 @@ begin
     end;
     SetLength(Buffer, Length);
   end;
-  ColOffset := NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);
+  ColOffset := NativeUInt((FAddedColumnCount)*FBindOffsets.size);
   PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^ := buffertype;
-  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
+  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount].length;
   PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= PlainDriver.GetFieldFlags(FieldHandle) and UNSIGNED_FLAG;
-  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount-1].buffer[0];
-  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount-1].length;
-  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount].buffer[0];
+  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount].length;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount].is_null;
+  Inc(FAddedColumnCount);
 end;
 
 { TZMySQLParamBindBuffer }
@@ -1697,8 +1695,7 @@ begin
   Else
     tempbuffertype := buffertype;
   End;
-  Inc(FAddedColumnCount);
-  With FPColumnArray^[FAddedColumnCount-1] do
+  With FPColumnArray^[FAddedColumnCount] do
   begin
     length := getMySQLFieldSize(tempbuffertype,field_length);
     if largeblobparameter then
@@ -1722,13 +1719,14 @@ begin
       is_null := 0;
     end;
   end;
-  ColOffset:=NativeUInt((FAddedColumnCount-1)*FBindOffsets.size);
+  ColOffset:=NativeUInt((FAddedColumnCount)*FBindOffsets.size);
   PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^:=tempbuffertype;
-  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount-1].length;
+  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount].length;
   PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= 0;
-  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount-1].buffer[0];
-  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount-1].length;
-  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount-1].is_null;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount].buffer[0];
+  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount].length;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount].is_null;
+  Inc(FAddedColumnCount);
 end;
 
 initialization

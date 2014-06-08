@@ -505,7 +505,7 @@ type
     function Clone(Empty: Boolean = False): IZBLob; override;
   End;
 
-  implementation
+implementation
 
 uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANISSTRINGS}, AnsiStrings{$ENDIF};
@@ -635,19 +635,15 @@ var
 begin
   CheckClosed;
   Metadata := TZAbstractResultSetMetadata(FMetadata);
-  if (Metadata = nil) or (ColumnIndex <= 0)
-    or (ColumnIndex > Metadata.GetColumnCount) then
-  begin
+  if (Metadata = nil) or (ColumnIndex < FirstDbcIndex) or
+     (ColumnIndex > Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
 
   InitialType := Metadata.GetColumnType(ColumnIndex);
   if not CheckConvertion(InitialType, ResultType) then
-  begin
-      raise EZSQLException.Create(Format(SConvertionIsNotPossible, [ColumnIndex,
-         DefineColumnTypeName(InitialType), DefineColumnTypeName(ResultType)]));
-  end;
+    raise EZSQLException.Create(Format(SConvertionIsNotPossible, [ColumnIndex,
+       DefineColumnTypeName(InitialType), DefineColumnTypeName(ResultType)]));
 end;
 
 {**
@@ -661,20 +657,15 @@ var
 begin
   CheckClosed;
   Metadata := TZAbstractResultSetMetadata(FMetadata);
-  if (Metadata = nil) or (ColumnIndex <= 0)
-    or (ColumnIndex > Metadata.GetColumnCount) then
-  begin
+  if (Metadata = nil) or (ColumnIndex < FirstDbcIndex) or
+     (ColumnIndex > Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
 
   InitialType := Metadata.GetColumnType(ColumnIndex);
   if not (InitialType in [stAsciiStream, stBinaryStream, stUnicodeStream]) then
-  begin
-    raise EZSQLException.Create(
-      Format(SCanNotAccessBlobRecord,
+    raise EZSQLException.Create(Format(SCanNotAccessBlobRecord,
       [ColumnIndex, DefineColumnTypeName(InitialType)]));
-  end;
 end;
 
 {**
@@ -736,12 +727,11 @@ begin
   FClosed := True;
   for I := FColumnsInfo.Count - 1 downto 0 do
   begin
-    FColumnInfo:=TZColumnInfo(FColumnsInfo.Extract(FColumnsInfo.Items[I]));
+    FColumnInfo := TZColumnInfo(FColumnsInfo.Extract(FColumnsInfo.Items[I]));
     FColumnInfo.Free;
   end;
   FColumnsInfo.Clear;
-  if (FStatement <> nil) then
-    FStatement.FreeOpenResultSetReference;
+  if (FStatement <> nil) then FStatement.FreeOpenResultSetReference;
   FStatement := nil;
 end;
 
@@ -806,11 +796,12 @@ end;
 }
 function TZAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result.P := GetPAnsiChar(ColumnIndex);
-  if LastWasNull then
-    Result.Len := 0
+  FRawTemp := GetRawByteString(ColumnIndex);
+  Result.Len := Length(FRawTemp);
+  if Result.Len = 0 then
+    Result.P := PAnsiChar(FRawTemp) //RTL conversion ):
   else
-    Result.Len := ZFastCode.StrLen(Result.P);
+    Result.P := Pointer(FRawTemp);
 end;
 
 {**
@@ -855,8 +846,10 @@ end;
 function TZAbstractResultSet.GetWideRec(ColumnIndex: Integer): TZWideRec;
 begin
   FUniTemp := GetUnicodeString(ColumnIndex);
-  Result.P := PWideChar(FUniTemp);
-  Result.Len := Length(FUniTemp);
+  if Result.Len = 0 then
+    Result.P := PWideChar(FUniTemp) //RTL conversion
+  else
+    Result.P := Pointer(FUniTemp); //No conversion
 end;
 {**
   Gets the value of the designated column in the current row
@@ -2088,7 +2081,7 @@ function TZAbstractResultSet.GetColumnIndex(const ColumnName: string): Integer;
 begin
   Result := FindColumn(ColumnName);
 
-  if Result < 1 then
+  if Result < {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF} then
     raise EZSQLException.Create(Format(SColumnWasNotFound, [ColumnName]));
 end;
 
@@ -2106,27 +2099,23 @@ var
 begin
   CheckClosed;
   Metadata := TZAbstractResultSetMetadata(FMetadata);
-  Result := 0;
+  Result := InvalidDbcIndex;
 
   { Search for case sensitive columns. }
-  for I := 1 to Metadata.GetColumnCount do
-  begin
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     if Metadata.GetColumnLabel(I) = ColumnName then
     begin
       Result := I;
       Exit;
     end;
-  end;
 
   { Search for case insensitive columns. }
-  for I := 1 to Metadata.GetColumnCount do
-  begin
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     if AnsiUpperCase(Metadata.GetColumnLabel(I)) = AnsiUpperCase(ColumnName) then
     begin
       Result := I;
       Exit;
     end;
-  end;
 end;
 
 //---------------------------------------------------------------------

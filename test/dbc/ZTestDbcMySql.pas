@@ -124,6 +124,11 @@ end;
   Runs a test for MySQL DBC PreparedStatement.
 }
 procedure TZTestDbcMySQLCase.TestPreparedStatement;
+const
+  department_dep_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  department_dep_shname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  department_dep_address_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZPreparedStatement;
   Stream: TStream;
@@ -134,12 +139,12 @@ begin
   try
     CheckNotNull(Statement);
 
-    Statement.SetInt(1, TEST_ROW_ID);
-    Statement.SetString(2, 'xyz');
-    Statement.SetNull(3, stString);
+    Statement.SetInt(department_dep_id_index, TEST_ROW_ID);
+    Statement.SetString(department_dep_name_index, 'xyz');
+    Statement.SetNull(department_dep_shname_index, stString);
     Stream := TStringStream.Create('abc'#10'def'#13'hgi');
     try
-      Statement.SetAsciiStream(4, Stream);
+      Statement.SetAsciiStream(department_dep_address_index, Stream);
     finally
       Stream.Free;
     end;
@@ -153,7 +158,7 @@ begin
   try
     CheckNotNull(Statement);
 
-    Statement.SetInt(1, TEST_ROW_ID);
+    Statement.SetInt(department_dep_id_index, TEST_ROW_ID);
     CheckEquals(1, Statement.ExecuteUpdatePrepared);
     Statement.ExecutePrepared;
     CheckEquals(0, Statement.GetUpdateCount);
@@ -231,6 +236,9 @@ end;
   Runs a test for MySQL AutoIncremented fields.
 }
 procedure TZTestDbcMySQLCase.TestAutoIncFields;
+const
+  c_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  c_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -244,13 +252,13 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateString(2, 'xxx');
-  CheckEquals(0, ResultSet.GetInt(1));
-  CheckEquals('xxx', ResultSet.GetString(2));
+  ResultSet.UpdateString(c_name_Index, 'xxx');
+  CheckEquals(0, ResultSet.GetInt(c_id_Index));
+  CheckEquals('xxx', ResultSet.GetString(c_name_Index));
 
   ResultSet.InsertRow;
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals('xxx', ResultSet.GetString(2));
+  Check(ResultSet.GetInt(c_id_Index) <> 0);
+  CheckEquals('xxx', ResultSet.GetString(c_name_Index));
 
   ResultSet.DeleteRow;
 
@@ -263,6 +271,14 @@ end;
   Runs a test for MySQL default values.
 }
 procedure TZTestDbcMySQLCase.TestDefaultValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -280,14 +296,14 @@ begin
   ResultSet.MoveToInsertRow;
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(5), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(6), 3);
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
   CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
+    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
   ResultSet.DeleteRow;
 

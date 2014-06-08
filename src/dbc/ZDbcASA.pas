@@ -556,7 +556,7 @@ begin
   Stmt := Self.CreateRegularStatement(Info);
   RS := Stmt.ExecuteQuery('SELECT DB_PROPERTY( ''CharSet'')');
   if RS.Next then
-    Result := RS.GetString(1)
+    Result := RS.GetString(FirstDbcIndex)
   else
     Result := '';
   RS := nil;

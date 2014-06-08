@@ -479,72 +479,72 @@ begin
       SetType(rtScrollInsensitive);
       SetConcurrency(rcReadOnly);
       RS.MoveToInsertRow;
-      for i := 1 to ColumnsInfo.Count do
-        case TZColumnInfo(ColumnsInfo[i-1]).ColumnType of
+      for i := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+        case TZColumnInfo(ColumnsInfo[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
           stBoolean:
-            RS.UpdateBoolean(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateBoolean(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stByte:
-            RS.UpdateByte(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateByte(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stShort:
-            RS.UpdateShort(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateShort(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stWord:
-            RS.UpdateWord(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateWord(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stSmall:
-            RS.UpdateSmall(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateSmall(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stLongWord:
-            RS.UpdateUInt(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateUInt(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stInteger:
-            RS.UpdateInt(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateInt(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stULong:
-            RS.UpdateULong(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateULong(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stLong:
-            RS.UpdateLong(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateLong(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stFloat, stDouble, stBigDecimal:
-            RS.UpdateFloat(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateFloat(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stString:
-            RS.UpdateString(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateString(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stAsciiStream:
             begin
-              Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value));
+              Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value));
               RS.UpdateAsciiStream(I, Stream);
               Stream.Free;
             end;
           stUnicodeString:
-            RS.UpdateUnicodeString(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateUnicodeString(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stUnicodeStream:
             begin
-              Stream := WideStringStream(WideString(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value));
+              Stream := WideStringStream(WideString(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value));
               RS.UpdateUnicodeStream(I, Stream);
               FreeAndNil(Stream);
             end;
           stBytes:
-            RS.UpdateBytes(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateBytes(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stDate:
-            RS.UpdateDate(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateDate(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stTime:
-            RS.UpdateTime(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateTime(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stTimestamp:
-            RS.UpdateTimestamp(i, FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+            RS.UpdateTimestamp(i, FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
           stBinaryStream:
             begin
-              if VarIsStr(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value) then
+              if VarIsStr(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value) then
               begin
-                Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value));
+                Stream := TStringStream.Create(AnsiString(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value));
                 RS.UpdateBinaryStream(I, Stream);
                 FreeAndNil(Stream);
               end
               else
-                if VarIsArray(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value) then
+                if VarIsArray(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value) then
                 begin
-                  P := VarArrayLock(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+                  P := VarArrayLock(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
                   try
                     Stream := TMemoryStream.Create;
-                    Stream.Size := VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value, 1)+1;
+                    Stream.Size := VarArrayHighBound(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value, 1)+1;
                     System.Move(P^, TMemoryStream(Stream).Memory^, Stream.Size);
                     RS.UpdateBinaryStream(I, Stream);
                     FreeAndNil(Stream);
                   finally
-                    VarArrayUnLock(FAdoCommand.Parameters.Item[IndexAlign[i-1]].Value);
+                    VarArrayUnLock(FAdoCommand.Parameters.Item[IndexAlign[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]].Value);
                   end;
                 end;
             end
@@ -556,8 +556,8 @@ begin
     Result := RS;
   finally
     ColumnsInfo.Free;
-    if Assigned(Stream) then Stream.Free;
-
+    if Stream <> nil then
+      Stream.Free;
   end;
 end;
 
@@ -623,21 +623,21 @@ procedure TZAdoCallableStatement.RegisterParamType(ParameterIndex: Integer;
   ParamType: Integer);
 begin
   inherited RegisterParamType(ParameterIndex, ParamType);
-  if Length(FDirectionTypes) < ParameterIndex then
-    SetLength(FDirectionTypes, ParameterIndex);
+  if Length(FDirectionTypes) < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} then
+    SetLength(FDirectionTypes, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 
-  case Self.FDBParamTypes[ParameterIndex-1] of
+  case Self.FDBParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
     1: //ptInput
-      FDirectionTypes[ParameterIndex-1] := adParamInput;
+      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamInput;
     2: //ptOut
-      FDirectionTypes[ParameterIndex-1] := adParamOutput;
+      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamOutput;
     3: //ptInputOutput
-      FDirectionTypes[ParameterIndex-1] := adParamInputOutput;
+      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamInputOutput;
     4: //ptResult
-      FDirectionTypes[ParameterIndex-1] := adParamReturnValue;
+      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamReturnValue;
     else
       //ptUnknown
-      FDirectionTypes[ParameterIndex-1] := adParamUnknown;
+      FDirectionTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := adParamUnknown;
   end;
 end;
 
@@ -677,9 +677,9 @@ begin
     Result := NullVariant
   else
   begin
-    Temp := FAdoCommand.Parameters.Item[ParameterIndex - 1].Value;
+    Temp := FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
 
-    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex - 1].Type_,
+    case ConvertAdoToSqlType(FAdoCommand.Parameters.Item[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Type_,
       ConSettings.CPType) of
       stBoolean:
         ClientVarManager.SetAsBoolean(Result, Temp);

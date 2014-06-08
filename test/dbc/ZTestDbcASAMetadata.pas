@@ -90,14 +90,12 @@ type
     procedure TestMetadataGetImportedKeys;
     procedure TestMetadataGetCrossReference;
     procedure TestMetadataGetIndexInfo;
-    procedure TestMetadataGetProcedures;
-    procedure TestMetadataGetProcedureColumns;
     procedure TestMetadataGetTypeInfo;
   end;
 
 implementation
 
-uses ZSysUtils;
+uses ZSysUtils, ZDbcMetadata;
 
 { TZASATestDbcMetadata }
 
@@ -135,7 +133,7 @@ begin
   Resultset := MD.GetTableTypes;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetTableTypes');
-  CheckEquals(1, Resultset.FindColumn('TABLE_TYPE'));
+  CheckEquals(TableTypeColumnTableTypeIndex, Resultset.FindColumn('TABLE_TYPE'));
   ResultSet.Close;
 end;
 
@@ -144,7 +142,7 @@ begin
   Resultset := MD.GetCatalogs;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetCatalogs');
-  CheckEquals(1, Resultset.FindColumn('TABLE_CAT'));
+  CheckEquals(CatalogNameIndex, Resultset.FindColumn('TABLE_CAT'));
   ResultSet.Close;
 end;
 
@@ -153,7 +151,7 @@ begin
   Resultset := MD.GetSchemas;
   CheckNotNull(ResultSet, 'The resultset is nil');
   PrintResultset(Resultset, False, 'GetSchemas');
-  CheckEquals(1, Resultset.FindColumn('TABLE_SCHEM'));
+  CheckEquals(SchemaColumnsTableSchemaIndex, Resultset.FindColumn('TABLE_SCHEM'));
   ResultSet.Close;
 end;
 
@@ -182,6 +180,8 @@ begin
 end;
 
 procedure TZASATestDbcMetadata.TestMetadataGetColumns;
+var
+  Index: Integer;
   procedure CheckColumns(Catalog, Schema, TableName, ColumnName: string;
   DataType: SmallInt; TypeName: string; ColumnSize, BufferLength, DecimalDigits,
   Radix, Nullable: Integer; Remarks, ColumnDef: string; SqlDataType,
@@ -206,8 +206,10 @@ procedure TZASATestDbcMetadata.TestMetadataGetColumns;
 //    CheckEquals(CharOctetLength, ResultSet.GetIntByName('CHAR_OCTET_LENGTH'));
     CheckEquals(OrdinalPosition, ResultSet.GetIntByName('ORDINAL_POSITION'));
     CheckEquals(UpperCase(IsNullable), UpperCase(ResultSet.GetStringByName('IS_NULLABLE')));
+    Inc(Index);
   end;
 begin
+  Index := FirstDbcIndex;
   ResultSet := MD.GetColumns(Catalog, Schema, 'PEOPLE', '');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, False);
@@ -233,10 +235,10 @@ begin
     CheckEquals(Catalog, Resultset.GetStringByName('TABLE_CAT'));
     CheckEquals(Schema, Resultset.GetStringByName('TABLE_SCHEM'));
     CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('TABLE_NAME')));
-    CheckEquals(4, Resultset.FindColumn('GRANTOR'));
-    CheckEquals(5, Resultset.FindColumn('GRANTEE'));
-    CheckEquals(6, Resultset.FindColumn('PRIVILEGE'));
-    CheckEquals(7, Resultset.FindColumn('IS_GRANTABLE'));
+    CheckEquals(TablePrivGrantorIndex, Resultset.FindColumn('GRANTOR'));
+    CheckEquals(TablePrivGranteeIndex, Resultset.FindColumn('GRANTEE'));
+    CheckEquals(TablePrivPrivilegeIndex, Resultset.FindColumn('PRIVILEGE'));
+    CheckEquals(TablePrivIsGrantableIndex, Resultset.FindColumn('IS_GRANTABLE'));
   end;
   ResultSet.Close;
 end;
@@ -250,11 +252,11 @@ begin
     CheckEquals(Catalog, Resultset.GetStringByName('TABLE_CAT'));
     CheckEquals(Schema, Resultset.GetStringByName('TABLE_SCHEM'));
     CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('TABLE_NAME')));
-    CheckEquals(4, Resultset.FindColumn('COLUMN_NAME'));
-    CheckEquals(5, Resultset.FindColumn('GRANTOR'));
-    CheckEquals(6, Resultset.FindColumn('GRANTEE'));
-    CheckEquals(7, Resultset.FindColumn('PRIVILEGE'));
-    CheckEquals(8, Resultset.FindColumn('IS_GRANTABLE'));
+    CheckEquals(ColumnNameIndex, Resultset.FindColumn('COLUMN_NAME'));
+    CheckEquals(TableColPrivGrantorIndex, Resultset.FindColumn('GRANTOR'));
+    CheckEquals(TableColPrivGranteeIndex, Resultset.FindColumn('GRANTEE'));
+    CheckEquals(TableColPrivPrivilegeIndex, Resultset.FindColumn('PRIVILEGE'));
+    CheckEquals(TableColPrivIsGrantableIndex, Resultset.FindColumn('IS_GRANTABLE'));
   end;
   ResultSet.Close;
 end;
@@ -264,14 +266,14 @@ begin
   ResultSet := MD.GetBestRowIdentifier(Catalog, Schema, 'PEOPLE', 0, True);
   PrintResultSet(ResultSet, False);
   CheckEquals(True, ResultSet.Next, 'There should be 1 bestRow Identifier in the people table');
-  CheckEquals(1, Resultset.FindColumn('SCOPE'));
+  CheckEquals(BestRowIdentScopeIndex, Resultset.FindColumn('SCOPE'));
   CheckEquals(UpperCase('p_id'), UpperCase(Resultset.GetStringByName('COLUMN_NAME')));
-  CheckEquals(3, Resultset.FindColumn('DATA_TYPE'));
-  CheckEquals(4, Resultset.FindColumn('TYPE_NAME'));
-  CheckEquals(5, Resultset.FindColumn('COLUMN_SIZE'));
-  CheckEquals(6, Resultset.FindColumn('BUFFER_LENGTH'));
-  CheckEquals(7, Resultset.FindColumn('DECIMAL_DIGITS'));
-  CheckEquals(8, Resultset.FindColumn('PSEUDO_COLUMN'));
+  CheckEquals(BestRowIdentDataTypeIndex, Resultset.FindColumn('DATA_TYPE'));
+  CheckEquals(BestRowIdentTypeNameIndex, Resultset.FindColumn('TYPE_NAME'));
+  CheckEquals(BestRowIdentColSizeIndex, Resultset.FindColumn('COLUMN_SIZE'));
+  CheckEquals(BestRowIdentBufLengthIndex, Resultset.FindColumn('BUFFER_LENGTH'));
+  CheckEquals(BestRowIdentDecimalDigitsIndex, Resultset.FindColumn('DECIMAL_DIGITS'));
+  CheckEquals(BestRowIdentPseudoColumnIndex, Resultset.FindColumn('PSEUDO_COLUMN'));
   CheckEquals(False, ResultSet.Next, 'There should not be more than 1 bestRow Identifier in the people table');
   ResultSet.Close;
 end;
@@ -280,14 +282,14 @@ procedure TZASATestDbcMetadata.TestMetadataGetVersionColumns;
 begin
   ResultSet := MD.GetVersionColumns(Catalog, Schema, 'PEOPLE');
   PrintResultSet(ResultSet, False);
-  CheckEquals(1, Resultset.FindColumn('SCOPE'));
-  CheckEquals(2, Resultset.FindColumn('COLUMN_NAME'));
-  CheckEquals(3, Resultset.FindColumn('DATA_TYPE'));
-  CheckEquals(4, Resultset.FindColumn('TYPE_NAME'));
-  CheckEquals(5, Resultset.FindColumn('COLUMN_SIZE'));
-  CheckEquals(6, Resultset.FindColumn('BUFFER_LENGTH'));
-  CheckEquals(7, Resultset.FindColumn('DECIMAL_DIGITS'));
-  CheckEquals(8, Resultset.FindColumn('PSEUDO_COLUMN'));
+  CheckEquals(TableColVerScopeIndex, Resultset.FindColumn('SCOPE'));
+  CheckEquals(TableColVerColNameIndex, Resultset.FindColumn('COLUMN_NAME'));
+  CheckEquals(TableColVerDataTypeIndex, Resultset.FindColumn('DATA_TYPE'));
+  CheckEquals(TableColVerTypeNameIndex, Resultset.FindColumn('TYPE_NAME'));
+  CheckEquals(TableColVerColSizeIndex, Resultset.FindColumn('COLUMN_SIZE'));
+  CheckEquals(TableColVerBufLengthIndex, Resultset.FindColumn('BUFFER_LENGTH'));
+  CheckEquals(TableColVerDecimalDigitsIndex, Resultset.FindColumn('DECIMAL_DIGITS'));
+  CheckEquals(TableColVerPseudoColumnIndex, Resultset.FindColumn('PSEUDO_COLUMN'));
   ResultSet.Close;
 end;
 
@@ -301,7 +303,7 @@ begin
   CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('TABLE_NAME')));
   CheckEquals('P_ID', UpperCase(Resultset.GetStringByName('COLUMN_NAME')));
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
-  CheckEquals(6, Resultset.FindColumn('PK_NAME'));
+  CheckEquals(PrimaryKeyPKNameIndex, Resultset.FindColumn('PK_NAME'));
   ResultSet.Close;
 end;
 
@@ -321,9 +323,9 @@ begin
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
   CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
-  CheckEquals(12, Resultset.FindColumn('FK_NAME'));
-  CheckEquals(13, Resultset.FindColumn('PK_NAME'));
-  CheckEquals(14, Resultset.FindColumn('DEFERRABILITY'));
+  CheckEquals(ImportedKeyColFKNameIndex, Resultset.FindColumn('FK_NAME'));
+  CheckEquals(ImportedKeyColPKNameIndex, Resultset.FindColumn('PK_NAME'));
+  CheckEquals(ImportedKeyColDeferrabilityIndex, Resultset.FindColumn('DEFERRABILITY'));
   ResultSet.Close;
 end;
 
@@ -343,9 +345,9 @@ begin
   CheckEquals(1, Resultset.GetSmallByName('KEY_SEQ'));
   CheckEquals(1, Resultset.GetSmallByName('UPDATE_RULE'));
   CheckEquals(1, Resultset.GetSmallByName('DELETE_RULE'));
-  CheckEquals(12, Resultset.FindColumn('FK_NAME'));
-  CheckEquals(13, Resultset.FindColumn('PK_NAME'));
-  CheckEquals(14, Resultset.FindColumn('DEFERRABILITY'));
+  CheckEquals(CrossRefKeyColFKNameIndex, Resultset.FindColumn('FK_NAME'));
+  CheckEquals(CrossRefKeyColPKNameIndex, Resultset.FindColumn('PK_NAME'));
+  CheckEquals(CrossRefKeyColDeferrabilityIndex, Resultset.FindColumn('DEFERRABILITY'));
   ResultSet.Close;
 end;
 
@@ -357,51 +359,16 @@ begin
   CheckEquals(Catalog, Resultset.GetStringByName('TABLE_CAT'));
   CheckEquals(Schema, Resultset.GetStringByName('TABLE_SCHEM'));
   CheckEquals('PEOPLE', UpperCase(Resultset.GetStringByName('TABLE_NAME')));
-  CheckEquals(4, Resultset.FindColumn('NON_UNIQUE'));
-  CheckEquals(5, Resultset.FindColumn('INDEX_QUALIFIER'));
-  CheckEquals(6, Resultset.FindColumn('INDEX_NAME'));
-  CheckEquals(7, Resultset.FindColumn('TYPE'));
-  CheckEquals(8, Resultset.FindColumn('ORDINAL_POSITION'));
-  CheckEquals(9, Resultset.FindColumn('COLUMN_NAME'));
-  CheckEquals(10, Resultset.FindColumn('ASC_OR_DESC'));
-  CheckEquals(11, Resultset.FindColumn('CARDINALITY'));
-  CheckEquals(12, Resultset.FindColumn('PAGES'));
-  CheckEquals(13, Resultset.FindColumn('FILTER_CONDITION'));
-  ResultSet.Close;
-end;
-
-procedure TZASATestDbcMetadata.TestMetadataGetProcedures;
-begin
-  ResultSet := MD.GetProcedures(Catalog, Schema, '%');
-  PrintResultSet(ResultSet, False);
-  CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
-  CheckEquals(2, Resultset.FindColumn('PROCEDURE_SCHEM'));
-  CheckEquals(3, Resultset.FindColumn('PROCEDURE_NAME'));
-  CheckEquals(4, Resultset.FindColumn('PROCEDURE_OVERLOAD'));
-  CheckEquals(5, Resultset.FindColumn('RESERVED1'));
-  CheckEquals(6, Resultset.FindColumn('RESERVED2'));
-  CheckEquals(7, Resultset.FindColumn('REMARKS'));
-  CheckEquals(8, Resultset.FindColumn('PROCEDURE_TYPE'));
-  ResultSet.Close;
-end;
-
-procedure TZASATestDbcMetadata.TestMetadataGetProcedureColumns;
-begin
-  ResultSet := MD.GetProcedureColumns(Catalog, Schema, '%', '');
-  PrintResultSet(ResultSet, False);
-  CheckEquals(1, Resultset.FindColumn('PROCEDURE_CAT'));
-  CheckEquals(2, Resultset.FindColumn('PROCEDURE_SCHEM'));
-  CheckEquals(3, Resultset.FindColumn('PROCEDURE_NAME'));
-  CheckEquals(4, Resultset.FindColumn('COLUMN_NAME'));
-  CheckEquals(5, Resultset.FindColumn('COLUMN_TYPE'));
-  CheckEquals(6, Resultset.FindColumn('DATA_TYPE'));
-  CheckEquals(7, Resultset.FindColumn('TYPE_NAME'));
-  CheckEquals(8, Resultset.FindColumn('PRECISION'));
-  CheckEquals(9, Resultset.FindColumn('LENGTH'));
-  CheckEquals(10, Resultset.FindColumn('SCALE'));
-  CheckEquals(11, Resultset.FindColumn('RADIX'));
-  CheckEquals(12, Resultset.FindColumn('NULLABLE'));
-  CheckEquals(13, Resultset.FindColumn('REMARKS'));
+  CheckEquals(IndexInfoColNonUniqueIndex, Resultset.FindColumn('NON_UNIQUE'));
+  CheckEquals(IndexInfoColIndexQualifierIndex, Resultset.FindColumn('INDEX_QUALIFIER'));
+  CheckEquals(IndexInfoColIndexNameIndex, Resultset.FindColumn('INDEX_NAME'));
+  CheckEquals(IndexInfoColTypeIndex, Resultset.FindColumn('TYPE'));
+  CheckEquals(IndexInfoColOrdPositionIndex, Resultset.FindColumn('ORDINAL_POSITION'));
+  CheckEquals(IndexInfoColColumnNameIndex, Resultset.FindColumn('COLUMN_NAME'));
+  CheckEquals(IndexInfoColAscOrDescIndex, Resultset.FindColumn('ASC_OR_DESC'));
+  CheckEquals(IndexInfoColCardinalityIndex, Resultset.FindColumn('CARDINALITY'));
+  CheckEquals(IndexInfoColPagesIndex, Resultset.FindColumn('PAGES'));
+  CheckEquals(IndexInfoColFilterConditionIndex, Resultset.FindColumn('FILTER_CONDITION'));
   ResultSet.Close;
 end;
 

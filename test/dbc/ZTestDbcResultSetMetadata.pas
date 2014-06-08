@@ -97,6 +97,13 @@ end;
   Runs a test for resultset metadata.
 }
 procedure TZTestResultSetMetadataCase.TestResultSetMetadata;
+const
+  department_dep_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  department_computed_col1_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  department_computed_col2_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -115,21 +122,13 @@ begin
 
   CheckEquals(4, Metadata.GetColumnCount);
 
-  CheckColumnMetadata(Metadata, 1, 'id', 'dep_id', 'department',
+  CheckColumnMetadata(Metadata, department_dep_id_Index, 'id', 'dep_id', 'department',
     True, True);
-  CheckColumnMetadata(Metadata, 2, 'name', 'dep_name', 'department',
+  CheckColumnMetadata(Metadata, department_dep_name_Index, 'name', 'dep_name', 'department',
     False, True);
-{  if StartsWith(Protocol, 'sqlite') then
-  begin
-    CheckColumnMetadata(Metadata, 3, 't.dep_shname', 'dep_shname', 'department',
-      False, True);
-  end
-  else
-  begin}
-    CheckColumnMetadata(Metadata, 3, 'dep_shname', 'dep_shname', 'department',
-      False, True);
-{  end;}
-  CheckColumnMetadata(Metadata, 4, 'dep_address', '', '',
+  CheckColumnMetadata(Metadata, department_dep_shname_Index, 'dep_shname', 'dep_shname', 'department',
+    False, True);
+  CheckColumnMetadata(Metadata, department_computed_col1_Index, 'dep_address', '', '',
     False, False);
 
   ResultSet := Statement.ExecuteQuery('SELECT t.*, 2+2 as dep_address'
@@ -138,15 +137,15 @@ begin
 
   CheckEquals(5, Metadata.GetColumnCount);
 
-  CheckColumnMetadata(Metadata, 1, 'dep_id', 'dep_id', 'department',
+  CheckColumnMetadata(Metadata, department_dep_id_Index, 'dep_id', 'dep_id', 'department',
     True, True);
-  CheckColumnMetadata(Metadata, 2, 'dep_name', 'dep_name', 'department',
+  CheckColumnMetadata(Metadata, department_dep_name_Index, 'dep_name', 'dep_name', 'department',
     False, True);
-  CheckColumnMetadata(Metadata, 3, 'dep_shname', 'dep_shname', 'department',
+  CheckColumnMetadata(Metadata, department_dep_shname_Index, 'dep_shname', 'dep_shname', 'department',
     False, True);
-//  CheckColumnMetadata(Metadata, 4, 'dep_address', 'dep_address', 'department',
+//  CheckColumnMetadata(Metadata, department_dep_address_Index, 'dep_address', 'dep_address', 'department',
 //    False, True);
-  CheckColumnMetadata(Metadata, 5, 'dep_address_1', '', '', False, False);
+  CheckColumnMetadata(Metadata, department_computed_col2_Index, 'dep_address_1', '', '', False, False);
 
   ResultSet := Statement.ExecuteQuery('SELECT *, 2+2 as dep_address'
     + ' FROM department as t where dep_id < 100');
@@ -154,28 +153,34 @@ begin
 
   CheckEquals(5, Metadata.GetColumnCount);
 
-  CheckColumnMetadata(Metadata, 1, 'dep_id', 'dep_id', 'department',
+  CheckColumnMetadata(Metadata, department_dep_id_Index, 'dep_id', 'dep_id', 'department',
     True, True);
-  CheckColumnMetadata(Metadata, 2, 'dep_name', 'dep_name', 'department',
+  CheckColumnMetadata(Metadata, department_dep_name_Index, 'dep_name', 'dep_name', 'department',
     False, True);
-  CheckColumnMetadata(Metadata, 3, 'dep_shname', 'dep_shname', 'department',
+  CheckColumnMetadata(Metadata, department_dep_shname_Index, 'dep_shname', 'dep_shname', 'department',
     False, True);
-//  CheckColumnMetadata(Metadata, 4, 'dep_address', 'dep_address', 'department',
+//  CheckColumnMetadata(Metadata, department_dep_address_Index, 'dep_address', 'dep_address', 'department',
 //    False, True);
-  CheckColumnMetadata(Metadata, 5, 'dep_address_1', '', '', False, False);
+  CheckColumnMetadata(Metadata, department_computed_col2_Index, 'dep_address_1', '', '', False, False);
 end;
 
 {**
   Runs a test for resultset metadata specific to Interbase, Firebird and Oracle.
 }
 procedure TZTestResultSetMetadataCase.TestResultSetMetadata1;
+const
+  DEP_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  DEP_NAME_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  DEP_SHNAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  DEP_ADDRESS_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  DEP_ADDRESS_1_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
   Metadata: IZResultSetMetadata;
 begin
   if not StartsWith(Protocol, 'interbase')
-     and not StartsWith(Protocol,'firebird') 
+     and not StartsWith(Protocol,'firebird')
      and not StartsWith(Protocol, 'oracle') then
     Exit;
 
@@ -187,13 +192,13 @@ begin
 
   CheckEquals(4, Metadata.GetColumnCount);
 
-  CheckColumnMetadata(Metadata, 1, 'ID', 'DEP_ID', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_ID_Index, 'ID', 'DEP_ID', 'DEPARTMENT',
     True, True);
-  CheckColumnMetadata(Metadata, 2, 'NAME', 'DEP_NAME', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_NAME_Index, 'NAME', 'DEP_NAME', 'DEPARTMENT',
     False, True);
-  CheckColumnMetadata(Metadata, 3, 'DEP_SHNAME', 'DEP_SHNAME', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_SHNAME_Index, 'DEP_SHNAME', 'DEP_SHNAME', 'DEPARTMENT',
     False, True);
-  CheckColumnMetadata(Metadata, 4, 'DEP_ADDRESS', '', '',
+  CheckColumnMetadata(Metadata, DEP_ADDRESS_Index, 'DEP_ADDRESS', '', '',
     False, False);
 
   ResultSet := Statement.ExecuteQuery('SELECT T.*, 2+2 AS DEP_ADDRESS'
@@ -202,13 +207,13 @@ begin
 
   CheckEquals(5, Metadata.GetColumnCount);
 
-  CheckColumnMetadata(Metadata, 1, 'DEP_ID', 'DEP_ID', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_ID_Index, 'DEP_ID', 'DEP_ID', 'DEPARTMENT',
     True, True);
-  CheckColumnMetadata(Metadata, 2, 'DEP_NAME', 'DEP_NAME', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_NAME_Index, 'DEP_NAME', 'DEP_NAME', 'DEPARTMENT',
     False, True);
-  CheckColumnMetadata(Metadata, 3, 'DEP_SHNAME', 'DEP_SHNAME', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_SHNAME_Index, 'DEP_SHNAME', 'DEP_SHNAME', 'DEPARTMENT',
     False, True);
-  CheckColumnMetadata(Metadata, 5, 'DEP_ADDRESS_1', '', '',
+  CheckColumnMetadata(Metadata, DEP_ADDRESS_1_Index, 'DEP_ADDRESS_1', '', '',
     False, False);
 
   ResultSet := Statement.ExecuteQuery('SELECT T.*, 2+2 as DEP_ADDRESS'
@@ -217,13 +222,13 @@ begin
 
   CheckEquals(5, Metadata.GetColumnCount);
 
-  CheckColumnMetadata(Metadata, 1, 'DEP_ID', 'DEP_ID', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_ID_Index, 'DEP_ID', 'DEP_ID', 'DEPARTMENT',
     True, True);
-  CheckColumnMetadata(Metadata, 2, 'DEP_NAME', 'DEP_NAME', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_NAME_Index, 'DEP_NAME', 'DEP_NAME', 'DEPARTMENT',
     False, True);
-  CheckColumnMetadata(Metadata, 3, 'DEP_SHNAME', 'DEP_SHNAME', 'DEPARTMENT',
+  CheckColumnMetadata(Metadata, DEP_SHNAME_Index, 'DEP_SHNAME', 'DEP_SHNAME', 'DEPARTMENT',
     False, True);
-  CheckColumnMetadata(Metadata, 5, 'DEP_ADDRESS_1', '', '',
+  CheckColumnMetadata(Metadata, DEP_ADDRESS_1_Index, 'DEP_ADDRESS_1', '', '',
     False, False);
 end;
 

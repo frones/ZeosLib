@@ -288,7 +288,7 @@ function TZAbstractResultSetMetadata.IsAutoIncrement(Column: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).AutoIncrement;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).AutoIncrement;
 end;
 
 {**
@@ -300,7 +300,7 @@ function TZAbstractResultSetMetadata.IsCaseSensitive(Column: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).CaseSensitive;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CaseSensitive;
 end;
 
 {**
@@ -312,7 +312,7 @@ function TZAbstractResultSetMetadata.IsSearchable(Column: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Searchable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Searchable;
 end;
 
 {**
@@ -322,7 +322,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsCurrency(Column: Integer): Boolean;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Currency;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Currency;
 end;
 
 {**
@@ -336,7 +336,7 @@ function TZAbstractResultSetMetadata.IsNullable(
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Nullable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Nullable;
 end;
 
 {**
@@ -346,7 +346,7 @@ end;
 }
 function TZAbstractResultSetMetadata.IsSigned(Column: Integer): Boolean;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Signed;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Signed;
 end;
 
 {**
@@ -358,7 +358,7 @@ end;
 function TZAbstractResultSetMetadata.GetColumnDisplaySize(
   Column: Integer): Integer;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnDisplaySize;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnDisplaySize;
 end;
 
 {**
@@ -395,7 +395,7 @@ begin
     end;
   end;
 
-  Result := ColumnsLabels[Column - 1];
+  Result := ColumnsLabels[Column{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}];
 end;
 
 {**
@@ -408,7 +408,7 @@ function TZAbstractResultSetMetadata.GetColumnName(
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnName;
 end;
 
 {**
@@ -418,7 +418,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetColumnCodePage(const Column: Integer): Word;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnCodePage;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage;
 end;
 
 {**
@@ -431,7 +431,7 @@ function TZAbstractResultSetMetadata.GetSchemaName(
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).SchemaName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).SchemaName;
 end;
 
 {**
@@ -441,7 +441,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetPrecision(Column: Integer): Integer;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Precision;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Precision;
 end;
 
 {**
@@ -451,7 +451,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetScale(Column: Integer): Integer;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Scale;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Scale;
 end;
 
 {**
@@ -463,7 +463,7 @@ function TZAbstractResultSetMetadata.GetTableName(Column: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).TableName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).TableName;
 end;
 
 {**
@@ -475,7 +475,7 @@ function TZAbstractResultSetMetadata.GetCatalogName(Column: Integer): string;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).CatalogName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).CatalogName;
 end;
 
 {**
@@ -485,7 +485,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ColumnType;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType;
 end;
 
 {**
@@ -497,7 +497,7 @@ end;
 }
 function TZAbstractResultSetMetadata.GetColumnTypeName(Column: Integer): string;
 begin
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).GetColumnTypeName;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).GetColumnTypeName;
 end;
 
 {**
@@ -509,7 +509,7 @@ function TZAbstractResultSetMetadata.IsReadOnly(Column: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).ReadOnly;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ReadOnly;
 end;
 
 {**
@@ -521,7 +521,7 @@ function TZAbstractResultSetMetadata.IsWritable(Column: Integer): Boolean;
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).Writable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).Writable;
 end;
 
 {**
@@ -534,7 +534,7 @@ function TZAbstractResultSetMetadata.IsDefinitelyWritable(
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefinitelyWritable;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefinitelyWritable;
 end;
 
 {**
@@ -547,7 +547,7 @@ function TZAbstractResultSetMetadata.GetDefaultValue(
 begin
   if not Loaded then
      LoadColumns;
-  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefaultValue;
+  Result := TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue;
 end;
 
 {**
@@ -561,7 +561,7 @@ begin
   if not Loaded then
      LoadColumns;
   // '' = NULL / no default value, '''''' = empty string (''), etc.
-  Result := not(TZColumnInfo(FResultSet.ColumnsInfo[Column - 1]).DefaultValue = '');
+  Result := not(TZColumnInfo(FResultSet.ColumnsInfo[Column {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).DefaultValue = '');
 end;
 
 {**
@@ -609,6 +609,18 @@ end;
 }
 function TZAbstractResultSetMetadata.ReadColumnByName(FieldName: string;
   TableRef: TZTableRef; ColumnInfo: TZColumnInfo): Boolean;
+const
+  FieldNameIndex = {$IFNDEF GENERIC_INDEX}4{$ELSE}3{$ENDIF};
+  SQLTypeIndex = {$IFNDEF GENERIC_INDEX}5{$ELSE}4{$ENDIF};
+  SQLTypeNameIndex = {$IFNDEF GENERIC_INDEX}6{$ELSE}5{$ENDIF};
+  nullableIndex = {$IFNDEF GENERIC_INDEX}11{$ELSE}10{$ENDIF};
+  AutoIncIndex = {$IFNDEF GENERIC_INDEX}19{$ELSE}18{$ENDIF};
+  CaseSensitiveIndex = {$IFNDEF GENERIC_INDEX}20{$ELSE}19{$ENDIF};
+  SearchableIndex = {$IFNDEF GENERIC_INDEX}21{$ELSE}20{$ENDIF};
+  WritableIndex = {$IFNDEF GENERIC_INDEX}22{$ELSE}21{$ENDIF};
+  DefinitelyWritableIndex = {$IFNDEF GENERIC_INDEX}23{$ELSE}22{$ENDIF};
+  ReadOnlyIndex = {$IFNDEF GENERIC_INDEX}24{$ELSE}23{$ENDIF};
+  DefaultValueIndex = {$IFNDEF GENERIC_INDEX}13{$ELSE}12{$ENDIF};
 var
   TableColumns: IZResultSet;
   tempColType: TZSQLType;
@@ -622,14 +634,14 @@ begin
   { Locates a column row. }
   TableColumns.BeforeFirst;
   while TableColumns.Next do
-    if TableColumns.GetString(4) = FieldName then
+    if TableColumns.GetString(FieldNameIndex) = FieldName then
       Break;
   if TableColumns.IsAfterLast then
   begin
     { Locates a column row with case insensitivity. }
     TableColumns.BeforeFirst;
     while TableColumns.Next do
-      if AnsiUpperCase(TableColumns.GetString(4)) = AnsiUpperCase(FieldName) then
+      if AnsiUpperCase(TableColumns.GetString(FieldNameIndex)) = AnsiUpperCase(FieldName) then
         Break;
     if TableColumns.IsAfterLast then
       Exit;
@@ -637,14 +649,14 @@ begin
 
   { Reads a column information. }
   Result := True;
-  ColumnInfo.CatalogName := TableColumns.GetString(1);
-  ColumnInfo.SchemaName := TableColumns.GetString(2);
-  ColumnInfo.TableName := TableColumns.GetString(3);
+  ColumnInfo.CatalogName := TableColumns.GetString(CatalogNameIndex);
+  ColumnInfo.SchemaName := TableColumns.GetString(SchemaNameIndex);
+  ColumnInfo.TableName := TableColumns.GetString(TableNameIndex);
   ColumnInfo.ColumnName := FieldName;
 
 //If the returned column information is null then the value assigned during
 //the resultset.open will be kept
-  if not TableColumns.IsNull(5) then
+  if not TableColumns.IsNull(SQLTypeIndex) then
   begin
     //since Pointer referencing by RowAccessor we've a pointer and GetBlob
     //raises an exception if the pointer is a reference to PPAnsiChar or
@@ -657,8 +669,8 @@ begin
     //or the same vice versa:
     //(CASE WHEN (Ticket51_B."Name" IS NOT NULL) THEN Ticket51_B."Name" ELSE 'Empty' END) As "Name"
     //we've NO fixed length for a case(postgres and FB2.5up f.e.) select
-    tempColType := TZSQLType(TableColumns.GetSmall(5));
-    if not (TZSQLType(TableColumns.GetSmall(5)) in [stBinaryStream, stAsciiStream,
+    tempColType := TZSQLType(TableColumns.GetSmall(SQLTypeIndex));
+    if not (tempColType in [stBinaryStream, stAsciiStream,
         stUnicodeStream, stBytes, stString, stUnicodeString]) then
       ColumnInfo.ColumnType := tempColType;
   end;
@@ -671,53 +683,54 @@ begin
       ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
     else
       if ResultSet.GetStatement.GetConnection.GetIZPlainDriver.IsAnsiDriver then //this excludes ADO which is allways 2Byte-String based
-        if (UpperCase(TableColumns.GetString(6)) = 'NVARCHAR') or (UpperCase(TableColumns.GetString(6)) = 'NCHAR') then
+        if (UpperCase(TableColumns.GetString(SQLTypeNameIndex)) = 'NVARCHAR') or
+           (UpperCase(TableColumns.GetString(SQLTypeNameIndex)) = 'NCHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF8
         else
-          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume lacale codepage
+          ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP //assume locale codepage
   else
     ColumnInfo.ColumnCodePage := zCP_NONE; //not a character column
   {nullable}
-  if not TableColumns.IsNull(11) then
-    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(11));
+  if not TableColumns.IsNull(nullableIndex) then
+    ColumnInfo.Nullable := TZColumnNullableType(TableColumns.GetInt(nullableIndex));
   {auto increment field}
-  if not TableColumns.IsNull(19) then
-    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(19);
+  if not TableColumns.IsNull(AutoIncIndex) then
+    ColumnInfo.AutoIncrement := TableColumns.GetBoolean(AutoIncIndex);
   {Case sensitive}
-  if not TableColumns.IsNull(20) then
-    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(20);
-  if not TableColumns.IsNull(21) then
-    ColumnInfo.Searchable := TableColumns.GetBoolean(21);
+  if not TableColumns.IsNull(CaseSensitiveIndex) then
+    ColumnInfo.CaseSensitive := TableColumns.GetBoolean(CaseSensitiveIndex);
+  if not TableColumns.IsNull(SearchableIndex) then
+    ColumnInfo.Searchable := TableColumns.GetBoolean(SearchableIndex);
   {Writable}
-  if not TableColumns.IsNull(22) then
+  if not TableColumns.IsNull(WritableIndex) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.Writable := TableColumns.GetBoolean(22)
+        ColumnInfo.Writable := TableColumns.GetBoolean(WritableIndex)
       else
         ColumnInfo.Writable := False
     else
-      ColumnInfo.Writable := TableColumns.GetBoolean(22);
+      ColumnInfo.Writable := TableColumns.GetBoolean(WritableIndex);
   {DefinitelyWritable}
-  if not TableColumns.IsNull(23) then
+  if not TableColumns.IsNull(DefinitelyWritableIndex) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23)
+        ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(DefinitelyWritableIndex)
       else
         ColumnInfo.DefinitelyWritable := False
     else
-      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(23);
+      ColumnInfo.DefinitelyWritable := TableColumns.GetBoolean(DefinitelyWritableIndex);
   {readonly}
-  if not TableColumns.IsNull(24) then
+  if not TableColumns.IsNull(ReadOnlyIndex) then
     if ColumnInfo.AutoIncrement and Assigned(FMetadata) then {improve ADO where the metainformations do not bring autoincremental fields through}
       if FMetadata.GetDatabaseInfo.SupportsUpdateAutoIncrementFields then
-        ColumnInfo.ReadOnly := TableColumns.GetBoolean(24)
+        ColumnInfo.ReadOnly := TableColumns.GetBoolean(ReadOnlyIndex)
       else
         ColumnInfo.ReadOnly := True
     else
-      ColumnInfo.ReadOnly := TableColumns.GetBoolean(24);
+      ColumnInfo.ReadOnly := TableColumns.GetBoolean(ReadOnlyIndex);
   {default value}
-  if not TableColumns.IsNull(13) then
-    ColumnInfo.DefaultValue := TableColumns.GetString(13);
+  if not TableColumns.IsNull(DefaultValueIndex) then
+    ColumnInfo.DefaultValue := TableColumns.GetString(DefaultValueIndex);
 end;
 
 {**
@@ -803,7 +816,7 @@ begin
         while ResultSet.Next do
         begin
           FieldRef := TZFieldRef.Create(True, TableRef.Catalog, TableRef.Schema,
-            TableRef.Table, ResultSet.GetString(4), '', TableRef);
+            TableRef.Table, ResultSet.GetString(ColumnNameIndex), '', TableRef);
           SelectSchema.InsertField(I, FieldRef);
           Inc(I);
         end;
@@ -850,7 +863,7 @@ begin
     for I := 0 to FResultSet.ColumnsInfo.Count - 1 do
     begin
       if FillByIndices then
-        LoadColumn(I + 1, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema)
+        LoadColumn(I {$IFNDEF GENERIC_INDEX}+1{$ENDIF}, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema)
       else
         LoadColumn(-1, TZColumnInfo(FResultSet.ColumnsInfo[I]), SelectSchema);
     end;
