@@ -1033,11 +1033,19 @@ begin
           ClientVarManager.GetAsFloat(InParamValues[I]));
       stString, stUnicodeString:
         begin
-          CP := ParamSqlData.GetIbSqlSubType(I);
-          if CP > High(CodePageArray) then
-            CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
-          else
-            CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[CP]);
+          CP := ParamSqlData.GetIbSqlType(I);
+          case CP of
+            SQL_TEXT, SQL_VARYING:
+              begin
+                CP := ParamSqlData.GetIbSqlSubType(I);  //get code page
+                if CP > High(CodePageArray) then
+                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
+                else
+                  CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], CodePageArray[CP]);
+              end;
+            else
+              CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP)
+          end;
           ParamSqlData.UpdatePAnsiChar(I, CharRec.P, CharRec.Len);
         end;
       stBytes:
