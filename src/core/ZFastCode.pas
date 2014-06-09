@@ -298,12 +298,12 @@ function UnicodeToIntDef(const S: ZWideString; const Default: Integer) : Integer
 function UnicodeToIntDef(const S: PWideChar; const Default: Integer) : Integer; overload;
 function RawToInt64Def(const S: RawByteString; const Default: Integer) : Int64; overload;
 function RawToInt64Def(const S: PAnsiChar; const Default: Integer) : Int64; overload;
-function RawToUInt64Def(const S: PAnsiChar; const Default: Cardinal) : UInt64; overload;
-function RawToUInt64Def(const S: RawByteString; const Default: Cardinal) : UInt64; overload;
+function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64; overload;
+function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64; overload;
 function UnicodeToInt64Def(const S: ZWideString; const Default: Integer) : Int64; overload;
 function UnicodeToInt64Def(const S: PWideChar; const Default: Integer) : Int64; overload;
-function UnicodeToUInt64Def(const S: ZWideString; const Default: Integer) : UInt64; overload;
-function UnicodeToUInt64Def(const S: PWideChar; const Default: Integer) : UInt64; overload;
+function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64; overload;
+function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64; overload;
 
 { Float convertion in Raw and Unicode Format}
 function RawToFloat(const s: RawByteString): Extended; overload;
@@ -4857,7 +4857,7 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-function RawToUInt64Def(const S: PAnsiChar; const Default: Cardinal) : UInt64;
+function RawToUInt64Def(const S: PAnsiChar; const Default: UInt64) : UInt64;
 var
   E: Integer;
 begin
@@ -4874,7 +4874,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
-function RawToUInt64Def(const S: RawByteString; const Default: Cardinal) : UInt64;
+function RawToUInt64Def(const S: RawByteString; const Default: UInt64) : UInt64;
 var
   E: Integer;
 begin
@@ -5046,7 +5046,7 @@ begin
     raise EConvertError.CreateResFmt(@SInvalidInteger, [Value]);
 end;
 
-function UnicodeToUInt64Def(const S: ZWideString; const Default: Integer) : UInt64;
+function UnicodeToUInt64Def(const S: ZWideString; const Default: UInt64) : UInt64;
 var
   E: Integer;
 begin
@@ -5058,7 +5058,7 @@ begin
   if E <> 0 then Result := Default;
 end;
 
-function UnicodeToUInt64Def(const S: PWideChar; const Default: Integer) : UInt64;
+function UnicodeToUInt64Def(const S: PWideChar; const Default: UInt64) : UInt64;
 var
   E: Integer;
 begin
