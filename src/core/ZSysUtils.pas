@@ -728,7 +728,7 @@ end;
 }
 function IsIpAddr(const Str: string): Boolean;
 var
-  I, N, M, Pos: Integer;
+  I, N, M, Pos, Val: Integer;
 begin
   if IsMatch('*.*.*.*', Str) then
   begin
@@ -741,8 +741,10 @@ begin
         Break;
       if Str[I] = '.' then
       begin
-       if StrToInt(Copy(Str, Pos, I - Pos)) > 255 then
-         Break;
+        {ticked #73/#24 patch }
+        Val := StrToIntDef(Copy(Str, Pos, I - Pos), -1);
+        if not ((Val > -1 ) and (Val < 256)) then
+          Break;
        Inc(N);
        Pos := I + 1;
       end;
