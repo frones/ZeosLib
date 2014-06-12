@@ -262,6 +262,7 @@ type
     function ExecuteUpdatePrepared: Integer; virtual;
     function ExecutePrepared: Boolean; virtual;
 
+    procedure Close; override;
     function GetSQL : String;
     procedure Prepare; virtual;
     procedure Unprepare; virtual;
@@ -2190,6 +2191,14 @@ begin
 end;
 {$WARNINGS ON}
 
+procedure TZAbstractPreparedStatement.Close;
+begin
+  if Prepared then
+    Unprepare;
+  inherited Close;
+end;
+
+
 function TZAbstractPreparedStatement.GetSQL: String;
 begin
   Result := {$IFDEF UNICODE}FWSQL{$ELSE}FASQL{$ENDIF};
@@ -2205,7 +2214,10 @@ end;
 procedure TZAbstractPreparedStatement.Unprepare;
 begin
   if Assigned(FOpenResultSet) then
+  begin
     IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
   UnPrepareInParameters;
   FPrepared := False;
   SetLength(FCachedQueryRaw, 0);
