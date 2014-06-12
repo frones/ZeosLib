@@ -846,7 +846,6 @@ end;
 function TZAbstractResultSet.GetWideRec(ColumnIndex: Integer): TZWideRec;
 begin
   FUniTemp := GetUnicodeString(ColumnIndex);
-  Result.Len := Length(FUniTemp);
   if Result.Len = 0 then
     Result.P := PWideChar(FUniTemp) //RTL conversion
   else
@@ -977,7 +976,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := GetSmall(ColumnIndex);
+  Result := Byte(GetInt(ColumnIndex));
 end;
 
 {**
@@ -994,7 +993,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stShort);
 {$ENDIF}
-  Result := GetSmall(ColumnIndex);
+  Result := ShortInt(GetInt(ColumnIndex));
 end;
 
 {**
@@ -1011,7 +1010,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stWord);
 {$ENDIF}
-  Result := GetInt(ColumnIndex);
+  Result := Word(GetInt(ColumnIndex));
 end;
 
 {**
@@ -1028,7 +1027,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stSmall);
 {$ENDIF}
-  Result := GetInt(ColumnIndex);
+  Result := SmallInt(GetInt(ColumnIndex));
 end;
 
 {**
@@ -1045,7 +1044,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLongWord);
 {$ENDIF}
-  Result := GetLong(ColumnIndex);
+  Result := LongWord(GetLong(ColumnIndex));
 end;
 
 {**
