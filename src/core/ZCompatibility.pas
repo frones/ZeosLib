@@ -57,9 +57,6 @@ interface
 
 uses
   Variants,
-  {$IFDEF WITH_LCONVENCODING}
-  LConvEncoding,
-  {$ENDIF}
 {$IFDEF FPC}
   {$IFDEF UNIX}
     dynlibs,
