@@ -97,11 +97,9 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): ShortInt; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
+    function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
@@ -442,91 +440,10 @@ begin
       SQLITE_FLOAT:
         Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex) <> 0;
       SQLITE3_TEXT:
-        Result := StrToBoolEx(FPlainDriver.column_text(FStmtHandle, ColumnIndex));
+        Result := StrToBoolEx(FPlainDriver.column_text(FStmtHandle, ColumnIndex), True, False);
       else
         Result := False; {SQLITE_BLOB}
     end;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZSQLiteResultSet.GetByte(ColumnIndex: Integer): Byte;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
-  if LastWasNull then
-    Result := 0
-  else
-    { sqlite does the conversion if required
-      http://www.sqlite.org/c3ref/column_blob.html }
-     Result := Byte(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZSQLiteResultSet.GetShort(ColumnIndex: Integer): ShortInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
-  if LastWasNull then
-    Result := 0
-  else
-    { sqlite does the conversion if required
-      http://www.sqlite.org/c3ref/column_blob.html }
-     Result := ShortInt(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZSQLiteResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stSmall);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
-  if LastWasNull then
-    Result := 0
-  else
-    { sqlite does the conversion if required
-      http://www.sqlite.org/c3ref/column_blob.html }
-     Result := SmallInt(FPlainDriver.column_int(FStmtHandle, ColumnIndex));
 end;
 
 {**
@@ -539,6 +456,8 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetInt(ColumnIndex: Integer): Integer;
+var
+  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -546,14 +465,21 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
+  LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
-    { sqlite does the conversion if required
-      http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FPlainDriver.column_int(FStmtHandle, ColumnIndex);
+    case ColType of
+      SQLITE_INTEGER:
+        Result := FPlainDriver.column_int(FStmtHandle, ColumnIndex);
+      SQLITE_FLOAT:
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.column_double(FStmtHandle, ColumnIndex));
+      SQLITE3_TEXT:
+        Result := RawToIntDef(FPlainDriver.column_text(FStmtHandle, ColumnIndex), 0);
+      else
+        Result := 0; {SQLITE_BLOB}
+    end;
 end;
 
 {**
@@ -566,6 +492,8 @@ end;
     value returned is <code>0</code>
 }
 function TZSQLiteResultSet.GetLong(ColumnIndex: Integer): Int64;
+var
+  ColType: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -573,16 +501,58 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
+  LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
     Result := 0
   else
-    { sqlite does the conversion if required
-      http://www.sqlite.org/c3ref/column_blob.html }
-     Result := FPlainDriver.column_int64(FStmtHandle, ColumnIndex);
+    case ColType of
+      SQLITE_INTEGER:
+        Result := FPlainDriver.column_int64(FStmtHandle, ColumnIndex);
+      SQLITE_FLOAT:
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.column_double(FStmtHandle, ColumnIndex));
+      SQLITE3_TEXT:
+        Result := RawToInt64Def(FPlainDriver.column_text(FStmtHandle, ColumnIndex), 0);
+      else
+        Result := 0; {SQLITE_BLOB}
+    end;
 end;
 
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UInt64</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZSQLiteResultSet.GetULong(ColumnIndex: Integer): UInt64;
+var
+  ColType: Integer;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stLong);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
+  LastWasNull := ColType = SQLITE_NULL;
+  if LastWasNull then
+    Result := 0
+  else
+    case ColType of
+      SQLITE_INTEGER:
+        Result := FPlainDriver.column_int64(FStmtHandle, ColumnIndex);
+      SQLITE_FLOAT:
+        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(FPlainDriver.column_double(FStmtHandle, ColumnIndex));
+      SQLITE3_TEXT:
+        Result := RawToUInt64Def(FPlainDriver.column_text(FStmtHandle, ColumnIndex), 0);
+      else
+        Result := 0;
+    end;
+end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
@@ -600,7 +570,6 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex) = SQLITE_NULL;
   if LastWasNull then
     Result := 0
@@ -853,20 +822,17 @@ begin
   if LastWasNull then
     Exit
   else
-    try
-      case GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) of
-        stAsciiStream, stUnicodeStream:
-          begin
-            Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
-            Result := TZAbstractClob.CreateWithData( Buffer,
-              ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
-          end;
-        stBinaryStream:
-           Result := TZAbstractBlob.CreateWithData(FPlainDriver.column_blob(FStmtHandle,ColumnIndex), FPlainDriver.column_bytes(FStmtHandle, ColumnIndex));
-        else
-          Result := TZAbstractBlob.CreateWithStream(nil);
-      end;
-    finally
+    case GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) of
+      stAsciiStream, stUnicodeStream:
+        begin
+          Buffer := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
+          Result := TZAbstractClob.CreateWithData( Buffer,
+            ZFastCode.StrLen(Buffer), zCP_UTF8, ConSettings);
+        end;
+      stBinaryStream:
+         Result := TZAbstractBlob.CreateWithData(FPlainDriver.column_blob(FStmtHandle,ColumnIndex), FPlainDriver.column_bytes(FStmtHandle, ColumnIndex));
+      else
+        Result := TZAbstractBlob.CreateWithStream(nil);
     end;
 end;
 
