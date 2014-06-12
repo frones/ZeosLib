@@ -78,6 +78,7 @@ type
     FUseResult: Boolean;
     FIgnoreUseResult: Boolean;
     FCachedLob: Boolean;
+    FLengthArray: PMySQLLengthArray;
     function GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     function GetBuffer(ColumnIndex: Integer): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
@@ -95,8 +96,6 @@ type
     function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
     function GetULong(ColumnIndex: Integer): UInt64; override;
@@ -273,8 +272,6 @@ begin
 end;
 
 function TZMySQLResultSet.GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar;
-var
-  LengthPointer: PULong;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
@@ -284,11 +281,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex - 1;
   {$ENDIF}
-  LengthPointer := FPlainDriver.FetchLengths(FQueryHandle);
-  if LengthPointer = nil then
-    Len := 0
-  else
-    Len  := {%H-}PULong({%H-}NativeUint(LengthPointer) + NativeUInt(ColumnIndex) * SizeOf(ULOng))^;
+  Len := FLengthArray^[ColumnIndex];
   Result := FPlainDriver.GetFieldData(FRowHandle, ColumnIndex);
   LastWasNull := Result = nil;
 end;
@@ -392,25 +385,13 @@ end;
     value returned is <code>true</code>. <code>false</code> otherwise.
 }
 function TZMySQLResultSet.IsNull(ColumnIndex: Integer): Boolean;
-var
-   Buffer: PAnsiChar;
-   Len: ULong;
-   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
   if FRowHandle = nil then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
-
-  Buffer := GetBufferAndLength(ColumnIndex, Len{%H-});
-  Result := (Buffer = nil);
-  if not Result and (TZAbstractResultSetMetadata(Metadata).
-    GetColumnType(ColumnIndex) in [stDate, stTimestamp]) then
-  begin
-    Result := ( RawSQLDateToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed{%H-}) = 0 ) and
-      (RawSQLTimeStampToDateTime(Buffer, Len, ConSettings^.ReadFormatSettings, Failed) = 0);
-  end;
+  Result := (GetBuffer(ColumnIndex) = nil);
 end;
 
 {**
@@ -424,11 +405,8 @@ end;
     value returned is <code>null</code>
 }
 function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
-var
-  Len: ULong;
 begin
-  Result.P := GetBufferAndLength(ColumnIndex, Len{%H-});
-  Result.Len := Len;
+  Result.P := GetBufferAndLength(ColumnIndex, Result.Len{%H-});
 end;
 
 {**
@@ -490,54 +468,6 @@ begin
     Result := False
   else
     Result := StrToBoolEx(Buffer, True, False);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZMySQLResultSet.GetByte(ColumnIndex: Integer): Byte;
-var
-  Buffer: PAnsiChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
-{$ENDIF}
-  Buffer := GetBuffer(ColumnIndex);
-
-  if LastWasNull then
-    Result := 0
-  else
-    Result := Byte(RawToIntDef(Buffer, 0));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZMySQLResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-var
-  Buffer: PAnsiChar;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stSmall);
-{$ENDIF}
-  Buffer := GetBuffer(ColumnIndex);
-
-  if LastWasNull then
-    Result := 0
-  else
-    Result := SmallInt(RawToIntDef(Buffer, 0));
 end;
 
 {**
@@ -910,6 +840,10 @@ begin
   end
   else
     RaiseForwardOnlyException;
+  if Result then
+    FLengthArray := FPlainDriver.FetchLengths(FQueryHandle)
+  else
+    FLengthArray := nil;
 end;
 
 {**
@@ -933,7 +867,7 @@ begin
   Result := False;
   if (MaxRows > 0) and (RowNo >= MaxRows) then
     Exit;
-  if Assigned(FQueryHandle) then
+  if FQueryHandle <> nil then
     FRowHandle := FPlainDriver.FetchRow(FQueryHandle);
   if FRowHandle <> nil then
   begin
@@ -948,6 +882,10 @@ begin
       RowNo := LastRowNo + 1;
     Result := False;
   end;
+  if Result then
+    FLengthArray := FPlainDriver.FetchLengths(FQueryHandle)
+  else
+    FLengthArray := nil;
 end;
 
 procedure TZMySQLResultSet.ReleaseHandle;

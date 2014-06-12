@@ -972,7 +972,7 @@ begin
       begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
-        Result.UpdateString(TableNameIndex, GetString(TABLES_TABLE_NAME_Index));
+        Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(TABLES_TABLE_NAME_Index));
         Result.UpdateString(TableColumnsSQLType, 'TABLE');
         Result.InsertRow;
       end;

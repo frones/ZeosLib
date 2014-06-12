@@ -119,7 +119,7 @@ type
     function FetchField(Res: PZMySQLResult): PZMySQLField;
     // fetch_field_direct
     // fetch_fields
-    function FetchLengths(Res: PZMySQLResult): PULong;
+    function FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
     // field_tell
@@ -349,7 +349,7 @@ type
     function SetConnectionCharacterSet(Handle: PMYSQL; const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 
     function FetchRow(Res: PZMySQLResult): PZMySQLRow;
-    function FetchLengths(Res: PZMySQLResult): PULong;
+    function FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
     function FetchField(Res: PZMySQLResult): PZMySQLField;
 
     procedure SeekData(Res: PZMySQLResult; Offset: Cardinal);
@@ -725,7 +725,7 @@ begin
   Result := MYSQL_API.mysql_fetch_field(Res);
 end;
 
-function TZMySQLBaseDriver.FetchLengths(Res: PZMySQLResult): PULong;
+function TZMySQLBaseDriver.FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
 begin
   Result := MYSQL_API.mysql_fetch_lengths(Res);
 end;
