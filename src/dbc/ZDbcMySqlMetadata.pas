@@ -1027,7 +1027,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateString(CatalogNameIndex, GetString(FirstDbcIndex));
+        Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(FirstDbcIndex));
         Result.InsertRow;
       end;
       Close;
@@ -1318,10 +1318,18 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: string;
   const Schema: string; const Table: string; const ColumnNamePattern: string): IZResultSet;
+const
+  host_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  db_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  grantor_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  user_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  table_name_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  column_name_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  column_priv_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   I: Integer;
-  Host, Database, Grantor, User, FullUser: String;
-  AllPrivileges, ColumnName, Privilege: String;
+  Host, User, FullUser: String;
+  AllPrivileges, Privilege: String;
   PrivilegesList: TStrings;
   ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
@@ -1355,31 +1363,28 @@ begin
       begin
         while Next do
         begin
-          Host := GetString(1);
-          Database := GetString(2);
-          Grantor := GetString(4);
-          User := GetString(5);
+          Host := GetString(host_Index);
+          User := GetString(user_Index);
           if User = '' then
             User := '%';
           if Host <> '' then
             FullUser := User + '@' + Host;
-          ColumnName := GetString(6);
 
-          AllPrivileges := GetString(7);
+          AllPrivileges := GetString(column_priv_Index);
           PutSplitString(PrivilegesList, AllPrivileges, ',');
 
           for I := 0 to PrivilegesList.Count - 1 do
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdateString(1, Database);
-            Result.UpdateNull(2);
-            Result.UpdateString(3, Table);
-            Result.UpdateString(4, ColumnName);
-            Result.UpdateString(5, Grantor);
-            Result.UpdateString(6, FullUser);
-            Result.UpdateString(7, Privilege);
-            Result.UpdateNull(8);
+            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(db_Index));
+            //Result.UpdateNull(SchemaNameIndex);
+            Result.UpdateString(TableNameIndex, Table);
+            Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(column_name_Index));
+            Result.UpdateAnsiRec(TableColPrivGrantorIndex, GetAnsiRec(grantor_Index));
+            Result.UpdateString(TableColPrivGranteeIndex, FullUser);
+            Result.UpdateString(TableColPrivPrivilegeIndex, Privilege);
+            //Result.UpdateNull(TableColPrivIsGrantableIndex);
             Result.InsertRow;
           end;
         end;
@@ -1424,9 +1429,16 @@ end;
 }
 function TZMySQLDatabaseMetadata.UncachedGetTablePrivileges(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string): IZResultSet;
+const
+  host_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  db_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  table_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  grantor_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  user_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  column_priv_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   I: Integer;
-  Host, Database, Table, Grantor, User, FullUser: String;
+  Host, User, FullUser: String;
   AllPrivileges, Privilege: String;
   PrivilegesList: TStrings;
   TableNameCondition, SchemaCondition: string;
@@ -1456,30 +1468,27 @@ begin
       begin
         while Next do
         begin
-          Host := GetString(1);
-          Database := GetString(2);
-          Table := GetString(3);
-          Grantor := GetString(4);
-          User := GetString(5);
+          Host := GetString(host_Index);
+          User := GetString(user_Index);
           if User = '' then
             User := '%';
           if Host <> '' then
             FullUser := User + '@' + Host;
 
-          AllPrivileges := GetString(6);
+          AllPrivileges := GetString(column_priv_Index);
           PutSplitString(PrivilegesList, AllPrivileges, ',');
 
           for I := 0 to PrivilegesList.Count - 1 do
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdateString(1, Database);
-            Result.UpdateNull(2);
-            Result.UpdateString(3, Table);
-            Result.UpdateString(4, Grantor);
-            Result.UpdateString(5, FullUser);
-            Result.UpdateString(6, Privilege);
-            Result.UpdateNull(7);
+            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(db_Index));
+            //Result.UpdateNull(SchemaNameIndex);
+            Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(table_name_Index));
+            Result.UpdateAnsiRec(TablePrivGrantorIndex, GetAnsiRec(grantor_Index));
+            Result.UpdateString(TablePrivGranteeIndex, FullUser);
+            Result.UpdateString(TablePrivPrivilegeIndex, Privilege);
+            //Result.UpdateNull(TablePrivIsGrantableIndex);
             Result.InsertRow;
           end;
         end;
@@ -2208,8 +2217,8 @@ begin
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
         Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(ColumnIndexes[4]));
         Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, GetAnsiRec(ColumnIndexes[5]));
-        Result.UpdateString(IndexInfoColAscOrDescIndex, GetString(ColumnIndexes[6]));
-        Result.UpdateString(IndexInfoColCardinalityIndex, GetString(ColumnIndexes[7]));
+        Result.UpdateAnsiRec(IndexInfoColAscOrDescIndex, GetAnsiRec(ColumnIndexes[6]));
+        Result.UpdateAnsiRec(IndexInfoColCardinalityIndex, GetAnsiRec(ColumnIndexes[7]));
         Result.UpdateInt(IndexInfoColPagesIndex, 0);
         //Result.UpdateNull(IndexInfoColFilterConditionIndex);
         Result.InsertRow;
@@ -2482,9 +2491,9 @@ begin
                   Params.Insert(0,'IN'); //Function in value
 
             Result.MoveToInsertRow;
-            Result.UpdateString(CatalogNameIndex, GetString(PROCEDURE_SCHEM_index)); //PROCEDURE_CAT
+            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(PROCEDURE_SCHEM_index)); //PROCEDURE_CAT
             //Result.UpdateNull(SchemaNameIndex); //PROCEDURE_SCHEM
-            Result.UpdateString(ProcColProcedureNameIndex, GetString(PROCEDURE_NAME_Index)); //PROCEDURE_NAME
+            Result.UpdateAnsiRec(ProcColProcedureNameIndex, GetAnsiRec(PROCEDURE_NAME_Index)); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
               ConSettings, TypeName, Temp,
               FieldType, ColumnSize, Precision);
@@ -2650,14 +2659,13 @@ begin
           if Next then
           begin
             Result.MoveToInsertRow;
-            Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
-            Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
-            Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
-            Result.UpdateString(4, ColumnNamePattern);//COLLATION_COLUMN
-            Result.UpdateString(5, GetString(FindColumn('COLLATION_NAME'))); //COLLATION_NAME
-            Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-            Result.UpdateNull(7); //CHARACTER_SET_ID
-            Result.UpdateSmall(8, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+            Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
+            Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
+            Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
+            Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
+            Result.UpdateAnsiRec(CollationNameIndex, GetAnsiRecByName('COLLATION_NAME')); //COLLATION_NAME
+            Result.UpdateAnsiRec(CharacterSetNameIndex, GetAnsiRecByName('CHARACTER_SET_NAME')); //CHARACTER_SET_NAME
+            Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN')); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
           Close;
@@ -2675,13 +2683,12 @@ begin
           if Next then
           begin
             Result.MoveToInsertRow;
-            Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
-            Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
-            Result.UpdateString(3, TableNamePattern); //COLLATION_TABLE
-            Result.UpdateString(5, GetString(FindColumn('TABLE_COLLATION'))); //COLLATION_NAME
-            Result.UpdateString(6, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-            Result.UpdateNull(7); //CHARACTER_SET_ID
-            Result.UpdateSmall(8, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+            Result.UpdateString(CatalogNameIndex, LCatalog);
+            Result.UpdateString(SchemaNameIndex, LCatalog);
+            Result.UpdateString(TableNameIndex, TableNamePattern);
+            Result.UpdateAnsiRec(CollationNameIndex, GetAnsiRecByName('TABLE_COLLATION'));
+            Result.UpdateAnsiRec(CharacterSetNameIndex, GetAnsiRecByName('CHARACTER_SET_NAME'));
+            Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN'));
             Result.InsertRow;
           end;
           Close;
@@ -2701,14 +2708,12 @@ begin
         if Next then
         begin
           Result.MoveToInsertRow;
-          Result.UpdateString(1, LCatalog);   //COLLATION_CATALOG
-          Result.UpdateString(2, LCatalog);   //COLLATION_SCHEMA
-          Result.UpdateNull(3); //COLLATION_TABLE
-          Result.UpdateNull(4);//COLLATION_COLUMN
-          Result.UpdateString(5, GetString(FindColumn('DEFAULT_COLLATION_NAME'))); //COLLATION_NAME
-          Result.UpdateString(6, GetString(FindColumn('DEFAULT_CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-          Result.UpdateNull(7); //CHARACTER_SET_ID
-          Result.UpdateSmall(8, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
+          Result.UpdateString(CatalogNameIndex, LCatalog);
+          Result.UpdateString(SchemaNameIndex, LCatalog);
+          Result.UpdateAnsiRec(CollationNameIndex, GetAnsiRecByName('DEFAULT_COLLATION_NAME'));
+          Result.UpdateAnsiRec(CharacterSetNameIndex, GetAnsiRecByName('DEFAULT_CHARACTER_SET_NAME'));
+          Result.UpdateNull(CharacterSetIDIndex); //CHARACTER_SET_ID
+          Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
           Result.InsertRow;
         end;
         Close;
@@ -2732,8 +2737,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateString(1, GetString(FindColumn('CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
-      Result.UpdateNull(2); //CHARACTER_SET_ID
+      Result.UpdateAnsiRec(CharacterSetsNameIndex, GetAnsiRecByName('CHARACTER_SET_NAME'));
       Result.InsertRow;
     end;
     Close;
