@@ -79,11 +79,13 @@ type
     procedure TestNotNullValues;
     procedure TestConcurrency;
     procedure TestStringGetter;
+    procedure TestStringToSignedIntegerConversions;
+    procedure TestStringToUnsignedIntegerConversions;
   end;
 
 implementation
 
-uses ZSysUtils, ZTestConsts;
+uses ZSysUtils, ZTestConsts, ZFastCode;
 
 { TZGenericTestDbcResultSet }
 {**
@@ -102,15 +104,15 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
 
-  Sql := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
-  Sql := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
   { Tests the equipment table }
   Sql := 'SELECT a.eq_id as id, a.eq_name as name, a.eq_type as type1,'
     + ' a.eq_cost + 10 as cost FROM equipment a where a.eq_id = '
-    + IntToStr(TEST_ROW_ID);
+    + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   { Inserts test record to equipment }
   ResultSet := Statement.ExecuteQuery(Sql);
   CheckNotNull(ResultSet);
@@ -192,9 +194,9 @@ begin
   if Metadata.GetDatabaseInfo.SupportsMixedCaseIdentifiers then
     Exit;
 
-  Sql := 'DELETE FROM "Case_Sensitive" where cs_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM "Case_Sensitive" where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
-  Sql := 'DELETE FROM case_sensitive where cs_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM case_sensitive where cs_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
   Sql := 'SELECT * FROM "Case_Sensitive" WHERE cs_id = ?';
@@ -415,9 +417,9 @@ var
   StrStream1, BinStream1: TStream;
   ResultSet: IZResultSet;
 begin
-  Sql := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
-  Sql := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
   { The test for equipment table }
@@ -583,16 +585,16 @@ begin
   Check(Statement.Execute('SELECT * FROM equipment'));
 
   Statement.ExecuteUpdate('DELETE FROM department where dep_id = ' +
-    IntToStr(TEST_ROW_ID));
+    ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
 
   { Inserts row to department table }
   Statement.Execute('INSERT INTO department VALUES (' +
-    IntToStr(TEST_ROW_ID) + ',''Some agency'',''ENG'',''Some city'')');
+    ZFastCode.IntToStr(Integer(TEST_ROW_ID)) + ',''Some agency'',''ENG'',''Some city'')');
   CheckEquals(1, Statement.GetUpdateCount);
 
   { Checks what row inserted }
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department where dep_id = ' +
-    IntToStr(TEST_ROW_ID));
+    ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
   CheckNotNull(ResultSet);
   CheckEquals(True, ResultSet.Next);
   CheckEquals(False, ResultSet.Next);
@@ -602,17 +604,17 @@ begin
   { Updates row in department table }
   Statement.ExecuteUpdate(
    'UPDATE department SET dep_name=NULL, dep_shname=NULL, dep_address=NULL WHERE dep_id = ' +
-   IntToStr(TEST_ROW_ID));
+   ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
   { Checks what row updated }
   CheckEquals(1, Statement.GetUpdateCount);
 
   { Deletes value from department table }
   Statement.ExecuteUpdate('DELETE FROM department where dep_id = ' +
-    IntToStr(TEST_ROW_ID));
+    ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
   CheckEquals(1, Statement.GetUpdateCount);
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department where dep_id = ' +
-    IntToStr(TEST_ROW_ID));
+    ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
   CheckNotNull(ResultSet);
   CheckEquals(False, ResultSet.Next);
   ResultSet.Close;
@@ -755,13 +757,13 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
 
-  Sql := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
-  Sql := 'DELETE FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
   { Tests the equipment table }
-  Sql := 'SELECT * FROM equipment where eq_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'SELECT * FROM equipment where eq_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   { Inserts test record to equipment }
   ResultSet := Statement.ExecuteQuery(Sql);
   CheckNotNull(ResultSet);
@@ -827,10 +829,10 @@ begin
 
 
   { Tests the people table }
-  Sql := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Statement.ExecuteUpdate(Sql);
 
-  Sql := 'SELECT * FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'SELECT * FROM people where p_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   StrStream := TMemoryStream.Create;
   StrStream.LoadFromFile('../../../database/text/lgpl.txt');
   StrStream.Size := 1024;
@@ -1012,11 +1014,11 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
 
-  Sql := 'DELETE FROM not_null_values where n_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'DELETE FROM not_null_values where n_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   Connection.CreateStatement.ExecuteUpdate(Sql);
 
   { Tests the equipment table }
-  Sql := 'SELECT * FROM not_null_values where n_id = ' + IntToStr(TEST_ROW_ID);
+  Sql := 'SELECT * FROM not_null_values where n_id = ' + ZFastCode.IntToStr(Integer(TEST_ROW_ID));
   { Inserts test record to equipment }
   try
     ResultSet := Statement.ExecuteQuery(Sql);
@@ -1154,6 +1156,246 @@ begin
   end;
 end;
 {$WARNINGS ON}
+
+procedure TZGenericTestDbcResultSet.TestStringToSignedIntegerConversions;
+const
+  s_id_Index  = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  s_char_Index  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  s_varchar_Index  = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+var
+  PStatement: IZPreparedStatement;
+  Statement: IZStatement;
+
+  function InsertTestString(ID: Integer; Const Str: RawByteString): Boolean;
+  begin
+    PStatement.SetInt(s_id_Index, ID);
+    PStatement.SetRawByteString(s_char_Index, Str);
+    PStatement.SetRawByteString(s_varchar_Index, Str);
+    PStatement.SetRawByteString(s_nchar_Index, Str);
+    PStatement.SetRawByteString(s_nvarchar_Index, Str);
+    PStatement.SetRawByteString(s_bit_Index, Str);
+    Result := PStatement.ExecuteUpdatePrepared = 1;
+  end;
+begin
+  PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)');
+  CheckNotNull(PStatement);
+  {Insert ShortInt test values}
+  Check(InsertTestString(TEST_ROW_ID, IntToRaw(Low(ShortInt))));
+  Check(InsertTestString(TEST_ROW_ID+1, IntToRaw(High(ShortInt))));
+  {Insert SmallInt test values}
+  Check(InsertTestString(TEST_ROW_ID+2, IntToRaw(Low(SmallInt))));
+  Check(InsertTestString(TEST_ROW_ID+3, IntToRaw(High(SmallInt))));
+  {Insert Integer test values}
+  Check(InsertTestString(TEST_ROW_ID+4, IntToRaw(Low(Integer))));
+  Check(InsertTestString(TEST_ROW_ID+5, IntToRaw(High(Integer))));
+  {Insert Int64 test values}
+  Check(InsertTestString(TEST_ROW_ID+6, IntToRaw(Low(Int64))));
+  Check(InsertTestString(TEST_ROW_ID+7, IntToRaw(High(Int64))));
+
+  PStatement := Connection.PrepareStatement('select * from string_values where s_id >= ?');
+  Statement := Connection.CreateStatement;
+  try
+    PStatement.SetInt(s_id_Index, TEST_ROW_ID-1);
+    with PStatement.ExecuteQueryPrepared do
+    begin
+      { Test ShortInt getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID, GetInt(s_id_Index));
+      CheckEquals(Low(ShortInt), GetShort(s_char_Index));
+      CheckEquals(Low(ShortInt), GetShort(s_varchar_Index));
+      CheckEquals(Low(ShortInt), GetShort(s_nchar_Index));
+      CheckEquals(Low(ShortInt), GetShort(s_nvarchar_Index));
+      CheckEquals(Low(ShortInt), GetShort(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+1, GetInt(s_id_Index));
+      CheckEquals(High(ShortInt), GetShort(s_char_Index));
+      CheckEquals(High(ShortInt), GetShort(s_varchar_Index));
+      CheckEquals(High(ShortInt), GetShort(s_nchar_Index));
+      CheckEquals(High(ShortInt), GetShort(s_nvarchar_Index));
+      CheckEquals(High(ShortInt), GetShort(s_bit_Index));
+      { Test SmallInt getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+2, GetInt(s_id_Index));
+      CheckEquals(Low(SmallInt), GetSmall(s_char_Index));
+      CheckEquals(Low(SmallInt), GetSmall(s_varchar_Index));
+      CheckEquals(Low(SmallInt), GetSmall(s_nchar_Index));
+      CheckEquals(Low(SmallInt), GetSmall(s_nvarchar_Index));
+      CheckEquals(Low(SmallInt), GetSmall(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+3, GetInt(s_id_Index));
+      CheckEquals(High(SmallInt), GetSmall(s_char_Index));
+      CheckEquals(High(SmallInt), GetSmall(s_varchar_Index));
+      CheckEquals(High(SmallInt), GetSmall(s_nchar_Index));
+      CheckEquals(High(SmallInt), GetSmall(s_nvarchar_Index));
+      CheckEquals(High(SmallInt), GetSmall(s_bit_Index));
+      { Test Integer getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+4, GetInt(s_id_Index));
+      CheckEquals(Low(Integer), GetInt(s_char_Index));
+      CheckEquals(Low(Integer), GetInt(s_varchar_Index));
+      CheckEquals(Low(Integer), GetInt(s_nchar_Index));
+      CheckEquals(Low(Integer), GetInt(s_nvarchar_Index));
+      CheckEquals(Low(Integer), GetInt(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+5, GetInt(s_id_Index));
+      CheckEquals(High(Integer), GetInt(s_char_Index));
+      CheckEquals(High(Integer), GetInt(s_varchar_Index));
+      CheckEquals(High(Integer), GetInt(s_nchar_Index));
+      CheckEquals(High(Integer), GetInt(s_nvarchar_Index));
+      CheckEquals(High(Integer), GetInt(s_bit_Index));
+      { Test Int64 getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+6, GetInt(s_id_Index));
+      CheckEquals(Low(Int64), GetLong(s_char_Index));
+      CheckEquals(Low(Int64), GetLong(s_varchar_Index));
+      CheckEquals(Low(Int64), GetLong(s_nchar_Index));
+      CheckEquals(Low(Int64), GetLong(s_nvarchar_Index));
+      CheckEquals(Low(Int64), GetLong(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+7, GetInt(s_id_Index));
+      CheckEquals(High(Int64), GetLong(s_char_Index));
+      CheckEquals(High(Int64), GetLong(s_varchar_Index));
+      CheckEquals(High(Int64), GetLong(s_nchar_Index));
+      CheckEquals(High(Int64), GetLong(s_nvarchar_Index));
+      CheckEquals(High(Int64), GetLong(s_bit_Index));
+      Close;
+    end;
+  finally
+    PStatement.Close;
+    PStatement := nil;
+    Statement.Execute('delete from string_values where s_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
+    Statement.Close;
+    Statement := nil;
+  end;
+end;
+
+procedure TZGenericTestDbcResultSet.TestStringToUnsignedIntegerConversions;
+const
+  s_id_Index  = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  s_char_Index  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  s_varchar_Index  = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+var
+  PStatement: IZPreparedStatement;
+  Statement: IZStatement;
+  Info: TStrings;
+
+  function InsertTestString(ID: Integer; Const Str: RawByteString): Boolean;
+  begin
+    PStatement.SetInt(s_id_Index, ID);
+    PStatement.SetRawByteString(s_char_Index, Str);
+    PStatement.SetRawByteString(s_varchar_Index, Str);
+    PStatement.SetRawByteString(s_nchar_Index, Str);
+    PStatement.SetRawByteString(s_nvarchar_Index, Str);
+    PStatement.SetRawByteString(s_bit_Index, Str);
+    Result := PStatement.ExecuteUpdatePrepared = 1;
+  end;
+begin
+  Info := TStringList.Create;
+  Info.Add('preferprepared=True');
+  PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)');
+  CheckNotNull(PStatement);
+  {Insert ShortInt test values}
+  Check(InsertTestString(TEST_ROW_ID, IntToRaw(Low(Byte))));
+  Check(InsertTestString(TEST_ROW_ID+1, IntToRaw(High(Byte))));
+  {Insert SmallInt test values}
+  Check(InsertTestString(TEST_ROW_ID+2, IntToRaw(Low(Word))));
+  Check(InsertTestString(TEST_ROW_ID+3, IntToRaw(High(Word))));
+  {Insert Integer test values}
+  Check(InsertTestString(TEST_ROW_ID+4, IntToRaw(Low(LongWord))));
+  Check(InsertTestString(TEST_ROW_ID+5, IntToRaw(High(LongWord))));
+  {Insert Int64 test values}
+  Check(InsertTestString(TEST_ROW_ID+6, IntToRaw(Low(UInt64))));
+  {$IFDEF WITH_UINT64_C1118_ERROR}
+  Check(InsertTestString(TEST_ROW_ID+7, '18446744073709551615')); //D7 returns -1 als High value
+  {$ELSE}
+  Check(InsertTestString(TEST_ROW_ID+7, IntToRaw(High(UInt64))));
+  {$ENDIF}
+
+  PStatement := Connection.PrepareStatementWithParams('select * from string_values where s_id >= ?', Info);
+  Statement := Connection.CreateStatement;
+  try
+    PStatement.SetInt(s_id_Index, TEST_ROW_ID-1);
+    with PStatement.ExecuteQueryPrepared do
+    begin
+      { Test Byte getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID, GetInt(s_id_Index));
+      CheckEquals(Low(Byte), GetByte(s_char_Index));
+      CheckEquals(Low(Byte), GetByte(s_varchar_Index));
+      CheckEquals(Low(Byte), GetByte(s_nchar_Index));
+      CheckEquals(Low(Byte), GetByte(s_nvarchar_Index));
+      CheckEquals(Low(Byte), GetByte(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+1, GetInt(s_id_Index));
+      CheckEquals(High(Byte), GetByte(s_char_Index));
+      CheckEquals(High(Byte), GetByte(s_varchar_Index));
+      CheckEquals(High(Byte), GetByte(s_nchar_Index));
+      CheckEquals(High(Byte), GetByte(s_nvarchar_Index));
+      CheckEquals(High(Byte), GetByte(s_bit_Index));
+      { Test Word getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+2, GetInt(s_id_Index));
+      CheckEquals(Low(Word), GetWord(s_char_Index));
+      CheckEquals(Low(Word), GetWord(s_varchar_Index));
+      CheckEquals(Low(Word), GetWord(s_nchar_Index));
+      CheckEquals(Low(Word), GetWord(s_nvarchar_Index));
+      CheckEquals(Low(Word), GetWord(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+3, GetInt(s_id_Index));
+      CheckEquals(High(Word), GetWord(s_char_Index));
+      CheckEquals(High(Word), GetWord(s_varchar_Index));
+      CheckEquals(High(Word), GetWord(s_nchar_Index));
+      CheckEquals(High(Word), GetWord(s_nvarchar_Index));
+      CheckEquals(High(Word), GetWord(s_bit_Index));
+      { Test Longword/Cardinal getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+4, GetInt(s_id_Index));
+      CheckEquals(Low(LongWord), GetUInt(s_char_Index));
+      CheckEquals(Low(LongWord), GetUInt(s_varchar_Index));
+      CheckEquals(Low(LongWord), GetUInt(s_nchar_Index));
+      CheckEquals(Low(LongWord), GetUInt(s_nvarchar_Index));
+      CheckEquals(Low(LongWord), GetUInt(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+5, GetInt(s_id_Index));
+      CheckEquals(High(LongWord), GetUInt(s_char_Index));
+      CheckEquals(High(LongWord), GetUInt(s_varchar_Index));
+      CheckEquals(High(LongWord), GetUInt(s_nchar_Index));
+      CheckEquals(High(LongWord), GetUInt(s_nvarchar_Index));
+      CheckEquals(High(LongWord), GetUInt(s_bit_Index));
+      { Test UInt64 getter}
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+6, GetInt(s_id_Index));
+      CheckEquals(Low(UInt64), GetULong(s_char_Index));
+      CheckEquals(Low(UInt64), GetULong(s_varchar_Index));
+      CheckEquals(Low(UInt64), GetULong(s_nchar_Index));
+      CheckEquals(Low(UInt64), GetULong(s_nvarchar_Index));
+      CheckEquals(Low(UInt64), GetULong(s_bit_Index));
+      Check(Next);
+      CheckEquals(TEST_ROW_ID+7, GetInt(s_id_Index));
+      CheckEquals(High(UInt64), GetULong(s_char_Index));
+      CheckEquals(High(UInt64), GetULong(s_varchar_Index));
+      CheckEquals(High(UInt64), GetULong(s_nchar_Index));
+      CheckEquals(High(UInt64), GetULong(s_nvarchar_Index));
+      CheckEquals(High(UInt64), GetULong(s_bit_Index));
+      Close;
+    end;
+  finally
+    PStatement.Close;
+    PStatement := nil;
+    Statement.Execute('delete from string_values where s_id >= '+ZFastCode.IntToStr(Integer(TEST_ROW_ID)));
+    Statement.Close;
+    Statement := nil;
+    FreeAndNil(Info);
+  end;
+end;
 
 initialization
   RegisterTest('dbc',TZGenericTestDbcResultSet.Suite);
