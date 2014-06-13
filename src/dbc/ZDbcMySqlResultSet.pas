@@ -406,7 +406,7 @@ end;
 }
 function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result.P := GetBufferAndLength(ColumnIndex, Result.Len{%H-});
+  Result.P := GetBufferAndLength(ColumnIndex, Result{%H-}.Len);
 end;
 
 {**
@@ -1146,7 +1146,7 @@ begin
           ['Field '+ZFastCode.IntToStr(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
             DefineColumnTypeName(GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
     end;
-    Result.Len := {$IFDEF WITH_INLINE}Length(FRawTemp){$ELSE}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+    Result.Len := {$IFDEF WITH_INLINE}Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
     Result.P := Pointer(FRawTemp);
   end;
 end;

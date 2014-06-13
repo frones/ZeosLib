@@ -58,8 +58,7 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZDbcConnection,
-  ZDbcCachedResultSet, ZDbcResultSetMetadata, ZURL, ZCompatibility;
+  ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility;
 
 type
 
@@ -256,7 +255,7 @@ type
 implementation
 
 uses
-  ZFastCode, Math, ZMessages, ZDbcUtils, ZCollections, ZDbcMySqlUtils;
+  ZFastCode, Math, ZMessages, ZDbcMySqlUtils;
 
 { TZMySQLDatabaseInfo }
 
@@ -482,7 +481,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion, MinorVersion);
+  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
   // changed from False by mdaems. After testing with lower versions, please correct.
   Result := MajorVersion >= 5;
 end;
@@ -551,7 +550,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion, MinorVersion);
+  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
   Result := ((MajorVersion = 3) and (MinorVersion >= 22)) or (MajorVersion > 3);
 end;
 
@@ -583,7 +582,7 @@ var
   MajorVersion: Integer;
   MinorVersion: Integer;
 begin
-  GetVersion(MajorVersion, MinorVersion);
+  GetVersion(MajorVersion{%H-}, MinorVersion{%H-});
   Result := MajorVersion >= 4;
 end;
 
@@ -1323,7 +1322,7 @@ const
   db_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   grantor_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   user_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  table_name_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  {%H-}table_name_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   column_name_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   column_priv_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
@@ -2350,12 +2349,12 @@ function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: stri
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 const
-  PROCEDURE_CAT_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  {%H-}PROCEDURE_CAT_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   PROCEDURE_SCHEM_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   PARAMS_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  REMARKS_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
-  PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  {%H-}REMARKS_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  {%H-}PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   RETURN_VALUES_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   SQL, TypeName, Temp: string;

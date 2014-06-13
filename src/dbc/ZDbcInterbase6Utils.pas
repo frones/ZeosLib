@@ -2562,7 +2562,7 @@ begin
     if (CurPos + SegLen > Len) then
       SegLen := Len - CurPos;
     if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
-      Pointer({%H-}NativeUInt(Buffer)+NativeUInt(CurPos))) > 0 then
+      {%H-}Pointer({%H-}NativeUInt(Buffer)+NativeUInt(CurPos))) > 0 then
       CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
     Inc(CurPos, SegLen);
   end;

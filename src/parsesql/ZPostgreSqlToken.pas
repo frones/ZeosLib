@@ -79,7 +79,7 @@ type
     function GetQuotedStringWithModifier(Stream: TStream; FirstChar: Char): string;
   public
     function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
     procedure SetStandardConformingStrings(const Value: Boolean);
   end;
 
@@ -176,7 +176,7 @@ begin
     FloatPoint := LastChar = '.';
     if FloatPoint then
     begin
-      Stream.Read(TempChar, SizeOf(Char));
+      Stream.Read(TempChar{%H-}, SizeOf(Char));
       Result.Value := Result.Value + TempChar;
     end;
   end;
@@ -234,7 +234,7 @@ begin
   if CharInSet(FirstChar, ['E', 'e', 'B', 'b', 'X', 'x', 'U', 'u']) then
   begin
     Modifier := FirstChar;
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
+    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
     if ReadNum = SizeOf(Char) then
     begin
       if (UpperCase(FirstChar) = 'U') and (ReadChar = '&') then // Check for U& modifier
@@ -267,7 +267,7 @@ var
 begin
   Result := QuoteChar;
   TagState := 0;
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
     if (ReadChar = QuoteChar) then
     begin
@@ -318,7 +318,7 @@ begin
   Result := QuoteChar;
   QuoteCount := 1;
 
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
     if ReadChar = QuoteChar then
       Inc(QuoteCount);
@@ -412,7 +412,7 @@ begin
   LastChar := #0;
   NestedLevel := 1;
   Result := '';
-  while Stream.Read(ReadChar, 1 * SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, 1 * SizeOf(Char)) > 0 do
   begin
     Result := Result + ReadChar;
     if (LastChar = '*') and (ReadChar = '/') then
@@ -443,7 +443,7 @@ begin
 
   if FirstChar = '-' then
   begin
-    ReadNum := Stream.Read(ReadChar, SizeOf(Char));
+    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '-') then
     begin
       Result.TokenType := ttComment;
