@@ -311,9 +311,11 @@ type
     procedure DoOnNewRecord; override;
 
     function GetDataSource: TDataSource; override;
-
-  protected
-    { Internal protected properties. }
+  protected { Internal protected properties. }
+    {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //EH: there is something weired with cirtcular references + FPC and implementation uses! So i added this virtual function to get a IsUpdatable state
+    function GetUpdatable: Boolean; virtual;
+    property Updatable: Boolean read GetUpdatable;
+    {$ENDIF}
     property RowAccessor: TZRowAccessor read FRowAccessor write FRowAccessor;
     property CurrentRow: Integer read FCurrentRow write FCurrentRow;
     property OldRowBuffer: PZRowBuffer read FOldRowBuffer write FOldRowBuffer;
@@ -335,11 +337,10 @@ type
     property Statement: IZPreparedStatement read FStatement write FStatement;
     property ResultSet: IZResultSet read FResultSet write FResultSet;
 
+  protected { External protected properties. }
     property DataLink: TDataLink read FDataLink;
     property MasterLink: TMasterDataLink read FMasterLink;
     property IndexFields: {$IFDEF WITH_GENERIC_TLISTTFIELD}TList<TField>{$ELSE}TList{$ENDIF} read FIndexFields;
-
-    { External protected properties. }
     property RequestLive: Boolean read FRequestLive write FRequestLive
       default False;
     property FetchRow: integer read FFetchRow write FFetchRow default 0;  // added by Patyi
@@ -378,8 +379,7 @@ type
     {$IFNDEF WITH_NESTEDDATASETCLASS}
     property NestedDataSetClass: TDataSetClass read FNestedDataSetClass write FNestedDataSetClass;
     {$ENDIF}
-  protected
-    { Abstracts methods }
+  protected { Abstracts methods }
     procedure InternalAddRecord({%H-}Buffer: Pointer; {%H-}Append: Boolean); override;
     procedure InternalDelete; override;
     procedure InternalPost; override;
@@ -1776,7 +1776,8 @@ var
 implementation
 
 uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSchema,
-  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZAbstractDataset, ZEncoding
+  ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding
+  {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
   {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
@@ -3526,6 +3527,13 @@ begin
   Result := DataLink.DataSource;
 end;
 
+{$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}
+function TZAbstractRODataset.GetUpdatable: Boolean;
+begin
+  Result := False;
+end;
+{$ENDIF}
+
 {**
   Sets the value of the Prepared property.
   Setting to <code>True</code> prepares the query. Setting to <code>False</code> unprepares.
@@ -3920,7 +3928,7 @@ procedure TZAbstractRODataset.InternalPost;
   end;
 
 begin
-  if not (Self is TZAbstractDataset) then
+  if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractDataSet{$ENDIF}) then
     RaiseReadOnlyError;
 
   Checkrequired;

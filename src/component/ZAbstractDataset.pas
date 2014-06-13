@@ -131,6 +131,9 @@ type
       IZPreparedStatement; override;
     function CreateResultSet(const SQL: string; MaxRows: Integer):
       IZResultSet; override;
+    {$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}
+    function GetUpdatable: Boolean; override;
+    {$ENDIF}
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
 
@@ -341,6 +344,13 @@ begin
       CachedResultSet.SetResolver(FUpdateObject);
   end;
 end;
+
+{$IFDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}
+function TZAbstractDataset.GetUpdatable: Boolean;
+begin
+  Result := False;
+end;
+{$ENDIF}
 
 {**
   Performs internal query closing.
