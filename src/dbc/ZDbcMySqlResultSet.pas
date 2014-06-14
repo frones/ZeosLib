@@ -341,7 +341,6 @@ begin
   end;
 
   inherited Open;
-
 end;
 
 {**
@@ -758,9 +757,10 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-  Result := nil;
   Buffer := GetBufferAndLength(ColumnIndex, Len{%H-});
-  if not LastWasNull then
+  if LastWasNull then
+    Result := nil
+  else
     case GetMetaData.GetColumnType(ColumnIndex) of
       stBytes, stBinaryStream:
         if FCachedLob then

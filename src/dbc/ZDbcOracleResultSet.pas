@@ -72,18 +72,13 @@ type
     FConnection: IZOracleConnection;
     FOutVars: PZSQLVars;
     FChunkSize: Integer;
-  protected
-    function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar;
+    function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetAsStringValue(ColumnIndex: Integer;
       SQLVarHolder: PZSQLVar): RawByteString;
-    function GetAsLongIntValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): LongInt;
-    function GetAsDoubleValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): Double;
-    function GetAsDateTimeValue(ColumnIndex: Integer;
-      SQLVarHolder: PZSQLVar): TDateTime;
-    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
+    function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime;
     function GetFinalObject(Obj: POCIObject): POCIObject;
+  protected
+    function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; SQL: string; StmtHandle: POCIStmt;
@@ -93,10 +88,9 @@ type
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
+    function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
@@ -241,11 +235,9 @@ begin
   CheckClosed;
   if (RowNo < 1) or (RowNo > LastRowNo) then
     raise EZSQLException.Create(SRowDataIsNotAvailable);
-  if (ColumnIndex <=0) or (ColumnIndex > FOutVars.AllocNum) then
-  begin
+  if (ColumnIndex <= InvalidDbcIndex) or (ColumnIndex > FOutVars.AllocNum{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
 {$ENDIF}
 
   CurrentVar := @FOutVars.Variables[ColumnIndex];
@@ -264,30 +256,34 @@ end;
 }
 function TZOracleAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 var
-  Blob: IZBlob;
   SQLVarHolder: PZSQLVar;
+  Len: Integer;
 begin
   SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   Result.Len := 0;
   Result.P := nil;
   if not LastWasNull then
-    case SQLVarHolder.TypeCode of
+    with SQLVarHolder^ do
+    case TypeCode of
       SQLT_INT:
         begin
-          FRawTemp := IntToRaw(PLongInt(SQLVarHolder.Data)^);
-          Result.P := PAnsiChar(FRawTemp);
-          Result.Len := Length(FRawTemp);
+          FRawTemp := IntToRaw(PLongInt(Data)^);
+          Result.P := Pointer(FRawTemp);
+          Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
         end;
       SQLT_FLT:
         begin
-          FRawTemp := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
-          Result.P := PAnsiChar(FRawTemp);
-          Result.Len := Length(FRawTemp);
+          FRawTemp := FloatToSQLRaw(PDouble(Data)^);
+          Result.P := Pointer(FRawTemp);
+          Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
         end;
       SQLT_STR:
         begin
-          Result.P := PAnsiChar(SQLVarHolder.Data);
-          Result.Len := SQLVarHolder.DataSize;
+          Len := DataSize;
+          if DataType = SQLT_AFC then //Ansi fixed char
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+          Result.P := SQLVarHolder.Data;
+          Result.Len := Len;
         end;
       SQLT_LVB, SQLT_LVC, SQLT_BIN:
         begin
@@ -296,10 +292,10 @@ begin
         end;
       SQLT_DAT, SQLT_TIMESTAMP:
         begin
-          FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
+          FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
             ConSettings^.ReadFormatSettings, False);
-          Result.P := PAnsiChar(FRawTemp);
-          Result.Len := Length(FRawTemp);
+          Result.P := Pointer(FRawTemp);
+          Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
         end;
       SQLT_BLOB, SQLT_CLOB:
         begin
@@ -307,6 +303,8 @@ begin
           Result.P := Blob.GetBuffer;
           Result.Len := Blob.Length;
         end;
+      else
+        raise Exception.Create('Missing OCI Type?');
     end;
 end;
 
@@ -367,12 +365,12 @@ begin
       SQLT_FLT:
         Result := FloatToSQLRaw(PDouble(SQLVarHolder.Data)^);
       SQLT_STR:
-        Result := PAnsiChar(SQLVarHolder.Data);
+        ZSetString(PAnsiChar(SQLVarHolder.Data), SQLVarHolder.DataSize, Result);
       SQLT_LVB, SQLT_LVC, SQLT_BIN:
         ZSetString(PAnsiChar(SQLVarHolder.Data) + SizeOf(Integer),
           PInteger(SQLVarHolder.Data)^, Result);
       SQLT_DAT, SQLT_TIMESTAMP:
-        Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(ColumnIndex, SQLVarHolder),
+        Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
           ConSettings^.ReadFormatSettings, False);
       SQLT_BLOB, SQLT_CLOB:
         begin
@@ -386,72 +384,6 @@ end;
 
 {**
   Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>LongInt</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleAbstractResultSet.GetAsLongIntValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): LongInt;
-begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_INT:
-        Result := PLongInt(SQLVarHolder.Data)^;
-      SQLT_FLT:
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(SQLVarHolder.Data)^);
-      else
-      begin
-        Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloatDef(
-          GetAsStringValue(ColumnIndex, SQLVarHolder), '.', 0));
-      end;
-    end;
-  end
-  else
-    Result := 0;
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as a <code>Double</code>.
-
-  @param ColumnIndex the first column is 1, the second is 2, ...
-  @param SQLVarHolder a reference to SQL variable holder or <code>nil</code>
-    to force retrieving the variable.
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0.0</code>
-}
-function TZOracleAbstractResultSet.GetAsDoubleValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): Double;
-begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
-  if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_INT:
-        Result := PLongInt(SQLVarHolder.Data)^;
-      SQLT_FLT:
-        Result := PDouble(SQLVarHolder.Data)^;
-      else
-      begin
-        Result := SqlStrToFloatDef(
-          GetAsStringValue(ColumnIndex, SQLVarHolder), 0);
-      end;
-    end;
-  end
-  else
-    Result := 0;
-end;
-
-{**
-  Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as a <code>DateTime</code>.
 
   @param ColumnIndex the first column is 1, the second is 2, ...
@@ -460,8 +392,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>0</code>
 }
-function TZOracleAbstractResultSet.GetAsDateTimeValue(ColumnIndex: Integer;
-  SQLVarHolder: PZSQLVar): TDateTime;
+function TZOracleAbstractResultSet.GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime;
 var
   Status: Integer;
   Year: SmallInt;
@@ -469,59 +400,43 @@ var
   Hour, Minute, Second: Byte;
   Millis: Integer;
   Connection: IZOracleConnection;
-  AnsiRec: TZAnsiRec;
-  Failed: Boolean;
 begin
-  if SQLVarHolder = nil then
-    SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   if SQLVarHolder <> nil then
-  begin
-    case SQLVarHolder.TypeCode of
-      SQLT_DAT:
-        Result := OraDateToDateTime(SQLVarHolder.Data);
-      SQLT_TIMESTAMP:
-        begin
-          Connection := GetStatement.GetConnection as IZOracleConnection;
-          if SQLVarHolder.ColType in [stDate, stTimestamp] then
-          begin
-            Status := FPlainDriver.DateTimeGetDate(
-              Connection.GetConnectionHandle,
-              FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Year{%H-}, Month{%H-}, Day{%H-});
-            // attention : this code handles all timestamps on 01/01/0001 as a pure time value
-            // reason : oracle doesn't have a pure time datatype so all time comparisons compare
-            //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-            if (Status = OCI_SUCCESS) and
-               ((Year <> 1) or (Month <> 1) or (Day <> 1)) then
-              Result := EncodeDate(Year, Month, Day)
-            else
-              Result := 0;
-          end
-          else
-            Result := 0;
-          if SQLVarHolder.ColType in [stTime, stTimestamp] then
-          begin
-            Status := FPlainDriver.DateTimeGetTime(
-              Connection.GetConnectionHandle,
-              FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
-              Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
-            if Status = OCI_SUCCESS then
-            begin
-              Millis := Round(Millis / 1000000);
-              if Millis >= 1000 then Millis := 999;
-                Result := Result + EncodeTime(
-                  Hour, Minute, Second, Millis);
-            end;
-          end;
-        end;
-      else
+    if SQLVarHolder.TypeCode = SQLT_DAT then
+      Result := OraDateToDateTime(SQLVarHolder.Data)
+    else
+    begin
+      Connection := GetStatement.GetConnection as IZOracleConnection;
+      if SQLVarHolder.ColType in [stDate, stTimestamp] then
       begin
-        AnsiRec := GetAnsiRec(ColumnIndex);
-        Result := ZSysUtils.RawSQLTimeStampToDateTime(AnsiRec.P,
-          AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-});
+        Status := FPlainDriver.DateTimeGetDate(
+          Connection.GetConnectionHandle,
+          FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
+          Year{%H-}, Month{%H-}, Day{%H-});
+        // attention : this code handles all timestamps on 01/01/0001 as a pure time value
+        // reason : oracle doesn't have a pure time datatype so all time comparisons compare
+        //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
+        if (Status = OCI_SUCCESS) then
+          if (Year and Month and Day = 1) then
+            Result := 0
+          else
+            Result := EncodeDate(Year, Month, Day)
+        else
+          Result := 0;
+      end
+      else
+        Result := 0;
+      if SQLVarHolder.ColType in [stTime, stTimestamp] then
+      begin
+        Status := FPlainDriver.DateTimeGetTime(
+          Connection.GetConnectionHandle,
+          FErrorHandle, PPOCIDescriptor(SQLVarHolder.Data)^,
+          Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
+        if Status = OCI_SUCCESS then
+          Result := Result + EncodeTime(
+            Hour, Minute, Second, Millis div 1000000);
       end;
-    end;
-  end
+    end
   else
     Result := 0;
 end;
@@ -571,41 +486,31 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-  Result := StrToBoolEx(GetAsStringValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleAbstractResultSet.GetByte(ColumnIndex: Integer): Byte;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
-{$ENDIF}
-  Result := Byte(GetAsLongIntValue(ColumnIndex, nil));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZOracleAbstractResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stSmall);
-{$ENDIF}
-  Result := SmallInt(GetAsLongIntValue(ColumnIndex, nil));
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := False
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^ <> 0;
+        SQLT_UIN:
+          Result := PLongWord(Data)^ <> 0;
+        SQLT_FLT:
+          Result := Trunc(PDouble(Data)^) <> 0;
+        SQLT_STR:
+          Result := StrToBoolEx(PAnsiChar(Data), True, DataType = SQLT_AFC);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := False;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]) <> 0;
+        SQLT_BLOB, SQLT_CLOB:
+          Result := StrToBoolEx(PAnsiChar(GetBlob(ColumnIndex).GetBuffer));
+      else
+        Result := False;
+      end;
+  end;
 end;
 
 {**
@@ -618,11 +523,44 @@ end;
     value returned is <code>0</code>
 }
 function TZOracleAbstractResultSet.GetInt(ColumnIndex: Integer): Integer;
+var Len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stInteger);
+  CheckColumnConvertion(ColumnIndex, stULong);
 {$ENDIF}
-  Result := Integer(GetAsLongIntValue(ColumnIndex, nil));
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := Trunc(PDouble(Data)^);
+        SQLT_STR:
+          if DataType = SQLT_AFC then //Ansi fixed char
+          begin
+            Len := DataSize;
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(PAnsiChar(Data), Len, FRawTemp);
+            Result := RawToIntDef(FRawTemp, 0);
+          end
+          else //#0 terminated string / no trailing spaces
+            Result := RawToIntDef(Data, 0);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]));
+        SQLT_BLOB, SQLT_CLOB:
+          Result := RawToIntDef(GetBlob(ColumnIndex).GetBuffer, 0);
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -635,11 +573,94 @@ end;
     value returned is <code>0</code>
 }
 function TZOracleAbstractResultSet.GetLong(ColumnIndex: Integer): Int64;
+var Len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
 {$ENDIF}
-  Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDoubleValue(ColumnIndex, nil));
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := Trunc(PDouble(Data)^);
+        SQLT_STR:
+          if DataType = SQLT_AFC then //Ansi fixed char
+          begin
+            Len := DataSize;
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(PAnsiChar(Data), Len, FRawTemp);
+            Result := RawToInt64Def(FRawTemp, 0);
+          end
+          else //#0 terminated string / no trailing spaces
+            Result := RawToInt64Def(Data, 0);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]));
+        SQLT_BLOB, SQLT_CLOB:
+          Result := RawToInt64Def(GetBlob(ColumnIndex).GetBuffer, 0);
+      else
+        Result := 0;
+      end;
+  end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UInt64</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZOracleAbstractResultSet.GetULong(ColumnIndex: Integer): UInt64;
+var Len: Integer;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stULong);
+{$ENDIF}
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := Trunc(PDouble(Data)^);
+        SQLT_STR:
+          if DataType = SQLT_AFC then //Ansi fixed char
+          begin
+            Len := DataSize;
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(PAnsiChar(Data), Len, FRawTemp);
+            Result := RawToUInt64Def(FRawTemp, 0);
+          end
+          else //#0 terminated string / no trailing spaces
+            Result := RawToUInt64Def(Data, 0);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]));
+        SQLT_BLOB, SQLT_CLOB:
+            Result := RawToUInt64Def(GetBlob(ColumnIndex).GetBuffer, 0);
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -652,11 +673,43 @@ end;
     value returned is <code>0</code>
 }
 function TZOracleAbstractResultSet.GetFloat(ColumnIndex: Integer): Single;
+var Len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
 {$ENDIF}
-  Result := GetAsDoubleValue(ColumnIndex, nil);
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := PDouble(Data)^;
+        SQLT_STR:
+          if DataType = SQLT_AFC then //Ansi fixed char
+          begin
+            Len := DataSize;
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            Result := SqlStrToFloatDef(PAnsiChar(Data), 0, Len);
+          end
+          else //#0 terminated string / no trailing spaces
+            Result := SqlStrToFloatDef(PAnsiChar(Data), 0, DataSize);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]);
+        SQLT_BLOB, SQLT_CLOB:
+          Result := SqlStrToFloatDef(GetBlob(ColumnIndex).GetString, 0);
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -669,11 +722,43 @@ end;
     value returned is <code>0</code>
 }
 function TZOracleAbstractResultSet.GetDouble(ColumnIndex: Integer): Double;
+var Len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
-  Result := GetAsDoubleValue(ColumnIndex, nil);
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := PDouble(Data)^;
+        SQLT_STR:
+          if DataType = SQLT_AFC then //Ansi fixed char
+          begin
+            Len := DataSize;
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            Result := SqlStrToFloatDef(PAnsiChar(Data), 0, Len);
+          end
+          else //#0 terminated string / no trailing spaces
+            Result := SqlStrToFloatDef(PAnsiChar(Data), 0, DataSize);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]);
+        SQLT_BLOB, SQLT_CLOB:
+          Result := SqlStrToFloatDef(GetBlob(ColumnIndex).GetString, 0);
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -687,11 +772,43 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
+var Len: Integer;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
-  Result := GetAsDoubleValue(ColumnIndex, nil);
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := PDouble(Data)^;
+        SQLT_STR:
+          if DataType = SQLT_AFC then //Ansi fixed char
+          begin
+            Len := DataSize;
+            while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            Result := SqlStrToFloatDef(PAnsiChar(Data), 0, Len);
+          end
+          else //#0 terminated string / no trailing spaces
+            Result := SqlStrToFloatDef(PAnsiChar(Data), 0, DataSize);
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]);
+        SQLT_BLOB, SQLT_CLOB:
+          Result := SqlStrToFloatDef(GetBlob(ColumnIndex).GetString, 0);
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -722,11 +839,55 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
+var 
+  Len: Cardinal;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
-  Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(ColumnIndex, nil));
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(Data)^);
+        SQLT_STR:
+          begin
+            Len := DataSize;
+            if DataType = SQLT_AFC then //Ansi fixed char
+              while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
+              Result := RawSQLDateToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+                RawSQLTimeStampToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
+            LastWasNull := Result = 0;
+          end;
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]);
+        SQLT_TIMESTAMP:
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]));
+        SQLT_BLOB, SQLT_CLOB:
+          begin
+            Blob := Getblob(ColumnIndex);
+            Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+              RawSQLTimeStampToDateTime(Blob.GetBuffer, Blob.Length, ConSettings^.ReadFormatSettings, Failed));
+            LastWasNull := Result = 0;
+          end;
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -739,11 +900,56 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
+var 
+  Len: Integer;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
-  Result := Frac(GetAsDateTimeValue(ColumnIndex, nil));
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := Frac(PDouble(Data)^);
+        SQLT_STR:
+          begin
+            Len := DataSize;
+            if DataType = SQLT_AFC then //Ansi fixed char
+              while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            if (PAnsiChar(Data)+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              Result := Frac(RawSQLTimeStampToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
+            LastWasNull := Result = 0;
+          end;
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT:
+          Result := 0;
+        SQLT_TIMESTAMP:
+          Result := Frac(GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]));
+        SQLT_BLOB, SQLT_CLOB:
+          begin
+            Blob := Getblob(ColumnIndex);
+            if (PAnsiChar(Blob.GetBuffer)+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(Blob.GetBuffer, Blob.Length, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              Result := Frac(RawSQLTimeStampToDateTime(Blob.GetBuffer, Blob.Length, ConSettings^.ReadFormatSettings, Failed{%H-}));
+            LastWasNull := Result = 0;
+          end;
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -757,11 +963,62 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZOracleAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
+var 
+  Len: Cardinal;
+  Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stTimestamp);
+  CheckColumnConvertion(ColumnIndex, stTimeStamp);
 {$ENDIF}
-  Result := GetAsDateTimeValue(ColumnIndex, nil);
+  with FOutVars.Variables[ColumnIndex] do
+  begin
+    LastWasNull := (Indicator < 0) or (Data = nil);
+    if LastWasNull then
+      Result := 0
+    else
+      case TypeCode of
+        SQLT_INT:
+          Result := PLongInt(Data)^;
+        SQLT_UIN:
+          Result := PLongWord(Data)^;
+        SQLT_FLT:
+          Result := PDouble(Data)^;
+        SQLT_STR:
+          begin
+            Len := DataSize;
+            if DataType = SQLT_AFC then //Ansi fixed char
+              while (PAnsiChar(Data)+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            if (PAnsiChar(Data)+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
+                Result := RawSQLTimeStampToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed)
+              else
+                Result := RawSQLTimeToDateTime(Data, Len, ConSettings^.ReadFormatSettings, Failed);
+            LastWasNull := Result = 0;
+          end;
+        SQLT_LVB, SQLT_LVC, SQLT_BIN:
+          Result := 0;
+        SQLT_DAT:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]);
+        SQLT_TIMESTAMP:
+          Result := GetAsDateTimeValue(@FOutVars.Variables[ColumnIndex]);
+        SQLT_BLOB, SQLT_CLOB:
+          begin
+            Blob := Getblob(ColumnIndex);
+            if (PAnsiChar(Blob.GetBuffer)+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(Blob.GetBuffer, Blob.Length, ConSettings^.ReadFormatSettings, Failed{%H-})
+            else
+              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - LongWord(Blob.Length)) <= 4 then
+                Result := RawSQLTimeStampToDateTime(Blob.GetBuffer, Blob.Length, ConSettings^.ReadFormatSettings, Failed)
+              else
+                Result := RawSQLTimeToDateTime(Blob.GetBuffer, Blob.Length, ConSettings^.ReadFormatSettings, Failed);
+            LastWasNull := Result = 0;
+          end;
+      else
+        Result := 0;
+      end;
+  end;
 end;
 
 {**
@@ -957,7 +1214,7 @@ begin
     case CurrentVar.DataType of
       SQLT_CHR, SQLT_VCS, SQLT_AFC, SQLT_AVC, SQLT_STR, SQLT_VST:
         CurrentVar.ColType := stString;
-      SQLT_NUM:
+      SQLT_NUM: //unsigned char[21] see: http://docs.oracle.com/cd/B19306_01/appdev.102/b14250/oci03typ.htm
         begin
           FPlainDriver.AttrGet(CurrentVar.Handle, OCI_DTYPE_PARAM,
             @CurrentVar.Precision, nil, OCI_ATTR_PRECISION, FErrorHandle);
@@ -967,15 +1224,15 @@ begin
           {by default convert number to double}
           CurrentVar.ColType := stDouble;
           if (CurrentVar.Scale = 0) and (CurrentVar.Precision <> 0) then
-          begin
-            if CurrentVar.Precision <= 2 then
-              CurrentVar.ColType := stByte
-            else if CurrentVar.Precision <= 4 then
-              CurrentVar.ColType := stSmall
-            else if CurrentVar.Precision <= 9 then
-              CurrentVar.ColType := stInteger
-            else if CurrentVar.Precision <= 19 then
-              CurrentVar.ColType := stLong;
+          begin //No digits found, but possible signed or not/overrun of converiosn? No way to find this out -> just use a "save" type
+            case CurrentVar.Precision of
+              0..2: CurrentVar.ColType := stShort; // -128..127
+              3..4: CurrentVar.ColType := stSmall; // -32768..32767
+              5..9: CurrentVar.ColType := stInteger; // -2147483648..2147484647
+              10..19: CurrentVar.ColType := stLong; // -9223372036854775808..9223372036854775807
+              //skip 20 can be UInt64 or Int64  assume Double values instead
+              21: CurrentVar.ColType := stULong; //0..18446744073709551615
+            end;
           end
           else if (CurrentVar.Scale <= 4) and (CurrentVar.Precision > 0) and
             (CurrentVar.Precision <= 19) then
@@ -1048,6 +1305,7 @@ begin
       CurrentVar.CodePage := High(Word);
 
 
+    {now reserve mem and override OCI given typecodes for bindings }
     InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
@@ -1268,8 +1526,7 @@ var
 begin
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := FirstDbcIndex to FOutVars.AllocNum {$IFDEF GENERIC_INDEX}-1{$ENDIF}
- do
+  for I := FirstDbcIndex to FOutVars.AllocNum {$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
