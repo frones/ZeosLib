@@ -87,6 +87,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
@@ -303,6 +304,55 @@ begin
           Result.P := Blob.GetBuffer;
           Result.Len := Blob.Length;
         end;
+      else
+        raise Exception.Create('Missing OCI Type?');
+    end;
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZOracleAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+var
+  SQLVarHolder: PZSQLVar;
+  AnsiRec: TZAnsiRec;
+begin
+  SQLVarHolder := GetSQLVarHolder(ColumnIndex);
+  if LastWasNull then
+    Result := ''
+  else
+    with SQLVarHolder^ do
+    case TypeCode of
+      SQLT_INT: Result := IntToRaw(PLongInt(Data)^);
+      SQLT_UIN: Result := IntToRaw(PLongWord(Data)^);
+      SQLT_FLT: Result := FloatToSQLRaw(PDouble(Data)^);
+      SQLT_STR:
+        begin
+          AnsiRec.Len := DataSize;
+          AnsiRec.P := Data;
+          if DataType = SQLT_AFC then //Ansi fixed char
+            while (PAnsiChar(Data)+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
+          Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.CP)
+        end;
+      SQLT_LVB, SQLT_LVC, SQLT_BIN:
+        ZSetString(PAnsiChar(Data), DataSize, Result);
+      SQLT_DAT, SQLT_TIMESTAMP:
+        Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
+          ConSettings^.ReadFormatSettings, False);
+      SQLT_BLOB:
+        begin
+          Blob := GetBlob(ColumnIndex);
+          ZSetString(PAnsiChar(Blob.GetBuffer), Blob.Length, Result);
+          Blob := nil;
+        end;
+      SQLT_CLOB:
+        GetBlob(ColumnIndex).GetUTF8String;
       else
         raise Exception.Create('Missing OCI Type?');
     end;
