@@ -297,6 +297,9 @@ var
   Label SkipStringAssembling, StringAssembling;
 
 begin
+  if FInVars = nil then //EH: need deep check of subsequential run -> this shouldn't happen!
+    AllocateOracleSQLVars(FInVars, InParamCount);
+
   if (InParamCount > 0) and (InParamValues[0].VType = vtArray) then
   begin
     { array DML binding}
@@ -1107,8 +1110,6 @@ end;
 
 procedure TZOraclePreparedStatement.ClearParameters;
 begin
-  UnPrepareInParameters;
-
   inherited ClearParameters;
 end;
 {**
