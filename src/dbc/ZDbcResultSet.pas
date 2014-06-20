@@ -3956,11 +3956,22 @@ end;
 procedure TZAbstractBlob.SetString(const Value: RawByteString);
 begin
   Clear;
-  FBlobSize := System.Length(Value);
-  if FBlobSize > 0 then
+  if IsClob then
   begin
+    FBlobSize := System.Length(Value)+1;
     GetMem(FBlobData, FBlobSize);
-    System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+    if FBlobSize > 1 then
+      System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+    (PAnsiChar(FBlobData)+FBlobSize-1)^ := #0;
+  end
+  else
+  begin
+    FBlobSize := System.Length(Value);
+    if FBlobSize > 0 then
+    begin
+      GetMem(FBlobData, FBlobSize);
+      System.Move(PAnsiChar(Value)^, FBlobData^, FBlobSize);
+    end;
   end;
   FUpdated := True;
 end;
@@ -4167,6 +4178,7 @@ begin
     end
     else
     begin
+      Clear;
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
       ReallocMem(FBlobData, FBlobSize);

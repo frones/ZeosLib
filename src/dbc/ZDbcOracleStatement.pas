@@ -71,10 +71,14 @@ type
     FHandle: POCIStmt;
     FErrorHandle: POCIError;
     FPlainDriver: IZOraclePlainDriver;
-    FInVars: PZSQLVars;
-    FPrefetchCount: Integer;
+    FParams: PZSQLVars;
+    FRowPrefetchSize: ub4;
+    FZBufferSize: Integer;
     FStatementType: ub2;
+    FServerStmtCache: Boolean;
     FConnectionHandle: POCIEnv;
+    FContextHandle: POCISvcCtx;
+    FBuffer: TByteDynArray; { holds all data for bindings }
     {some temporary array for array bindings}
     FNullIndicators: array of array of sb2;
     FLengthIndicators: array of array of ub2;
@@ -88,7 +92,6 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
-    property InVars: PZSQLVars read FInVars write FInVars;
   public
     constructor Create(PlainDriver: IZOraclePlainDriver;
       Connection: IZConnection; const SQL: string; Info: TStrings); overload;
@@ -110,29 +113,35 @@ type
   private
     FOutParamCount: Integer;
     FErrorHandle: POCIError;
-    FInVars: PZSQLVars;
+    FParams: PZSQLVars;
     FPlainDriver:IZOraclePlainDriver;
-    FPrepared:boolean;
     FHandle: POCIStmt;
     FOracleParams: TZOracleParams;
     FOracleParamsCount: Integer;
     FParamNames: TStringDynArray;
     PackageIncludedList: TStrings;
-    FPrefetchCount: Integer;
     FConnectionHandle: POCIEnv;
+    FBuffer: TByteDynArray;
+    FRowPrefetchSize: ub4;
+    FZBufferSize: Integer;
+    FStatementType: ub2;
+    FIteration: Integer;
     procedure ArrangeInParams;
     procedure FetchOutParamsFromOracleVars;
-  protected
     function GetProcedureSql(SelectProc: boolean): RawByteString;
+  protected
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
     procedure RegisterParamTypeAndName(const ParameterIndex:integer;
       ParamTypeName: String; const ParamName: String; Const {%H-}ColumnSize, {%H-}Precision: Integer);
+    procedure PrepareInParameters; override;
+    procedure BindInParameters; override;
+    procedure UnPrepareInParameters; override;
   public
     procedure RegisterOutParameter(ParameterIndex: Integer; SQLType: Integer); override;
     procedure RegisterParamType(ParameterIndex: integer; ParamType: Integer); override;
     procedure Prepare; override;
-    function IsNull(ParameterIndex: Integer): Boolean;override;
+    procedure Unprepare; override;
 
     Function ExecuteUpdatePrepared: Integer; override;
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -165,8 +174,10 @@ begin
   FPlainDriver := PlainDriver;
   ResultSetType := rtForwardOnly;
   ASQL := ConvertToOracleSQLQuery;
-  FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
+  FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'row_prefetch_size', ''), 131072);
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072);
   FConnectionHandle := (Connection as IZOracleConnection).GetConnectionHandle;
+  FContextHandle := (Connection as IZOracleConnection).GetContextHandle;
 end;
 
 constructor TZOraclePreparedStatement.Create(PlainDriver: IZOraclePlainDriver;
@@ -183,16 +194,28 @@ end;
 function TZOraclePreparedStatement.ConvertToOracleSQLQuery: RawByteString;
 var
   I, N: Integer;
+  SelectFound: Boolean;
 begin
+  FServerStmtCache := False;
+  SelectFound := False;
   N := 0;
   Result := '';
   for I := 0 to High(CachedQueryRaw) do
+  begin
+    SelectFound := (I = 0) and (AnsiUpperCase(CachedQueryRaw[i]) = 'SELECT');
     if IsParamIndex[i] then
     begin
+      FServerStmtCache := True;
       Inc(N);
       Result := Result + ':P' + IntToRaw(N);
     end else
+    begin
+      if SelectFound and not FServerStmtCache then
+        SelectFound := AnsiUpperCase(CachedQueryRaw[i]) <> 'WHERE';
       Result := Result + CachedQueryRaw[i];
+    end;
+  end;
+  FServerStmtCache := SelectFound or FServerStmtCache;
   {$IFNDEF UNICODE}
   if ConSettings^.AutoEncode then
      Result := GetConnection.GetDriver.GetTokenizer.GetEscapeString(Result);
@@ -206,7 +229,7 @@ begin
     IZResultSet(FOpenResultSet).Close;
     FOpenResultSet := nil;
   end;
-  Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle);
+  Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle, FZBufferSize);
   FOpenResultSet := Pointer(Result);
 end;
 
@@ -215,7 +238,7 @@ end;
 }
 procedure TZOraclePreparedStatement.PrepareInParameters;
 begin
-  AllocateOracleSQLVars(FInVars, InParamCount);
+  AllocateOracleSQLVars(FParams, InParamCount);
 end;
 
 {**
@@ -223,11 +246,12 @@ end;
 }
 procedure TZOraclePreparedStatement.BindInParameters;
 var
-  I, J: Integer;
+  I, J, Iteration: Integer;
   CurrentVar: PZSQLVar;
   Status: Integer;
   CharRec: TZCharRec;
   OCIData: Pointer;
+  DataEntry: PAnsiChar; //nice to increment positions
   {using mem entry of OCIData is faster then casting}
   BooleanArray: TBooleanDynArray absolute OCIData;
   ByteArray: TByteDynArray absolute OCIData;
@@ -280,11 +304,11 @@ var
   ZGUIDArray: TGUIDDynArray absolute ZData;
 
   ZVariant: TZVariant;
-  UsedMem: Int64;
+  BufferSize: Int64;
   TmpStrLen: Cardinal;
   WideRec: TZWideRec;
   AnsiRec: TZAnsiRec;
-  WS: ZWideString; //temp val to avoid overrun if WideString
+  WS: ZWideString; //temp val to avoid overrun if WideString(com based)
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   WriteTempBlob: IZOracleBlob;
   TempBlob: IZBlob;
@@ -298,7 +322,7 @@ begin
   if (InParamCount > 0) and (InParamValues[0].VType = vtArray) then
   begin
     { array DML binding}
-    UsedMem := 0;
+    BufferSize := 0;
     OracleConnection := Connection as IZOracleConnection;
     SetLength(FNullIndicators,InParamCount);
     SetLength(FLengthIndicators, InParamCount);
@@ -311,7 +335,7 @@ begin
       SetLength(FNullIndicators[i], ArrayCount);
     for I := 0 to InParamCount - 1 do
     begin
-      CurrentVar := @FInVars.Variables[I{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}];
+      CurrentVar := @FParams.Variables[I];
       CurrentVar.Handle := nil;
 
       ZVariant := InParamValues[i];
@@ -427,7 +451,7 @@ begin
               if (FIntegerValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FIntegerValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FIntegerValues[I], ArrayCount);
               OCIData := FIntegerValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 IntegerArray[J] := Ord(ZBooleanArray[j]); //convert Boolean to integer
               CurrentVar.Length := 4;
@@ -438,7 +462,7 @@ begin
               if (FIntegerValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FIntegerValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FIntegerValues[I], ArrayCount);
               OCIData := FIntegerValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 IntegerArray[J] := ZByteArray[j]; //convert byte to integer
               CurrentVar.Length := 4;
@@ -449,7 +473,7 @@ begin
               if (FIntegerValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FIntegerValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FIntegerValues[I], ArrayCount);
               OCIData := FIntegerValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 IntegerArray[J] := ZShortIntArray[j]; //convert shortint to integer
               CurrentVar.Length := 4;
@@ -460,7 +484,7 @@ begin
               if (FIntegerValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FIntegerValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FIntegerValues[I], ArrayCount);
               OCIData := FIntegerValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 IntegerArray[J] := ZWordArray[j]; //convert shortint to integer
               CurrentVar.Length := 4;
@@ -471,7 +495,7 @@ begin
               if (FIntegerValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FIntegerValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FIntegerValues[I], ArrayCount);
               OCIData := FIntegerValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 IntegerArray[J] := ZSmallIntArray[j]; //convert shortint to integer
               CurrentVar.Length := 4;
@@ -484,7 +508,7 @@ begin
               if (FInt64Values[I] = nil) or ({%H-}PLongInt(NativeUInt(FInt64Values[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FInt64Values[I], ArrayCount);
               OCIData := FInt64Values[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 Int64Array[J] := ZLongWordArray[j]; //convert LongWord to Int64
               CurrentVar.Length := 8;
@@ -495,7 +519,7 @@ begin
               if (FDoubleValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FDoubleValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FDoubleValues[I], ArrayCount);
               OCIData := FDoubleValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 DoubleArray[J] := ZLongWordArray[j]; //convert LongWord to double
               CurrentVar.Length := 8;
@@ -504,7 +528,7 @@ begin
           stInteger: { no conversion required }
             begin
               OCIData := ZData;
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Integer)); //Count mem to avoid overrun of OCI limit of 4GB-1
               CurrentVar.Length := 4;
               CurrentVar.TypeCode := SQLT_INT;
             end;
@@ -515,7 +539,7 @@ begin
               if (FInt64Values[I] = nil) or ({%H-}PLongInt(NativeUInt(FInt64Values[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FInt64Values[I], ArrayCount);
               OCIData := FInt64Values[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 Int64Array[J] := ZUInt64Array[j]; //convert UInt64 to Double. Range???? Better to use strings?
               CurrentVar.Length := 8;
@@ -526,7 +550,7 @@ begin
               if (FDoubleValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FDoubleValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FDoubleValues[I], ArrayCount);
               OCIData := FDoubleValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 DoubleArray[J] := ZUInt64Array[j]; //convert UInt64 to double. Range?????? Better to use strings?
               CurrentVar.Length := 8;
@@ -537,7 +561,7 @@ begin
             if Connection.GetClientVersion >= 11002000 then
             begin
               OCIData := ZData;
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Int64)); //Count mem to avoid overrun of OCI limit of 4GB-1
               CurrentVar.Length := 8;
               CurrentVar.TypeCode := SQLT_INT;
             end
@@ -546,7 +570,7 @@ begin
               if (FDoubleValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FDoubleValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FDoubleValues[I], ArrayCount);
               OCIData := FDoubleValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 DoubleArray[J] := ZInt64Array[j]; //convert UInt64 to double. Range???? Better to use strings?
               CurrentVar.Length := 8;
@@ -557,7 +581,7 @@ begin
               if (FDoubleValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FDoubleValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FDoubleValues[I], ArrayCount);
               OCIData := FDoubleValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 DoubleArray[J] := ZSingleArray[j]; //convert UInt64 to double. Range?????? Better to use strings?
               CurrentVar.Length := SizeOf(Double);
@@ -566,7 +590,7 @@ begin
           stDouble: //no conversion required
             begin
               OCIData := ZData;
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               CurrentVar.Length := SizeOf(Double);
               CurrentVar.TypeCode := SQLT_FLT;
             end;
@@ -575,7 +599,7 @@ begin
               if (FDoubleValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FDoubleValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FDoubleValues[I], ArrayCount);
               OCIData := FDoubleValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 DoubleArray[J] := ZCurrencyArray[j]; //convert Currency to double.
               CurrentVar.Length := SizeOf(Double);
@@ -586,7 +610,7 @@ begin
               if (FDoubleValues[I] = nil) or ({%H-}PLongInt(NativeUInt(FDoubleValues[I]) - 4)^{$IFDEF FPC}+1{$ENDIF} <> ArrayCount) then
                 SetLength(FDoubleValues[I], ArrayCount);
               OCIData := FDoubleValues[I];
-              {%H-}Inc(UsedMem, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, ArrayCount * SizeOf(Double)); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 DoubleArray[J] := ZExtendedArray[j]; //convert Extended to double. Range?????? Better to use strings?
               CurrentVar.Length := SizeOf(Double);
@@ -716,7 +740,7 @@ begin
                     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
                     System.SetLength(InParamValues[I].VRawByteString, CurrentVar.Length*ArrayCount); //alloc mem as static blocks
                     {$ELSE}
-                    System.SetString(InParamValues[I].VRawByteString, nil, CurrentVar.Length*ArrayCount); //alloc mem as static blocks
+                    System.SetString(InParamValues[I].VRawByteString, nil, Integer(CurrentVar.Length)*ArrayCount); //alloc mem as static blocks
                     {$ENDIF}
                     CharBuffer := Pointer(InParamValues[I].VRawByteString);
                     for J := 0 to ArrayCount -1 do
@@ -783,7 +807,7 @@ begin
               {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
               System.SetLength(InParamValues[I].VRawByteString, CurrentVar.Length*ArrayCount); //alloc mem
               {$ELSE}
-              System.SetString(InParamValues[I].VRawByteString, nil, CurrentVar.Length*ArrayCount); //alloc mem as static blocks
+              System.SetString(InParamValues[I].VRawByteString, nil, Integer(CurrentVar.Length)*ArrayCount); //alloc mem as static blocks
               {$ENDIF}
               CharBuffer := Pointer(InParamValues[I].VRawByteString);
               for J := 0 to ArrayCount -1 do
@@ -798,7 +822,7 @@ begin
                 Inc(CharBuffer, CurrentVar.Length);
               end;
   SkipStringAssembling:
-              {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, Integer(CurrentVar.Length)*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
               OCIData := Pointer(InParamValues[I].VRawByteString);
               CurrentVar.TypeCode := SQLT_STR;
             end;
@@ -871,7 +895,7 @@ begin
                 end
                 else
                   LengthIndicator[j] := 0;
-              System.SetLength(InParamValues[I].VBytes, CurrentVar.Length*ArrayCount); //alloc mem
+              System.SetLength(InParamValues[I].VBytes, Integer(CurrentVar.Length)*ArrayCount); //alloc mem
               CharBuffer := Pointer(InParamValues[I].VBytes);
               {now let's move mem... }
               for J := 0 to ArrayCount -1 do
@@ -881,7 +905,7 @@ begin
                   System.Move(Pointer(ZBytesArray[j])^, (CharBuffer+SizeOf(Integer))^, LengthIndicator[J]);
                 Inc(CharBuffer, CurrentVar.Length); //set new entry Pointer
               end;
-              {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, Integer(CurrentVar.Length)*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
               PLengthIndicator := nil; //do not set an own indicator!
               OCIData := Pointer(InParamValues[I].VBytes);
               CurrentVar.TypeCode := SQLT_LVB;
@@ -919,7 +943,7 @@ begin
               SetLength(FDescriptors[I].Descriptors, ArrayCount);
               OCIData := FDescriptors[I].Descriptors;
 
-              {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, Integer(CurrentVar.Length)*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 if NullIndicator[j] = 0 then //not NULL
                 begin
@@ -954,7 +978,7 @@ begin
                 SetLength(FDescriptors[I].Lobs, ArrayCount);
               OCIData := FDescriptors[I].Descriptors;
 
-              {%H-}Inc(UsedMem, CurrentVar.Length*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
+              {%H-}Inc(BufferSize, Integer(CurrentVar.Length)*ArrayCount); //Count mem to avoid overrun of OCI limit of 4GB-1
               for J := 0 to ArrayCount -1 do
                 if (NullIndicator[j] = 0) and (ZInterfaceArray[J] <> nil) and
                    not (ZInterfaceArray[J] as IZBlob).IsEmpty then
@@ -1010,7 +1034,7 @@ begin
                   end;
             end;
         end;
-      if UsedMem > High(Cardinal) then
+      if BufferSize >= High(Cardinal) then
         raise Exception.Create('Memory out of bounds! OCI-Limit = 4GB -1Byte');
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
@@ -1022,58 +1046,57 @@ begin
   end
   else
   begin
+    BufferSize := 0;
+    Iteration := 1;
     { single row execution}
     for I := 0 to InParamCount - 1 do
     begin
-      CurrentVar := @FInVars.Variables[I{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}];
+      CurrentVar := @FParams.Variables[I];
       CurrentVar.Handle := nil;
 
       { Artificially define Oracle internal type. }
       if InParamTypes[I] in [stBytes, stBinaryStream] then
-        InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
-          InParamTypes[I], SQLT_BLOB, Max_OCI_String_Size)
+        DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_BLOB)
       else if InParamTypes[I] in [stAsciiStream, stUnicodeStream] then
-        InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
-          InParamTypes[I], SQLT_CLOB, Max_OCI_String_Size)
+        DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_CLOB)
       else if InParamTypes[I] in [stString, stUnicodeString] then
-      begin
-        CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
-        //(pl/sql statement) possible out params!!
+        //(pl/sql statement) may have possible out params!!
         //so take care to use a new bidirectional memory addressation
-        InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
-          InParamTypes[I], SQLT_STR, Max_OCI_String_Size, (CharRec.Len > Max_OCI_String_Size) or (FStatementType in [OCI_STMT_BEGIN, OCI_STMT_DECLARE]));
-      end
+        DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_STR,
+          (FStatementType in [OCI_STMT_BEGIN, OCI_STMT_DECLARE]))
       else
-        InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
-          InParamTypes[I], SQLT_STR, Max_OCI_String_Size);
+        DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_STR);
+      Inc(BufferSize, Iteration * ((Ord(CurrentVar^.AllocMem)*Integer(CurrentVar^.Length))+
+                                  SizeOf(sb2){NullIndicator}+
+                                  (Ord((CurrentVar^.TypeCode = SQLT_STR) and (CurrentVar^.oDataSize > 0))*SizeOf(ub2)){LengthIndicator}));
+    end; //Bufsize is determined
+    if Length(FBuffer) < BufferSize then SetLength(FBuffer, BufferSize); //realloc the buffer if required
+    CharBuffer := Pointer(FBuffer); //set first data-entry in rowBuffer
 
-      if CurrentVar.FreeMem then //point to allocated mem ?
-        Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
-          FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
-          CurrentVar.TypeCode, @CurrentVar.Indicator, nil, nil, 0, nil, OCI_DEFAULT)
-      else //nope, just to local data
-        if InParamTypes[I] in [stString, stUnicodeString] then
-        begin //point to data of string
-          CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
-          //CurrentVar.Data := CharRec.P;
-          Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
-            FErrorHandle, I + 1, CharRec.P, CharRec.Len,
-            CurrentVar.TypeCode, @CurrentVar.Indicator, @CurrentVar.DataSize,
-            nil, 0, nil, OCI_DEFAULT);
-          //set datasize, so oracle can move data instead of use StrPCopy
-          CurrentVar.DataSize := CharRec.Len+1; //include trailing #0
-        end //currently not handled.. just make compiler happy
-        else
-          Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
-            FErrorHandle, I + 1, CurrentVar.Data, CurrentVar.Length,
-            CurrentVar.TypeCode, @CurrentVar.Indicator, nil, nil, 0, nil,
-            OCI_DEFAULT);
+    for i := 0 to FParams^.AllocNum -1 do
+    begin
+      CurrentVar := @FParams.Variables[I];
+      SetVariableDataEntrys(CharBuffer, CurrentVar, Iteration);
+      AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, Iteration);
+      if CurrentVar^.AllocMem then //point to allocated mem ?
+        Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+          I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
+          CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT)
+      else //nope, just to local string data
+      begin //point to data of string
+        CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
+        Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+          I + 1, CharRec.P, CharRec.Len, CurrentVar^.TypeCode, CurrentVar^.oIndicatorArray,
+          CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
+        //set oDataSize, so oracle can move data instead of use StrPCopy
+        Pub2(CurrentVar^.oDataSizeArray)^ := CharRec.Len+1; //include trailing #0
+      end;
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
     end;
 
     { Loads binded variables with values. }
     LoadOracleVars(FPlainDriver, Connection, FErrorHandle,
-      FInVars, InParamValues,ChunkSize);
+      FParams, InParamValues,ChunkSize);
   end;
   inherited BindInParameters;
 end;
@@ -1086,7 +1109,7 @@ var
   I, J: Integer;
 begin
   if ArrayCount = 0 then
-    FreeOracleSQLVars(FPlainDriver, FInVars, FConnectionHandle, FErrorHandle, ConSettings)
+    FreeOracleSQLVars(FPlainDriver, FParams, 1, FConnectionHandle, FErrorHandle, ConSettings)
   else
   begin
     for i := 0 to high(FDescriptors) do
@@ -1110,13 +1133,13 @@ procedure TZOraclePreparedStatement.Prepare;
 begin
   if not Prepared then
   begin
-    { Allocates statement handles. }
     if (FHandle = nil) or (FErrorHandle = nil) then
-      AllocateOracleStatementHandles(FPlainDriver, Connection,
-        FHandle, FErrorHandle);
-    { prepare stmt on server side }
-    PrepareOracleStatement(FPlainDriver, ASQL, FHandle, FErrorHandle,
-      FPrefetchCount, ConSettings);
+    { Allocates statement handles. }
+    AllocateOracleStatementHandles(FPlainDriver, Connection,
+        FHandle, FErrorHandle, False{FServerStmtCache});
+    { prepare stmt }
+    PrepareOracleStatement(FPlainDriver, FContextHandle, ASQL, FHandle, FErrorHandle,
+        FRowPrefetchSize, False{FServerStmtCache}, ConSettings);
     { get Statemant type }
     FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
@@ -1125,9 +1148,18 @@ begin
 end;
 
 procedure TZOraclePreparedStatement.UnPrepare;
+const RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
-  FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
-  inherited Unprepare;
+  try
+    {if Self.FServerStmtCache then
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
+      lcExecute, ASQL, ConSettings)
+    else}
+      FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
+  finally
+    inherited Unprepare;
+  end;
 end;
 
 
@@ -1172,7 +1204,7 @@ begin
 
   { Unloads binded variables with values. }
   if ArrayCount = 0 then
-    UnloadOracleVars(FInVars, 0)
+    UnloadOracleVars(FParams, 0)
   else
     UnloadOracleVars(FDescriptors, ArrayCount)
 
@@ -1198,7 +1230,7 @@ begin
 
   { Unloads binded variables with values. }
   if ArrayCount = 0 then
-    UnloadOracleVars(FInVars, ArrayCount)
+    UnloadOracleVars(FParams, ArrayCount)
   else
     UnloadOracleVars(FDescriptors, ArrayCount)
 end;
@@ -1253,7 +1285,7 @@ begin
   finally
     { Unloads binded variables with values. }
     if ArrayCount = 0 then
-      UnloadOracleVars(FInVars, ArrayCount)
+      UnloadOracleVars(FParams, ArrayCount)
     else
       UnloadOracleVars(FDescriptors, ArrayCount)
   end;
@@ -1262,66 +1294,37 @@ begin
 end;
 
 procedure TZOracleCallableStatement.Prepare;
-var
-  I: Integer;
-  TypeCode: ub2;
-  CurrentVar: PZSQLVar;
-  SQLType:TZSQLType;
 begin
-  if not FPrepared then
+  if not Prepared then
   begin
-    ArrangeInParams; //need to sort ReturnValues for functions
     ASQL := GetProcedureSql(False);
-    SetLength(FParamNames, FOracleParamsCount);
-    for i := 0 to FOracleParamsCount -1 do
-      FParamNames[I] := Self.FOracleParams[I].pName;
-
     { Allocates statement handles. }
     if (FHandle = nil) or (FErrorHandle = nil) then
-    begin
       AllocateOracleStatementHandles(FPlainDriver, Connection,
         FHandle, FErrorHandle);
-    end;
-
-    PrepareOracleStatement(FPlainDriver, ASQL, FHandle, FErrorHandle,
-          FPrefetchCount, ConSettings);
-    //make sure eventual old buffers are cleaned
-    FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
-    AllocateOracleSQLVars(FInVars, FOracleParamsCount);
-
-    for I := 0 to FOracleParamsCount - 1 do
-    begin
-      CurrentVar := @FInVars.Variables[I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}];
-      CurrentVar.Handle := nil;
-      SQLType := TZSQLType(FOracleParams[I].pSQLType);
-
-    { Artificially define Oracle internal type. }
-      if SQLType = stBinaryStream then
-        TypeCode := SQLT_BLOB
-      else if SQLType in [stAsciiStream, stUnicodeStream] then
-        TypeCode := SQLT_CLOB
-      else TypeCode := SQLT_STR;
-
-      InitializeOracleVar(FPlainDriver, FConnectionHandle, CurrentVar,
-        SQLType, TypeCode, Max_OCI_String_Size);
-
-      if SQLType in [stString, stUnicodeString] then
-        CheckOracleError(FPlainDriver, FErrorHandle, FPlainDriver.BindByPos(
-          FHandle, CurrentVar.BindHandle, FErrorHandle, I + 1, CurrentVar.Data,
-          CurrentVar.Length, CurrentVar.TypeCode, @CurrentVar.Indicator,
-          @CurrentVar.DataSize, nil, 0, nil, OCI_DEFAULT), lcExecute,
-          'OCIBindByPos', ConSettings)
-      else
-        CheckOracleError(FPlainDriver, FErrorHandle, FPlainDriver.BindByPos(
-          FHandle, CurrentVar.BindHandle, FErrorHandle, I + 1, CurrentVar.Data,
-          CurrentVar.Length, CurrentVar.TypeCode, @CurrentVar.Indicator, nil,
-          nil, 0, nil, OCI_DEFAULT), lcExecute, 'OCIBindByPos', ConSettings);
-    end;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-    //FPrepared := True;
+    PrepareOracleStatement(FPlainDriver, nil, ASQL, FHandle, FErrorHandle,
+          FRowPrefetchSize, False, ConSettings);
+    FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
+      OCI_ATTR_STMT_TYPE, FErrorHandle);
+    inherited Prepare;
   end;
 end;
 
+
+procedure TZOracleCallableStatement.UnPrepare;
+const RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
+begin
+  try
+    {if Self.FServerStmtCache then
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FplainDriver.StmtRelease(FHandle, FErrorHandle, nil, 0, RELEASE_MODE[False]),
+      lcExecute, ASQL, ConSettings)
+    else}
+      FreeOracleStatementHandles(FPlainDriver, FHandle, FErrorHandle);
+  finally
+    inherited Unprepare;
+  end;
+end;
 
 procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
@@ -1347,13 +1350,8 @@ begin
   FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pParamIndex := ParameterIndex;
   if ParamType in [2,3,4] then //ptInOut, ptOut, ptResult
   begin
-    {$IFNDEF GENERIC_INDEX}
-    Inc(FOutParamCount);
-    {$ENDIF}
     FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pOutIndex := FOutParamCount;
-    {$IFDEF GENERIC_INDEX}
     Inc(FOutParamCount);
-    {$ENDIF}
   end;
 end;
 
@@ -1406,6 +1404,96 @@ begin
     FOracleParams[ParameterIndex].pProcIndex := 0;
 end;
 
+{**
+  Prepares eventual structures for binding input parameters.
+}
+procedure TZOracleCallableStatement.PrepareInParameters;
+var I: Integer;
+begin
+  AllocateOracleSQLVars(FParams, FOracleParamsCount);
+  SetLength(FParamNames, FOracleParamsCount);
+  for i := 0 to FOracleParamsCount -1 do
+    FParamNames[I] := Self.FOracleParams[I].pName;
+end;
+
+{**
+  Binds the input parameters
+}
+procedure TZOracleCallableStatement.BindInParameters;
+var
+  I, Iteration: Integer;
+  CurrentVar: PZSQLVar;
+  Status: Integer;
+  CharRec: TZCharRec;
+  BufferSize: Int64;
+  CharBuffer: PAnsiChar;
+  SQLType: TZSQLType;
+begin
+  ArrangeInParams; //need to sort ReturnValues for functions
+  BufferSize := 0;
+  Iteration := 1;
+  { single row execution}
+  for I := 0 to FOracleParamsCount - 1 do
+  begin
+    CurrentVar := @FParams.Variables[I];
+    CurrentVar.Handle := nil;
+
+    SQLType := TZSQLType(FOracleParams[I].pSQLType);
+    { Artificially define Oracle internal type. }
+    if SQLType in [stBytes, stBinaryStream] then
+      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_BLOB)
+    else if SQLType in [stAsciiStream, stUnicodeStream] then
+      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_CLOB)
+    else if SQLType in [stString, stUnicodeString] then
+      //(pl/sql statement) may have possible out params!!
+      //so take care to use a new bidirectional memory addressation
+      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_STR,
+        (FStatementType in [OCI_STMT_BEGIN, OCI_STMT_DECLARE]))
+    else
+      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_STR);
+    Inc(BufferSize, Iteration * ((Ord(CurrentVar^.AllocMem)*Integer(CurrentVar^.Length))+
+                                SizeOf(sb2){NullIndicator}+
+                                (Ord((CurrentVar^.TypeCode = SQLT_STR) and (CurrentVar^.oDataSize > 0))*SizeOf(ub2)){LengthIndicator}));
+  end; //Bufsize is determined
+  if Length(FBuffer) < BufferSize then SetLength(FBuffer, BufferSize); //realloc the buffer if required
+  CharBuffer := Pointer(FBuffer); //set first data-entry in rowBuffer
+
+  for i := 0 to FParams^.AllocNum -1 do
+  begin
+    CurrentVar := @FParams.Variables[I];
+    SetVariableDataEntrys(CharBuffer, CurrentVar, Iteration);
+    AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, Iteration);
+    if CurrentVar^.AllocMem then //point to allocated mem ?
+      Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+        I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
+        CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT)
+    else //nope, just to local string data
+    begin //point to data of string
+      CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
+      Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+        I + 1, CharRec.P, CharRec.Len, CurrentVar^.TypeCode, CurrentVar^.oIndicatorArray,
+        CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
+      //set oDataSize, so oracle can move data instead of use StrPCopy
+      Pub2(CurrentVar^.oDataSizeArray)^ := CharRec.Len+1; //include trailing #0
+    end;
+    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
+  end;
+
+  { Loads binded variables with values. }
+  LoadOracleVars(FPlainDriver, Connection, FErrorHandle,
+    FParams, InParamValues,ChunkSize);
+
+  inherited BindInParameters;
+end;
+
+{**
+  Removes eventual structures for binding input parameters.
+}
+procedure TZOracleCallableStatement.UnPrepareInParameters;
+begin
+  FreeOracleSQLVars(FPlainDriver, FParams, 1, FConnectionHandle, FErrorHandle, ConSettings)
+end;
+
 procedure TZOracleCallableStatement.ArrangeInParams;
 var
   I, J, NewProcIndex, StartProcIndex: Integer;
@@ -1438,13 +1526,12 @@ begin
     SetLength(TempVars, Length(FOracleParams));
     for i := 0 to high(FOracleParams) do
       TempVars[i] := FOracleParams[i].pValue;
-    InParamValues := TempVars;  
+    InParamValues := TempVars;
   end;
 end;
 
 procedure TZOracleCallableStatement.FetchOutParamsFromOracleVars;
 var
-  CurrentVar: PZSQLVar;
   LobLocator: POCILobLocator;
   I: integer;
   L: Cardinal;
@@ -1455,81 +1542,68 @@ var
     OracleConnection :IZOracleConnection;
     Year:SmallInt;
     Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
-    dTmp:TDateTime;
     {$IFDEF UNICODE}
     AnsiRec: TZAnsiRec;
     {$ELSE}
     RawTemp: RawByteString;
     {$ENDIF}
   begin
-    case CurrentVar.TypeCode of
-      SQLT_INT: outParamValues[Index] := EncodeInteger(PLongInt(CurrentVar.Data)^ );
-      SQLT_FLT: outParamValues[Index] := EncodeFloat(PDouble(CurrentVar.Data)^ );
-      SQLT_STR:
-        begin
-          try
-            if Currentvar.Data = nil then
-              outParamValues[Index] := NullVariant
-            else
-            begin
-              L := ZFastCode.StrLen(CurrentVar.Data);
-              {$IFDEF UNICODE}
-              AnsiRec.Len := L;
-              AnsiRec.P := CurrentVar.Data;// .Data;
-              outParamValues[Index] := EncodeString(ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP));
-              {$ELSE}
-              ZSetString(CurrentVar.Data, L, RawTemp{%H-});
-              outParamValues[Index] := EncodeString(ConSettings.ConvFuncs.ZRawToString(RawTemp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
-              {$ENDIF}
-            end;
-          finally
+    if CurrentVar^.oIndicatorArray[0] < 0 then
+      outParamValues[Index] := NullVariant
+    else
+      case CurrentVar^.TypeCode of
+        SQLT_INT: outParamValues[Index] := EncodeInteger(PLongInt(CurrentVar^.Data)^ );
+        SQLT_FLT: outParamValues[Index] := EncodeFloat(PDouble(CurrentVar^.Data)^ );
+        SQLT_STR:
+          begin
+            L := CurrentVar^.oDataSizeArray[0];
+            {$IFDEF UNICODE}
+            AnsiRec.Len := L;
+            AnsiRec.P := CurrentVar^.Data;// .Data;
+            outParamValues[Index] := EncodeString(ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP));
+            {$ELSE}
+            ZSetString(CurrentVar^.Data, L, RawTemp{%H-});
+            outParamValues[Index] := EncodeString(ConSettings.ConvFuncs.ZRawToString(RawTemp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
+            {$ENDIF}
           end;
-        end;
-      SQLT_TIMESTAMP:
-        begin
-          OracleConnection := Connection as IZOracleConnection;
-          FPlainDriver.DateTimeGetDate(
-            OracleConnection.GetConnectionHandle ,
-            FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-            Year{%H-}, Month{%H-}, Day{%H-});
-          FPlainDriver.DateTimeGetTime(
-            OracleConnection.GetConnectionHandle ,
-            FErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-            Hour{%H-}, Min{%H-}, Sec{%H-},MSec{%H-});
-          dTmp := EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,msec) ;
-          outParamValues[Index] := EncodeDateTime(dTmp);
-        end;
-      SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE:
-        begin
-          if CurrentVar.Indicator >= 0 then
-            LobLocator := PPOCIDescriptor(CurrentVar.Data)^
-          else
-            LobLocator := nil;
+        SQLT_TIMESTAMP:
+          begin
+            OracleConnection := Connection as IZOracleConnection;
+            FPlainDriver.DateTimeGetDate(
+              OracleConnection.GetConnectionHandle ,
+              FErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
+              Year{%H-}, Month{%H-}, Day{%H-});
+            FPlainDriver.DateTimeGetTime(
+              OracleConnection.GetConnectionHandle ,
+              FErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
+              Hour{%H-}, Min{%H-}, Sec{%H-},MSec{%H-});
+            outParamValues[Index] := EncodeDateTime(EncodeDate(year,month,day )+EncodeTime(Hour,min,sec,  msec div 1000000));
+          end;
+        SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE:
+          begin
+            LobLocator := PPOCIDescriptor(CurrentVar^.Data)^;
 
-          OracleConnection := Connection as IZOracleConnection;
-          if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_BFILEE] then
-            TempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
-              OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                LobLocator, GetChunkSize, ConSettings)
-          else
-            TempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
-              OracleConnection.GetConnectionHandle,
-              OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-              LobLocator, GetChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-          outParamValues[Index] := EncodeInterface(TempBlob);
-          TempBlob := nil;
-        end;
-      SQLT_NTY: //currently not supported
-        outParamValues[Index] := NullVariant;
-    end;
+            OracleConnection := Connection as IZOracleConnection;
+            if CurrentVar^.TypeCode in [SQLT_BLOB, SQLT_BFILEE] then
+              TempBlob := TZOracleBlob.Create(FPlainDriver, nil, 0,
+                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                  LobLocator, GetChunkSize, ConSettings)
+            else
+              TempBlob := TZOracleClob.Create(FPlainDriver, nil, 0,
+                OracleConnection.GetConnectionHandle,
+                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
+                LobLocator, GetChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
+            outParamValues[Index] := EncodeInterface(TempBlob);
+            TempBlob := nil;
+          end;
+        SQLT_NTY: //currently not supported
+          outParamValues[Index] := NullVariant;
+      end;
   end;
 begin
   for I := 0 to FOracleParamsCount -1 do
     if FOracleParams[i].pType in [2,3,4] then
-    begin
-      CurrentVar:= @FInVars.Variables[I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}];
-      SetOutParam(CurrentVar, FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
-    end;
+      SetOutParam(@FParams^.Variables[I], FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
 end;
 
 function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): RawByteString;
@@ -1603,11 +1677,6 @@ begin
   Result := NotEmptyStringToASCII7(TempResult);
 end;
 
-function TZOracleCallableStatement.IsNull(ParameterIndex: Integer): Boolean;
-begin
-  result := inherited IsNull(ParameterIndex);
-end;
-
 procedure TZOracleCallableStatement.ClearParameters;
 begin
   inherited;
@@ -1623,16 +1692,17 @@ begin
   FOracleParamsCount := 0;
   FPlainDriver := Connection.GetIZPlainDriver as IZOraclePlainDriver;
   ResultSetType := rtForwardOnly;
-  FPrepared := False;
   PackageIncludedList := TStringList.Create;
   FOutParamCount := 0;
-  FPrefetchCount := StrToIntDef(ZDbcUtils.DefineStatementParameter(Self, 'prefetch_count', '1000'), 1000);
+  FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'row_prefetch_size', ''), 131072);
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072);
   FConnectionHandle := (Connection as IZOracleConnection).GetConnectionHandle;
+  FIteration := 1;
 end;
 
 destructor TZOracleCallableStatement.Destroy;
 begin
-  FreeOracleSQLVars(FPlainDriver, FInVars, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
+  FreeOracleSQLVars(FPlainDriver, FParams, FIteration, (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings);
   PackageIncludedList.Free;
   inherited;
 end;
@@ -1640,22 +1710,18 @@ end;
 function TZOracleCallableStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Prepares a statement. }
-  if not Prepared then
-    Prepare;
+  Prepare;
 
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
-    FInVars, InParamValues, ChunkSize);
-
+  BindInParameters;
   try
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit, 1);
+      ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit, FIteration);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     FetchOutParamsFromOracleVars;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FInVars, 0)
+    UnloadOracleVars(FParams, 0)
   end;
 
   { Autocommit statement. done by ExecuteOracleStatement}
@@ -1665,24 +1731,20 @@ end;
 function TZOracleCallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Prepares a statement. }
-  if not Prepared then
-    Prepare;
+  Prepare;
 
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver , Connection, FErrorHandle,
-    FInVars, InParamValues, ChunkSize);
-
+  BindInParameters;
   try
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
       ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit, 1);
     FetchOutParamsFromOracleVars;
     LastResultSet := CreateOracleResultSet(FPlainDriver, Self, Self.SQL,
-      FHandle, FErrorHandle, FInVars, FOracleParams);
+      FHandle, FErrorHandle, FParams, FOracleParams);
     Result := LastResultSet;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   finally
     { Unloads binded variables with values. }
-    UnloadOracleVars(FInVars, 0);
+    UnloadOracleVars(FParams, 0);
   end;
 end;
 

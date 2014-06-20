@@ -106,6 +106,11 @@ type
 
     function StmtPrepare(stmtp: POCIStmt; errhp: POCIError; stmt: text;
       stmt_len: ub4; language:ub4; mode: ub4):sword;
+    function StmtPrepare2(svchp: POCISvcCtx; var stmtp: POCIStmt; errhp: POCIError;
+      stmt: text; stmt_len: ub4; key: text; key_len: ub4;
+      language:ub4; mode: ub4): sword;
+    function StmtRelease(stmtp: POCIStmt; errhp: POCIError; key: text; key_len: ub4;
+      mode: ub4):sword;
     function StmtExecute(svchp: POCISvcCtx; stmtp: POCIStmt;
       errhp: POCIError; iters: ub4; rowoff: ub4; snap_in: POCISnapshot;
       snap_out: POCISnapshot; mode: ub4): sword;
@@ -640,6 +645,11 @@ type
 
     function StmtPrepare(stmtp: POCIStmt; errhp: POCIError; stmt: text;
       stmt_len: ub4; language:ub4; mode: ub4):sword;
+    function StmtPrepare2(svchp: POCISvcCtx; var stmtp: POCIStmt; errhp: POCIError;
+      stmt: text; stmt_len: ub4; key: text; key_len: ub4;
+      language:ub4; mode: ub4): sword;
+    function StmtRelease(stmtp: POCIStmt; errhp: POCIError; key: text; key_len: ub4;
+      mode: ub4): sword;
     function StmtExecute(svchp: POCISvcCtx; stmtp: POCIStmt;
       errhp: POCIError; iters: ub4; rowoff: ub4; snap_in: POCISnapshot;
       snap_out: POCISnapshot; mode: ub4): sword;
@@ -1471,6 +1481,8 @@ begin
     @OracleAPI.OCITransForget     := GetAddress('OCITransForget');
 
     @OracleAPI.OCIStmtPrepare     := GetAddress('OCIStmtPrepare');
+    @OracleAPI.OCIStmtPrepare2    := GetAddress('OCIStmtPrepare2');
+    @OracleAPI.OCIStmtRelease     := GetAddress('OCIStmtRelease');
     @OracleAPI.OCIStmtExecute     := GetAddress('OCIStmtExecute');
     @OracleAPI.OCIStmtFetch       := GetAddress('OCIStmtFetch');
     @OracleAPI.OCIStmtFetch2      := GetAddress('OCIStmtFetch2');
@@ -2708,6 +2720,20 @@ function TZOracle9iPlainDriver.StmtPrepare(stmtp: POCIStmt;
 begin
   Result := OracleAPI.OCIStmtPrepare(stmtp, errhp, stmt, stmt_len,
     language, mode);
+end;
+
+function TZOracle9iPlainDriver.StmtPrepare2(svchp: POCISvcCtx;
+  var stmtp: POCIStmt; errhp: POCIError; stmt: text; stmt_len: ub4; key: text;
+  key_len: ub4; language:ub4; mode: ub4): sword;
+begin
+  Result := OracleAPI.OCIStmtPrepare2(svchp, stmtp, errhp, stmt, stmt_len, key,
+    key_len, language, mode);
+end;
+
+function TZOracle9iPlainDriver.StmtRelease(stmtp: POCIStmt; errhp: POCIError;
+  key: text; key_len: ub4; mode: ub4): sword;
+begin
+  Result := OracleAPI.OCIStmtRelease(stmtp, errhp, key, key_len, mode);
 end;
 
 function TZOracle9iPlainDriver.StmtSetPieceInfo(handle: Pointer;

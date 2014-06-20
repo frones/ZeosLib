@@ -92,29 +92,38 @@ type
     Level:          Integer;          //the instance level
   end;
 
+  PUB2Array = ^TUB2Array;
+  TUB2Array = array[0..0] of ub2;
+  PSB2Array = ^TSB2Array;
+  TSB2Array = array[0..0] of sb2;
+
   PZSQLVar = ^TZSQLVar;
   TZSQLVar = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
+    {OCI Handles}
     Handle:    POCIHandle;
     Define:    POCIHandle;
     BindHandle: POCIBind;
+    {binding values}
     Data:      Pointer;
-    DataType:  ub2;
-    DataSize:  ub2;
-    Length:    Integer;
-    Precision: Integer;
-    Scale:     Integer;
-    ColType:   TZSQLType;
-    TypeCode:  ub2;
-    Indicator: sb2;
-    Blob:      IZBlob;
-    CodePage:  Word;
+    oDataType:  ub2;
+    oDataSize:  ub2;
+    oIndicatorArray: PSB2Array; //indicates NULL ...
+    oDataSizeArray: PUB2Array; //value length for strings/bytes
     _Obj:      POCIObject;
-    FreeMem:   Boolean;
+    {Zeos proceesing values}
+    TypeCode:  ub2;
+    Length:    NativeUInt; //indicate size of Data
+    Precision: Integer; //field.precision
+    Scale:     Integer; //field.scale
+    ColType:   TZSQLType; //Zeos SQLType
+    Blob:      IZBlob; //temporary interface
+    CodePage:  Word; //ColumnCodePage
+    AllocMem:   Boolean; //isn't it selve explainatory?
   end;
 
   TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     AllocNum:  ub4;
-    Variables: array[FirstDbcIndex..MAX_SQLVAR_LIMIT{$IFDEF GENERIC_INDEX}-1{$ENDIF}] of TZSQLVar;
+    Variables: array[0..MAX_SQLVAR_LIMIT] of TZSQLVar;
   end;
   PZSQLVars = ^TZSQLVars;
 
@@ -153,22 +162,17 @@ procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
   @param ConSetttings the Pointer to the TZConSettings record
 }
 procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars; const Handle: POCIEnv; const ErrorHandle: POCIError;
-  const ConSettings: PZConSettings);
+  var Variables: PZSQLVars; const Iteration: Integer; const Handle: POCIEnv;
+  const ErrorHandle: POCIError; const ConSettings: PZConSettings);
 
-{**
-  Allocates in memory and initializes the Oracle variable.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param Variable an Oracle variable holder.
-  @param DataType a DBC data type.
-  @param OracleType a correspondent Oracle type.
-  @param DataSize a length for string variables.
-}
-procedure InitializeOracleVar(const PlainDriver: IZOraclePlainDriver;
-  const ConnectionHandle: POCIEnv; var Variable: PZSQLVar;
-  const DataType: TZSQLType; OracleType: ub2; const DataSize: Integer;
-  const DoAllocMem: Boolean = True);
+procedure DefineOracleVarTypes(var Variable: PZSQLVar; DataType: TZSQLType;
+  DataSize: Integer; OracleType: ub2; DoAllocMem: Boolean = True);
+
+procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
+  Iteration: LongWord);
+
+procedure AllocDesriptors(const PlainDriver: IZOraclePlainDriver;
+  ConnectionHandle: POCIEnv; var Variable: PZSQLVar; Iteration: Integer);
 
 {**
   Loads Oracle variables binded to SQL statement with data.
@@ -222,7 +226,7 @@ procedure CheckOracleError(const PlainDriver: IZOraclePlainDriver;
 }
 function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
   const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
-  const ErrorHandle: POCIError): IZResultSet; overload;
+  const ErrorHandle: POCIError; ZBufferSize: Integer): IZResultSet; overload;
 
 {**
   Creates an Oracle result set based on the current settings.
@@ -230,7 +234,7 @@ function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
-  ErrorHandle: POCIError; OutVars: PZSQLVars;
+  ErrorHandle: POCIError; const Params: PZSQLVars;
   Const OracleParams: TZOracleParams): IZResultSet; overload;
 
 {**
@@ -241,7 +245,8 @@ function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure AllocateOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError);
+  Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
+  UserServerCachedStmt: Boolean = False);
 
 {**
   Frees from memory Oracle handlers for Statement object.
@@ -260,8 +265,9 @@ procedure FreeOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const SQL: RawByteString; const Handle: POCIStmt; const ErrorHandle: POCIError;
-  const PrefetchCount: ub4; const ConSettings: PZConSettings);
+  ContextHandle: POCISvcCtx; const SQL: RawByteString; var Handle: POCIStmt;
+  const ErrorHandle: POCIError; PrefetchMemory: ub4; ServerCachedStmtHandle: Boolean;
+  const ConSettings: PZConSettings);
 
 {**
   Executes an Oracle statement.
@@ -304,16 +310,6 @@ uses Math, ZMessages, ZDbcOracle, ZDbcOracleResultSet, ZDbcCachedResultSet,
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
-  Calculates size of SQLVars record.
-  @param Count a number of variable.
-  @returns a record size.
-}
-function CalculateSQLVarsSize(Count: Integer): Integer;
-begin
-  Result := SizeOf(TZSQLVars) + Count * SizeOf(TZSQLVar);
-end;
-
-{**
   Allocates memory for Oracle SQL Variables.
   @param Variables a pointer to array of variables.
   @param Count a number of SQL variables.
@@ -325,7 +321,7 @@ begin
   if Variables <> nil then
     FreeMem(Variables);
 
-  Size := CalculateSQLVarsSize(Count);
+  Size := SizeOf(TZSQLVars) + Count * SizeOf(TZSQLVar);
   GetMem(Variables, Size);
   FillChar(Variables^, Size, 0);
   Variables^.AllocNum := Count;
@@ -340,10 +336,11 @@ end;
   @param ConSetttings the Pointer to the TZConSettings record
 }
 procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
-  var Variables: PZSQLVars; const Handle: POCIEnv; const ErrorHandle: POCIError;
-  const ConSettings: PZConSettings);
+  var Variables: PZSQLVars; const Iteration: Integer; const Handle: POCIEnv;
+  const ErrorHandle: POCIError; const ConSettings: PZConSettings);
 var
   I: Integer;
+  J: Word;
   CurrentVar: PZSQLVar;
 
   procedure DisposeObject(Obj: POCIObject);
@@ -366,8 +363,8 @@ var
     if Obj.Level = 0 then
     begin
       {Unpin tdo}
-      CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar._Obj.tdo), lcOther, 'OCIObjectUnpin', ConSettings);
-      CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar._Obj.tdo, 0), lcOther, 'OCIObjectFree', ConSettings);;
+      CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar^._Obj.tdo), lcOther, 'OCIObjectUnpin', ConSettings);
+      CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar^._Obj.tdo, 0), lcOther, 'OCIObjectFree', ConSettings);;
     end;
 
     Dispose(Obj);
@@ -377,112 +374,130 @@ begin
   if Variables <> nil then
   begin
     { Frees allocated memory for output variables }
-    for I := FirstDbcIndex to Variables.AllocNum{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
+    for I := 0 to Variables.AllocNum-1 do
     begin
       CurrentVar := @Variables.Variables[I];
-      if Assigned(CurrentVar._Obj) then
+      if Assigned(CurrentVar^._Obj) then
       begin
-        DisposeObject(CurrentVar._Obj);
-        CurrentVar._Obj := nil;
+        DisposeObject(CurrentVar^._Obj);
+        CurrentVar^._Obj := nil;
       end;
-      if CurrentVar.Data <> nil then
+      if CurrentVar^.Data <> nil then
       begin
-        if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
-          PlainDriver.DescriptorFree(PPOCIDescriptor(CurrentVar.Data)^,
-            OCI_DTYPE_LOB)
-        else if CurrentVar.TypeCode = SQLT_TIMESTAMP then
-          PlainDriver.DescriptorFree(PPOCIDescriptor(CurrentVar.Data)^,
-            OCI_DTYPE_TIMESTAMP);
-        if CurrentVar.FreeMem then
-          FreeMem(CurrentVar.Data);
-        CurrentVar.Data := nil;
+        if CurrentVar^.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
+          for J := 0 to Iteration-1 do
+            PlainDriver.DescriptorFree(PPOCIDescriptor(NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer)))^,
+              OCI_DTYPE_LOB)
+        else
+          if CurrentVar^.TypeCode = SQLT_TIMESTAMP then
+            for J := 0 to Iteration-1 do
+              PlainDriver.DescriptorFree(PPOCIDescriptor(NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer)))^,
+                OCI_DTYPE_TIMESTAMP);
+        CurrentVar^.Data := nil;
       end;
+      CurrentVar^.oIndicatorArray := nil;
+      CurrentVar^.oDataSizeArray := nil;
     end;
-
     FreeMem(Variables);
+    Variables := nil;
   end;
-  Variables := nil;
 end;
 
-{**
-  Allocates in memory and initializes the Oracle variable.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param Variable an Oracle variable holder.
-  @param DataType a DBC data type.
-  @param OracleType a correspondent Oracle type.
-  @param DataSize a length for string variables.
-}
-
-procedure InitializeOracleVar(const PlainDriver: IZOraclePlainDriver;
-  const ConnectionHandle: POCIEnv; var Variable: PZSQLVar;
-  const DataType: TZSQLType; OracleType: ub2; const DataSize: Integer;
-  const DoAllocMem: Boolean = True);
-var
-  Length: Integer;
+procedure DefineOracleVarTypes(var Variable: PZSQLVar; DataType: TZSQLType;
+  DataSize: Integer; OracleType: ub2; DoAllocMem: Boolean = True);
 begin
-  Variable.ColType := DataType;
-  Variable.TypeCode := OracleType;
-  Variable.DataSize := DataSize;
-  Length := 0;
-  case Variable.ColType of
-    stByte, stShort, stWord, stSmall, stInteger:
-      begin
-        Variable.TypeCode := SQLT_INT;
-        Length := SizeOf(LongInt);
-      end;
-    stUlong, stLong:
-      begin
-        Variable.TypeCode := SQLT_STR;
-        Length := 21;
-      end;
-    stFloat, stDouble, stLongWord, stCurrency, stBigDecimal:
-      begin
-        Variable.TypeCode := SQLT_FLT;
-        Length := SizeOf(Double);
-      end;
-    stDate, stTime, stTimestamp:
-      begin
-        Variable.TypeCode := SQLT_TIMESTAMP;
-        Length := SizeOf(POCIDateTime);
-      end;
-    stString, stUnicodeString:
-      begin
-        Variable.TypeCode := SQLT_STR;
-        Length := Variable.DataSize + 1;
-      end;
-    stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
-      begin
-        if not (Variable.TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
+  with Variable^ do
+  begin
+    ColType := DataType;
+    TypeCode := OracleType;
+    oDataSize := DataSize;
+    AllocMem := DoAllocMem;
+    case ColType of
+      stByte, stShort, stWord, stSmall, stInteger:
         begin
-          if Variable.ColType = stAsciiStream then
-            Variable.TypeCode := SQLT_LVC
+          TypeCode := SQLT_INT;
+          Length := SizeOf(LongInt);
+        end;
+      stUlong:
+        begin
+          TypeCode := SQLT_STR;
+          oDataSize := 22;
+          Length := oDataSize +1; //for trailing #0
+        end;
+      stLong, stFloat, stDouble, stLongWord, stCurrency, stBigDecimal:
+        begin
+          TypeCode := SQLT_FLT;
+          Length := SizeOf(Double);
+        end;
+      stDate, stTime, stTimestamp:
+        begin
+          TypeCode := SQLT_TIMESTAMP;
+          Length := SizeOf(POCIDateTime);
+        end;
+      stString, stUnicodeString:
+        if OracleType = SQLT_AFC then
+          Length := oDataSize
+        else
+        begin
+          TypeCode := SQLT_STR;
+          Length := oDataSize + 1;
+        end;
+      stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
+        if (TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
+          Length := SizeOf(POCILobLocator)
+        else
+        begin
+          if ColType = stAsciiStream then
+            TypeCode := SQLT_LVC
           else
-            Variable.TypeCode := SQLT_LVB;
-          if Variable.DataSize = 0 then
+            TypeCode := SQLT_LVB;
+          if oDataSize = 0 then
             Length := 128 * 1024 + SizeOf(Integer)
           else
-            Length := Variable.DataSize + SizeOf(Integer);
-        end
-        else
-          Length := SizeOf(POCILobLocator);
-      end;
-    stDataSet: ; //Do nothing here!
-    stUnknown:
+            Length := oDataSize + SizeOf(Integer);
+        end;
+      stDataSet: ; //Do nothing here!
+      stUnknown:
+        Exit;
+    end;
+  end;
+end;
+
+procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
+  Iteration: LongWord);
+begin
+  with Variable^ do
+  begin
+  {now let's set binding entrys}
+  //step one: set null indicators
+    oIndicatorArray := Pointer(BufferEntry);
+    Inc(BufferEntry, SizeOf(sb2)*Iteration);
+  //Step two: set Length Indicators if required
+    oDataSizeArray := Pointer(NativeUInt(BufferEntry) * Byte((TypeCode=SQLT_STR) and (oDataSize > 0))); //either nil or valid address
+    Inc(BufferEntry, Byte((TypeCode=SQLT_STR) and (oDataSize > 0))*SizeOf(ub2)*Iteration); //inc 0 or SizeOf(ub2)
+  //Step three: set data entrys if required
+    Data := Pointer(NativeUInt(BufferEntry) * Byte(AllocMem)); //either nil or valid address
+    Inc(BufferEntry, Byte(AllocMem)*Length*Iteration); //inc 0 or Length
+  end;
+end;
+
+procedure AllocDesriptors(const PlainDriver: IZOraclePlainDriver;
+  ConnectionHandle: POCIEnv; var Variable: PZSQLVar; Iteration: Integer);
+var
+  i: LongWord;
+  hType: Integer;
+begin
+  case Variable^.TypeCode of
+    SQLT_TIMESTAMP:
+      hType := OCI_DTYPE_TIMESTAMP;
+    SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
+      hType := OCI_DTYPE_LOB;
+    else
       Exit;
   end;
-
-  Variable.Length := Length;
-  if DoAllocMem then
-    ReallocMem(Variable.Data, Variable.Length);
-  Variable.FreeMem := DoAllocMem;
-  if Variable.TypeCode in [SQLT_BIN, SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
+  for i := 0 to Iteration -1 do
     PlainDriver.DescriptorAlloc(ConnectionHandle,
-      PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_LOB, 0, nil)
-  else
-    if Variable.TypeCode = SQLT_TIMESTAMP then
-      PlainDriver.DescriptorAlloc(ConnectionHandle,
-        PPOCIDescriptor(Variable.Data)^, OCI_DTYPE_TIMESTAMP, 0, nil);
+      PPOCIDescriptor(NativeUInt(Variable^.Data)+(I*SizeOf(POCIDescriptor)))^, hType, 0, nil)
 end;
 
 {**
@@ -497,7 +512,6 @@ procedure LoadOracleVars(const PlainDriver: IZOraclePlainDriver;
   Variables: PZSQLVars; const Values: TZVariantDynArray; const ChunkSize: Integer);
 var
   I, Len: Integer;
-  Status: Integer;
   CurrentVar: PZSQLVar;
   TempDate: TDateTime;
   TempBytes: TBytes;
@@ -512,41 +526,41 @@ var
   ConSettings: PZConSettings;
   CharRec: TZCharRec;
 begin
-
   OracleConnection := Connection as IZOracleConnection;
   ClientVarManager := Connection.GetClientVariantManager;
   ConSettings := Connection.GetConSettings;
   for I := 0 to Variables.AllocNum - 1 do
   begin
-    CurrentVar := @Variables.Variables[I{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}];
+    CurrentVar := @Variables.Variables[I];
     if (high(Values)<I) or ClientVarManager.IsNull(Values[I]) then
-      CurrentVar.Indicator := -1
+      CurrentVar^.oIndicatorArray^[0] := -1
     else
     begin
-      CurrentVar.Indicator := 0;
-      case CurrentVar.TypeCode of
+      CurrentVar^.oIndicatorArray^[0] := 0;
+      case CurrentVar^.TypeCode of
         SQLT_INT:
-          PLongInt(CurrentVar.Data)^ := ClientVarManager.GetAsInteger(Values[I]);
+          PLongInt(CurrentVar^.Data)^ := ClientVarManager.GetAsInteger(Values[I]);
         SQLT_FLT:
-          PDouble(CurrentVar.Data)^ := ClientVarManager.GetAsFloat(Values[I]);
+          PDouble(CurrentVar^.Data)^ := ClientVarManager.GetAsFloat(Values[I]);
         SQLT_STR:
-          if CurrentVar.FreeMem then //no mem is allocated. data is just a pointer to a locale string of TZCharRec
+          if CurrentVar^.AllocMem then //no mem is allocated. data is just a pointer to a locale string of TZCharRec
           begin
             CharRec := ClientVarManager.GetAsCharRec(Values[i], ConSettings^.ClientCodePage^.CP);
-            CurrentVar.DataSize := Math.Min(CharRec.Len, Max_OCI_String_Size)+1; //need the leading $0, because oracle expects it
-            System.Move(CharRec.P^, CurrentVar.Data^, CurrentVar.DataSize);
-            (PAnsiChar(CurrentVar.Data)+CurrentVar.DataSize-1)^ := #0; //improve  StrLCopy...
+            CurrentVar^.oDataSizeArray^[0] := Math.Min(CharRec.Len, Max_OCI_String_Size)+1; //need the leading $0, because oracle expects it
+            System.Move(CharRec.P^, CurrentVar^.Data^, CurrentVar^.oDataSizeArray^[0]);
+            (PAnsiChar(CurrentVar^.Data)+CurrentVar^.oDataSizeArray^[0]-1)^ := #0; //improve  StrLCopy...
           end;
         SQLT_TIMESTAMP:
           begin
             TempDate := ClientVarManager.GetAsDateTime(Values[I]);
             DecodeDate(TempDate, Year, Month, Day);
             DecodeTime(TempDate, Hour, Min, Sec, MSec);
-            Status := PlainDriver.DateTimeConstruct(
-              OracleConnection.GetConnectionHandle,
-              ErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
-              Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0);
-            CheckOracleError(PlainDriver, ErrorHandle, Status, lcOther, '', ConSettings);
+            CheckOracleError(PlainDriver, ErrorHandle,
+              PlainDriver.DateTimeConstruct(
+                OracleConnection.GetConnectionHandle,
+                ErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
+                Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0),
+              lcOther, '', ConSettings);
           end;
         SQLT_BLOB:
           begin
@@ -576,10 +590,10 @@ begin
             try
               WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
                 OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, ConSettings);
+                PPOCIDescriptor(CurrentVar^.Data)^, ChunkSize, ConSettings);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
-              CurrentVar.Blob := WriteTempBlob;
+              CurrentVar^.Blob := WriteTempBlob;
             finally
               WriteTempBlob := nil;
             end;
@@ -592,7 +606,7 @@ begin
               WriteTempBlob := TZOracleClob.Create(PlainDriver,
                 nil, 0, OracleConnection.GetConnectionHandle,
                 OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(CurrentVar.Data)^, ChunkSize, ConSettings,
+                PPOCIDescriptor(CurrentVar^.Data)^, ChunkSize, ConSettings,
                 ConSettings^.ClientCodePage^.CP);
               WriteTempBlob.CreateBlob;
               Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
@@ -617,12 +631,12 @@ begin
               end;
               WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
                 OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
-                OracleConnection.GetErrorHandle, PPOCIDescriptor(CurrentVar.Data)^,
+                OracleConnection.GetErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
                 ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
             end;
-            CurrentVar.Blob := WriteTempBlob;
+            CurrentVar^.Blob := WriteTempBlob;
           finally
             WriteTempBlob := nil;
           end
@@ -638,21 +652,12 @@ end;
 procedure UnloadOracleVars(var Variables; const ArrayCount: Integer);
 var
   I, J: Integer;
-  CurrentVar: PZSQLVar;
   SQLVars: PZSQLVars absolute Variables;
   DescriptorsArray: TDesciptorRecArray absolute Variables;
 begin
   if ArrayCount = 0 then
-    for I := FirstDbcIndex to SQLVars.AllocNum{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
-    begin
-      CurrentVar := @SQLVars.Variables[I];
-      CurrentVar.Blob := nil;
-      if not CurrentVar.FreeMem then
-      begin
-        CurrentVar.Data := nil;
-        CurrentVar.FreeMem := True;
-      end;
-    end
+    for I := 0 to SQLVars.AllocNum -1 do
+      SQLVars.Variables[i].Blob := nil
   else
     for i := 0 to High(DescriptorsArray) do
       if (DescriptorsArray[i].htype = OCI_DTYPE_LOB) then
@@ -804,13 +809,13 @@ end;
 }
 function CreateOracleResultSet(const PlainDriver: IZOraclePlainDriver;
   const Statement: IZStatement; const LogSQL: string; const Handle: POCIStmt;
-  const ErrorHandle: POCIError): IZResultSet; overload;
+  const ErrorHandle: POCIError; ZBufferSize: Integer): IZResultSet;
 var
   NativeResultSet: TZOracleResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZOracleResultSet.Create(PlainDriver, Statement,
-    LogSQL, Handle, ErrorHandle);
+    LogSQL, Handle, ErrorHandle, ZBufferSize);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if (Statement.GetResultSetConcurrency = rcUpdatable)
     or (Statement.GetResultSetType <> rtForwardOnly) then
@@ -832,14 +837,14 @@ end;
 }
 function CreateOracleResultSet(PlainDriver: IZOraclePlainDriver;
       Statement: IZStatement; LogSQL: string; StmtHandle: POCIStmt;
-      ErrorHandle: POCIError; OutVars: PZSQLVars;
+      ErrorHandle: POCIError; const Params: PZSQLVars;
       Const OracleParams: TZOracleParams): IZResultSet;
 var
   NativeResultSet: TZOracleCallableResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZOracleCallableResultSet.Create(PlainDriver, Statement,
-    LogSQL, StmtHandle, ErrorHandle, OutVars, OracleParams);
+    LogSQL, StmtHandle, ErrorHandle, Params, OracleParams);
   NativeResultSet.SetConcurrency(rcReadOnly);
   CachedResultSet := TZCachedResultSet.Create(NativeResultSet, LogSQL, nil,
     Statement.GetConnection.GetConSettings);
@@ -859,7 +864,8 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure AllocateOracleStatementHandles(PlainDriver: IZOraclePlainDriver;
-  Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError);
+  Connection: IZConnection; var Handle: POCIStmt; var ErrorHandle: POCIError;
+  UserServerCachedStmt: Boolean = False);
 var
   OracleConnection: IZOracleConnection;
 begin
@@ -868,8 +874,9 @@ begin
   PlainDriver.HandleAlloc(OracleConnection.GetConnectionHandle,
     ErrorHandle, OCI_HTYPE_ERROR, 0, nil);
   Handle := nil;
-  PlainDriver.HandleAlloc(OracleConnection.GetConnectionHandle,
-    Handle, OCI_HTYPE_STMT, 0, nil);
+  if not UserServerCachedStmt then
+    PlainDriver.HandleAlloc(OracleConnection.GetConnectionHandle,
+      Handle, OCI_HTYPE_STMT, 0, nil);
 end;
 
 {**
@@ -901,14 +908,38 @@ end;
   @param ErrorHandle a holder for Error handle.
 }
 procedure PrepareOracleStatement(const PlainDriver: IZOraclePlainDriver;
-  const SQL: RawByteString; const Handle: POCIStmt; const ErrorHandle: POCIError;
-  const PrefetchCount: ub4; const ConSettings: PZConSettings);
+  ContextHandle: POCISvcCtx; const SQL: RawByteString; var Handle: POCIStmt;
+  const ErrorHandle: POCIError; PrefetchMemory: ub4; ServerCachedStmtHandle: Boolean;
+  const ConSettings: PZConSettings);
+var
+  PrefetchCount: ub4;
 begin
-  PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
-    OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
-  CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.StmtPrepare(Handle,
-    ErrorHandle, PAnsiChar(SQL), Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT),
-    lcExecute, SQL, ConSettings);
+  PrefetchCount := 0;
+  if ServerCachedStmtHandle then
+  begin
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.StmtPrepare2(ContextHandle, Handle, ErrorHandle,
+        Pointer(SQL), Length(SQL),nil,0,OCI_NTV_SYNTAX,OCI_DEFAULT),
+      lcExecute, SQL, ConSettings);
+    CheckOracleError(PlainDriver, ErrorHandle,
+     PlainDriver.AttrSet(Handle,OCI_HTYPE_STMT, @PrefetchCount ,0, OCI_ATTR_PREFETCH_ROWS,ErrorHandle),
+        lcOther, 'Prefetch_Count', ConSettings);
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.AttrSet(Handle,OCI_HTYPE_STMT,@PrefetchMemory,0,OCI_ATTR_PREFETCH_MEMORY,ErrorHandle),
+        lcOther, 'Prefetch_Memory', ConSettings);
+  end
+  else
+  begin
+    CheckOracleError(PlainDriver, ErrorHandle,
+     PlainDriver.AttrSet(Handle,OCI_HTYPE_STMT, @PrefetchCount ,0, OCI_ATTR_PREFETCH_ROWS,ErrorHandle),
+        lcOther, 'Prefetch_Count', ConSettings);
+    CheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.AttrSet(Handle,OCI_HTYPE_STMT,@PrefetchMemory,0,OCI_ATTR_PREFETCH_MEMORY,ErrorHandle),
+        lcOther, 'Prefetch_Memory', ConSettings);
+    CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.StmtPrepare(Handle,
+      ErrorHandle, Pointer(SQL), Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT),
+      lcExecute, SQL, ConSettings);
+  end;
 end;
 
 {**
