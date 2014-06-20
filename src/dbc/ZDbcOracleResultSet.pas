@@ -1359,14 +1359,14 @@ begin
           CurrentVar^.TypeCode := CurrentVar^.oDataType;
 
           CurrentVar^._Obj := DescribeObject(FplainDriver, FConnection,
-            CurrentVar^.Handle, FStmtHandle, nil, 0);
+            CurrentVar^.Handle, FStmtHandle, 0);
           if CurrentVar^._Obj.col_typecode = OCI_TYPECODE_TABLE then
             CurrentVar^.ColType := stDataSet
           else if CurrentVar^._Obj.col_typecode = OCI_TYPECODE_VARRAY then
             CurrentVar^.ColType := stArray
           else //more possible types
             CurrentVar^.ColType := stBinaryStream;
-          end;
+        end;
       else
         CurrentVar^.ColType := stUnknown;
     end;
