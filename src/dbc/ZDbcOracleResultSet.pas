@@ -279,31 +279,31 @@ begin
         SQLT_AFC:
           begin
             Result.Len := oDataSize;
-            Result.P := Pointer(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Result.P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (Result.P+Result.Len-1)^ = ' ' do Dec(Result.Len); //omit trailing spaces
           end;
         SQLT_INT:
           begin
-            FRawTemp := IntToRaw(PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+            FRawTemp := IntToRaw({%H-}PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
             Result.P := Pointer(FRawTemp);
             Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
         SQLT_FLT:
           begin
-            FRawTemp := FloatToSQLRaw(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+            FRawTemp := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
             Result.P := Pointer(FRawTemp);
             Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
         SQLT_STR:
           begin
-            Result.P := Pointer(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Result.P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             //Result.Len := ZFastCode.StrLen(Result.P);
             Result.Len := oDataSizeArray^[FCurrentBufRowNo];
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           begin
-            Result.P := Pointer(NativeUInt(Data)+(FCurrentBufRowNo*Length)+ SizeOf(Integer));
-            Result.Len := PInteger(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+            Result.P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)+ SizeOf(Integer));
+            Result.Len := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
           end;
         SQLT_DAT, SQLT_TIMESTAMP:
           begin
@@ -346,23 +346,23 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.CP)
           end;
-        SQLT_INT: Result := IntToRaw(PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
-        SQLT_UIN: Result := IntToRaw(PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
-        SQLT_FLT: Result := FloatToSQLRaw(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+        SQLT_INT: Result := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+        SQLT_UIN: Result := IntToRaw({%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+        SQLT_FLT: Result := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
           begin
             AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             //AnsiRec.Len := ZFastCode.StrLen(AnsiRec.P);
             Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.CP)
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
-          ZSetString(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length))+SizeOf(Integer),
-            PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^, Result);
+          ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))+SizeOf(Integer),
+            {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^, Result);
         SQLT_DAT, SQLT_TIMESTAMP:
           Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
             ConSettings^.ReadFormatSettings, False);
@@ -430,13 +430,13 @@ var
 begin
   with SQLVarHolder^ do
     if TypeCode = SQLT_DAT then
-      Result := OraDateToDateTime(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)))
+      Result := OraDateToDateTime({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)))
     else
     begin
       if ColType in [stDate, stTimestamp] then
       begin
         Status := FPlainDriver.DateTimeGetDate(FConnectionHandle, FErrorHandle,
-          PPOCIDescriptor(NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
+          {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
           Year{%H-}, Month{%H-}, Day{%H-});
       // attention : this code handles all timestamps on 01/01/0001 as a pure time value
       // reason : oracle doesn't have a pure time datatype so all time comparisons compare
@@ -449,7 +449,7 @@ begin
       if ColType in [stTime, stTimestamp] then
       begin
         Status := FPlainDriver.DateTimeGetTime(FConnectionHandle, FErrorHandle,
-          PPOCIDescriptor(NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
+          {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
             Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
         if Status = OCI_SUCCESS then
           Result := Result + EncodeTime(
@@ -486,18 +486,18 @@ begin
         SQLT_AFC:
           begin
             Len := oDataSize;
-            P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
             ZSetString(P, Len, Result);
           end;
         SQLT_INT:
-          Result := IntToRaw(PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_FLT:
-          Result := FloatToSQLRaw(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
-          ZSetString(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)), SQLVarHolder.oDataSizeArray[FCurrentBufRowNo], Result);
+          ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), SQLVarHolder.oDataSizeArray[FCurrentBufRowNo], Result);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
-          ZSetString(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)) + SizeOf(Integer), PInteger(NativeUInt(Data)+(FCurrentBufRowNo*Length))^, Result);
+          ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)) + SizeOf(Integer), {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^, Result);
         SQLT_DAT, SQLT_TIMESTAMP:
           Result := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
             ConSettings^.ReadFormatSettings, False);
@@ -551,21 +551,21 @@ begin
     with SQLVarHolder^ do
       case TypeCode of
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^ <> 0;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^ <> 0;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^ <> 0;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^ <> 0;
         SQLT_FLT:
-          Result := Trunc(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^) <> 0;
+          Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^) <> 0;
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := StrToBoolEx(FRawTemp);
           end;
         SQLT_STR:
-          Result := StrToBoolEx(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)), True, False);
+          Result := StrToBoolEx({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), True, False);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := False;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -603,19 +603,19 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := RawToIntDef(FRawTemp, 0);
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := Trunc(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
-          Result := RawToIntDef(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
+          Result := RawToIntDef({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -653,19 +653,19 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := RawToInt64Def(FRawTemp, 0);
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := Trunc(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
-          Result := RawToInt64Def(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
+          Result := RawToInt64Def({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -703,19 +703,19 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := RawToUInt64Def(FRawTemp, 0);
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := Trunc(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
-          Result := RawToUInt64Def(PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
+          Result := RawToUInt64Def({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)), 0);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
         SQLT_DAT, SQLT_TIMESTAMP:
@@ -753,19 +753,19 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := SqlStrToFloatDef(FRawTemp, 0);
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
-          Result := SqlStrToFloatDef(PAnsichar(NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+          Result := SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
             oDataSizeArray^[FCurrentBufRowNo] , 0);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
@@ -804,19 +804,19 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := SqlStrToFloatDef(FRawTemp, 0);
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
-          Result := SqlStrToFloatDef(PAnsichar(NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+          Result := SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
             oDataSizeArray^[FCurrentBufRowNo] , 0);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
@@ -856,19 +856,19 @@ begin
         SQLT_AFC:
           begin
             AnsiRec.Len := oDataSize;
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
             Result := SqlStrToFloatDef(FRawTemp, 0);
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
-          Result := SqlStrToFloatDef(PAnsichar(NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+          Result := SqlStrToFloatDef({%H-}PAnsichar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
             oDataSizeArray^[FCurrentBufRowNo], 0);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
@@ -926,20 +926,20 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             AnsiRec.Len := oDataSize;
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             goto ConvFromString;
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
           begin
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
     ConvFromString:
             if AnsiRec.Len = ConSettings^.ReadFormatSettings.DateFormatLen then
@@ -995,20 +995,20 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             AnsiRec.Len := oDataSize;
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             goto ConvFromString;
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := Frac(PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+          Result := Frac({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
           begin
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
     ConvFromString:
             if (AnsiRec.P+2)^ = ':' then //possible date if Len = 10 then
@@ -1064,20 +1064,20 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             AnsiRec.Len := oDataSize;
             while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
             goto ConvFromString;
           end;
         SQLT_INT:
-          Result := PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_UIN:
-          Result := PLongWord(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_FLT:
-          Result := PDouble(NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+          Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
           begin
-            AnsiRec.P := PAnsiChar(NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
             AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
     ConvFromString:
             if (AnsiRec.P+2)^ = ':' then //possible date if Len = 10 then
@@ -1203,7 +1203,7 @@ begin
   with SQLVarHolder^ do
     if TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
     begin
-      LobLocator := PPOCIDescriptor(NativeUInt(Data)+FCurrentBufRowNo*Length)^;
+      LobLocator := {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)^;
       if TypeCode in [SQLT_BLOB, SQLT_BFILEE] then
         Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FContextHandle,
           FConnection.GetErrorHandle, LobLocator, FChunkSize, ConSettings)
@@ -1219,8 +1219,8 @@ begin
         Result := TZAbstractBlob.CreateWithStream(nil)
       else
         if TypeCode in [SQLT_LVB, SQLT_LVC, SQLT_BIN] then
-          Result := TZAbstractBlob.CreateWithData(PAnsiChar(NativeUInt(Data)+FCurrentBufRowNo*Length)+ SizeOf(Integer),
-            PInteger(NativeUInt(Data)+FCurrentBufRowNo*Length)^)
+          Result := TZAbstractBlob.CreateWithData({%H-}PAnsiChar({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)+ SizeOf(Integer),
+            {%H-}PInteger({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)^)
         else
         begin
           AnsiRec := GetAnsiRec(ColumnIndex);
