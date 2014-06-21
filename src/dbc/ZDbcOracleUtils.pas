@@ -1087,70 +1087,71 @@ var
           @list_attibutes, nil, OCI_ATTR_LIST_TYPE_ATTRS, FConnection.GetErrorHandle),
         lcOther, 'OCIAttrGet(OCI_ATTR_LIST_TYPE_ATTRS) of OCI_DTYPE_PARAM(SubType)', ConSettings);
 
-      for I := 0 to obj.field_count-1 do
+      if obj.field_count > 0 then
+        for I := 0 to obj.field_count-1 do
+        begin
+          Fld := AllocateObject;  //allocate a new object
+          Obj.fields[i] := Fld;  //assign the object to the field-list
+
+          CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+            PlainDriver.ParamGet(list_attibutes, OCI_DTYPE_PARAM,
+              FConnection.GetErrorHandle, Fld.parmdp, I+1),
+            lcOther, 'OCIParamGet(OCI_DTYPE_PARAM) of OCI_DTYPE_PARAM(Element)', ConSettings);
+
+          // get the name of the attribute
+          len := 0;
+          CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+            PlainDriver.AttrGet(Fld.parmdp, OCI_DTYPE_PARAM,
+              @name, @len, OCI_ATTR_NAME, FConnection.GetErrorHandle),
+            lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM(Element)', ConSettings);
+
+          ZSetString(name, len, temp);
+          Fld.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
+            ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+
+          // get the typeCode of the attribute
+          CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
+            PlainDriver.AttrGet(Fld.parmdp, OCI_DTYPE_PARAM,
+              @Fld.typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
+            lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE) of OCI_DTYPE_PARAM(Element)', ConSettings);
+
+          if (fld.typecode = OCI_TYPECODE_OBJECT) or
+             (fld.typecode = OCI_TYPECODE_VARRAY) or
+             (fld.typecode = OCI_TYPECODE_TABLE) or
+             (fld.typecode = OCI_TYPECODE_NAMEDCOLLECTION) then
+            //this is some sort of object or collection so lets drill down some more
+            fld.next_subtype := DescribeObject(PlainDriver, Connection, fld.parmdp,
+              obj.stmt_handle, obj.Level+1);
+        end;
+      end
+      else
       begin
-        Fld := AllocateObject;  //allocate a new object
-        Obj.fields[i] := Fld;  //assign the object to the field-list
+        //this is an embedded table or varray of some form so find out what is in it*/
 
         CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-          PlainDriver.ParamGet(list_attibutes, OCI_DTYPE_PARAM,
-            FConnection.GetErrorHandle, Fld.parmdp, I+1),
-          lcOther, 'OCIParamGet(OCI_DTYPE_PARAM) of OCI_DTYPE_PARAM(Element)', ConSettings);
+          PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+            @obj.col_typecode, nil, OCI_ATTR_COLLECTION_TYPECODE, FConnection.GetErrorHandle),
+          lcOther, 'OCIAttrGet(OCI_ATTR_COLLECTION_TYPECODE) of OCI_DTYPE_PARAM', ConSettings);
 
-        // get the name of the attribute
-        len := 0;
+        //first get what sort of collection it is by coll typecode
         CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-          PlainDriver.AttrGet(Fld.parmdp, OCI_DTYPE_PARAM,
-            @name, @len, OCI_ATTR_NAME, FConnection.GetErrorHandle),
-          lcOther, 'OCIAttrGet(OCI_ATTR_NAME) of OCI_DTYPE_PARAM(Element)', ConSettings);
+          PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+            @obj.parmap, nil, OCI_ATTR_COLLECTION_ELEMENT, FConnection.GetErrorHandle),
+          lcOther, 'OCIAttrGet(OCI_ATTR_COLLECTION_ELEMENT) of OCI_DTYPE_PARAM', ConSettings);
 
-        ZSetString(name, len, temp);
-        Fld.type_name := ConSettings^.ConvFuncs.ZRawToString(temp,
-          ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-
-        // get the typeCode of the attribute
         CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-          PlainDriver.AttrGet(Fld.parmdp, OCI_DTYPE_PARAM,
-            @Fld.typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
-          lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE) of OCI_DTYPE_PARAM(Element)', ConSettings);
+          PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
+            @obj.elem_typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
+          lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE of Element) of OCI_DTYPE_PARAM', ConSettings);
 
-        if (fld.typecode = OCI_TYPECODE_OBJECT) or
-           (fld.typecode = OCI_TYPECODE_VARRAY) or
-           (fld.typecode = OCI_TYPECODE_TABLE) or
-           (fld.typecode = OCI_TYPECODE_NAMEDCOLLECTION) then
+        if (obj.elem_typecode = OCI_TYPECODE_OBJECT) or
+           (obj.elem_typecode = OCI_TYPECODE_VARRAY) or
+           (obj.elem_typecode = OCI_TYPECODE_TABLE) or
+           (obj.elem_typecode = OCI_TYPECODE_NAMEDCOLLECTION) then
           //this is some sort of object or collection so lets drill down some more
-          fld.next_subtype := DescribeObject(PlainDriver, Connection, fld.parmdp,
+          obj.next_subtype := DescribeObject(PlainDriver, Connection, obj.parmap,
             obj.stmt_handle, obj.Level+1);
       end;
-    end
-    else
-    begin
-      //this is an embedded table or varray of some form so find out what is in it*/
-
-      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
-          @obj.col_typecode, nil, OCI_ATTR_COLLECTION_TYPECODE, FConnection.GetErrorHandle),
-        lcOther, 'OCIAttrGet(OCI_ATTR_COLLECTION_TYPECODE) of OCI_DTYPE_PARAM', ConSettings);
-
-      //first get what sort of collection it is by coll typecode
-      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
-          @obj.parmap, nil, OCI_ATTR_COLLECTION_ELEMENT, FConnection.GetErrorHandle),
-        lcOther, 'OCIAttrGet(OCI_ATTR_COLLECTION_ELEMENT) of OCI_DTYPE_PARAM', ConSettings);
-
-      CheckOracleError(PlainDriver, FConnection.GetErrorHandle,
-        PlainDriver.AttrGet(obj.parmdp, OCI_DTYPE_PARAM,
-          @obj.elem_typecode, nil, OCI_ATTR_TYPECODE, FConnection.GetErrorHandle),
-        lcOther, 'OCIAttrGet(OCI_ATTR_TYPECODE of Element) of OCI_DTYPE_PARAM', ConSettings);
-
-      if (obj.elem_typecode = OCI_TYPECODE_OBJECT) or
-         (obj.elem_typecode = OCI_TYPECODE_VARRAY) or
-         (obj.elem_typecode = OCI_TYPECODE_TABLE) or
-         (obj.elem_typecode = OCI_TYPECODE_NAMEDCOLLECTION) then
-        //this is some sort of object or collection so lets drill down some more
-        obj.next_subtype := DescribeObject(PlainDriver, Connection, obj.parmap,
-          obj.stmt_handle, obj.Level+1);
-    end;
   end;
 begin
   ConSettings := Connection.GetConSettings;
