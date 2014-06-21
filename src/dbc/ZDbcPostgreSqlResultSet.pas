@@ -982,7 +982,7 @@ begin
 end;
 
 { TZPostgreSQLUnCachedCLob }
-procedure TZPostgreSQLUnCachedBLob.ReadLob;
+(*procedure TZPostgreSQLUnCachedBLob.ReadLob;
 var
   Buffer: Pointer;
 begin
@@ -1029,6 +1029,6 @@ begin
   FRowNo := RowNo;
   FColumnIndex := ColumnIndex;
   FConSettings := ConSettings;
-end;
+end;*)
 
 end.
