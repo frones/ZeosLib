@@ -1331,7 +1331,7 @@ begin
           CurrentVar^.ColType := stTime;
           inc(DescriptorColumnCount);
         end;
-      SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ:
+      SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ{, SQLT_INTERVAL_DS, SQLT_INTERVAL_YM}:
         begin
           CurrentVar^.ColType := stTimestamp;
           inc(DescriptorColumnCount);
@@ -1368,7 +1368,7 @@ begin
             CurrentVar^.ColType := stBinaryStream;
         end;
       else
-        CurrentVar^.ColType := stUnknown;
+          CurrentVar^.ColType := stUnknown;
     end;
 
     if CurrentVar^.ColType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
@@ -1409,12 +1409,15 @@ begin
   begin
     CurrentVar := @FColumns.Variables[I-1];
     SetVariableDataEntrys(BufferPos, CurrentVar, FIteration);
-    AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration);
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.DefineByPos(FStmtHandle, CurrentVar^.Define,
-        FErrorHandle, I, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
-        CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, OCI_DEFAULT),
-      lcExecute, 'OCIDefineByPos', ConSettings);
+    if CurrentVar^.ColType <> stUnknown then //do not BIND unknown types
+    begin
+      AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration);
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.DefineByPos(FStmtHandle, CurrentVar^.Define,
+          FErrorHandle, I, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
+          CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, OCI_DEFAULT),
+        lcExecute, 'OCIDefineByPos', ConSettings);
+    end;
     if CurrentVar^.oDataType=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,
