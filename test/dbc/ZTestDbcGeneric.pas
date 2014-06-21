@@ -1196,7 +1196,7 @@ begin
   Check(InsertTestString(TEST_ROW_ID+6, IntToRaw(Low(Int64))));
   Check(InsertTestString(TEST_ROW_ID+7, IntToRaw(High(Int64))));
 
-  PStatement := Connection.PrepareStatement('select * from string_values where s_id >= ?');
+  PStatement := Connection.PrepareStatement('select * from string_values where s_id >= ? order by s_id');
   Statement := Connection.CreateStatement;
   try
     PStatement.SetInt(s_id_Index, TEST_ROW_ID-1);
@@ -1314,12 +1314,12 @@ begin
   {Insert Int64 test values}
   Check(InsertTestString(TEST_ROW_ID+6, IntToRaw(Low(UInt64))));
   {$IFDEF WITH_UINT64_C1118_ERROR}
-  Check(InsertTestString(TEST_ROW_ID+7, '18446744073709551615')); //D7 returns -1 als High value
+  Check(InsertTestString(TEST_ROW_ID+7, IntToRaw(UInt64($FFFFFFFFFFFFFFFF)))); //D7 returns -1 als High value
   {$ELSE}
   Check(InsertTestString(TEST_ROW_ID+7, IntToRaw(High(UInt64))));
   {$ENDIF}
 
-  PStatement := Connection.PrepareStatementWithParams('select * from string_values where s_id >= ?', Info);
+  PStatement := Connection.PrepareStatementWithParams('select * from string_values where s_id >= ? order by s_id', Info);
   Statement := Connection.CreateStatement;
   try
     PStatement.SetInt(s_id_Index, TEST_ROW_ID-1);
