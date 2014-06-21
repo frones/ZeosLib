@@ -1262,8 +1262,8 @@ begin
     OCI_ATTR_PARAM_COUNT, FErrorHandle);
 
   AllocateOracleSQLVars(FColumns, ColumnCount);
-  RowSize := 0; DescriptorColumnCount := 0; SubObjectColumnCount := 0;
-
+  RowSize := 0;
+  DescriptorColumnCount := 0; SubObjectColumnCount := 0;
   { collect informations for result set columns }
   for I := 1 to ColumnCount do
   begin
@@ -1396,7 +1396,7 @@ begin
     FIteration := FZBufferSize div RowSize;
   if ( DescriptorColumnCount > 0 ) and (DescriptorColumnCount * FIteration > 1000) then //take care we do not create too much descriptors
     FIteration := 1000 div DescriptorColumnCount;
-  if SubObjectColumnCount > 0 then
+  if (SubObjectColumnCount > 0) then
     FIteration := 1; //EH: current code isn't prepared -> Bugfix required
 
   SetLength(FRowsBuffer, RowSize * FIteration); //Alloc mem we need for multiple rows
@@ -1704,8 +1704,11 @@ end;
 procedure TZOracleCallableResultSet.Close;
 begin
   { stmt holds buffers and handles. Here we just reference it. So we do NOTHING here, IDE frees all DynArrays}
-  FreeMem(FColumns);
-  FColumns := nil;
+  FreeOracleSQLVars(FPlainDriver, FColumns, FIteration, FConnectionHandle,
+    FErrorHandle, ConSettings);
+  SetLength(Self.FRowsBuffer, 0);
+  { prepared statement own handles, so dont free them }
+  FStmtHandle := nil;
   inherited Close;
 end;
 

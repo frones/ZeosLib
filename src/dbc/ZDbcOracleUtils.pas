@@ -473,8 +473,8 @@ begin
     oDataSizeArray := Pointer(NativeUInt(BufferEntry) * Byte((TypeCode=SQLT_STR) and (oDataSize > 0))); //either nil or valid address
     Inc(BufferEntry, Byte((TypeCode=SQLT_STR) and (oDataSize > 0))*SizeOf(ub2)*Iteration); //inc 0 or SizeOf(ub2)
   //Step three: set data entrys if required
-    Data := Pointer(NativeUInt(BufferEntry) * Byte(AllocMem)); //either nil or valid address
-    Inc(BufferEntry, Byte(AllocMem)*Length*Iteration); //inc 0 or Length
+    Data := Pointer(NativeUInt(BufferEntry) * Byte(AllocMem and (ColType <> stUnknown))); //either nil or valid address
+    Inc(BufferEntry, Byte(AllocMem and (ColType <> stUnknown))*Length*Iteration); //inc 0 or Length
   end;
 end;
 
