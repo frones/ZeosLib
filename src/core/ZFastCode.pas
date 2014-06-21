@@ -3018,7 +3018,7 @@ var
   I32, J32, K32, L32 : Cardinal;
   Digits             : Byte;
   P                  : PByte;
-  NewLen, OldLen    : Integer;
+  NewLen, OldLen     : Integer;
 begin
   if (Negative and (Value <= High(Integer))) or
      (not Negative and (Value <= High(Cardinal))) then
@@ -3029,11 +3029,17 @@ begin
   if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
     if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
       if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
-        {$IFDEF SUPPORTS_UINT64_CONSTS}
-        if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF} then
+        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
+        if Value >= UInt64(10000000000000000000) then
+        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
+          {$IFDEF SUPPORTS_UINT64_CONSTS}
+          if Value >= 10000000000000000000 then
+          {$ELSE !SUPPORTS_UINT64_CONSTS}
+          if Value >= $8AC7230489E80000 then
+          {$ENDIF SUPPORTS_UINT64_CONSTS}
+        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
           Digits := 20
         else
-        {$ENDIF}
           Digits := 19
       else
         Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
@@ -3065,7 +3071,6 @@ begin
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
-  {$IFDEF SUPPORTS_UINT64_CONSTS}
   if Digits = 20 then
   begin
     P^ := Ord('1');
@@ -3073,11 +3078,10 @@ begin
     {$IFDEF FPC} //fatal error?
     Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
     {$ELSE}
-    Dec(Value, 10000000000000000000);
+    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
     {$ENDIF}
     Dec(Digits);
   end;
-  {$ENDIF SUPPORTS_UINT64_CONSTS}
   if Digits > 17 then
   begin {18 or 19 Digits}
     if Digits = 19 then
