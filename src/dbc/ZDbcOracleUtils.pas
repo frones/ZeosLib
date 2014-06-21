@@ -111,6 +111,7 @@ type
     oDataSizeArray: PUB2Array; //value length for strings/bytes
     _Obj:      POCIObject;
     {Zeos proceesing values}
+    DescriptorType: sb4;
     TypeCode:  ub2;
     Length:    NativeUInt; //indicate size of Data
     Precision: Integer; //field.precision
@@ -428,6 +429,12 @@ begin
         end;
       stDate, stTime, stTimestamp:
         begin
+          {if OracleType = SQLT_INTERVAL_DS then
+            DescriptorType := OCI_DTYPE_INTERVAL_DS
+          else if OracleType = SQLT_INTERVAL_YM then
+            DescriptorType := OCI_DTYPE_INTERVAL_YM
+          else
+            DescriptorType := OCI_DTYPE_TIMESTAMP;}
           TypeCode := SQLT_TIMESTAMP;
           Length := SizeOf(POCIDateTime);
         end;
@@ -455,7 +462,6 @@ begin
         end;
       stDataSet: ; //Do nothing here!
       stUnknown:
-        Exit;
     end;
   end;
 end;

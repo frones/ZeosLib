@@ -1606,6 +1606,7 @@ begin
       Result.Variables[J].oDataSizeArray := Params.Variables[I].oDataSizeArray;  //reference to array entry in stmt buffer -> no move!
       Result.Variables[J].oIndicatorArray := Params.Variables[I].oIndicatorArray; //reference to array entry in stmt buffer -> no move!
       Result.Variables[J].Data := Params.Variables[I].Data; //reference to data entry in stmt buffer -> no move!
+      Result.Variables[J].DescriptorType := Params.Variables[I].DescriptorType;
       FFieldNames[J] := OracleParams[I].pName;
     end;
   end;
