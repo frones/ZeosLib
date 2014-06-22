@@ -1386,8 +1386,7 @@ begin
       {set new datatypes if required}
       DefineOracleVarTypes(CurrentVar, CurrentVar^.ColType, CurrentVar^.oDataSize, CurrentVar^.oDataType);
       {calc required size of field}
-      Inc(RowSize, Integer(CurrentVar^.Length)+SizeOf(sb2){NullIndicator}+
-        (Ord((CurrentVar^.TypeCode = SQLT_STR){only for #0} and (CurrentVar^.oDataSize > 0){skip null fields})*SizeOf(ub2)){LengthIndicator}); //calc buffer size
+      Inc(RowSize, CalcBufferSizeOfSQLVar(CurrentVar));
     end;
   { now let's calc the iters we can use }
   if RowSize > FZBufferSize then

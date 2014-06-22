@@ -1060,15 +1060,16 @@ begin
       else if InParamTypes[I] in [stAsciiStream, stUnicodeStream] then
         DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_CLOB)
       else if InParamTypes[I] in [stString, stUnicodeString] then
+      begin
+        CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
         //(pl/sql statement) may have possible out params!!
         //so take care to use a new bidirectional memory addressation
         DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_STR,
-          (FStatementType in [OCI_STMT_BEGIN, OCI_STMT_DECLARE]))
+          (CharRec.Len > Max_OCI_String_Size) or (FStatementType in [OCI_STMT_BEGIN, OCI_STMT_DECLARE]));
+      end
       else
         DefineOracleVarTypes(CurrentVar, InParamTypes[I], Max_OCI_String_Size, SQLT_STR);
-      Inc(BufferSize, Iteration * ((Ord(CurrentVar^.AllocMem)*Integer(CurrentVar^.Length))+
-                                  SizeOf(sb2){NullIndicator}+
-                                  (Ord((CurrentVar^.TypeCode = SQLT_STR) and (CurrentVar^.oDataSize > 0))*SizeOf(ub2)){LengthIndicator}));
+      Inc(BufferSize, CalcBufferSizeOfSQLVar(CurrentVar));
     end; //Bufsize is determined
     if Length(FBuffer) < BufferSize then SetLength(FBuffer, BufferSize); //realloc the buffer if required
     CharBuffer := Pointer(FBuffer); //set first data-entry in rowBuffer
@@ -1086,7 +1087,7 @@ begin
       begin //point to data of string
         CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
         Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
-          I + 1, CharRec.P, CharRec.Len, CurrentVar^.TypeCode, CurrentVar^.oIndicatorArray,
+          I + 1, CharRec.P, Math.Max(2, CharRec.Len), CurrentVar^.TypeCode, CurrentVar^.oIndicatorArray,
           CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
         //set oDataSize, so oracle can move data instead of use StrPCopy
         Pub2(CurrentVar^.oDataSizeArray)^ := CharRec.Len+1; //include trailing #0
@@ -1451,9 +1452,7 @@ begin
         (FStatementType in [OCI_STMT_BEGIN, OCI_STMT_DECLARE]))
     else
       DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_STR);
-    Inc(BufferSize, Iteration * ((Ord(CurrentVar^.AllocMem)*Integer(CurrentVar^.Length))+
-                                SizeOf(sb2){NullIndicator}+
-                                (Ord((CurrentVar^.TypeCode = SQLT_STR) and (CurrentVar^.oDataSize > 0))*SizeOf(ub2)){LengthIndicator}));
+    Inc(BufferSize, Iteration * CalcBufferSizeOfSQLVar(CurrentVar));
   end; //Bufsize is determined
   if Length(FBuffer) < BufferSize then SetLength(FBuffer, BufferSize); //realloc the buffer if required
   CharBuffer := Pointer(FBuffer); //set first data-entry in rowBuffer
@@ -1474,7 +1473,7 @@ begin
         I + 1, CharRec.P, CharRec.Len, CurrentVar^.TypeCode, CurrentVar^.oIndicatorArray,
         CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
       //set oDataSize, so oracle can move data instead of use StrPCopy
-      Pub2(CurrentVar^.oDataSizeArray)^ := CharRec.Len+1; //include trailing #0
+      CurrentVar^.oDataSizeArray^[0] := CharRec.Len+1; //include trailing #0
     end;
     CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
   end;

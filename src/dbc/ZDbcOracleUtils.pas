@@ -172,6 +172,8 @@ procedure DefineOracleVarTypes(var Variable: PZSQLVar; DataType: TZSQLType;
 procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
   Iteration: LongWord);
 
+function CalcBufferSizeOfSQLVar(Const Variable: PZSQLVar): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
+
 procedure AllocDesriptors(const PlainDriver: IZOraclePlainDriver;
   ConnectionHandle: POCIEnv; var Variable: PZSQLVar; Iteration: Integer);
 
@@ -429,12 +431,12 @@ begin
         end;
       stDate, stTime, stTimestamp:
         begin
-          {if OracleType = SQLT_INTERVAL_DS then
+          if OracleType = SQLT_INTERVAL_DS then
             DescriptorType := OCI_DTYPE_INTERVAL_DS
           else if OracleType = SQLT_INTERVAL_YM then
             DescriptorType := OCI_DTYPE_INTERVAL_YM
           else
-            DescriptorType := OCI_DTYPE_TIMESTAMP;}
+            DescriptorType := OCI_DTYPE_TIMESTAMP;
           TypeCode := SQLT_TIMESTAMP;
           Length := SizeOf(POCIDateTime);
         end;
@@ -448,7 +450,9 @@ begin
         end;
       stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
         if (TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
-          Length := SizeOf(POCILobLocator)
+        begin
+          Length := SizeOf(POCILobLocator);
+        end
         else
         begin
           if ColType = stAsciiStream then
@@ -482,6 +486,15 @@ begin
     Data := Pointer(NativeUInt(BufferEntry) * Byte(AllocMem and (ColType <> stUnknown))); //either nil or valid address
     Inc(BufferEntry, Byte(AllocMem and (ColType <> stUnknown))*Length*Iteration); //inc 0 or Length
   end;
+end;
+
+function CalcBufferSizeOfSQLVar(Const Variable: PZSQLVar): Integer;
+begin
+  Result := (
+    (Ord(Variable^.AllocMem)*Integer(Variable^.Length))+ {if we use locale adressation then skip it}
+    SizeOf(sb2){NullIndicator}+ {allways present}
+    (Ord((Variable^.TypeCode = SQLT_STR) and (Variable^.oDataSize > 0))*SizeOf(ub2)){LengthIndicator} //only for SQLT_STR and skip if field is null
+    );
 end;
 
 procedure AllocDesriptors(const PlainDriver: IZOraclePlainDriver;
