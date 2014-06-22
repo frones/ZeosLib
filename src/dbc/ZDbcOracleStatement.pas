@@ -1086,11 +1086,11 @@ begin
       else //nope, just to local string data
       begin //point to data of string
         CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
-        Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
-          I + 1, CharRec.P, Math.Max(2, CharRec.Len), CurrentVar^.TypeCode, CurrentVar^.oIndicatorArray,
-          CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
         //set oDataSize, so oracle can move data instead of use StrPCopy
         Pub2(CurrentVar^.oDataSizeArray)^ := CharRec.Len+1; //include trailing #0
+        Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+          I + 1, CharRec.P, Pub2(CurrentVar^.oDataSizeArray)^, CurrentVar^.TypeCode,
+          CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
       end;
       CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
     end;

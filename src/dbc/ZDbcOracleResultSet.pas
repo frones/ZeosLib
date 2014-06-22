@@ -427,10 +427,27 @@ var
   Month, Day: Byte;
   Hour, Minute, Second: Byte;
   Millis: Integer;
+  P: PAnsiChar;
+  Ptr: POraDate absolute P;
 begin
   with SQLVarHolder^ do
     if TypeCode = SQLT_DAT then
-      Result := OraDateToDateTime({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)))
+    begin
+      P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+      if (PInteger(P)^=0) and (PInteger(P+3)^=0) then //all 0 ?
+        result := 0
+      else
+      begin
+        Result := 0;
+        if Ptr^.Cent <= 100 then // avoid TDateTime values < 0 (generates wrong DecodeTime) //thanks to ab of synopse
+          result := 0
+        else
+          if ColType in [stDate, stTimestamp] then
+            result := EncodeDate((Ptr^.Cent-100)*100+Ptr^.Year-100,Ptr^.Month,Ptr^.Day);
+        if (ColType in [stTime, stTimestamp]) and ((Ptr^.Hour<>0) or (Ptr^.Min<>0) or (Ptr^.Sec<>0)) then
+          result := result + EncodeTime(Ptr^.Hour-1,Ptr^.Min-1,Ptr^.Sec-1,0);
+      end;
+    end
     else
     begin
       if ColType in [stDate, stTimestamp] then
@@ -951,10 +968,8 @@ begin
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
-        SQLT_DAT:
+        SQLT_DAT, SQLT_TIMESTAMP:
           Result := GetAsDateTimeValue(SQLVarHolder);
-        SQLT_TIMESTAMP:
-          Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(GetAsDateTimeValue(SQLVarHolder));
         SQLT_BLOB, SQLT_CLOB:
           begin
             Blob := Getblob(ColumnIndex);
@@ -1019,10 +1034,8 @@ begin
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           Result := 0;
-        SQLT_DAT:
-          Result := 0;
-        SQLT_TIMESTAMP:
-          Result := Frac(GetAsDateTimeValue(SQLVarHolder));
+        SQLT_DAT, SQLT_TIMESTAMP:
+          Result := GetAsDateTimeValue(SQLVarHolder);
         SQLT_BLOB, SQLT_CLOB:
           begin
             Blob := Getblob(ColumnIndex);
@@ -1322,10 +1335,7 @@ begin
         end;
       SQLT_DAT, SQLT_DATE:
         { oracle DATE precission - 1 second}
-        begin
-          CurrentVar^.ColType := stTimestamp;
-          inc(DescriptorColumnCount);
-        end;
+         CurrentVar^.ColType := stTimestamp;
       SQLT_TIME, SQLT_TIME_TZ:
         begin
           CurrentVar^.ColType := stTime;
@@ -1383,11 +1393,11 @@ begin
     end
     else
       CurrentVar^.CodePage := High(Word);
-      {set new datatypes if required}
-      DefineOracleVarTypes(CurrentVar, CurrentVar^.ColType, CurrentVar^.oDataSize, CurrentVar^.oDataType);
-      {calc required size of field}
-      Inc(RowSize, CalcBufferSizeOfSQLVar(CurrentVar));
-    end;
+    {set new datatypes if required}
+    DefineOracleVarTypes(CurrentVar, CurrentVar^.ColType, CurrentVar^.oDataSize, CurrentVar^.oDataType);
+    {calc required size of field}
+    Inc(RowSize, CalcBufferSizeOfSQLVar(CurrentVar));
+  end;
   { now let's calc the iters we can use }
   if RowSize > FZBufferSize then
     FIteration := 1
@@ -1410,7 +1420,7 @@ begin
     SetVariableDataEntrys(BufferPos, CurrentVar, FIteration);
     if CurrentVar^.ColType <> stUnknown then //do not BIND unknown types
     begin
-      AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration);
+      AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration); //alloc Desciptors if required
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.DefineByPos(FStmtHandle, CurrentVar^.Define,
           FErrorHandle, I, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,

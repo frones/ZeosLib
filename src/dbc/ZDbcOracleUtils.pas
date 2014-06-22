@@ -147,6 +147,12 @@ type
   end;
   TDesciptorRecArray = array of TDesciptorRec;
 
+type
+  TOraDate = record
+    Cent, Year, Month, Day, Hour, Min, Sec: Byte;
+  end;
+  POraDate = ^TOraDate;
+
 {**
   Allocates memory for Oracle SQL Variables.
   @param Variables a pointer to array of variables.
@@ -164,13 +170,13 @@ procedure AllocateOracleSQLVars(var Variables: PZSQLVars; Count: Integer);
 }
 procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
   var Variables: PZSQLVars; const Iteration: Integer; const Handle: POCIEnv;
-  const ErrorHandle: POCIError; const ConSettings: PZConSettings);
+  const ErrorHandle: POCIError; const {%H-}ConSettings: PZConSettings);
 
 procedure DefineOracleVarTypes(var Variable: PZSQLVar; DataType: TZSQLType;
   DataSize: Integer; OracleType: ub2; DoAllocMem: Boolean = True);
 
 procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
-  Iteration: LongWord);
+  Iteration: NativeUInt); {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
 function CalcBufferSizeOfSQLVar(Const Variable: PZSQLVar): Integer; {$IFDEF WITH_INLINE}inline;{$ENDIF}
 
@@ -202,13 +208,6 @@ procedure UnloadOracleVars(var Variables; const ArrayCount: Integer);
 }
 function ConvertOracleTypeToSQLType(TypeName: string;
   Precision, Scale: Integer; const CtrlsCPType: TZControlsCodePage): TZSQLType;
-
-{**
-  Converts Oracle internal date into TDateTime
-  @param Value a pointer to Oracle internal date.
-  @return a decoded TDateTime value.
-}
-function OraDateToDateTime(Value: PAnsiChar): TDateTime;
 
 {**
   Checks for possible SQL errors.
@@ -299,7 +298,7 @@ function GetOracleUpdateCount(const PlainDriver: IZOraclePlainDriver;
   const Handle: POCIStmt; const ErrorHandle: POCIError): ub4;
 
 function DescribeObject(PlainDriver: IZOraclePlainDriver; Connection: IZConnection;
-  ParamHandle: POCIParam; stmt_handle: POCIHandle; Level: ub2): POCIObject;
+  ParamHandle: POCIParam; {%H-}stmt_handle: POCIHandle; Level: ub2): POCIObject;
 
 procedure OraWriteLob(const PlainDriver: IZOraclePlainDriver; const BlobData: Pointer;
   const ContextHandle: POCISvcCtx; const ErrorHandle: POCIError;
@@ -343,7 +342,7 @@ procedure FreeOracleSQLVars(const PlainDriver: IZOraclePlainDriver;
   const ErrorHandle: POCIError; const ConSettings: PZConSettings);
 var
   I: Integer;
-  J: Word;
+  J: NativeUInt;
   CurrentVar: PZSQLVar;
 
   procedure DisposeObject(Obj: POCIObject);
@@ -382,19 +381,11 @@ begin
         ;//debug, lcOther, 'OCIObjectFree', ConSettings);
         CurrentVar^._Obj := nil;
       end;
-      if CurrentVar^.Data <> nil then
-      begin
-        if CurrentVar^.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
-          for J := 0 to Iteration-1 do
-            PlainDriver.DescriptorFree(PPOCIDescriptor(NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer)))^,
-              OCI_DTYPE_LOB)
-        else
-          if CurrentVar^.TypeCode = SQLT_TIMESTAMP then
-            for J := 0 to Iteration-1 do
-              PlainDriver.DescriptorFree(PPOCIDescriptor(NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer)))^,
-                OCI_DTYPE_TIMESTAMP);
-        CurrentVar^.Data := nil;
-      end;
+      if (CurrentVar^.Data <> nil) and (CurrentVar^.DescriptorType > 0) then
+        for J := 0 to Iteration-1 do
+          PlainDriver.DescriptorFree({%H-}PPOCIDescriptor({%H-}NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer)))^,
+            CurrentVar^.DescriptorType);
+      CurrentVar^.Data := nil;
       CurrentVar^.oIndicatorArray := nil;
       CurrentVar^.oDataSizeArray := nil;
     end;
@@ -412,6 +403,7 @@ begin
     TypeCode := OracleType;
     oDataSize := DataSize;
     AllocMem := DoAllocMem;
+    DescriptorType := 0; //init ?
     case ColType of
       stByte, stShort, stWord, stSmall, stInteger:
         begin
@@ -430,16 +422,25 @@ begin
           Length := SizeOf(Double);
         end;
       stDate, stTime, stTimestamp:
-        begin
-          if OracleType = SQLT_INTERVAL_DS then
-            DescriptorType := OCI_DTYPE_INTERVAL_DS
-          else if OracleType = SQLT_INTERVAL_YM then
-            DescriptorType := OCI_DTYPE_INTERVAL_YM
+        if OracleType = SQLT_DAT then
+          Length := DataSize //reading without conversions!
+        else
+          if OracleType = SQLT_DATE then
+          begin
+            TypeCode := SQLT_DATE;
+            Length := 7;
+          end
           else
-            DescriptorType := OCI_DTYPE_TIMESTAMP;
-          TypeCode := SQLT_TIMESTAMP;
-          Length := SizeOf(POCIDateTime);
-        end;
+          begin
+            if OracleType = SQLT_INTERVAL_DS then
+              DescriptorType := OCI_DTYPE_INTERVAL_DS
+            else if OracleType = SQLT_INTERVAL_YM then
+              DescriptorType := OCI_DTYPE_INTERVAL_YM
+            else
+              DescriptorType := OCI_DTYPE_TIMESTAMP;
+            TypeCode := SQLT_TIMESTAMP;
+            Length := SizeOf(POCIDateTime);
+          end;
       stString, stUnicodeString:
         if OracleType = SQLT_AFC then
           Length := oDataSize
@@ -451,6 +452,8 @@ begin
       stAsciiStream, stUnicodeStream, stBinaryStream, stBytes:
         if (TypeCode in [SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE,SQLT_NTY]) then
         begin
+          if not (OracleType = SQLT_NTY) then
+            DescriptorType := OCI_DTYPE_LOB;
           Length := SizeOf(POCILobLocator);
         end
         else
@@ -471,7 +474,7 @@ begin
 end;
 
 procedure SetVariableDataEntrys(var BufferEntry: PAnsiChar; var Variable: PZSQLVar;
-  Iteration: LongWord);
+  Iteration: NativeUInt);
 begin
   with Variable^ do
   begin
@@ -480,10 +483,10 @@ begin
     oIndicatorArray := Pointer(BufferEntry);
     Inc(BufferEntry, SizeOf(sb2)*Iteration);
   //Step two: set Length Indicators if required
-    oDataSizeArray := Pointer(NativeUInt(BufferEntry) * Byte((TypeCode=SQLT_STR) and (oDataSize > 0))); //either nil or valid address
-    Inc(BufferEntry, Byte((TypeCode=SQLT_STR) and (oDataSize > 0))*SizeOf(ub2)*Iteration); //inc 0 or SizeOf(ub2)
+    oDataSizeArray := {%H-}Pointer({%H-}NativeUInt(BufferEntry) * Byte((TypeCode=SQLT_STR) and (oDataSize > 0))); //either nil or valid address
+    Inc(BufferEntry, Byte((TypeCode=SQLT_STR) and (oDataSize > 0))*NativeUInt(SizeOf(ub2))*Iteration); //inc 0 or SizeOf(ub2)
   //Step three: set data entrys if required
-    Data := Pointer(NativeUInt(BufferEntry) * Byte(AllocMem and (ColType <> stUnknown))); //either nil or valid address
+    Data := {%H-}Pointer({%H-}NativeUInt(BufferEntry) * Byte(AllocMem and (ColType <> stUnknown))); //either nil or valid address
     Inc(BufferEntry, Byte(AllocMem and (ColType <> stUnknown))*Length*Iteration); //inc 0 or Length
   end;
 end;
@@ -501,19 +504,11 @@ procedure AllocDesriptors(const PlainDriver: IZOraclePlainDriver;
   ConnectionHandle: POCIEnv; var Variable: PZSQLVar; Iteration: Integer);
 var
   i: LongWord;
-  hType: Integer;
 begin
-  case Variable^.TypeCode of
-    SQLT_TIMESTAMP:
-      hType := OCI_DTYPE_TIMESTAMP;
-    SQLT_CLOB, SQLT_BLOB, SQLT_BFILEE, SQLT_CFILEE:
-      hType := OCI_DTYPE_LOB;
-    else
-      Exit;
-  end;
-  for i := 0 to Iteration -1 do
-    PlainDriver.DescriptorAlloc(ConnectionHandle,
-      PPOCIDescriptor(NativeUInt(Variable^.Data)+(I*SizeOf(POCIDescriptor)))^, hType, 0, nil)
+  if Variable^.DescriptorType > 0 then
+    for i := 0 to Iteration -1 do
+      PlainDriver.DescriptorAlloc(ConnectionHandle,
+        {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+(I*SizeOf(POCIDescriptor)))^, Variable^.DescriptorType, 0, nil);
 end;
 
 {**
@@ -736,23 +731,6 @@ begin
       stString: Result := stUnicodeString;
       stAsciiStream: if not (TypeName = 'LONG') then Result := stUnicodeStream; //fix: http://zeos.firmos.at/viewtopic.php?t=3530
     end;
-end;
-
-{**
-  Converts Oracle internal date into TDateTime
-  @param Value a pointer to Oracle internal date.
-  @return a decoded TDateTime value.
-}
-function OraDateToDateTime(Value: PAnsiChar): TDateTime;
-type
-  TOraDate = array[1..7] of Byte;
-  POraDate = ^TOraDate;
-var
-  Ptr: POraDate;
-begin
-  Ptr := POraDate(Value);
-  Result := EncodeDate((Ptr[1] - 100) * 100 + Ptr[2] - 100, Ptr[3], Ptr[4]) +
-    EncodeTime(Ptr[5]-1, Ptr[6]-1, Ptr[7]-1, 0);
 end;
 
 {**
@@ -1280,4 +1258,5 @@ end;
 
 
 end.
+
 
