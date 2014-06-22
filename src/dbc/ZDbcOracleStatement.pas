@@ -251,7 +251,6 @@ var
   Status: Integer;
   CharRec: TZCharRec;
   OCIData: Pointer;
-  DataEntry: PAnsiChar; //nice to increment positions
   {using mem entry of OCIData is faster then casting}
   BooleanArray: TBooleanDynArray absolute OCIData;
   ByteArray: TByteDynArray absolute OCIData;
@@ -1313,7 +1312,7 @@ end;
 
 
 procedure TZOracleCallableStatement.UnPrepare;
-const RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
+const {%H-}RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
   try
     {if Self.FServerStmtCache then
