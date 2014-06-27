@@ -375,8 +375,11 @@ end;
     value returned is <code>null</code>
 }
 function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+var
+  Len: ULong;
 begin
-  Result.P := GetBufferAndLength(ColumnIndex, Result{%H-}.Len);
+  Result.P := GetBufferAndLength(ColumnIndex, Len);
+  Result.Len := Len;
 end;
 
 {**

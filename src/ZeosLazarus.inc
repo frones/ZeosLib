@@ -145,7 +145,5 @@
     {$if lcl_fullversion>=1000000} //Lazarus >= 1.0.0 with delphi fix.
       {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
     {$ifend}
-  {$ELSE}
-    {$ERROR lcl_fullversion isn't defined!}
   {$ifend}
 {$ENDIF}
