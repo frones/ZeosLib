@@ -97,7 +97,7 @@ type
   PWord                 = ^Word; // M.A.
   {$ENDIF}
   ULong                 = LongWord;
-  ULongLong             = UInt64; //delphi don´t have Unsigned Int64 type until XE2 but integer constants with 20 digits are supported since D2005. Ideas??
+  ULongLong             = UInt64; //delphi don't have Unsigned Int64 type until XE2 but integer constants with 20 digits are supported since D2005. Ideas??
 {$ENDIF}
   PULong                = ^ULong;
   PULongLong            = ^ULongLong;
