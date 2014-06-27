@@ -382,7 +382,8 @@ begin
     end;
   end;
   CheckOracleError(GetPlainDriver, FErrorHandle,
-    GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ConSettings^.ClientCodePage^.CharWidth),
+    GetPlainDriver.NlsNumericInfoGet(FHandle, FErrorHandle,
+      @ConSettings^.ClientCodePage^.CharWidth, OCI_NLS_CHARSET_MAXBYTESZ),
     lcConnect, LogMessage, ConSettings);
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
