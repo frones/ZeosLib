@@ -79,7 +79,7 @@ type
     FZBufferSize: Integer; //max size for multiple rows. If Row > Value ignore it!
     FRowsBuffer: TByteDynArray; //Buffer for multiple rows if possible which is reallocated or freed by IDE -> mem leak save!
     function GetSQLVarHolder(ColumnIndex: Integer): PZSQLVar; {$IFDEF WITH_INLINE}inline;{$ENDIF}
-    function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime; //{$IFDEF WITH_INLINE}inline;{$ENDIF}
+    function GetAsDateTimeValue(const SQLVarHolder: PZSQLVar): TDateTime; {$IFDEF WITH_INLINE}inline;{$ENDIF}
     function GetFinalObject(Obj: POCIObject): POCIObject;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
