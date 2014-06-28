@@ -487,13 +487,13 @@ begin
           if ConSettings.ClientCodePage.Encoding = ceUTF8 then
           begin
             ConSettings.CPType := {$IFDEF WITH_WIDEFIELDS}cCP_UTF16{$ELSE}cCP_UTF8{$ENDIF};
-            ConSettings.CTRL_CP := zCP_UTF8;
+            ConSettings.CTRL_CP := 65001;
             ConSettings.AutoEncode := True;
           end
           else
           begin
             ConSettings.CPType := cCP_UTF8;
-            ConSettings.CTRL_CP := zCP_UTF8;
+            ConSettings.CTRL_CP := 65001;
             ConSettings.AutoEncode := False;
           end;
           {$IFEND}
