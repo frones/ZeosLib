@@ -290,14 +290,6 @@ function ZWideRecToString(const Value: TZWideRec; const CP: Word): String; {$IF 
 
 {converter functions for the String-types}
 {$IFDEF WITH_LCONVENCODING}
-  {$MACRO ON}
-  {$IF declared(lcl_fullversion)}
-    {$if defined(FPC) AND (lcl_fullversion>=1000000)} //Lazarus >= 1.0.0 with delphi fix.
-      {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
-    {$ifend}
-  {$ELSE}
-    {$ERROR lcl_fullversion isn't defined!}
-  {$ifend}
 function ZConvertRaw28591ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
 function ZConvertUTF8ToRaw28591(Const Src: UTF8String; const CP: Word): RawByteString;
 function ZConvertRaw28592ToUTF8(const Src: RawByteString; const CP: Word): UTF8String;
