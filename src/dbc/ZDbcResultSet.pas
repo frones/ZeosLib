@@ -983,7 +983,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := 0;
+  Result := GetSmall(ColumnIndex);
 end;
 
 {**

@@ -306,6 +306,7 @@
     {$UNDEF WITH_INLINE}          // D7 doesn't support inline declarations
   {$ENDIF}
   {$DEFINE WITH_MILLISECONDOFTHEYEAR_BUG} //D7-D005 Bug -> a Int64 Cast of SecondOfTheYear(AValue) is missing
+  {$DEFINE WITH_UINT64_C1118_ERROR} //D7 has proplems to assign code constants for UInt64
 {$ENDIF}
 
 {$IFDEF DELPHI16_UP}
