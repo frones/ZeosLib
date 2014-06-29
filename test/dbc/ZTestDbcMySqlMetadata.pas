@@ -86,7 +86,7 @@ type
 
 implementation
 uses
-  ZTestCase;
+  ZTestCase, ZDbcMetadata;
 
 { TZTestMySqlMetadataCase }
 
@@ -128,14 +128,14 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetBestRowIdentifier('', '', 'people', 0, false);
-  CheckEquals(1, ResultSet.FindColumn('SCOPE'));
-  CheckEquals(2, ResultSet.FindColumn('COLUMN_NAME'));
-  CheckEquals(3, ResultSet.FindColumn('DATA_TYPE'));
-  CheckEquals(4, ResultSet.FindColumn('TYPE_NAME'));
-  CheckEquals(5, ResultSet.FindColumn('COLUMN_SIZE'));
-  CheckEquals(6, ResultSet.FindColumn('BUFFER_LENGTH'));
-  CheckEquals(7, ResultSet.FindColumn('DECIMAL_DIGITS'));
-  CheckEquals(8, ResultSet.FindColumn('PSEUDO_COLUMN'));
+  CheckEquals(BestRowIdentScopeIndex, ResultSet.FindColumn('SCOPE'));
+  CheckEquals(BestRowIdentColNameIndex, ResultSet.FindColumn('COLUMN_NAME'));
+  CheckEquals(BestRowIdentDataTypeIndex, ResultSet.FindColumn('DATA_TYPE'));
+  CheckEquals(BestRowIdentTypeNameIndex, ResultSet.FindColumn('TYPE_NAME'));
+  CheckEquals(BestRowIdentColSizeIndex, ResultSet.FindColumn('COLUMN_SIZE'));
+  CheckEquals(BestRowIdentBufLengthIndex, ResultSet.FindColumn('BUFFER_LENGTH'));
+  CheckEquals(BestRowIdentDecimalDigitsIndex, ResultSet.FindColumn('DECIMAL_DIGITS'));
+  CheckEquals(BestRowIdentPseudoColumnIndex, ResultSet.FindColumn('PSEUDO_COLUMN'));
 
   ResultSet.Next;
   CheckEquals('2', ResultSet.GetStringByName('SCOPE'));
@@ -158,11 +158,11 @@ var
 begin
   DBFound := False;
   ResultSet := Metadata.GetCatalogs;
-  CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
 
   while ResultSet.Next do
   begin
-    CatalogName := ResultSet.GetString(1);
+    CatalogName := ResultSet.GetString(CatalogNameIndex);
     if CatalogName = Connection.GetMetadata.NormalizePatternCase(ConnectionConfig.Database) then
       DBFound := True;
   end;
@@ -184,14 +184,14 @@ begin
   if SkipForReason(srNonZeos) then Exit;
 
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
-  CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
-  CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
-  CheckEquals(3, ResultSet.FindColumn('TABLE_NAME'));
-  CheckEquals(4, ResultSet.FindColumn('COLUMN_NAME'));
-  CheckEquals(5, ResultSet.FindColumn('GRANTOR'));
-  CheckEquals(6, ResultSet.FindColumn('GRANTEE'));
-  CheckEquals(7, ResultSet.FindColumn('PRIVILEGE'));
-  CheckEquals(8, ResultSet.FindColumn('IS_GRANTABLE'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
+  CheckEquals(SchemaNameIndex, ResultSet.FindColumn('TABLE_SCHEM'));
+  CheckEquals(TableNameIndex, ResultSet.FindColumn('TABLE_NAME'));
+  CheckEquals(ColumnNameIndex, ResultSet.FindColumn('COLUMN_NAME'));
+  CheckEquals(TableColPrivGrantorIndex, ResultSet.FindColumn('GRANTOR'));
+  CheckEquals(TableColPrivGranteeIndex, ResultSet.FindColumn('GRANTEE'));
+  CheckEquals(TableColPrivPrivilegeIndex, ResultSet.FindColumn('PRIVILEGE'));
+  CheckEquals(TableColPrivIsGrantableIndex, ResultSet.FindColumn('IS_GRANTABLE'));
 
   CheckEquals(True, ResultSet.Next);
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
@@ -225,24 +225,24 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetColumns('', '', 'people', 'p_r%');
-  CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
-  CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
-  CheckEquals(3, ResultSet.FindColumn('TABLE_NAME'));
-  CheckEquals(4, ResultSet.FindColumn('COLUMN_NAME'));
-  CheckEquals(5, ResultSet.FindColumn('DATA_TYPE'));
-  CheckEquals(6, ResultSet.FindColumn('TYPE_NAME'));
-  CheckEquals(7, ResultSet.FindColumn('COLUMN_SIZE'));
-  CheckEquals(8, ResultSet.FindColumn('BUFFER_LENGTH'));
-  CheckEquals(9, ResultSet.FindColumn('DECIMAL_DIGITS'));
-  CheckEquals(10, ResultSet.FindColumn('NUM_PREC_RADIX'));
-  CheckEquals(11, ResultSet.FindColumn('NULLABLE'));
-  CheckEquals(12, ResultSet.FindColumn('REMARKS'));
-  CheckEquals(13, ResultSet.FindColumn('COLUMN_DEF'));
-  CheckEquals(14, ResultSet.FindColumn('SQL_DATA_TYPE'));
-  CheckEquals(15, ResultSet.FindColumn('SQL_DATETIME_SUB'));
-  CheckEquals(16, ResultSet.FindColumn('CHAR_OCTET_LENGTH'));
-  CheckEquals(17, ResultSet.FindColumn('ORDINAL_POSITION'));
-  CheckEquals(18, ResultSet.FindColumn('IS_NULLABLE'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
+  CheckEquals(SchemaNameIndex, ResultSet.FindColumn('TABLE_SCHEM'));
+  CheckEquals(TableNameIndex, ResultSet.FindColumn('TABLE_NAME'));
+  CheckEquals(ColumnNameIndex, ResultSet.FindColumn('COLUMN_NAME'));
+  CheckEquals(TableColColumnTypeIndex, ResultSet.FindColumn('DATA_TYPE'));
+  CheckEquals(TableColColumnTypeNameIndex, ResultSet.FindColumn('TYPE_NAME'));
+  CheckEquals(TableColColumnSizeIndex, ResultSet.FindColumn('COLUMN_SIZE'));
+  CheckEquals(TableColColumnBufLengthIndex, ResultSet.FindColumn('BUFFER_LENGTH'));
+  CheckEquals(TableColColumnDecimalDigitsIndex, ResultSet.FindColumn('DECIMAL_DIGITS'));
+  CheckEquals(TableColColumnNumPrecRadixIndex, ResultSet.FindColumn('NUM_PREC_RADIX'));
+  CheckEquals(TableColColumnNullableIndex, ResultSet.FindColumn('NULLABLE'));
+  CheckEquals(TableColColumnRemarksIndex, ResultSet.FindColumn('REMARKS'));
+  CheckEquals(TableColColumnColDefIndex, ResultSet.FindColumn('COLUMN_DEF'));
+  CheckEquals(TableColColumnSQLDataTypeIndex, ResultSet.FindColumn('SQL_DATA_TYPE'));
+  CheckEquals(TableColColumnSQLDateTimeSubIndex, ResultSet.FindColumn('SQL_DATETIME_SUB'));
+  CheckEquals(TableColColumnCharOctetLengthIndex, ResultSet.FindColumn('CHAR_OCTET_LENGTH'));
+  CheckEquals(TableColColumnOrdPosIndex, ResultSet.FindColumn('ORDINAL_POSITION'));
+  CheckEquals(TableColColumnIsNullableIndex, ResultSet.FindColumn('IS_NULLABLE'));
 
   ResultSet.Next;
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
@@ -299,19 +299,19 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetProcedureColumns('', '', '', '');
-  CheckEquals(1, ResultSet.FindColumn('PROCEDURE_CAT'));
-  CheckEquals(2, ResultSet.FindColumn('PROCEDURE_SCHEM'));
-  CheckEquals(3, ResultSet.FindColumn('PROCEDURE_NAME'));
-  CheckEquals(4, ResultSet.FindColumn('COLUMN_NAME'));
-  CheckEquals(5, ResultSet.FindColumn('COLUMN_TYPE'));
-  CheckEquals(6, ResultSet.FindColumn('DATA_TYPE'));
-  CheckEquals(7, ResultSet.FindColumn('TYPE_NAME'));
-  CheckEquals(8, ResultSet.FindColumn('PRECISION'));
-  CheckEquals(9, ResultSet.FindColumn('LENGTH'));
-  CheckEquals(10, ResultSet.FindColumn('SCALE'));
-  CheckEquals(11, ResultSet.FindColumn('RADIX'));
-  CheckEquals(12, ResultSet.FindColumn('NULLABLE'));
-  CheckEquals(13, ResultSet.FindColumn('REMARKS'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('PROCEDURE_CAT'));
+  CheckEquals(SchemaNameIndex, ResultSet.FindColumn('PROCEDURE_SCHEM'));
+  CheckEquals(ProcColProcedureNameIndex, ResultSet.FindColumn('PROCEDURE_NAME'));
+  CheckEquals(ProcColColumnNameIndex, ResultSet.FindColumn('COLUMN_NAME'));
+  CheckEquals(ProcColColumnTypeIndex, ResultSet.FindColumn('COLUMN_TYPE'));
+  CheckEquals(ProcColDataTypeIndex, ResultSet.FindColumn('DATA_TYPE'));
+  CheckEquals(ProcColTypeNameIndex, ResultSet.FindColumn('TYPE_NAME'));
+  CheckEquals(ProcColPrecisionIndex, ResultSet.FindColumn('PRECISION'));
+  CheckEquals(ProcColLengthIndex, ResultSet.FindColumn('LENGTH'));
+  CheckEquals(ProcColScaleIndex, ResultSet.FindColumn('SCALE'));
+  CheckEquals(ProcColRadixIndex, ResultSet.FindColumn('RADIX'));
+  CheckEquals(ProcColNullableIndex, ResultSet.FindColumn('NULLABLE'));
+  CheckEquals(ProcColRemarksIndex, ResultSet.FindColumn('REMARKS'));
   Check(ResultSet.Next);
   ResultSet.Close;
   ResultSet := nil;
@@ -325,11 +325,11 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetProcedures('', '', '');
-  CheckEquals(1, ResultSet.FindColumn('PROCEDURE_CAT'));
-  CheckEquals(2, ResultSet.FindColumn('PROCEDURE_SCHEM'));
-  CheckEquals(3, ResultSet.FindColumn('PROCEDURE_NAME'));
-  CheckEquals(7, ResultSet.FindColumn('REMARKS'));
-  CheckEquals(8, ResultSet.FindColumn('PROCEDURE_TYPE'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('PROCEDURE_CAT'));
+  CheckEquals(SchemaNameIndex, ResultSet.FindColumn('PROCEDURE_SCHEM'));
+  CheckEquals(ProcedureNameIndex, ResultSet.FindColumn('PROCEDURE_NAME'));
+  CheckEquals(ProcedureRemarksIndex, ResultSet.FindColumn('REMARKS'));
+  CheckEquals(ProcedureTypeIndex, ResultSet.FindColumn('PROCEDURE_TYPE'));
   Check(ResultSet.Next);
   ResultSet.Close;
   ResultSet := nil;
@@ -343,7 +343,7 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetSchemas;
-  CheckEquals(1, ResultSet.FindColumn('TABLE_SCHEM'));
+  CheckEquals(SchemaColumnsTableSchemaIndex, ResultSet.FindColumn('TABLE_SCHEM'));
   Check(not ResultSet.Next);
   ResultSet.Close;
   ResultSet := nil;
@@ -365,13 +365,13 @@ begin
   if SkipForReason(srNonZeos) then Exit;
 
   ResultSet := Metadata.GetTablePrivileges('', '', 'people');
-  CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
-  CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
-  CheckEquals(3, ResultSet.FindColumn('TABLE_NAME'));
-  CheckEquals(4, ResultSet.FindColumn('GRANTOR'));
-  CheckEquals(5, ResultSet.FindColumn('GRANTEE'));
-  CheckEquals(6, ResultSet.FindColumn('PRIVILEGE'));
-  CheckEquals(7, ResultSet.FindColumn('IS_GRANTABLE'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
+  CheckEquals(SchemaNameIndex, ResultSet.FindColumn('TABLE_SCHEM'));
+  CheckEquals(TableNameIndex, ResultSet.FindColumn('TABLE_NAME'));
+  CheckEquals(TablePrivGrantorIndex, ResultSet.FindColumn('GRANTOR'));
+  CheckEquals(TablePrivGranteeIndex, ResultSet.FindColumn('GRANTEE'));
+  CheckEquals(TablePrivPrivilegeIndex, ResultSet.FindColumn('PRIVILEGE'));
+  CheckEquals(TablePrivIsGrantableIndex, ResultSet.FindColumn('IS_GRANTABLE'));
 
   Check(ResultSet.Next);
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
@@ -393,11 +393,11 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetTables('', '', 'people', nil);
-  CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
-  CheckEquals(2, ResultSet.FindColumn('TABLE_SCHEM'));
-  CheckEquals(3, ResultSet.FindColumn('TABLE_NAME'));
-  CheckEquals(4, ResultSet.FindColumn('TABLE_TYPE'));
-  CheckEquals(5, ResultSet.FindColumn('REMARKS'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
+  CheckEquals(SchemaNameIndex, ResultSet.FindColumn('TABLE_SCHEM'));
+  CheckEquals(TableNameIndex, ResultSet.FindColumn('TABLE_NAME'));
+  CheckEquals(TableColumnsSQLType, ResultSet.FindColumn('TABLE_TYPE'));
+  CheckEquals(TableColumnsRemarks, ResultSet.FindColumn('REMARKS'));
 
   ResultSet.Next;
   CheckEquals(uppercase(Database), uppercase(ResultSet.GetStringByName('TABLE_CAT')));
@@ -417,7 +417,7 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetTableTypes;
-  CheckEquals(1, ResultSet.FindColumn('TABLE_TYPE'));
+  CheckEquals(TableTypeColumnTableTypeIndex, ResultSet.FindColumn('TABLE_TYPE'));
 
   ResultSet.Next;
   CheckEquals('TABLE', ResultSet.GetStringByName('TABLE_TYPE'));

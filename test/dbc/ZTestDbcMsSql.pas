@@ -127,6 +127,11 @@ end;
   Runs a test for MySQL DBC PreparedStatement.
 }
 procedure TZTestDbcMsSQLCase.TestPreparedStatement;
+const
+  dep_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  dep_name_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  dep_shname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  dep_address_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZPreparedStatement;
   Stream: TStream;
@@ -136,12 +141,12 @@ begin
     + ' VALUES(?,?,?,?)');
   CheckNotNull(Statement);
 
-  Statement.SetInt(1, TEST_ROW_ID);
-  Statement.SetString(2, 'xyz');
-  Statement.SetNull(3, stString);
+  Statement.SetInt(dep_id_index, TEST_ROW_ID);
+  Statement.SetString(dep_name_index, 'xyz');
+  Statement.SetNull(dep_shname_index, stString);
   Stream := TStringStream.Create('abc'#10'def'#13'hgi');
   try
-    Statement.SetAsciiStream(4, Stream);
+    Statement.SetAsciiStream(dep_address_index, Stream);
   finally
     Stream.Free;
   end;
@@ -151,7 +156,7 @@ begin
     'DELETE FROM department WHERE dep_id=?');
   CheckNotNull(Statement);
 
-  Statement.SetInt(1, TEST_ROW_ID);
+  Statement.SetInt(dep_id_index, TEST_ROW_ID);
   CheckEquals(1, Statement.ExecuteUpdatePrepared);
   Statement.ExecutePrepared;
   CheckEquals(0, Statement.GetUpdateCount);
@@ -222,6 +227,14 @@ end;
   Runs a test for MySQL default values.
 }
 procedure TZTestDbcMsSQLCase.TestDefaultValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -237,17 +250,17 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 1);
+  ResultSet.UpdateInt(D_ID, 1);
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(5), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(6), 3);
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
   CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
+    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
   ResultSet.DeleteRow;
 
@@ -259,6 +272,11 @@ end;
   Runs a test for Interbase stored procedures.
 }
 procedure TZTestDbcMSSqlCase.TestStoredprocedures;
+const
+  RETURN_VALUE_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  P1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  R1_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  eq_name_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
@@ -267,11 +285,11 @@ begin
     'procedure1', nil);
   with CallableStatement do
   begin
-    RegisterOutParameter(1, Ord(stInteger)); //stupid RETURN_VALUE
-    SetInt(2, 12345);
-    RegisterOutParameter(3, Ord(stInteger));
+    RegisterOutParameter(RETURN_VALUE_Index, Ord(stInteger)); //stupid RETURN_VALUE
+    SetInt(P1_Index, 12345);
+    RegisterOutParameter(R1_Index, Ord(stInteger));
     ExecutePrepared;
-    CheckEquals(12346, GetInt(2));
+    CheckEquals(12346, GetInt(R1_Index));
   end;
   CallableStatement.Close;
 
@@ -281,13 +299,13 @@ begin
   with ResultSet do
   begin
     CheckEquals(True, Next);
-    CheckEquals('Computer', GetString(1));
+    CheckEquals('Computer', GetString(eq_name_Index));
     CheckEquals(True, Next);
-    CheckEquals('Laboratoy', GetString(1));
+    CheckEquals('Laboratoy', GetString(eq_name_Index));
     CheckEquals(True, Next);
-    CheckEquals('Radiostation', GetString(1));
+    CheckEquals('Radiostation', GetString(eq_name_Index));
     CheckEquals(True, Next);
-    CheckEquals('Volvo', GetString(1));
+    CheckEquals('Volvo', GetString(eq_name_Index));
     Close;
   end;
   CallableStatement.Close;

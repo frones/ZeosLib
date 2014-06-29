@@ -954,6 +954,8 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetTables(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const Types: TStringDynArray): IZResultSet;
+const
+  TABLES_TABLE_NAME_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   LCatalog, LTableNamePattern: string;
 begin
@@ -969,9 +971,9 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateString(1, LCatalog);
-        Result.UpdateString(3, GetString(1));
-        Result.UpdateString(4, 'TABLE');
+        Result.UpdateString(CatalogNameIndex, LCatalog);
+        Result.UpdateString(TableNameIndex, GetString(TABLES_TABLE_NAME_Index));
+        Result.UpdateString(TableColumnsSQLType, 'TABLE');
         Result.InsertRow;
       end;
       Close;
@@ -989,9 +991,9 @@ begin
              IC.Quote(LTableNamePattern)])).Next then
           begin
             Result.MoveToInsertRow;
-            Result.UpdateString(1, LCatalog);
-            Result.UpdateString(3, LTableNamePattern);
-            Result.UpdateString(4, 'TABLE');
+            Result.UpdateString(CatalogNameIndex, LCatalog);
+            Result.UpdateString(TableNameIndex, LTableNamePattern);
+            Result.UpdateString(TableColumnsSQLType, 'TABLE');
             Result.InsertRow;
           end;
         finally
@@ -1025,7 +1027,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateString(1, GetString(1));
+        Result.UpdateString(CatalogNameIndex, GetString(FirstDbcIndex));
         Result.InsertRow;
       end;
       Close;
@@ -1051,7 +1053,7 @@ begin
     Result:=inherited UncachedGetTableTypes;
 
     Result.MoveToInsertRow;
-    Result.UpdateString(1, 'TABLE');
+    Result.UpdateString(TableTypeColumnTableTypeIndex, 'TABLE');
     Result.InsertRow;
 end;
 
@@ -1123,10 +1125,9 @@ var
   TableNameList: TStrings;
   TableNameLength: Integer;
   ColumnIndexes : Array[1..6] of integer;
-  Res : IZResultset;
-
 begin
-    Res:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
+    Result := inherited UncachedGetColumns(Catalog, SchemaPattern,
+      TableNamePattern, ColumnNamePattern);
 
     GetCatalogAndNamePattern(Catalog, SchemaPattern, ColumnNamePattern,
       TempCatalog, TempColumnNamePattern);
@@ -1138,7 +1139,7 @@ begin
       begin
         while Next do
         begin
-          TableNameList.Add(GetString(3)); //TABLE_NAME
+          TableNameList.Add(GetString(TableNameIndex)); //TABLE_NAME
           TableNameLength := Max(TableNameLength, Length(TableNameList[TableNameList.Count - 1]));
         end;
         Close;
@@ -1164,41 +1165,41 @@ begin
           while Next do
           begin
             {initialise some variables}
-            Res.MoveToInsertRow;
-            Res.UpdateString(1, TempCatalog);
-            Res.UpdateString(2, '');
-            Res.UpdateString(3, TempTableNamePattern) ;
-            Res.UpdateString(4, GetString(ColumnIndexes[1]));
+            Result.MoveToInsertRow;
+            Result.UpdateString(CatalogNameIndex, TempCatalog);
+            Result.UpdateString(SchemaNameIndex, '');
+            Result.UpdateString(TableNameIndex, TempTableNamePattern) ;
+            Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(ColumnIndexes[1]));
 
             ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
               ConSettings, TypeName,
               TypeInfoSecond, MySQLType, ColumnSize, ColumnDecimals);
-            Res.UpdateInt(5, Ord(MySQLType));
-            Res.UpdateString(6, TypeName);
-            Res.UpdateInt(7, ColumnSize);
-            Res.UpdateInt(8, MAXBUF);
-            Res.UpdateInt(9, ColumnDecimals);
-            Res.UpdateNull(10);
+            Result.UpdateInt(TableColColumnTypeIndex, Ord(MySQLType));
+            Result.UpdateString(TableColColumnTypeNameIndex, TypeName);
+            Result.UpdateInt(TableColColumnSizeIndex, ColumnSize);
+            Result.UpdateInt(TableColColumnBufLengthIndex, MAXBUF);
+            Result.UpdateInt(TableColColumnDecimalDigitsIndex, ColumnDecimals);
+            Result.UpdateNull(TableColColumnNumPrecRadixIndex);
 
             { Sets nullable fields. }
             Nullable := GetString(ColumnIndexes[3]);
             if Nullable <> '' then
               if Nullable = 'YES' then
               begin
-                Res.UpdateInt(11, Ord(ntNullable));
-                Res.UpdateString(18, 'YES');
+                Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+                Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
               end
               else
               begin
-                Res.UpdateInt(11, Ord(ntNoNulls));
-                Res.UpdateString(18, 'NO');
+                Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
+                Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
               end
             else
             begin
-              Res.UpdateInt(11, 0);
-              Res.UpdateString(18, 'NO');
+              Result.UpdateInt(TableColColumnNullableIndex, 0);
+              Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
             end;
-            Res.UpdateString(12, GetString(ColumnIndexes[4]));
+            Result.UpdateAnsiRec(TableColColumnRemarksIndex, GetAnsiRec(ColumnIndexes[4]));
             // MySQL is a bit bizarre.
             if IsNull(ColumnIndexes[5]) then
             begin
@@ -1261,22 +1262,23 @@ begin
                   DefaultValue := '0';
               end;
             end;
-            Res.UpdateString(13, DefaultValue);
-            Res.UpdateNull(14);
-            Res.UpdateNull(15);
-            Res.UpdateInt(17, OrdPosition);
+            Result.UpdateString(TableColColumnColDefIndex, DefaultValue);
+            //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
+            //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
+            //Result.UpdateNull(TableColColumnCharOctetLengthIndex);
+            Result.UpdateInt(TableColColumnOrdPosIndex, OrdPosition);
 
-            Res.UpdateBoolean(19, //AUTO_INCREMENT
+            Result.UpdateBoolean(TableColColumnAutoIncIndex, //AUTO_INCREMENT
               Trim(LowerCase(GetString(ColumnIndexes[4]))) = 'auto_increment'); //Extra
-            Res.UpdateBoolean(20, //CASE_SENSITIVE
+            Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, //CASE_SENSITIVE
               IC.IsCaseSensitive(GetString(ColumnIndexes[1]))); //Field
-            Res.UpdateBoolean(21, True);  //SEARCHABLE
-            Res.UpdateBoolean(22, True);  //WRITABLE
-            Res.UpdateBoolean(23, True);  //DEFINITELYWRITABLE
-            Res.UpdateBoolean(24, False); //READONLY
+            Result.UpdateBoolean(TableColColumnSearchableIndex, True);  //SEARCHABLE
+            Result.UpdateBoolean(TableColColumnWritableIndex, True);  //WRITABLE
+            Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);  //DEFINITELYWRITABLE
+            Result.UpdateBoolean(TableColColumnReadonlyIndex, False); //READONLY
 
             Inc(OrdPosition);
-            Res.InsertRow;
+            Result.InsertRow;
           end;
           Close;
         end;
@@ -1284,7 +1286,6 @@ begin
     finally
       TableNameList.Free;
     end;
-    Result := Res;
 end;
 
 {**
@@ -1536,17 +1537,17 @@ begin
       ColumnIndexes[3] := FindColumn('Seq_in_index');
       while Next do
       begin
-        KeyType := UpperCase(String(GetString(ColumnIndexes[1])));
+        KeyType := UpperCase(GetString(ColumnIndexes[1]));
         KeyType := Copy(KeyType, 1, 3);
         if KeyType = 'PRI' then
         begin
           Result.MoveToInsertRow;
-          Result.UpdateString(1, LCatalog);
-          Result.UpdateString(2, '');
-          Result.UpdateString(3, Table);
-          Result.UpdateString(4, GetString(ColumnIndexes[2]));
-          Result.UpdateString(5, GetString(ColumnIndexes[3]));
-          Result.UpdateNull(6);
+          Result.UpdateString(CatalogNameIndex, LCatalog);
+          Result.UpdateString(SchemaNameIndex, '');
+          Result.UpdateString(TableNameIndex, Table);
+          Result.UpdateAnsiRec(PrimaryKeyColumnNameIndex, GetAnsiRec(ColumnIndexes[2]));
+          Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(ColumnIndexes[3]));
+          Result.UpdateNull(PrimaryKeyPKNameIndex);
           Result.InsertRow;
         end;
       end;
@@ -1660,32 +1661,30 @@ begin
               KeySeq := 0;
 
               if CommentList.Count > 4 then
-              begin
                 for I := 0 to CommentList.Count - 1 do
                 begin
                   Keys := CommentList.Strings[1];
                   Result.MoveToInsertRow;
                   PutSplitString(KeyList, Keys, '() /');
 
-                  Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
-                  Result.UpdateNull(2); // PKTABLE_SCHEM
-                  Result.UpdateString(3, KeyList.Strings[3]); // PKTABLE_NAME
-                  Result.UpdateString(4, KeyList.Strings[4]); // PKCOLUMN_NAME
-                  Result.UpdateString(5, LCatalog);
-                  Result.UpdateNull(6);// FKTABLE_SCHEM
-                  Result.UpdateString(7, Table); // FKTABLE_NAME
-                  Result.UpdateString(8, KeyList.Strings[0]); // FKCOLUMN_NAME
+                  Result.UpdateString(ImportedKeyColPKTableCatalogIndex, KeyList.Strings[2]);
+                  //Result.UpdateNull(ImportedKeyColPKTableSchemaIndex);
+                  Result.UpdateString(ImportedKeyColPKTableNameIndex, KeyList.Strings[3]);
+                  Result.UpdateString(ImportedKeyColPKColumnNameIndex, KeyList.Strings[4]);
+                  Result.UpdateString(ImportedKeyColFKTableCatalogIndex, LCatalog);
+                  //Result.UpdateNull(ImportedKeyColFKTableSchemaIndex);
+                  Result.UpdateString(ImportedKeyColFKTableNameIndex, Table);
+                  Result.UpdateString(ImportedKeyColFKColumnNameIndex, KeyList.Strings[0]);
 
-                  Result.UpdateInt(9, KeySeq); // KEY_SEQ
-                  Result.UpdateInt(10, Ord(ikSetDefault)); // UPDATE_RULE
-                  Result.UpdateInt(11, Ord(ikSetDefault)); // DELETE_RULE
-                  Result.UpdateNull(12); // FK_NAME
-                  Result.UpdateNull(13); // PK_NAME
-                  Result.UpdateInt(14, Ord(ikSetDefault)); // DEFERRABILITY
+                  Result.UpdateInt(ImportedKeyColKeySeqIndex, KeySeq);
+                  Result.UpdateInt(ImportedKeyColUpdateRuleIndex, Ord(ikSetDefault));
+                  Result.UpdateInt(ImportedKeyColDeleteRuleIndex, Ord(ikSetDefault));
+                  //Result.UpdateNull(ImportedKeyColFKNameIndex);
+                  //Result.UpdateNull(ImportedKeyColPKNameIndex);
+                  Result.UpdateInt(ImportedKeyColDeferrabilityIndex, Ord(ikSetDefault));
                   Inc(KeySeq);
                   Result.InsertRow;
                 end;
-              end;
             end;
           end;
         end;
@@ -1810,21 +1809,20 @@ begin
                   Result.MoveToInsertRow;
                   PutSplitString(KeyList, Keys, '() /');
 
-                  Result.UpdateString(5, LCatalog);
-                  Result.UpdateNull(6);// FKTABLE_SCHEM
-                  Result.UpdateString(7, GetString(ColumnIndexes[3])); // FKTABLE_NAME
-                  Result.UpdateString(8, KeyList.Strings[0]); // PKTABLE_CAT
-
-                  Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
-                  Result.UpdateNull(2); // PKTABLE_SCHEM
-                  Result.UpdateString(3, Table); // PKTABLE_NAME
-                  Result.UpdateInt(9, KeySeq); // KEY_SEQ
-
-                  Result.UpdateInt(10, Ord(ikSetDefault)); // UPDATE_RULE
-                  Result.UpdateInt(11, Ord(ikSetDefault)); // DELETE_RULE
-                  Result.UpdateNull(12); // FK_NAME
-                  Result.UpdateNull(13); // PK_NAME
-                  Result.UpdateInt(14, Ord(ikSetDefault)); // DEFERRABILITY
+                  Result.UpdateString(ExportedKeyColPKTableCatalogIndex, KeyList.Strings[2]);
+                  //Result.UpdateNull(ExportedKeyColPKTableSchemaIndex);
+                  Result.UpdateString(ExportedKeyColPKTableNameIndex, Table);
+                  //Result.UpdateNull(ExportedKeyColPKColumnNameIndex);
+                  Result.UpdateString(ExportedKeyColFKTableCatalogIndex, LCatalog);
+                  //Result.UpdateNull(ExportedKeyColFKTableSchemaIndex);
+                  Result.UpdateAnsiRec(ExportedKeyColFKTableNameIndex, GetAnsiRec(ColumnIndexes[3]));
+                  Result.UpdateString(ExportedKeyColFKColumnNameIndex, KeyList.Strings[0]);
+                  Result.UpdateInt(ExportedKeyColKeySeqIndex, KeySeq);
+                  Result.UpdateInt(ExportedKeyColUpdateRuleIndex, Ord(ikSetDefault));
+                  Result.UpdateInt(ExportedKeyColDeleteRuleIndex, Ord(ikSetDefault));
+                  //Result.UpdateNull(ExportedKeyColFKNameIndex);
+                  //Result.UpdateNull(ExportedKeyColPKNameIndex);
+                  Result.UpdateInt(ExportedKeyColDeferrabilityIndex, Ord(ikSetDefault));
                   Inc(KeySeq);
                   Result.InsertRow;
                 end;
@@ -1965,35 +1963,33 @@ begin
                   Result.MoveToInsertRow;
                   PutSplitString(KeyList, Keys, '() /');
 
-                  Result.UpdateString(5, LForeignCatalog);
-                  if ForeignSchema = '' then
-                    Result.UpdateNull(6) // FKTABLE_SCHEM
-                  else
-                    Result.UpdateString(6, ForeignSchema);
-                  if ForeignTable <> GetString(ColumnIndexes[3]) then
-                    Continue
-                  else
-                    Result.UpdateString(7, GetString(ColumnIndexes[3])); // FKTABLE_NAME
-
-                  Result.UpdateString(8, KeyList.Strings[0]); // PKTABLE_CAT
-
-                  Result.UpdateString(1, KeyList.Strings[2]); // PKTABLE_CAT
+                  Result.UpdateString(CrossRefKeyColPKTableCatalogIndex, KeyList.Strings[2]);
                   if PrimarySchema = '' then
-                    Result.UpdateNull(2) // PKTABLE_SCHEM
+                    Result.UpdateNull(CrossRefKeyColPKTableSchemaIndex)
                   else
-                    Result.UpdateString(2, PrimarySchema); // PKTABLE_SCHEM
+                    Result.UpdateString(CrossRefKeyColPKTableSchemaIndex, PrimarySchema);
 
                   if PrimaryTable = KeyList.Strings[3] then
                     Continue;
 
-                  Result.UpdateString(3, PrimaryTable); // PKTABLE_NAME
-                  Result.UpdateString(4, KeyList.Strings[4]); // PKCOLUMN_NAME
-                  Result.UpdateInt(9, KeySeq); // KEY_SEQ
-                  Result.UpdateInt(10, Ord(ikSetDefault)); // UPDATE_RULE
-                  Result.UpdateInt(11, Ord(ikSetDefault)); // DELETE_RULE
-                  Result.UpdateNull(12); // FK_NAME
-                  Result.UpdateNull(13); // PK_NAME
-                  Result.UpdateInt(14, Ord(ikSetDefault)); // DEFERRABILITY
+                  Result.UpdateString(CrossRefKeyColPKTableNameIndex, PrimaryTable);
+                  Result.UpdateString(CrossRefKeyColPKColumnNameIndex, KeyList.Strings[4]);
+                  Result.UpdateString(CrossRefKeyColFKTableCatalogIndex, LForeignCatalog);
+                  if ForeignSchema = '' then
+                    Result.UpdateNull(CrossRefKeyColFKTableSchemaIndex)
+                  else
+                    Result.UpdateString(CrossRefKeyColFKTableSchemaIndex, ForeignSchema);
+                  if ForeignTable <> GetString(ColumnIndexes[3]) then
+                    Continue
+                  else
+                    Result.UpdateString(CrossRefKeyColFKTableNameIndex, GetString(ColumnIndexes[3]));
+                  Result.UpdateString(CrossRefKeyColFKColumnNameIndex, KeyList.Strings[0]);
+                  Result.UpdateInt(CrossRefKeyColKeySeqIndex, KeySeq);
+                  Result.UpdateInt(CrossRefKeyColUpdateRuleIndex, Ord(ikSetDefault));
+                  Result.UpdateInt(CrossRefKeyColDeleteRuleIndex, Ord(ikSetDefault));
+                  Result.UpdateNull(CrossRefKeyColFKNameIndex);
+                  Result.UpdateNull(CrossRefKeyColPKNameIndex);
+                  Result.UpdateInt(CrossRefKeyColDeferrabilityIndex, Ord(ikSetDefault)); // DEFERRABILITY
                   Inc(KeySeq);
                   Result.InsertRow;
                 end;
@@ -2084,36 +2080,36 @@ begin
     begin
       Result.MoveToInsertRow;
 
-      Result.UpdateString(1, TypeNames[I]);
-      Result.UpdateInt(2, Ord(TypeCodes[I]));
+      Result.UpdateString(TypeInfoTypeNameIndex, TypeNames[I]);
+      Result.UpdateByte(TypeInfoDataTypeIndex, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
-        Result.UpdateInt(3, TypePrecision[I])
+        Result.UpdateInt(TypeInfoPecisionIndex, TypePrecision[I])
       else
-        Result.UpdateNull(3);
+        Result.UpdateNull(TypeInfoPecisionIndex);
       if TypeCodes[I] in [stString, stBytes, stDate, stTime,
         stTimeStamp, stBinaryStream, stAsciiStream] then
       begin
-        Result.UpdateString(4, '''');
-        Result.UpdateString(5, '''');
+        Result.UpdateString(TypeInfoLiteralPrefixIndex, '''');
+        Result.UpdateString(TypeInfoLiteralSuffixIndex, '''');
       end
-      else
+      {else
       begin
-        Result.UpdateNull(4);
-        Result.UpdateNull(5);
-      end;
-      Result.UpdateNull(6);
-      Result.UpdateInt(7, Ord(ntNullable));
-      Result.UpdateBoolean(8, False);
-      Result.UpdateBoolean(9, False);
-      Result.UpdateBoolean(11, False);
-      Result.UpdateBoolean(12, False);
-      Result.UpdateBoolean(12, TypeNames[I] = 'INTEGER');
-      Result.UpdateNull(13);
-      Result.UpdateNull(14);
-      Result.UpdateNull(15);
-      Result.UpdateNull(16);
-      Result.UpdateNull(17);
-      Result.UpdateInt(18, 10);
+        Result.UpdateNull(TypeInfoLiteralPrefixIndex);
+        Result.UpdateNull(TypeInfoLiteralSuffixIndex);
+      end};
+      //Result.UpdateNull(TypeInfoCreateParamsIndex);
+      Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNullable));
+      Result.UpdateBoolean(TypeInfoCaseSensitiveIndex, False);
+      Result.UpdateBoolean(TypeInfoSearchableIndex, False);
+      //Result.UpdateNull(TypeInfoUnsignedAttributeIndex);
+      Result.UpdateBoolean(TypeInfoFixedPrecScaleIndex, False);
+      Result.UpdateBoolean(TypeInfoAutoIncrementIndex, TypeNames[I] = 'INTEGER');
+      //Result.UpdateNull(TypeInfoLocaleTypeNameIndex);
+      //Result.UpdateNull(TypeInfoMinimumScaleIndex);
+      //Result.UpdateNull(TypeInfoMaximumScaleIndex);
+      //Result.UpdateNull(TypeInfoSQLDataTypeIndex);
+      //Result.UpdateNull(TypeInfoSQLDateTimeSubIndex);
+      Result.UpdateInt(TypeInfoNumPrecRadix, 10);
 
       Result.InsertRow;
     end;
@@ -2200,22 +2196,22 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateString(1, LCatalog);
-        Result.UpdateNull(2);
-        Result.UpdateString(3, GetString(ColumnIndexes[1]));
+        Result.UpdateString(CatalogNameIndex, LCatalog);
+        //Result.UpdateNull(SchemaNameIndex);
+        Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(ColumnIndexes[1]));
         if GetInt(ColumnIndexes[2]) = 0 then
-          Result.UpdateString(4, 'true')
+          Result.UpdateString(IndexInfoColNonUniqueIndex, 'true')
         else
-          Result.UpdateString(4, 'false');
-        Result.UpdateNull(5);
-        Result.UpdateString(6, GetString(ColumnIndexes[3]));
-        Result.UpdateInt(7, Ord(tiOther));
-        Result.UpdateInt(8, GetInt(ColumnIndexes[4]));
-        Result.UpdateString(9, GetString(ColumnIndexes[5]));
-        Result.UpdateString(10, GetString(ColumnIndexes[6]));
-        Result.UpdateString(11, GetString(ColumnIndexes[7]));
-        Result.UpdateInt(12, 0);
-        Result.UpdateNull(13);
+          Result.UpdateString(IndexInfoColNonUniqueIndex, 'false');
+        //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
+        Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, GetAnsiRec(ColumnIndexes[3]));
+        Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
+        Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(ColumnIndexes[4]));
+        Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, GetAnsiRec(ColumnIndexes[5]));
+        Result.UpdateString(IndexInfoColAscOrDescIndex, GetString(ColumnIndexes[6]));
+        Result.UpdateString(IndexInfoColCardinalityIndex, GetString(ColumnIndexes[7]));
+        Result.UpdateInt(IndexInfoColPagesIndex, 0);
+        //Result.UpdateNull(IndexInfoColFilterConditionIndex);
         Result.InsertRow;
       end;
       Close;
@@ -2344,6 +2340,14 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetProcedureColumns(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
+const
+  PROCEDURE_CAT_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  PROCEDURE_SCHEM_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  PARAMS_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  REMARKS_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  RETURN_VALUES_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   SQL, TypeName, Temp: string;
   ParamList, Params, Names, Returns: TStrings;
@@ -2436,7 +2440,7 @@ begin
 
   Result := inherited UncachedGetProcedureColumns(Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern);
 
-  SQL := 'SELECT p.db AS PROCEDURE_CAT, NULL AS PROCEDURE_SCHEM, '+
+  SQL := 'SELECT NULL AS PROCEDURE_CAT, p.db AS PROCEDURE_SCHEM, '+
       'p.name AS PROCEDURE_NAME, p.param_list AS PARAMS, p.comment AS REMARKS, '+
     ZFastCode.IntToStr(Ord(ProcedureReturnsResult))+' AS PROCEDURE_TYPE, p.returns AS RETURN_VALUES '+
     ' from  mysql.proc p where 1 = 1'+SchemaCondition+ProcedureNameCondition+
@@ -2451,10 +2455,10 @@ begin
         Returns := TStringList.Create;
         while Next do
         begin
-          PutSplitString(ParamList, Trim(GetString(4)), ',');
+          PutSplitString(ParamList, Trim(GetString(PARAMS_Index)), ',');
           PutSplitString(ParamList, DecomposeParamFromList(ParamList), LineEnding);
 
-          PutSplitString(Returns, Trim(GetString(7)), ',');
+          PutSplitString(Returns, Trim(GetString(RETURN_VALUES_Index)), ',');
           PutSplitString(Returns, DecomposeParamFromList(Returns), LineEnding);
 
           for I := 0 to Returns.Count-1 do
@@ -2478,51 +2482,51 @@ begin
                   Params.Insert(0,'IN'); //Function in value
 
             Result.MoveToInsertRow;
-            Result.UpdateString(1, GetString(1)); //PROCEDURE_CAT
-            Result.UpdateString(2, GetString(2)); //PROCEDURE_SCHEM
-            Result.UpdateString(3, GetString(3)); //PROCEDURE_NAME
+            Result.UpdateString(CatalogNameIndex, GetString(PROCEDURE_SCHEM_index)); //PROCEDURE_CAT
+            //Result.UpdateNull(SchemaNameIndex); //PROCEDURE_SCHEM
+            Result.UpdateString(ProcColProcedureNameIndex, GetString(PROCEDURE_NAME_Index)); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
               ConSettings, TypeName, Temp,
               FieldType, ColumnSize, Precision);
             { process COLUMN_NAME }
             if Params[1] = '' then
               if Params[0] = 'RETURNS' then
-                Result.UpdateString(4, 'ReturnValue')
+                Result.UpdateString(ProcColColumnNameIndex, 'ReturnValue')
               else
-                Result.UpdateString(4, GetNextName('$', True))
+                Result.UpdateString(ProcColColumnNameIndex, GetNextName('$', True))
             else
               if IC.IsQuoted(Params[1]) then
-                Result.UpdateString(4, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
+                Result.UpdateString(ProcColColumnNameIndex, GetNextName(Copy(Params[1], 2, Length(Params[1])-2), (Length(Params[1])=2)))
               else
-                Result.UpdateString(4, GetNextName(Params[1]));
+                Result.UpdateString(ProcColColumnNameIndex, GetNextName(Params[1]));
             { COLUMN_TYPE }
             if UpperCase(Params[0]) = 'OUT' then
-              Result.UpdateInt(5, Ord(pctOut))
+              Result.UpdateByte(ProcColColumnTypeIndex, Ord(pctOut))
             else
               if UpperCase(Params[0]) = 'INOUT' then
-                Result.UpdateInt(5, Ord(pctInOut))
+                Result.UpdateByte(ProcColColumnTypeIndex, Ord(pctInOut))
               else
                 if UpperCase(Params[0]) = 'IN' then
-                  Result.UpdateInt(5, Ord(pctIn))
+                  Result.UpdateByte(ProcColColumnTypeIndex, Ord(pctIn))
                 else
                   if UpperCase(Params[0]) = 'RETURNS' then
-                    Result.UpdateInt(5, Ord(pctReturn))
+                    Result.UpdateByte(ProcColColumnTypeIndex, Ord(pctReturn))
                   else
-                    Result.UpdateInt(5, Ord(pctUnknown));
+                    Result.UpdateByte(ProcColColumnTypeIndex, Ord(pctUnknown));
 
             { DATA_TYPE }
-            Result.UpdateInt(6, Ord(FieldType));
+            Result.UpdateByte(ProcColDataTypeIndex, Ord(FieldType));
             { TYPE_NAME }
-            Result.UpdateString(7, TypeName);
+            Result.UpdateString(ProcColTypeNameIndex, TypeName);
             { PRECISION }
-            Result.UpdateInt(8, ColumnSize);
+            Result.UpdateInt(ProcColPrecisionIndex, ColumnSize);
             { LENGTH }
-            Result.UpdateInt(9, Precision);
+            Result.UpdateInt(ProcColLengthIndex, Precision);
 
-            Result.UpdateNull(10);
-            Result.UpdateNull(11);
-            Result.UpdateInt(12, Ord(ntNullableUnknown));
-            Result.UpdateNull(13);
+            //Result.UpdateNull(ProcColScaleIndex);
+            //Result.UpdateNull(ProcColRadixIndex);
+            Result.UpdateInt(ProcColNullableIndex, Ord(ntNullableUnknown));
+            //Result.UpdateNull(ProcColRemarksIndex);
             Result.InsertRow;
           end;
         end;

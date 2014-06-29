@@ -276,7 +276,7 @@ procedure ReadBlobBufer(const PlainDriver: IZInterbasePlainDriver;
   const Binary: Boolean; const ConSettings: PZConSettings);
 
 const
-  { Default Interbase blob size for readig }
+  { Default Interbase blob size for reading }
   DefaultBlobSegmentSize = 16 * 1024;
 
   IBScaleDivisor: array[-18..-1] of Int64 = (
@@ -1400,7 +1400,7 @@ begin
           IbReAlloc(SqlVar.sqldata, 0, SqlVar.sqllen + 2)
     end;
 
-    if Parameters = True then
+    if Parameters then
     begin
       //This code used when allocated sqlind parameter for Param SQLDA
       SqlVar.sqltype := SqlVar.sqltype or 1;

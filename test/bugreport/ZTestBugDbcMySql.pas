@@ -125,6 +125,10 @@ end;
   execution SQL query do not contain the aliased fields.
 }
 procedure TZTestDbcMySQLBugReport.Test739444;
+const
+  items_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  total_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  average_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -139,14 +143,14 @@ begin
 
   MetaData := ResultSet.GetMetadata;
   CheckEquals(3, MetaData.GetColumnCount);
-  CheckEquals('items', MetaData.GetColumnLabel(1));
-  CheckEquals('total', MetaData.GetColumnLabel(2));
-  CheckEquals('average', MetaData.GetColumnLabel(3));
+  CheckEquals('items', MetaData.GetColumnLabel(items_Index));
+  CheckEquals('total', MetaData.GetColumnLabel(total_Index));
+  CheckEquals('average', MetaData.GetColumnLabel(average_Index));
 
   ResultSet.Next;
-  CheckEquals(4, ResultSet.GetInt(1));
-  CheckEquals(8434, ResultSet.GetInt(2));
-  CheckEquals(8.5, ResultSet.GetFloat(3), 0.01);
+  CheckEquals(4, ResultSet.GetInt(items_Index));
+  CheckEquals(8434, ResultSet.GetInt(total_Index));
+  CheckEquals(8.5, ResultSet.GetFloat(average_Index), 0.01);
   ResultSet.Close;
   ResultSet := nil;
 end;
@@ -156,6 +160,13 @@ Dublicate field names. Do not show properly fields name
 if query have two alike field names and different tables.
 }
 procedure TZTestDbcMySQLBugReport.Test739448;
+const
+  table739448a_fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  table739448a_fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  table739448a_fld3_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  table739448b_fld1_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  table739448b_fld2_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  table739448b_fld3_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -170,18 +181,18 @@ begin
 
   MetaData := ResultSet.GetMetadata;
   CheckEquals(6, MetaData.GetColumnCount);
-  CheckEquals('fld1', MetaData.GetColumnLabel(1));
-  CheckEquals('fld2', MetaData.GetColumnLabel(2));
-  CheckEquals('fld3', MetaData.GetColumnLabel(3));
-  CheckEquals('fld1_1', MetaData.GetColumnLabel(4));
-  CheckEquals('fld2_1', MetaData.GetColumnLabel(5));
-  CheckEquals('fld3_1', MetaData.GetColumnLabel(6));
-  CheckEquals('fld1', MetaData.GetColumnName(1));
-  CheckEquals('fld2', MetaData.GetColumnName(2));
-  CheckEquals('fld3', MetaData.GetColumnName(3));
-  CheckEquals('fld1', MetaData.GetColumnName(4));
-  CheckEquals('fld2', MetaData.GetColumnName(5));
-  CheckEquals('fld3', MetaData.GetColumnName(6));
+  CheckEquals('fld1', MetaData.GetColumnLabel(table739448a_fld1_Index));
+  CheckEquals('fld2', MetaData.GetColumnLabel(table739448a_fld2_Index));
+  CheckEquals('fld3', MetaData.GetColumnLabel(table739448a_fld3_Index));
+  CheckEquals('fld1_1', MetaData.GetColumnLabel(table739448b_fld1_Index));
+  CheckEquals('fld2_1', MetaData.GetColumnLabel(table739448b_fld2_Index));
+  CheckEquals('fld3_1', MetaData.GetColumnLabel(table739448b_fld3_Index));
+  CheckEquals('fld1', MetaData.GetColumnName(table739448a_fld1_Index));
+  CheckEquals('fld2', MetaData.GetColumnName(table739448a_fld2_Index));
+  CheckEquals('fld3', MetaData.GetColumnName(table739448a_fld3_Index));
+  CheckEquals('fld1', MetaData.GetColumnName(table739448b_fld1_Index));
+  CheckEquals('fld2', MetaData.GetColumnName(table739448b_fld2_Index));
+  CheckEquals('fld3', MetaData.GetColumnName(table739448b_fld3_Index));
   ResultSet.Close;
 end;
 
@@ -191,6 +202,9 @@ end;
   unsigned int field problem.
 }
 procedure TZTestDbcMySQLBugReport.Test768163;
+const
+  fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -208,7 +222,7 @@ begin
   with ResultSet do
   begin
     MoveToInsertRow;
-    UpdateBigDecimal(1, 2147483648);
+    UpdateBigDecimal(fld1_Index, 2147483648);
     InsertRow;
     Close;
   end;
@@ -218,7 +232,7 @@ begin
   with ResultSet do
   begin
     Next;
-    CheckEquals(2147483648, GetBigDecimal(1));
+    CheckEquals(2147483648, GetBigDecimal(fld1_Index));
     Close;
   end;
     ResultSet := nil;
@@ -230,6 +244,11 @@ end;
   Problems with ZeosDBO 6.0.2, Delphi 6 and Infopower 3000
 }
 procedure TZTestDbcMySQLBugReport.Test816925;
+const
+  fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  fld3_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  fld4_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -241,18 +260,18 @@ begin
   Statement.SetResultSetConcurrency(rcReadOnly);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3, fld4 from table816925');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(2)));
-  CheckEquals(Ord(stLong), Ord(Metadata.GetColumnType(3)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(4)));
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_Index)));
+  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld2_Index)));
+  CheckEquals(Ord(stLong), Ord(Metadata.GetColumnType(fld3_Index)));
+  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld4_Index)));
 
   Statement.SetResultSetConcurrency(rcUpdatable);
   ResultSet := Statement.ExecuteQuery('select fld1, fld2, fld3, fld4 from table816925');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(2)));
-  CheckEquals(Ord(stLong), Ord(Metadata.GetColumnType(3)));
-  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(4)));
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(fld1_Index)));
+  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld2_Index)));
+  CheckEquals(Ord(stLong), Ord(Metadata.GetColumnType(fld3_Index)));
+  CheckEquals(Ord(stDouble), Ord(Metadata.GetColumnType(fld4_Index)));
 end;
 
 {**
@@ -260,6 +279,10 @@ end;
    Complex select statement returns wrong field types.
 }
 procedure TZTestDbcMySQLBugReport.Test881634;
+const
+  idt2_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  ft2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  ft1_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -273,17 +296,17 @@ begin
     + ' FROM table881634b INNER JOIN table881634a'
     + ' ON (table881634b.ft1 = table881634a.idt1)');
   Metadata := ResultSet.GetMetadata;
-  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
+  CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(idt2_Index)));
   //Client_Character_set sets column-type!!!!
   if ( Connection.GetConSettings.CPType = cCP_UTF16 ) then
   begin
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(2)));
-    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(3)));
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(ft2_Index)));
+    CheckEquals(Ord(stUnicodeString), Ord(Metadata.GetColumnType(ft1_Index)));
   end
   else
   begin
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(2)));
-    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(3)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(ft2_Index)));
+    CheckEquals(Ord(stString), Ord(Metadata.GetColumnType(ft1_Index)));
   end;
 end;
 
@@ -308,6 +331,12 @@ end;
   ENUM('Y','N') is not recognized as Boolean when column name is renamed.
 }
 procedure TZTestDbcMySQLBugReport.Test961337;
+const
+  id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  fld1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  fld2_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  fld3_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  fld4_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;
@@ -322,11 +351,11 @@ begin
       + ' fld2 as fld4 FROM table735299');
     try
       Metadata := ResultSet.GetMetadata;
-      CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(1)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(2)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(3)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(4)));
-      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(5)));
+      CheckEquals(Ord(stInteger), Ord(Metadata.GetColumnType(id_Index)));
+      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld1_Index)));
+      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld2_Index)));
+      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld3_Index)));
+      CheckEquals(Ord(stBoolean), Ord(Metadata.GetColumnType(fld4_Index)));
     finally
       ResultSet.Close;
     end;

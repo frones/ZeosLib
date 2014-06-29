@@ -382,9 +382,9 @@ begin
     Exit;
 
   { Looks by field index. }
-  if (ColumnIndex > 0) and (ColumnIndex <= FFields.Count) then
+  if (ColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0) and (ColumnIndex {$IFDEF GENERIC_INDEX}<{$ELSE}<={$ENDIF} FFields.Count) then
   begin
-    Current := TZFieldRef(FFields[ColumnIndex - 1]);
+    Current := TZFieldRef(FFields[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
     if not Current.Linked
       and ((Current.Alias = Field) or (Current.Field = Field)) then
     begin

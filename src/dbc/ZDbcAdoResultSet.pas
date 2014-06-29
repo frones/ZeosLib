@@ -351,8 +351,8 @@ end;
 }
 function TZAdoResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := VarIsNull(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) or
-            VarIsEmpty(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  Result := VarIsNull(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value) or
+            VarIsEmpty(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value);
 end;
 
 {**
@@ -372,11 +372,11 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  if (VarType(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) = varOleStr)
-    {$IFDEF UNICODE} or ( VarType(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value) = varUString){$ENDIF} then
-    Result := ConSettings^.ConvFuncs.ZUnicodeToString(ZWideString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value), ConSettings^.CTRL_CP)
+  if (VarType(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value) = varOleStr)
+    {$IFDEF UNICODE} or ( VarType(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value) = varUString){$ENDIF} then
+    Result := ConSettings^.ConvFuncs.ZUnicodeToString(ZWideString(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value), ConSettings^.CTRL_CP)
   else
-    Result := ConSettings^.ConvFuncs.ZRawToString(AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
+    Result := ConSettings^.ConvFuncs.ZRawToString(AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP)
   {Why this? It cuts wanted trailing spaces!
   NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do Dec(NL);
@@ -398,7 +398,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  Result := AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value);
 end;
 
 {**
@@ -417,9 +417,9 @@ begin
   if LastWasNull then
      Exit;
   {$IFDEF WITH_RAWBYTESTRING}
-  Result := UTF8String(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  Result := UTF8String(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value);
   {$ELSE}
-  Result := UTF8Encode(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  Result := UTF8Encode(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value);
   {$ENDIF}
 end;
 
@@ -438,7 +438,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := RawByteString(FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value);
+  Result := RawByteString(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value);
 end;
 
 {**
@@ -458,7 +458,7 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   {Why this? It cuts wanted trailing spaces!
   NL := Length(Result);
   while (NL > 0) and (Result[NL] = ' ') do
@@ -482,7 +482,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := False;
   end;
@@ -504,7 +504,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -526,7 +526,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -548,7 +548,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -570,7 +570,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -592,7 +592,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -614,7 +614,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -637,7 +637,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -662,11 +662,11 @@ begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
      Exit;
-  V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  V := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   if VarType(V) = varByte then
     Result := V
   else
-    if TZColumnInfo(ColumnsInfo[ColumnIndex-1]).ColumnType = stGUID then
+    if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType = stGUID then
     begin
       SetLength(Result, 16);
       GUID := StringToGUID(V);
@@ -692,7 +692,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -714,7 +714,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   except
     Result := 0;
   end;
@@ -739,7 +739,7 @@ begin
   if LastWasNull then
      Exit;
   try
-    V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+    V := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
     if VarIsStr(V) then
       Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
         Length(V), ConSettings^.ReadFormatSettings, Failed)
@@ -769,7 +769,7 @@ begin
   if LastWasNull then
      Exit;
 
-  V := FAdoRecordSet.Fields.Item[ColumnIndex - 1].Value;
+  V := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
   if VarIsStr(V) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
   begin
     Result := TZAbstractClob.CreateWithData(PWideChar(ZWideString(V)), Length(ZWideString(V)), ConSettings);
@@ -807,16 +807,14 @@ begin
   FHandle.CommandType := adCmdText;
 
   { Defines an index of autoincrement field. }
-  FAutoColumnIndex := 0;
-  for I := 1 to Metadata.GetColumnCount do
-  begin
+  FAutoColumnIndex := InvalidDbcIndex;
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     if Metadata.IsAutoIncrement(I) and
-      (Metadata.GetColumnType(I) in [stByte, stSmall, stInteger, stLong]) then
+      (Metadata.GetColumnType(I) in [stByte,stShort,stWord,stSmall,stLongWord,stInteger,stULong,stLong]) then
     begin
       FAutoColumnIndex := I;
       Break;
     end;
-  end;
 end;
 
 {**
@@ -834,7 +832,7 @@ var
 begin
   inherited PostUpdates(Sender, UpdateType, OldRowAccessor, NewRowAccessor);
 
-  if (UpdateType = utInserted) and (FAutoColumnIndex > 0)
+  if (UpdateType = utInserted) and (FAutoColumnIndex > InvalidDbcIndex)
     and OldRowAccessor.IsNull(FAutoColumnIndex) then
   begin
     Recordset := FHandle.Execute(RA, null, 0);

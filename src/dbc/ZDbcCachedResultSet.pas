@@ -297,7 +297,6 @@ type
   public
     constructor Create(ResultSet: IZResultSet; SQL: string;
       Resolver: IZCachedResolver; ConSettings: PZConSettings);
-    destructor Destroy; override;
 
     procedure Close; override;
     function GetMetaData: IZResultSetMetaData; override;
@@ -2262,14 +2261,6 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZCachedResultSet.Destroy;
-begin
-  inherited Destroy;
-end;
-
-{**
   Fetches one row from the wrapped result set object.
   @return <code>True</code> if row was successfuly fetched
     or <code>False</code> otherwise.
@@ -2292,9 +2283,9 @@ begin
     RowAccessor.RowBuffer.Index := GetNextRowIndex;
     RowAccessor.RowBuffer.UpdateType := utUnmodified;
 
-    for I := 1 to ColumnsInfo.Count do
+    for I := FirstDbcIndex to ColumnsInfo.Count{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
-      case TZColumnInfo(ColumnsInfo[I - 1]).ColumnType of
+      case TZColumnInfo(ColumnsInfo[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
         stBoolean: RowAccessor.SetBoolean(I, ResultSet.GetBoolean(I));
         stByte: RowAccessor.SetByte(I, ResultSet.GetByte(I));
         stShort: RowAccessor.SetShort(I, ResultSet.GetShort(I));
@@ -2348,7 +2339,7 @@ var
 begin
   ColumnsInfo.Clear;
   MetaData := FResultSet.GetMetadata;
-  for I := 1 to Metadata.GetColumnCount do
+  for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do

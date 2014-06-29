@@ -466,7 +466,7 @@ var
   {$IFDEF WITH_TBOOKMARK}
   BM: TBookMark;
   {$ELSE}
-  BM:TBookMarkStr;
+  BM:TBookMarkStr{%H-};
   {$ENDIF}
   I: Integer;
 begin

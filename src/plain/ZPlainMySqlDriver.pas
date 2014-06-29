@@ -861,16 +861,14 @@ end;
 function TZMySQLBaseDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
-  begin
     MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
-  end;
   Handle := MYSQL_API.mysql_init(nil);
   Result := Handle;
 end;
 
 function TZMySQLBaseDriver.GetLastInsertID(Handle: PZMySQLConnect): Int64;
 begin
-    Result := MYSQL_API.mysql_insert_id(PMYSQL(Handle));
+  Result := MYSQL_API.mysql_insert_id(PMYSQL(Handle));
 end;
 
 procedure TZMySQLBaseDriver.Despose(var Handle: PZMySQLConnect);
@@ -1000,7 +998,7 @@ end;
 
 function TZMySQLBaseDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
 begin
-    Result :=  MYSQL_API.mysql_stmt_affected_rows (PMYSQL_STMT(Handle));
+  Result :=  MYSQL_API.mysql_stmt_affected_rows (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;

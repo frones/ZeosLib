@@ -155,6 +155,10 @@ begin
 end;
 
 procedure TZTestDbcASACase.TestBlobs;
+const
+  B_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  B_TEXT_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  B_IMAGE_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
@@ -180,9 +184,9 @@ begin
   try
     PreparedStatement := Connection.PrepareStatement(
       'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
-    PreparedStatement.SetInt(1, TEST_ROW_ID);
-    PreparedStatement.SetAsciiStream(2, TextStream);
-    PreparedStatement.SetBinaryStream(3, ImageStream);
+    PreparedStatement.SetInt(B_ID_Index, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(B_TEXT_Index, TextStream);
+    PreparedStatement.SetBinaryStream(B_IMAGE_Index, ImageStream);
     CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
     ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
@@ -245,6 +249,14 @@ end;
   Runs a test for Interbase default values.
 }
 procedure TZTestDbcASACase.TestDefaultValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -260,17 +272,17 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 1);
+  ResultSet.UpdateInt(D_ID, 1);
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(5), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(6), 3);
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
   CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
+    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
   ResultSet.DeleteRow;
 
@@ -282,6 +294,11 @@ end;
   Runs a test for Interbase domain fields.
 }
 procedure TZTestDbcASACase.TestDomainValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -299,13 +316,13 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 1);
+  ResultSet.UpdateInt(D_ID, 1);
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
 
   ResultSet.Close;
   ResultSet := nil;
@@ -315,10 +332,10 @@ begin
 
   ResultSet.Next;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
 
   ResultSet.Close;
   Statement.Close;
@@ -328,6 +345,8 @@ end;
   Runs a test for Interbase stored procedures.
 }
 procedure TZTestDbcASACase.TestStoredprocedures;
+const
+  ParamIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
@@ -337,9 +356,9 @@ begin
   with CallableStatement do
   begin
     RegisterOutParameter(1, Ord(stInteger));
-    SetInt(1, 12345);
+    SetInt(ParamIndex, 12345);
     ExecutePrepared;
-    CheckEquals(12346, GetInt(1));
+    CheckEquals(12346, GetInt(ParamIndex));
   end;
   CallableStatement.Close;
 
@@ -349,13 +368,13 @@ begin
   with ResultSet do
   begin
     CheckEquals(True, Next);
-    CheckEquals('Computer', GetString(1));
+    CheckEquals('Computer', GetString(ParamIndex));
     CheckEquals(True, Next);
-    CheckEquals('Laboratoy', GetString(1));
+    CheckEquals('Laboratoy', GetString(ParamIndex));
     CheckEquals(True, Next);
-    CheckEquals('Radiostation', GetString(1));
+    CheckEquals('Radiostation', GetString(ParamIndex));
     CheckEquals(True, Next);
-    CheckEquals('Volvo', GetString(1));
+    CheckEquals('Volvo', GetString(ParamIndex));
     Close;
   end;
   CallableStatement.Close;

@@ -161,6 +161,10 @@ begin
 end;
 
 procedure TZTestDbcInterbaseCase.TestBlobs;
+const
+  B_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  B_TEXT_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  B_IMAGE_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
@@ -179,37 +183,48 @@ begin
   Statement.ExecuteUpdate('DELETE FROM BLOB_VALUES WHERE B_ID='
     + IntToStr(TEST_ROW_ID));
 
+  TempStream := nil;
   TextStream := TStringStream.Create('ABCDEFG');
   ImageStream := TMemoryStream.Create;
   ImageStream.LoadFromFile('../../../database/images/zapotec.bmp');
+  try
+    PreparedStatement := Connection.PrepareStatement(
+      'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
+    PreparedStatement.SetInt(B_ID_Index, TEST_ROW_ID);
+    PreparedStatement.SetAsciiStream(B_TEXT_Index, TextStream);
+    PreparedStatement.SetBinaryStream(B_IMAGE_Index, ImageStream);
+    CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
-  PreparedStatement := Connection.PrepareStatement(
-    'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
-  PreparedStatement.SetInt(1, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(2, TextStream);
-  PreparedStatement.SetBinaryStream(3, ImageStream);
-  CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
+      + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
+    CheckNotNull(ResultSet);
+    Check(ResultSet.Next);
+    CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
+    TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
+    CheckEquals(TextStream, TempStream);
+    TempStream.Free;
+    TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
+    CheckEquals(ImageStream, TempStream);
+  finally
+    if Assigned(TempStream) then
+      TempStream.Free;
+    ResultSet.Close;
 
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
-    + ' WHERE b_id=' + IntToStr(TEST_ROW_ID));
-  CheckNotNull(ResultSet);
-  Check(ResultSet.Next);
-  CheckEquals(TEST_ROW_ID, ResultSet.GetIntByName('B_ID'));
-  TempStream := ResultSet.GetAsciiStreamByName('B_TEXT');
-  CheckEquals(TextStream, TempStream);
-  TempStream.Free;
-  TempStream := ResultSet.GetBinaryStreamByName('B_IMAGE');
-  CheckEquals(ImageStream, TempStream);
-  TempStream.Free;
-  ResultSet.Close;
+    TextStream.Free;
+    ImageStream.Free;
 
-  TextStream.Free;
-  ImageStream.Free;
-
-  Statement.Close;
+    Statement.Close;
+  end;
 end;
 
 procedure TZTestDbcInterbaseCase.TestUpdateBlobs;
+const
+  insert_B_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  insert_B_TEXT_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  insert_B_IMAGE_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  update_B_ID_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  update_B_TEXT_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  update_B_IMAGE_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
@@ -234,9 +249,9 @@ begin
 
   PreparedStatement := Connection.PrepareStatement(
     'INSERT INTO BLOB_VALUES (B_ID, B_TEXT, B_IMAGE) VALUES(?,?,?)');
-  PreparedStatement.SetInt(1, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(2, TextStream);
-  PreparedStatement.SetBinaryStream(3, ImageStream);
+  PreparedStatement.SetInt(insert_B_ID_Index, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(insert_B_TEXT_Index, TextStream);
+  PreparedStatement.SetBinaryStream(insert_B_IMAGE_Index, ImageStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
@@ -260,9 +275,9 @@ begin
 
   PreparedStatement := Connection.PrepareStatement(
     'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
-  PreparedStatement.SetInt(3, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(1, TextStream);
-  PreparedStatement.SetBinaryStream(2, ImageStream);
+  PreparedStatement.SetInt(update_B_ID_Index, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(update_B_TEXT_Index, TextStream);
+  PreparedStatement.SetBinaryStream(update_B_IMAGE_Index, ImageStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
   ResultSet.Close;
 
@@ -284,9 +299,9 @@ begin
 
   PreparedStatement := Connection.PrepareStatement(
     'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
-  PreparedStatement.SetInt(3, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(1, TextStream);
-  PreparedStatement.SetNull(2,stBinaryStream);
+  PreparedStatement.SetInt(update_B_ID_Index, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(update_B_TEXT_Index, TextStream);
+  PreparedStatement.SetNull(update_B_IMAGE_Index,stBinaryStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
   ResultSet.Close;
@@ -305,9 +320,9 @@ begin
   ResultSet.Close;
   PreparedStatement := Connection.PrepareStatement(
     'UPDATE BLOB_VALUES SET B_TEXT =?,B_IMAGE=? WHERE B_ID=?');
-  PreparedStatement.SetInt(3, TEST_ROW_ID);
-  PreparedStatement.SetNull(1,stAsciiStream);
-  PreparedStatement.SetNull(2,stBinaryStream);
+  PreparedStatement.SetInt(update_B_ID_Index, TEST_ROW_ID);
+  PreparedStatement.SetNull(update_B_TEXT_Index,stAsciiStream);
+  PreparedStatement.SetNull(update_B_IMAGE_Index,stBinaryStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES'
@@ -327,6 +342,11 @@ begin
 end;
 
 procedure TZTestDbcInterbaseCase.TestCaseSensitive;
+const
+  CS_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Cs_Data1_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  cs_data1_Index1 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  cs_data1_Index2 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -340,21 +360,21 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckNotNull(Metadata);
 
-  CheckEquals('CS_ID', Metadata.GetColumnName(1));
-  CheckEquals(False, Metadata.IsCaseSensitive(1));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(1));
+  CheckEquals('CS_ID', Metadata.GetColumnName(CS_ID_Index));
+  CheckEquals(False, Metadata.IsCaseSensitive(CS_ID_Index));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(CS_ID_Index));
 
-  CheckEquals('Cs_Data1', Metadata.GetColumnName(2));
-  CheckEquals(True, Metadata.IsCaseSensitive(2));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(2));
+  CheckEquals('Cs_Data1', Metadata.GetColumnName(Cs_Data1_Index));
+  CheckEquals(True, Metadata.IsCaseSensitive(Cs_Data1_Index));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(Cs_Data1_Index));
 
-  CheckEquals('cs_data1', Metadata.GetColumnName(3));
-  CheckEquals(True, Metadata.IsCaseSensitive(3));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(3));
+  CheckEquals('cs_data1', Metadata.GetColumnName(cs_data1_Index1));
+  CheckEquals(True, Metadata.IsCaseSensitive(cs_data1_Index1));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(cs_data1_Index1));
 
-  CheckEquals('cs data1', Metadata.GetColumnName(4));
-  CheckEquals(True, Metadata.IsCaseSensitive(4));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(4));
+  CheckEquals('cs data1', Metadata.GetColumnName(cs_data1_Index2));
+  CheckEquals(True, Metadata.IsCaseSensitive(cs_data1_Index2));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(cs_data1_Index2));
 
   ResultSet.Close;
   Statement.Close;
@@ -364,6 +384,14 @@ end;
   Runs a test for Interbase default values.
 }
 procedure TZTestDbcInterbaseCase.TestDefaultValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -379,17 +407,17 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 1);
+  ResultSet.UpdateInt(D_ID, 1);
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(5), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(6), 3);
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
   CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
+    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
   ResultSet.DeleteRow;
 
@@ -401,6 +429,11 @@ end;
   Runs a test for Interbase domain fields.
 }
 procedure TZTestDbcInterbaseCase.TestDomainValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -416,13 +449,13 @@ begin
   CheckNotNull(ResultSet);
 
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 1);
+  ResultSet.UpdateInt(D_ID, 1);
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
 
   ResultSet.Close;
   ResultSet := nil;
@@ -432,10 +465,10 @@ begin
 
   ResultSet.Next;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
 
   ResultSet.Close;
   Statement.Close;
@@ -445,6 +478,8 @@ end;
   Runs a test for Interbase stored procedures.
 }
 procedure TZTestDbcInterbaseCase.TestStoredprocedures;
+const
+  ParamIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
@@ -456,12 +491,12 @@ begin
   CallableStatement := Connection.PrepareCallWithParams(
     'PROCEDURE1', nil);
   with CallableStatement do begin
-    SetInt(1, 12345);
+    SetInt(ParamIndex, 12345);
     ResultSet := ExecuteQueryPrepared;
     with ResultSet do begin
       CheckEquals(True, Next);
       CheckEquals(True, (IsFirst() and IsLast()));
-      CheckEquals(12346, GetInt(1));
+      CheckEquals(12346, GetInt(ParamIndex));
     end;
   end;
   CallableStatement.Close;
@@ -471,25 +506,31 @@ begin
   ResultSet := CallableStatement.ExecuteQueryPrepared;
   with ResultSet do begin
     CheckEquals(True, Next);
-    CheckEquals('Computer', GetString(1));
+    CheckEquals('Computer', GetString(ParamIndex));
     CheckEquals(True, Next);
-    CheckEquals('Laboratoy', GetString(1));
+    CheckEquals('Laboratoy', GetString(ParamIndex));
     CheckEquals(True, Next);
-    CheckEquals('Radiostation', GetString(1));
+    CheckEquals('Radiostation', GetString(ParamIndex));
     CheckEquals(True, Next);
-    CheckEquals('Volvo', GetString(1));
+    CheckEquals('Volvo', GetString(ParamIndex));
     Close;
   end;
   CallableStatement.Close;
 end;
 
 procedure TZTestDbcInterbaseCase.TestMsec; 
-var 
-    Statement: IZStatement; 
-    ResultSet: IZResultSet; 
-    ThisTime : TDateTime; 
-    oldTimeFormat: string; 
-begin 
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_DATE = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_TIME = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_DATETIME = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_TIMESTAMP = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+  ThisTime : TDateTime;
+  oldTimeFormat: string;
+begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -501,18 +542,18 @@ begin
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := 'hh:mm:ss.zzz';
   ThisTime := now;
   ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(1, 4);
-  ResultSet.UpdateDate(2,ThisTime);
-  ResultSet.UpdateTime(3,ThisTime);
-  ResultSet.UpdateTimestamp(4,ThisTime);
-  ResultSet.UpdateTimestamp(5,ThisTime);
+  ResultSet.UpdateInt(D_ID, 4);
+  ResultSet.UpdateDate(D_DATE,ThisTime);
+  ResultSet.UpdateTime(D_TIME,ThisTime);
+  ResultSet.UpdateTimestamp(D_DATETIME,ThisTime);
+  ResultSet.UpdateTimestamp(D_TIMESTAMP,ThisTime);
   ResultSet.InsertRow;
   ResultSet.Last;
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(Trunc(ThisTime), ResultSet.GetDate(2),'Failure field 2');
-  CheckEquals(RoundTo(Frac(ThisTime),-10), RoundTo(ResultSet.GetTime(3),-10),'Failure field 3');
-  CheckEquals(ThisTime, ResultSet.GetTimeStamp(4),'Failure field 4');
-  CheckEquals(ThisTime, ResultSet.GetTimeStamp(5),'Failure field 5');
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(Trunc(ThisTime), ResultSet.GetDate(D_DATE),'Failure field 2');
+  CheckEquals(RoundTo(Frac(ThisTime),-10), RoundTo(ResultSet.GetTime(D_TIME),-10),'Failure field 3');
+  CheckEquals(ThisTime, ResultSet.GetTimeStamp(D_DATETIME),'Failure field 4');
+  CheckEquals(ThisTime, ResultSet.GetTimeStamp(D_TIMESTAMP),'Failure field 5');
   ResultSet.DeleteRow;
   {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}LongTimeFormat := OldTimeFormat;
   ResultSet.Close;
@@ -525,6 +566,8 @@ procedure TZTestDbcInterbaseCase.TestEmptyStrings;
 const
   CSQLd = 'delete from department where dep_id in (4,5)';
   CSQLi = 'insert into department (dep_id, dep_shname) values (?,?)';
+  dep_id = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  dep_shname = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   PreparedStatement: IZPreparedStatement;
 begin
@@ -534,11 +577,11 @@ begin
   PreparedStatement.Close;
   PreparedStatement := Connection.PrepareStatement(CSQLi);
   CheckNotNull(PreparedStatement);
-  PreparedStatement.SetInt(1, 4);
-  PreparedStatement.SetString(2, '');
+  PreparedStatement.SetInt(dep_id, 4);
+  PreparedStatement.SetString(dep_shname, '');
   PreparedStatement.ExecuteUpdatePrepared;
-  PreparedStatement.SetInt(1, 5);
-  PreparedStatement.SetString(2, '');
+  PreparedStatement.SetInt(dep_id, 5);
+  PreparedStatement.SetString(dep_shname, '');
   PreparedStatement.ExecuteUpdatePrepared;
   PreparedStatement.Close;
 end;

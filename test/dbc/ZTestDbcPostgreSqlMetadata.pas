@@ -93,7 +93,7 @@ type
 
 implementation
 
-uses ZTestCase;
+uses ZTestCase, ZDbcMetadata;
 
 { TZTestPostgreSqlMetadataCase }
 
@@ -116,24 +116,24 @@ begin
   ResultSet := Metadata.GetVersionColumns('', '', '');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('SCOPE'));
-    CheckEquals(2, FindColumn('COLUMN_NAME'));
-    CheckEquals(3, FindColumn('DATA_TYPE'));
-    CheckEquals(4, FindColumn('TYPE_NAME'));
-    CheckEquals(5, FindColumn('COLUMN_SIZE'));
-    CheckEquals(6, FindColumn('BUFFER_LENGTH'));
-    CheckEquals(7, FindColumn('DECIMAL_DIGITS'));
-    CheckEquals(8, FindColumn('PSEUDO_COLUMN'));
+    CheckEquals(TableColVerScopeIndex, FindColumn('SCOPE'));
+    CheckEquals(TableColVerColNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(TableColVerDataTypeIndex, FindColumn('DATA_TYPE'));
+    CheckEquals(TableColVerTypeNameIndex, FindColumn('TYPE_NAME'));
+    CheckEquals(TableColVerColSizeIndex, FindColumn('COLUMN_SIZE'));
+    CheckEquals(TableColVerBufLengthIndex, FindColumn('BUFFER_LENGTH'));
+    CheckEquals(TableColVerDecimalDigitsIndex, FindColumn('DECIMAL_DIGITS'));
+    CheckEquals(TableColVerPseudoColumnIndex, FindColumn('PSEUDO_COLUMN'));
 
     CheckEquals(True, Next);
     CheckEquals(True, IsNullByName('SCOPE'));
     CheckEquals('ctid', GetStringByName('COLUMN_NAME'));
     CheckEquals(0, GetIntByName('DATA_TYPE'));
-    CheckEquals(2, GetIntByName('TYPE_NAME'));
+    CheckEquals('tid', GetStringByName('TYPE_NAME'));
     CheckEquals(True, IsNullByName('COLUMN_SIZE'));
     CheckEquals(True, IsNullByName('BUFFER_LENGTH'));
     CheckEquals(True, IsNullByName('DECIMAL_DIGITS'));
-//    CheckEquals(ord(vcPseudo), GetIntByName('PSEUDO_COLUMN')); FIX IT
+    CheckEquals(ord(vcPseudo), GetIntByName('PSEUDO_COLUMN'));
     CheckEquals(False, Next);
     Close;
   end;
@@ -171,14 +171,14 @@ begin
   ResultSet := Metadata.GetBestRowIdentifier('', '', 'people', 0, false);
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('SCOPE'));
-    CheckEquals(2, FindColumn('COLUMN_NAME'));
-    CheckEquals(3, FindColumn('DATA_TYPE'));
-    CheckEquals(4, FindColumn('TYPE_NAME'));
-    CheckEquals(5, FindColumn('COLUMN_SIZE'));
-    CheckEquals(6, FindColumn('BUFFER_LENGTH'));
-    CheckEquals(7, FindColumn('DECIMAL_DIGITS'));
-    CheckEquals(8, FindColumn('PSEUDO_COLUMN'));
+    CheckEquals(BestRowIdentScopeIndex, FindColumn('SCOPE'));
+    CheckEquals(BestRowIdentColNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(BestRowIdentDataTypeIndex, FindColumn('DATA_TYPE'));
+    CheckEquals(BestRowIdentTypeNameIndex, FindColumn('TYPE_NAME'));
+    CheckEquals(BestRowIdentColSizeIndex, FindColumn('COLUMN_SIZE'));
+    CheckEquals(BestRowIdentBufLengthIndex, FindColumn('BUFFER_LENGTH'));
+    CheckEquals(BestRowIdentDecimalDigitsIndex, FindColumn('DECIMAL_DIGITS'));
+    CheckEquals(BestRowIdentPseudoColumnIndex, FindColumn('PSEUDO_COLUMN'));
 
     CheckEquals(True, Next);
     CheckEquals(2, GetIntByName('SCOPE'));
@@ -202,11 +202,11 @@ var
 begin
   DBFound := False;
   ResultSet := Metadata.GetCatalogs;
-  CheckEquals(1, ResultSet.FindColumn('TABLE_CAT'));
+  CheckEquals(CatalogNameIndex, ResultSet.FindColumn('TABLE_CAT'));
 
   while ResultSet.Next do
   begin
-    CatalogName := ResultSet.GetString(1);
+    CatalogName := ResultSet.GetString(CatalogNameIndex);
     if CatalogName = Connection.GetMetadata.NormalizePatternCase(ConnectionConfig.Database) then
       DBFound := True;
   end;
@@ -228,14 +228,14 @@ begin
   ResultSet := Metadata.GetColumnPrivileges('', '', 'people', 'p_r%');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_CAT'));
-    CheckEquals(2, FindColumn('TABLE_SCHEM'));
-    CheckEquals(3, FindColumn('TABLE_NAME'));
-    CheckEquals(4, FindColumn('COLUMN_NAME'));
-    CheckEquals(5, FindColumn('GRANTOR'));
-    CheckEquals(6, FindColumn('GRANTEE'));
-    CheckEquals(7, FindColumn('PRIVILEGE'));
-    CheckEquals(8, FindColumn('IS_GRANTABLE'));
+    CheckEquals(CatalogNameIndex, FindColumn('TABLE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('TABLE_SCHEM'));
+    CheckEquals(TableNameIndex, FindColumn('TABLE_NAME'));
+    CheckEquals(ColumnNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(TableColPrivGrantorIndex, FindColumn('GRANTOR'));
+    CheckEquals(TableColPrivGranteeIndex, FindColumn('GRANTEE'));
+    CheckEquals(TableColPrivPrivilegeIndex, FindColumn('PRIVILEGE'));
+    CheckEquals(TableColPrivIsGrantableIndex, FindColumn('IS_GRANTABLE'));
 
 {    CheckEquals(True, Next);
     CheckEquals('', GetStringByName('TABLE_CAT'));
@@ -261,24 +261,24 @@ begin
   ResultSet := Metadata.GetColumns('', '', 'people', 'p_r%');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_CAT'));
-    CheckEquals(2, FindColumn('TABLE_SCHEM'));
-    CheckEquals(3, FindColumn('TABLE_NAME'));
-    CheckEquals(4, FindColumn('COLUMN_NAME'));
-    CheckEquals(5, FindColumn('DATA_TYPE'));
-    CheckEquals(6, FindColumn('TYPE_NAME'));
-    CheckEquals(7, FindColumn('COLUMN_SIZE'));
-    CheckEquals(8, FindColumn('BUFFER_LENGTH'));
-    CheckEquals(9, FindColumn('DECIMAL_DIGITS'));
-    CheckEquals(10, FindColumn('NUM_PREC_RADIX'));
-    CheckEquals(11, FindColumn('NULLABLE'));
-    CheckEquals(12, FindColumn('REMARKS'));
-    CheckEquals(13, FindColumn('COLUMN_DEF'));
-    CheckEquals(14, FindColumn('SQL_DATA_TYPE'));
-    CheckEquals(15, FindColumn('SQL_DATETIME_SUB'));
-    CheckEquals(16, FindColumn('CHAR_OCTET_LENGTH'));
-    CheckEquals(17, FindColumn('ORDINAL_POSITION'));
-    CheckEquals(18, FindColumn('IS_NULLABLE'));
+    CheckEquals(CatalogNameIndex, FindColumn('TABLE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('TABLE_SCHEM'));
+    CheckEquals(TableNameIndex, FindColumn('TABLE_NAME'));
+    CheckEquals(ColumnNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(TableColColumnTypeIndex, FindColumn('DATA_TYPE'));
+    CheckEquals(TableColColumnTypeNameIndex, FindColumn('TYPE_NAME'));
+    CheckEquals(TableColColumnSizeIndex, FindColumn('COLUMN_SIZE'));
+    CheckEquals(TableColColumnBufLengthIndex, FindColumn('BUFFER_LENGTH'));
+    CheckEquals(TableColColumnDecimalDigitsIndex, FindColumn('DECIMAL_DIGITS'));
+    CheckEquals(TableColColumnNumPrecRadixIndex, FindColumn('NUM_PREC_RADIX'));
+    CheckEquals(TableColColumnNullableIndex, FindColumn('NULLABLE'));
+    CheckEquals(TableColColumnRemarksIndex, FindColumn('REMARKS'));
+    CheckEquals(TableColColumnColDefIndex, FindColumn('COLUMN_DEF'));
+    CheckEquals(TableColColumnSQLDataTypeIndex, FindColumn('SQL_DATA_TYPE'));
+    CheckEquals(TableColColumnSQLDateTimeSubIndex, FindColumn('SQL_DATETIME_SUB'));
+    CheckEquals(TableColColumnCharOctetLengthIndex, FindColumn('CHAR_OCTET_LENGTH'));
+    CheckEquals(TableColColumnOrdPosIndex, FindColumn('ORDINAL_POSITION'));
+    CheckEquals(TableColColumnIsNullableIndex, FindColumn('IS_NULLABLE'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('TABLE_CAT'));
@@ -338,19 +338,19 @@ begin
   ResultSet := Metadata.GetProcedureColumns('', '', 'procedure1', '');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('PROCEDURE_CAT'));
-    CheckEquals(2, FindColumn('PROCEDURE_SCHEM'));
-    CheckEquals(3, FindColumn('PROCEDURE_NAME'));
-    CheckEquals(4, FindColumn('COLUMN_NAME'));
-    CheckEquals(5, FindColumn('COLUMN_TYPE'));
-    CheckEquals(6, FindColumn('DATA_TYPE'));
-    CheckEquals(7, FindColumn('TYPE_NAME'));
-    CheckEquals(8, FindColumn('PRECISION'));
-    CheckEquals(9, FindColumn('LENGTH'));
-    CheckEquals(10, FindColumn('SCALE'));
-    CheckEquals(11, FindColumn('RADIX'));
-    CheckEquals(12, FindColumn('NULLABLE'));
-    CheckEquals(13, FindColumn('REMARKS'));
+    CheckEquals(CatalogNameIndex, FindColumn('PROCEDURE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('PROCEDURE_SCHEM'));
+    CheckEquals(ProcColProcedureNameIndex, FindColumn('PROCEDURE_NAME'));
+    CheckEquals(ProcColColumnNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(ProcColColumnTypeIndex, FindColumn('COLUMN_TYPE'));
+    CheckEquals(ProcColDataTypeIndex, FindColumn('DATA_TYPE'));
+    CheckEquals(ProcColTypeNameIndex, FindColumn('TYPE_NAME'));
+    CheckEquals(ProcColPrecisionIndex, FindColumn('PRECISION'));
+    CheckEquals(ProcColLengthIndex, FindColumn('LENGTH'));
+    CheckEquals(ProcColScaleIndex, FindColumn('SCALE'));
+    CheckEquals(ProcColRadixIndex, FindColumn('RADIX'));
+    CheckEquals(ProcColNullableIndex, FindColumn('NULLABLE'));
+    CheckEquals(ProcColRemarksIndex, FindColumn('REMARKS'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('PROCEDURE_CAT'));
@@ -358,7 +358,7 @@ begin
     CheckEquals('procedure1', GetStringByName('PROCEDURE_NAME'));
     CheckEquals('$1', GetStringByName('COLUMN_NAME'));
     CheckEquals('1', GetStringByName('COLUMN_TYPE'));
-    CheckEquals(IntToStr(Ord(stInteger)), GetStringByName('DATA_TYPE'));
+    CheckEquals(Ord(stInteger), GetByteByName('DATA_TYPE'));
     CheckEquals('int4', GetStringByName('TYPE_NAME'));
     CheckEquals('', GetStringByName('PRECISION'));
     CheckEquals('', GetStringByName('LENGTH'));
@@ -396,11 +396,11 @@ begin
   ResultSet := Metadata.GetProcedures('', '', 'procedure%');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('PROCEDURE_CAT'));
-    CheckEquals(2, FindColumn('PROCEDURE_SCHEM'));
-    CheckEquals(3, FindColumn('PROCEDURE_NAME'));
-    CheckEquals(7, FindColumn('REMARKS'));
-    CheckEquals(8, FindColumn('PROCEDURE_TYPE'));
+    CheckEquals(CatalogNameIndex, FindColumn('PROCEDURE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('PROCEDURE_SCHEM'));
+    CheckEquals(ProcedureNameIndex, FindColumn('PROCEDURE_NAME'));
+    CheckEquals(ProcedureRemarksIndex, FindColumn('REMARKS'));
+    CheckEquals(ProcedureTypeIndex, FindColumn('PROCEDURE_TYPE'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('PROCEDURE_CAT'));
@@ -422,7 +422,7 @@ var
   ResultSet: IZResultSet;
 begin
   ResultSet := Metadata.GetSchemas;
-  CheckEquals(1, ResultSet.FindColumn('TABLE_SCHEM'));
+  CheckEquals(SchemaColumnsTableSchemaIndex, ResultSet.FindColumn('TABLE_SCHEM'));
   ResultSet.Close;
   ResultSet := nil;
 end;
@@ -439,13 +439,13 @@ begin
   ResultSet := Metadata.GetTablePrivileges('', '', 'people');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_CAT'));
-    CheckEquals(2, FindColumn('TABLE_SCHEM'));
-    CheckEquals(3, FindColumn('TABLE_NAME'));
-    CheckEquals(4, FindColumn('GRANTOR'));
-    CheckEquals(5, FindColumn('GRANTEE'));
-    CheckEquals(6, FindColumn('PRIVILEGE'));
-    CheckEquals(7, FindColumn('IS_GRANTABLE'));
+    CheckEquals(CatalogNameIndex, FindColumn('TABLE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('TABLE_SCHEM'));
+    CheckEquals(TableNameIndex, FindColumn('TABLE_NAME'));
+    CheckEquals(TablePrivGrantorIndex, FindColumn('GRANTOR'));
+    CheckEquals(TablePrivGranteeIndex, FindColumn('GRANTEE'));
+    CheckEquals(TablePrivPrivilegeIndex, FindColumn('PRIVILEGE'));
+    CheckEquals(TablePrivIsGrantableIndex, FindColumn('IS_GRANTABLE'));
 
 {    CheckEquals(True, Next);
     CheckEquals('', GetStringByName('TABLE_CAT'));
@@ -470,15 +470,15 @@ begin
   ResultSet := Metadata.GetTables('', '', 'people', nil);
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_CAT'));
-    CheckEquals(2, FindColumn('TABLE_SCHEM'));
-    CheckEquals(3, FindColumn('TABLE_NAME'));
-    CheckEquals(4, FindColumn('TABLE_TYPE'));
-    CheckEquals(5, FindColumn('REMARKS'));
+    CheckEquals(CatalogNameIndex, FindColumn('TABLE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('TABLE_SCHEM'));
+    CheckEquals(TableNameIndex, FindColumn('TABLE_NAME'));
+    CheckEquals(TableColumnsSQLType, FindColumn('TABLE_TYPE'));
+    CheckEquals(TableColumnsRemarks, FindColumn('REMARKS'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('TABLE_CAT'));
-//    CheckEquals('public', GetStringByName('TABLE_SCHEM'));
+    //CheckEquals('public', GetStringByName('TABLE_SCHEM'));
     CheckEquals('people', GetStringByName('TABLE_NAME'));
     CheckEquals('TABLE', GetStringByName('TABLE_TYPE'));
     CheckEquals('', GetStringByName('REMARKS'));
@@ -502,7 +502,7 @@ begin
   ResultSet := Metadata.GetTableTypes;
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_TYPE'));
+    CheckEquals(TableTypeColumnTableTypeIndex, FindColumn('TABLE_TYPE'));
     CheckEquals(True, Next);
     CheckEquals(Types[0], GetStringByName('TABLE_TYPE'));
     CheckEquals(True, Next);
@@ -540,12 +540,12 @@ begin
   ResultSet := Metadata.GetPrimaryKeys('', '', 'people');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_CAT'));
-    CheckEquals(2, FindColumn('TABLE_SCHEM'));
-    CheckEquals(3, FindColumn('TABLE_NAME'));
-    CheckEquals(4, FindColumn('COLUMN_NAME'));
-    CheckEquals(5, FindColumn('KEY_SEQ'));
-    CheckEquals(6, FindColumn('PK_NAME'));
+    CheckEquals(CatalogNameIndex, FindColumn('TABLE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('TABLE_SCHEM'));
+    CheckEquals(TableNameIndex, FindColumn('TABLE_NAME'));
+    CheckEquals(PrimaryKeyColumnNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(PrimaryKeyKeySeqIndex, FindColumn('KEY_SEQ'));
+    CheckEquals(PrimaryKeyPKNameIndex, FindColumn('PK_NAME'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('TABLE_CAT'));
@@ -569,20 +569,20 @@ begin
   ResultSet := Metadata.GetImportedKeys('', '', 'people');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('PKTABLE_CAT'));
-    CheckEquals(2, FindColumn('PKTABLE_SCHEM'));
-    CheckEquals(3, FindColumn('PKTABLE_NAME'));
-    CheckEquals(4, FindColumn('PKCOLUMN_NAME'));
-    CheckEquals(5, FindColumn('FKTABLE_CAT'));
-    CheckEquals(6, FindColumn('FKTABLE_SCHEM'));
-    CheckEquals(7, FindColumn('FKTABLE_NAME'));
-    CheckEquals(8, FindColumn('FKCOLUMN_NAME'));
-    CheckEquals(9, FindColumn('KEY_SEQ'));
-    CheckEquals(10, FindColumn('UPDATE_RULE'));
-    CheckEquals(11, FindColumn('DELETE_RULE'));
-    CheckEquals(12, FindColumn('FK_NAME'));
-    CheckEquals(13, FindColumn('PK_NAME'));
-    CheckEquals(14, FindColumn('DEFERRABILITY'));
+    CheckEquals(ImportedKeyColPKTableCatalogIndex, FindColumn('PKTABLE_CAT'));
+    CheckEquals(ImportedKeyColPKTableSchemaIndex, FindColumn('PKTABLE_SCHEM'));
+    CheckEquals(ImportedKeyColPKTableNameIndex, FindColumn('PKTABLE_NAME'));
+    CheckEquals(ImportedKeyColPKColumnNameIndex, FindColumn('PKCOLUMN_NAME'));
+    CheckEquals(ImportedKeyColFKTableCatalogIndex, FindColumn('FKTABLE_CAT'));
+    CheckEquals(ImportedKeyColFKTableSchemaIndex, FindColumn('FKTABLE_SCHEM'));
+    CheckEquals(ImportedKeyColFKTableNameIndex, FindColumn('FKTABLE_NAME'));
+    CheckEquals(ImportedKeyColFKColumnNameIndex, FindColumn('FKCOLUMN_NAME'));
+    CheckEquals(ImportedKeyColKeySeqIndex, FindColumn('KEY_SEQ'));
+    CheckEquals(ImportedKeyColUpdateRuleIndex, FindColumn('UPDATE_RULE'));
+    CheckEquals(ImportedKeyColDeleteRuleIndex, FindColumn('DELETE_RULE'));
+    CheckEquals(ImportedKeyColFKNameIndex, FindColumn('FK_NAME'));
+    CheckEquals(ImportedKeyColPKNameIndex, FindColumn('PK_NAME'));
+    CheckEquals(ImportedKeyColDeferrabilityIndex, FindColumn('DEFERRABILITY'));
 
     CheckEquals(True, Next);
 //    CheckEquals('', GetStringByName('PKTABLE_CAT'));
@@ -599,7 +599,7 @@ begin
     CheckEquals(ord(ikRestrict), GetIntByName('UPDATE_RULE'));
     CheckEquals(ord(ikRestrict), GetIntByName('DELETE_RULE'));
     CheckEquals('people_p_dep_id_fkey', GetStringByName('FK_NAME'));
-    CheckEquals('1', GetStringByName('PK_NAME'));
+    CheckEquals('department_pkey', GetStringByName('PK_NAME'));
     CheckEquals(ord(ikNotDeferrable), GetIntByName('DEFERRABILITY'));
     CheckEquals(False, Next);
   end;
@@ -616,20 +616,20 @@ begin
   ResultSet := Metadata.GetExportedKeys('', '', 'department');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('PKTABLE_CAT'));
-    CheckEquals(2, FindColumn('PKTABLE_SCHEM'));
-    CheckEquals(3, FindColumn('PKTABLE_NAME'));
-    CheckEquals(4, FindColumn('PKCOLUMN_NAME'));
-    CheckEquals(5, FindColumn('FKTABLE_CAT'));
-    CheckEquals(6, FindColumn('FKTABLE_SCHEM'));
-    CheckEquals(7, FindColumn('FKTABLE_NAME'));
-    CheckEquals(8, FindColumn('FKCOLUMN_NAME'));
-    CheckEquals(9, FindColumn('KEY_SEQ'));
-    CheckEquals(10, FindColumn('UPDATE_RULE'));
-    CheckEquals(11, FindColumn('DELETE_RULE'));
-    CheckEquals(12, FindColumn('FK_NAME'));
-    CheckEquals(13, FindColumn('PK_NAME'));
-    CheckEquals(14, FindColumn('DEFERRABILITY'));
+    CheckEquals(ExportedKeyColPKTableCatalogIndex, FindColumn('PKTABLE_CAT'));
+    CheckEquals(ExportedKeyColPKTableSchemaIndex, FindColumn('PKTABLE_SCHEM'));
+    CheckEquals(ExportedKeyColPKTableNameIndex, FindColumn('PKTABLE_NAME'));
+    CheckEquals(ExportedKeyColPKColumnNameIndex, FindColumn('PKCOLUMN_NAME'));
+    CheckEquals(ExportedKeyColFKTableCatalogIndex, FindColumn('FKTABLE_CAT'));
+    CheckEquals(ExportedKeyColFKTableSchemaIndex, FindColumn('FKTABLE_SCHEM'));
+    CheckEquals(ExportedKeyColFKTableNameIndex, FindColumn('FKTABLE_NAME'));
+    CheckEquals(ExportedKeyColFKColumnNameIndex, FindColumn('FKCOLUMN_NAME'));
+    CheckEquals(ExportedKeyColKeySeqIndex, FindColumn('KEY_SEQ'));
+    CheckEquals(ExportedKeyColUpdateRuleIndex, FindColumn('UPDATE_RULE'));
+    CheckEquals(ExportedKeyColDeleteRuleIndex, FindColumn('DELETE_RULE'));
+    CheckEquals(ExportedKeyColFKNameIndex, FindColumn('FK_NAME'));
+    CheckEquals(ExportedKeyColPKNameIndex, FindColumn('PK_NAME'));
+    CheckEquals(ExportedKeyColDeferrabilityIndex, FindColumn('DEFERRABILITY'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('PKTABLE_CAT'));
@@ -643,8 +643,8 @@ begin
     CheckEquals(1, GetIntByName('KEY_SEQ'));
     CheckEquals(ord(ikRestrict), GetIntByName('UPDATE_RULE'));
     CheckEquals(ord(ikRestrict), GetIntByName('DELETE_RULE'));
-//    CheckEquals('<unnamed>', GetStringByName('FK_NAME'));
-    CheckEquals('1', GetStringByName('PK_NAME'));
+    CheckEquals('cargo_c_dep_id_fkey', GetStringByName('FK_NAME'));
+    CheckEquals('department_pkey', GetStringByName('PK_NAME'));
     CheckEquals(ord(ikNotDeferrable), GetIntByName('DEFERRABILITY'));
 
     CheckEquals(True, Next);
@@ -656,11 +656,11 @@ begin
 //    CheckEquals('public', GetStringByName('FKTABLE_SCHEM'));
     CheckEquals('equipment2', GetStringByName('FKTABLE_NAME'));
     CheckEquals('dep_id', GetStringByName('FKCOLUMN_NAME'));
-    CheckEquals(2, GetIntByName('KEY_SEQ'));
+    CheckEquals(1, GetIntByName('KEY_SEQ'));
     CheckEquals(ord(ikRestrict), GetIntByName('UPDATE_RULE'));
     CheckEquals(ord(ikRestrict), GetIntByName('DELETE_RULE'));
-//    CheckEquals('<unnamed>', GetStringByName('FK_NAME'));
-    CheckEquals('1', GetStringByName('PK_NAME'));
+    CheckEquals('equipment2_dep_id_fkey', GetStringByName('FK_NAME'));
+    CheckEquals('department_pkey', GetStringByName('PK_NAME'));
     CheckEquals(ord(ikNotDeferrable), GetIntByName('DEFERRABILITY'));
 
     CheckEquals(True, Next);
@@ -672,13 +672,13 @@ begin
 //    CheckEquals('public', GetStringByName('FKTABLE_SCHEM'));
     CheckEquals('people', GetStringByName('FKTABLE_NAME'));
     CheckEquals('p_dep_id', GetStringByName('FKCOLUMN_NAME'));
-    CheckEquals(3, GetIntByName('KEY_SEQ'));
+    CheckEquals(1, GetIntByName('KEY_SEQ'));
     CheckEquals(ord(ikRestrict), GetIntByName('UPDATE_RULE'));
     CheckEquals(ord(ikRestrict), GetIntByName('DELETE_RULE'));
-//    CheckEquals('<unnamed>', GetStringByName('FK_NAME'));
-    CheckEquals('1', GetStringByName('PK_NAME'));
+     CheckEquals('people_p_dep_id_fkey', GetStringByName('FK_NAME'));
+    CheckEquals('department_pkey', GetStringByName('PK_NAME'));
     CheckEquals(ord(ikNotDeferrable), GetIntByName('DEFERRABILITY'));
-    CheckEquals(False, Next);
+    Check(Not Next);
   end;
   ResultSet := nil;
 end;
@@ -693,20 +693,20 @@ begin
   ResultSet := Metadata.GetCrossReference('', '', 'department', '', '', 'people');
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('PKTABLE_CAT'));
-    CheckEquals(2, FindColumn('PKTABLE_SCHEM'));
-    CheckEquals(3, FindColumn('PKTABLE_NAME'));
-    CheckEquals(4, FindColumn('PKCOLUMN_NAME'));
-    CheckEquals(5, FindColumn('FKTABLE_CAT'));
-    CheckEquals(6, FindColumn('FKTABLE_SCHEM'));
-    CheckEquals(7, FindColumn('FKTABLE_NAME'));
-    CheckEquals(8, FindColumn('FKCOLUMN_NAME'));
-    CheckEquals(9, FindColumn('KEY_SEQ'));
-    CheckEquals(10, FindColumn('UPDATE_RULE'));
-    CheckEquals(11, FindColumn('DELETE_RULE'));
-    CheckEquals(12, FindColumn('FK_NAME'));
-    CheckEquals(13, FindColumn('PK_NAME'));
-    CheckEquals(14, FindColumn('DEFERRABILITY'));
+    CheckEquals(CrossRefKeyColPKTableCatalogIndex, FindColumn('PKTABLE_CAT'));
+    CheckEquals(CrossRefKeyColPKTableSchemaIndex, FindColumn('PKTABLE_SCHEM'));
+    CheckEquals(CrossRefKeyColPKTableNameIndex, FindColumn('PKTABLE_NAME'));
+    CheckEquals(CrossRefKeyColPKColumnNameIndex, FindColumn('PKCOLUMN_NAME'));
+    CheckEquals(CrossRefKeyColFKTableCatalogIndex, FindColumn('FKTABLE_CAT'));
+    CheckEquals(CrossRefKeyColFKTableSchemaIndex, FindColumn('FKTABLE_SCHEM'));
+    CheckEquals(CrossRefKeyColFKTableNameIndex, FindColumn('FKTABLE_NAME'));
+    CheckEquals(CrossRefKeyColFKColumnNameIndex, FindColumn('FKCOLUMN_NAME'));
+    CheckEquals(CrossRefKeyColKeySeqIndex, FindColumn('KEY_SEQ'));
+    CheckEquals(CrossRefKeyColUpdateRuleIndex, FindColumn('UPDATE_RULE'));
+    CheckEquals(CrossRefKeyColDeleteRuleIndex, FindColumn('DELETE_RULE'));
+    CheckEquals(CrossRefKeyColFKNameIndex, FindColumn('FK_NAME'));
+    CheckEquals(CrossRefKeyColPKNameIndex, FindColumn('PK_NAME'));
+    CheckEquals(CrossRefKeyColDeferrabilityIndex, FindColumn('DEFERRABILITY'));
 
     CheckEquals(True, Next);
     //CheckEquals('zeoslib', GetStringByName('PKTABLE_CAT'));
@@ -721,7 +721,7 @@ begin
     CheckEquals(ord(ikRestrict), GetIntByName('UPDATE_RULE'));
     CheckEquals(ord(ikRestrict), GetIntByName('DELETE_RULE'));
     CheckEquals('people_p_dep_id_fkey', GetStringByName('FK_NAME'));
-    CheckEquals('1', GetStringByName('PK_NAME'));
+    CheckEquals('department_pkey', GetStringByName('PK_NAME'));
     CheckEquals(ord(ikNotDeferrable), GetIntByName('DEFERRABILITY'));
     CheckEquals(False, Next);
   end;
@@ -754,19 +754,19 @@ begin
   ResultSet := Metadata.GetIndexInfo('', '', 'department', True, True);
   with ResultSet do
   begin
-    CheckEquals(1, FindColumn('TABLE_CAT'));
-    CheckEquals(2, FindColumn('TABLE_SCHEM'));
-    CheckEquals(3, FindColumn('TABLE_NAME'));
-    CheckEquals(4, FindColumn('NON_UNIQUE'));
-    CheckEquals(5, FindColumn('INDEX_QUALIFIER'));
-    CheckEquals(6, FindColumn('INDEX_NAME'));
-    CheckEquals(7, FindColumn('TYPE'));
-    CheckEquals(8, FindColumn('ORDINAL_POSITION'));
-    CheckEquals(9, FindColumn('COLUMN_NAME'));
-    CheckEquals(10, FindColumn('ASC_OR_DESC'));
-    CheckEquals(11, FindColumn('CARDINALITY'));
-    CheckEquals(12, FindColumn('PAGES'));
-    CheckEquals(13, FindColumn('FILTER_CONDITION'));
+    CheckEquals(CatalogNameIndex, FindColumn('TABLE_CAT'));
+    CheckEquals(SchemaNameIndex, FindColumn('TABLE_SCHEM'));
+    CheckEquals(TableNameIndex, FindColumn('TABLE_NAME'));
+    CheckEquals(IndexInfoColNonUniqueIndex, FindColumn('NON_UNIQUE'));
+    CheckEquals(IndexInfoColIndexQualifierIndex, FindColumn('INDEX_QUALIFIER'));
+    CheckEquals(IndexInfoColIndexNameIndex, FindColumn('INDEX_NAME'));
+    CheckEquals(IndexInfoColTypeIndex, FindColumn('TYPE'));
+    CheckEquals(IndexInfoColOrdPositionIndex, FindColumn('ORDINAL_POSITION'));
+    CheckEquals(IndexInfoColColumnNameIndex, FindColumn('COLUMN_NAME'));
+    CheckEquals(IndexInfoColAscOrDescIndex, FindColumn('ASC_OR_DESC'));
+    CheckEquals(IndexInfoColCardinalityIndex, FindColumn('CARDINALITY'));
+    CheckEquals(IndexInfoColPagesIndex, FindColumn('PAGES'));
+    CheckEquals(IndexInfoColFilterConditionIndex, FindColumn('FILTER_CONDITION'));
 
     CheckEquals(True, Next);
     CheckEquals('', GetStringByName('TABLE_CAT'));

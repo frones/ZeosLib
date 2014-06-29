@@ -61,6 +61,11 @@ uses
   ZGenericSqlAnalyser, ZDbcLogging, ZVariant, ZPlainDriver, ZURL;
 
 const
+  { generic constant for first column/parameter index }
+  FirstDbcIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  { generic constant for invalid column/parameter index }
+  InvalidDbcIndex = {$IFDEF GENERIC_INDEX}-1{$ELSE}0{$ENDIF};
+const
   { Constants from JDBC DatabaseMetadata }
   TypeSearchable           = 3;
   ProcedureReturnsResult   = 2;

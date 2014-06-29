@@ -114,7 +114,7 @@ type
 
   TZSQLVars = {$ifndef FPC_REQUIRES_PROPER_ALIGNMENT}packed{$endif} record
     AllocNum:  ub4;
-    Variables: array[1..MAX_SQLVAR_LIMIT] of TZSQLVar;
+    Variables: array[FirstDbcIndex..MAX_SQLVAR_LIMIT{$IFDEF GENERIC_INDEX}-1{$ENDIF}] of TZSQLVar;
   end;
   PZSQLVars = ^TZSQLVars;
 
@@ -377,7 +377,7 @@ begin
   if Variables <> nil then
   begin
     { Frees allocated memory for output variables }
-    for I := 1 to Variables.AllocNum do
+    for I := FirstDbcIndex to Variables.AllocNum{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       CurrentVar := @Variables.Variables[I];
       if Assigned(CurrentVar._Obj) then
@@ -513,7 +513,7 @@ begin
   ConSettings := Connection.GetConSettings;
   for I := 0 to Variables.AllocNum - 1 do
   begin
-    CurrentVar := @Variables.Variables[I + 1];
+    CurrentVar := @Variables.Variables[I{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}];
     if (high(Values)<I) or ClientVarManager.IsNull(Values[I]) then
       CurrentVar.Indicator := -1
     else
@@ -638,7 +638,7 @@ var
   DescriptorsArray: TDesciptorRecArray absolute Variables;
 begin
   if ArrayCount = 0 then
-    for I := 1 to SQLVars.AllocNum do
+    for I := FirstDbcIndex to SQLVars.AllocNum{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       CurrentVar := @SQLVars.Variables[I];
       CurrentVar.Blob := nil;

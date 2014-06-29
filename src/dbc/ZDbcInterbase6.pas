@@ -158,7 +158,7 @@ var
 implementation
 
 uses ZFastCode, ZDbcInterbase6Statement, ZDbcInterbase6Metadata, ZEncoding,
-  ZInterbaseToken, ZInterbaseAnalyser
+  ZInterbaseToken, ZInterbaseAnalyser, ZDbcMetadata
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZInterbase6Driver }
@@ -514,7 +514,7 @@ begin
       if Next then
         if FCLientCodePage = '' then
         begin
-          FCLientCodePage := GetString(6);
+          FCLientCodePage := GetString(CollationAndCharSetNameIndex);
           if URL.Properties.Values['ResetCodePage'] <> '' then
           begin
             ConSettings^.ClientCodePage := GetIZPlainDriver.ValidateCharEncoding(FClientCodePage);
@@ -524,7 +524,7 @@ begin
             CheckCharEncoding(FClientCodePage);
         end
         else
-          if GetString(6) = sCS_NONE then
+          if GetString(CollationAndCharSetNameIndex) = sCS_NONE then
           begin
             if not ( FClientCodePage = sCS_NONE ) then
             begin

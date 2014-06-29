@@ -57,7 +57,7 @@ interface
 
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
-  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
+  {$IFDEF MSWINDOWS}{%H-}Windows,{$ENDIF}
   ZSysUtils, ZDbcIntfs, ZDbcStatement, ZDbcLogging, ZPlainOracleDriver,
   ZCompatibility, ZVariant, ZDbcOracleUtils, ZPlainOracleConstants;
 
@@ -313,7 +313,7 @@ begin
       SetLength(FNullIndicators[i], ArrayCount);
     for I := 0 to InParamCount - 1 do
     begin
-      CurrentVar := @FInVars.Variables[I + 1];
+      CurrentVar := @FInVars.Variables[I{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}];
       CurrentVar.Handle := nil;
 
       ZVariant := InParamValues[i];
@@ -1027,7 +1027,7 @@ begin
     { single row execution}
     for I := 0 to InParamCount - 1 do
     begin
-      CurrentVar := @FInVars.Variables[I + 1];
+      CurrentVar := @FInVars.Variables[I{$IFNDEF GENERIC_INDEX} + 1{$ENDIF}];
       CurrentVar.Handle := nil;
 
       { Artificially define Oracle internal type. }
@@ -1299,7 +1299,7 @@ begin
 
     for I := 0 to FOracleParamsCount - 1 do
     begin
-      CurrentVar := @FInVars.Variables[I + 1];
+      CurrentVar := @FInVars.Variables[I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}];
       CurrentVar.Handle := nil;
       SQLType := TZSQLType(FOracleParams[I].pSQLType);
 
@@ -1326,6 +1326,7 @@ begin
           nil, 0, nil, OCI_DEFAULT), lcExecute, 'OCIBindByPos', ConSettings);
     end;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+    //FPrepared := True;
   end;
 end;
 
@@ -1334,10 +1335,10 @@ procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
 begin
   inherited RegisterOutParameter(ParameterIndex,SQLType);
-  with FOracleParams[ParameterIndex-1] do
+  with FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] do
   begin
     if not GetConnection.UseMetadata then
-      pName := 'pOut'+ZFastCode.IntToStr(ParameterIndex);
+      pName := 'pOut'+ZFastCode.IntToStr(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
     pSQLType := SQLType;
   end;
 end;
@@ -1347,15 +1348,20 @@ procedure TZOracleCallableStatement.RegisterParamType(ParameterIndex: integer;
 begin
   inherited RegisterParamType(ParameterIndex, ParamType);
   if ParameterIndex > High(FOracleParams) then
-    SetLength(FOracleParams, ParameterIndex);
-  if ParameterIndex > FOracleParamsCount then
-    FOracleParamsCount := ParameterIndex;
-  FOracleParams[ParameterIndex-1].pType := ParamType;
-  FOracleParams[ParameterIndex-1].pParamIndex := ParameterIndex;
+    SetLength(FOracleParams, ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+  if ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} > FOracleParamsCount then
+    FOracleParamsCount := ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF};
+  FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pType := ParamType;
+  FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pParamIndex := ParameterIndex;
   if ParamType in [2,3,4] then //ptInOut, ptOut, ptResult
   begin
+    {$IFNDEF GENERIC_INDEX}
     Inc(FOutParamCount);
-    FOracleParams[ParameterIndex-1].pOutIndex := FOutParamCount;
+    {$ENDIF}
+    FOracleParams[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pOutIndex := FOutParamCount;
+    {$IFDEF GENERIC_INDEX}
+    Inc(FOutParamCount);
+    {$ENDIF}
   end;
 end;
 
@@ -1382,7 +1388,7 @@ begin
   begin
     AConnection := GetConnection;
     if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
-      pName := 'p'+ZFastCode.IntToStr(ParameterIndex);
+      pName := 'p'+ZFastCode.IntToStr(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
     pSQLType := ord(SQLType);
     pValue := Value;
   end;
@@ -1529,8 +1535,8 @@ begin
   for I := 0 to FOracleParamsCount -1 do
     if FOracleParams[i].pType in [2,3,4] then
     begin
-      CurrentVar:= @FInVars.Variables[I+1];
-      SetOutParam(CurrentVar, FOracleParams[i].pParamIndex-1);
+      CurrentVar:= @FInVars.Variables[I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}];
+      SetOutParam(CurrentVar, FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
     end;
 end;
 

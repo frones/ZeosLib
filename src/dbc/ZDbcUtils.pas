@@ -172,7 +172,7 @@ function TokenizeSQLQueryUni(var SQL: {$IF defined(FPC) and defined(WITH_RAWBYTE
   ComparePrefixTokens: TPreparablePrefixTokens; const CompareSuccess: PBoolean;
   const NeedNCharDetection: Boolean = False): TUnicodeStringDynArray;
 
-{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+{$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const PAramTypes: array of ShortInt);
@@ -811,7 +811,7 @@ begin
     {$ENDIF}
 end;
 
-{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+{$IF defined(ENABLE_MYSQL) ord defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const ParamTypes: array of ShortInt);
@@ -824,13 +824,13 @@ begin
   if SupportsMoveAbsolute then ResultSet.BeforeFirst;
   HasRows := ResultSet.Next;
 
-  I := 1;
+  I := FirstDbcIndex;
   for ParamIndex := 0 to OutParamCount - 1 do
   begin
     if not (ParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
       Continue;
 
-    if I > ResultSet.GetMetadata.GetColumnCount then
+    if I > ResultSet.GetMetadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
       Break;
 
     if (not HasRows) or (ResultSet.IsNull(I)) then

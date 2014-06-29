@@ -122,6 +122,7 @@ type
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
+    function GetAnsiRec(const Index: Integer): TZAnsiRec;
     function GetString(const Index: Integer): RawByteString;
     function GetBytes(const Index: Integer): TBytes;
     function GetDate(const Index: Integer): TDateTime;
@@ -143,7 +144,8 @@ type
     FSQLDA: PASASQLDA;
     FPlainDriver: IZASAPlainDriver;
     FHandle: PZASASQLCA;
-    FCursorName: AnsiString;
+    FCursorName: PAnsiChar;
+    FRawTemp: RawByteString;
     procedure CreateException( Msg: string);
     procedure CheckIndex(const Index: Word);
     procedure CheckRange(const Index: Word);
@@ -156,7 +158,7 @@ type
     procedure ReadBlob(const Index: Word; Buffer: Pointer; Length: LongWord);
   public
     constructor Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-      CursorName: AnsiString; ConSettings: PZConSettings; NumVars: Word = StdVars);
+      CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
     destructor Destroy; override;
 
     procedure AllocateSQLDA( NumVars: Word);
@@ -204,6 +206,7 @@ type
     function GetDouble(const Index: Integer): Double;
     function GetBigDecimal(const Index: Integer): Extended;
     function GetPChar(const Index: Integer): PAnsiChar;
+    function GetAnsiRec(const Index: Integer): TZAnsiRec;
     function GetString(const Index: Integer): RawByteString;
     function GetBytes(const Index: Integer): TBytes;
     function GetDate(const Index: Integer): TDateTime;
@@ -345,7 +348,7 @@ begin
 end;
 
 constructor TZASASQLDA.Create(PlainDriver: IZASAPlainDriver; Handle: PZASASQLCA;
-   CursorName: AnsiString; ConSettings: PZConSettings; NumVars: Word = StdVars);
+   CursorName: PAnsiChar; ConSettings: PZConSettings; NumVars: Word = StdVars);
 begin
   FPlainDriver := PlainDriver;
   FHandle := Handle;
@@ -1544,6 +1547,52 @@ begin
 end;
 
 {**
+   Return String field value
+   @param Index the field index
+   @return the field String value
+}
+function TZASASQLDA.GetAnsiRec(const Index: Integer): TZAnsiRec;
+begin
+  CheckRange(Index);
+  with FSQLDA.sqlvar[Index] do
+  begin
+    Result.P := nil;
+    Result.Len := 0;
+    if (sqlind^ < 0) then
+       Exit;
+
+    case sqlType and $FFFE of
+      DT_SMALLINT    : FRawTemp := IntToRaw( PSmallint(sqldata)^);
+      DT_UNSSMALLINT : FRawTemp := IntToRaw( PWord(sqldata)^);
+      DT_INT         : FRawTemp := IntToRaw( PInteger(sqldata)^);
+      DT_UNSINT      : FRawTemp := IntToRaw( PLongWord(sqldata)^);
+      DT_FLOAT       : FRawTemp := FloatToRaw( PSingle(sqldata)^);
+      DT_DOUBLE      : FRawTemp := FloatToRaw( PDouble(sqldata)^);
+      DT_VARCHAR     :
+        begin
+          Result.P := @PZASASQLSTRING(sqlData).data[0];
+          Result.Len := PZASASQLSTRING( sqlData).length;
+          Exit;
+        end;
+      DT_LONGVARCHAR : ReadBlobToString( Index, FRawTemp);
+      DT_TIMESTAMP_STRUCT : FRawTemp := DateTimeToRawSQLTimeStamp(GetTimestamp(Index), FConSettings^.ReadFormatSettings, False);
+      DT_TINYINT     : FRawTemp := IntToRaw( PByte(sqldata)^);
+      DT_BIT         : FRawTemp := BoolToRawEx( PByte(sqldata)^ = 1);
+      DT_BIGINT,
+      DT_UNSBIGINT   : FRawTemp := IntToRaw( PInt64(sqldata)^);
+    else
+      CreateException( Format( SErrorConvertionField,
+        [ GetFieldName(Index), ConvertASATypeToString( sqlType)]));
+    end;
+  end;
+  Result.Len := Length(FRawTemp);
+  if Result.Len = 0 then
+    Result.P := PAnsiChar(FRawTemp) //RTL convesrion ):
+  else
+    Result.P := Pointer(FRawTemp); //fast result
+end;
+
+{**
    Return Short field value
    @param Index the field index
    @return the field Short value
@@ -1739,7 +1788,7 @@ begin
 
           while True do
           begin
-            FPlainDriver.db_get_data(FHandle, PAnsiChar(FCursorName), Index + 1, Offs, TempSQLDA);
+            FPlainDriver.db_get_data(FHandle, FCursorName, Index + 1, Offs, TempSQLDA);
             CheckASAError( FPlainDriver, FHandle, lcOther, FConSettings);
             if ( sqlind^ < 0 ) then
               break;

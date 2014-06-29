@@ -642,7 +642,7 @@ begin
   Stmt := CreateRegularStatement(Self.Info);
   RS := Stmt.ExecuteQuery('SELECT dateformat FROM master.dbo.syslanguages WHERE name = @@LANGUAGE');
   if RS.Next then
-    ConSettings^.ReadFormatSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(1));
+    ConSettings^.ReadFormatSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(FirstDbcIndex));
   RS := nil;
   Stmt.close;
   Stmt := nil;
@@ -665,7 +665,7 @@ begin
     RS := Stmt.ExecuteQuery('SELECT DATABASEPROPERTYEX('+
       AnsiQuotedStr(DataBase, #39)+', ''Collation'') as DatabaseCollation');
     if RS.Next then
-      Result := RS.GetString(1)
+      Result := RS.GetString(FirstDbcIndex)
     else
       Result := '';
     RS := nil;
@@ -685,7 +685,7 @@ begin
   try
     RS := Stmt.ExecuteQuery('SELECT COLLATIONPROPERTY('+AnsiQuotedStr(Collation, #39)+', ''Codepage'') AS CodePage');
     if RS.Next then
-      Result := RS.GetInt(1)
+      Result := RS.GetInt(FirstDbcIndex)
     else
       Result := High(Word);
     RS := nil;

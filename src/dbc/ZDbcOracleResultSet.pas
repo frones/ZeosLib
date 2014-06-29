@@ -942,7 +942,7 @@ begin
   { Allocates memory for result set }
   for I := 1 to FOutVars.AllocNum do
   begin
-    CurrentVar := @FOutVars.Variables[I];
+    CurrentVar := @FOutVars.Variables[I{$IFDEF GENERIC_INDEX}-1{$ENDIF}];
     CurrentVar.Handle := nil;
 
     FPlainDriver.ParamGet(FStmtHandle, OCI_HTYPE_STMT, FErrorHandle,
@@ -1072,7 +1072,7 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FOutVars.AllocNum do
+  for I := FirstDbcIndex to FOutVars.AllocNum{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
@@ -1240,10 +1240,14 @@ begin
   AllocateOracleSQLVars(Result, J);
   SetLength(FFieldNames, J);
 
+  {$IFDEF GENERIC_INDEX}
+  for I := 0 to High(OracleParams) do
+  {$ELSE}
   for I := 1 to Length(OracleParams) do
+  {$ENDIF}
   begin
-    J := OracleParams[I-1].pOutIndex;
-    if OracleParams[I-1].pType in [2,3,4] then //ptInOut, ptOut, ptResult
+    J := OracleParams[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pOutIndex;
+    if OracleParams[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pType in [2,3,4] then //ptInOut, ptOut, ptResult
     begin
       Result.Variables[J].ColType := InVars.Variables[I].ColType;
       Result.Variables[J].TypeCode := InVars.Variables[I].TypeCode;
@@ -1251,7 +1255,7 @@ begin
       Result.Variables[J].Length := InVars.Variables[I].Length;
       GetMem(Result.Variables[J].Data, InVars.Variables[I].Length);
       Move(InVars.Variables[I].Data^, Result.Variables[J].Data^, InVars.Variables[I].Length);
-      FFieldNames[J-1] := OracleParams[I-1].pName;
+      FFieldNames[J{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := OracleParams[I{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].pName;
     end;
   end;
 end;
@@ -1264,7 +1268,8 @@ var
 begin
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 1 to FOutVars.AllocNum do
+  for I := FirstDbcIndex to FOutVars.AllocNum {$IFDEF GENERIC_INDEX}-1{$ENDIF}
+ do
   begin
     CurrentVar := @FOutVars.Variables[I];
     ColumnInfo := TZColumnInfo.Create;
@@ -1274,7 +1279,7 @@ begin
       ColumnName := '';
       TableName := '';
 
-      ColumnLabel := FFieldNames[i-1];
+      ColumnLabel := FFieldNames[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
       ColumnDisplaySize := 0;
       AutoIncrement := False;
       Signed := True;

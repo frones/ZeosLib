@@ -1746,11 +1746,11 @@ begin
         vtString:
           Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
         vtAnsiString:
-          Result.VInteger := RawToInt64Def(Value.VAnsiString, 0);
+          Result.VInteger := RawToInt64Def(Pointer(Value.VAnsiString), 0);
         vtUTF8String:
-          Result.VInteger := RawToInt64Def(Value.VUTF8String, 0);
+          Result.VInteger := RawToInt64Def(Pointer(Value.VUTF8String), 0);
         vtRawByteString:
-          Result.VInteger := RawToInt64Def(Value.VRawByteString, 0);
+          Result.VInteger := RawToInt64Def(Pointer(Value.VRawByteString), 0);
         vtUnicodeString:
           Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         vtCharRec:
@@ -1764,14 +1764,7 @@ begin
             {$ENDIF}
           end
           else
-          begin
-            {$IF defined(WIN32) and not defined(FPC)}
-            SetString(AnsiTemp, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len);
-            Result.VInteger := RawToInt64Def(Ansitemp, 0);
-            {$ELSE}
             Result.VInteger := RawToInt64Def(Value.VCharRec.P, 0);
-            {$IFEND}
-          end;
         vtDateTime:
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:

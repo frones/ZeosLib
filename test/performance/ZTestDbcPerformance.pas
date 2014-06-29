@@ -132,17 +132,8 @@ function TZNativeDbcPerformanceTestCase.CreateResultSet(
   Query: string): IZResultSet;
 var
   Statement: IZStatement;
-  Info: TStrings;
 begin
-  if StartsWith(Protocol, 'sqlite') then
-  begin
-    Info := TStringList.Create;
-    Info.Add('ForceNativeResultSet=true');
-    Statement := Connection.CreateStatementWithParams(Info);
-    Info.Free;
-  end
-  else
-    Statement := Connection.CreateStatement;
+  Statement := Connection.CreateStatement;
   Statement.SetFetchDirection(fdForward);
   Statement.SetResultSetConcurrency(rcReadOnly);
   Statement.SetResultSetType(rtForwardOnly);
@@ -218,7 +209,7 @@ begin
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
-    for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
+    for N := FirstDbcIndex to high(ConnectionConfig.PerformanceResultSetTypes){$IFNDEF GENERIC_INDEX}+1{$ENDIF} do
       case ConnectionConfig.PerformanceResultSetTypes[N-1] of
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
         stByte,
@@ -271,8 +262,8 @@ begin
   if SkipForReason(srNoPerformance) then Exit;
 
   while FResultSet.Next do
-    for i := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
-      case ConnectionConfig.PerformanceResultSetTypes[i-1] of
+    for i := FirstDbcIndex to high(ConnectionConfig.PerformanceResultSetTypes){$IFNDEF GENERIC_INDEX}+1{$ENDIF} do
+      case ConnectionConfig.PerformanceResultSetTypes[i{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
         stBoolean: FResultSet.GetBoolean(I);
         stByte:    FResultSet.GetByte(I);
         stShort,
@@ -328,7 +319,7 @@ begin
   Statement := Connection.PrepareStatement(SQL);
   for I := 1 to GetRecordCount do
   begin
-    for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes) do
+    for N := FirstDbcIndex to high(ConnectionConfig.PerformanceResultSetTypes) do
       case ConnectionConfig.PerformanceResultSetTypes[N] of
         stBoolean: Statement.SetBoolean(N, Random(1) = 1);
         stByte:    Statement.SetByte(N, Ord(Random(255)));
@@ -362,7 +353,7 @@ begin
             Statement.SetBlob(N, stBinaryStream, TZAbstractBlob.CreateWithData(Pointer(Bts), Length(Bts)));
           end;
       end;
-    Statement.SetInt(High(ConnectionConfig.PerformanceResultSetTypes)+1, I);
+    Statement.SetInt(High(ConnectionConfig.PerformanceResultSetTypes){$IFNDEF GENERIC_INDEX}+1{$ENDIF}, I);
     Statement.ExecuteUpdatePrepared;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -382,7 +373,7 @@ begin
     'DELETE FROM '+PerformanceTable+' WHERE '+PerformancePrimaryKey+'=?');
   for I := 1 to GetRecordCount do
   begin
-    Statement.SetInt(1, I);
+    Statement.SetInt(FirstDbcIndex, I);
     Statement.ExecutePrepared;
   end;
   if not SkipPerformanceTransactionMode then Connection.Commit;
@@ -555,8 +546,8 @@ begin
   for I := 1 to GetRecordCount do
   begin
     FResultSet.MoveToInsertRow;
-    for N := 1 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
-      case ConnectionConfig.PerformanceResultSetTypes[N-1] of
+    for N := FirstDbcIndex to high(ConnectionConfig.PerformanceResultSetTypes){$IFNDEF GENERIC_INDEX}+1{$ENDIF} do
+      case ConnectionConfig.PerformanceResultSetTypes[N{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
         stBoolean: FResultSet.UpdateBoolean(N, Random(1) = 1);
         stByte:    FResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,
@@ -608,8 +599,8 @@ begin
   ResultSet := CreateResultSet('SELECT * from '+PerformanceTable);
   while ResultSet.Next do
   begin
-    for N := 2 to high(ConnectionConfig.PerformanceResultSetTypes)+1 do
-      case ConnectionConfig.PerformanceResultSetTypes[N-1] of
+    for N := {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF} to high(ConnectionConfig.PerformanceResultSetTypes){$IFNDEF GENERIC_INDEX}+1{$ENDIF} do
+      case ConnectionConfig.PerformanceResultSetTypes[N{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
         stBoolean: ResultSet.UpdateBoolean(N, Random(1) = 1);
         stByte:    ResultSet.UpdateByte(N, Ord(Random(255)));
         stShort,

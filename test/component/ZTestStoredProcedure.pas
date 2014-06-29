@@ -308,8 +308,8 @@ begin
 
   StoredProc.Params[1].AsInteger := 12345;
   StoredProc.ExecProc;
-  CheckEquals(12346, StoredProc.Params[1].AsInteger);
-  CheckEquals(2, StoredProc.Params.Count);
+  CheckEquals(12346, StoredProc.Params[2].AsInteger);
+  CheckEquals(3, StoredProc.Params.Count);
 end;
 
 { TZTestPosgreSQLStoredProcedure }

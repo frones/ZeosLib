@@ -160,6 +160,10 @@ begin
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestBlobs;
+const
+  b_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  b_text_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  b_image_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
   Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
@@ -187,9 +191,9 @@ begin
 
   PreparedStatement := Connection.PrepareStatement(
     'INSERT INTO blob_values (b_id,b_text,b_image) VALUES(?,?,?)');
-  PreparedStatement.SetInt(1, TEST_ROW_ID);
-  PreparedStatement.SetAsciiStream(2, TextStream);
-  PreparedStatement.SetBinaryStream(3, ImageStream);
+  PreparedStatement.SetInt(b_id_index, TEST_ROW_ID);
+  PreparedStatement.SetAsciiStream(b_text_index, TextStream);
+  PreparedStatement.SetBinaryStream(b_image_index, ImageStream);
   CheckEquals(1, PreparedStatement.ExecuteUpdatePrepared);
 
   ResultSet := Statement.ExecuteQuery('SELECT * FROM blob_values'
@@ -213,6 +217,11 @@ begin
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestCaseSensitive;
+const
+  cs_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  Cs_Data1_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  cs_data1_2_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  cs_data1_3_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -226,21 +235,21 @@ begin
   Metadata := ResultSet.GetMetadata;
   CheckNotNull(Metadata);
 
-  CheckEquals('cs_id', Metadata.GetColumnName(1));
-  CheckEquals(False, Metadata.IsCaseSensitive(1));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(1));
+  CheckEquals('cs_id', Metadata.GetColumnName(cs_id_index));
+  CheckEquals(False, Metadata.IsCaseSensitive(cs_id_index));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(cs_id_index));
 
-  CheckEquals('Cs_Data1', Metadata.GetColumnName(2));
-  CheckEquals(True, Metadata.IsCaseSensitive(2));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(2));
+  CheckEquals('Cs_Data1', Metadata.GetColumnName(Cs_Data1_index));
+  CheckEquals(True, Metadata.IsCaseSensitive(Cs_Data1_index));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(Cs_Data1_index));
 
-  CheckEquals('cs_data1', Metadata.GetColumnName(3));
-  CheckEquals(False, Metadata.IsCaseSensitive(3));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(3));
+  CheckEquals('cs_data1', Metadata.GetColumnName(cs_data1_2_index));
+  CheckEquals(False, Metadata.IsCaseSensitive(cs_data1_2_index));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(cs_data1_2_index));
 
-  CheckEquals('cs data1', Metadata.GetColumnName(4));
-  CheckEquals(True, Metadata.IsCaseSensitive(4));
-  CheckEquals('Case_Sensitive', Metadata.GetTableName(4));
+  CheckEquals('cs data1', Metadata.GetColumnName(cs_data1_3_index));
+  CheckEquals(True, Metadata.IsCaseSensitive(cs_data1_3_index));
+  CheckEquals('Case_Sensitive', Metadata.GetTableName(cs_data1_3_index));
 
   ResultSet.Close;
   Statement.Close;
@@ -251,6 +260,14 @@ end;
   Runs a test for PostgreSQL default values.
 }
 procedure TZTestDbcPostgreSQLCase.TestDefaultValues;
+const
+  D_ID = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  D_FLD1 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  D_FLD2 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  D_FLD3 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  D_FLD4 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  D_FLD5 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  D_FLD6 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -268,14 +285,14 @@ begin
   ResultSet.MoveToInsertRow;
   ResultSet.InsertRow;
 
-  Check(ResultSet.GetInt(1) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(2));
-  CheckEquals(123.456, ResultSet.GetFloat(3), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(4));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(5), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(6), 3);
+  Check(ResultSet.GetInt(D_ID) <> 0);
+  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
   CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
+    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
   ResultSet.DeleteRow;
 
@@ -284,6 +301,9 @@ begin
 end;
 
 procedure TZTestDbcPostgreSQLCase.TestEnumValues;
+const
+  ext_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  ext_enum_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -297,8 +317,8 @@ begin
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);
   ResultSet.First;
-  Check(ResultSet.GetInt(1) = 1);
-  CheckEquals('Car', ResultSet.GetString(2));
+  Check(ResultSet.GetInt(ext_id_index) = 1);
+  CheckEquals('Car', ResultSet.GetString(ext_enum_index));
   ResultSet.Close;
   Statement.Close;
 
@@ -309,8 +329,8 @@ begin
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);
   ResultSet.First;
-  Check(ResultSet.GetInt(1) = 1);
-  CheckEquals('House', ResultSet.GetString(2));
+  Check(ResultSet.GetInt(ext_id_index) = 1);
+  CheckEquals('House', ResultSet.GetString(ext_enum_index));
   ResultSet.Close;
   Statement.Close;
 
@@ -324,8 +344,8 @@ begin
   ResultSet := Statement.ExecuteQuery('SELECT * FROM extension where ext_id = 1');
   CheckNotNull(ResultSet);
   ResultSet.First;
-  Check(ResultSet.GetInt(1) = 1);
-  CheckEquals('Car', ResultSet.GetString(2));
+  Check(ResultSet.GetInt(ext_id_index) = 1);
+  CheckEquals('Car', ResultSet.GetString(ext_enum_index));
   ResultSet.Close;
   Statement.Close;
 end;

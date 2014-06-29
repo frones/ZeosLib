@@ -214,6 +214,15 @@ end;
   Runs a test for Oracle DBC PreparedStatement.
 }
 procedure TZTestDbcOracleCase.TestPreparedStatement;
+const
+  department_dep_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  people_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  people_p_begin_work_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  people_p_resume_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   Statement: IZPreparedStatement;
   Statement1: IZPreparedStatement;
@@ -224,7 +233,7 @@ begin
     'DELETE FROM department WHERE dep_id=?');
   CheckNotNull(Statement);
   try
-    Statement.SetInt(1, TEST_ROW_ID);
+    Statement.SetInt(department_dep_id_Index, TEST_ROW_ID);
     Statement.ExecuteUpdatePrepared;
 
     Statement1 := Connection.PrepareStatement(
@@ -232,12 +241,12 @@ begin
       + ' VALUES(?,?,?,?)');
     CheckNotNull(Statement1);
     try
-      Statement1.SetInt(1, TEST_ROW_ID);
-      Statement1.SetString(2, 'xyz');
-      Statement1.SetNull(3, stString);
+      Statement1.SetInt(department_dep_id_Index, TEST_ROW_ID);
+      Statement1.SetString(department_dep_name_Index, 'xyz');
+      Statement1.SetNull(department_dep_shname_Index, stString);
       Stream := TStringStream.Create('abc'#10'def'#13'hgi');
       try
-        Statement1.SetAsciiStream(4, Stream);
+        Statement1.SetAsciiStream(department_dep_address_Index, Stream);
       finally
         Stream.Free;
       end;
@@ -246,7 +255,7 @@ begin
       Statement1.Close;
     end;
 
-    Statement.SetInt(1, TEST_ROW_ID);
+    Statement.SetInt(department_dep_id_Index, TEST_ROW_ID);
     CheckEquals(1, Statement.ExecuteUpdatePrepared);
     Statement.ExecutePrepared;
     CheckEquals(0, Statement.GetUpdateCount);
@@ -255,12 +264,12 @@ begin
       'SELECT count(*) FROM people WHERE p_id<>? AND p_begin_work<>?');
     CheckNotNull(Statement1);
     try
-      Statement1.SetNull(1, stInteger);
-      Statement1.SetNull(2, stTimestamp);
+      Statement1.SetNull(people_p_id_Index, stInteger);
+      Statement1.SetNull(people_p_begin_work_Index, stTimestamp);
       ResultSet := Statement1.ExecuteQueryPrepared;
       try
         Check(ResultSet.Next);
-//        CheckEquals(5, ResultSet.GetInt(1));
+//        CheckEquals(5, ResultSet.GetInt(people_count_Index));
         Check(not ResultSet.Next);
       finally
         ResultSet.Close;
@@ -272,7 +281,7 @@ begin
     Statement1 := Connection.PrepareStatement('UPDATE people SET p_resume=?');
     CheckNotNull(Statement1);
     try
-      Statement1.SetNull(1, stAsciiStream);
+      Statement1.SetNull(people_p_resume_Index, stAsciiStream);
       CheckEquals(5, Statement1.ExecuteUpdatePrepared);
     finally
       Statement1.Close;
@@ -287,6 +296,9 @@ end;
 }
 
 procedure TZTestDbcOracleCase.TestEmptyBlob;
+const
+  update_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  select_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZPreparedStatement;
   Statement1: IZPreparedStatement;
@@ -298,7 +310,7 @@ begin
   CheckNotNull(Statement);
   Stream := TMemoryStream.Create; // empty stream
   try
-    Statement.SetBinaryStream(1, Stream);
+    Statement.SetBinaryStream(update_blob_values_b_blob_Index, Stream);
     CheckEquals(1, Statement.ExecuteUpdatePrepared);
 
     Statement1 := Connection.PrepareStatement(
@@ -308,10 +320,10 @@ begin
       ResultSet := Statement1.ExecuteQueryPrepared;
       try
         Check(ResultSet.Next);
-        Check(not ResultSet.IsNull(2));
-        CheckEquals(0, ResultSet.GetBlob(2).Length, 'Wrong blob length');
+        Check(not ResultSet.IsNull(select_blob_values_b_blob_Index));
+        CheckEquals(0, ResultSet.GetBlob(select_blob_values_b_blob_Index).Length, 'Wrong blob length');
         Check(ResultSet.Next);
-        CheckEquals(20, ResultSet.GetBlob(2).Length, 'Wrong blob length (2)');
+        CheckEquals(20, ResultSet.GetBlob(select_blob_values_b_blob_Index).Length, 'Wrong blob length (2)');
       finally
         ResultSet.Close;
       end;
@@ -369,6 +381,15 @@ end;
   Runs a test for Oracle long objects.
 }
 procedure TZTestDbcOracleCase.TestLongObjects;
+const
+  blob_values_b_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  blob_values_b_long_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  blob_values_b_clob_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  binary_values_n_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  binary_values_n_raw_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  binary_values_n_longraw_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  binary_values_n_blob_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -383,25 +404,25 @@ begin
   CheckNotNull(ResultSet);
 
   Check(ResultSet.Next);
-  CheckEquals(1, ResultSet.GetInt(1));
-  CheckEquals('', ResultSet.GetString(2));
-  CheckEquals('', ResultSet.GetString(3));
-  CheckEquals('', ResultSet.GetString(4));
+  CheckEquals(1, ResultSet.GetInt(blob_values_b_id_Index));
+  CheckEquals('', ResultSet.GetString(blob_values_b_long_Index));
+  CheckEquals('', ResultSet.GetString(blob_values_b_clob_Index));
+  CheckEquals('', ResultSet.GetString(blob_values_b_blob_Index));
 
   Check(ResultSet.Next);
-  CheckEquals(2, ResultSet.GetInt(1));
-  CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(2).GetString);
-  CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(3).GetString);
+  CheckEquals(2, ResultSet.GetInt(blob_values_b_id_Index));
+  CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(blob_values_b_long_Index).GetString);
+  CheckEquals(RawByteString('Test string'), ResultSet.GetBlob(blob_values_b_clob_Index).GetString);
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(4).GetString));
+    String(ResultSet.GetBlob(blob_values_b_blob_Index).GetString));
 
   Check(ResultSet.Next);
-  CheckEquals(3, ResultSet.GetInt(1));
+  CheckEquals(3, ResultSet.GetInt(blob_values_b_id_Index));
   CheckEquals('111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111',
-    String(ResultSet.GetBlob(2).GetString));
+    String(ResultSet.GetBlob(blob_values_b_long_Index).GetString));
   CheckEquals('111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111',
-    String(ResultSet.GetBlob(3).GetString));
-  Check(ResultSet.IsNull(4));
+    String(ResultSet.GetBlob(blob_values_b_clob_Index).GetString));
+  Check(ResultSet.IsNull(blob_values_b_blob_Index));
 
   ResultSet.Close;
 
@@ -410,25 +431,25 @@ begin
   CheckNotNull(ResultSet);
 
   Check(ResultSet.Next);
-  CheckEquals(1, ResultSet.GetInt(1));
-  CheckEquals('', ResultSet.GetString(2));
-  CheckEquals('', ResultSet.GetString(3));
-  CheckEquals('', ResultSet.GetString(4));
+  CheckEquals(1, ResultSet.GetInt(binary_values_n_id_Index));
+  CheckEquals('', ResultSet.GetString(binary_values_n_raw_Index));
+  CheckEquals('', ResultSet.GetString(binary_values_n_longraw_Index));
+  CheckEquals('', ResultSet.GetString(binary_values_n_blob_Index));
 
   Check(ResultSet.Next);
-  CheckEquals(2, ResultSet.GetInt(1));
+  CheckEquals(2, ResultSet.GetInt(binary_values_n_id_Index));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(2).GetString));
+    String(ResultSet.GetBlob(binary_values_n_raw_Index).GetString));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(3).GetString));
+    String(ResultSet.GetBlob(binary_values_n_longraw_Index).GetString));
   CheckEquals(#01#02#03#04#05#06#07#08#09#00#01#02#03#04#05#06#07#08#09#00,
-    String(ResultSet.GetBlob(4).GetString));
+    String(ResultSet.GetBlob(binary_values_n_blob_Index).GetString));
 
   Check(ResultSet.Next);
-  CheckEquals(3, ResultSet.GetInt(1));
-  Check(ResultSet.IsNull(2));
-  Check(ResultSet.IsNull(3));
-  Check(ResultSet.IsNull(4));
+  CheckEquals(3, ResultSet.GetInt(binary_values_n_id_Index));
+  Check(ResultSet.IsNull(binary_values_n_raw_Index));
+  Check(ResultSet.IsNull(binary_values_n_longraw_Index));
+  Check(ResultSet.IsNull(binary_values_n_blob_Index));
 
   ResultSet.Close;
 
@@ -441,6 +462,13 @@ end;
 }
 
 procedure TZTestDbcOracleCase.TestNumbers;
+const
+  number_values_n_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  number_values_n_tint_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  number_values_n_sint_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  number_values_n_int_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  number_values_n_bdecimal_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  number_values_n_numeric_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -455,15 +483,15 @@ begin
   Check(ResultSet.Next);
 
   // 1, -128,-32768,-2147483648,-9223372036854775808, -99999.9999
-  CheckEquals(1, ResultSet.GetInt(1));
-  CheckEquals(-128, ResultSet.GetInt(2));
-  CheckEquals(-32768, ResultSet.GetInt(3));
+  CheckEquals(1, ResultSet.GetInt(number_values_n_id_Index));
+  CheckEquals(-128, ResultSet.GetInt(number_values_n_tint_Index));
+  CheckEquals(-32768, ResultSet.GetInt(number_values_n_sint_Index));
 {$IFDEF FPC}
-  CheckEquals(-2147483648, ResultSet.GetInt(4));
+  CheckEquals(-2147483648, ResultSet.GetInt(number_values_n_int_Index));
   // !! in oracle we can only use double precission numbers now
-  CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(5), 10000);
+  CheckEquals(-9223372036854775808, ResultSet.GetBigDecimal(number_values_n_bdecimal_Index), 10000);
 {$ENDIF}
-  CheckEquals(-99999.9999, ResultSet.GetDouble(6), 0.00001);
+  CheckEquals(-99999.9999, ResultSet.GetDouble(number_values_n_numeric_Index), 0.00001);
 end;
 
 {**
@@ -471,6 +499,9 @@ end;
 }
 
 procedure TZTestDbcOracleCase.TestLargeBlob;
+const
+  insert_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  select_blob_values_b_blob_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   InStm: TMemoryStream;
   OutBytes: TBytes;
@@ -494,7 +525,7 @@ begin
     PStatement := Connection.PrepareStatement(
       Format('insert into blob_values(b_id, b_blob) values (%d, ?)', [TEST_ROW_ID]));
     CheckNotNull(PStatement);
-    PStatement.SetBinaryStream(1, InStm);
+    PStatement.SetBinaryStream(insert_blob_values_b_blob_Index, InStm);
     CheckEquals(1, PStatement.ExecuteUpdatePrepared, 'Row insert');
     PStatement.Close;
 
@@ -508,11 +539,11 @@ begin
     Check(ResultSet.Next);
 
     // checking value
-    CheckEquals(TestSize, ResultSet.GetBlob(2).Length, 'Wrong blob length');
-    OutBytes := ResultSet.GetBytes(2);
+    CheckEquals(TestSize, ResultSet.GetBlob(select_blob_values_b_blob_Index).Length, 'Wrong blob length');
+    OutBytes := ResultSet.GetBytes(select_blob_values_b_blob_Index);
     CheckEquals(TestSize, Length(OutBytes), 'Wrong blob bytes length');
     CheckEqualsMem(InStm.Memory, @OutBytes[0], TestSize, 'Wrong blob content (byte array)');
-    OutStr := ResultSet.GetBinaryString(2);
+    OutStr := ResultSet.GetBinaryString(select_blob_values_b_blob_Index);
     CheckEquals(TestSize, Length(OutStr), 'Wrong blob string length');
     CheckEqualsMem(InStm.Memory, Pointer(OutStr), TestSize, 'Wrong blob content (string)');
   finally
@@ -529,6 +560,9 @@ end;
 }
 
 procedure TZTestDbcOracleCase.TestDateWithTime;
+const
+  param_d_date_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  field_d_date_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   TestDate: TDateTime;
   Statement: IZStatement;
@@ -541,7 +575,7 @@ begin
     PStatement := Connection.PrepareStatement(
       Format('insert into date_values(d_id, d_date) values(%d, ?)', [TEST_ROW_ID]));
     CheckNotNull(PStatement);
-    PStatement.SetTimestamp(1, TestDate);
+    PStatement.SetTimestamp(param_d_date_Index, TestDate);
     CheckEquals(1, PStatement.ExecuteUpdatePrepared, 'Row insert');
     PStatement.Close;
 
@@ -554,7 +588,7 @@ begin
     Check(ResultSet.Next);
 
     // checking value
-    CheckEqualsDate(TestDate, ResultSet.GetTimestamp(2), [dpYear..dpSec], 'DATE type must have 1 sec precission');
+    CheckEqualsDate(TestDate, ResultSet.GetTimestamp(field_d_date_Index), [dpYear..dpSec], 'DATE type must have 1 sec precission');
   finally
     PStatement := Connection.PrepareStatement(
     'DELETE FROM date_values WHERE d_id=' + IntToStr(TEST_ROW_ID));
@@ -569,6 +603,8 @@ end;
 procedure TZTestDbcOracleCase.TestFKError;
 const
   TestStr = 'The source code of the ZEOS Libraries and packages are distributed under the Library GNU General Public License';
+  s_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  s_varchar_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   Statement: IZStatement;
   PStatement: IZPreparedStatement;
@@ -576,11 +612,11 @@ var
 begin
   // inserting
   PStatement := Connection.PrepareStatement(
-  'insert into string_values(s_id, s_varchar) values(?, ?)');
+    'insert into string_values(s_id, s_varchar) values(?, ?)');
   CheckNotNull(PStatement);
   // making PK error
-  PStatement.SetInt(1, 1);
-  PStatement.SetNull(2, stString);  // null clears variable memory ref
+  PStatement.SetInt(s_id_Index, 1);
+  PStatement.SetNull(s_varchar_Index, stString);  // null clears variable memory ref
   try
     PStatement.ExecuteUpdatePrepared;
     Fail('Primary key violation expected');
@@ -588,8 +624,8 @@ begin
   end;
   // rerun with new value (and check, that prev error dont corrupt PStatement)
   try
-    PStatement.SetInt(1, TEST_ROW_ID);
-    PStatement.SetString(2, TestStr);
+    PStatement.SetInt(s_id_Index, TEST_ROW_ID);
+    PStatement.SetString(s_varchar_Index, TestStr);
     CheckEquals(1, PStatement.ExecuteUpdatePrepared, 'Row insert');
 
     // selectiong
@@ -601,7 +637,7 @@ begin
     Check(ResultSet.Next);
 
     // checking value
-    CheckEquals(TestStr, ResultSet.GetString(2));
+    CheckEquals(TestStr, ResultSet.GetString(s_varchar_Index));
   finally
     PStatement := Connection.PrepareStatement(
     'DELETE FROM string_values WHERE s_id=' + IntToStr(TEST_ROW_ID));
@@ -611,6 +647,26 @@ end;
 
 {$WARNINGS OFF} //implizit string conversion of...
 procedure TZTestDbcOracleCase.TestArrayBindings;
+const
+  hl_id_Index           = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  stBooleanArray_Index  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  stByte_Index          = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
+  stShort_Index         = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  stInteger_Index       = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  stLong_Index          = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
+  stFloat_Index         = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  stDouble_Index        = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
+  stBigDecimal_Index    = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
+  stString_Index        = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  stUnicode_Index       = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
+  stBytes_Index         = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
+  stDate_Index          = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
+  stTime_Index          = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
+  stTimeStamp_Index     = {$IFDEF GENERIC_INDEX}14{$ELSE}15{$ENDIF};
+  stGUID_Index          = {$IFDEF GENERIC_INDEX}15{$ELSE}16{$ENDIF};
+  stAsciiStream_Index   = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
+  stUnicodeStream_Index = {$IFDEF GENERIC_INDEX}17{$ELSE}18{$ENDIF};
+  stBinaryStream_Index  = {$IFDEF GENERIC_INDEX}18{$ELSE}19{$ENDIF};
 var
   PStatement: IZPreparedStatement;
   hl_idArray: TIntegerDynArray;
@@ -705,34 +761,34 @@ begin
     'stBinaryStream) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
   CheckNotNull(PStatement);
   PrepareSomeData;
-  PStatement.SetDataArray(1, hl_idArray, stInteger);
-  PStatement.SetDataArray(2, stBooleanArray, stBoolean);
-  PStatement.SetDataArray(3, stByteArray, stByte);
-  PStatement.SetDataArray(4, stShortArray, stShort);
-  PStatement.SetDataArray(5, stIntegerArray, stInteger);
-  PStatement.SetDataArray(6, stLongArray, stLong);
-  PStatement.SetDataArray(7, stFloatArray, stFloat);
-  PStatement.SetDataArray(8, stDoubleArray, stDouble);
-  PStatement.SetDataArray(9, stBigDecimalArray, stBigDecimal);
-  PStatement.SetDataArray(10, stStringArray, stString, vtRawByteString);
-  PStatement.SetDataArray(11, stUnicodeStringArray, stUnicodeString, vtUnicodeString);
-  PStatement.SetDataArray(12, stBytesArray, stBytes);
-  PStatement.SetDataArray(13, stDateArray, stDate);
-  PStatement.SetDataArray(14, stTimeArray, stTime);
-  PStatement.SetDataArray(15, stTimeStampArray, stTimeStamp);
-  PStatement.SetDataArray(16, stGUIDArray, stGUID);
-  PStatement.SetDataArray(17, stAsciiStreamArray, stString, vtCharRec);
-  PStatement.SetDataArray(18, stUnicodeStreamArray, stString, vtUTF8String);
-  PStatement.SetDataArray(19, stBinaryStreamArray, stBinaryStream);
+  PStatement.SetDataArray(hl_id_Index, hl_idArray, stInteger);
+  PStatement.SetDataArray(stBooleanArray_Index, stBooleanArray, stBoolean);
+  PStatement.SetDataArray(stByte_Index, stByteArray, stByte);
+  PStatement.SetDataArray(stShort_Index, stShortArray, stShort);
+  PStatement.SetDataArray(stInteger_Index, stIntegerArray, stInteger);
+  PStatement.SetDataArray(stLong_Index, stLongArray, stLong);
+  PStatement.SetDataArray(stFloat_Index, stFloatArray, stFloat);
+  PStatement.SetDataArray(stDouble_Index, stDoubleArray, stDouble);
+  PStatement.SetDataArray(stBigDecimal_Index, stBigDecimalArray, stBigDecimal);
+  PStatement.SetDataArray(stString_Index, stStringArray, stString, vtRawByteString);
+  PStatement.SetDataArray(stUnicode_Index, stUnicodeStringArray, stUnicodeString, vtUnicodeString);
+  PStatement.SetDataArray(stBytes_Index, stBytesArray, stBytes);
+  PStatement.SetDataArray(stDate_Index, stDateArray, stDate);
+  PStatement.SetDataArray(stTime_Index, stTimeArray, stTime);
+  PStatement.SetDataArray(stTimeStamp_Index, stTimeStampArray, stTimeStamp);
+  PStatement.SetDataArray(stGUID_Index, stGUIDArray, stGUID);
+  PStatement.SetDataArray(stAsciiStream_Index, stAsciiStreamArray, stString, vtCharRec);
+  PStatement.SetDataArray(stUnicodeStream_Index, stUnicodeStreamArray, stString, vtUTF8String);
+  PStatement.SetDataArray(stBinaryStream_Index, stBinaryStreamArray, stBinaryStream);
 
-  for i := 1 to 19 do
+  for i := FirstDbcIndex to 19{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     case TZSQLType(Random(14)+1) of
       stBoolean:
         begin
           SetLength(stBooleanNullArray, Length(stBooleanNullArray) +1);
           SetLength(stBooleanNullArray[High(stBooleanNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stBooleanNullArray[High(stBooleanNullArray)][J] := False
             else
               stBooleanNullArray[High(stBooleanNullArray)][J] := Boolean(Random(1));
@@ -743,7 +799,7 @@ begin
           SetLength(stByteNullArray, Length(stByteNullArray)+1);
           SetLength(stByteNullArray[High(stByteNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stByteNullArray[High(stByteNullArray)][J] := Ord(False)
             else
               stByteNullArray[High(stByteNullArray)][J] := Random(2);
@@ -754,7 +810,7 @@ begin
           SetLength(stShortNullArray, Length(stShortNullArray)+1);
           SetLength(stShortNullArray[High(stShortNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stShortNullArray[High(stShortNullArray)][J] := 0
             else
               stShortNullArray[High(stShortNullArray)][J] := Random(2);
@@ -765,7 +821,7 @@ begin
           SetLength(stWordNullArray, Length(stWordNullArray)+1);
           SetLength(stWordNullArray[High(stWordNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stWordNullArray[High(stWordNullArray)][j] := 0
             else
               stWordNullArray[High(stWordNullArray)][J] := Random(2);
@@ -776,7 +832,7 @@ begin
           SetLength(stSmallNullArray, Length(stSmallNullArray)+1);
           SetLength(stSmallNullArray[High(stSmallNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stSmallNullArray[High(stSmallNullArray)][J] := 0
             else
               stSmallNullArray[High(stSmallNullArray)][J] := -Random(2);
@@ -787,7 +843,7 @@ begin
           SetLength(stLongWordNullArray, Length(stLongWordNullArray)+1);
           SetLength(stLongWordNullArray[High(stLongWordNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stLongWordNullArray[High(stLongWordNullArray)][J] := 0
             else
               stLongWordNullArray[High(stLongWordNullArray)][J] := Random(2);
@@ -798,7 +854,7 @@ begin
           SetLength(stIntegerNullArray, Length(stIntegerNullArray)+1);
           SetLength(stIntegerNullArray[High(stIntegerNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stIntegerNullArray[High(stIntegerNullArray)][J] := 0
             else
               stIntegerNullArray[High(stIntegerNullArray)][J] := Random(2);
@@ -809,7 +865,7 @@ begin
           SetLength(stULongNullArray, Length(stULongNullArray)+1);
           SetLength(stULongNullArray[High(stULongNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stULongNullArray[High(stULongNullArray)][J] := 0
             else
               stULongNullArray[High(stULongNullArray)][J] := Random(2);
@@ -820,7 +876,7 @@ begin
           SetLength(stLongNullArray, Length(stLongNullArray) +1);
           SetLength(stLongNullArray[High(stLongNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stLongNullArray[High(stLongNullArray)][J] := 0
             else
               stLongNullArray[High(stLongNullArray)][J] := Random(2)-1;
@@ -831,7 +887,7 @@ begin
           SetLength(stFloatNullArray, Length(stFloatNullArray)+1);
           SetLength(stFloatNullArray[High(stFloatNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stFloatNullArray[High(stFloatNullArray)][J] := 0
             else
               stFloatNullArray[High(stFloatNullArray)][J] := Random(2)-1;
@@ -842,7 +898,7 @@ begin
           SetLength(stDoubleNullArray, Length(stDoubleNullArray)+1);
           SetLength(stDoubleNullArray[high(stDoubleNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stDoubleNullArray[high(stDoubleNullArray)][J] := 0
             else
               stDoubleNullArray[high(stDoubleNullArray)][J] := Random(2)-1;
@@ -853,7 +909,7 @@ begin
           SetLength(stCurrencyNullArray, Length(stCurrencyNullArray)+1);
           SetLength(stCurrencyNullArray[High(stCurrencyNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stCurrencyNullArray[High(stCurrencyNullArray)][J] := 0
             else
               stCurrencyNullArray[High(stCurrencyNullArray)][J] := Random(2)-1;
@@ -864,7 +920,7 @@ begin
           SetLength(stBigDecimalNullArray, Length(stBigDecimalNullArray)+1);
           SetLength(stBigDecimalNullArray[High(stBigDecimalNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stBigDecimalNullArray[High(stBigDecimalNullArray)][J] := 0
             else
               stBigDecimalNullArray[High(stBigDecimalNullArray)][J] := Random(2)-1;
@@ -875,7 +931,7 @@ begin
           SetLength(stStringNullArray, Length(stStringNullArray)+1);
           SetLength(stStringNullArray[High(stStringNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
             else
               if Random(2) = 0 then
@@ -889,7 +945,7 @@ begin
           SetLength(stUnicodeStringNullArray, Length(stUnicodeStringNullArray)+1);
           SetLength(stUnicodeStringNullArray[High(stUnicodeStringNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stUnicodeStringNullArray[High(stUnicodeStringNullArray)][J] := 'FALSE'
             else
               if Random(2) = 0 then
@@ -903,7 +959,7 @@ begin
           SetLength(stStringNullArray, Length(stStringNullArray)+1);
           SetLength(stStringNullArray[High(stStringNullArray)], 50);
           for J := 0 to 49 do
-            if I = 1 then
+            if I = FirstDbcIndex then
               stStringNullArray[High(stStringNullArray)][J] := 'FALSE'
             else
               if Random(2) = 0 then

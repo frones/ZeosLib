@@ -321,7 +321,7 @@ begin
         NativeResultSet := TZDBLibResultSet.Create(Self, 'select @@rowcount');
         try
           if NativeResultset.Next then
-            RowsAffected := NativeResultSet.GetInt(1);
+            RowsAffected := NativeResultSet.GetInt(FirstDbcIndex);
         finally
           NativeResultSet.Close;
         end;
@@ -669,12 +669,12 @@ end;
 procedure TZDBLibCallableStatement.RegisterOutParameter(ParameterIndex: Integer;
   SqlType: Integer);
 begin
-  SetOutParamCount(ParameterIndex);
-  OutParamTypes[ParameterIndex - 1] := TZSqlType(SqlType);
+  SetOutParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+  OutParamTypes[ParameterIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] := TZSqlType(SqlType);
 
   //Count inparams must equal count outparams to correct set paramters
-  if InParamCount < ParameterIndex then
-    SetInParamCount(ParameterIndex);
+  if InParamCount < ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF} then
+    SetInParamCount(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
 end;
 
 function TZDBLibCallableStatement.ExecutePrepared: Boolean;
@@ -825,6 +825,8 @@ begin
     Temp := EncodeInteger(FPlainDriver.dbRetStatus(FHandle))
   else
     Temp := NullVariant;
+  if Length(OutParamValues) = 0 then // check if DynArray is initialized for RETURN_VALUE
+    SetOutParamCount(1);
   OutParamValues[0] := Temp; //set function RETURN_VALUE
 
   ParamIndex := 1;

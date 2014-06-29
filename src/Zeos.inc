@@ -507,3 +507,6 @@
 //run ZSysUtils benchmarks
 {.$DEFINE BENCHMARK}
 
+//stop incrementing column/param index -> always start on [0]
+{.$DEFINE GENERIC_INDEX}
+
