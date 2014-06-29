@@ -391,8 +391,6 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
 {$ENDIF}
 
-procedure CopyZFormatSettings(Source, {%H-}Dest: TZFormatSettings);
-
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
 procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
@@ -449,16 +447,6 @@ var
   ZDefaultSystemCodePage: Word;
 
 implementation
-
-procedure CopyZFormatSettings(Source, Dest: TZFormatSettings);
-begin
-  Dest.DateFormat := Source.DateFormat;
-  Dest.DateFormatLen := Source.DateFormatLen;
-  Dest.TimeFormat := Source.TimeFormat;
-  Dest.TimeFormatLen := Source.TimeFormatLen;
-  Dest.DateTimeFormat := Source.DateTimeFormat;
-  Dest.DateTimeFormatLen := Source.DateTimeFormatLen;
-end;
 
 procedure TZCodePagedObject.SetConSettingsFromInfo(Info: TStrings);
 begin

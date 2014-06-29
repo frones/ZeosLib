@@ -1664,7 +1664,8 @@ begin
           'USER_NAME(t.creator) like %s escape ''\'' and '+
           'c.column_name like %s escape ''\'' and c.column_type=''C'' '+
           'order by USER_NAME(t.creator) asc,t.table_name asc,c.column_id asc',
-          [ComposeObjectString(TableNamePattern, '''%'''),
+          [DeComposeObjectString(TableNamePattern),//, '''%'''),
+          //[ComposeObjectString(TableNamePattern), '''%'''),
            ComposeObjectString(SchemaPattern, '''%'''),
            ComposeObjectString(ColumnNamePattern, '''%''')])) do
     begin

@@ -301,7 +301,7 @@ type
 
 implementation
 
-uses ZFastCode, ZDbcDbLibUtils;
+uses ZFastCode, ZDbcDbLibUtils, ZDbcDbLib;
 
 { TZDbLibDatabaseInfo }
 
@@ -1834,6 +1834,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const ColumnNamePattern: string): IZResultSet;
 var
   SQLType: TZSQLType;
+  default_val: String;
 begin
     Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1874,7 +1875,14 @@ begin
         if GetStringByName('IS_NULLABLE') = 'YES' then
           Result.UpdateSmallByName('NULLABLE', 1);
         Result.UpdateStringByName('REMARKS', GetStringByName('REMARKS'));
-        Result.UpdateStringByName('COLUMN_DEF', GetStringByName('COLUMN_DEF'));
+        if (GetConnection as IZDBLibConnection).FreeTDS then
+          Result.UpdateStringByName('COLUMN_DEF', GetStringByName('COLUMN_DEF'))
+        else //MSSQL bizarity: defaults are double braked '((value))' or braked and quoted '(''value'')'
+        begin
+          default_val := GetStringByName('COLUMN_DEF');
+          if default_val <> '' then
+            Result.UpdateStringByName('COLUMN_DEF', Copy(default_val, 2, Length(default_val)-2));
+        end;
         Result.UpdateSmallByName('SQL_DATA_TYPE', GetSmallByName('SQL_DATA_TYPE'));
         Result.UpdateSmallByName('SQL_DATETIME_SUB', GetSmallByName('SQL_DATETIME_SUB'));
         Result.UpdateIntByName('CHAR_OCTET_LENGTH', GetIntByName('CHAR_OCTET_LENGTH'));

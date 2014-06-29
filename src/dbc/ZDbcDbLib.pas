@@ -438,14 +438,8 @@ begin
   InternalLogin;
 
   LogMessage := 'USE '+ ConSettings^.Database;
-  if FProvider = dpMsSQL then
-  begin
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ConSettings^.Database)) <> DBSUCCEED then
-      CheckDBLibError(lcConnect, LogMessage);
-  end
-  else
-    if GetPlainDriver.dbUse(FHandle, PAnsiChar(ConSettings^.Database)) <> DBSUCCEED then
-      CheckDBLibError(lcConnect, LogMessage);
+  if GetPlainDriver.dbUse(FHandle, Pointer(ConSettings^.Database)) <> DBSUCCEED then
+    CheckDBLibError(lcConnect, LogMessage);
   DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
   LogMessage := 'set textlimit=2147483647';
@@ -477,7 +471,14 @@ begin
     ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
     ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
   end;
-  CopyZFormatSettings(ConSettings^.ReadFormatSettings, ConSettings^.WriteFormatSettings);
+  { EH:
+  http://technet.microsoft.com/en-us/library/ms180878%28v=sql.105%29.aspx
+   Using DATE and DATETIME in ISO 8601 format is multi-language supported:
+   DATE Un-separated
+   DATETIME as YYYY-MM-DDTHH:NN:SS
+  }
+  ConSettings^.WriteFormatSettings.DateFormat := 'YYYYMMDD';
+  ConSettings^.WriteFormatSettings.DateTimeFormat := 'YYYY-MM-DDTHH:NN:SS';
   SetDateTimeFormatProperties(False);
 
   InternalSetTransactionIsolation(GetTransactionIsolation);
@@ -652,8 +653,6 @@ begin
   else
     ConSettings^.ReadFormatSettings.DateFormat := 'YYYY/MM/DD';
   ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' HH:NN:SS:ZZZ';
-  ConSettings^.ReadFormatSettings.PDateFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateFormat);
-  ConSettings^.ReadFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateTimeFormat);
 end;
 
 function TZDBLibConnection.DetermineMSServerCollation: String;

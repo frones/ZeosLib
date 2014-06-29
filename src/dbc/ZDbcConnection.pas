@@ -655,32 +655,32 @@ begin
     else
       ConSettings^.ReadFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimereadformat']));
 
-    if Info.Values['datetimediaplayformat'] = '' then
+    if Info.Values['datetimedisplayformat'] = '' then
       ConSettings^.DisplayFormatSettings.DateTimeFormat := ConSettings^.DisplayFormatSettings.DateFormat+' '+ConSettings^.DisplayFormatSettings.TimeFormat
     else
-      ConSettings^.DisplayFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimediaplayformat']));
+      ConSettings^.DisplayFormatSettings.DateTimeFormat := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(UpperCase(Info.Values['datetimedisplayformat']));
   end;
 
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
   ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
   ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
-  ConSettings^.WriteFormatSettings.PDateFormat := PAnsiChar(ConSettings^.WriteFormatSettings.DateFormat);
-  ConSettings^.ReadFormatSettings.PDateFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateFormat);
-  ConSettings^.DisplayFormatSettings.PDateFormat := PAnsiChar(ConSettings^.DisplayFormatSettings.DateFormat);
+  ConSettings^.WriteFormatSettings.PDateFormat := Pointer(ConSettings^.WriteFormatSettings.DateFormat);
+  ConSettings^.ReadFormatSettings.PDateFormat := Pointer(ConSettings^.ReadFormatSettings.DateFormat);
+  ConSettings^.DisplayFormatSettings.PDateFormat := Pointer(ConSettings^.DisplayFormatSettings.DateFormat);
 
   ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
   ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
   ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
-  ConSettings^.WriteFormatSettings.PTimeFormat := PAnsiChar(ConSettings^.WriteFormatSettings.TimeFormat);
-  ConSettings^.ReadFormatSettings.PTimeFormat := PAnsiChar(ConSettings^.ReadFormatSettings.TimeFormat);
-  ConSettings^.DisplayFormatSettings.PTimeFormat := PAnsiChar(ConSettings^.DisplayFormatSettings.TimeFormat);
+  ConSettings^.WriteFormatSettings.PTimeFormat := Pointer(ConSettings^.WriteFormatSettings.TimeFormat);
+  ConSettings^.ReadFormatSettings.PTimeFormat := Pointer(ConSettings^.ReadFormatSettings.TimeFormat);
+  ConSettings^.DisplayFormatSettings.PTimeFormat := Pointer(ConSettings^.DisplayFormatSettings.TimeFormat);
 
   ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
   ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
-  ConSettings^.WriteFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.WriteFormatSettings.DateTimeFormat);
-  ConSettings^.ReadFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.ReadFormatSettings.DateTimeFormat);
-  ConSettings^.DisplayFormatSettings.PDateTimeFormat := PAnsiChar(ConSettings^.DisplayFormatSettings.DateTimeFormat);
+  ConSettings^.WriteFormatSettings.PDateTimeFormat := Pointer(ConSettings^.WriteFormatSettings.DateTimeFormat);
+  ConSettings^.ReadFormatSettings.PDateTimeFormat := Pointer(ConSettings^.ReadFormatSettings.DateTimeFormat);
+  ConSettings^.DisplayFormatSettings.PDateTimeFormat := Pointer(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
 procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);

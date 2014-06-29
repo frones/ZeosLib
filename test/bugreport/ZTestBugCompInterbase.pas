@@ -87,6 +87,7 @@ type
     procedure Test1021705;
     procedure Test_Decimal;
     procedure Test_Ticket54;
+    procedure Test_Ticket63;
   end;
 
   ZTestCompInterbaseBugReportMBCs = class(TZAbstractCompSQLTestCaseMBCs)
@@ -757,6 +758,45 @@ begin
     Query.Open;
   finally
     Query.Free;
+  end;
+end;
+
+{
+}
+procedure ZTestCompInterbaseBugReport.Test_Ticket63;
+var
+  Table: TZTable;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+
+  Table := CreateTable;
+  try
+    Table.TableName := 'PLUS__';
+    Table.Open;
+    CheckEquals(3, Table.Fields.Count);
+    Table.Insert;
+    Table.FieldByName('ID').AsInteger := TEST_ROW_ID;
+    Table.Fields[1].AsString := 'A';
+    Table.Fields[2].AsString := 'PLUSA';
+    Table.Post;
+    Table.Edit;
+    Table.Fields[2].AsString := 'PLU__';
+    Table.Post;
+
+    Table.TableName := 'PLUSA';
+    Table.Open;
+    CheckEquals(2, Table.Fields.Count);
+    Table.Insert;
+    Table.FieldByName('ID').AsInteger := TEST_ROW_ID;
+    Table.Fields[1].AsString := 'PLUS__';
+    Table.Post;
+    Table.Edit;
+    Table.Fields[1].AsString := 'PLUSA';
+    Table.Post;
+  finally
+    Table.Free;
+    Connection.ExecuteDirect('Delete from PLUS__');
+    Connection.ExecuteDirect('Delete from PLUSA');
   end;
 end;
 
