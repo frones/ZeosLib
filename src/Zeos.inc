@@ -102,7 +102,7 @@
   {$DEFINE BDS4_UP} // Used in code
 {$ENDIF}
 
-// Compilation directives for BDS 2007 (Delphi 2007, BCB 2007)
+// Compilation directives for Delphi 2007, Delphi .NET 2007
 {$IFDEF VER185}
   {$DEFINE BDS4_UP} // Used in code
 {$ENDIF}
@@ -168,8 +168,8 @@
   {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
-  {$DEFINE DELPHI17_UP} // Used in code
-  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -181,9 +181,24 @@
   {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
-  {$DEFINE DELPHI17_UP} // Used in code
-  {$DEFINE DELPHI18_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP}
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
+// Compilation directives for Delphi XE6 by dieletro
+{$IFDEF VER270}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI18_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI19_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
