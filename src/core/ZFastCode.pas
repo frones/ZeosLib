@@ -3323,8 +3323,8 @@ begin
   {$IF defined(Delphi) and defined(WIN32)} //since XE2 the fastcode pure pascal is used too
   Tmp := IntToRaw(Value); //the BASM fastcode is 10x faster than pascal version
   L := system.Length(tmp); //temp l speeds x2
-  if (Result = '' ) or (not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeInt(Result) - 4)^))) then { length }
+  if (Result = '' ) or (not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeUInt(Result) - 4)^))) then { length }
     System.SetString(Result,nil, l); //sade we need two mem-allocation until i find the time to patch the raw version to Unicode but it's almost twice faster than RTL
   for i := 0 to l-1 do
     PWordArray(Result)[i] := PByteArray(tmp)[i]; //0..255 equals to widechars
