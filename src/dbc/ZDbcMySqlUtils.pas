@@ -212,13 +212,19 @@ begin
       else
         Result := stULong;
     FIELD_TYPE_FLOAT:
-      Result := stDouble;
+      Result := stFloat;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
       if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
         if PlainDriver.GetFieldLength(FieldHandle) < 11 then
-          Result := stInteger
+          if Signed then
+            Result := stInteger
+          else
+            Result := stLongWord
         else
-          Result := stLong
+          if Signed then
+             Result := stLong
+          else
+            Result := stULong
       else
         Result := stDouble;
     FIELD_TYPE_DOUBLE:
@@ -521,27 +527,23 @@ begin
 end;
 
 function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
-var
-    FieldSize: LongWord;
-Begin
-    FieldSize := field_size;
-
-    case field_type of
-        FIELD_TYPE_TINY:        Result := 1;
-        FIELD_TYPE_SHORT:       Result := 2;
-        FIELD_TYPE_LONG:        Result := 4;
-        FIELD_TYPE_LONGLONG:    Result := 8;
-        FIELD_TYPE_FLOAT:       Result := 4;
-        FIELD_TYPE_DOUBLE:      Result := 8;
-        FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
-        FIELD_TYPE_TINY_BLOB:   Result := FieldSize; //stBytes
-        FIELD_TYPE_BLOB:        Result := FieldSize;
-        FIELD_TYPE_STRING:      Result := FieldSize;
-    else
-        Result := 255;  {unknown ??}
-    end;
+begin
+  case field_type of
+    FIELD_TYPE_TINY:        Result := 1;
+    FIELD_TYPE_SHORT:       Result := 2;
+    FIELD_TYPE_LONG:        Result := 4;
+    FIELD_TYPE_LONGLONG:    Result := 8;
+    FIELD_TYPE_FLOAT:       Result := 4;
+    FIELD_TYPE_DOUBLE:      Result := 8;
+    FIELD_TYPE_DATE:        Result := sizeOf(MYSQL_TIME);
+    FIELD_TYPE_TIME:        Result := sizeOf(MYSQL_TIME);
+    FIELD_TYPE_DATETIME:    Result := sizeOf(MYSQL_TIME);
+    FIELD_TYPE_TINY_BLOB:   Result := field_size; //stBytes
+    FIELD_TYPE_BLOB:        Result := field_size;
+    FIELD_TYPE_STRING:      Result := field_size;
+  else
+    Result := 255;  {unknown ??}
+  end;
 end;
 
 {**
@@ -619,23 +621,17 @@ begin
       Result.Precision := min(MaxBlobSize,FieldLength);
 
     if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING,
-      FIELD_TYPE_VAR_STRING] then
-      begin
+       FIELD_TYPE_VAR_STRING] then
       if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
         Result.MaxLenghtBytes := Result.Precision
       else
-        Result.MaxLenghtBytes := PlainDriver.GetFieldMaxLength(FieldHandle);
-      end
+        Result.MaxLenghtBytes := PlainDriver.GetFieldMaxLength(FieldHandle)
     else
       Result.MaxLenghtBytes := FieldLength;
     Result.Scale := PlainDriver.GetFieldDecimals(FieldHandle);
-    if (AUTO_INCREMENT_FLAG and FieldFlags <> 0)
-      or (TIMESTAMP_FLAG and FieldFlags <> 0) then
-      Result.AutoIncrement := True;
-    if UNSIGNED_FLAG and FieldFlags <> 0 then
-      Result.Signed := False
-    else
-      Result.Signed := True;
+    Result.AutoIncrement := (AUTO_INCREMENT_FLAG and FieldFlags <> 0) or
+      (TIMESTAMP_FLAG and FieldFlags <> 0);
+    Result.Signed := (UNSIGNED_FLAG and FieldFlags) = 0;
     if NOT_NULL_FLAG and FieldFlags <> 0 then
       Result.Nullable := ntNoNulls
     else

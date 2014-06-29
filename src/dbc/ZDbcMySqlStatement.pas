@@ -56,7 +56,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZClasses, ZDbcIntfs, ZDbcStatement, ZDbcMySql, ZVariant, ZPlainMySqlDriver,
   ZPlainMySqlConstants, ZCompatibility, ZDbcLogging, ZDbcUtils;
 
@@ -121,7 +121,7 @@ type
   protected
     FAddedColumnCount : Integer;
     FBindOffsets: MYSQL_BINDOFFSETS;
-    FBindArray: Array of byte;
+    FBindArray: TByteDynArray;
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
     constructor Create(PlainDriver:IZMysqlPlainDriver;
@@ -235,7 +235,7 @@ type
 implementation
 
 uses
-  Types, Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet,
+  Math, DateUtils, ZFastCode, ZDbcMySqlUtils, ZDbcMySqlResultSet,
   ZSysUtils, ZMessages, ZDbcCachedResultSet, ZEncoding, ZDbcResultSet
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
@@ -541,7 +541,7 @@ begin
           TempBytes := ClientVarManager.GetAsBytes(Value);
           Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
         end;
-      stString, stUnicodeString: 
+      stString, stUnicodeString:
         Result := FPlainDriver.EscapeString(FHandle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
       stDate:
         Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
@@ -1653,7 +1653,6 @@ begin
       FIELD_TYPE_LONGLONG:    Length := 8;
       FIELD_TYPE_FLOAT:       Length := 4;
       FIELD_TYPE_DOUBLE:      Length := 8;
-      //FIELD_TYPE_NEWDECIMAL:  Length := 11;
       FIELD_TYPE_BLOB,
       FIELD_TYPE_MEDIUM_BLOB,
       FIELD_TYPE_LONG_BLOB,

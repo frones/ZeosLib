@@ -575,6 +575,9 @@ TMYSQL_CLIENT_OPTIONS =
 
   PMYSQL_STMT = Pointer;
 
+  PMySQLLengthArray = ^TMySQLLengthArray;
+  TMySQLLengthArray = array[0..0] of Ulong; //http://dev.mysql.com/doc/refman/4.1/en/column-count-limit.html
+
 { ****************** Plain API Types definition ***************** }
 
 type
@@ -599,7 +602,7 @@ type
   Tmysql_fetch_field            = function(Result: PMYSQL_RES): PMYSQL_FIELD;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_fetch_field_direct     = function(Result: PMYSQL_RES; FieldNo: UInt): PMYSQL_FIELD;       {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_fetch_fields           = function(Result: PMYSQL_RES): PMYSQL_FIELD;                          {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_fetch_lengths          = function(Result: PMYSQL_RES): PULong;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_fetch_lengths          = function(Result: PMYSQL_RES): PMySQLLengthArray; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_fetch_row              = function(Result: PMYSQL_RES): PMYSQL_ROW;                            {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_field_seek             = function(Result: PMYSQL_RES; Offset: MYSQL_FIELD_OFFSET): MYSQL_FIELD_OFFSET;
                                                                                                        {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};

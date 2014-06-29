@@ -57,7 +57,7 @@ interface
 
 uses
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility;
 
@@ -72,6 +72,8 @@ type
     FIs_bytea_output_hex: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
     FCachedLob: boolean;
+    FFixedCharFields: TBooleanDynArray;
+    FBinaryFields: TBooleanDynArray;
     function GetBuffer(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -88,11 +90,9 @@ type
     function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
-    function GetByte(ColumnIndex: Integer): Byte; override;
-    function GetShort(ColumnIndex: Integer): ShortInt; override;
-    function GetSmall(ColumnIndex: Integer): SmallInt; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
     function GetLong(ColumnIndex: Integer): Int64; override;
+    function GetULong(ColumnIndex: Integer): UInt64; override;
     function GetFloat(ColumnIndex: Integer): Single; override;
     function GetDouble(ColumnIndex: Integer): Double; override;
     function GetBigDecimal(ColumnIndex: Integer): Extended; override;
@@ -248,7 +248,7 @@ procedure TZPostgreSQLResultSet.Open;
 var
   I: Integer;
   ColumnInfo: TZColumnInfo;
-  FieldMode, FieldSize, FieldType: Integer;
+  FieldMode, FieldSize, FieldType, FieldCount: Integer;
   TableInfo: PZPGTableInfo;
   Connection: IZPostgreSQLConnection;
 begin
@@ -264,7 +264,10 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
+  FieldCount := FPlainDriver.GetFieldCount(FQueryHandle);
+  SetLength(FFixedCharFields, FieldCount);
+  SetLength(FBinaryFields, FieldCount);
+  for I := 0 to FieldCount - 1 do
   begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
@@ -295,7 +298,9 @@ begin
       Nullable := ntNullable;
 
       FieldType := FPlainDriver.GetFieldType(FQueryHandle, I);
+      FFixedCharFields[i] := FieldType = 1042;
       DefinePostgreSQLToSQLType(ColumnInfo, FieldType);
+      FBinaryFields[i] := ColumnInfo.ColumnType in [stBytes, stBinaryStream];
       if ColumnInfo.ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream] then
         ColumnCodePage := ConSettings^.ClientCodePage^.CP
       else
@@ -373,11 +378,10 @@ begin
 end;
 
 function TZPostgreSQLResultSet.GetBuffer(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+var RNo: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
+  RNo := RowNo - 1;
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RNo, ColumnIndex) <> 0;
 
   if LastWasNull then
   begin
@@ -386,10 +390,22 @@ begin
   end
   else
   begin
-    Len := FPlainDriver.GetLength(FQueryHandle, RowNo - 1, ColumnIndex);
-    Result := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex);
-    if (Len > 0) and (FPlainDriver.GetFieldType(FQueryHandle, ColumnIndex) = 1042) then
-      while (Result+Len-1)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
+    Result := FPlainDriver.GetValue(FQueryHandle, RNo, ColumnIndex);
+    if FBinaryFields[ColumnIndex] then
+      Len := FPlainDriver.GetLength(FQueryHandle, RNo, ColumnIndex)
+    else
+    begin
+      {http://www.postgresql.org/docs/9.0/static/libpq-exec.html
+      PQgetlength:
+       This is the actual data length for the particular data value, that is,
+       the size of the object pointed to by PQgetvalue.
+       For text data format this is the same as strlen().
+       For binary format this is essential information.
+       Note that one should not rely on PQfsize to obtain the actual data length.}
+      Len := ZFastCode.StrLen(Result);
+      if FFixedCharFields[ColumnIndex] and (Len > 0) then
+        while (Result+Len-1)^ = ' ' do dec(Len); //remove Trailing spaces for fixed character fields
+    end;
   end;
 end;
 
@@ -405,7 +421,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result.P := GetBuffer(ColumnIndex, Result{%H-}.Len);
+  Result.P := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result{%H-}.Len);
 end;
 
 {**
@@ -418,10 +434,8 @@ end;
     value returned is <code>null</code>
 }
 function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-var
-  Len: Cardinal;
 begin
-  Result := GetBuffer(ColumnIndex, Len{%H-});
+  Result := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
 end;
 
 {**
@@ -438,7 +452,7 @@ var
   Len: Cardinal;
   Buffer: PAnsiChar;
 begin
-  Buffer := GetBuffer(ColumnIndex, Len{%H-});
+  Buffer := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
   if LastWasNull then
     Result := ''
   else
@@ -466,79 +480,7 @@ begin
   if LastWasNull then
     Result := False
   else
-    Result := StrToBoolEx(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>byte</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZPostgreSQLResultSet.GetByte(ColumnIndex: Integer): Byte;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stByte);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-    Result := Byte(RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>shortint</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZPostgreSQLResultSet.GetShort(ColumnIndex: Integer): ShortInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stShort);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-    Result := ShortInt(RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0));
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>short</code> in the Java programming language.
-
-  @param columnIndex the first column is 1, the second is 2, ...
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>0</code>
-}
-function TZPostgreSQLResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-begin
-{$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stSmall);
-{$ENDIF}
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
-  {$ENDIF}
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
-  if LastWasNull then
-    Result := 0
-  else
-    Result := SmallInt(RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0));
+    Result := StrToBoolEx(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), True, FFixedCharFields[ColumnIndex]);
 end;
 
 {**
@@ -562,7 +504,10 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
+    if FFixedCharFields[ColumnIndex] then
+      Result := RawToIntDef(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0)
+    else
+      Result := RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
 end;
 
 {**
@@ -586,7 +531,37 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := RawToInt64Def(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
+    if FFixedCharFields[ColumnIndex] then
+      Result := RawToInt64Def(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0)
+    else
+      Result := RawToInt64Def(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UInt64</code> in the Java programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>0</code>
+}
+function TZPostgreSQLResultSet.GetULong(ColumnIndex: Integer): UInt64;
+begin
+{$IFNDEF DISABLE_CHECKING}
+  CheckColumnConvertion(ColumnIndex, stULong);
+{$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
+  if LastWasNull then
+    Result := 0
+  else
+    if FFixedCharFields[ColumnIndex] then
+      Result := RawToUInt64Def(InternalGetString(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}), 0)
+    else
+      Result := RawToUInt64Def(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
 end;
 
 {**
@@ -604,8 +579,11 @@ var
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
-  CheckColumnConvertion(ColumnIndex, stFloat);
+  CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
@@ -631,6 +609,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
@@ -657,6 +638,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
@@ -701,6 +685,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDate);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
@@ -733,6 +720,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
@@ -763,6 +753,9 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTimestamp);
 {$ENDIF}
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
   Buffer := GetBuffer(ColumnIndex, Len{%H-});
 
   if LastWasNull then
@@ -786,6 +779,7 @@ var
   Connection: IZConnection;
   Buffer: PAnsiChar;
   Len: Cardinal;
+  SQLType: TZSQLType;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
@@ -794,54 +788,49 @@ begin
     raise EZSQLException.Create(SRowDataIsNotAvailable);
 {$ENDIF}
 
-  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}) <> 0;
+  SQLType := GetMetadata.GetColumnType(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := FPlainDriver.GetIsNull(FQueryHandle, RowNo - 1, ColumnIndex) <> 0;
 
   Connection := Statement.GetConnection;
-  if (GetMetadata.GetColumnType(ColumnIndex) = stBinaryStream)
+  if (SQLType = stBinaryStream)
     and (Connection as IZPostgreSQLConnection).IsOidAsBlob then
   begin
     if LastWasNull then
       BlobOid := 0
     else
-      BlobOid := RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}), 0);
+      BlobOid := RawToIntDef(FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex), 0);
     Result := TZPostgreSQLOidBlob.Create(FPlainDriver, nil, 0, FHandle, BlobOid, FChunk_Size);
   end
   else
-  begin
     if not LastWasNull then
-    begin
-      try
-        case GetMetadata.GetColumnType(ColumnIndex) of
-          stBinaryStream:
-            if FCachedLob then
-            begin
-              Len := FPlainDriver.DecodeBYTEA(RowNo-1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF},
-                FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer({%H-}Buffer));
-              Result := TZAbstractBlob.CreateWithData(Buffer, Len);
-              FreeMem(Buffer, Len);
-            end
-            else
-              Result := TZPostgreSQLUnCachedBLob.Create(FPlainDriver,
-                FQueryHandle, FHandle, RowNo -1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, FIs_bytea_output_hex);
-          stAsciiStream, stUnicodeStream:
-            begin
-              if FCachedLob then
-              begin
-                Buffer := GetBuffer(ColumnIndex, Len);
-                Result := TZAbstractCLob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
-              end
-              else
-                Result := TZPostgreSQLUnCachedCLob.Create(FPlainDriver, ConSettings, FQueryHandle, RowNo-1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
-            end;
+      case SQLType of
+        stBinaryStream:
+          if FCachedLob then
+          begin
+            Len := FPlainDriver.DecodeBYTEA(RowNo-1, ColumnIndex,
+              FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer({%H-}Buffer));
+            Result := TZAbstractBlob.CreateWithData(Buffer, Len);
+            FreeMem(Buffer, Len);
+          end
           else
-            Result := TZAbstractBlob.CreateWithStream(nil);
-        end;
-      finally
-      end;
-    end
+            Result := TZPostgreSQLUnCachedBLob.Create(FPlainDriver,
+              FQueryHandle, FHandle, RowNo -1, ColumnIndex, FIs_bytea_output_hex);
+        stAsciiStream, stUnicodeStream:
+          if FCachedLob then
+          begin
+            Buffer := GetBuffer(ColumnIndex, Len);
+            Result := TZAbstractCLob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
+          end
+          else
+            Result := TZPostgreSQLUnCachedCLob.Create(FPlainDriver, ConSettings, FQueryHandle, RowNo-1, ColumnIndex);
+        else
+          Result := TZAbstractBlob.CreateWithStream(nil);
+      end
     else
       Result := TZAbstractBlob.CreateWithStream(nil);
-  end;
 end;
 
 {**
