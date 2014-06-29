@@ -846,6 +846,7 @@ end;
 function TZAbstractResultSet.GetWideRec(ColumnIndex: Integer): TZWideRec;
 begin
   FUniTemp := GetUnicodeString(ColumnIndex);
+  Result.Len := Length(FUniTemp);
   if Result.Len = 0 then
     Result.P := PWideChar(FUniTemp) //RTL conversion
   else

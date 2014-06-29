@@ -2496,7 +2496,7 @@ begin
       Value[Len+2] := AnsiChar(#39);
       System.Move(Suffix[1], Value[Len+3], Slen);
     end;
-    P := Pointer(NativeUInt(Value)+1);
+    P := {%H-}Pointer(NativeUInt(Value)+1);
   end
   else
   begin
