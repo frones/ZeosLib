@@ -123,7 +123,7 @@ type
     FStatementType: ub2;
     FIteration: Integer;
     FCanBindInt64: Boolean;
-    procedure ArrangeInParams;
+    procedure SortZeosOrderToOCIParamsOrder;
     procedure FetchOutParamsFromOracleVars;
     function GetProcedureSql(SelectProc: boolean): RawByteString;
   protected
@@ -382,7 +382,7 @@ begin
     { Executes the statement and gets a result. }
     ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
       ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit,
-      Max(1, ArrayCount));
+      FIteration);
     LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
   end;
   inherited ExecutePrepared;
@@ -455,7 +455,7 @@ begin
     begin
       { Executes the statement and gets a result. }
       ExecuteOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
-        ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit,Max(1, ArrayCount));
+        ASQL, FHandle, FErrorHandle, ConSettings, Connection.GetAutoCommit,FIteration);
       LastUpdateCount := GetOracleUpdateCount(FPlainDriver, FHandle, FErrorHandle);
     end;
     Result := LastUpdateCount;
@@ -555,7 +555,6 @@ begin
     if Assigned(AConnection) and ( not AConnection.UseMetadata ) then
       pName := 'p'+ZFastCode.IntToStr(ParameterIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
     pSQLType := ord(SQLType);
-    pValue := Value;
   end;
 end;
 
@@ -583,12 +582,61 @@ end;
   Prepares eventual structures for binding input parameters.
 }
 procedure TZOracleCallableStatement.PrepareInParameters;
-var I: Integer;
+var
+  I: Integer;
+  CurrentVar: PZSQLVar;
+  Status: Integer;
+  BufferSize: Int64;
+  CurrentBufferEntry: PAnsiChar;
+  SQLType: TZSQLType;
+  Label CheckMaxIter;
 begin
   AllocateOracleSQLVars(FParams, FOracleParamsCount);
+  SortZeosOrderToOCIParamsOrder;
   SetLength(FParamNames, FOracleParamsCount);
-  for i := 0 to FOracleParamsCount -1 do
+  BufferSize := 0;
+  FIteration := 0;
+  if FParams^.AllocNum = 0 then goto CheckMaxIter; //nothing to do here
+
+  {first determine oracle type and check out required buffer-size we need }
+  for I := 0 to FParams^.AllocNum - 1 do
+  begin
     FParamNames[I] := Self.FOracleParams[I].pName;
+    CurrentVar := @FParams.Variables[I];
+    CurrentVar.Handle := nil;
+    SQLType := TZSQLType(FOracleParams[I].pSQLType);
+    { Artificially define Oracle internal type. }
+    if SQLType = stBytes then
+      DefineOracleVarTypes(CurrentVar, SQLType, Max_OCI_Raw_Size, SQLT_LVC, FCanBindInt64)
+    else if SQLType = stBinaryStream then
+      DefineOracleVarTypes(CurrentVar, SQLType, Max_OCI_String_Size, SQLT_BLOB, FCanBindInt64)
+    else if SQLType in [stAsciiStream, stUnicodeStream] then
+      DefineOracleVarTypes(CurrentVar, SQLType, Max_OCI_String_Size, SQLT_CLOB, FCanBindInt64)
+    else
+      DefineOracleVarTypes(CurrentVar, SQLType, Max_OCI_String_Size, SQLT_STR, FCanBindInt64);
+    Inc(BufferSize, CalcBufferSizeOfSQLVar(CurrentVar));
+  end; //Buffer size is determined now
+  FIteration := Ord((ArrayCount = 0) and (InparamCount > 0)) or ArrayCount; //determine initial iters
+  Inc(BufferSize, BufferSize * FIteration); //determine inital buffersize
+  if BufferSize >= High(LongWord)-1 then
+    raise Exception.Create('Memory out of bounds! OCI-Limit = 4GB -1Byte');
+  if Length(FParamsBuffer) < BufferSize then SetLength(FParamsBuffer, BufferSize); //Alloc new buffer if required
+  CurrentBufferEntry := Pointer(FParamsBuffer);
+
+  { now let's set data-entries, bind them }
+  for i := 0 to FParams.AllocNum -1 do
+  begin
+    CurrentVar := @FParams.Variables[I];
+    CurrentVar.Handle := nil;
+    SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
+    AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration, True);
+    Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
+      I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
+      CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
+    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
+  end;
+  CheckMaxIter:
+  FIteration := Max(FIteration, 1);
 end;
 
 {**
@@ -597,51 +645,15 @@ end;
 procedure TZOracleCallableStatement.BindInParameters;
 var
   I: Integer;
-  CurrentVar: PZSQLVar;
-  Status: Integer;
-  BufferSize: Int64;
-  CharBuffer: PAnsiChar;
-  SQLType: TZSQLType;
 begin
-  ArrangeInParams; //need to sort ReturnValues for functions
-  BufferSize := 0;
-  FIteration := 1;
-  { single row execution}
-  for I := 0 to FOracleParamsCount - 1 do
-  begin
-    CurrentVar := @FParams.Variables[I];
-    CurrentVar.Handle := nil;
-
-    SQLType := TZSQLType(FOracleParams[I].pSQLType);
-    { Artificially define Oracle internal type. }
-    if SQLType in [stBytes, stBinaryStream] then
-      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_BLOB, FCanBindInt64)
-    else if SQLType in [stAsciiStream, stUnicodeStream] then
-      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_CLOB, FCanBindInt64)
-    else if SQLType in [stString, stUnicodeString] then
-      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_STR, FCanBindInt64)
-    else
-      DefineOracleVarTypes(CurrentVar, SQLType, 4096, SQLT_STR, FCanBindInt64);
-    Inc(BufferSize, FIteration * CalcBufferSizeOfSQLVar(CurrentVar));
-  end; //Bufsize is determined
-  if Length(FParamsBuffer) < BufferSize then SetLength(FParamsBuffer, BufferSize); //realloc the buffer if required
-  CharBuffer := Pointer(FParamsBuffer); //set first data-entry in rowBuffer
-
-  for i := 0 to FParams^.AllocNum -1 do
-  begin
-    CurrentVar := @FParams.Variables[I];
-    SetVariableDataEntrys(CharBuffer, CurrentVar, FIteration);
-    AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration, True);
-    Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
-      I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
-      CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
-    CheckOracleError(FPlainDriver, FErrorHandle, Status, lcExecute, ASQL, ConSettings);
-  end;
-
-  { Loads binded variables with values. }
-  LoadOracleVars(FPlainDriver, Connection, FErrorHandle,
-    FParams, InParamValues,ChunkSize);
-
+  if FParams^.AllocNum > 0 then
+    for I := 0 to FParams^.AllocNum - 1 do
+      if (FOracleParams[i].pType in [1,3]) then
+        LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
+          InParamValues[FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}], ChunkSize, FIteration)
+      else
+        LoadOracleVar(FPlainDriver, Connection, FErrorHandle,
+          @FParams.Variables[I], NullVariant, ChunkSize, FIteration);
   inherited BindInParameters;
 end;
 
@@ -650,19 +662,17 @@ end;
 }
 procedure TZOracleCallableStatement.UnPrepareInParameters;
 begin
-  FreeOracleSQLVars(FPlainDriver, FParams, 1, FConnectionHandle, FErrorHandle, ConSettings)
+  FreeOracleSQLVars(FPlainDriver, FParams, FIteration, FConnectionHandle, FErrorHandle, ConSettings)
 end;
 
-procedure TZOracleCallableStatement.ArrangeInParams;
+procedure TZOracleCallableStatement.SortZeosOrderToOCIParamsOrder;
 var
   I, J, NewProcIndex, StartProcIndex: Integer;
-  TempVars: TZVariantDynArray;
   TempOraVar: TZOracleParam;
 begin
   NewProcIndex := -1;
   StartProcIndex := 0;
   if IsFunction then
-  begin
     for i := 0 to high(FOracleParams) do
     begin
       if not ( FOracleParams[i].pProcIndex = NewProcIndex ) then
@@ -670,9 +680,8 @@ begin
         NewProcIndex := FOracleParams[i].pProcIndex;
         StartProcIndex := I;
       end;
-      if ( FOracleParams[i].pType = 4 ) then
+      if ( FOracleParams[i].pType = 4 ) then //Result value
       begin
-        ClientVarManager.SetNull(FOracleParams[i].pValue);
         if not (i = StartProcIndex) then
         begin
           TempOraVar := FOracleParams[I];
@@ -682,11 +691,6 @@ begin
         end;
       end;
     end;
-    SetLength(TempVars, Length(FOracleParams));
-    for i := 0 to high(FOracleParams) do
-      TempVars[i] := FOracleParams[i].pValue;
-    InParamValues := TempVars;
-  end;
 end;
 
 procedure TZOracleCallableStatement.FetchOutParamsFromOracleVars;

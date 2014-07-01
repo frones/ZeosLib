@@ -129,13 +129,12 @@ type
   PZSQLVars = ^TZSQLVars;
 
   TZOracleParam = Record
-    pName:string;
-    pSQLType:Integer;
-    pValue: TZVariant;
+    pName: string;
+    pSQLType: Integer;
     pTypeName: String;
     pType: ShortInt;
     pProcIndex: Integer;
-    pParamIndex: Integer;
+    pParamIndex: Integer; //Current ZeosParameter index
     pOutIndex: Integer;
   End;
   TZOracleParams = array of TZOracleParam;
@@ -191,17 +190,6 @@ procedure LoadOracleVar(const PlainDriver: IZOraclePlainDriver;
   const Connection: IZConnection; const ErrorHandle: POCIError;
   const Variable: PZSQLVar; var Value: TZVariant; ChunkSize: Integer;
   Iteration: Integer);
-
-{**
-  Loads Oracle variables binded to SQL statement with data.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param Variables Oracle variable holders.
-  @param Values a values to be loaded.
-}
-procedure LoadOracleVars(const PlainDriver: IZOraclePlainDriver;
-  const Connection: IZConnection; const ErrorHandle: POCIError;
-  Variables: PZSQLVars; const Values: TZVariantDynArray; const ChunkSize: Integer);
 
 {**
   Unloads Oracle variables binded to SQL statement with data.
@@ -1033,152 +1021,6 @@ begin
 end;
 
 {**
-  Loads Oracle variables binded to SQL statement with data.
-  @param PlainDriver an Oracle plain driver.
-  @param Connection an Oracle connection Object.
-  @param Variables Oracle variable holders.
-  @param Values a values to be loaded.
-}
-procedure LoadOracleVars(const PlainDriver: IZOraclePlainDriver;
-  const Connection: IZConnection; const ErrorHandle: POCIError;
-  Variables: PZSQLVars; const Values: TZVariantDynArray; const ChunkSize: Integer);
-var
-  I, Len: Integer;
-  CurrentVar: PZSQLVar;
-  TempDate: TDateTime;
-  TempBytes: TBytes;
-  TempBlob: IZBlob;
-  WriteTempBlob: IZOracleBlob;
-
-  Year, Month, Day, Hour, Min, Sec, MSec: Word;
-  OracleConnection: IZOracleConnection;
-  ClientVarManager: IZClientVariantManager;
-  Buffer: Pointer;
-  AnsiTemp: RawByteString;
-  ConSettings: PZConSettings;
-  CharRec: TZCharRec;
-begin
-  OracleConnection := Connection as IZOracleConnection;
-  ClientVarManager := Connection.GetClientVariantManager;
-  ConSettings := Connection.GetConSettings;
-  for I := 0 to Variables.AllocNum - 1 do
-  begin
-    CurrentVar := @Variables.Variables[I];
-    if (high(Values)<I) or ClientVarManager.IsNull(Values[I]) then
-      CurrentVar^.oIndicatorArray^[0] := -1
-    else
-    begin
-      CurrentVar^.oIndicatorArray^[0] := 0;
-      case CurrentVar^.TypeCode of
-        SQLT_INT:
-          PLongInt(CurrentVar^.Data)^ := ClientVarManager.GetAsInteger(Values[I]);
-        SQLT_FLT:
-          PDouble(CurrentVar^.Data)^ := ClientVarManager.GetAsFloat(Values[I]);
-        SQLT_STR:
-          begin
-            CharRec := ClientVarManager.GetAsCharRec(Values[i], ConSettings^.ClientCodePage^.CP);
-            CurrentVar^.oDataSizeArray^[0] := Math.Min(CharRec.Len, Max_OCI_String_Size)+1; //need the leading $0, because oracle expects it
-            System.Move(CharRec.P^, CurrentVar^.Data^, CurrentVar^.oDataSizeArray^[0]);
-            (PAnsiChar(CurrentVar^.Data)+CurrentVar^.oDataSizeArray^[0]-1)^ := #0; //improve  StrLCopy...
-          end;
-        SQLT_TIMESTAMP:
-          begin
-            TempDate := ClientVarManager.GetAsDateTime(Values[I]);
-            DecodeDate(TempDate, Year, Month, Day);
-            DecodeTime(TempDate, Hour, Min, Sec, MSec);
-            CheckOracleError(PlainDriver, ErrorHandle,
-              PlainDriver.DateTimeConstruct(
-                OracleConnection.GetConnectionHandle,
-                ErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
-                Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0),
-              lcOther, '', ConSettings);
-          end;
-        SQLT_BLOB:
-          begin
-            SetLength(CurrentVar^.lobs, 1);
-            if Values[I].VType = vtBytes then
-            begin
-              TempBytes := ClientVarManager.GetAsBytes(Values[I]);
-              Len := Length(TempBytes);
-              if Len > 0 then
-                Buffer := @TempBytes[0]
-              else
-                Buffer := nil;
-            end
-            else
-            begin
-              TempBlob := ClientVarManager.GetAsInterface(Values[I]) as IZBlob;
-              if TempBlob.IsEmpty then
-              begin
-                Buffer := nil;
-                Len := 0;
-              end
-              else
-              begin
-                Buffer := TempBlob.GetBuffer;
-                Len := TempBlob.Length;
-              end;
-            end;
-            try
-              WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
-                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(CurrentVar^.Data)^, ChunkSize, ConSettings);
-              WriteTempBlob.CreateBlob;
-              WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
-              CurrentVar^.lobs[0] := WriteTempBlob;
-            finally
-              WriteTempBlob := nil;
-            end;
-          end;
-        SQLT_CLOB:
-          try
-            SetLength(CurrentVar^.lobs, 1);
-            TempBlob := ClientVarManager.GetAsInterface(Values[I]) as IZBlob;
-            if TempBlob.IsClob then
-            begin
-              WriteTempBlob := TZOracleClob.Create(PlainDriver,
-                nil, 0, OracleConnection.GetConnectionHandle,
-                OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(CurrentVar^.Data)^, ChunkSize, ConSettings,
-                ConSettings^.ClientCodePage^.CP);
-              WriteTempBlob.CreateBlob;
-              Buffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-              WriteTempBlob.WriteLobFromBuffer(Buffer, TempBlob.Length);
-            end
-            else
-            begin
-              if not TempBlob.IsEmpty then
-              begin
-                AnsiTemp := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                    TempBlob.Length, Connection.GetConSettings);
-                Len := Length(AnsiTemp);
-                if Len = 0 then
-                  Buffer := nil
-                else
-                  Buffer := @AnsiTemp[1];
-              end
-              else
-              begin
-                Buffer := nil;
-                Len := 0;
-              end;
-              WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
-                OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
-                OracleConnection.GetErrorHandle, PPOCIDescriptor(CurrentVar^.Data)^,
-                ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
-              WriteTempBlob.CreateBlob;
-              WriteTempBlob.WriteLobFromBuffer(Buffer, Len);
-            end;
-            CurrentVar^.lobs[0] := WriteTempBlob;
-          finally
-            WriteTempBlob := nil;
-          end
-      end;
-    end;
-  end;
-end;
-
-{**
   Unloads Oracle variables binded to SQL statement with data.
   @param Variables Oracle variable holders.
 }
@@ -1188,7 +1030,7 @@ var
   J: LongWord;
 begin
   for i := 0 to Variables^.AllocNum -1 do
-    if (Variables^.Variables[i].DescriptorType > 0) and (Pointer(Variables^.Variables[i].Lobs) <> nil) then
+    if (Variables^.Variables[i].DescriptorType > 0) and (Length(Variables^.Variables[i].Lobs) > 0) then
       for j := 0 to Iteration -1 do
           Variables^.Variables[i].Lobs[j] := nil;
 end;
