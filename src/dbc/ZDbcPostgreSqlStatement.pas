@@ -195,7 +195,7 @@ begin
   Findeterminate_datatype := False;
   { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
     the pgBouncer does not support the RealPrepareds.... }
-  FUseEmulatedStmtsOnly := StrToBoolEx(Info.Values['EMULATE_PREPARES']);
+  FUseEmulatedStmtsOnly := StrToBoolEx(Self.Info.Values['EMULATE_PREPARES']);
 end;
 
 constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
