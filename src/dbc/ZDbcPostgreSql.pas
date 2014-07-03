@@ -145,7 +145,6 @@ type
     FClientSettingsChanged: Boolean;
     FTableInfoCache: TZPGTableInfoCache;
     FIs_bytea_output_hex: Boolean;
-    FUseEmulatedStmtsOnly: Boolean;
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
@@ -461,11 +460,7 @@ begin
     FOidAsBlob := StrToBoolEx(Info.Values['oidasblob'])
   else
     FOidAsBlob := False;
-
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
-  { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
-    the pgBouncer does not support the RealPrepareds.... }
-  FUseEmulatedStmtsOnly := StrToBoolEx(Info.Values['EMULATE_PREPARES']);
 
   OnPropertiesChange(nil);
 
@@ -560,7 +555,6 @@ begin
   { Sets the application name }
   if Info.Values['application_name'] <> '' then
     AddParamToResult('application_name', Info.Values['application_name']);
-
 end;
 
 {**
@@ -775,7 +769,7 @@ begin
   Case GetTestMode of
     0:
   {$ENDIF}
-      if (not FUseEmulatedStmtsOnly) and (GetServerMajorVersion >= 8) then
+      if GetServerMajorVersion >= 8 then
         Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, '', Info)
       else
         Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, '', Info);
@@ -823,7 +817,7 @@ begin
   Case GetTestMode of
     0:
   {$ENDIF}
-      if (not FUseEmulatedStmtsOnly) and (GetServerMajorVersion >= 8) then
+      if GetServerMajorVersion >= 8 then
         Result := TZPostgreSQLCAPIPreparedStatement.Create(GetPlainDriver, Self, SQL, Info)
       else
         Result := TZPostgreSQLClassicPreparedStatement.Create(GetPlainDriver, Self, SQL, Info);
