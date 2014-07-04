@@ -1607,8 +1607,8 @@ begin
     if Result = '' then
       SetString(Result, Src.P, Src.Len)
     else
-      if PLongInt(NativeUInt(Result) - 8)^ = 1 then { ref count }
-        if Src.len = Cardinal(PLongInt(NativeUInt(Result) - 4)^) { length } then
+      if PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
+        if Src.len = Cardinal(PLongInt(NativeInt(Result) - 4)^) { length } then
           System.Move(Src.P^, Pointer(Result)^, Src.Len)
         else
           SetString(Result, Src.P, Src.Len)

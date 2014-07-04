@@ -3190,8 +3190,8 @@ begin
   if Result = '' then
     System.SetString(Result,nil, l)
   else
-    if not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeUInt(Result) - 4)^)) then { length }
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
       System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
@@ -3209,8 +3209,8 @@ begin
   if Result = '' then
     System.SetString(Result,nil, Len)
   else
-    if not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
-       (Len = PLongInt(NativeUInt(Result) - 4)^)) then { length }
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (Len = PLongInt(NativeInt(Result) - 4)^)) then { length }
       System.SetString(Result,nil, Len);
   for i := 0 to Len-1 do
     PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
@@ -3229,8 +3229,8 @@ begin
   if Result = '' then
     System.SetString(Result,nil, l)
   else
-    if not ((PLongInt(NativeUInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeUInt(Result) - 4)^)) then { length }
+    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
+       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
       System.SetString(Result,nil, l);
   for i := 0 to l-1 do
     PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars

@@ -620,11 +620,13 @@ begin
   if ( Len = 0 ) or ( Src = nil ) then
     Dest := ''
   else
-    if (NativeUInt(Dest) <> 0) and //Empty?
-       (PLongInt(NativeUInt(Dest) - 8)^ = 1) {refcount} and
-       (PLongInt(NativeUInt(Dest) - 4)^ = LongInt(Len)) {length} then
+    {$IFNDEF FPC}
+    if (Pointer(Dest) <> nil) and //Empty?
+       (PLongInt(NativeInt(Dest) - 8)^ = 1) {refcount} and
+       (PLongInt(NativeInt(Dest) - 4)^ = LongInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
+    {$ENDIF}
       SetString(Dest, Src, Len);
 end;
 
@@ -633,11 +635,13 @@ begin
   if ( Len = 0 ) or ( Src = nil ) then
     Dest := ''
   else
-    if (NativeUInt(Dest) <> 0) and //Empty?
-       (PLongInt(NativeUInt(Dest) - 8)^ = 1) {refcount} and
-       (PLongInt(NativeUInt(Dest) - 4)^ = LongInt(Len)) {length} then
+    {$IFNDEF FPC}
+    if (Pointer(Dest) <> nil) and //Empty?
+       (PLongInt(NativeInt(Dest) - 8)^ = 1) {refcount} and
+       (PLongInt(NativeInt(Dest) - 4)^ = LongInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
+    {$ENDIF}
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
@@ -667,11 +671,13 @@ begin
   if ( Len = 0 ) or ( Src = nil ) then
     Dest := ''
   else
+    {$IFNDEF FPC}
     if (NativeUInt(Dest) <> 0) and //Empty?
-       (PLongInt(NativeUInt(Dest) - 8)^ = 1) {refcount} and
-       (PLongInt(NativeUInt(Dest) - 4)^ = LongInt(Len)) {length} then
+       (PLongInt(NativeInt(Dest) - 8)^ = 1) {refcount} and
+       (PLongInt(NativeInt(Dest) - 4)^ = LongInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
+    {$ENDIF}
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
