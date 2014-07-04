@@ -77,7 +77,6 @@ type
     FPlainDriver: IZMySQLPlainDriver;
     FUseResult: Boolean;
     FIgnoreUseResult: Boolean;
-    FCachedLob: Boolean;
     FLengthArray: PMySQLLengthArray;
     function GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     function GetBuffer(ColumnIndex: Integer): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
@@ -88,8 +87,7 @@ type
     constructor Create(const PlainDriver: IZMySQLPlainDriver;
       const Statement: IZStatement; const SQL: string;
       const Handle: PZMySQLConnect; const UseResult: Boolean;
-      AffectedRows: PInteger; const CachedLob: Boolean;
-      const IgnoreUseResult: Boolean = False);
+      AffectedRows: PInteger; const IgnoreUseResult: Boolean = False);
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
@@ -221,8 +219,7 @@ end;
 constructor TZMySQLResultSet.Create(const PlainDriver: IZMySQLPlainDriver;
   const Statement: IZStatement; const SQL: string;
   const Handle: PZMySQLConnect; const UseResult: Boolean;
-  AffectedRows: PInteger; const CachedLob: Boolean;
-  const IgnoreUseResult: Boolean = False);
+  AffectedRows: PInteger; const IgnoreUseResult: Boolean = False);
 begin
   inherited Create(Statement, SQL, TZMySQLResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -235,7 +232,6 @@ begin
   ResultSetConcurrency := rcReadOnly;
   FUseResult := UseResult;
   FIgnoreUseResult := IgnoreUseResult;
-  FCachedLob := CachedLob;
 
   Open;
   if Assigned(AffectedRows) then
@@ -978,11 +974,12 @@ begin
   if Assigned(FBindBuffer) then
     FreeAndNil(FBindBuffer);
   if Assigned(FPrepStmt) then
-    begin
+  begin
+    FPlainDriver.FreePreparedResult(FPrepStmt);
+    while(FPlainDriver.GetPreparedNextResult(FPrepStmt) = 0) do
       FPlainDriver.FreePreparedResult(FPrepStmt);
-      while(FPlainDriver.GetPreparedNextResult(FPrepStmt) = 0) do
-        FPlainDriver.FreePreparedResult(FPrepStmt);
-    end;
+    FPrepStmt := nil;
+  end;
   inherited Close;
 
 end;
@@ -1461,7 +1458,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 4{Max ShortInt Length = 3} ) then
+           (FColumnArray[ColumnIndex].length < 5{Max ShortInt Length = 3+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToIntDef(FRawTemp, 0)
@@ -1540,7 +1537,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 6{Max Word Length = 5} ) then
+           (FColumnArray[ColumnIndex].length < 7{Max Word Length = 5+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToIntDef(FRawTemp, 0)
@@ -1619,7 +1616,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 7{Max SmallInt Length = 6} ) then
+           (FColumnArray[ColumnIndex].length < 8{Max SmallInt Length = 6+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToIntDef(FRawTemp, 0)
@@ -1698,7 +1695,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 11{Max LongWord Length = 10} ) then
+           (FColumnArray[ColumnIndex].length < 12{Max LongWord Length = 10+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToUInt64Def(FRawTemp, 0)
@@ -1777,7 +1774,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 12{Max Int32 Length = 11} ) then
+           (FColumnArray[ColumnIndex].length < 13{Max Int32 Length = 11+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToIntDef(FRawTemp, 0)
@@ -1856,7 +1853,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 21{Max UInt64 Length = 20} ) then
+           (FColumnArray[ColumnIndex].length < 22{Max UInt64 Length = 20+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToUInt64Def(FRawTemp, 0)
@@ -1935,7 +1932,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 21{Max Int64 Length = 20} ) then
+           (FColumnArray[ColumnIndex].length < 22{Max Int64 Length = 20+#0}) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToInt64Def(FRawTemp, 0)
@@ -2014,7 +2011,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 29{Max Extende Length = 28 ??} ) then
+           (FColumnArray[ColumnIndex].length < 30{Max Extended Length = 28 ??} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToFloatDef(FRawTemp, '.', 0)
@@ -2093,7 +2090,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 29{Max Extended Length = 28 ??} ) then
+           (FColumnArray[ColumnIndex].length < 30{Max Extended Length = 28 ??+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToFloatDef(FRawTemp, '.', 0)
@@ -2170,7 +2167,7 @@ begin
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
-           (FColumnArray[ColumnIndex].length < 29{Max Extended Length = 28 ??} ) then
+           (FColumnArray[ColumnIndex].length < 29{Max Extended Length = 28 ??+#0} ) then
         begin
           ZSetString(PAnsiChar(FColumnArray[ColumnIndex].buffer), FColumnArray[ColumnIndex].length, FRawTemp);
           Result := RawToFloatDef(FRawTemp, '.', 0)

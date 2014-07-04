@@ -59,7 +59,7 @@ interface
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
-  ZCompatibility, ZDbcResultSetMetadata;
+  ZCompatibility, ZDbcResultSetMetadata, ZVariant;
 
 const
   MAXBUF = 65535;
@@ -99,7 +99,9 @@ procedure CheckMySQLError(const PlainDriver: IZMySQLPlainDriver;
   const LogMessage: RawByteString; Const ConSettings: PZConSettings);
 procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
   const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const ConSettings: PZConSettings);
+  const LogMessage: RawByteString; const ConSettings: PZConSettings;
+  ErrorIsIgnored: PBoolean = nil; const IgnoreErrorCode: Integer = 0);
+
 procedure EnterSilentMySQLError;
 procedure LeaveSilentMySQLError;
 
@@ -152,6 +154,11 @@ function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
   ConSettings: PZConSettings; out TypeName, TypeInfoSecond: String;
   out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
+
+function MySQLPrepareAnsiSQLParam(Handle: PZMySQLConnect; Value: TZVariant;
+  const DefaultValue: String; ClientVarManager: IZClientVariantManager;
+  PlainDriver: IZMySQLPlainDriver; const InParamType: TZSQLType;
+  const UseDefaults: Boolean; ConSettings: PZConSettings): RawByteString;
 
 implementation
 
@@ -454,13 +461,22 @@ end;
 
 procedure CheckMySQLPrepStmtError(const PlainDriver: IZMySQLPlainDriver;
   const Handle: PZMySQLConnect; const LogCategory: TZLoggingCategory;
-  const LogMessage: RawByteString; const ConSettings: PZConSettings);
+  const LogMessage: RawByteString; const ConSettings: PZConSettings;
+  ErrorIsIgnored: PBoolean = nil; const IgnoreErrorCode: Integer = 0);
 var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastPreparedError(Handle));
   ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
+  if Assigned(ErrorIsIgnored) then
+    if (IgnoreErrorCode = ErrorCode) then
+    begin
+      ErrorIsIgnored^ := True;
+      Exit;
+    end
+    else
+      ErrorIsIgnored^ := False;
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastPreparedError(Handle));
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
@@ -526,9 +542,10 @@ begin
  Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
 
-function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
+function getMySQLFieldSize(field_type: TMysqlFieldTypes; field_size: LongWord): LongWord;
 begin
   case field_type of
+    FIELD_TYPE_ENUM:        Result := 1;
     FIELD_TYPE_TINY:        Result := 1;
     FIELD_TYPE_SHORT:       Result := 2;
     FIELD_TYPE_LONG:        Result := 4;
@@ -751,5 +768,72 @@ begin
 
   FreeAndNil(TypeInfoList);
 end;
+
+function MySQLPrepareAnsiSQLParam(Handle: PZMySQLConnect; Value: TZVariant;
+  const DefaultValue: String; ClientVarManager: IZClientVariantManager;
+  PlainDriver: IZMySQLPlainDriver; const InParamType: TZSQLType;
+  const UseDefaults: Boolean; ConSettings: PZConSettings): RawByteString;
+var
+  TempBytes: TBytes;
+  TempBlob: IZBlob;
+begin
+  if ClientVarManager.IsNull(Value) then
+    if UseDefaults and (DefaultValue <> '') then
+      Result := ConSettings^.ConvFuncs.ZStringToRaw(DefaultValue,
+        ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
+    else
+      Result := 'NULL'
+  else
+  begin
+    case InParamType of
+      stBoolean:
+        if ClientVarManager.GetAsBoolean(Value) then
+           Result := '''Y'''
+        else
+           Result := '''N''';
+      stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong, stLong,
+      stFloat, stDouble, stCurrency, stBigDecimal:
+        Result := ClientVarManager.GetAsRawByteString(Value);
+      stBytes:
+        begin
+          TempBytes := ClientVarManager.GetAsBytes(Value);
+          Result := GetSQLHexAnsiString(PAnsiChar(TempBytes), Length(TempBytes));
+        end;
+      stString, stUnicodeString:
+        Result := PlainDriver.EscapeString(Handle, ClientVarManager.GetAsRawByteString(Value), ConSettings, True);
+      stDate:
+        Result := DateTimeToRawSQLDate(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
+      stTime:
+        Result := DateTimeToRawSQLTime(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
+      stTimestamp:
+        Result := DateTimeToRawSQLTimeStamp(ClientVarManager.GetAsDateTime(Value),
+          ConSettings^.WriteFormatSettings, True);
+      stAsciiStream, stUnicodeStream, stBinaryStream:
+        begin
+          TempBlob := ClientVarManager.GetAsInterface(Value) as IZBlob;
+          if not TempBlob.IsEmpty then
+          begin
+            case InParamType of
+              stBinaryStream:
+                Result := GetSQLHexAnsiString(PAnsichar(TempBlob.GetBuffer), TempBlob.Length);
+              else
+                if TempBlob.IsClob then
+                  Result := PlainDriver.EscapeString(Handle,
+                    TempBlob.GetRawByteString, ConSettings, True)
+                else
+                  Result := PlainDriver.EscapeString(Handle,
+                    GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                      TempBlob.Length, ConSettings), ConSettings, True);
+            end;
+          end
+          else
+            Result := 'NULL';
+        end;
+    end;
+  end;
+end;
+
 
 end.
