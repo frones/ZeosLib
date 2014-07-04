@@ -800,7 +800,6 @@ var
   TempBytes: TBytes;
   ChunkedData: Boolean;
   AnsiRec: TZAnsiRec;
-  TmpDateTime: TDateTime;
 label JmpClob, JmpInherited, JmpCharRec;
 begin
   ChunkedData := False;
