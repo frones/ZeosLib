@@ -959,7 +959,7 @@ begin
                       begin
                         ValuePtr1 := Blob1.GetPAnsiChar(zCP_UTF8);
                         ValuePtr2 := Blob2.GetPAnsiChar(zCP_UTF8);
-                        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+                        Result := ZMemLComp(ValuePtr1, ValuePtr2, Max(Blob1.Length, Blob2.Length));
                       end;
                     else
                       begin
