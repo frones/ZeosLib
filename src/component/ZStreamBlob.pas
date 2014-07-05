@@ -243,7 +243,7 @@ begin
       Blob.Clear;
     try
       if Assigned(FField.Dataset) then
-        THackedDataset(FField.DataSet).DataEvent(deFieldChange, ULong(FField));
+        THackedDataset(FField.DataSet).DataEvent(deFieldChange, NativeInt(FField));
     except
         ApplicationHandleException(Self);
     end;
