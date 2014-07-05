@@ -4167,9 +4167,8 @@ end;
 procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
 var RawTemp: RawByteString;
 begin
-  if Buffer = nil then
-    Clear
-  else
+  InternalClear;
+  if Buffer <> nil then
   begin
     if CodePage = zCP_NONE then
     begin
@@ -4178,10 +4177,9 @@ begin
     end
     else
     begin
-      Clear;
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
-      ReallocMem(FBlobData, FBlobSize);
+      GetMem(FBlobData, FBlobSize);
       System.Move(Buffer^, FBlobData^, FBlobSize-1);
       (PAnsiChar(FBlobData)+Len)^ := #0; //set leading terminator
     end;
