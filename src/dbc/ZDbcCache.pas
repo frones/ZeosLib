@@ -949,7 +949,7 @@ begin
                         ValuePtr2 := Blob2.GetPWideChar;
                         SetLastError(0);
                         Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-                          ValuePtr1, Blob1.Length, ValuePtr2, Blob1.Length) - 2{CSTR_EQUAL};
+                          ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
                         if GetLastError <> 0 then RaiseLastOSError;
                         {$ELSE}
                         WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
