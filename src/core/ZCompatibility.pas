@@ -82,10 +82,6 @@ type
   PPLongWord            = ^PLongWord;
   {$IFEND}
 {$IFDEF FPC}
-  ULong                 = {$IFDEF WIN64}LongWord{$ELSE}PTRUINT{$ENDIF};
-                            // EgonHugeist: Use always a 4Byte Integer as long the PlainDriver dll's are 32Bit for Windows64
-                            //on the other hand MySQL64 and FB64 have problems on Win64!
-  ULongLong             = QWord;
   NativeInt             = PtrInt;
   NativeUInt            = PtrUInt;
   PNativeUInt           = ^NativeUInt;
@@ -96,15 +92,24 @@ type
   PNativeUInt           = ^NativeUInt;
   PWord                 = ^Word; // M.A.
   {$ENDIF}
-  ULong                 = LongWord;
-  ULongLong             = UInt64; //delphi don't have Unsigned Int64 type until XE2 but integer constants with 20 digits are supported since D2005. Ideas??
 {$ENDIF}
+  // EgonHugeist: Use always a 4Byte unsigned Integer for Windows otherwise MySQL64 has problems on Win64!
+  // don't know anything about reported issues on other OS's
+  ULong                 = {$IFDEF WIN64}LongWord{$ELSE}NativeUInt{$ENDIF};
+  ULongLong             = UInt64;
   PULong                = ^ULong;
   PULongLong            = ^ULongLong;
 
   UInt                  = LongWord;
   PUInt                 = ^UInt;
-  ZPPWideChar            = ^PWideChar;//BCB issue: PPWideChar is not part of system
+  ZPPWideChar           = ^PWideChar;//BCB issue: PPWideChar is not part of system
+
+  {EH: just a clear type/IDE to get the length of String or Array by reading back from
+    initial entry(X) - SizeOf(LengthInt) = Length}
+  PLengthInt            = ^LengthInt;
+  LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
+  PRefCntInt            = ^RefCntInt;
+  RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
 
   TZAnsiRec = Record
     Len: Cardinal;
