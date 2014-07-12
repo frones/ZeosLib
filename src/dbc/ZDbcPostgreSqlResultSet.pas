@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 
 uses
-  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs,{$ENDIF}
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, Types,
+  {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZDbcResultSet, ZPlainPostgreSqlDriver, ZDbcLogging,
   ZDbcResultSetMetadata, ZCompatibility;
 
