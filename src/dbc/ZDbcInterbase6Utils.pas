@@ -2081,7 +2081,7 @@ begin
       SQL_TYPE_DATE : FPlainDriver.isc_encode_sql_date(@TmpDate, PISC_DATE(sqldata));
       SQL_TYPE_TIME : begin
                         FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata));
-                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ + msec*10;
+                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ {%H-}+ msec*10;
                       end;
       SQL_TIMESTAMP : begin
                         FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata));
@@ -2320,10 +2320,7 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
     if (sqlind <> nil) then
-      case Value of
-        True  : sqlind^ := -1; //NULL
-        False : sqlind^ :=  0; //NOT NULL
-      end;
+       sqlind^ := -Ord(Value);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}
