@@ -111,11 +111,14 @@ type
   PRefCntInt            = ^RefCntInt;
   RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
 
+  {EH: Keep the Len, Pointer, x.... order in next three records! New field -> add it @the end!}
+  PZAnsiRec = ^TZAnsiRec;
   TZAnsiRec = Record
     Len: Cardinal;
     P: PAnsiChar;
   end;
 
+  PZWideRec = ^TZWideRec;
   TZWideRec = Record
     Len: Cardinal;
     P: PWideChar;
@@ -123,8 +126,8 @@ type
 
   TZCharRec = Record
     Len: Cardinal; //Length of String
-    CP: Word;      //CodePage of the String
     P: Pointer;    //Allocated Mem of String including #0 terminator
+    CP: Word;      //CodePage of the String
   end;
 
   {$IFNDEF HAVE_TBYTES}
