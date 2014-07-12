@@ -80,7 +80,7 @@ type
   { Interbase blob Information structure
     contain iformation about blob size in bytes,
     segments count, segment size in bytes and blob type
-    Note: blob type can be text an binary }
+    Note: blob type can be text and binary }
   TIbBlobInfo = record
     NumSegments: Word;
     MaxSegmentSize: Word;
@@ -828,7 +828,7 @@ begin
   end;
   { Prepare an sql statement }
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-    0, PAnsiChar(SQL), Dialect, nil);
+    0, Pointer(SQL), Dialect, nil);
 
   iError := CheckInterbase6Error(PlainDriver, StatusVector, ConSettings, lcPrepStmt, SQL); //Check for disconnect AVZ
 

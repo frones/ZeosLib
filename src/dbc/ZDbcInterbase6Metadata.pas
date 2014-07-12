@@ -2910,7 +2910,7 @@ begin
       Result.UpdateString(CatalogNameIndex, LCatalog);   //COLLATION_CATALOG
       Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
       Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
-      Result.UpdateNull(ColumnNameIndex);//COLLATION_COLUMN
+      //Result.UpdateNull(ColumnNameIndex);//COLLATION_COLUMN
       Result.UpdateString(CollationNameIndex, GetString(FindColumn('RDB$DEFAULT_COLLATE_NAME'))); //COLLATION_NAME
       Result.UpdateString(CharacterSetNameIndex, GetString(FindColumn('RDB$CHARACTER_SET_NAME'))); //CHARACTER_SET_NAME
       Result.UpdateSmall(CharacterSetIDIndex, GetSmall(FindColumn('RDB$CHARACTER_SET_ID'))); //CHARACTER_SET_ID
