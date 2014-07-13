@@ -2109,10 +2109,10 @@ procedure TZAbstractPreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 var
   V: TZVariant;
-  {using mem entry of ZData is faster then casting}
+  {using mem entry of ZData is faster then casting and save imbelievable many codelines for all possible types!}
   ZArray: Pointer absolute Value;
 
-  procedure AssertLength(const Len: Integer);
+  procedure AssertLength(const Len: LengthInt);
   begin
     if (ParameterIndex = FirstDbcIndex) or ((ParameterIndex > FirstDbcIndex) and
        (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}].VArray.VArray = nil))  then
@@ -2128,18 +2128,18 @@ begin
       stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
       stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
       stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
-        AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+        AssertLength({%H-}PLengthInt(NativeUInt(ZArray) - SizeOf(LengthInt))^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
       stString:
         case VariantType of
           vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
-            AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+            AssertLength({%H-}PLengthInt(NativeUInt(ZArray) - SizeOf(LengthInt))^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
           else
             raise Exception.Create('Invalid Variant-Type for String-Array binding!');
         end;
       stUnicodeString:
         case VariantType of
           vtUnicodeString, vtCharRec:
-            AssertLength({%H-}PLongInt(NativeUInt(ZArray) - 4)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+            AssertLength({%H-}PLengthInt(NativeUInt(ZArray) - SizeOf(LengthInt))^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
           else
             raise Exception.Create('Invalid Variant-Type for String-Array binding!');
         end;
