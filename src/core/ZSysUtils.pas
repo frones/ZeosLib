@@ -1084,13 +1084,13 @@ end;
 { Convert string buffer into pascal string }
 
 function BufferToStr(Buffer: PWideChar; Length: LongInt): string;
-var s : Widestring;
+var s : ZWidestring;
 begin
    Result := '';
    if Assigned(Buffer) then
    begin
       SetString(s, Buffer, Length div SizeOf(Char));
-      Result := s;
+      Result := String(s);
    end;
 end;
 
@@ -2559,7 +2559,7 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
-  Result := UnicodeStringToASCII7(DateTimeToRawSQLDate(Value,
+  Result := ASCII7ToUnicodeString(DateTimeToRawSQLDate(Value,
     ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
 end;
 {$ELSE}
@@ -3171,7 +3171,7 @@ begin
     Result := ''
   else
   begin
-    l := PLengthInt(NativeInt(Src) - StringLenOffSet)^;
+    l := {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^;
     SetString(result,nil,l);
     for i := 0 to l-1 do
       PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
@@ -3229,7 +3229,7 @@ begin
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
       Result := ''; //speeds up SetLength x2
-      SetLength(Result, l);
+      SetLength(Result, len);
     end;
     {$ELSE}
     System.SetString(Result,nil, Len);
