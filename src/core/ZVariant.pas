@@ -1703,15 +1703,12 @@ begin
         vtUnicodeString:
           Result.VBytes := StrToBytes(Value.VUnicodeString);
         vtCharRec:
+          begin
             if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
-          begin
-            SetString(UniTemp, PWideChar(Value.VCharRec.P), Value.VCharRec.Len);
-            Result.VBytes := StrToBytes(UniTemp);
-          end
+              SetLength(Result.VBytes, Value.VCharRec.Len*2)
             else
-          begin
-            SetString(AnsiTemp, PAnsiChar(Value.VCharRec.P), Value.VCharRec.Len);
-            Result.VBytes := StrToBytes(AnsiTemp);
+              SetLength(Result.VBytes, Value.VCharRec.Len);
+            System.Move(Value.VCharRec.P^, Pointer(Result.VBytes)^, Length(Result.VBytes));
           end;
         else
           RaiseTypeMismatchError;
