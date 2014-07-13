@@ -368,7 +368,7 @@ begin
     begin
       S := Info.Values['codepage'];
       if S <> '' then
-        GetPlainDriver.dbSetLCharSet(LoginRec, PAnsiChar(NotEmptyStringToASCII7(S)));
+        GetPlainDriver.dbSetLCharSet(LoginRec, Pointer({$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(S)));
       GetPlainDriver.dbsetluser(LoginRec, PAnsiChar(ConSettings^.User));
       GetPlainDriver.dbsetlpwd(LoginRec, PAnsiChar(AnsiString(Password)));
         LogMessage := LogMessage + ' AS USER "'+ConSettings^.User+'"';
@@ -642,7 +642,7 @@ begin
   Stmt := CreateRegularStatement(Self.Info);
   RS := Stmt.ExecuteQuery('SELECT dateformat FROM master.dbo.syslanguages WHERE name = @@LANGUAGE');
   if RS.Next then
-    ConSettings^.ReadFormatSettings.DateFormat := PosEmptyStringToASCII7(RS.GetString(FirstDbcIndex));
+    ConSettings^.ReadFormatSettings.DateFormat := RS.GetRawByteString(FirstDbcIndex);
   RS := nil;
   Stmt.close;
   Stmt := nil;

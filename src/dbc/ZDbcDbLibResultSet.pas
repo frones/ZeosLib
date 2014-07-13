@@ -323,7 +323,7 @@ begin
               Result := ZConvertRawToString(tmp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
             end;
           else
-            Result := {$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(tmp);
+            Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(tmp);
         end;
       end
       else
@@ -440,14 +440,14 @@ begin
               Result := ConSettings^.ConvFuncs.ZRawToUnicode(tmp, ConSettings^.ClientCodePage^.CP);
             end;
           else
-            Result := PosEmptyASCII7ToUnicodeString(tmp);
+            Result := ASCII7ToUnicodeString(tmp);
         end;
       end
       else
         Result := ZRawToUnicode(InternalGetString(ColumnIndex),
           TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage);
     else
-      Result := PosEmptyASCII7ToUnicodeString(InternalGetString(ColumnIndex));
+      Result := ASCII7ToUnicodeString(InternalGetString(ColumnIndex));
   end;
 end;
 
@@ -486,7 +486,7 @@ begin
       if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
         (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
       begin
-        while (DL > 0) and (PAnsiChar(NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
+        while (DL > 0) and ({%H-}PAnsiChar({%H-}NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
                 Dec(DL);
         if DL > 0 then
         begin
@@ -858,7 +858,7 @@ begin
   if Data <> nil then
   begin
     if DT = FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME] then
-      Move(Data^, TempDate, SizeOf(TempDate))
+      Move(Data^, TempDate{%H-}, SizeOf(TempDate))
     else
       FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME],
         @TempDate, SizeOf(TempDate));

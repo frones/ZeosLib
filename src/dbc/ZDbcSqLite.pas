@@ -310,14 +310,14 @@ begin
 
   if Info.Values['synchronous'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_synchronous
   begin  //0 brings best performance
-    SQL := 'PRAGMA synchronous = '+NotEmptyStringToAscii7(Info.Values['synchronous']);
+    SQL := 'PRAGMA synchronous = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['synchronous']);
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
   end;
 
   if Info.Values['locking_mode'] <> '' then //see http://www.sqlite.org/pragma.html#pragma_locking_mode
   begin //EXCLUSIVE brings best performance
-    SQL := 'PRAGMA locking_mode = '+NotEmptyStringToAscii7(Info.Values['locking_mode']);
+    SQL := 'PRAGMA locking_mode = '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Info.Values['locking_mode']);
     ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
     CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
   end;
@@ -325,7 +325,7 @@ begin
   try
     if ( FClientCodePage <> '' ) then
     begin
-      SQL := 'PRAGMA encoding = '''+NotEmptyStringToAscii7(FClientCodePage)+'''';
+      SQL := 'PRAGMA encoding = '''+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage)+'''';
       ErrorCode := GetPlainDriver.Execute(FHandle, Pointer(SQL), nil, nil, ErrorMessage);
       CheckSQLiteError(GetPlainDriver, FHandle, ErrorCode, ErrorMessage, lcExecute, SQL, ConSettings);
     end;

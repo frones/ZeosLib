@@ -311,12 +311,13 @@ begin
   if not Closed then
     Exit;
 
-  LogMessage := 'CONNECT TO "'+NotEmptyStringToAscii7(Database)+'" AS USER "'+PosEmptyStringToAscii7(User)+'"';
+  LogMessage := 'CONNECT TO "'+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Database)+
+    '" AS USER "'+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(User)+'"';
 
   GetPlainDriver.Init(FHandle);
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
-  sMy_client_Char_Set := NotEmptyASCII7ToString(GetPlainDriver.GetConnectionCharacterSet(FHandle));
+  sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GetPlainDriver.GetConnectionCharacterSet(FHandle));
   ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(sMy_client_Char_Set);
   ZEncoding.SetConvertFunctions(ConSettings);
   {EgonHugeist:
@@ -368,8 +369,6 @@ begin
   SslCa := nil;
   SslCaPath := nil;
   SslCypher := nil;
-  {EgonHugeist: If these Paramters MUST BE UTF8 then leave Param ceUTF8 in the
-    ZPlainString-function like else remove it and it adapts to default codepage}
   if StrToBoolEx(Info.Values['MYSQL_SSL']) then
     begin
        if Info.Values['MYSQL_SSL_KEY'] <> '' then
@@ -398,7 +397,6 @@ begin
                               PAnsiChar(ConSettings^.User), PAnsiChar(AnsiString(Password)),
                               PAnsiChar(ConSettings^.Database), Port, nil,
                               ClientFlag) = nil then
-
     begin
       CheckMySQLError(GetPlainDriver, FHandle, lcConnect, LogMessage, ConSettings);
       DriverManager.LogError(lcConnect, ConSettings^.Protocol, LogMessage,
@@ -421,8 +419,8 @@ begin
 
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
-      SQL := PAnsiChar('SET NAMES '+NotEmptyStringToASCII7(FClientCodePage));
-      GetPlainDriver.ExecQuery(FHandle, PAnsichar(SQL));
+      SQL := 'SET NAMES '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
+      GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;

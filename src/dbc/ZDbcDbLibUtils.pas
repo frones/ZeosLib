@@ -78,7 +78,7 @@ function ConvertFreeTDSToSqlType(const FieldType: SmallInt;
   @param string field type value
   @result the SqlType field type value
 }
-function ConvertDBLibTypeToSqlType(Value: string): TZSQLType;
+function ConvertDBLibTypeToSqlType({%H-}Value: string): TZSQLType;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -114,7 +114,7 @@ function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
 
 implementation
 
-uses Types, ZSysUtils, ZPlainDbLibConstants, ZEncoding, ZDbcUtils
+uses ZSysUtils, ZPlainDbLibConstants, ZEncoding, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**

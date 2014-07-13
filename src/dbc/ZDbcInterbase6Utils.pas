@@ -483,7 +483,7 @@ begin
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
       isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
         begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(NotEmptyASCII7ToString(ParamValue)));
+          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(ZFastCode.RawToInt(ParamValue));
           Inc(FDPBLength, 3);
         end;
       isc_dpb_sweep:
@@ -493,7 +493,7 @@ begin
         end;
       isc_dpb_sweep_interval:
         begin
-          PValue := StrToInt(NotEmptyASCII7ToString(ParamValue));
+          PValue := ZFastCode.RawToInt(ParamValue);
           DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
                  PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
           Inc(FDPBLength, 6);

@@ -580,26 +580,10 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 }
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
-function NotEmptyASCII7ToString(const Src: RawByteString): string; overload;
-function NotEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
-function NotEmptyStringToASCII7(const Src: string): RawByteString; overload;
-function NotEmptyStringToASCII7(Src: PChar): RawByteString; overload;
-
-function PosEmptyASCII7ToString(const Src: RawByteString): string; overload;
-function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string; overload;
-function PosEmptyStringToASCII7(const Src: string): RawByteString; overload;
-function PosEmptyStringToASCII7(Src: PChar): RawByteString; overload;
-
-function NotEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
-function NotEmptyASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString; overload;
-function NotEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
-function NotEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
-
-function PosEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
-function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString; overload;
-function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
-function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString; overload;
-function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
+function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
+function ASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString; overload;
+function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
+function UnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
 
 //function ValUnicodeInt(const s: ZWideString; var code: Integer): Integer;
 
@@ -1608,7 +1592,7 @@ begin
     Result := nil
   else
   begin
-    RBS := NotEmptyUnicodeStringToASCII7(Value);
+    RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
       Move(RBS[1], Result[0], L)
@@ -1630,7 +1614,7 @@ begin
     Result := nil
   else
   begin
-    RBS := NotEmptyUnicodeStringToASCII7(Value);
+    RBS := UnicodeStringToASCII7(Value);
     SetLength(Result, L);
     if Value <> '' then
       Move(RBS[1], Result[0], L)
@@ -1918,7 +1902,7 @@ end;
 function UnicodeSQLDateToDateTime(Value: PWideChar; const ValLen: Cardinal;
   ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 begin
-  Result := RawSQLDateToDateTime(PAnsiChar(PosEmptyUnicodeStringToASCII7(Value, ValLen)),
+  Result := RawSQLDateToDateTime(Pointer(UnicodeStringToASCII7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
 end;
 
@@ -2103,7 +2087,7 @@ end;
 function UnicodeSQLTimeToDateTime(Value: PWideChar; const ValLen: Cardinal;
   ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 begin
-  Result := RawSQLTimeToDateTime(PAnsiChar(PosEmptyUnicodeStringToAscii7(Value, ValLen)),
+  Result := RawSQLTimeToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed);
 end;
 
@@ -2434,7 +2418,7 @@ end;
 function UnicodeSQLTimeStampToDateTime(Value: PWideChar; const ValLen: Cardinal;
   ZFormatSettings: TZFormatSettings; var Failed: Boolean): TDateTime;
 begin
-  Result := RawSQLTimeStampToDateTime(PAnsiChar(PosEmptyUnicodeStringToAscii7(Value, ValLen)),
+  Result := RawSQLTimeStampToDateTime(Pointer(UnicodeStringToAscii7(Value, ValLen)),
     ValLen, ZFormatSettings, Failed)
 end;
 
@@ -2575,8 +2559,8 @@ function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
-  Result := NotEmptyASCII7ToUnicodeString(DateTimeToRawSQLDate(Value,
-    ConFormatSettings, Quoted, PosEmptyUnicodeStringToAscii7(Suffix)));
+  Result := UnicodeStringToASCII7(DateTimeToRawSQLDate(Value,
+    ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
 end;
 {$ELSE}
 var
@@ -2696,8 +2680,8 @@ function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
-  Result := NotEmptyASCII7ToUnicodeString(DateTimeToRawSQLTime(Value,
-    ConFormatSettings, Quoted, PosEmptyUnicodeStringToAscii7(Suffix)));
+  Result := UnicodeStringToASCII7(DateTimeToRawSQLTime(Value,
+    ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
 end;
 {$ELSE}
 var
@@ -2846,8 +2830,8 @@ function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
 {$IFDEF FPC} //imbelievable performance drop!!!
 begin
-  Result := NotEmptyASCII7ToUnicodeString(DateTimeToRawSQLTimeStamp(Value,
-    ConFormatSettings, Quoted, PosEmptyUnicodeStringToAscii7(Suffix)));
+  Result := UnicodeStringToASCII7(DateTimeToRawSQLTimeStamp(Value,
+    ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
 end;
 {$ELSE}
 var
@@ -3180,224 +3164,24 @@ begin
            ZFastCode.IntToStr(SubVersion);
 end;
 
-function NotEmptyASCII7ToString(const Src: RawByteString): string;
-{$IFDEF UNICODE}
+function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
 var i, l: integer;
-{$ENDIF}
 begin
-  {$IFDEF UNICODE}
-  l := Length(Src); //temp l speeds x2
-  if Result = '' then
-    System.SetString(Result,nil, l)
-  else
-    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
-      System.SetString(Result,nil, l);
-  for i := 0 to l-1 do
-    PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function NotEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string;
-{$IFDEF UNICODE}
-var i: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  if Result = '' then
-    System.SetString(Result,nil, Len)
-  else
-    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (Len = PLongInt(NativeInt(Result) - 4)^)) then { length }
-      System.SetString(Result,nil, Len);
-  for i := 0 to Len-1 do
-    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  {$ELSE}
-  System.SetString(Result, Src, Len);
-  {$ENDIF}
-end;
-
-function NotEmptyStringToASCII7(const Src: string): RawByteString;
-{$IFDEF UNICODE}
-var i, l: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  L := Length(Src); //temp l speeds x2
-  if Result = '' then
-    System.SetString(Result,nil, l)
-  else
-    if not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeInt(Result) - 4)^)) then { length }
-      System.SetString(Result,nil, l);
-  for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-
-function NotEmptyStringToASCII7(Src: PChar): RawByteString;
-{$IFDEF UNICODE}
-var i, l: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  L := System.Length(Src); //temp l speeds x2
-  System.SetString(Result,nil, l);
-  for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i];
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function PosEmptyASCII7ToString(const Src: RawByteString): string;
-{$IFDEF UNICODE}
-var i, l: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  l := Length(Src); //temp l speeds x2
-  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if L = 0
+  if Pointer(Src) = nil then
     Result := ''
   else
   begin
-    SetString(result,nil,l);
-    for i := 0 to l-1 do
-      PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  end;
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function PosEmptyASCII7ToString(Src: PAnsiChar; Len: integer): string;
-{$IFDEF UNICODE}
-var i: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  if Len = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if Len = 0
-    Result := ''
-  else
-  begin
-    System.SetString(result, nil, Len);
-    for i := 0 to Len-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  end;
-  {$ELSE}
-  System.SetString(Result, Src, Len);
-  {$ENDIF}
-end;
-
-function PosEmptyStringToASCII7(const Src: string): RawByteString;
-{$IFDEF UNICODE}
-var i, l: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  L := System.Length(Src); //temp l speeds x2
-  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
-    Result := ''
-  else
-  begin
-    System.SetString(Result,nil, l);
-    for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
-  end;
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-
-function PosEmptyStringToASCII7(Src: PChar): RawByteString;
-{$IFDEF UNICODE}
-var i, l: integer;
-{$ENDIF}
-begin
-  {$IFDEF UNICODE}
-  L := system.Length(Src); //temp l speeds x2
-  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
-    Result := ''
-  else
-  begin
-    System.SetString(Result,nil, l);
-    for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
-  end;
-  {$ELSE}
-  Result := Src;
-  {$ENDIF}
-end;
-
-function NotEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
-var i, l: integer;
-begin
-  l := Length(Src); //temp l speeds x2
-  SetString(result,nil,l);
-  for i := 0 to l-1 do
-    PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-end;
-
-function NotEmptyASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString;
-var i: integer;
-begin
-  System.SetString(result, nil, Len);
-  for i := 0 to Len-1 do
-    PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-end;
-
-function NotEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString;
-var i, l: integer;
-begin
-  L := System.Length(Src); //temp l speeds x2
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Result := ''; //speeds up SetLength x2
-  SetLength(Result, l);
-  {$ELSE}
-  System.SetString(Result,nil, l);
-  {$ENDIF}
-  for i := 0 to l-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
-end;
-
-
-function NotEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
-var i: integer;
-begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Result := ''; //speeds up SetLength x2
-  SetLength(Result, len);
-  {$ELSE}
-  System.SetString(Result,nil, len);
-  {$ENDIF}
-  for i := 0 to len-1 do
-    PByteArray(Result)[i] := PWordArray(Src)[i];
-end;
-
-function PosEmptyASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
-var i, l: integer;
-begin
-  l := Length(Src); //temp l speeds x2
-  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if L = 0
-    Result := ''
-  else
-  begin
+    l := PLengthInt(NativeInt(Src) - StringLenOffSet)^;
     SetString(result,nil,l);
     for i := 0 to l-1 do
       PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
   end;
 end;
 
-function PosEmptyASCII7ToUnicodeString(Src: PAnsiChar; Len: integer): ZWideString;
+function ASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString;
 var i: integer;
 begin
-  if Len = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyASCII7ToString but is 2x faster if Len = 0
+  if (Src = nil) or (Len = 0) then
     Result := ''
   else
   begin
@@ -3407,17 +3191,22 @@ begin
   end;
 end;
 
-function PosEmptyUnicodeStringToASCII7(const Src: ZWideString): RawByteString;
+function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
 var i, l: integer;
 begin
   L := System.Length(Src); //temp l speeds x2
-  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+  if L = 0 then
     Result := ''
   else
   begin
+    if (Pointer(Result) = nil) or //empty ?
+      ({%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+      (LengthInt(l) <> {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Result := ''; //speeds up SetLength x2
-    SetLength(Result, l);
+    begin
+      Result := ''; //speeds up SetLength x2
+      SetLength(Result, l);
+    end;
     {$ELSE}
     System.SetString(Result,nil, l);
     {$ENDIF}
@@ -3427,37 +3216,23 @@ begin
 end;
 
 
-function PosEmptyUnicodeStringToASCII7(Src: PWideChar): RawByteString;
-var i, l: integer;
-begin
-  L := system.Length(Src); //temp l speeds x2
-  if L = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
-    Result := ''
-  else
-  begin
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Result := ''; //speeds up SetLength x2
-    SetLength(Result, l);
-    {$ELSE}
-    System.SetString(Result,nil, l);
-    {$ENDIF}
-    for i := 0 to l-1 do
-      PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
-  end;
-end;
-
-function PosEmptyUnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
+function UnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
 var i: integer;
 begin
-  if Len = 0 then   //this line eats 30ms in average of exec count 10.000.000x against NotEmptyStringToASCII7 but is 2x faster if L = 0
+  if (Src = nil) or (Len = 0) then
     Result := ''
   else
   begin
+    if (Pointer(Result) = nil) or //empty ?
+      ({%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+      (LengthInt(len) <> {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Result := ''; //speeds up SetLength x2
-    SetLength(Result, len);
+    begin
+      Result := ''; //speeds up SetLength x2
+      SetLength(Result, l);
+    end;
     {$ELSE}
-    System.SetString(Result,nil, len);
+    System.SetString(Result,nil, Len);
     {$ENDIF}
     for i := 0 to len-1 do
       PByteArray(Result)[i] := PWordArray(Src)[i]; //0..255 equals to widechars
@@ -3493,12 +3268,12 @@ end;
 
 function FloatToUnicode(const Value: Extended): ZWideString;
 begin
-  Result := NotEmptyASCII7ToUnicodeString(FloatToRaw(Value));
+  Result := ASCII7ToUnicodeString(FloatToRaw(Value));
 end;
 
 function FloatToSqlUnicode(const Value: Extended): ZWideString;
 begin
-  Result := NotEmptyASCII7ToUnicodeString(FloatToSqlRaw(Value));
+  Result := ASCII7ToUnicodeString(FloatToSqlRaw(Value));
 end;
 
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal);

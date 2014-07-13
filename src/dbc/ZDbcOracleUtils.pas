@@ -954,11 +954,11 @@ begin
               {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := Math.Min(System.Length(ZBytesArray[I]), Variable^.oDataSize);
               System.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-} PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^);
             end;
-        stGUID: //AFIAK OCI doesn't support GUID fields so let's convert them to stings
+        stGUID: //AFAIK OCI doesn't support GUID fields so let's convert them to stings
           for i := 0 to Iteration -1 do
             if (Variable^.oIndicatorArray^[I] = 0) then
             begin
-              AnsiTemp := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[I]));
+              AnsiTemp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[I]));
               Variable^.oDataSizeArray^[i] := 39;
               System.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*39)^, 39);
             end;
@@ -985,7 +985,7 @@ begin
                 WriteTempBlob := TZOracleClob.Create(PlainDriver,
                   nil, 0, OracleConnection.GetConnectionHandle,
                   OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                  {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^, 
+                  {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                   ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
                 WriteTempBlob.CreateBlob;
                 LobBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);

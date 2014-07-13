@@ -2474,16 +2474,12 @@ begin
     else
       Digits := 1;
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
-  if Result {%H-}= '' then
+  if Pointer(Result) = nil then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -2492,7 +2488,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2541,16 +2536,12 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result {%H-}= '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -2559,7 +2550,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -2606,16 +2596,12 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result {%H-}= '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -2624,7 +2610,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -3069,16 +3054,12 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3087,7 +3068,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := Byte('-');
   Inc(P, Ord(Negative));
@@ -3174,16 +3154,12 @@ begin
     else
       Digits := 1;
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result {%H-}= '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3192,7 +3168,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := WideChar('-');
   Inc(P, Ord(Negative));
@@ -3234,16 +3209,12 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result {%H-}= '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3252,7 +3223,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := WideChar('-');
   Inc(P, Ord(Negative));
@@ -3304,16 +3274,12 @@ begin
     else
       Digits := 1 + Ord(Value >= 10);
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result {%H-}= '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { ref count }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3322,7 +3288,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   PWord(P)^ := Word('-');
   Inc(P, Ord(Negative)*2);
@@ -3358,8 +3323,8 @@ begin
   {$IF defined(Delphi) and defined(WIN32)} //since XE2 the fastcode pure pascal is used too
   Tmp := IntToRaw(Value); //the BASM fastcode is 10x faster than pascal version
   L := system.Length(tmp); //temp l speeds x2
-  if (Result = '' ) or (not ((PLongInt(NativeInt(Result) - 8)^ = 1) and { ref count }
-       (L = PLongInt(NativeInt(Result) - 4)^))) then { length }
+  if (Result = '' ) or (not ((PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1) and { ref count }
+       (L = PLengthInt(NativeInt(Result) - StringLenOffSet)^))) then { length }
     System.SetString(Result,nil, l); //sade we need two mem-allocation until i find the time to patch the raw version to Unicode but it's almost twice faster than RTL
   for i := 0 to l-1 do
     PWordArray(Result)[i] := PByteArray(tmp)[i]; //0..255 equals to widechars
@@ -3410,16 +3375,12 @@ begin
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
-  {$IFDEF FPC}
-  Result := '';
-  SetLength(Result, NewLen);
-  {$ELSE}
   if Result = '' then
     SetLength(Result, NewLen)
   else
   begin
-    if {%H-}PLongInt(NativeInt(Result) - 8)^ = 1 then { ref count }
-      OldLen := {%H-}PLongInt(NativeInt(Result) - 4)^ { length }
+    if {%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ = 1 then { unique string ? }
+      OldLen := {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^ { length as expected ? }
     else
       OldLen := 0;
     if NewLen <> OldLen then
@@ -3428,7 +3389,6 @@ begin
       SetLength(Result, NewLen);
     end;
   end;
-  {$ENDIF}
   P := Pointer(Result);
   P^ := '-';
   Inc(P, Ord(Negative));
@@ -3917,7 +3877,7 @@ function UnicodeToInt(const Value: ZWideString): Integer;
 //http://fastcode.sourceforge.net/
 {$IFDEF FPC} //FPC leaks imbelievable here. Speed decrese from Delphi to FPC *10000. Don't know why.
 begin
-  Result := RawToInt(PosEmptyUnicodeStringToAscii7(Value));
+  Result := RawToInt(UnicodeStringToAscii7(Value));
 end;
 {$ELSE}
 const
@@ -4342,7 +4302,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //FPC leaks imbelievable here. Speed decrese from Delphi to FPC *10000. Don't know why.
-  Result := ValLong_JOH_PAS_4_b(Pointer(PosEmptyUnicodeStringToASCII7(s)), E{%H-});
+  Result := ValLong_JOH_PAS_4_b(Pointer(UnicodeStringToASCII7(s)), E{%H-});
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S), E);
   {$ENDIF}
@@ -4354,7 +4314,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //FPC leaks imbelievable here. Speed decrese from Delphi to FPC *10000. Don't know why.
-  Result := ValLong_JOH_PAS_4_b(Pointer(PosEmptyUnicodeStringToASCII7(s)), E{%H-});
+  Result := ValLong_JOH_PAS_4_b(Pointer(UnicodeStringToASCII7(s)), E{%H-});
   {$ELSE}
   Result := ValLong_JOH_PAS_4_b_unicode(Pointer(S), E);
   {$ENDIF}
@@ -5050,7 +5010,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(S)), E{%H-});
+  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(UnicodeStringToASCII7(S)), E{%H-});
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_unicode(Pointer(S), E);
   {$ENDIF}
@@ -5062,7 +5022,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(Value)), E{%H-});
+  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(UnicodeStringToASCII7(Value)), E{%H-});
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_unicode(Pointer(Value), E);
   {$ENDIF}
@@ -5075,7 +5035,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(S)), E{%H-});
+  Result := ValInt64_JOH_PAS_8_a_raw(Pointer(UnicodeStringToASCII7(S)), E{%H-});
   {$ELSE}
   Result := ValInt64_JOH_PAS_8_a_unicode(S, E);
   {$ENDIF}
@@ -5087,7 +5047,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(Value)), E{%H-});
+  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(UnicodeStringToASCII7(Value)), E{%H-});
   {$ELSE}
   Result := ValUInt64_JOH_PAS_8_a_unicode(Pointer(Value), E);
   {$ENDIF}
@@ -5100,7 +5060,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(S)), E{%H-});
+  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(UnicodeStringToASCII7(S)), E{%H-});
   {$ELSE}
   Result := ValUInt64_JOH_PAS_8_a_unicode(Pointer(S), E);
   {$ENDIF}
@@ -5112,7 +5072,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC} //imbelievable performance leak with FPC!!!!
-  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(PosEmptyUnicodeStringToASCII7(S)), E{%H-});
+  Result := ValUInt64_JOH_PAS_8_a_raw(Pointer(UnicodeStringToASCII7(S)), E{%H-});
   {$ELSE}
   Result := ValUInt64_JOH_PAS_8_a_unicode(S, E);
   {$ENDIF}
@@ -5302,7 +5262,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E{%H-});
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E{%H-});
   {$ELSE}
   Result :=  ValUnicodeExt(Pointer(s), {$IFNDEF UNICODE}WideChar{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
   {$ENDIF}
@@ -5315,7 +5275,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E{%H-});
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), {$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator, E{%H-});
   {$ELSE}
   Result :=  ValUnicodeExt(s, {$IFNDEF UNICODE}WideChar{$ENDIF}({$IFDEF WITH_FORMATSETTINGS}FormatSettings.{$ENDIF}DecimalSeparator), E);
   {$ENDIF}
@@ -5329,7 +5289,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
   {$ELSE}
   Result :=  ValUnicodeExt(Pointer(s), DecimalSep, E);
   {$ENDIF}
@@ -5342,7 +5302,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
   {$ELSE}
   Result :=  ValUnicodeExt(s, DecimalSep, E);
   {$ENDIF}
@@ -5355,7 +5315,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
   {$ELSE}
   Result :=  ValUnicodeExt(Pointer(s), DecimalSep, E);
   {$ENDIF}
@@ -5367,7 +5327,7 @@ var
   E: Integer;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), E{%H-});
   {$ELSE}
   Result :=  ValUnicodeExt(s, DecimalSep, E);
   {$ENDIF}
@@ -5377,7 +5337,7 @@ end;
 function ValUnicodeExt(const s: ZWideString; const DecimalSep: WideChar; var code: Integer): Extended;
 begin
   {$IFDEF FPC}
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
   {$ELSE}
   Result := ValUnicodeExt(Pointer(S), DecimalSep, Code);
   {$ENDIF}
@@ -5391,7 +5351,7 @@ function ValUnicodeExt(const s: PWideChar; const DecimalSep: WideChar; var code:
 //modified for varying DecimalSeperator
 {$IFDEF FPC}
 begin
-  Result := ValRawExt(Pointer(PosEmptyUnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
+  Result := ValRawExt(Pointer(UnicodeStringToASCII7(s)), AnsiChar(DecimalSep), Code);
 end;
 {$ELSE}
 var

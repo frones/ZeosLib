@@ -781,7 +781,7 @@ begin
   FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
   for i := 0 to InParamCount -1 do
   begin
-    MySQLType := GetFieldType(InParamTypes[i], Signed);
+    MySQLType := GetFieldType(InParamTypes[i], Signed{%H-});
     FParamBindBuffer.AddColumn(MySQLType, getMySQLFieldSize(MySQLType, ChunkSize), Signed);
   end;
 end;
@@ -866,7 +866,7 @@ begin
             stGUID:
               begin
                 if InParamValues[i].vType = vtBytes then
-                  TempAnsi := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(GuidToString(PGUID(@InParamValues[i].vBytes[0])^))
+                  TempAnsi := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GuidToString(PGUID(@InParamValues[i].vBytes[0])^))
                 else
                   TempAnsi := ClientVarManager.GetAsRawByteString(InParamValues[i]);
                 FColumnArray[I].Length := 38;

@@ -126,7 +126,7 @@ var DefaultLoggingFormatter: TZLoggingFormatter;
 
 function TZLoggingFormatter.Format(LoggingEvent: TZLoggingEvent): RawByteString;
 begin
-  Result := NotEmptyStringToAscii7(FormatDateTime('yyyy-mm-dd hh:mm:ss', LoggingEvent.Timestamp)) + ' cat: ';
+  Result := {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FormatDateTime('yyyy-mm-dd hh:mm:ss', LoggingEvent.Timestamp)) + ' cat: ';
   case LoggingEvent.Category of
     lcConnect: Result := Result + 'Connect';
     lcDisconnect: Result := Result + 'Disconnect';

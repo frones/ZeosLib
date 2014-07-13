@@ -1472,7 +1472,7 @@ begin
       DT_VARCHAR:
          begin
            ZSetString(PAnsiChar(@PZASASQLSTRING(sqlData).data[0]), PZASASQLSTRING( sqlData).length, s{%H-});
-           Result := StrToInt64({$IFDEF UNICODE}PosEmptyASCII7ToString{$ENDIF}(s));
+           Result := ZFastCode.RawToInt64(s);
          end;
       DT_TINYINT,
       DT_BIT         : Result := PByte(sqldata)^;
@@ -1536,7 +1536,7 @@ begin
       DT_LONGVARCHAR : ReadBlobToString( Index, Result);
       DT_TIMESTAMP_STRUCT : Result := DateTimeToRawSQLTimeStamp(GetTimestamp(Index), FConSettings^.ReadFormatSettings, False);
       DT_TINYINT     : Result := IntToRaw( PByte(sqldata)^);
-      DT_BIT         : Result := NotEmptyStringToASCII7(BoolToStr( ( PByte(sqldata)^ = 1), True));
+      DT_BIT         : Result := BoolToRawEx(PByte(sqldata)^ = 1);
       DT_BIGINT,
       DT_UNSBIGINT   : Result := IntToRaw( PInt64(sqldata)^);
     else

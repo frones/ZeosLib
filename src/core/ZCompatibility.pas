@@ -106,11 +106,26 @@ type
 
   {EH: just a clear type/IDE to get the length of String or Array by reading back from
     initial entry(X) - SizeOf(LengthInt) = Length}
+
   PLengthInt            = ^LengthInt;
   LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
   PRefCntInt            = ^RefCntInt;
   RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
-
+const
+  {$IFDEF FPC}
+  { ustrings.inc/astrings.inc:
+  ....
+  @-8  : SizeInt for reference count;
+  @-4  : SizeInt for size;
+  @    : String + Terminating #0;
+  .... }
+  StringLenOffSet             = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
+  StringRefCntOffSet          = SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Ref}+SizeOf(SizeInt){PAnsiRec/PUnicodeRec.Len};
+  {$ELSE} //system.pas
+  StringLenOffSet             = SizeOf(LongInt); {PStrRec.Len}
+  StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
+  {$ENDIF}
+type
   {EH: Keep the Len, Pointer, x.... order in next three records! New field -> add it @the end!}
   PZAnsiRec = ^TZAnsiRec;
   TZAnsiRec = Record

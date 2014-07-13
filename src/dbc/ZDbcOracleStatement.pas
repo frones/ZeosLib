@@ -835,7 +835,7 @@ begin
     InParams := GenerateParamsStr( FOracleParamsCount );
     TempResult := 'BEGIN ' + sFunc +SQL + InParams+'; END;';
   end;
-  Result := NotEmptyStringToASCII7(TempResult);
+  Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(TempResult);
 end;
 
 procedure TZOracleCallableStatement.ClearParameters;

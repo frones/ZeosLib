@@ -58,7 +58,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZDbcIntfs, ZTokenizer, ZCompatibility, ZVariant, ZDbcLogging, ZClasses,
-  ZPlainDriver, ZDbcUtils;
+  ZDbcUtils;
 
 type
   TZSQLTypeArray = array of TZSQLType;
@@ -804,7 +804,7 @@ begin
           Result := Result + ConSettings^.ConvFuncs.ZStringToRaw(SQLTokens[i].Value,
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
         else
-          Result := Result + NotEmptyStringToASCII7(SQLTokens[i].Value);
+          Result := Result + {$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(SQLTokens[i].Value);
       end;
     end;
   end
@@ -842,7 +842,7 @@ begin
         ttWord, ttQuotedIdentifier, ttKeyword:
           Result := ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings.CTRL_CP);
         else
-          Result := Result + PosEmptyASCII7ToUnicodeString(SQLTokens[i].Value);
+          Result := Result + ASCII7ToUnicodeString(SQLTokens[i].Value);
       end;
       {$ENDIF UNICODE}
     end;

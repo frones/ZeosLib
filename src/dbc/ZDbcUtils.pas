@@ -694,7 +694,7 @@ begin
             ttWord, ttQuotedIdentifier, ttKeyword:
               Temp := Temp + ConSettings^.ConvFuncs.ZStringToRaw(Tokens[i].Value, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)
             else
-              Temp := Temp + {$IFDEF UNICODE}PosEmptyStringToASCII7{$ENDIF}(Tokens[i].Value);
+              Temp := Temp + {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Tokens[i].Value);
           end;
     end;
     if (Temp <> '') then
@@ -796,7 +796,7 @@ begin
             ttWord, ttQuotedIdentifier, ttKeyword:
               Temp := Temp + ConSettings^.ConvFuncs.ZStringToUnicode(Tokens[i].Value, ConSettings^.CTRL_CP)
             else
-              Temp := Temp + PosEmptyASCII7ToUnicodeString(Tokens[i].Value);
+              Temp := Temp + ASCII7ToUnicodeString(Tokens[i].Value);
           end;
           {$ENDIF}
     end;
@@ -829,7 +829,6 @@ begin
   begin
     if not (ParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
       Continue;
-
     if I > ResultSet.GetMetadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
       Break;
 
@@ -852,7 +851,7 @@ begin
         stInteger:
           OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetInt(I));
         stULong:
-          OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetULong(I));
+          OutParamValues[ParamIndex] := EncodeUInteger(ResultSet.GetULong(I));
         stLong:
           OutParamValues[ParamIndex] := EncodeInteger(ResultSet.GetLong(I));
         stBytes:

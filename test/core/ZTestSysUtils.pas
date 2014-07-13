@@ -85,7 +85,6 @@ type
     procedure TestDateTimeToRawSQLTimeStamp;
     procedure TestDateTimeToUnicodeSQLTimeStamp;
     {$IFDEF BENCHMARK}
-    procedure TestASCII7ToString_VS_RawByteToString;
     procedure TestIntToRaw_VS_IntToStr;
     procedure TestIntToUnicode_VS_IntToStr;
     procedure TestInt64ToRaw_VS_IntToStr;
@@ -811,111 +810,6 @@ begin
 end;
 
 {$IFDEF BENCHMARK}
-procedure TZTestSysUtilsCase.TestASCII7ToString_VS_RawByteToString;
-var
-  tm, raw: RawByteString;
-  Between1, Between2: Cardinal;
-  Start, Stop: Cardinal;
-  S1, S2: String;
-
-    function TestNotEmptyASCII7ToString: String;
-    var
-      I: Integer;
-    begin
-      for i := 0 to 10000000 do
-      begin
-        Result := '';
-        Result := Result + NotEmptyASCII7ToString(tm);
-      end;
-    end;
-
-    function TestPosEmptyASCII7ToString: String;
-    var
-      I: Integer;
-    begin
-      for i := 0 to 10000000 do
-      begin
-        Result := '';
-        Result := Result + PosEmptyASCII7ToString(tm);
-      end;
-    end;
-
-    function RawByteToString: String;
-    var
-      I: Integer;
-    begin
-      for i := 0 to 10000000 do
-      begin
-        Result := '';
-        Result := Result + String(tm);
-      end;
-    end;
-begin
-  Raw :=RawByteString(Format('''%s''::timestamp', [FormatDateTime('yyyy-mm-dd hh":"mm":"ss"."zzz', now)]));
-  ZSetString(PAnsiChar(Raw), Length(Raw), tm);
-
-  Start := GetTickCount;
-  S1 := TestNotEmptyASCII7ToString;
-  Stop := GetTickCount;
-  Between1 := Stop - Start;
-  Start := GetTickCount;
-  S2 := RawByteToString;
-  Stop := GetTickCount;
-  Between2 := Stop - Start;
-
-  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
-
-  system.WriteLn('');
-  system.WriteLn('Benchmarking(x 10.000.000): RawByteString To UnicodeString');
-  system.WriteLn('NotEmptyASCII7ToString from filled RawByteString:');
-  system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
-
-  Start := GetTickCount;
-  S1 := TestPosEmptyASCII7ToString;
-  Stop := GetTickCount;
-  Between1 := Stop - Start;
-  Start := GetTickCount;
-  S2 := RawByteToString;
-  Stop := GetTickCount;
-  Between2 := Stop - Start;
-
-  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
-
-  system.WriteLn('PosEmptyASCII7ToString from filled RawByteString:');
-  system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
-
-  tm := '';
-
-  Start := GetTickCount;
-  S1 := TestNotEmptyASCII7ToString;
-  Stop := GetTickCount;
-  Between1 := Stop - Start;
-  Start := GetTickCount;
-  S2 := RawByteToString;
-  Stop := GetTickCount;
-  Between2 := Stop - Start;
-
-  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
-
-  system.WriteLn('NotEmptyASCII7ToString from empty RawByteString:');
-  system.WriteLn(Format('Zeos: %d ms VS. System String cast: %d ms', [Between1, Between2]));
-
-  Start := GetTickCount;
-  S1 := TestPosEmptyASCII7ToString;
-  Stop := GetTickCount;
-  Between1 := Stop - Start;
-  Start := GetTickCount;
-  S2 := RawByteToString;
-  Stop := GetTickCount;
-  Between2 := Stop - Start;
-
-  CheckEquals(s1, s2, 'Results of NotEmptyASCII7ToString VS. String(RawByteString)');
-
-  system.WriteLn('PosEmptyASCII7ToString from empty RawByteString:');
-  system.WriteLn(Format('Zeos: %d ms VS. system String cast: %d ms', [Between1, Between2]));
-  system.WriteLn('');
-end;
-
 procedure TZTestSysUtilsCase.TestIntToRaw_VS_IntToStr;
 var
   Between1, Between2: Cardinal;
@@ -1067,9 +961,9 @@ var
       for i := 0 to 10000000 do
       begin
         I64 := i * i;
-        Result := NotEmptyStringToASCII7(SysUtils.IntToStr(I64));
+        Result := {$ifdef unicode}UnicodeStringToASCII7{$endif}(SysUtils.IntToStr(I64));
       end;
-      Result := NotEmptyStringToASCII7(SysUtils.IntToStr(High(Int64)));
+      Result := {$ifdef unicode}UnicodeStringToASCII7{$endif}(SysUtils.IntToStr(High(Int64)));
     end;
 begin
   Start := GetTickCount;
@@ -1085,7 +979,7 @@ begin
 
   system.WriteLn('');
   system.WriteLn('Benchmarking(x 10.000.000): Int64 to RawByteString');
-  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+NotEmptyStringToASCII7: %d ms', [Between1, Between2]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+{$ifdef unicde}UnicodeStringToASCII7{$endif}: %d ms', [Between1, Between2]));
 
 end;
 {$ifdef OverflowCheckEnabled}
