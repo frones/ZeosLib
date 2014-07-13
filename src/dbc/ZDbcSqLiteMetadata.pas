@@ -1336,62 +1336,62 @@ begin
     Format('PRAGMA %s table_info(''%s'')', [Temp_scheme, TempTableNamePattern]));
   if ResSet <> nil then
     with ResSet do
+  begin
+    while Next do
     begin
-      while Next do
+      Result.MoveToInsertRow;
+      if SchemaPattern <> '' then
+        Result.UpdateString(CatalogNameIndex, SchemaPattern);
+      //else Result.UpdateNull(CatalogNameIndex);
+      //Result.UpdateNull(SchemaNameIndex);
+      Result.UpdateString(TableNameIndex, TempTableNamePattern);
+      Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(name_index));
+      Result.UpdateInt(TableColColumnTypeIndex, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(type_index),
+        UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
+
+      { Defines a table name. }
+      Temp := UpperCase(GetString(type_index));
+      if Pos('(', Temp) > 0 then
+        Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
+      Result.UpdateString(TableColColumnTypeNameIndex, Temp);
+
+      Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
+      //Result.UpdateNull(TableColColumnBufLengthIndex);
+      Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
+      Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);
+
+      if GetInt(notnull_index) <> 0 then
       begin
-        Result.MoveToInsertRow;
-        if SchemaPattern <> '' then
-          Result.UpdateString(CatalogNameIndex, SchemaPattern)
-        else Result.UpdateNull(CatalogNameIndex);
-        Result.UpdateNull(SchemaNameIndex);
-        Result.UpdateString(TableNameIndex, TempTableNamePattern);
-        Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(name_index));
-        Result.UpdateInt(TableColColumnTypeIndex, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(type_index),
-          UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
-
-        { Defines a table name. }
-        Temp := UpperCase(GetString(type_index));
-        if Pos('(', Temp) > 0 then
-          Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
-        Result.UpdateString(TableColColumnTypeNameIndex, Temp);
-
-        Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
-        Result.UpdateNull(TableColColumnBufLengthIndex);
-        Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
-        Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);
-
-        if GetInt(notnull_index) <> 0 then
-        begin
-          Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
-          Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
-        end
-        else
-        begin
-          Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
-          Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
-        end;
-
-        Result.UpdateNull(TableColColumnRemarksIndex);
-        if Trim(GetString(dflt_value_index)) <> '' then
-          Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(dflt_value_index))
-        else
-          Result.UpdateNull(TableColColumnColDefIndex);
-        Result.UpdateNull(TableColColumnSQLDataTypeIndex);
-        Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
-        Result.UpdateNull(TableColColumnCharOctetLengthIndex);
-        Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
-
-        Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Temp = 'INTEGER'));
-        Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
-        Result.UpdateBoolean(TableColColumnSearchableIndex, True);
-        Result.UpdateBoolean(TableColColumnWritableIndex, True);
-        Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
-        Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
-
-        Result.InsertRow;
+        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNoNulls));
+        Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'NO');
+      end
+      else
+      begin
+        Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
+        Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
       end;
-      Close;
+
+      //Result.UpdateNull(TableColColumnRemarksIndex);
+      if Trim(GetString(dflt_value_index)) <> '' then
+        Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(dflt_value_index));
+      //else
+        //Result.UpdateNull(TableColColumnColDefIndex);
+      //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
+      //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
+      //Result.UpdateNull(TableColColumnCharOctetLengthIndex);
+      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
+
+      Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Temp = 'INTEGER'));
+      Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, False);
+      Result.UpdateBoolean(TableColColumnSearchableIndex, True);
+      Result.UpdateBoolean(TableColColumnWritableIndex, True);
+      Result.UpdateBoolean(TableColColumnDefinitelyWritableIndex, True);
+      Result.UpdateBoolean(TableColColumnReadonlyIndex, False);
+
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
@@ -1428,34 +1428,34 @@ const
 var
   Temp_scheme: string;
 begin
-    Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
+  Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
 
-    if Schema = '' then
-      Temp_scheme := '' // OR  'main.'
-    else
-      Temp_scheme := Schema +'.';
+  if Schema = '' then
+    Temp_scheme := '' // OR  'main.'
+  else
+    Temp_scheme := Schema +'.';
 
-    with GetConnection.CreateStatement.ExecuteQuery(
-      Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
+  with GetConnection.CreateStatement.ExecuteQuery(
+    Format('PRAGMA %s table_info(''%s'')', [Temp_scheme,Table])) do
+  begin
+    while Next do
     begin
-      while Next do
-      begin
-        if GetInt(pk_index) = 0 then
-          Continue;
+      if GetInt(pk_index) = 0 then
+        Continue;
 
-        Result.MoveToInsertRow;
-        if Schema <> '' then
-          Result.UpdateString(CatalogNameIndex, Schema)
-        else Result.UpdateNull(CatalogNameIndex);
-        Result.UpdateNull(SchemaNameIndex);
-        Result.UpdateString(TableNameIndex, Table);
-        Result.UpdateAnsiRec(PrimaryKeyColumnNameIndex, GetAnsiRec(name_index));
-        Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
-        Result.UpdateNull(PrimaryKeyPKNameIndex);
-        Result.InsertRow;
-      end;
-      Close;
+      Result.MoveToInsertRow;
+      if Schema <> '' then
+        Result.UpdateString(CatalogNameIndex, Schema);
+      //else Result.UpdateNull(CatalogNameIndex);
+      //Result.UpdateNull(SchemaNameIndex);
+      Result.UpdateString(TableNameIndex, Table);
+      Result.UpdateAnsiRec(PrimaryKeyColumnNameIndex, GetAnsiRec(name_index));
+      Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
+      //Result.UpdateNull(PrimaryKeyPKNameIndex);
+      Result.InsertRow;
     end;
+    Close;
+  end;
 end;
 
 {**
@@ -1532,8 +1532,8 @@ begin
       Result.UpdateUTF8String(TypeInfoTypeNameIndex, TypeNames[I]);
       Result.UpdateInt(TypeInfoDataTypeIndex, Ord(TypeCodes[I]));
       if TypePrecision[I] >= 0 then
-        Result.UpdateInt(TypeInfoPecisionIndex, TypePrecision[I])
-      else Result.UpdateNull(TypeInfoPecisionIndex);
+        Result.UpdateInt(TypeInfoPecisionIndex, TypePrecision[I]);
+      //else Result.UpdateNull(TypeInfoPecisionIndex);
       if TypeCodes[I] in [stString, stBytes, stDate, stTime,
         stTimeStamp, stBinaryStream, stAsciiStream, stUnicodeString] then
       begin
@@ -1641,7 +1641,7 @@ begin
     begin
       while MainResultSet.Next do
       begin
-        if (Pos(' autoindex ', String(MainResultSet.GetString(main_name_field_index))) = 0)
+        if (Pos(' autoindex ', MainResultSet.GetString(main_name_field_index)) = 0)
           and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(
@@ -1651,20 +1651,20 @@ begin
             Result.MoveToInsertRow;
 
             if Schema <> '' then
-              Result.UpdateString(CatalogNameIndex, Schema)
-            else Result.UpdateNull(CatalogNameIndex);
-            Result.UpdateNull(SchemaNameIndex);
+              Result.UpdateString(CatalogNameIndex, Schema);
+            //else Result.UpdateNull(CatalogNameIndex);
+            //Result.UpdateNull(SchemaNameIndex);
             Result.UpdateString(TableNameIndex, Table);
             Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
-            Result.UpdateNull(IndexInfoColIndexQualifierIndex);
+            //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
             Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, MainResultSet.GetAnsiRec(main_name_field_index));
-            Result.UpdateNull(IndexInfoColTypeIndex);
+            //Result.UpdateNull(IndexInfoColTypeIndex);
             Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF});
             Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, ResultSet.GetAnsiRec(sub_name_field_index));
             Result.UpdateString(IndexInfoColAscOrDescIndex, 'A');
             Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
             Result.UpdateInt(IndexInfoColPagesIndex, 0);
-            Result.UpdateNull(IndexInfoColFilterConditionIndex);
+            //Result.UpdateNull(IndexInfoColFilterConditionIndex);
 
             Result.InsertRow;
           end;
