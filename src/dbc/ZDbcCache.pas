@@ -949,7 +949,7 @@ begin
                         ValuePtr2 := Blob2.GetPWideChar;
                         SetLastError(0);
                         Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-                          ValuePtr1, Blob1.Length, ValuePtr2, Blob1.Length) - 2{CSTR_EQUAL};
+                          ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
                         if GetLastError <> 0 then RaiseLastOSError;
                         {$ELSE}
                         WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
@@ -959,7 +959,7 @@ begin
                       begin
                         ValuePtr1 := Blob1.GetPAnsiChar(zCP_UTF8);
                         ValuePtr2 := Blob2.GetPAnsiChar(zCP_UTF8);
-                        Result := ZMemLComp(ValuePtr1, ValuePtr2, Blob1.Length);
+                        Result := ZMemLComp(ValuePtr1, ValuePtr2, Max(Blob1.Length, Blob2.Length));
                       end;
                     else
                       begin

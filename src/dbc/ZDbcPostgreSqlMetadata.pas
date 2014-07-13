@@ -3591,7 +3591,7 @@ begin
   Result := Value;
   if (QuoteDelim <> '') and (Value <> '') then
     if (Value[1]=QuoteDelim[1]) and
-      (Value[{%H-}PLongInt(NativeUInt(Value) - 4)^{fast Length()}]=QuoteDelim[1]) then
+      (Value[Length(Value)]=QuoteDelim[1]) then
     begin
       Result:=copy(Value,2,length(Value)-2);
       Result:=StringReplace(Result,QuoteDelim+QuoteDelim,QuoteDelim,[rfReplaceAll]);
@@ -3608,7 +3608,7 @@ begin
   QuoteDelim := Metadata.GetDatabaseInfo.GetIdentifierQuoteString;
   Result := (QuoteDelim <> '') and (Value <> '') and
             (Value[1]=QuoteDelim[1]) and
-            (Value[{%H-}PLongInt(NativeUInt(Value) - 4)^{fast Length()}]=QuoteDelim[1]);
+            (Value[Length(Value)]=QuoteDelim[1]);
 end;
 
 function TZPostgreSQLIdentifierConvertor.IsSpecialCase(

@@ -116,7 +116,7 @@ var
 begin
   { Creates a native result set. }
     NativeResultSet := TZSQLiteResultSet.Create(FPlainDriver, Self, Self.SQL, FHandle,
-      FStmtHandle, FErrorCode, FUndefinedVarcharAsStringLength, False);
+      FStmtHandle, FErrorCode, FUndefinedVarcharAsStringLength);
     NativeResultSet.SetConcurrency(rcReadOnly);
 
   if (GetResultSetConcurrency = rcUpdatable)

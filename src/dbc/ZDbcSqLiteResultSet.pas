@@ -77,7 +77,6 @@ type
     FStmtHandle: Psqlite_vm;
     FColumnCount: Integer;
     FPlainDriver: IZSQLitePlainDriver;
-    FFinalizeHandle: Boolean;
     FFirstRow: Boolean;
     FUndefinedVarcharAsStringLength: Integer;
   protected
@@ -87,8 +86,7 @@ type
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
-      const ErrorCode: Integer; const UndefinedVarcharAsStringLength: Integer;
-      const FinalizeHandle: Boolean = True); overload;
+      const ErrorCode: Integer; const UndefinedVarcharAsStringLength: Integer); overload;
 
     procedure Close; override;
 
@@ -167,7 +165,7 @@ end;
 constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   Statement: IZStatement; SQL: string; const Handle: Psqlite;
   const StmtHandle: Psqlite_vm; const ErrorCode: Integer;
-  const UndefinedVarcharAsStringLength: Integer; const FinalizeHandle: Boolean = True);
+  const UndefinedVarcharAsStringLength: Integer);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -177,7 +175,6 @@ begin
   FStmtHandle := StmtHandle;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
-  FFinalizeHandle := FinalizeHandle;
   FErrorCode := ErrorCode;
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
@@ -264,24 +261,13 @@ end;
 }
 procedure TZSQLiteResultSet.FreeHandle;
 begin
-  if FFinalizeHandle then
+  if FStmtHandle <> nil then
   begin
-    if Assigned(FStmtHandle) then
-      CheckSQLiteError(FPlainDriver, FStmtHandle,
-        FPlainDriver.Finalize(FStmtHandle), nil,
-        lcOther, 'FINALIZE SQLite VM', ConSettings);
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
+      nil, lcOther, 'Reset Prepared Stmt', ConSettings);
     FStmtHandle := nil;
-  end
-  else
-  begin
-    if FStmtHandle <> nil then
-    begin
-      CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
-        nil, lcOther, 'Reset Prepared Stmt', ConSettings);
-      FStmtHandle := nil;
-    end;
-    FErrorCode := SQLITE_DONE;
   end;
+  FErrorCode := SQLITE_DONE;
 end;
 
 {**
@@ -299,8 +285,8 @@ end;
 }
 procedure TZSQLiteResultSet.Close;
 begin
-  inherited Close;
   FreeHandle;
+  inherited Close;
 end;
 
 {**

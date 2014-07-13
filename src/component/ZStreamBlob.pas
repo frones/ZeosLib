@@ -119,7 +119,15 @@ begin
     else
     Buffer := Blob.GetBuffer;
     ASize := Blob.Length;
-    SetPointer(Buffer, ASize);
+    {$IFNDEF WITH_MM_CAN_REALLOC_EXTERNAL_MEM}
+    if Mode = bmReadWrite then
+    begin
+      WriteBuffer(Buffer^, ASize); //something courrupts the FPC-Memory-Manager here??? D7??
+      Position := 0;
+    end
+    else
+    {$ENDIF}
+      SetPointer(Buffer, ASize);
   end;
 end;
 

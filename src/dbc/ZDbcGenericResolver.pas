@@ -450,7 +450,11 @@ begin
   { Tryes to define primary keys. }
   if not WhereAll then
   begin
-    PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(Catalog, Schema, Table);
+    {For exact results: quote all identifiers SEE: http://sourceforge.net/p/zeoslib/tickets/81/
+    If table names have mixed case ConstructNameCondition will return wrong results
+    and we fall back to WhereAll}
+    PrimaryKeys := DatabaseMetadata.GetPrimaryKeys(IdentifierConvertor.Quote(Catalog),
+      IdentifierConvertor.Quote(Schema), IdentifierConvertor.Quote(Table));
     while PrimaryKeys.Next do
     begin
       ColumnName := PrimaryKeys.GetString(ColumnNameIndex);

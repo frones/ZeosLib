@@ -125,7 +125,7 @@ type
     FPColumnArray: ^TZMysqlColumnBuffer;
   public
     constructor Create(PlainDriver:IZMysqlPlainDriver;
-      const BindCount : Integer; var ColumnArray:TZMysqlColumnBuffer);
+      const BindCount : Integer; var ColumnArray: TZMysqlColumnBuffer); virtual;
     function GetColumnArray : TZMysqlColumnBuffer;
     function GetBufferAddress : Pointer;
     function GetBufferType(ColumnIndex: Integer): TMysqlFieldTypes;
@@ -140,9 +140,14 @@ type
 
   {** Encapsulates a MySQL bind buffer for updates. }
   TZMySQLParamBindBuffer = class(TZMySQLAbstractBindBuffer)
+  private
+    FInitialMySQLTypes: array of TMysqlFieldTypes;
+    FInitialLengths: array of ULong;
   public
+    constructor Create(PlainDriver:IZMysqlPlainDriver;
+      const BindCount : Integer; var ColumnArray: TZMysqlColumnBuffer); override;
     procedure AddColumn(buffertype: TMysqlFieldTypes; const field_length: integer;
-      const largeblobparameter: boolean);
+      const Signed: Boolean);
   end;
   {** Implements Prepared SQL Statement. }
 
@@ -161,11 +166,13 @@ type
     FColumnArray: TZMysqlColumnBuffer;
     FParamBindBuffer: TZMySQLParamBindBuffer;
 
+    //function PrepareAnsiSQLQuery: RawByteString;
     function CreateResultSet(const SQL: string): IZResultSet;
 
-    function getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
+    function GetFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
   protected
     function GetStmtHandle : PZMySqlPrepStmt;
+    procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; override;
@@ -174,7 +181,7 @@ type
     constructor Create(PlainDriver: IZMysqlPlainDriver; Connection: IZConnection;
       const SQL: string; Info: TStrings);
     procedure Prepare; override;
-    destructor Destroy; override;
+    procedure Unprepare; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -182,6 +189,7 @@ type
 
     function IsUseResult: Boolean;
     function IsPreparedStatement: Boolean;
+    function GetMoreResults: Boolean; override;
   end;
 
   {** Implements callable Postgresql Statement. }
@@ -621,40 +629,38 @@ begin
 
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
   FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
-
-  Prepare;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZMySQLPreparedStatement.Destroy;
-begin
-  FStmtHandle := FPlainDriver.ClosePrepStmt(FStmtHandle);
-  inherited Destroy;
 end;
 
 procedure TZMySQLPreparedStatement.Prepare;
 begin
-  FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
-  if (FStmtHandle = nil) then
+  if not Prepared then
   begin
-    CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt,
-      ConvertZMsgToRaw(SFailedtoInitPrepStmt, ZMessages.cCodePage,
-        ConSettings^.ClientCodePage^.CP), ConSettings);
-    exit;
-  end;
-  if (FPlainDriver.PrepareStmt(FStmtHandle, Pointer(ASQL), length(ASQL)) <> 0) then
+    FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
+    if (FStmtHandle = nil) then
+    begin
+      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt,
+        ConvertZMsgToRaw(SFailedtoInitPrepStmt, ZMessages.cCodePage,
+          ConSettings^.ClientCodePage^.CP), ConSettings);
+      exit;
+    end;
+    if (FPlainDriver.PrepareStmt(FStmtHandle, Pointer(ASQL), length(ASQL)) <> 0) then
     begin
       CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt,
         ConvertZMsgToRaw(SFailedtoPrepareStmt,
         ZMessages.cCodePage, ConSettings^.ClientCodePage^.CP), ConSettings);
-      exit;
-    end;
-  LogPrepStmtMessage(lcPrepStmt, ASQL);
-  inherited Prepare;
+        exit;
+      end;
+    LogPrepStmtMessage(lcPrepStmt, ASQL);
+    inherited Prepare;
+  end;
 end;
 
+procedure TZMySQLPreparedStatement.Unprepare;
+begin
+  if FStmtHandle <> nil then
+    FStmtHandle := FPlainDriver.ClosePrepStmt(FStmtHandle);
+  inherited Unprepare;
+end;
 {**
   Checks is use result should be used in result sets.
   @return <code>True</code> use result in result sets,
@@ -673,6 +679,70 @@ function TZMySQLPreparedStatement.IsPreparedStatement: Boolean;
 begin
   Result := True;
 end;
+
+{**
+  Moves to a <code>Statement</code> object's next result.  It returns
+  <code>true</code> if this result is a <code>ResultSet</code> object.
+  This method also implicitly closes any current <code>ResultSet</code>
+  object obtained with the method <code>getResultSet</code>.
+
+  <P>There are no more results when the following is true:
+  <PRE>
+        <code>(!getMoreResults() && (getUpdateCount() == -1)</code>
+  </PRE>
+
+ @return <code>true</code> if the next result is a <code>ResultSet</code> object;
+   <code>false</code> if it is an update count or there are no more results
+ @see #execute
+}
+function TZMySQLPreparedStatement.GetMoreResults: Boolean;
+var
+  AStatus: integer;
+begin
+  Result := inherited GetMoreResults;
+  if FPlainDriver.GetClientVersion >= 40100 then
+  begin
+    AStatus := FPlainDriver.RetrieveNextRowset(FHandle);
+    if AStatus > 0 then
+      CheckMySQLError(FPlainDriver, FHandle, lcExecute, ASQL, ConSettings)
+    else
+      Result := (AStatus = 0);
+
+    if LastResultSet <> nil then
+      LastResultSet.Close;
+    LastResultSet := nil;
+    LastUpdateCount := -1;
+    if FPlainDriver.ResultSetExists(FHandle) then
+      LastResultSet := CreateResultSet(Self.SQL)
+    else
+      LastUpdateCount := FPlainDriver.GetAffectedRows(FHandle);
+  end;
+end;
+
+{**
+  Prepares an SQL statement and inserts all data values.
+  @return a RawByteString SQL statement.
+}
+(*function TZMySQLPreparedStatement.PrepareAnsiSQLQuery: RawByteString;
+var
+  I: Integer;
+  ParamIndex: Integer;
+begin
+  ParamIndex := 0;
+  Result := '';
+  for I := 0 to High(CachedQueryRaw) do
+    if IsParamIndex[I] then
+    begin
+      if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
+        raise EZSQLException.Create(SInvalidInputParameterCount);
+      Result := Result + MySQLPrepareAnsiSQLParam(FHandle, InParamValues[ParamIndex],
+        InParamDefaultValues[ParamIndex], ClientVarManager, FPlainDriver,
+        InParamTypes[ParamIndex], FUseDefaults, ConSettings);
+      Inc(ParamIndex);
+    end
+    else
+      Result := Result + CachedQueryRaw[i];
+end;*)
 
 {**
   Creates a result set based on the current settings.
@@ -701,109 +771,207 @@ begin
     Result := NativeResultSet;
 end;
 
+procedure TZMysqlPreparedStatement.PrepareInParameters;
+var
+  I: Integer;
+  MySQLType: TMysqlFieldTypes;
+  Signed: Boolean;
+begin
+  { Initialize Bind Array and Column Array }
+  FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
+  for i := 0 to InParamCount -1 do
+  begin
+    MySQLType := GetFieldType(InParamTypes[i], Signed);
+    FParamBindBuffer.AddColumn(MySQLType, getMySQLFieldSize(MySQLType, ChunkSize), Signed);
+  end;
+end;
+
 procedure TZMysqlPreparedStatement.BindInParameters;
 var
   PBuffer: Pointer;
   year, month, day, hour, minute, second, millisecond: word;
   MyType: TMysqlFieldTypes;
-  I, OffSet, PieceSize: integer;
+  I: integer;
+  OffSet, PieceSize: LongWord;
   TempBlob: IZBlob;
   TempAnsi: RawByteString;
   CharRec: TZCharRec;
+  Signed: Boolean;
+  TempBytes: TBytes;
+  ChunkedData: Boolean;
+  AnsiRec: TZAnsiRec;
+label JmpClob, JmpInherited, JmpCharRec;
 begin
+  ChunkedData := False;
   //http://dev.mysql.com/doc/refman/5.0/en/storage-requirements.html
-  if InParamCount = 0 then
-     exit;
-  { Initialize Bind Array and Column Array }
-  FParamBindBuffer := TZMySqlParamBindBuffer.Create(FPlainDriver,InParamCount,FColumnArray);
-
+  if (InParamCount = 0) then
+     goto JmpInherited;
   For I := 0 to InParamCount - 1 do
   begin
+    PBuffer := Pointer(FColumnArray[I].buffer);
     if (InParamValues[I].VType = vtNull) and FUseDefaults and (InParamDefaultValues[I] <> '') then
+    begin
+      {EH: Hint we're using the ClientVarManager vor conversions. This works pretty fine
+      except for default Date/TimeStamp-Values like "0000-00-00...."
+      So i made this workaround here}
       ClientVarManager.SetAsString(InParamValues[I], Copy(InParamDefaultValues[I], 2, Length(InParamDefaultValues[I])-2)); //extract quotes
-    MyType := GetFieldType(InParamValues[I]);
-    if MyType = FIELD_TYPE_STRING then
-      CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
-    case MyType of
-      FIELD_TYPE_STRING:
-        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, CharRec.Len, False);
-      FIELD_TYPE_BLOB:
-        begin
-          TempBlob := (InParamValues[I].VInterface as IZBlob);
-          if TempBlob.IsEmpty then
-            ClientVarManager.SetNull(InParamValues[I])
-          else
-            if InParamTypes[I] = stBinaryStream then
-              FParamBindBuffer.AddColumn(FIELD_TYPE_BLOB, TempBlob.Length, TempBlob.Length > ChunkSize)
-            else
-            begin
-              if TempBlob.IsClob then
-                TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP) //set proper encoding if required
-              else
-              begin
-                TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
-                          TempBlob.Length, ConSettings);
-                TempBlob := TZAbstractBlob.CreateWithData(PAnsiChar(TempAnsi), Length(TempAnsi));
-              end;
-              InParamValues[I].VInterface  := TempBlob;
-              FParamBindBuffer.AddColumn(FIELD_TYPE_STRING, TempBlob.Length, TempBlob.Length > ChunkSize);
-            end;
-        end;
-      FIELD_TYPE_TINY:
-        FParamBindBuffer.AddColumn(FIELD_TYPE_STRING,1,false);
-      FIELD_TYPE_TINY_BLOB:
-        FParamBindBuffer.AddColumn(MyType,Length(InParamValues[i].VBytes),false);
-      else
-        FParamBindBuffer.AddColumn(MyType, getMySQLFieldSize(MyType, 0), false);
+      SetLength(FColumnArray[I].buffer, Max(Length(FColumnArray[I].buffer), ChunkSize+1));
+      PTMysqlFieldTypes(@FParamBindBuffer.FbindArray[NativeUInt((I)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer_type])^:= FIELD_TYPE_STRING;
+      PULong(@FParamBindBuffer.FbindArray[NativeUInt((I)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer_length])^ := Length(FColumnArray[I].buffer);
+      goto JmpCharRec; //this skips reset of column-types!
     end;
-    PBuffer := @FColumnArray[I].buffer[0];
-
-    if InParamValues[I].VType = vtNull then
+    Signed := PByte(@FParamBindBuffer.FbindArray[NativeUInt((I)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.is_unsigned])^ = 0;
+    if InParamValues[i].vType = vtNull then
       FColumnArray[I].is_null := 1
     else
+    begin
       FColumnArray[I].is_null := 0;
-
-    case FParamBindBuffer.GetBufferType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) of
-      FIELD_TYPE_FLOAT:    Single(PBuffer^)     := InParamValues[I].VFloat;
-      FIELD_TYPE_DOUBLE:   Double(PBuffer^)     := InParamValues[I].VFloat;
-      FIELD_TYPE_STRING:
-        case MyType of
-          FIELD_TYPE_TINY:
-            if InParamValues[I].VBoolean then
-              PAnsiChar(PBuffer)^ := AnsiChar('Y')
-            else
-              PAnsiChar(PBuffer)^ := AnsiChar('N');
-          FIELD_TYPE_BLOB:
-            begin
-              if TempBlob.Length<=ChunkSize then
-                System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
-              TempBlob := nil;
-            end;
+      MyType := FParamBindBuffer.FInitialMySQLTypes[i];
+      {allways reset type and length if defaults(strings) have been bound before}
+      PTMysqlFieldTypes(@FParamBindBuffer.FbindArray[NativeUInt((I)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer_type])^:= MyType;
+      PULong(@FParamBindBuffer.FbindArray[NativeUInt((I)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer_length])^ := FParamBindBuffer.FInitialLengths[I];
+      case MyType of
+        FIELD_TYPE_TINY:
+          if Signed then
+            PByte(PBuffer)^ := Byte(ClientVarManager.GetAsInteger(InParamValues[i]))
           else
-            System.Move(CharRec.P^, PBuffer^, CharRec.Len);
-        end;
-      FIELD_TYPE_LONGLONG: Int64(PBuffer^) := InParamValues[I].VInteger;
-      FIELD_TYPE_DATETIME:
-        begin
-          DecodeDateTime(InParamValues[I].VDateTime, Year, Month, Day, hour, minute, second, millisecond);
-          PMYSQL_TIME(PBuffer)^.year := year;
-          PMYSQL_TIME(PBuffer)^.month := month;
-          PMYSQL_TIME(PBuffer)^.day := day;
-          PMYSQL_TIME(PBuffer)^.hour := hour;
-          PMYSQL_TIME(PBuffer)^.minute := minute;
-          PMYSQL_TIME(PBuffer)^.second := second;
-          PMYSQL_TIME(PBuffer)^.second_part := millisecond;
-        end;
-        FIELD_TYPE_TINY_BLOB:
-          System.Move(InParamValues[i].VBytes[0], PBuffer^, Length(InParamValues[i].VBytes));
-        FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
-        FIELD_TYPE_BLOB:
+            PShortInt(PBuffer)^ := ShortInt(ClientVarManager.GetAsInteger(InParamValues[i]));
+        FIELD_TYPE_SHORT:
+          if Signed then
+            PSmallInt(PBuffer)^ := SmallInt(ClientVarManager.GetAsInteger(InParamValues[i]))
+          else
+            PWord(PBuffer)^ := Word(ClientVarManager.GetAsInteger(InParamValues[i]));
+        FIELD_TYPE_LONG:
+          if Signed then
+            PLongInt(PBuffer)^ := LongInt(ClientVarManager.GetAsInteger(InParamValues[i]))
+          else
+            PLongWord(PBuffer)^ := LongWord(ClientVarManager.GetAsInteger(InParamValues[i]));
+        FIELD_TYPE_LONGLONG:
+          if Signed then
+            PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
+          else
+            PUInt64(PBuffer)^ := PUInt64(@InParamValues[i].VInteger)^;
+        FIELD_TYPE_FLOAT: PSingle(PBuffer)^:= ClientVarManager.GetAsFloat(InParamValues[i]);
+        FIELD_TYPE_DOUBLE: PDouble(PBuffer)^:= ClientVarManager.GetAsFloat(InParamValues[i]);
+        FIELD_TYPE_STRING:
+          case InParamTypes[i] of
+            stBoolean:
+              begin
+                FColumnArray[I].Length := 1;
+                if ClientVarManager.GetAsBoolean(InParamValues[i]) then
+                  PAnsiChar(PBuffer)^ := AnsiChar('Y')
+                else
+                  PAnsiChar(PBuffer)^ := AnsiChar('N');
+              end;
+            stGUID:
+              begin
+                if InParamValues[i].vType = vtBytes then
+                  TempAnsi := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(GuidToString(PGUID(@InParamValues[i].vBytes[0])^))
+                else
+                  TempAnsi := ClientVarManager.GetAsRawByteString(InParamValues[i]);
+                FColumnArray[I].Length := 38;
+                System.Move(Pointer(TempAnsi)^, PBuffer^, 39);
+              end;
+            stAsciiStream, stUnicodeStream:
+              begin
+                TempBlob := ClientVarManager.GetAsInterface(InParamValues[i]) as IZBlob;
+                if TempBlob.IsEmpty then
+                  FColumnArray[I].is_null := 1
+                else
+                  if TempBlob.IsClob then
+                  begin
+JmpClob:            CharRec.P := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP); //set proper encoding if required
+                    FColumnArray[I].Length := TempBlob.Length;
+                    if FColumnArray[I].Length > Cardinal(ChunkSize)-1  then
+                    begin {out of buffer range}
+                      {now we've to set the Buffer of binding-record to nil to indicate we send data as chunks}
+                      PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := nil;
+                      ChunkedData := True;
+                    end
+                    else {within buffer range}
+                    begin
+                      PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := PBuffer; //adjust buffer entry again
+                      System.Move(CharRec.P^, PBuffer^, FColumnArray[I].Length+1); //trailing #0 included
+                    end;
+                  end
+                  else
+                  begin
+                    TempAnsi := GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
+                              TempBlob.Length, ConSettings);
+                    TempBlob := TZAbstractClob.CreateWithData(Pointer(TempAnsi), Length(TempAnsi),
+                      ConSettings^.ClientCodePage.CP, ConSettings);
+                    InParamValues[i].vInterface := TempBlob;
+                    goto JmpClob;
+                  end;
+              end;
+            else
+              begin
+JmpCharRec:     CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
+                FColumnArray[I].Length := CharRec.Len;
+                if CharRec.Len > Cardinal(ChunkSize)-1 then
+                begin {out of buffer range}
+                  {now we've to set the Buffer of binding-record to nil to indicate we send data as chunks}
+                  PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := nil;
+                  ChunkedData := True;
+                end
+                else
+                begin {within buffer range}
+                  PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := PBuffer; //adjust buffer entry again
+                  System.Move(CharRec.P^, PBuffer^, CharRec.Len+1); //trailing #0 included
+                end;
+              end;
+          end;
+        FIELD_TYPE_TINY_BLOB: {stBytes}
           begin
-            if TempBlob.Length<=ChunkSize then
-              System.Move(TempBlob.GetBuffer^, PBuffer^, TempBlob.Length);
-            TempBlob := nil;
+            TempBytes := ClientVarManager.GetAsBytes(InParamValues[i]);
+            FColumnArray[I].Length := Length(TempBytes);
+            if FColumnArray[I].Length > Cardinal(ChunkSize) then
+            begin {out of buffer range}
+              {now we've to set the Buffer of binding-record to nil to indicate we send data as chunks}
+              PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := nil;
+              ChunkedData := True;
+            end
+            else
+            begin {within buffer range}
+              PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := PBuffer; //adjust buffer entry again
+              System.Move(Pointer(TempBytes)^, PBuffer^, Length(TempBytes));
+            end;
+          end;
+        FIELD_TYPE_DATETIME:
+          begin
+            DecodeDateTime(ClientVarManager.GetAsDateTime(InParamValues[i]),
+              Year, Month, Day, hour, minute, second, millisecond);
+            PMYSQL_TIME(PBuffer)^.year := year;
+            PMYSQL_TIME(PBuffer)^.month := month;
+            PMYSQL_TIME(PBuffer)^.day := day;
+            PMYSQL_TIME(PBuffer)^.hour := hour;
+            PMYSQL_TIME(PBuffer)^.minute := minute;
+            PMYSQL_TIME(PBuffer)^.second := second;
+            PMYSQL_TIME(PBuffer)^.second_part := millisecond;
+          end;
+        FIELD_TYPE_BLOB:  //used for stBinaryStream only
+          begin
+            TempBlob := ClientVarManager.GetAsInterface(InParamValues[i]) as IZBlob;
+            if TempBlob.IsEmpty then
+              FColumnArray[I].is_null := 1
+            else
+            begin
+              FColumnArray[I].Length := TempBlob.Length;
+              if FColumnArray[I].Length > Cardinal(ChunkSize) then
+              begin {out of buffer range}
+                {now we've to nil the BufferEntry of binding-record to indicate we send data as chunks}
+                PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := nil;
+                ChunkedData := True;
+              end {within buffer range}
+              else
+              begin
+                PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ := PBuffer; //adjust buffer entry again
+                System.Move(TempBlob.GetBuffer^, PBuffer^, FColumnArray[I].Length);
+              end;
+            end;
           end;
         FIELD_TYPE_NULL:;
+      end; {case}
     end;
   end;
 
@@ -814,40 +982,67 @@ begin
       ConSettings^.ClientCodePage^.CP), ConSettings);
     exit;
   end;
+JmpInherited:
   inherited BindInParameters;
 
-  // Send large blobs in chuncks
-  For I := 0 to InParamCount - 1 do
-    if (FParamBindBuffer.GetBufferType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) in [FIELD_TYPE_STRING,FIELD_TYPE_BLOB])
-      and (GetFieldType(InParamValues[I]) = FIELD_TYPE_BLOB) then
-    begin
-      TempBlob := (InParamValues[I].VInterface as IZBlob);
-      if TempBlob.Length>ChunkSize then
+  if ChunkedData then
+    // Send large blobs in chuncks
+    for I := 0 to InParamCount - 1 do
+      if (FColumnArray[I].is_null = 0) and (PPointer(@FParamBindBuffer.FBindArray[NativeUInt((i)*FParamBindBuffer.FBindOffsets.size)+FParamBindBuffer.FBindOffsets.buffer])^ = nil) then
       begin
+        MyType := FParamBindBuffer.GetBufferType(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+        case MyType of
+          FIELD_TYPE_STRING:
+            if inParamTypes[i] in [stAsciiStream, stUnicodeStream] then
+            begin
+              TempBlob := InParamValues[i].VInterface as IZBlob;
+              AnsiRec.P := TempBlob.GetBuffer;
+              AnsiRec.Len := TempBlob.Length;
+            end
+            else
+            begin
+              CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
+              AnsiRec.Len := CharRec.Len;
+              AnsiRec.P := CharRec.P;
+            end;
+          FIELD_TYPE_TINY_BLOB:
+            begin
+              AnsiRec.P := Pointer(InParamValues[i].vBytes);
+              AnsiRec.Len := Length(InParamValues[i].vBytes);
+            end;
+          FIELD_TYPE_BLOB:
+            begin
+              TempBlob := (InParamValues[I].VInterface as IZBlob);
+              AnsiRec.Len := TempBlob.Length;
+              AnsiRec.P := TempBlob.GetBuffer;
+            end;
+          else
+            Continue;
+        end;
         OffSet := 0;
         PieceSize := ChunkSize;
-        while OffSet < TempBlob.Length do
+        while OffSet < AnsiRec.Len do
         begin
-          if OffSet+PieceSize > TempBlob.Length then
-            PieceSize := TempBlob.Length - OffSet;
-          if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, PAnsiChar(TempBlob.GetBuffer)+OffSet, PieceSize) <> 0) then
+          if OffSet+PieceSize > AnsiRec.Len then
+            PieceSize := AnsiRec.Len - OffSet;
+          if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, AnsiRec.P, PieceSize) <> 0) then
           begin
             checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt,
               ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
               ConSettings^.ClientCodePage^.CP), ConSettings);
             exit;
-          end;
+          end
+          else Inc(AnsiRec.P, PieceSize);
           Inc(OffSet, PieceSize);
         end;
+        TempBlob:=nil;
       end;
-      TempBlob:=nil;
-    end;
 end;
 
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
 begin
-  // Empty : Mysql can't prepare datastructures before the actual parameters are known, because the
-  // number/datatype of parameters isn't returned by the server.
+  if Assigned(FParamBindBuffer) then
+    FreeAndNil(FParamBindBuffer);
   inherited UnPrepareInParameters;
 end;
 
@@ -856,24 +1051,29 @@ begin
   Result := FPreparablePrefixTokens;
 end;
 
-function TZMysqlPreparedStatement.getFieldType (testVariant: TZVariant): TMysqlFieldTypes;
+function TZMysqlPreparedStatement.getFieldType(SQLType: TZSQLType; Var Signed: Boolean): TMysqlFieldTypes;
 begin
-  case testVariant.vType of
-    vtNull:      Result := FIELD_TYPE_TINY;
-    vtBoolean:   Result := FIELD_TYPE_TINY;
-    vtBytes:     Result := FIELD_TYPE_TINY_BLOB;
-    vtInteger:   Result := FIELD_TYPE_LONGLONG;
-    vtFloat:     Result := FIELD_TYPE_DOUBLE;
-    vtString,
-    vtAnsiString,
-    vtUTF8String,
-    vtRawByteString,
-    vtCharRec,
-    vtUnicodeString:  Result := FIELD_TYPE_STRING;
-    vtDateTime:  Result := FIELD_TYPE_DATETIME;
-    vtInterface: Result := FIELD_TYPE_BLOB;
-  else
-    raise EZSQLException.Create(SUnsupportedDataType);
+  Signed := SQLType in [stShort, stSmall, stInteger, stLong];
+  case SQLType of
+    stBoolean:                Result := FIELD_TYPE_STRING;//does NOT WORK: FIELD_TYPE_ENUM('Y'/'N'), TINY LEADS to truncations ):
+    stByte, stShort:          Result := FIELD_TYPE_TINY;
+    stWord, stSmall:          Result := FIELD_TYPE_SHORT;
+    stLongWord, stInteger:    Result := FIELD_TYPE_LONG;
+    stULong, stLong:          Result := FIELD_TYPE_LONGLONG;
+    stFloat:                  Result := FIELD_TYPE_FLOAT;
+    stDouble,
+    stCurrency, stBigDecimal: Result := FIELD_TYPE_DOUBLE;
+    stString, stUnicodeString,
+    stGUID:                   Result := FIELD_TYPE_STRING;
+    stBytes:                  Result := FIELD_TYPE_TINY_BLOB;
+    stDate, stTime,
+    stTimestamp:              Result := FIELD_TYPE_DATETIME;
+    stAsciiStream,
+    stUnicodeStream:          Result := FIELD_TYPE_STRING; //all text data need to submitted as this!
+    stBinaryStream:           Result := FIELD_TYPE_BLOB;
+    else
+      //stUnknown, stArray, stDataSet
+      Result := FIELD_TYPE_NULL;
   end;
 end;
 
@@ -886,22 +1086,13 @@ end;
 }
 function TZMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
+  Prepare;
   Result := nil;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-    try
       checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
         ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
         ConSettings^.ClientCodePage^.CP), ConSettings);
-    except
-      if Assigned(FParamBindBuffer) then
-        FreeAndNil(FParamBindBuffer);
-      raise;
-    end;
-
-  if Assigned(FParamBindBuffer) then
-     FreeAndNil(FParamBindBuffer);
-
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) = 0 then
     raise EZSQLException.Create(SCanNotOpenResultSet);
   Result := CreateResultSet(SQL);
@@ -920,23 +1111,15 @@ end;
 }
 function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
+  Prepare;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-    try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
-        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP),
-        ConSettings);
-    except
-      if Assigned(FParamBindBuffer) then
-        FreeAndNil(FParamBindBuffer); //MemLeak closed
-      raise;
-    end;
+    checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+      ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+        ConSettings^.ClientCodePage^.CP),
+      ConSettings);
 
-  if Assigned(FParamBindBuffer) then
-    FreeAndNil(FParamBindBuffer); //MemLeak closed
-
-    { Process queries with result sets }
+  { Process queries with result sets }
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
   begin
     FPlainDriver.StorePreparedResult(FStmtHandle);
@@ -964,21 +1147,12 @@ end;
 }
 function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
 begin
+  Prepare;
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
-    try
-      checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
-        ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
-          ConSettings^.ClientCodePage^.CP), ConSettings);
-    except
-      if Assigned(FParamBindBuffer) then
-        FreeAndNil(FParamBindBuffer); //MemLeak closed
-      raise;
-    end;
-
-  if Assigned(FParamBindBuffer) then
-    FreeAndNil(FParamBindBuffer); //MemLeak closed
-
+    checkMySQLPrepStmtError(FPlainDriver,FStmtHandle, lcExecPrepStmt,
+      ConvertZMsgToRaw(SPreparedStmtExecFailure, ZMessages.cCodePage,
+        ConSettings^.ClientCodePage^.CP), ConSettings);
   if FPlainDriver.GetPreparedFieldCount(FStmtHandle) > 0 then
   begin
     Result := True;
@@ -1287,7 +1461,7 @@ function TZMySQLCallableStatement.ExecuteQuery(const SQL: RawByteString): IZResu
 begin
   Result := nil;
   ASQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, Pointer(SQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
@@ -1384,7 +1558,7 @@ var
 begin
   Result := False;
   ASQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecQuery(FHandle, Pointer(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
@@ -1679,52 +1853,34 @@ end;
 
 { TZMySQLParamBindBuffer }
 
-// largeblobparameter: true to indicate that parameter is a blob that will be
-// sent chunked. Set to false for result set columns.
+constructor TZMySQLParamBindBuffer.Create(PlainDriver:IZMysqlPlainDriver;
+  const BindCount : Integer; var ColumnArray: TZMysqlColumnBuffer);
+begin
+  inherited Create(PlainDriver, BindCount, ColumnArray);
+  SetLength(FInitialMySQLTypes, BindCount);
+  SetLength(FInitialLengths, BindCount);
+end;
 
 procedure TZMySQLParamBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
-  const field_length: integer; const largeblobparameter: boolean);
+  const field_length: integer; const Signed: Boolean);
 var
-  tempbuffertype: TMysqlFieldTypes;
   ColOffset:NativeUInt;
 begin
-  Case buffertype of
-    FIELD_TYPE_DECIMAL,
-    FIELD_TYPE_NEWDECIMAL: tempbuffertype := FIELD_TYPE_DOUBLE;
-  Else
-    tempbuffertype := buffertype;
-  End;
-  With FPColumnArray^[FAddedColumnCount] do
-  begin
-    length := getMySQLFieldSize(tempbuffertype,field_length);
-    if largeblobparameter then
-    begin
-      is_Null := 0;
-      buffer := nil;
-    end
-    else if field_length = 0 then
-    begin
-      is_Null := 1;
-      buffer := nil;
-    end
-    else
-    begin
-      if tempbuffertype in [FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
-           FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING] then
-      //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
-        SetLength(buffer,length+1)
-      else
-        SetLength(buffer,length);
-      is_null := 0;
-    end;
-  end;
+  FInitialMySQLTypes[FAddedColumnCount] := buffertype;
+  //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
+  FInitialLengths[FAddedColumnCount] := field_length+
+    Ord(buffertype in [FIELD_TYPE_ENUM, FIELD_TYPE_DECIMAL, FIELD_TYPE_MEDIUM_BLOB,
+      FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING]);
+  SetLength(FPColumnArray^[FAddedColumnCount].buffer, FInitialLengths[FAddedColumnCount]);
+
+  FPColumnArray^[FAddedColumnCount].is_null := Ord(buffertype = FIELD_TYPE_NULL);
   ColOffset:=NativeUInt((FAddedColumnCount)*FBindOffsets.size);
-  PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^:=tempbuffertype;
-  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FPColumnArray^[FAddedColumnCount].length;
-  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= 0;
-  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= @FPColumnArray^[FAddedColumnCount].buffer[0];
-  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @FPColumnArray^[FAddedColumnCount].length;
-  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @FPColumnArray^[FAddedColumnCount].is_null;
+  PTMysqlFieldTypes(@FbindArray[ColOffset+FBindOffsets.buffer_type])^ := buffertype;
+  PULong(@FbindArray[ColOffset+FBindOffsets.buffer_length])^ := FInitialLengths[FAddedColumnCount];
+  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^ := Ord(not Signed);
+  PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^ := @FPColumnArray^[FAddedColumnCount].buffer[0];
+  PPointer(@FbindArray[ColOffset+FBindOffsets.length])^ := @FPColumnArray^[FAddedColumnCount].length;
+  PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^ := @FPColumnArray^[FAddedColumnCount].is_null;
   Inc(FAddedColumnCount);
 end;
 

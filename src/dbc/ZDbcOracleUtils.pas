@@ -342,7 +342,7 @@ var
   J: NativeUInt;
   CurrentVar: PZSQLVar;
 
-  procedure DisposeObject(Obj: POCIObject);
+  procedure DisposeObject(var Obj: POCIObject);
   var
     I: Integer;
   begin
@@ -359,7 +359,13 @@ var
       //CheckOracleError(PlainDriver, ErrorHandle, //debug
         PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar^._Obj.tdo)
         ;//debug, lcOther, 'OCIObjectUnpin', ConSettings);
+    if (Obj.Level = 0) and assigned(Obj.tdo) then
+      {Free Object}
+      //debugCheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar^._Obj.tdo, 0)
+      ;//debug, lcOther, 'OCIObjectFree', ConSettings);
     Dispose(Obj);
+    Obj := nil;
   end;
 
 begin
@@ -370,14 +376,7 @@ begin
     begin
       CurrentVar := @Variables.Variables[I];
       if Assigned(CurrentVar^._Obj) then
-      begin
         DisposeObject(CurrentVar^._Obj);
-        {Free Object}
-        //debugCheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar^._Obj.tdo, 0)
-        ;//debug, lcOther, 'OCIObjectFree', ConSettings);
-        CurrentVar^._Obj := nil;
-      end;
       if (CurrentVar^.Data <> nil) and (CurrentVar^.DescriptorType > 0) then
         for J := 0 to Iteration-1 do
           if ({%H-}PPOCIDescriptor({%H-}NativeUInt(CurrentVar^.Data)+(J*SizeOf(Pointer))))^ <> nil then
