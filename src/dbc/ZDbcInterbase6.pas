@@ -104,8 +104,6 @@ type
   protected
     procedure InternalCreate; override;
   public
-    destructor Destroy; override;
-
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
@@ -392,16 +390,6 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZInterbase6Connection.Destroy;
-begin
-  if not Closed then
-    Close;
-  inherited Destroy;
-end;
-
-{**
    Get database connection handle.
    @return database handle
 }
@@ -460,14 +448,12 @@ begin
   DPB := GenerateDPB(Info, FDPBLength{%H-}, FDialect);
 
   if HostName <> '' then
-  begin
     if Port <> 3050 then
       {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + '/' + ZFastCode.IntToStr(Port) + ':' + Database),
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
     else
       {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.ConvFuncs.ZStringToRaw((HostName + ':' + Database),
             ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP))
-  end
   else
     {$IFDEF WITH_STRPCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPCopy(DBName, ConSettings^.Database);
 
