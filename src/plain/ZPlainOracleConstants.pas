@@ -495,6 +495,8 @@ const
   OCI_ATTR_CHAR_USED            = 285; //char length semantics
   OCI_ATTR_CHAR_SIZE            = 286; //char length
 
+  OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE = 438; // default prefetch size
+
   { OCI Error Return Values }
   OCI_SUCCESS             = 0;
   OCI_SUCCESS_WITH_INFO   = 1;
@@ -750,6 +752,10 @@ const
   { for schemas }
   OCI_ATTR_LIST_OBJECTS              = 261;   // list of objects in schema
 
+  { Enable OCI Server-Side Statement Caching }
+  OCI_STMT_CACHE       = $40;
+  OCI_STMTCACHE_DELETE = $10;
+
   { for database }
   OCI_ATTR_NCHARSET_ID               = 262;   // char set id
   OCI_ATTR_LIST_SCHEMAS              = 263;   // list of schemas
@@ -883,6 +889,13 @@ type
 
   TOCIStmtPrepare = function(stmtp: POCIStmt; errhp: POCIError; stmt: text;
     stmt_len: ub4; language:ub4; mode: ub4):sword; cdecl;
+
+  TOCIStmtPrepare2 = function(svchp: POCISvcCtx; var stmtp: POCIStmt; errhp: POCIError;
+    stmt: text; stmt_len: ub4; key: text; key_len: ub4;
+    language:ub4; mode: ub4): sword; cdecl;
+
+  TOCIStmtRelease = function(stmtp: POCIStmt; errhp: POCIError; key: text;
+    key_len: ub4; mode: ub4):sword; cdecl;
 
   TOCIStmtExecute = function(svchp: POCISvcCtx; stmtp: POCIStmt;
     errhp: POCIError; iters: ub4; rowoff: ub4; snap_in: POCISnapshot;
@@ -7738,6 +7751,9 @@ type
     OCIHandleFree:          TOCIHandleFree;
     OCIErrorGet:            TOCIErrorGet;
     OCIStmtPrepare:         TOCIStmtPrepare;
+    OCIStmtPrepare2:        TOCIStmtPrepare2;
+    OCIStmtRelease:         TOCIStmtRelease;
+
     OCIStmtExecute:         TOCIStmtExecute;
     OCIParamGet:            TOCIParamGet;
     OCIAttrGet:             TOCIAttrGet;

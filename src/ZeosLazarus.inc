@@ -49,6 +49,7 @@
 {$DEFINE TFIELD_HAS_ASBYTES}          // TField.AsBytes is supported
 {$DEFINE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
 {$DEFINE HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //seems FPC behaves different to Delphi. Some weired ref issues arrive if Ancastor units using Descendants in implementation uses section??
+{$DEFINE NEED_TYPED_UINT64_CONSTANTS}
 
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE

@@ -85,9 +85,9 @@ const
   SQL_DIALECT_V6                = 3;
   SQL_DIALECT_CURRENT = SQL_DIALECT_V6; (* latest IB DIALECT *)
 
-  { SQL definitions }
-  SQL_VARYING                    = 448;
-  SQL_TEXT                       = 452;
+  { SQL definitions order by value and versions }
+  SQL_VARYING                    = 448; //#0 terminated
+  SQL_TEXT                       = 452; //fixed char(N)
   SQL_DOUBLE                     = 480;
   SQL_FLOAT                      = 482;
   SQL_LONG                       = 496;
@@ -100,7 +100,13 @@ const
   SQL_TYPE_TIME                  = 560;
   SQL_TYPE_DATE                  = 570;
   SQL_INT64                      = 580;
+  // IB7
   SQL_BOOLEAN                    = 590;
+  // FB25
+  SQL_NULL                       = 32766;
+  // FB30
+  SQL_BOOLEAN_FB                 = 32764;
+  // deprecated alias for pre V6 applications
   SQL_DATE                       = SQL_TIMESTAMP;
 
 (* #define BLR_WORD(x)	UCHAR(x), UCHAR((x) >> 8)
@@ -851,7 +857,7 @@ type
   PPISC_STATUS         = ^PISC_STATUS;
   PUISC_STATUS         = ^UISC_STATUS;
   PShort               = ^Short;
-  PPAnsiChar               = ^PAnsiChar;
+  PPAnsiChar           = ^PAnsiChar;
   UShort               = Word;
   PVoid                = Pointer;
 

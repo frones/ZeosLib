@@ -458,10 +458,6 @@ begin
     ColumnInfo.ColumnType := ConvertDatasetToDbcType(Current.DataType);
     ColumnInfo.ColumnName := Current.FieldName;
     ColumnInfo.Precision := Current.Size;
-//This is a hack for stUnicodeStream because there is only ftWideString for both type
-    if ColumnInfo.ColumnType = stUnicodeString then
-      if Current.Size > 10240 then
-        ColumnInfo.ColumnType := stUnicodeStream;
     ColumnInfo.Scale := 0;
     ColumnInfo.ColumnLabel := Current.DisplayName;
     ColumnInfo.ColumnDisplaySize := Current.DisplayWidth;
@@ -537,7 +533,7 @@ begin
         RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          RowAccessor.SetRawByteString(FieldIndex, ResultSet.GetRawByteString(ColumnIndex))
+          RowAccessor.SetAnsiRec(FieldIndex, ResultSet.GetAnsiRec(ColumnIndex))
         else
           RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:

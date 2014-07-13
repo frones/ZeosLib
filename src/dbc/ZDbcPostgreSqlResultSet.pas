@@ -133,36 +133,6 @@ type
     function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
-  TZPostgreSQLUnCachedBLob = class(TZAbstractUnCachedBLob)
-  private
-    FPlainDriver: IZPostgreSQLPlainDriver;
-    FQueryHandle: PZPostgreSQLResult;
-    FRowNo: Integer;
-    FColumnIndex: Integer;
-    FIs_bytea_output_hex: Boolean;
-    FHandle: PZPostgreSQLConnect;
-  protected
-    procedure ReadLob; override;
-  public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      const QueryHandle: PZPostgreSQLResult; const Handle: PZPostgreSQLConnect;
-      Const RowNo, ColumnIndex: Integer; const Is_bytea_output_hex: Boolean);
-  end;
-
-  TZPostgreSQLUnCachedCLob = class(TZAbstractUnCachedCLob)
-  private
-    FPlainDriver: IZPostgreSQLPlainDriver;
-    FQueryHandle: PZPostgreSQLResult;
-    FRowNo: Integer;
-    FColumnIndex: Integer;
-  protected
-    procedure ReadLob; override;
-  public
-    constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      const ConSettings: PZConSettings; const QueryHandle: PZPostgreSQLResult;
-      Const RowNo, ColumnIndex: Integer);
-  end;
-
 implementation
 
 uses
@@ -808,24 +778,17 @@ begin
     if not LastWasNull then
       case SQLType of
         stBinaryStream:
-          if FCachedLob then
           begin
             Len := FPlainDriver.DecodeBYTEA(RowNo-1, ColumnIndex,
               FIs_bytea_output_hex, FHandle, FQueryHandle, Pointer({%H-}Buffer));
             Result := TZAbstractBlob.CreateWithData(Buffer, Len);
             FreeMem(Buffer, Len);
-          end
-          else
-            Result := TZPostgreSQLUnCachedBLob.Create(FPlainDriver,
-              FQueryHandle, FHandle, RowNo -1, ColumnIndex, FIs_bytea_output_hex);
+          end;
         stAsciiStream, stUnicodeStream:
-          if FCachedLob then
           begin
             Buffer := GetBuffer(ColumnIndex, Len);
             Result := TZAbstractCLob.CreateWithData(Buffer, Len, ConSettings^.ClientCodePage^.CP, ConSettings);
-          end
-          else
-            Result := TZPostgreSQLUnCachedCLob.Create(FPlainDriver, ConSettings, FQueryHandle, RowNo-1, ColumnIndex);
+          end;
         else
           Result := TZAbstractBlob.CreateWithStream(nil);
       end
@@ -1019,7 +982,7 @@ begin
 end;
 
 { TZPostgreSQLUnCachedCLob }
-procedure TZPostgreSQLUnCachedBLob.ReadLob;
+(*procedure TZPostgreSQLUnCachedBLob.ReadLob;
 var
   Buffer: Pointer;
 begin
@@ -1066,6 +1029,6 @@ begin
   FRowNo := RowNo;
   FColumnIndex := ColumnIndex;
   FConSettings := ConSettings;
-end;
+end;*)
 
 end.

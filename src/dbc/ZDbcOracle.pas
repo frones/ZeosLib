@@ -102,6 +102,9 @@ type
     FSessionHandle: POCISession;
     FTransHandle: POCITrans;
     FDescibeHandle: POCIDescribe;
+    FStatementPrefetchSize: Integer;
+    FBlobPrefetchSize: Integer;
+    FStmtMode: ub4;
   protected
     procedure InternalCreate; override;
     procedure StartTransactionSupport;
@@ -165,7 +168,7 @@ var
 implementation
 
 uses
-  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils,
+  ZMessages, ZGenericSqlToken, ZDbcOracleStatement, ZSysUtils, ZFastCode,
   ZDbcOracleUtils, ZDbcOracleMetadata, ZOracleToken, ZOracleAnalyser;
 
 { TZOracleDriver }
@@ -265,6 +268,16 @@ begin
       Self.Port := 1521;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
+
+  if Info.Values['ServerCachedStmts'] = '' then
+    FStmtMode := OCI_STMT_CACHE //use by default
+  else
+    if StrToBoolEx(Info.Values['ServerCachedStmts'], False) then
+      FStmtMode := OCI_STMT_CACHE //use by default
+    else
+      FStmtMode := OCI_DEFAULT;
+  FStatementPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['StatementCache'], 30); //default = 20
+  FBlobPrefetchSize := FChunkSize;
   Open;
 end;
 
@@ -368,8 +381,9 @@ begin
       Exit;
     end;
   end;
-  if GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ConSettings^.ClientCodePage^.CharWidth) <> OCI_SUCCESS then
-    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcConnect, LogMessage, ConSettings);
+  CheckOracleError(GetPlainDriver, FErrorHandle,
+    GetPlainDriver.GetEnvCharsetByteWidth(FHandle, FErrorHandle, ConSettings^.ClientCodePage^.CharWidth),
+    lcConnect, LogMessage, ConSettings);
 
   GetPlainDriver.AttrSet(FContextHandle, OCI_HTYPE_SVCCTX, FServerHandle, 0,
     OCI_ATTR_SERVER, FErrorHandle);
@@ -378,6 +392,8 @@ begin
     Length(User), OCI_ATTR_USERNAME, FErrorHandle);
   GetPlainDriver.AttrSet(FSessionHandle, OCI_HTYPE_SESSION, PAnsiChar(AnsiString(Password)),
     Length(Password), OCI_ATTR_PASSWORD, FErrorHandle);
+  GetPlainDriver.AttrSet(FSessionHandle,OCI_HTYPE_SESSION,@fBlobPrefetchSize,0,
+    OCI_ATTR_DEFAULT_LOBPREFETCH_SIZE,FErrorHandle);
   Status := GetPlainDriver.SessionBegin(FContextHandle, FErrorHandle,
     FSessionHandle, OCI_CRED_RDBMS, OCI_DEFAULT);
   try
@@ -439,6 +455,13 @@ begin
 
   Status := GetPlainDriver.TransStart(FContextHandle, FErrorHandle, 0, Isolation);
   CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
+
+  if FStmtMode = OCI_STMT_CACHE  then
+  begin
+    Status := GetPlainDriver.AttrSet(FContextHandle,OCI_HTYPE_SVCCTX,@FStatementPrefetchSize,0,
+        OCI_ATTR_STMTCACHESIZE,FErrorHandle);
+    CheckOracleError(GetPlainDriver, FErrorHandle, Status, lcExecute, SQL, ConSettings);
+  end;
 
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 end;

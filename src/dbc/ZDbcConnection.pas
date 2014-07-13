@@ -136,6 +136,7 @@ type
     function GetInfo: TStrings;
   protected
     FUndefinedVarcharAsStringLength: Integer; //used for PostgreSQL and SQLite
+    FChunkSize: Integer; //indicates reading / writing lobs in Chunks of x Byte
     FClientCodePage: String;
     FMetadata: TContainedObject;
     {$IFDEF ZEOS_TEST_ONLY}
@@ -832,6 +833,7 @@ begin
   ConSettings^.Protocol := NotEmptyStringToASCII7(FIZPlainDriver.GetProtocol);
   ConSettings^.Database := ConSettings^.ConvFuncs.ZStringToRaw(FURL.Database, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ConSettings^.User := ConSettings^.ConvFuncs.ZStringToRaw(FURL.UserName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  FChunkSize := StrToIntDef(Info.Values['chunk_size'], 4096);
   // now InternalCreate will work, since it will try to Open the connection
   InternalCreate;
   SetDateTimeFormatProperties;
