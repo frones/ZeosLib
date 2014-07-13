@@ -345,7 +345,7 @@ begin
   TokenIndex := 0;
   FoundSection := True;
   Elements := nil;
-  CheckForKeyword(Tokens, TokenIndex, SectionNames, Keyword, WordCount);
+  CheckForKeyword(Tokens, TokenIndex, SectionNames, Keyword{%H-}, WordCount{%H-});
 
   while TokenIndex < Tokens.Count do
   begin

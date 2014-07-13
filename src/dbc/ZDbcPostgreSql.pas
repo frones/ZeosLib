@@ -59,7 +59,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IF defined(DELPHI) and defined(MSWINDOWS)}Windows,{$IFEND}
   ZDbcIntfs, ZDbcConnection, ZPlainPostgreSqlDriver, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZPlainDriver, ZCompatibility;
+  ZGenericSqlAnalyser, ZURL, ZCompatibility;
 
 type
 
@@ -229,7 +229,7 @@ const
   FON = String('ON');
   standard_conforming_strings = 'standard_conforming_strings';
 
-procedure DefaultNoticeProcessor(arg: Pointer; message: PAnsiChar); cdecl;
+procedure DefaultNoticeProcessor({%H-}arg: Pointer; message: PAnsiChar); cdecl;
 begin
   DriverManager.LogMessage(lcOther,'Postgres NOTICE', message);
 end;

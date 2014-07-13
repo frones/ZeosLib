@@ -249,7 +249,7 @@ type
     // (technobot) end of questioned section
 
     function EscapeString(const S: string): string; override;
-    function UncachedGetTables(const Catalog: string; const SchemaPattern: string;
+    function UncachedGetTables(const {%H-}Catalog: string; const SchemaPattern: string;
       const TableNamePattern: string; const Types: TStringDynArray): IZResultSet; override;
     function UncachedGetSchemas: IZResultSet; override;
     function UncachedGetCatalogs: IZResultSet; override;
@@ -260,7 +260,7 @@ type
       const TableNamePattern: string): IZResultSet; override;
     function UncachedGetColumnPrivileges(const Catalog: string; const Schema: string;
       const Table: string; const ColumnNamePattern: string): IZResultSet; override;
-    function UncachedGetPrimaryKeys(const Catalog: string; const Schema: string;
+    function UncachedGetPrimaryKeys(const {%H-}Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
     function UncachedGetImportedKeys(const Catalog: string; const Schema: string;
       const Table: string): IZResultSet; override;
@@ -269,11 +269,11 @@ type
     function UncachedGetCrossReference(const PrimaryCatalog: string; const PrimarySchema: string;
       const PrimaryTable: string; const ForeignCatalog: string; const ForeignSchema: string;
       const ForeignTable: string): IZResultSet; override;
-    function UncachedGetIndexInfo(const Catalog: string; const Schema: string; const Table: string;
+    function UncachedGetIndexInfo(const {%H-}Catalog: string; const Schema: string; const Table: string;
       Unique: Boolean; {%H-}Approximate: Boolean): IZResultSet; override;
      function UncachedGetSequences(const Catalog: string; const SchemaPattern: string;
       const SequenceNamePattern: string): IZResultSet; override;
-    function UncachedGetProcedures(const Catalog: string; const SchemaPattern: string;
+    function UncachedGetProcedures(const {%H-}Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string): IZResultSet; override;
     function UncachedGetProcedureColumns(const Catalog: string; const SchemaPattern: string;
       const ProcedureNamePattern: string; const ColumnNamePattern: string):
@@ -2597,11 +2597,11 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetImportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  tc_constraint_catalog_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  {%H-}tc_constraint_catalog_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   tc_constraint_schema_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   ccu_table_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   ccu_column_name_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  kcu_table_catalog_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  {%H-}kcu_table_catalog_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   kcu_constraint_schema_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   kcu_table_name_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
   kcu_column_name_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
@@ -2749,11 +2749,11 @@ end;
 function TZPostgreSQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 const
-  tc_constraint_catalog_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  {%H-}tc_constraint_catalog_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   tc_constraint_schema_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   ccu_table_name_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   ccu_column_name_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  kcu_table_catalog_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  {%H-}kcu_table_catalog_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   kcu_constraint_schema_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   kcu_table_name_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
   kcu_column_name_Index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
@@ -2911,11 +2911,11 @@ function TZPostgreSQLDatabaseMetadata.UncachedGetCrossReference(const PrimaryCat
   const PrimarySchema: string; const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): IZResultSet;
 const
-  tc_constraint_catalog_Index_74 = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  {%H-}tc_constraint_catalog_Index_74 = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   tc_constraint_schema_Index_74 = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   ccu_table_name_Index_74 = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   ccu_column_name_Index_74 = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  kcu_table_catalog_Index_74 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  {%H-}kcu_table_catalog_Index_74 = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   kcu_constraint_schema_Index_74 = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   kcu_table_name_Index_74 = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
   kcu_column_name_Index_74 = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
@@ -2930,12 +2930,12 @@ const
   fnspname_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   prelname_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   frelname_index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  t1_tgconstrname_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
+  {%H-}t1_tgconstrname_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   keyseq_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  fkeyname_index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
+  {%H-}fkeyname_index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
   t1_tgdeferrable_index = {$IFDEF GENERIC_INDEX}7{$ELSE}8{$ENDIF};
   t1_tginitdeferred_index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
-  t1_tgnargs_index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
+  {%H-}t1_tgnargs_index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
   t1_tgargs_index = {$IFDEF GENERIC_INDEX}10{$ELSE}11{$ENDIF};
   updaterule_index = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
   deleterule_index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};

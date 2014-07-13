@@ -57,7 +57,7 @@ interface
 {$I ZDbc.inc}
 
 uses
-  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, StrUtils,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZSysUtils, ZDbcIntfs, ZPlainMySqlDriver, ZPlainMySqlConstants, ZDbcLogging,
   ZCompatibility, ZDbcResultSetMetadata;
 

@@ -1502,7 +1502,7 @@ end;
 function TZOracleDatabaseMetadata.UncachedGetProcedures(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): IZResultSet;
 const
-  PROCEDURE_CAT_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  {%H-}PROCEDURE_CAT_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   PROCEDURE_SCHEM_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   OBJECT_NAME_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   PROCEDURE_NAME_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};

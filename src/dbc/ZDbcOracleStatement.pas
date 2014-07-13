@@ -98,8 +98,6 @@ type
     procedure Prepare; override;
     procedure Unprepare; override;
 
-    procedure ClearParameters; override;
-
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
@@ -1057,7 +1055,7 @@ begin
         if InParamTypes[I] in [stString, stUnicodeString] then
         begin //point to data of string
           CharRec := ClientVarManager.GetAsCharRec(InParamValues[i], ConSettings^.ClientCodePage^.CP);
-          CurrentVar.Data := CharRec.P;
+          //CurrentVar.Data := CharRec.P;
           Status := FPlainDriver.BindByPos(FHandle, CurrentVar.BindHandle,
             FErrorHandle, I + 1, CharRec.P, CharRec.Len,
             CurrentVar.TypeCode, @CurrentVar.Indicator, @CurrentVar.DataSize,
@@ -1105,12 +1103,6 @@ begin
   end;
 end;
 
-procedure TZOraclePreparedStatement.ClearParameters;
-begin
-  UnPrepareInParameters;
-
-  inherited ClearParameters;
-end;
 {**
   Prepares an SQL statement
 }
@@ -1180,7 +1172,7 @@ begin
 
   { Unloads binded variables with values. }
   if ArrayCount = 0 then
-    UnloadOracleVars(FInVars, ArrayCount)
+    UnloadOracleVars(FInVars, 0)
   else
     UnloadOracleVars(FDescriptors, ArrayCount)
 

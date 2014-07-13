@@ -187,35 +187,6 @@ type
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
   end;
 
-  TZMySQLUncachedBlob = class(TZAbstractUnCachedBlob)
-  private
-    FPlainDriver: IZMySQLPlainDriver;
-    FColumnIndex: Integer;
-    FRowNo: Integer;
-    FQueryHandle: PZMySQLResult;
-    FSize: ULong;
-  protected
-    procedure ReadLob; override;
-  public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver; const Size: ULong;
-      const ColumnIndex, RowNo: Integer; const QueryHandle: PZMySQLResult);
-  end;
-
-  TZMySQLUncachedClob = class(TZAbstractUnCachedClob)
-  private
-    FPlainDriver: IZMySQLPlainDriver;
-    FColumnIndex: Integer;
-    FRowNo: Integer;
-    FQueryHandle: PZMySQLResult;
-    FSize: ULong;
-  protected
-    procedure ReadLob; override;
-  public
-    constructor Create(const PlainDriver: IZMySQLPlainDriver; const Size: ULong;
-      const ColumnIndex, RowNo: Integer; const QueryHandle: PZMySQLResult;
-      Const ConSettings: PZConSettings);
-  end;
-
 implementation
 
 uses
@@ -341,7 +312,6 @@ begin
   end;
 
   inherited Open;
-
 end;
 
 {**
@@ -406,7 +376,7 @@ end;
 }
 function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 begin
-  Result.P := GetBufferAndLength(ColumnIndex, Result.Len{%H-});
+  Result.P := GetBufferAndLength(ColumnIndex, Result{%H-}.Len);
 end;
 
 {**
@@ -758,24 +728,16 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckBlobColumn(ColumnIndex);
 {$ENDIF}
-  Result := nil;
   Buffer := GetBufferAndLength(ColumnIndex, Len{%H-});
-  if not LastWasNull then
+  if LastWasNull then
+    Result := nil
+  else
     case GetMetaData.GetColumnType(ColumnIndex) of
       stBytes, stBinaryStream:
-        if FCachedLob then
-          Result := TZAbstractBlob.CreateWithData(Buffer, Len)
-        else
-          Result := TZMySQLUncachedBlob.Create(FPlainDriver, Len,
-            ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}, Rowno-1, FQueryHandle);
+        Result := TZAbstractBlob.CreateWithData(Buffer, Len)
       else
-        if FCachedLob then
-          Result := TZAbstractClob.CreateWithData(Buffer, Len,
-            ConSettings^.ClientCodePage^.CP, ConSettings)
-        else
-          Result := TZMySQLUncachedClob.Create(FPlainDriver, Len,
-            ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}, Rowno-1,
-            FQueryHandle, ConSettings);
+        Result := TZAbstractClob.CreateWithData(Buffer, Len,
+          ConSettings^.ClientCodePage^.CP, ConSettings)
     end;
 end;
 
@@ -1146,7 +1108,7 @@ begin
           ['Field '+ZFastCode.IntToStr(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
             DefineColumnTypeName(GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
     end;
-    Result.Len := {$IFDEF WITH_INLINE}Length(FRawTemp){$ELSE}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+    Result.Len := {$IFDEF WITH_INLINE}Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
     Result.P := Pointer(FRawTemp);
   end;
 end;
@@ -2966,74 +2928,6 @@ begin
       Result := Result + 'NULL';
   end;
   Result := 'SELECT ' + Result;
-end;
-
-{ TZMySQLUncachedBlob }
-
-procedure TZMySQLUncachedBlob.ReadLob;
-var
-  RowHandle: PZMySQLRow;
-  Buffer, Data: Pointer;
-begin
-  FPlainDriver.SeekData(FQueryHandle, FRowNo);
-  RowHandle := FPlainDriver.FetchRow(FQueryHandle);
-  Data := FPlainDriver.GetFieldData(RowHandle, FColumnIndex);
-  FBlobSize  := FSize;
-  Buffer := AllocMem(FBlobSize);
-  System.Move(Data^, Buffer^, FBlobSize);
-  FBlobData := Buffer;
-  inherited ReadLob;
-end;
-
-{**
-  Constructs this class and assignes the main properties.
-  @param MySQL plaindriver.
-  @ColumnIndex the ColumnIndex.
-  @param RowNo the RowNo of the Lob.
-  @param QueryHandle the PZMySQLResult.
-}
-constructor TZMySQLUncachedBlob.Create(const PlainDriver: IZMySQLPlainDriver;
-  const Size: ULong; const ColumnIndex, RowNo: Integer;
-  const QueryHandle: PZMySQLResult);
-begin
-  FPlainDriver := PlainDriver;
-  FColumnIndex := ColumnIndex;
-  FSize := Size;
-  FRowNo := RowNo;
-  FQueryHandle := QueryHandle;
-end;
-
-{ TZMySQLUncachedClob }
-
-procedure TZMySQLUncachedClob.ReadLob;
-var
-  RowHandle: PZMySQLRow;
-  Buffer: PAnsiChar;
-begin
-  FPlainDriver.SeekData(FQueryHandle, FRowNo);
-  RowHandle := FPlainDriver.FetchRow(FQueryHandle);
-  Buffer := FPlainDriver.GetFieldData(RowHandle, FColumnIndex);
-  InternalSetPAnsiChar(Buffer, FConSettings^.ClientCodePage^.CP, FSize);
-  inherited ReadLob;
-end;
-
-{**
-  Constructs this class and assignes the main properties.
-  @param MySQL plaindriver.
-  @ColumnIndex the ColumnIndex.
-  @param RowNo the RowNo of the Lob.
-  @param QueryHandle the PZMySQLResult.
-}
-constructor TZMySQLUncachedClob.Create(const PlainDriver: IZMySQLPlainDriver;
-  const Size: ULong; const ColumnIndex, RowNo: Integer;
-  const QueryHandle: PZMySQLResult; const ConSettings: PZConSettings);
-begin
-  FPlainDriver := PlainDriver;
-  FColumnIndex := ColumnIndex;
-  FRowNo := RowNo;
-  FQueryHandle := QueryHandle;
-  FConSettings := ConSettings;
-  FSize := Size;
 end;
 
 end.

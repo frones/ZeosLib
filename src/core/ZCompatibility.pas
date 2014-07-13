@@ -617,23 +617,36 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
-  SetString(Dest, Src, Len);
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+    if (NativeUInt(Dest) <> 0) and //Empty?
+       (PLongInt(NativeUInt(Dest) - 8)^ = 1) {refcount} and
+       (PLongInt(NativeUInt(Dest) - 4)^ = LongInt(Len)) {length} then
+      Move(Src^, Pointer(Dest)^, Len)
+    else
+      SetString(Dest, Src, Len);
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
 begin
   if ( Len = 0 ) or ( Src = nil ) then
-    Exit
+    Dest := ''
   else
-  begin
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Dest := '';
-    SetLength(Dest, Len);
-    Move(Src^, Pointer(Dest)^, Len);
-    {$ELSE}
-    SetString(Dest, Src, Len);
-    {$ENDIF}
-  end;
+    if (NativeUInt(Dest) <> 0) and //Empty?
+       (PLongInt(NativeUInt(Dest) - 8)^ = 1) {refcount} and
+       (PLongInt(NativeUInt(Dest) - 4)^ = LongInt(Len)) {length} then
+      Move(Src^, Pointer(Dest)^, Len)
+    else
+      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+      begin
+        Dest := '';
+        SetLength(Dest, Len);
+        Move(Src^, Pointer(Dest)^, Len);
+      end;
+      {$ELSE}
+      SetString(Dest, Src, Len);
+      {$ENDIF}
 end;
 
 procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
@@ -651,13 +664,23 @@ end;
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
-  {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-  Dest := '';
-  SetLength(Dest, Len);
-  Move(Src^, Pointer(Dest)^, Len);
-  {$ELSE}
-  SetString(Dest, Src, Len);
-  {$ENDIF}
+  if ( Len = 0 ) or ( Src = nil ) then
+    Dest := ''
+  else
+    if (NativeUInt(Dest) <> 0) and //Empty?
+       (PLongInt(NativeUInt(Dest) - 8)^ = 1) {refcount} and
+       (PLongInt(NativeUInt(Dest) - 4)^ = LongInt(Len)) {length} then
+      Move(Src^, Pointer(Dest)^, Len)
+    else
+      {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+      begin
+        Dest := '';
+        SetLength(Dest, Len);
+        Move(Src^, Pointer(Dest)^, Len);
+      end;
+      {$ELSE}
+      SetString(Dest, Src, Len);
+      {$ENDIF}
 end;
 {$ENDIF}
 
