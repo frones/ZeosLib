@@ -266,6 +266,7 @@ end;
 function TZOracleAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 var
   SQLVarHolder: PZSQLVar;
+  Blob: IZBlob;
 begin
   SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   if LastWasNull then
@@ -336,6 +337,7 @@ function TZOracleAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8Stri
 var
   SQLVarHolder: PZSQLVar;
   AnsiRec: TZAnsiRec;
+  Blob: IZBlob;
 begin
   SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   if LastWasNull then
@@ -424,6 +426,7 @@ function TZOracleAbstractResultSet.GetAsDateTimeValue(const SQLVarHolder: PZSQLV
 var
   Status: Integer;
   Year: SmallInt;
+  yr, mnth, dy, hr, mm, ss, fsec: sb4;
   Month, Day: Byte;
   Hour, Minute, Second: Byte;
   Millis: Integer;
@@ -449,30 +452,48 @@ begin
       end;
     end
     else
-    begin
-      if ColType in [stDate, stTimestamp] then
-      begin
-        Status := FPlainDriver.DateTimeGetDate(FConnectionHandle, FErrorHandle,
-          {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
-          Year{%H-}, Month{%H-}, Day{%H-});
-      // attention : this code handles all timestamps on 01/01/0001 as a pure time value
-      // reason : oracle doesn't have a pure time datatype so all time comparisons compare
-      //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-        if (Status = OCI_SUCCESS) and (not (Year and Month and Day = 1)) then
-          Result := EncodeDate(Year, Month, Day)
-        else Result := 0;
-      end
-      else Result := 0;
-      if ColType in [stTime, stTimestamp] then
-      begin
-        Status := FPlainDriver.DateTimeGetTime(FConnectionHandle, FErrorHandle,
-          {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
-            Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
-        if Status = OCI_SUCCESS then
-          Result := Result + EncodeTime(
-            Hour, Minute, Second, Millis div 1000000);
+      case oDataType of
+        SQLT_INTERVAL_DS:
+          begin
+            Status := FPlainDriver.IntervalGetDaySecond(FContextHandle, FErrorHandle, @dy, @hr, @mm, @ss, @fsec, {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+            if (Status = OCI_SUCCESS) then
+              Result := EncodeTime(hr, mm, ss, fsec div 100000)
+            else
+              Result := 0;
+          end;
+        SQLT_INTERVAL_YM:
+          begin
+            Status := FPlainDriver.IntervalGetYearMonth(FContextHandle, FErrorHandle, @yr, @mnth, {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+            if (Status = OCI_SUCCESS) and (not (yr and mnth = 1)) then
+              Result := EncodeDate(yr, mnth, 0)
+            else Result := 0;
+          end;
+        else
+        begin
+          if ColType in [stDate, stTimestamp] then
+          begin
+            Status := FPlainDriver.DateTimeGetDate(FConnectionHandle, FErrorHandle,
+              {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
+              Year{%H-}, Month{%H-}, Day{%H-});
+          // attention : this code handles all timestamps on 01/01/0001 as a pure time value
+          // reason : oracle doesn't have a pure time datatype so all time comparisons compare
+          //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
+            if (Status = OCI_SUCCESS) and (not (Year and Month and Day = 1)) then
+              Result := EncodeDate(Year, Month, Day)
+            else Result := 0;
+          end
+          else Result := 0;
+          if ColType in [stTime, stTimestamp] then
+          begin
+            Status := FPlainDriver.DateTimeGetTime(FConnectionHandle, FErrorHandle,
+              {%H-}PPOCIDescriptor({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^,
+                Hour{%H-}, Minute{%H-}, Second{%H-}, Millis{%H-});
+            if Status = OCI_SUCCESS then
+              Result := Result + EncodeTime(
+                Hour, Minute, Second, Millis div 1000000);
+          end;
+        end;
       end;
-    end
 end;
 
 {**
@@ -489,6 +510,7 @@ var
   Len: Cardinal;
   SQLVarHolder: PZSQLVar;
   P: PAnsiChar;
+  Blob: IZBlob;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -522,7 +544,6 @@ begin
           begin
             Blob := GetBlob(ColumnIndex);
             Result := Blob.GetString;
-            Blob := nil;
           end;
         else
           raise Exception.Create('Missing OCI Type?');
@@ -930,6 +951,7 @@ var
   Failed: Boolean;
   SQLVarHolder: PZSQLVar;
   AnsiRec: TZAnsiRec;
+  Blob: IZBlob;
 label ConvFromString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -975,7 +997,6 @@ begin
             Blob := Getblob(ColumnIndex);
             AnsiRec.P := Blob.GetBuffer;
             AnsiRec.Len := Blob.Length;
-            Blob := nil;
             goto ConvFromString;
           end;
       else
@@ -997,6 +1018,7 @@ var
   SQLVarHolder: PZSQLVar;
   AnsiRec: TZAnsiRec;
   Failed: Boolean;
+  Blob: IZBlob;
 label ConvFromString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1041,7 +1063,6 @@ begin
             Blob := Getblob(ColumnIndex);
             AnsiRec.P := Blob.GetBuffer;
             AnsiRec.Len := Blob.Length;
-            Blob := nil;
             goto ConvFromString;
           end;
       else
@@ -1060,10 +1081,11 @@ end;
   @exception SQLException if a database access error occurs
 }
 function TZOracleAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
-var 
+var
   Failed: Boolean;
   SQLVarHolder: PZSQLVar;
   AnsiRec: TZAnsiRec;
+  Blob: IZBlob;
 label ConvFromString;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1111,7 +1133,6 @@ begin
             Blob := Getblob(ColumnIndex);
             AnsiRec.P := Blob.GetBuffer;
             AnsiRec.Len := Blob.Length;
-            Blob := nil;
             goto ConvFromString;
           end;
       else
@@ -1184,10 +1205,10 @@ begin
 
 
       {CheckOracleError(FPlainDriver, FErrorHandle,
-        FPlainDriver.ResultSetToStmt(CurrentVar^._Object,
+        FPlainDriver.ResultSetToStmt(CurrentVar^._Obj.obj_ind,
           FErrorHandle), lcOther, 'Nested Table to Stmt handle', ConSettings);
       Result := CreateOracleResultSet(FPlainDriver, GetStatement,
-        'Fetch Nested Table', CurrentVar^._Object, FErrorHandle);}
+        'Fetch Nested Table', CurrentVar^._Obj.obj_ref, FErrorHandle)};
     end;
 end;
 
@@ -1341,7 +1362,7 @@ begin
           CurrentVar^.ColType := stTime;
           inc(DescriptorColumnCount);
         end;
-      SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ{, SQLT_INTERVAL_DS, SQLT_INTERVAL_YM}:
+      SQLT_TIMESTAMP, SQLT_TIMESTAMP_TZ, SQLT_TIMESTAMP_LTZ, SQLT_INTERVAL_DS, SQLT_INTERVAL_YM:
         begin
           CurrentVar^.ColType := stTimestamp;
           inc(DescriptorColumnCount);
@@ -1394,7 +1415,7 @@ begin
     else
       CurrentVar^.CodePage := High(Word);
     {set new datatypes if required}
-    DefineOracleVarTypes(CurrentVar, CurrentVar^.ColType, CurrentVar^.oDataSize, CurrentVar^.oDataType);
+    DefineOracleVarTypes(CurrentVar, CurrentVar^.ColType, CurrentVar^.oDataSize, CurrentVar^.oDataType, FConnection.GetClientVersion >= 11002000);
     {calc required size of field}
     Inc(RowSize, CalcBufferSizeOfSQLVar(CurrentVar));
   end;
@@ -1420,13 +1441,15 @@ begin
     SetVariableDataEntrys(BufferPos, CurrentVar, FIteration);
     if CurrentVar^.ColType <> stUnknown then //do not BIND unknown types
     begin
-      AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration); //alloc Desciptors if required
+      AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration, False); //alloc Desciptors if required
       CheckOracleError(FPlainDriver, FErrorHandle,
         FPlainDriver.DefineByPos(FStmtHandle, CurrentVar^.Define,
           FErrorHandle, I, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
           CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, OCI_DEFAULT),
         lcExecute, 'OCIDefineByPos', ConSettings);
-    end;
+    end
+    else
+      CurrentVar := @FColumns.Variables[I-1];
     if CurrentVar^.oDataType=SQLT_NTY then
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
       CheckOracleError(FPlainDriver, FErrorHandle,

@@ -1169,6 +1169,7 @@ const
 var
   PStatement: IZPreparedStatement;
   Statement: IZStatement;
+  Use_S_BIT: Boolean;
 
   function InsertTestString(ID: Integer; Const Str: RawByteString): Boolean;
   begin
@@ -1177,11 +1178,16 @@ var
     PStatement.SetRawByteString(s_varchar_Index, Str);
     PStatement.SetRawByteString(s_nchar_Index, Str);
     PStatement.SetRawByteString(s_nvarchar_Index, Str);
-    PStatement.SetRawByteString(s_bit_Index, Str);
+    if Use_S_BIT then
+      PStatement.SetRawByteString(s_bit_Index, Str);
     Result := PStatement.ExecuteUpdatePrepared = 1;
   end;
 begin
-  PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)');
+  Use_S_BIT := Not(StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or StartsWith(Protocol, 'FreeTDS'));
+  if Use_S_BIT then
+    PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
+  else
+    PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
   CheckNotNull(PStatement);
   {Insert ShortInt test values}
   Check(InsertTestString(TEST_ROW_ID, IntToRaw(Low(ShortInt))));
@@ -1209,14 +1215,16 @@ begin
       CheckEquals(Low(ShortInt), GetShort(s_varchar_Index));
       CheckEquals(Low(ShortInt), GetShort(s_nchar_Index));
       CheckEquals(Low(ShortInt), GetShort(s_nvarchar_Index));
-      CheckEquals(Low(ShortInt), GetShort(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(ShortInt), GetShort(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+1, GetInt(s_id_Index));
       CheckEquals(High(ShortInt), GetShort(s_char_Index));
       CheckEquals(High(ShortInt), GetShort(s_varchar_Index));
       CheckEquals(High(ShortInt), GetShort(s_nchar_Index));
       CheckEquals(High(ShortInt), GetShort(s_nvarchar_Index));
-      CheckEquals(High(ShortInt), GetShort(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(ShortInt), GetShort(s_bit_Index));
       { Test SmallInt getter}
       Check(Next);
       CheckEquals(TEST_ROW_ID+2, GetInt(s_id_Index));
@@ -1224,14 +1232,16 @@ begin
       CheckEquals(Low(SmallInt), GetSmall(s_varchar_Index));
       CheckEquals(Low(SmallInt), GetSmall(s_nchar_Index));
       CheckEquals(Low(SmallInt), GetSmall(s_nvarchar_Index));
-      CheckEquals(Low(SmallInt), GetSmall(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(SmallInt), GetSmall(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+3, GetInt(s_id_Index));
       CheckEquals(High(SmallInt), GetSmall(s_char_Index));
       CheckEquals(High(SmallInt), GetSmall(s_varchar_Index));
       CheckEquals(High(SmallInt), GetSmall(s_nchar_Index));
       CheckEquals(High(SmallInt), GetSmall(s_nvarchar_Index));
-      CheckEquals(High(SmallInt), GetSmall(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(SmallInt), GetSmall(s_bit_Index));
       { Test Integer getter}
       Check(Next);
       CheckEquals(TEST_ROW_ID+4, GetInt(s_id_Index));
@@ -1239,14 +1249,16 @@ begin
       CheckEquals(Low(Integer), GetInt(s_varchar_Index));
       CheckEquals(Low(Integer), GetInt(s_nchar_Index));
       CheckEquals(Low(Integer), GetInt(s_nvarchar_Index));
-      CheckEquals(Low(Integer), GetInt(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(Integer), GetInt(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+5, GetInt(s_id_Index));
       CheckEquals(High(Integer), GetInt(s_char_Index));
       CheckEquals(High(Integer), GetInt(s_varchar_Index));
       CheckEquals(High(Integer), GetInt(s_nchar_Index));
       CheckEquals(High(Integer), GetInt(s_nvarchar_Index));
-      CheckEquals(High(Integer), GetInt(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(Integer), GetInt(s_bit_Index));
       { Test Int64 getter}
       Check(Next);
       CheckEquals(TEST_ROW_ID+6, GetInt(s_id_Index));
@@ -1254,14 +1266,16 @@ begin
       CheckEquals(Low(Int64), GetLong(s_varchar_Index));
       CheckEquals(Low(Int64), GetLong(s_nchar_Index));
       CheckEquals(Low(Int64), GetLong(s_nvarchar_Index));
-      CheckEquals(Low(Int64), GetLong(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(Int64), GetLong(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+7, GetInt(s_id_Index));
       CheckEquals(High(Int64), GetLong(s_char_Index));
       CheckEquals(High(Int64), GetLong(s_varchar_Index));
       CheckEquals(High(Int64), GetLong(s_nchar_Index));
       CheckEquals(High(Int64), GetLong(s_nvarchar_Index));
-      CheckEquals(High(Int64), GetLong(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(Int64), GetLong(s_bit_Index));
       Close;
     end;
   finally
@@ -1286,6 +1300,7 @@ var
   PStatement: IZPreparedStatement;
   Statement: IZStatement;
   Info: TStrings;
+  Use_S_BIT: Boolean;
 
   function InsertTestString(ID: Integer; Const Str: RawByteString): Boolean;
   begin
@@ -1294,12 +1309,18 @@ var
     PStatement.SetRawByteString(s_varchar_Index, Str);
     PStatement.SetRawByteString(s_nchar_Index, Str);
     PStatement.SetRawByteString(s_nvarchar_Index, Str);
-    PStatement.SetRawByteString(s_bit_Index, Str);
+    if Use_S_BIT then
+      PStatement.SetRawByteString(s_bit_Index, Str);
     Result := PStatement.ExecuteUpdatePrepared = 1;
   end;
 begin
   Info := TStringList.Create;
   Info.Add('preferprepared=True');
+  Use_S_BIT := Not(StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or StartsWith(Protocol, 'FreeTDS'));
+  if Use_S_BIT then
+    PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
+  else
+    PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
   PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)');
   CheckNotNull(PStatement);
   {Insert ShortInt test values}
@@ -1332,14 +1353,16 @@ begin
       CheckEquals(Low(Byte), GetByte(s_varchar_Index));
       CheckEquals(Low(Byte), GetByte(s_nchar_Index));
       CheckEquals(Low(Byte), GetByte(s_nvarchar_Index));
-      CheckEquals(Low(Byte), GetByte(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(Byte), GetByte(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+1, GetInt(s_id_Index));
       CheckEquals(High(Byte), GetByte(s_char_Index));
       CheckEquals(High(Byte), GetByte(s_varchar_Index));
       CheckEquals(High(Byte), GetByte(s_nchar_Index));
       CheckEquals(High(Byte), GetByte(s_nvarchar_Index));
-      CheckEquals(High(Byte), GetByte(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(Byte), GetByte(s_bit_Index));
       { Test Word getter}
       Check(Next);
       CheckEquals(TEST_ROW_ID+2, GetInt(s_id_Index));
@@ -1347,14 +1370,16 @@ begin
       CheckEquals(Low(Word), GetWord(s_varchar_Index));
       CheckEquals(Low(Word), GetWord(s_nchar_Index));
       CheckEquals(Low(Word), GetWord(s_nvarchar_Index));
-      CheckEquals(Low(Word), GetWord(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(Word), GetWord(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+3, GetInt(s_id_Index));
       CheckEquals(High(Word), GetWord(s_char_Index));
       CheckEquals(High(Word), GetWord(s_varchar_Index));
       CheckEquals(High(Word), GetWord(s_nchar_Index));
       CheckEquals(High(Word), GetWord(s_nvarchar_Index));
-      CheckEquals(High(Word), GetWord(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(Word), GetWord(s_bit_Index));
       { Test Longword/Cardinal getter}
       Check(Next);
       CheckEquals(TEST_ROW_ID+4, GetInt(s_id_Index));
@@ -1362,14 +1387,16 @@ begin
       CheckEquals(Low(LongWord), GetUInt(s_varchar_Index));
       CheckEquals(Low(LongWord), GetUInt(s_nchar_Index));
       CheckEquals(Low(LongWord), GetUInt(s_nvarchar_Index));
-      CheckEquals(Low(LongWord), GetUInt(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(LongWord), GetUInt(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+5, GetInt(s_id_Index));
       CheckEquals(High(LongWord), GetUInt(s_char_Index));
       CheckEquals(High(LongWord), GetUInt(s_varchar_Index));
       CheckEquals(High(LongWord), GetUInt(s_nchar_Index));
       CheckEquals(High(LongWord), GetUInt(s_nvarchar_Index));
-      CheckEquals(High(LongWord), GetUInt(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(LongWord), GetUInt(s_bit_Index));
       { Test UInt64 getter}
       Check(Next);
       CheckEquals(TEST_ROW_ID+6, GetInt(s_id_Index));
@@ -1377,14 +1404,16 @@ begin
       CheckEquals(Low(UInt64), GetULong(s_varchar_Index));
       CheckEquals(Low(UInt64), GetULong(s_nchar_Index));
       CheckEquals(Low(UInt64), GetULong(s_nvarchar_Index));
-      CheckEquals(Low(UInt64), GetULong(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(Low(UInt64), GetULong(s_bit_Index));
       Check(Next);
       CheckEquals(TEST_ROW_ID+7, GetInt(s_id_Index));
       CheckEquals(High(UInt64), GetULong(s_char_Index));
       CheckEquals(High(UInt64), GetULong(s_varchar_Index));
       CheckEquals(High(UInt64), GetULong(s_nchar_Index));
       CheckEquals(High(UInt64), GetULong(s_nvarchar_Index));
-      CheckEquals(High(UInt64), GetULong(s_bit_Index));
+      if Use_S_BIT then
+        CheckEquals(High(UInt64), GetULong(s_bit_Index));
       Close;
     end;
   finally

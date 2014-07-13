@@ -75,6 +75,7 @@ type
     Foidasblob: Boolean;
     FConnectionHandle: PZPostgreSQLConnect;
     Findeterminate_datatype: Boolean;
+    FUseEmulatedStmtsOnly: Boolean;
   protected
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
@@ -192,11 +193,13 @@ begin
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
+  { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
+    the pgBouncer does not support the RealPrepareds.... }
+  FUseEmulatedStmtsOnly := StrToBoolEx(Self.Info.Values['EMULATE_PREPARES']);
 end;
 
-constructor TZPostgreSQLPreparedStatement.Create(
-  PlainDriver: IZPostgreSQLPlainDriver; Connection: IZPostgreSQLConnection; Info: TStrings
-  );
+constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
+  Connection: IZPostgreSQLConnection; Info: TStrings);
 begin
   Create(PlainDriver, Connection, SQL, Info);
 end;
@@ -240,7 +243,7 @@ begin
   for I := 0 to High(CachedQueryRaw) do
     if IsParamIndex[I] then
     begin
-      if InParamCount <= ParamIndex then
+      if ParamIndex > InParamCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
         raise EZSQLException.Create(SInvalidInputParameterCount);
       Result := Result + PGPrepareAnsiSQLParam(InParamValues[ParamIndex],
         ClientVarManager, (Connection as IZPostgreSQLConnection), FPlainDriver,
@@ -398,7 +401,7 @@ begin
       end else
         TempSQL := TempSQL + CachedQueryRaw[i];
 
-    if IsPreparable then //detected after tokenizing the query
+    if (not FUseEmulatedStmtsOnly) and IsPreparable then //detected after tokenizing the query
       QueryHandle := ExecuteInternal(TempSQL, eicPrepStmt)
     else
       Findeterminate_datatype := True;
@@ -730,7 +733,7 @@ end;
 function TZPostgreSQLCAPIPreparedStatement.GetPrepareSQLPrefix: RawByteString;
 begin
   Result := '';
-  FPRawPlanName := PAnsiChar(FRawPlanName);
+  FPRawPlanName := Pointer(FRawPlanName);
 end;
 
 { TZPostgreSQLCallableStatement }

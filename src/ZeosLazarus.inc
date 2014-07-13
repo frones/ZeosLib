@@ -50,6 +50,9 @@
 {$DEFINE TFIELD_HAS_ASLARGEINT}       // TField-baseclass hase AsLargeIntProperty
 {$DEFINE HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES} //seems FPC behaves different to Delphi. Some weired ref issues arrive if Ancastor units using Descendants in implementation uses section??
 {$DEFINE NEED_TYPED_UINT64_CONSTANTS}
+{$IFDEF SYSTEMINLINE} //global FPC define
+  {$DEFINE WITH_INLINE}           // compiler supports inline methodes
+{$ENDIF}
 
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
@@ -108,9 +111,6 @@
   {$IFDEF FPC_FULLVERSION>20601}
     {$UNDEF WITH_FPC_FTTIME_BUG} //seems like the never FPC2.6.2 also have fixed the NativData bug for TTimeFields+TDataSet
   {$ENDIF}
-  {$IF FPC_FULLVERSION>20602}       // will be introduced in 2.6.2 (and up to date 2.6.1)
-    {$DEFINE WITH_INLINE}           // compiler supports inline methodes
-  {$IFEND}
   {$IF FPC_FULLVERSION>20700}       // will be introduced in 2.7+
     {$DEFINE WITH_TRECORDBUFFER}
     {$DEFINE WITH_TBOOKMARK}        // Have TBookmark
@@ -145,7 +145,5 @@
     {$if lcl_fullversion>=1000000} //Lazarus >= 1.0.0 with delphi fix.
       {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
     {$ifend}
-  {$ELSE}
-    {$ERROR lcl_fullversion isn't defined!}
   {$ifend}
 {$ENDIF}

@@ -207,8 +207,8 @@ create table string_values (
 s_id                 int                  not null,
 s_char               char(255)            null,
 s_varchar            varchar(255)         null,
-s_nchar              char(255)            null,
-s_nvarchar           varchar(255)         null,
+s_nchar              nchar(255)           null,
+s_nvarchar           nvarchar(255)        null,
 s_bit                binary(255)          null,
 s_varbit             varbinary(1024)      null,
 primary key  (s_id)

@@ -754,6 +754,7 @@ var
     end;
   end;
 begin
+  Connection.PrepareStatement('delete from high_load').ExecutePrepared;
   PStatement := Connection.PrepareStatement(
   'insert into high_load(hl_id, stBoolean, stByte, stShort, stInteger, stLong, '+
     'stFloat, stDouble, stBigDecimal, stString, stUnicodeString, stBytes,'+

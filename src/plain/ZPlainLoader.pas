@@ -55,9 +55,16 @@ interface
 
 {$I ZPlain.inc}
 
-uses Types, ZCompatibility;
+uses Types,
+{$IFDEF FPC}
+  dynlibs,
+{$ENDIF}
+  ZCompatibility;
 
 type
+  {$IFDEF FPC}
+  THandle = TLibHandle;
+  {$ENDIF}
   {** Implements a loader for native library. }
 
   { TZNativeLibraryLoader }

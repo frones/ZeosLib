@@ -84,7 +84,10 @@ type
     Name: String;
     Schema: String;
     ColNames: Array of String;
+    ColCount: Integer;
   end;
+
+  { TZPGTableInfoCache }
 
   TZPGTableInfoCache = class(TObject)
     protected
@@ -93,12 +96,12 @@ type
       FConSettings: PZconSettings;
       FPlainDriver: IZPostgreSQLPlainDriver;
       FHandle: PZPostgreSQLConnect;
-      function LoadTblInfo(const TblOid: Oid; out Index: Integer): Boolean;
+      function LoadTblInfo(const TblOid: Oid; out Index: Integer; ZPGTableInfo: PZPGTableInfo): Boolean;
       function GetTblPos(const TblOid: Oid): Integer;
     public
       constructor Create(const ConSettings: PZConSettings;
         const Handle: PZPostgreSQLConnect; const PlainDriver: IZPostgreSQLPlainDriver);
-      function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+      function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
       procedure Clear;
   end;
 
@@ -120,7 +123,7 @@ type
     procedure UnregisterPreparedStmtName(const value: String);
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+    function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -145,7 +148,7 @@ type
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
-    function GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+    function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
     function BuildConnectStr: AnsiString;
     procedure StartTransactionSupport;
     procedure LoadServerVersion;
@@ -236,10 +239,10 @@ end;
 
 { TZPGTableInfoCache }
 function TZPGTableInfoCache.LoadTblInfo(const TblOid: Oid; 
-  out Index: Integer): Boolean;
+  out Index: Integer; ZPGTableInfo: PZPGTableInfo): Boolean;
 var
   SQL: RawByteString;
-  TblInfo: TZPGTableInfo;
+  TblInfo: PZPGTableInfo;
   RawOid: RawByteString;
   QueryHandle: PZPostgreSQLResult;
   I: Integer;
@@ -276,18 +279,23 @@ begin
   Result := FPlainDriver.GetRowCount(QueryHandle) > 0;
   if Result then
   begin
-    TblInfo.OID := TblOid;
-    TblInfo.Name := GetString(0, 0);
-    TblInfo.Schema := GetString(0, 1);
-    SetLength(TblInfo.ColNames, FPlainDriver.GetRowCount(QueryHandle));
+    if ZPGTableInfo <> nil then //just overwrite all values
+      tblInfo := ZPGTableInfo
+    else
+    begin //we need a new cache
+      SetLength(FTblInfo, Length(FTblInfo) +1);
+      Index := High(FTblInfo);
+      TblInfo := @FTblInfo[Index];
+    end;
+    TblInfo^.OID := TblOid;
+    TblInfo^.Name := GetString(0, 0);
+    TblInfo^.Schema := GetString(0, 1);
+    TblInfo^.ColCount := FPlainDriver.GetRowCount(QueryHandle);
+    SetLength(TblInfo^.ColNames, TblInfo^.ColCount);
 
-    for I := 0 to FPlainDriver.GetRowCount(QueryHandle)-1 do
-      TblInfo.ColNames[GetInt(I, 2)-1] := GetString(i, 3);
+    for I := 0 to TblInfo^.ColCount - 1 do
+      TblInfo^.ColNames[GetInt(I, 2)-1] := GetString(i, 3);
     FPlainDriver.Clear(QueryHandle);
-
-    Index := Length(FTblInfo);
-    SetLength(FTblInfo, Index +1);
-    FTblInfo[Index] := TblInfo;
   end
   else
     Index := -1;
@@ -317,19 +325,22 @@ begin
   Clear;
 end;
 
-function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+function TZPGTableInfoCache.GetTableInfo(const TblOid: Oid;
+  CurrentFieldCount: Integer): PZPGTableInfo;
 var Idx: Integer;
 begin
   Idx := GetTblPos(TblOid);
   if (Idx = -1) then
-  begin
-    if (TblOid <> InvalidOid) and (LoadTblInfo(TblOid, Idx)) then
+    if (TblOid <> InvalidOid) and (LoadTblInfo(TblOid, Idx, nil)) then
       Result := @FTblInfo[Idx]
     else
-      Result := nil;
-  end
+      Result := nil
   else
+  begin
     Result := @FTblInfo[Idx];
+    if Result^.ColCount <> CurrentFieldCount then //something changed ?
+      LoadTblInfo(TblOid, Idx, Result); //refresh all data
+  end;
 end;
 
 procedure TZPGTableInfoCache.Clear;
@@ -449,7 +460,6 @@ begin
     FOidAsBlob := StrToBoolEx(Info.Values['oidasblob'])
   else
     FOidAsBlob := False;
-
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
 
   OnPropertiesChange(nil);
@@ -463,9 +473,9 @@ begin
   Result := FUndefinedVarcharAsStringLength;
 end;
 
-function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid): PZPGTableInfo;
+function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
 begin
-  Result := FTableInfoCache.GetTableInfo(TblOid);
+  Result := FTableInfoCache.GetTableInfo(TblOid, CurrentFieldCount);
 end;
 
 {**
@@ -545,7 +555,6 @@ begin
   { Sets the application name }
   if Info.Values['application_name'] <> '' then
     AddParamToResult('application_name', Info.Values['application_name']);
-
 end;
 
 {**
@@ -1323,7 +1332,8 @@ end;
   @param AName a parameter name.
   @param AValue a new parameter value.
 }
-procedure TZPostgreSQLConnection.SetServerSetting(const AName, AValue: RawByteString);
+procedure TZPostgreSQLConnection.SetServerSetting(const AName,
+  AValue: RawbyteString);
 var
   SQL: RawByteString;
   QueryHandle: PZPostgreSQLResult;

@@ -1012,7 +1012,7 @@ begin
           Result := 0;
       end;
     vtPointer:
-      Result := sign({%H-}NativeInt(Value1.VPointer) - GetAsInteger(Value2));
+      Result := sign({%H-}NativeUInt(Value1.VPointer) - GetAsInteger(Value2));
     else
       Result := 0;
   end;
@@ -1768,7 +1768,7 @@ begin
         vtDateTime:
           Result.VInteger := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(Value.VDateTime);
         vtPointer:
-          Result.VInteger := Int64({%H-}NativeInt(Value.VPointer));
+          Result.VInteger := Int64({%H-}NativeUInt(Value.VPointer));
         else
           RaiseTypeMismatchError;
       end;
@@ -2484,7 +2484,7 @@ begin
               end
               else
               begin
-                Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+                Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
                 Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
               end;
             end
@@ -2499,7 +2499,7 @@ begin
               end
               else
               begin
-                Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+                Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
                 Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL conversion to PAnsiChar
               end;
             end;
@@ -2515,7 +2515,7 @@ begin
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
               Result.VCharRec.P := Pointer(Result.VString); //avoid RTL conversion to PAnsiChar
             end;
           end;
@@ -2530,7 +2530,7 @@ begin
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VAnsiString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
               Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL conversion to PAnsiChar
             end;
           end;
@@ -2545,7 +2545,7 @@ begin
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
               Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL conversion to PAnsiChar
             end;
           end;
@@ -2560,7 +2560,7 @@ begin
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLongInt(NativeInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+              Result.VCharRec.Len := {%H-}PLongInt(NativeUInt(Result.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
               Result.VCharRec.P := Pointer(Result.VUnicodeString); //avoid RTL conversion to PWideChar
             end;
           end;
@@ -2666,7 +2666,7 @@ begin
           end
           else
           begin
-            Result.Len := {%H-}PLongInt(NativeInt(Value.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+            Result.Len := {%H-}PLongInt(NativeUInt(Value.VUnicodeString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
             Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
           end;
         end
@@ -2682,7 +2682,7 @@ begin
         end
         else
         begin
-          Result.Len := {%H-}PLongInt(NativeInt(Value.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+          Result.Len := {%H-}PLongInt(NativeUInt(Value.VUTF8String) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
           Result.P := Pointer(Value.VUTF8String); //avoid RTL conversion to PAnsiChar
         end;
       end
@@ -2699,7 +2699,7 @@ begin
         end
         else
         begin
-          Result.Len := {%H-}PLongInt(NativeInt(Value.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
+          Result.Len := {%H-}PLongInt(NativeUInt(Value.VRawByteString) - 4)^; //fast Length() helper for D7..D9 where Length() isn't inlined
           Result.P := Pointer(Value.VRawByteString); //avoid RTL conversion to PAnsiChar
         end;
       end;
@@ -2944,7 +2944,7 @@ begin
     vtDateTime: Result := Value.VDateTime;
     vtPointer:
     {$ifdef fpc}
-        Result := {%H-}NativeInt(Value.VPointer);
+        Result := {%H-}NativeUInt(Value.VPointer);
     {$else}
         Result := NativeUInt(Value.VPointer);
     {$endif}

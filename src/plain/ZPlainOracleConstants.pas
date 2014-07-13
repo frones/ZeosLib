@@ -149,8 +149,14 @@ type
   OCITypeMethodFlag = ub2; //enum!
   OCITypeParamMode = ub2;  //enum!
   OCIObjectPropId = ub1;
-  OCIRefreshOpt = ub2;     //enum;
+  OCIRefreshOpt = ub2;     //enum!
 
+  OCITypeCode = ub2; //enum!
+  OCIPinOpt = ub2;
+  OCILockOpt = pub2;
+
+  POCIComplexObject = Pointer;
+  PPOCIComplexObject = ^POCIComplexObject;
 const
   OCI_DURATION_INVALID = $FFFF;      { Invalid duration }
   OCI_DURATION_BEGIN = 10;           { beginning sequence of duration }
@@ -850,9 +856,6 @@ const
 type
   PPointer = ^Pointer;
 
-  TOCIInitialize = function(mode: ub4; ctxp: Pointer; malocfp: Pointer;
-    ralocfp: Pointer; mfreefp: Pointer): sword; cdecl;
-
   TOCIEnvInit = function(var envhpp: POCIEnv; mode: ub4; xtramemsz: size_T;
     usrmempp: PPointer): sword; cdecl;
 
@@ -860,71 +863,8 @@ type
     malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
     usrmempp: PPointer): sword; cdecl;
 
-  TOCIEnvNlsCreate = function(var envhpp: POCIEnv; mode: ub4; ctxp: Pointer;
-    malocfp: Pointer; ralocfp: Pointer; mfreefp: Pointer; xtramemsz: size_T;
-    usrmempp: PPointer; charset, ncharset: ub2): sword; cdecl;
-
-  TOCIHandleAlloc = function(parenth: POCIHandle; var hndlpp: POCIHandle;
-    atype: ub4; xtramem_sz: size_T; usrmempp: PPointer): sword; cdecl;
-
-  TOCIServerAttach = function(srvhp: POCIServer; errhp: POCIError; dblink: text;
-    dblink_len: sb4; mode: ub4): sword; cdecl;
-
-  TOCIAttrSet = function(trgthndlp: POCIHandle; trghndltyp: ub4;
-    attributep: Pointer; size: ub4; attrtype: ub4; errhp: POCIError):sword; cdecl;
-
-  TOCISessionBegin = function(svchp: POCISvcCtx; errhp: POCIError;
-    usrhp: POCISession; credt: ub4; mode: ub4):sword; cdecl;
-
-  TOCISessionEnd = function(svchp: POCISvcCtx; errhp: POCIError;
-    usrhp: POCISession; mode: ub4): sword; cdecl;
-
-  TOCIServerDetach = function(srvhp: POCIServer; errhp: POCIError;
-    mode: ub4): sword; cdecl;
-
-  TOCIHandleFree = function(hndlp: Pointer; atype: ub4): sword; cdecl;
-
-  TOCIErrorGet = function(hndlp: Pointer; recordno: ub4; sqlstate: text;
-    var errcodep: sb4; bufp: text; bufsiz: ub4; atype: ub4): sword; cdecl;
-
-  TOCIStmtPrepare = function(stmtp: POCIStmt; errhp: POCIError; stmt: text;
-    stmt_len: ub4; language:ub4; mode: ub4):sword; cdecl;
-
-  TOCIStmtPrepare2 = function(svchp: POCISvcCtx; var stmtp: POCIStmt; errhp: POCIError;
-    stmt: text; stmt_len: ub4; key: text; key_len: ub4;
-    language:ub4; mode: ub4): sword; cdecl;
-
-  TOCIStmtRelease = function(stmtp: POCIStmt; errhp: POCIError; key: text;
-    key_len: ub4; mode: ub4):sword; cdecl;
-
-  TOCIStmtExecute = function(svchp: POCISvcCtx; stmtp: POCIStmt;
-    errhp: POCIError; iters: ub4; rowoff: ub4; snap_in: POCISnapshot;
-    snap_out: POCISnapshot; mode: ub4): sword; cdecl;
-
-  TOCIParamGet = function(hndlp: Pointer; htype: ub4; errhp: POCIError;
-    var parmdpp: Pointer; pos: ub4): sword; cdecl;
-
-  TOCIAttrGet = function(trgthndlp: POCIHandle; trghndltyp: ub4;
-    attributep: Pointer; sizep: Pointer; attrtype: ub4;
-    errhp: POCIError):sword; cdecl;
-
-  TOCIStmtFetch = function(stmtp: POCIStmt; errhp: POCIError; nrows: ub4;
-    orientation: ub2; mode: ub4): sword; cdecl;
-
-  TOCIStmtFetch2 = function(stmtp: POCIStmt; errhp: POCIError; const nrows: ub4;
-    const orientation: ub2; const fetchOffset: sb4; const mode: ub4): sword; cdecl;
-
-  TOCIDefineByPos = function(stmtp: POCIStmt; var defnpp: POCIDefine;
-    errhp: POCIError; position: ub4; valuep: Pointer; value_sz: sb4; dty: ub2;
-    indp: Pointer; rlenp: Pointer; rcodep: Pointer; mode: ub4): sword; cdecl;
-
   TOCIDefineArrayOfStruct = function(defnpp: POCIDefine; errhp: POCIError;
     pvskip: ub4; indskip: ub4; rlskip: ub4; rcskip: ub4): sword; cdecl;
-
-  TOCIBindByPos = function(stmtp: POCIStmt; var bindpp: POCIBind;
-    errhp: POCIError; position: ub4; valuep: Pointer; value_sz: sb4; dty: ub2;
-    indp: Pointer; alenp: Pointer; rcodep: Pointer; maxarr_len: ub4;
-    curelep: Pointer; mode: ub4): sword; cdecl;
 
   TOCIBindByName = function(stmtp: POCIStmt; var bindpp: POCIBind;
     errhp: POCIError; placeholder: text; placeh_len: sb4; valuep: Pointer;
@@ -933,85 +873,6 @@ type
 
   TOCIBindDynamic = function(bindp: POCIBind; errhp: POCIError; ictxp: Pointer;
     icbfp: Pointer; octxp: Pointer; ocbfp: Pointer): sword; cdecl;
-
-(*---------------------------------OCIBindObject--------------------------------
-
-  This function sets up additional attributes which are required for a named
-  data type (object)  bind.
-  Syntax
-------------------------------------------------------------------------------*)
-  TOCIBindObject = function(bindp: POCIBind; errhp: POCIError;
-                    const _type: POCIType; pgvpp: PPointer;
-                    pvszsp: pub4; indpp: PPointer;
-                    indszp: pub4): sword; cdecl;
-  (*Comments
-  This function sets up additional attributes which binding a named data type
-  or a REF. An error will be returned if this function is called when the OCI
-  environment has been initialized in non-object mode.
-  This call takes as a paramter a type descriptor object (TDO) of datatype
-  OCIType for the named data type being defined.  The TDO can be retrieved
-  with a call to OCITypeByName().
-  If the OCI_DATA_AT_EXEC mode was specified in ocibindn() or ocibindp(), the
-  pointers to the IN buffers are obtained either using the callback icbfp
-  registered in the OCIBindDynamic() call or by the OCIStmtSetPieceInfo() call.
-  The buffers are dynamically allocated for the OUT data and the pointers to
-  these buffers are returned either by calling ocbfp() registered by the
-  OCIBindDynamic() or by setting the pointer to the buffer in the buffer passed
-  in by OCIStmtSetPieceInfo() called when OCIStmtExecute() returned
-  OCI_NEED_DATA. The memory of these client library- allocated buffers must be
-  freed when not in use anymore by using the OCIObjectFreee() call.
-  Parameters
-  bindp ( IN/OUT) - the bind handle returned by the call to OCIBindByName()
-  or OCIBindByPos().
-  errhp ( IN/OUT) - an error handle which can be passed to OCIErrorGet() for
-  diagnostic information in the event of an error.
-  type ( IN) - points to the TDO which describes the type of the program
-  variable being bound. Retrieved by calling OCITypeByName().
-  pgvpp ( IN/OUT) - points to a pointer to the program variable buffer. For an
-  array, pgvpp points to an array of pointers. When the bind variable is also an
-  OUT variable, the OUT Named Data Type value or REF is allocated
-  (unpickled) in the Object Cache, and a pointer to the value or REF is returned,
-  At the end of execute, when all OUT values have been received, pgvpp points
-  to an array of pointer(s) to these newly allocated named data types in the
-  object cache.
-  pgvpp is ignored if the OCI_DATA_AT_EXEC mode is set. Then the Named
-  Data Type buffers are requested at runtime. For static array binds, skip
-  factors may be specified using the OCIBindArrayOfStruct() call. The skip
-  factors are used to compute the address of the next pointer to the value, the
-  indicator structure and their sizes.
-  pvszsp ( IN/OUT) - points to the size of the program variable. The size of the
-  named data type is not required on input. For an array, pvszsp is an array of
-  ub4s. On return, for OUT bind variables, this points to size(s) of the Named
-  Data Types and REFs received. pvszsp is ignored if the OCI_DATA_AT_EXEC
-  mode is set. Then the size of the buffer is taken at runtime.
-  indpp ( IN/OUT) - points to a pointer to the program variable buffer
-  containing the parallel indicator structure. For an array, points to an array
-  of pointers. When the bind variable is also an OUT bind variable, memory is
-  allocated in the object cache, to store the unpickled OUT indicator values. At
-  the end of the execute when all OUT values have been received, indpp points
-  to the pointer(s) to these newly allocated indicator structure(s).
-  indpp is ignored if the OCI_DATA_AT_EXEC mode is set. Then the indicator
-  is requested at runtime.
-  indszp ( IN/OUT) - points to the size of the IN indicator structure program
-  variable. For an array, it is an array of sb2s. On return for OUT bind
-  variables, this points to size(s) of the received OUT indicator structures.
-  indszp is ignored if the OCI_DATA_AT_EXEC mode is set. Then the indicator
-  size is requested at runtime.
-  Related Functions
-  OCIAttrGet() *)
-
-  TOCIDefineObject = function(defnpp:POCIDefine; errhp:POCIError;
-    _type:POCIHandle; pgvpp:pointer; pvszsp:Pub4;
-    indpp:pointer; indszp:Pub4):sword;cdecl;
-
-  TOCITransStart = function(svchp: POCISvcCtx; errhp: POCIError; timeout: word;
-    flags: ub4): sword; cdecl;
-
-  TOCITransRollback = function(svchp:POCISvcCtx; errhp:POCIError;
-    flags: ub4): sword; cdecl;
-
-  TOCITransCommit = function(svchp: POCISvcCtx; errhp: POCIError;
-    flags: ub4) :sword; cdecl;
 
   TOCITransDetach = function(svchp: POCISvcCtx; errhp: POCIError;
     flags: ub4) :sword; cdecl;
@@ -1022,18 +883,9 @@ type
   TOCITransForget = function(svchp: POCISvcCtx; errhp: POCIError;
     flags: ub4) :sword; cdecl;
 
-  TOCIDescribeAny = function(svchp: POCISvcCtx; errhp: POCIError;
-    objptr: Pointer; objnm_len: ub4; objptr_typ: ub1; info_level: ub1;
-    objtyp: ub1; dschp: POCIDescribe): sword; cdecl;
-
   TOCIBreak = function(svchp: POCISvcCtx; errhp:POCIError): sword; cdecl;
 
   TOCIReset = function(svchp: POCISvcCtx; errhp:POCIError): sword; cdecl;
-
-  TOCIDescriptorAlloc = function(parenth: POCIEnv; var descpp: POCIDescriptor;
-    htype: ub4; xtramem_sz: integer; usrmempp: Pointer): sword; cdecl;
-
-  TOCIDescriptorFree = function(descp: Pointer; htype: ub4): sword; cdecl;
 
   TOCIDateTimeAssign = function(hndl: POCIEnv; err: POCIError;
     const from: POCIDateTime;_to: POCIDateTime): sword; cdecl;
@@ -1053,24 +905,11 @@ type
     fmt_length: ub1; const lang_name: text; lang_length: size_t;
     date: POCIDateTime): sword; cdecl;
 
-  TOCIDateTimeGetDate = function(hndl: POCIEnv; err: POCIError;
-    const date: POCIDateTime; var year: sb2; var month: ub1;
-    var day: ub1): sword; cdecl;
-
-  TOCIDateTimeGetTime = function(hndl: POCIEnv; err: POCIError;
-    datetime: POCIDateTime; var hour: ub1; var minute: ub1; var sec: ub1;
-    var fsec: ub4): sword; cdecl;
-
   TOCIDateTimeGetTimeZoneOffset = function(hndl: POCIEnv; err: POCIError;
     const datetime: POCIDateTime; var hour: sb1; var minute: sb1): sword; cdecl;
 
   TOCIDateTimeSysTimeStamp = function(hndl: POCIEnv; err: POCIError;
     sys_date: POCIDateTime): sword; cdecl;
-
-  TOCIDateTimeConstruct = function(hndl: POCIEnv; err: POCIError;
-    datetime: POCIDateTime; year: sb2; month: ub1; day: ub1; hour: ub1;
-    min: ub1; sec: ub1; fsec: ub4; timezone: text;
-    timezone_length: size_t): sword; cdecl;
 
   TOCIDateTimeToText = function(hndl: POCIEnv; err: POCIError;
     const date: POCIDateTime; const fmt: text; fmt_length: ub1;
@@ -1086,16 +925,9 @@ type
   TOCILobAssign = function(svchp: POCISvcCtx; errhp: POCIError;
     src_locp: POCILobLocator; var dst_locpp: POCILobLocator): sword; cdecl;
 
-  TOCILobClose = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator): sword; cdecl;
-
   TOCILobCopy = function(svchp: POCISvcCtx; errhp: POCIError;
     dst_locp: POCILobLocator; src_locp: POCILobLocator; amount: ub4;
     dst_offset: ub4; src_offset: ub4): sword; cdecl;
-
-  TOCILobCreateTemporary = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator; csid: ub2; csfrm: ub1; lobtype: ub1;
-    cache: LongBool; duration: OCIDuration): sword; cdecl;
 
   TOCILobEnableBuffering = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator): sword; cdecl;
@@ -1120,23 +952,11 @@ type
   TOCILobFlushBuffer = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator; flag: ub4): sword; cdecl;
 
-  TOCILobFreeTemporary = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator): sword; cdecl;
-
-  TOCILobCharSetForm = function ( envhp: POCIEnv; errhp: POCIError;
-        const locp: POCILobLocator; csfrm: pub1): sword; cdecl;
-
-  TOCILobCharSetId = function( envhp: POCIEnv; errhp: POCIError;
-        const locp: POCILobLocator; csid: pub2): sword; cdecl;
-
   TOCILobGetLength = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator; var lenp: ub4): sword; cdecl;
 
   TOCILobIsOpen = function(svchp: POCISvcCtx; errhp: POCIError;
     locp: POCILobLocator; var flag: LongBool): sword; cdecl;
-
-  TOCILobIsTemporary = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator; var is_temporary: LongBool): sword; cdecl;
 
   TOCILobLoadFromFile = function(svchp: POCISvcCtx; errhp: POCIError;
     dst_locp: POCILobLocator; src_locp: POCILobLocator; amount: ub4;
@@ -1145,20 +965,6 @@ type
   TOCILobLocatorIsInit = function(envhp: POCIEnv; errhp: POCIError;
    locp: POCILobLocator; var is_initialized: LongBool): sword; cdecl;
 
-  TOCILobOpen = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator; mode: ub1): sword; cdecl;
-
-  TOCILobRead = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator; var amtp: ub4; offset: ub4; bufp: Pointer; bufl: ub4;
-    ctxp: Pointer; cbfp: Pointer; csid: ub2; csfrm: ub1): sword; cdecl;
-
-  TOCILobTrim = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator; newlen: ub4): sword; cdecl;
-
-  TOCILobWrite = function(svchp: POCISvcCtx; errhp: POCIError;
-    locp: POCILobLocator; var amtp: ub4; offset: ub4; bufp: Pointer; bufl: ub4;
-    piece: ub1; ctxp: Pointer; cbfp: Pointer; csid: ub2; csfrm: ub1): sword; cdecl;
-
   TOCIStmtGetPieceInfo = function(stmtp: POCIStmt; errhp: POCIError;
     var hndlpp: Pointer; var typep: ub4; var in_outp: ub1; var iterp: ub4;
     var idxp: ub4; var piecep: ub1): sword; cdecl;
@@ -1166,23 +972,6 @@ type
   TOCIStmtSetPieceInfo = function(handle: Pointer; typep: ub4; errhp: POCIError;
     buf: Pointer; var alenp: ub4; piece: ub1; indp: Pointer;
     var rcodep: ub2): sword; cdecl;
-
-  TOCIPasswordChange = function(svchp: POCISvcCtx; errhp: POCIError;
-    user_name: text; usernm_len: ub4; opasswd: text; opasswd_len: ub4;
-    npasswd: text; npasswd_len: sb4; mode: ub4): sword; cdecl;
-
-  TOCIServerVersion = function(hndlp: POCIHandle; errhp: POCIError; bufp: text;
-    bufsz: ub4; hndltype: ub1): sword; cdecl;
-
-  TOCIServerRelease = function(hndlp: POCIHandle; errhp: POCIError; bufp: text;
-    bufsz: ub4; hndltype: ub1; version:pointer): sword; cdecl;
-
-  TOCIResultSetToStmt = function(rsetdp: POCIHandle; errhp: POCIError): sword; cdecl;
-
-  TOCINlsNumericInfoGet = function(envhp: POCIEnv; errhp: POCIError; val: psb4; item: ub2): sword; cdecl;
-
-  TOCIClientVersion = procedure(major_version, minor_version, update_num,
-      patch_num, port_update_num: psword); cdecl;
 
 (*****************************************************************************
  *                         NUMBER/FLOAT/DECIMAL TYPE                         *
@@ -4329,10 +4118,6 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
           no previous index available
  *)
 
-(*--------------------------------orciap.h-----------------------------------*
-
-(*-------------------------------- OCIPing ----------------------------------*)
-  TOCIPing = function(svchp: POCISvcCtx; errhp: POCIError; mode: ub4): sword; cdecl;
 (*---------------------------------orid.h------------------------------------*
  *                           PUBLIC FUNCTIONS                                *
  *---------------------------------------------------------------------------*)
@@ -4438,237 +4223,8 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
   {                       OBJECT/INSTANCE OPERATIONS                           }
   {--------------------------------------------------------------------------- }
   {--------------------------- OCIObjectNew ---------------------------------- }
-  OCITypeCode = ub2;
-  TOCIObjectNew = function(env: POCIEnv; err: POCIError; const svc: POCISvcCtx;
-    const typecode: OCITypeCode; const tdo: POCIType; const table: Pointer;
-    const duration: OCIDuration; const value: boolean;
-    instance: PPointer): sword; cdecl;
-  {
-     NAME: OCIObjectNew - OCI new (create) a standalone instance
-     PARAMETERS:
-          env  (IN/OUT) - OCI environment handle initialized in object mode
-          err  (IN/OUT) - error handle. If there is an error, it is
-                          recorded in 'err' and this function returns OCI_ERROR.
-                          The error recorded in 'err' can be retrieved by calling
-                          OCIErrorGet().
-          svc      (IN) - OCI service handle.
-          typecode (IN) - the typecode of the type of the instance.
-          tdo      (IN, optional) - pointer to the type descriptor object. The
-                          TDO describes the type of the instance that is to be
-                          created. Refer to OCITypeByName() for obtaining a TDO.
-                          The TDO is required for creating a named type (e.g. an
-                          object or a collection).
-          table (IN, optional) - pointer to a table object which specifies a
-                          table in the server.  This parameter can be set to NULL
-                          if no table is given. See the description below to find
-                          out how the table object and the TDO are used together
-                          to determine the kind of instances (persistent,
-                          transient, value) to be created. Also see
-                          OCIObjectPinTable() for retrieving a table object.
-          duration (IN) - this is an overloaded parameter. The use of this
-                          parameter is based on the kind of the instance that is
-                          to be created.
-                          a) persistent object. This parameter specifies the
-                             pin duration.
-                          b) transient object. This parameter specififes the
-                             allocation duration and pin duration.
-                          c) value. This parameter specifies the allocation
-                             duration.
-          value    (IN)  - specifies whether the created object is a value.
-                           If TRUE, then a value is created. Otherwise, a
-                           referenceable object is created.  If the instance is
-                           not an object, then this parameter is ignored.
-          instance (OUT) - address of the newly created instance
-
-     REQUIRES:
-          - a valid OCI environment handle must be given.
-     DESCRIPTION:
-          This function creates a new instance of the type specified by the
-          typecode or the TDO. Based on the parameters 'typecode' (or 'tdo'),
-          'value' and 'table', different kinds of instances can be created:
-
-                                       The parameter 'table' is not NULL?
-
-                                                 yes              no
-               ----------------------------------------------------------------
-               | object type (value=TRUE)   |   value         |   value       |
-               ----------------------------------------------------------------
-               | object type (value=FALSE)  | persistent obj  | transient obj |
-         type  ----------------------------------------------------------------
-               | built-in type              |   value         |   value       |
-               ----------------------------------------------------------------
-               | collection type            |   value         |   value       |
-               ----------------------------------------------------------------
-
-          This function allocates the top level memory chunk of an OTS instance.
-          The attributes in the top level memory are initialized (e.g. an
-          attribute of varchar2 is initialized to a vstring of 0 length).
-
-          If the instance is an object, the object is marked existed but is
-          atomically null.
-
-          FOR PERSISTENT OBJECTS:
-          The object is marked dirty and existed.  The allocation duration for
-          the object is session. The object is pinned and the pin duration is
-          specified by the given parameter 'duration'.
-
-          FOR TRANSIENT OBJECTS:
-          The object is pinned. The allocation duration and the pin duration are
-          specified by the given parameter 'duration'.
-
-          FOR VALUES:
-          The allocation duration is specified by the given parameter 'duration'.
-
-     RETURNS:
-          if environment handle or error handle is null, return
-          OCI_INVALID_HANDLE.
-          if operation suceeds, return OCI_SUCCESS.
-          if operation fails, return OCI_ERROR.
-    }
   {--------------------------- OCIObjectPin ---------------------------------- }
-  POCIComplexObject = Pointer;
-  PPOCIComplexObject = ^POCIComplexObject;
-  OCIPinOpt = ub2;
-  OCILockOpt = pub2;
 
-  TOCIObjectPin = function(env: POCIEnv; err: POCIError;
-    const object_ref: POCIRef; const corhdl: POCIComplexObject;
-    const pin_option: OCIPinOpt; const pin_duration: OCIDuration;
-    const lock_option: OCILockOpt; _object: PPointer): sword; cdecl;
-  {
-     NAME: OCIObjectPin - OCI pin a referenceable object
-     PARAMETERS:
-          env        (IN/OUT) - OCI environment handle initialized in object mode
-          err        (IN/OUT) - error handle. If there is an error, it is
-                                recorded in 'err' and this function returns
-                                OCI_ERROR. The error recorded in 'err' can be
-                                retrieved by calling OCIErrorGet().
-          object_ref     (IN) - the reference to the object.
-          corhdl         (IN) - handle for complex object retrieval.
-          pin_option     (IN) - See description below.
-          pin_duration   (IN) - The duration of which the object is being accesed
-                                by a client. The object is implicitly unpinned at
-                                the end of the pin duration.
-                                If OCI_DURATION_NULL is passed, there is no pin
-                                promotion if the object is already loaded into
-                                the cache. If the object is not yet loaded, then
-                                the pin duration is set to OCI_DURATION_DEFAULT.
-          lock_option    (IN) - lock option (e.g., exclusive). If a lock option
-                                is specified, the object is locked in the server.
-                                See 'oro.h' for description about lock option.
-          object        (OUT) - the pointer to the pinned object.
-
-     REQUIRES:
-          - a valid OCI environment handle must be given.
-     DESCRIPTION:
-
-          This function pins a referenceable object instance given the object
-          reference. The process of pinning serves three purposes:
-
-          1) locate an object given its reference. This is done by the object
-             cache which keeps track of the objects in the object heap.
-
-          2) notify the object cache that an object is being in use. An object
-             can be pinned many times. A pinned object will remain in memory
-             until it is completely unpinned (see OCIObjectUnpin()).
-
-          3) notify the object cache that a persistent object is being in use
-             such that the persistent object cannot be aged out.  Since a
-             persistent object can be loaded from the server whenever is needed,
-             the memory utilization can be increased if a completely unpinned
-             persistent object can be freed (aged out), even before the
-             allocation duration is expired.
-
-          Also see OCIObjectUnpin() for more information about unpinning.
-
-          FOR PERSISTENT OBJECTS:
-
-          When pinning a persistent object, if it is not in the cache, the object
-          will be fetched from the persistent store. The allocation duration of
-          the object is session. If the object is already in the cache, it is
-          returned to the client.  The object will be locked in the server if a
-          lock option is specified.
-
-          This function will return an error for a non-existent object.
-
-          A pin option is used to specify the copy of the object that is to be
-          retrieved:
-
-          1) If option is OCI_PIN_ANY (pin any), if the object is already
-             in the environment heap, return this object. Otherwise, the object
-             is retrieved from the database.  This option is useful when the
-             client knows that he has the exclusive access to the data in a
-             session.
-
-          2) If option is OCI_PIN_LATEST (pin latest), if the object is
-             not cached, it is retrieved from the database.  If the object is
-             cached, it is refreshed with the latest version. See
-             OCIObjectRefresh() for more information about refreshing.
-
-          3) If option is OCI_PIN_RECENT (pin recent), if the object is loaded
-             into the cache in the current transaction, the object is returned.
-             If the object is not loaded in the current transaction, the object
-             is refreshed from the server.
-
-          FOR TRANSIENT OBJECTS:
-
-          This function will return an error if the transient object has already
-          been freed. This function does not return an error if an exclusive
-          lock is specified in the lock option.
-
-     RETURNS:
-          if environment handle or error handle is null, return
-          OCI_INVALID_HANDLE.
-          if operation suceeds, return OCI_SUCCESS.
-          if operation fails, return OCI_ERROR.
-    }
-  {------------------------------ OCIObjectUnpin ----------------------------- }
-  TOCIObjectUnpin = function(env: POCIEnv; err: POCIError;
-    const _object: Pointer): sword; cdecl;
-  {
-     NAME: OCIObjectUnpin - OCI unpin a referenceable object
-     PARAMETERS:
-          env   (IN/OUT) - OCI environment handle initialized in object mode
-          err   (IN/OUT) - error handle. If there is an error, it is
-                           recorded in 'err' and this function returns OCI_ERROR.
-                           The error recorded in 'err' can be retrieved by
-                           calling OCIErrorGet().
-          object    (IN) - pointer to an object
-     REQUIRES:
-          - a valid OCI environment handle must be given.
-          - The specified object must be pinned.
-     DESCRIPTION:
-          This function unpins an object.  An object is completely unpinned when
-            1) the object was unpinned N times after it has been pinned N times
-               (by calling OCIObjectPin()).
-            2) it is the end of the pin duration
-            3) the function OCIObjectPinCountReset() is called
-
-          There is a pin count associated with each object which is incremented
-          whenever an object is pinned. When the pin count of the object is zero,
-          the object is said to be completely unpinned. An unpinned object can
-          be freed without error.
-
-          FOR PERSISTENT OBJECTS:
-          When a persistent object is completely unpinned, it becomes a candidate
-          for aging. The memory of an object is freed when it is aged out. Aging
-          is used to maximize the utilization of memory.  An dirty object cannot
-          be aged out unless it is flushed.
-
-          FOR TRANSIENT OBJECTS:
-          The pin count of the object is decremented. A transient can be freed
-          only at the end of its allocation duration or when it is explicitly
-          deleted by calling OCIObjectFree().
-
-          FOR VALUE:
-          This function will return an error for value.
-
-     RETURNS:
-          if environment handle or error handle is null, return
-          OCI_INVALID_HANDLE.
-          if operation suceeds, return OCI_SUCCESS.
-          if operation fails, return OCI_ERROR.
-    }
   {---------------------------- OCIObjectPinCountReset ----------------------- }
   TOCIObjectPinCountReset = function (env: POCIEnv; err: POCIError;
     const _object: pointer): sword; cdecl;
@@ -4880,62 +4436,6 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
           if operation suceeds, return OCI_SUCCESS.
           if operation fails, return OCI_ERROR.
     }
-  {--------------------------- OCIObjectFree --------------------------------- }
-  TOCIObjectFree = function(env: POCIEnv; err: POCIError;
-    const instance: pointer; const flags: ub2): sword; cdecl;
-
-  {
-     NAME: OCIObjectFree - OCI free (and unpin) an standalone instance
-     PARAMETERS:
-          env    (IN/OUT) - OCI environment handle initialized in object mode
-          err    (IN/OUT) - error handle. If there is an error, it is
-                            recorded in 'err' and this function returns
-                            OCI_ERROR.  The error recorded in 'err' can be
-                            retrieved by calling OCIErrorGet().
-          instance   (IN) - pointer to a standalone instance.
-          flags      (IN) - If OCI_OBJECT_FREE_FORCE is set, free the object
-                            even if it is pinned or dirty.
-                            If OCI_OBJECT_FREE_NONULL is set, the null
-                            structure will not be freed.
-     REQUIRES:
-          - a valid OCI environment handle must be given.
-          - The instance to be freed must be standalone.
-          - If the instance is a referenceable object, the object must be pinned.
-     DESCRIPTION:
-          This function deallocates all the memory allocated for an OTS instance,
-          including the null structure.
-
-          FOR PERSISTENT OBJECTS:
-          This function will return an error if the client is attempting to free
-          a dirty persistent object that has not been flushed. The client should
-          either flush the persistent object or set the parameter 'flag' to
-          OCI_OBJECT_FREE_FORCE.
-
-          This function will call OCIObjectUnpin() once to check if the object
-          can be completely unpin. If it succeeds, the rest of the function will
-          proceed to free the object.  If it fails, then an error is returned
-          unless the parameter 'flag' is set to OCI_OBJECT_FREE_FORCE.
-
-          Freeing a persistent object in memory will not change the persistent
-          state of that object at the server.  For example, the object will
-          remain locked after the object is freed.
-
-          FOR TRANSIENT OBJECTS:
-
-          This function will call OCIObjectUnpin() once to check if the object
-          can be completely unpin. If it succeeds, the rest of the function will
-          proceed to free the object.  If it fails, then an error is returned
-          unless the parameter 'flag' is set to OCI_OBJECT_FREE_FORCE.
-
-          FOR VALUES:
-          The memory of the object is freed immediately.
-
-     RETURNS:
-          if environment handle or error handle is null, return
-          OCI_INVALID_HANDLE.
-          if operation suceeds, return OCI_SUCCESS.
-          if operation fails, return OCI_ERROR.
-   }
   {----------------------- OCIObjectMarkDeleteByRef -------------------------- }
   TOCIObjectMarkDeleteByRef = function(env: POCIEnv; err: POCIError;
     const object_ref:POCIRef): sword; cdecl;
@@ -5141,34 +4641,6 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
              are set to null.
           b) If the attribute is a LOB, then it is set to null.
 
-     RETURNS:
-          if environment handle or error handle is null, return
-          OCI_INVALID_HANDLE.
-          if operation suceeds, return OCI_SUCCESS.
-          if operation fails, return OCI_ERROR.
-    }
-  {---------------------------- OCIObjectGetTypeRef -------------------------- }
-  TOCIObjectGetTypeRef = function(env: POCIEnv; err: POCIError;
-    const instance:pointer; type_ref: POCIRef): sword; cdecl;
-
-  {
-     NAME: OCIObjectGetTypeRef - get the type reference of a standalone object
-     PARAMETERS:
-          env   (IN/OUT) - OCI environment handle initialized in object mode
-          err   (IN/OUT) - error handle. If there is an error, it is
-                           recorded in 'err' and this function returns
-                           OCI_ERROR.  The error recorded in 'err' can be
-                           retrieved by calling OCIErrorGet().
-          instance  (IN) - pointer to an standalone instance
-          type_ref (OUT) - reference to the type of the object.  The reference
-                           must already be allocated.
-     REQUIRES:
-          - a valid OCI environment handle must be given.
-          - The instance must be standalone.
-          - If the object is referenceable, the specified object must be pinned.
-          - The reference must already be allocated.
-     DESCRIPTION:
-          This function returns a reference to the TDO of a standalone instance.
      RETURNS:
           if environment handle or error handle is null, return
           OCI_INVALID_HANDLE.
@@ -6169,42 +5641,7 @@ sword OCIIterInit(    OCIEnv *env, OCIError *err, const OCIColl *coll,
              2) one or more adt types associated with a schema/type name entry
                 does not exist.
    }
-  TOCITypeByRef = function(env: POCIEnv; err: POCIError; type_ref: POCIRef;
-    pin_duration: OCIDuration; get_option: OCITypeGetOpt;
-    tdo: PPOCIType): sword; cdecl;
 
-  {
-    NAME: OCITypeArrayByRef - OCI Get array of TYPes by REF.
-    PARAMETERS:
-         env (IN/OUT) - OCI environment handle initialized in object mode
-         err (IN/OUT) - error handle. If there is an error, it is
-                  recorded in 'err' and this function returns OCI_ERROR.
-                  The error recorded in 'err' can be retrieved by calling
-                  OCIErrorGet().
-         type_ref (IN) - OCIRef * pointing to the particular version of
-                    the type descriptor object to obtain.
-                    The array must have array_len elements if specified.
-         pin_duration (IN) - pin duration (e.g. until the end of current
-                    transaction) for the type to retreieve.  See 'oro.h' for a
-                    description of each option.
-         get_option (IN) - options for loading the type. It can be one of two
-                     values:
-                    OCI_TYPEGET_HEADER for only the header to be loaded, or
-                    OCI_TYPEGET_ALL for the TDO and all ADO and MDOs to be
-                      loaded.
-         tdo (OUT) - pointer to the pinned type in the object cache
-    DESCRIPTION:
-         Get pointers to the
-         with the schema/type name array. This is similar to OCITypeByName()
-         except that all the TDO's are retreived via a single network roundtrip.
-    RETURNS:
-          OCI_SUCCESS if the function completes successfully.
-          OCI_INVALID_HANDLE if 'env' or 'err' is null.
-          OCI_ERROR if
-             1) any of the required parameters is null.
-             2) one or more adt types associated with a schema/type name entry
-                does not exist.
-   }
   TOCITypeArrayByRef = function(env: POCIEnv; err: POCIError; array_len: ub4;
     type_ref: PPOCIRef; pin_duration: OCIDuration; get_option: OCITypeGetOpt;
     tdo: PPOCIType): sword; cdecl;
@@ -7734,55 +7171,27 @@ type
   { return type might be wrong }
   TOCI_TYPEPARAM_IS_REQUIRED = function (param_flag : longint) : longint;
 
-
+(*
 type
   OracleOCI_API = record
-    OCIPasswordChange:      TOCIPasswordChange;
-    OCIInitialize:          TOCIInitialize;
     OCIEnvInit:             TOCIEnvInit;
     OCIEnvCreate:           TOCIEnvCreate;
-    OCIEnvNlsCreate:        TOCIEnvNlsCreate;
-    OCIHandleAlloc:         TOCIHandleAlloc;
-    OCIServerAttach:        TOCIServerAttach;
-    OCIAttrSet:             TOCIAttrSet;
-    OCISessionBegin:        TOCISessionBegin;
-    OCISessionEnd:          TOCISessionEnd;
-    OCIServerDetach:        TOCIServerDetach;
-    OCIHandleFree:          TOCIHandleFree;
-    OCIErrorGet:            TOCIErrorGet;
-    OCIStmtPrepare:         TOCIStmtPrepare;
-    OCIStmtPrepare2:        TOCIStmtPrepare2;
-    OCIStmtRelease:         TOCIStmtRelease;
 
-    OCIStmtExecute:         TOCIStmtExecute;
-    OCIParamGet:            TOCIParamGet;
-    OCIAttrGet:             TOCIAttrGet;
-    OCIStmtFetch:           TOCIStmtFetch;
-    OCIStmtFetch2:          TOCIStmtFetch2;
-    OCIDefineByPos:         TOCIDefineByPos;
     OCIDefineArrayOfStruct: TOCIDefineArrayOfStruct;
-    OCIBindByPos:           TOCIBindByPos;
     OCIBindByName:          TOCIBindByName;
 
-    OCIDefineObject:        TOCIDefineObject;
-
     { > ori.h }
-    OCIObjectNew:           TOCIObjectNew;
-    OCIObjectPin:           TOCIObjectPin;
-    OCIObjectUnpin:         TOCIObjectUnpin;
     OCIObjectPinCountReset: TOCIObjectPinCountReset;
     OCIObjectLock:          TOCIObjectLock;
     OCIObjectLockNoWait:    TOCIObjectLockNoWait;
     OCIObjectMarkUpdate:    TOCIObjectMarkUpdate;
     OCIObjectUnmark:        TOCIObjectUnmark;
     OCIObjectUnmarkByRef:   TOCIObjectUnmarkByRef;
-    OCIObjectFree:          TOCIObjectFree;
     OCIObjectMarkDeleteByRef: TOCIObjectMarkDeleteByRef;
     OCIObjectMarkDelete:    TOCIObjectMarkDelete;
     OCIObjectFlush:         TOCIObjectFlush;
     OCIObjectRefresh:       TOCIObjectRefresh;
     OCIObjectCopy:          TOCIObjectCopy;
-    OCIObjectGetTypeRef:    TOCIObjectGetTypeRef;
     OCIObjectGetObjectRef:  TOCIObjectGetObjectRef;
     OCIObjectMakeObjectRef: TOCIObjectMakeObjectRef;
     OCIObjectGetPrimaryKeyTypeRef:  TOCIObjectGetPrimaryKeyTypeRef;
@@ -7802,40 +7211,26 @@ type
     OCIDurationEnd:         TOCIDurationEnd;
     { < ori.h }
 
-    OCITransStart:          TOCITransStart;
-    OCITransCommit:         TOCITransCommit;
-    OCITransRollback:       TOCITransRollback;
     OCITransDetach:         TOCITransDetach;
     OCITransPrepare:        TOCITransPrepare;
     OCITransForget:         TOCITransForget;
-    OCIDescribeAny:         TOCIDescribeAny;
     OCIBreak:               TOCIBreak;
     OCIReset:               TOCIReset;
-    OCIDescriptorAlloc:     TOCIDescriptorAlloc;
-    OCIDescriptorFree:      TOCIDescriptorFree;
     OCIStmtGetPieceInfo:    TOCIStmtGetPieceInfo;
     OCIStmtSetPieceInfo:    TOCIStmtSetPieceInfo;
-    OCIServerVersion:       TOCIServerVersion;
-    OCIServerRelease:       TOCIServerRelease;
     OCIBindDynamic:         TOCIBindDynamic;
-    OCIBindObject:          TOCIBindObject;
     OCIDateTimeAssign:      TOCIDateTimeAssign;
     OCIDateTimeCheck:       TOCIDateTimeCheck;
     OCIDateTimeCompare:     TOCIDateTimeCompare;
     OCIDateTimeConvert:     TOCIDateTimeConvert;
     OCIDateTimeFromText:    TOCIDateTimeFromText;
-    OCIDateTimeGetDate:     TOCIDateTimeGetDate;
-    OCIDateTimeGetTime:     TOCIDateTimeGetTime;
     OCIDateTimeGetTimeZoneOffset: TOCIDateTimeGetTimeZoneOffset;
     OCIDateTimeSysTimeStamp: TOCIDateTimeSysTimeStamp;
-    OCIDateTimeConstruct:   TOCIDateTimeConstruct;
     OCIDateTimeToText:      TOCIDateTimeToText;
     OCIDateTimeGetTimeZoneName: TOCIDateTimeGetTimeZoneName;
     OCILobAppend:           TOCILobAppend;
     OCILobAssign:           TOCILobAssign;
-    OCILobClose:            TOCILobClose;
     OCILobCopy:             TOCILobCopy;
-    OCILobCreateTemporary:  TOCILobCreateTemporary;
     OCILobEnableBuffering:  TOCILobEnableBuffering;
     OCILobDisableBuffering: TOCILobDisableBuffering;
     OCILobErase:            TOCILobErase;
@@ -7843,21 +7238,10 @@ type
     OCILobFileGetName:      TOCILobFileGetName;
     OCILobFileSetName:      TOCILobFileSetName;
     OCILobFlushBuffer:      TOCILobFlushBuffer;
-    OCILobFreeTemporary:    TOCILobFreeTemporary;
-    OCILobCharSetForm:      TOCILobCharSetForm;
-    OCILobCharSetId:        TOCILobCharSetId;
     OCILobGetLength:        TOCILobGetLength;
     OCILobIsOpen:           TOCILobIsOpen;
-    OCILobIsTemporary:      TOCILobIsTemporary;
     OCILobLoadFromFile:     TOCILobLoadFromFile;
     OCILobLocatorIsInit:    TOCILobLocatorIsInit;
-    OCILobOpen:             TOCILobOpen;
-    OCILobRead:             TOCILobRead;
-    OCILobTrim:             TOCILobTrim;
-    OCILobWrite:            TOCILobWrite;
-    OCIResultSetToStmt:     TOCIResultSetToStmt;
-    OCINlsNumericInfoGet:   TOCINlsNumericInfoGet;
-    OCIClientVersion:       TOCIClientVersion;
 
     { OCI Number mapping }
     OCINumberInc:           TOCINumberInc;
@@ -7933,15 +7317,12 @@ type
     { Oracle Object Interface for Dynamic Data Access }
     OCIObjectSetAttr:       TOCIObjectSetAttr;
     OCIObjectGetAttr:       TOCIObjectGetAttr;
-    {ociap.h}
-    OCIPing:                TOCIPing;
     {ort.h}
     OCITypeIterNew:         TOCITypeIterNew;
     OCITypeIterSet:         TOCITypeIterSet;
     OCITypeIterFree:        TOCITypeIterFree;
     OCITypeByName:          TOCITypeByName;
     OCITypeArrayByName:     TOCITypeArrayByName;
-    OCITypeByRef:           TOCITypeByRef;
     OCITypeArrayByRef:      TOCITypeArrayByRef;
     OCITypeName:            TOCITypeName;
     OCITypeSchema:          TOCITypeSchema;
@@ -7985,7 +7366,7 @@ type
     OCITypeVTInsert:        TOCITypeVTInsert;
     OCITypeVTSelect:        TOCITypeVTSelect;
   end;
-
+*)
 implementation
 
 end.
