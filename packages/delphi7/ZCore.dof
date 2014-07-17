@@ -92,8 +92,8 @@ ExeDescription=Zeos Core Classes and Interfaces
 [Directories]
 OutputDir=
 UnitOutputDir=build
-PackageDLLOutputDir=$(BDSCOMMONDIR)\Bpl
-PackageDCPOutputDir=$(BDSCOMMONDIR)\Dcp
+PackageDLLOutputDir=
+PackageDCPOutputDir=
 SearchPath=build
 Packages=
 Conditionals=
@@ -158,8 +158,10 @@ Count=2
 Item0=build
 Item1=$(ZEOSDBO_BUILD)
 [HistoryLists\hlBPLOutput]
-Count=1
-Item0=$(BDSCOMMONDIR)\Bpl
+Count=2
+Item0=build
+Item1=$(ZEOSDBO_BUILD)
 [HistoryLists\hlDCPOutput]
-Count=1
-Item0=$(BDSCOMMONDIR)\Dcp
+Count=2
+Item0=build
+Item1=$(ZEOSDBO_BUILD)
