@@ -174,7 +174,7 @@ type
   TZAbstractRODataset = class(TDataSet)
   {$ENDIF}
   private
-{$IFDEF WITH_FUNIDIRECTIONAL}
+{$IFNDEF WITH_FUNIDIRECTIONAL}
     FUniDirectional: Boolean;
 {$ENDIF}
 {$IFNDEF WITH_FIELDDEFLIST}
@@ -289,6 +289,9 @@ type
     procedure WriteParamData(Writer: TWriter);
 
     procedure SetPrepared(Value : Boolean);
+    {$IFNDEF WITH_FUNIDIRECTIONAL}
+    procedure SetUniDirectional(const Value: boolean);
+    {$ENDIF}
     function  GetUniDirectional: boolean;
 
   protected
@@ -353,13 +356,8 @@ type
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
       write SetShowRecordTypes default [usUnmodified, usModified, usInserted];
-{$IFDEF WITH_FUNIDIRECTIONAL}
-    property IsUniDirectional: Boolean read FUniDirectional
-      write FUnidirectional default False;
-{$ELSE}
     property IsUniDirectional: Boolean read GetUniDirectional
       write SetUniDirectional default False;
-{$ENDIF}
     property Properties: TStrings read FProperties write SetProperties;
     property Options: TZDatasetOptions read FOptions write SetOptions
       default [doCalcDefaults];
@@ -2151,14 +2149,19 @@ begin
   Result := FSQL;
 end;
 
+{$IFNDEF WITH_FUNIDIRECTIONAL}
+function TZAbstractRODataset.SetUniDirectional(const Value: boolean);
+begin
+  FUniDirectional := Value;
+end;
+{$ENDIF}
 {**
   Gets unidirectional state of dataset.
   @return the unidirectional flag (delphi).
 }
-
 function TZAbstractRODataset.GetUniDirectional: boolean;
 begin
-  Result := inherited IsUniDirectional;
+  Result := {$IFNDEF WITH_FUNIDIRECTIONAL}FUniDirectional{$ELSE}inherited IsUniDirectional{$ENDIF};
 end;
 
 {$IFNDEF WITH_SPARSEARRAYS}
@@ -2715,7 +2718,7 @@ var
 begin
   // mad stub for unidirectional (problem in TDataSet.MoveBuffer) - dont know about FPC
   // we always use same TDataSet-level buffer, because we can see only one row
-  {$IFNDEF WITH_FUNIDIRECTIONAL}
+  {$IFNDEF WITH_UNIDIRECTIONALBUG}
   if IsUniDirectional then
     Buffer := {$IFDEF WITH_BUFFERS_IS_TRECBUF}Pointer{$ENDIF}(Buffers[0]);
   {$ENDIF}

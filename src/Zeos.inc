@@ -89,6 +89,7 @@
  {$DEFINE WITH_NESTEDDATASETCLASS} //TDataSet has property NestedDataSetclass
  {$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure
  {$DEFINE WITH_FIELD_VALIDATELOOKUPINFO} //TField has private ValidateLookupInfo() procedure
+ {$DEFINE WITH_FUNIDIRECTIONAL} //TDataSet have SetUniDirectional and GetUnidirectional
 {$ENDIF}
 
 // Compilation directives for Delphi4
