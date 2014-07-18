@@ -480,7 +480,7 @@ begin
   if ODBC then
   begin
     SetLength(Result,(Len * 2)+2);
-    P := PWideChar(Result);
+    P := Pointer(Result);
     P^ := '0';
     Inc(P);
     P^ := 'x';
@@ -490,7 +490,7 @@ begin
   else
   begin
     SetLength(Result, (Len * 2)+3);
-    P := PWideChar(Result);
+    P := Pointer(Result);
     P^ := 'x';
     Inc(P);
     P^ := #39;
@@ -507,8 +507,8 @@ begin
   Result := ''; //init speeds setlength x2
   if ODBC then
   begin
-    SetLength(Result,(Len * 2)+2);
-    P := PAnsiChar(Result);
+    System.SetLength(Result,(Len * 2)+2);
+    P := Pointer(Result);
     P^ := '0';
     Inc(P);
     P^ := 'x';
@@ -518,7 +518,7 @@ begin
   else
   begin
     SetLength(Result, (Len * 2)+3);
-    P := PAnsiChar(Result);
+    P := Pointer(Result);
     P^ := 'x';
     Inc(P);
     P^ := #39;

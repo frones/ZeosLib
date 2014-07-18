@@ -392,9 +392,9 @@ begin
         Result := ClientVarManager.GetAsRawByteString(Value);
       stString, stUnicodeString:
         if NChar then
-          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8)), #39)
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8), #39)
         else
-          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ClientVarManager.GetAsRawByteString(Value), #39);
       stBytes:
         begin
           TempBytes := ClientVarManager.GetAsBytes(Value);

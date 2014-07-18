@@ -73,8 +73,8 @@ type
   end;
 
 var
-  TwoDigitLookupHexW: packed array[0..255] of Word;
-  TwoDigitLookupHexLW: packed array[0..255] of Cardinal;
+  TwoDigitLookupHexW: packed array[Low(Byte)..High(Byte)] of Word;
+  TwoDigitLookupHexLW: packed array[Low(Byte)..High(Byte)] of LongWord;
 
 {**
   Determines a position of a first delimiter.
@@ -592,8 +592,8 @@ function FloatToSqlRaw(const Value: Extended): RawByteString;
 function FloatToUnicode(const Value: Extended): ZWideString;
 function FloatToSqlUnicode(const Value: Extended): ZWideString;
 
-procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal); overload;
-procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal); overload;
+procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
+procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
 
 implementation
 
@@ -2422,78 +2422,57 @@ begin
     ValLen, ZFormatSettings, Failed)
 end;
 
-{$IFNDEF FPC}
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
-  const Len: Cardinal; var Value: ZWideString; out P: PWideChar); overload;
-var SLen: Cardinal;
+  const Len: LengthInt; var Value: ZWideString; out P: PWideChar); overload;
+var SLen: LengthInt;
 begin
+  SLen := Length(Suffix);
+  { prepare Value if required }
+  if Length(Value) <> len+(2*Ord(Quoted))+Slen then
+    System.SetString(Value, nil, len+(2*Ord(Quoted))+Slen);
+  P := Pointer(Value);
   if Quoted then
   begin
-    if Suffix = '' then
-    begin
-      SetLength(Value, Len +2);
-      Value[1] := WideChar(#39);
-      Value[Len+2] := WideChar(#39);
-    end
-    else
-    begin
-      SLen := Length(Suffix);
-      SetLength(Value, Len +2+Slen);
-      Value[1] := WideChar(#39);
-      Value[Len+2] := WideChar(#39);
-      System.Move(Suffix[1], Value[Len+3], Slen*2);
-    end;
-    P := Pointer(NativeUInt(Value)+2);
+    P^ := #39; //starting quote
+    Inc(P); //skip first quote
+    (P+Len)^ := #39; //leading quote
+    if SLen > 0 then //move suffix after leading quote
+      System.Move(Pointer(Suffix)^, (P+Len+1)^, Slen*2);
   end
   else
-  begin
-    if Suffix = '' then
-      SetLength(Value, Len)
-    else
-    begin
-      SLen := Length(Suffix);
-      SetLength(Value, Len+Slen);
-      System.Move(Suffix[1], Value[Len+1], Slen*2);
-    end;
-    P := Pointer(Value);
-  end;
+    if SLen > 0 then
+      System.Move(Pointer(Suffix)^, (P+Len)^, Slen*2);
 end;
-{$ENDIF}
 
 procedure PrepareDateTimeStr(const Quoted: Boolean;
-  const Suffix: RawByteString; const Len: Cardinal; var Value: RawByteString; out P: PAnsiChar); overload;
-var SLen: Cardinal;
+  const Suffix: RawByteString; const Len: LengthInt; var Value: RawByteString; out P: PAnsiChar); overload;
+var SLen: LengthInt;
 begin
+  SLen := Length(Suffix);
+  { prepare Value if required }
+  if (Pointer(Value) = nil) or//empty
+     ({%H-}PRefCntInt(NativeInt(Value) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+     (LengthInt(len+(2*Ord(Quoted))+Slen) <> {%H-}PLengthInt(NativeInt(Value) - StringLenOffSet)^) then { length as expected ? }
+    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
+    begin
+      Value := '';
+      SetLength(Value, len+(2*Ord(Quoted))+Slen);
+    end;
+    {$ELSE}
+    SetString(Value, nil, len+(2*Ord(Quoted))+Slen);
+    {$ENDIF}
+  P := Pointer(Value);
   if Quoted then
   begin
-    if Suffix = '' then
-    begin
-      SetLength(Value, Len +2);
-      Value[1] := AnsiChar(#39);
-      Value[Len+2] := AnsiChar(#39);
-    end
-    else
-    begin
-      SLen := Length(Suffix);
-      SetLength(Value, Len +2+Slen);
-      Value[1] := AnsiChar(#39);
-      Value[Len+2] := AnsiChar(#39);
-      System.Move(Suffix[1], Value[Len+3], Slen);
-    end;
-    P := {%H-}Pointer(NativeUInt(Value)+1);
+    P^ := #39; //starting quote
+    Inc(P); //skip first quote
+    (P+Len)^ := #39; //leading quote
+    if SLen > 0 then //move suffix after leading quote
+      System.Move(Pointer(Suffix)^, (P+Len+1)^, Slen);
   end
   else
-  begin
-    if Suffix = '' then
-      SetLength(Value, Len)
-    else
-    begin
-      SLen := Length(Suffix);
-      SetLength(Value, Len+Slen);
-      System.Move(Suffix[1], Value[Len+1], Slen);
-    end;
-    P := Pointer(Value); //No RTL conversion
-  end;
+    if SLen > 0 then
+      System.Move(Pointer(Suffix)^, (P+Len)^, Slen);
 end;
 {**
   Converts DateTime value to a rawbyteString
@@ -2557,12 +2536,6 @@ end;
 function DateTimeToUnicodeSQLDate(const Value: TDateTime;
   ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
-{$IFDEF FPC} //imbelievable performance drop!!!
-begin
-  Result := ASCII7ToUnicodeString(DateTimeToRawSQLDate(Value,
-    ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
-end;
-{$ELSE}
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2572,7 +2545,7 @@ var
 begin
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
   YearSet := False;
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result, PW);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-}, PW);
 
   I := ConFormatSettings.DateFormatLen-1;
   DateFormat := ConFormatSettings.PDateFormat;
@@ -2601,12 +2574,11 @@ begin
         end;
       else
       begin
-        (PW+i)^ := WideChar((DateFormat+i)^);
+        PWord(PW+i)^ := Word((DateFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
   end;
 end;
-{$ENDIF}
 
 {**
   Converts DateTime value into a RawByteString with format pattern
@@ -2678,12 +2650,6 @@ end;
 function DateTimeToUnicodeSQLTime(const Value: TDateTime;
   ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
-{$IFDEF FPC} //imbelievable performance drop!!!
-begin
-  Result := UnicodeStringToASCII7(DateTimeToRawSQLTime(Value,
-    ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
-end;
-{$ELSE}
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2693,7 +2659,7 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result, PW);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.TimeFormatLen, Result{%H-}, PW);
   ZSet := False;
 
   I := ConFormatSettings.TimeFormatLen-1;
@@ -2729,12 +2695,11 @@ begin
         end;
       else
       begin
-        (PW+i)^ := WideChar((TimeFormat+i)^);
+        PWord(PW+i)^ := Word((TimeFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
     end;
 end;
-{$ENDIF FPC}
 
 
 {**
@@ -2828,12 +2793,6 @@ end;
 function DateTimeToUnicodeSQLTimeStamp(const Value: TDateTime;
   ConFormatSettings: TZFormatSettings;
   const Quoted: Boolean; Suffix: ZWideString = ''): ZWideString;
-{$IFDEF FPC} //imbelievable performance drop!!!
-begin
-  Result := UnicodeStringToASCII7(DateTimeToRawSQLTimeStamp(Value,
-    ConFormatSettings, Quoted, UnicodeStringToASCII7(Suffix)));
-end;
-{$ELSE}
 var
   AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond: Word;
   I: Integer;
@@ -2843,7 +2802,7 @@ var
 begin
   {need fixed size to read from back to front}
   DecodeDateTime(Value, AYear, AMonth, ADay, AHour, AMinute, ASecond, AMilliSecond);
-  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result, PW);
+  PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateTimeFormatLen, Result{%H-}, PW);
   ZSet := False;
   YearSet := False;
 
@@ -2901,12 +2860,11 @@ begin
         end;
       else
       begin
-        (PW+i)^ := WideChar((TimeStampFormat+i)^);
+        PWord(PW+i)^ := Word((TimeStampFormat+i)^); //instead of conversion with WideChar -> FPC rocks!
         Dec(i);
       end;
     end;
 end;
-{$ENDIF FPC}
 {$WARNINGS ON} //suppress D2007 Warning for undefined result
 
 
@@ -3276,23 +3234,23 @@ begin
   Result := ASCII7ToUnicodeString(FloatToSqlRaw(Value));
 end;
 
-procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: Cardinal);
-var I: Cardinal;
+procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt);
+var I: LengthInt;
 begin
-  for i := 0 to Len do
+  for i := 0 to Len-1 do
   begin
-    PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
+    PWord(Text)^ := TwoDigitLookupHexW[Byte(Buffer^)];
     Inc(Buffer);
     Inc(Text, 2);
   end;
 end;
 
-procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: Cardinal);
-var I: Cardinal;
+procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt);
+var I: LengthInt;
 begin
-  for i := 0 to Len do
+  for i := 0 to Len-1 do
   begin
-    PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
+    PLongWord(Text)^ := TwoDigitLookupHexLW[Byte(Buffer^)];
     Inc(Buffer);
     Inc(Text, 2);
   end;
@@ -3300,10 +3258,10 @@ end;
 
 procedure HexFiller;
 var
-  I: Integer;
+  I: Byte;
   Hex: String;
 begin
-  for i := 0 to 255 do
+  for i := Low(Byte) to High(Byte) do
   begin
     Hex := IntToHex(I, 2);
     {$IFDEF UNICODE}

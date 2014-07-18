@@ -2474,7 +2474,7 @@ begin
     else
       Digits := 1;
   NewLen  := Digits + Ord(Negative);
-  if Pointer(Result) = nil then
+  if Pointer(Result{%H-}) = nil then
     SetLength(Result, NewLen)
   else
   begin
@@ -3353,25 +3353,31 @@ begin
     Result := IntToUnicode(Cardinal(Value), Negative);
     Exit;
   end;
-  if Value >= 100000000000000 then
-    if Value >= 10000000000000000 then
-      if Value >= 1000000000000000000 then
-        {$IFDEF SUPPORTS_UINT64_CONSTS}
-        if Value >= 10000000000000000000 then
+  if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000){$ELSE}100000000000000{$ENDIF} then
+    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000){$ELSE}10000000000000000{$ENDIF} then
+      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} then
+        {$IFDEF NEED_TYPED_UINT64_CONSTANTS}
+        if Value >= UInt64(10000000000000000000) then
+        {$ELSE !NEED_TYPED_UINT64_CONSTANTS}
+          {$IFDEF SUPPORTS_UINT64_CONSTS}
+          if Value >= 10000000000000000000 then
+          {$ELSE !SUPPORTS_UINT64_CONSTS}
+          if Value >= $8AC7230489E80000 then
+          {$ENDIF SUPPORTS_UINT64_CONSTS}
+        {$ENDIF NEED_TYPED_UINT64_CONSTANTS}
           Digits := 20
         else
-        {$ENDIF SUPPORTS_UINT64_CONSTS}
           Digits := 19
       else
-        Digits := 17 + Ord(Value >= 100000000000000000)
+        Digits := 17 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF})
     else
-      Digits := 15 + Ord(Value >= 1000000000000000)
+      Digits := 15 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000){$ELSE}1000000000000000{$ENDIF})
   else
-    if Value >= 1000000000000 then
-      Digits := 13 + Ord(Value >= 10000000000000)
+    if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000){$ELSE}1000000000000{$ENDIF} then
+      Digits := 13 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000){$ELSE}10000000000000{$ENDIF})
     else
-      if Value >= 10000000000 then
-        Digits := 11 + Ord(Value >= 100000000000)
+      if Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000){$ELSE}10000000000{$ENDIF} then
+        Digits := 11 + Ord(Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000){$ELSE}100000000000{$ENDIF})
       else
         Digits := 10;
   NewLen  := Digits + Ord(Negative);
@@ -3392,42 +3398,40 @@ begin
   P := Pointer(Result);
   P^ := '-';
   Inc(P, Ord(Negative));
-  {$IFDEF SUPPORTS_UINT64_CONSTS}
   if Digits = 20 then
   begin
     Word(P^) := Word('1');
     Inc(P);
     {$IFDEF FPC} //(???? Dec seems not supporting integers with range > MaxInt64 -> Fatal: Internal error 200706094
-    Value := Value - 10000000000000000000;
+    Value := Value - {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(10000000000000000000){$ELSE}10000000000000000000{$ENDIF};
     {$ELSE}
-    Dec(Value, 10000000000000000000);
+    Dec(Value, {$IFDEF SUPPORTS_UINT64_CONSTS}10000000000000000000{$ELSE}$8AC7230489E80000{$ENDIF});
     {$ENDIF}
     Dec(Digits);
   end;
-  {$ENDIF SUPPORTS_UINT64_CONSTS}
   if Digits > 17 then
   begin {18 or 19 Digits}
     if Digits = 19 then
     begin
       Word(P^) := Word('0');
-      while Value >= 1000000000000000000 do
-      begin
-        Dec(Value, 1000000000000000000);
-        Inc(Word(P^));
-      end;
+      while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF} do
+        begin
+          Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(1000000000000000000){$ELSE}1000000000000000000{$ENDIF});
+          Inc(Word(P^));
+        end;
       Inc(P);
     end;
     Word(P^) := Word('0');
-    while Value >= 100000000000000000 do
-    begin
-      Dec(Value, 100000000000000000);
-      Inc(Word(P^));
-    end;
+    while Value >= {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF} do
+      begin
+        Dec(Value, {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000000000000){$ELSE}100000000000000000{$ENDIF});
+        Inc(Word(P^));
+      end;
     Inc(P);
     Digits := 17;
   end;
-  J64 := Value div 100000000;
-  K64 := Value - (J64 * 100000000); {Remainder = 0..99999999}
+  J64 := Value div {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}; {Very Slow prior to Delphi 2005}
+  K64 := Value - (J64 * {$IFDEF NEED_TYPED_UINT64_CONSTANTS}UInt64(100000000){$ELSE}100000000{$ENDIF}); {Remainder = 0..99999999}
   I32 := K64;
   J32 := I32 div 100;
   K32 := J32 * 100;

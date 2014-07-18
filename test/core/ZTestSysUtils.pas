@@ -855,19 +855,19 @@ var
         if I < 0 then
           if I < Low(ShortInt) then
             if i < Low(SmallInt) then
-              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(I))
+              Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SysUtils.IntToStr(I))
             else
-              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(SmallInt(I)))
+              Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SysUtils.IntToStr(SmallInt(I)))
           else
-            Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(ShortInt(I)))
+            Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SysUtils.IntToStr(ShortInt(I)))
         else
           if I > High(Byte) then
             if I > High(Word) then
-              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(I))
+              Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SysUtils.IntToStr(I))
             else
-              Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(Word(I)))
+              Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SysUtils.IntToStr(Word(I)))
           else
-            Result := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(SysUtils.IntToStr(Byte(I)));
+            Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SysUtils.IntToStr(Byte(I)));
     end;
 begin
   Start := GetTickCount;
@@ -979,7 +979,7 @@ begin
 
   system.WriteLn('');
   system.WriteLn('Benchmarking(x 10.000.000): Int64 to RawByteString');
-  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+{$ifdef unicde}UnicodeStringToASCII7{$endif}: %d ms', [Between1, Between2]));
+  system.WriteLn(Format('Zeos: %d ms VS. SysUtils.IntToStr+{$ifdef unicode}UnicodeStringToASCII7{$endif}: %d ms', [Between1, Between2]));
 
 end;
 {$ifdef OverflowCheckEnabled}
@@ -1565,7 +1565,7 @@ var
       CheckEquals(High(Int64), UnicodeToInt64Def(IntToUnicode(High(Int64)), 0), 'Results of UnicodeToInt64Def VS. High(Int64)');
       for i := 0 to 10000000 do
         Result := UnicodeToInt64Def(IntToUnicode(Int64(i*i)), 1);
-      Result := Result + UnicodeToInt64Def('test', -999);
+      Result := Result + UnicodeToInt64Def(ZWideString('test'), -999);
     end;
 
     function TStrToInt: Int64;
@@ -1681,7 +1681,7 @@ var
         for i := 1 to 10 do
           Result := Result + UnicodeToFloat(PWideChar(ZWideString(sTestFloat[i])), WideChar('.'));
       end;
-      Result := Result + UnicodeToFloatDef('test', WideChar('.'), -999);
+      Result := Result + UnicodeToFloatDef(ZWideString('test'), WideChar('.'), -999);
     end;
 
     function TStrToFloat: Extended;
@@ -2039,13 +2039,11 @@ var
   function TZBinToHex: ZWideString;
   var
     I: Integer;
-    P: PWideChar;
   begin
     Result := '';
     SetLength(Result, L*2);
-    P := PWideChar(Result);
     for i := 0 to 1000000 do
-      ZBinToHex(PAnsiChar(Bin), P, L);
+      ZBinToHex(PAnsiChar(Pointer(Bin)), PWideChar(Pointer(Result)), L);
   end;
 
   function TBinToHex: ZWideString;
@@ -2057,7 +2055,7 @@ var
     SetLength(Tmp, L*2);
     for i := 0 to 1000000 do
     begin
-      BinToHex(PAnsiChar(Bin), PAnsiChar(Tmp), L);
+      BinToHex(PAnsiChar(Pointer(Bin)), PAnsiChar(Pointer(Tmp)), L);
       Result := ZWideString(Tmp);
     end;
 
@@ -2065,8 +2063,8 @@ var
 begin
   L := 10000;
   SetLength(Bin, L);
-  for i := 0 to L do
-    Bin[i] := Ord(Random(255));
+  for i := 0 to L-1 do
+    Bin[i] := Byte(Random(255));
   Start := GetTickCount;
   S1 := TZBinToHex;
   Stop := GetTickCount;
@@ -2098,7 +2096,7 @@ var
     Result := '';
     SetLength(Result, L*2);
     for i := 0 to 1000000 do
-      ZBinToHex(PAnsiChar(Bin), PAnsiChar(Result), L);
+      ZBinToHex(PAnsiChar(Pointer(Bin)), PAnsiChar(Pointer(Result)), L);
   end;
 
   function TBinToHex: RawByteString;
@@ -2108,13 +2106,13 @@ var
     Result := '';
     SetLength(Result, L*2);
     for i := 0 to 1000000 do
-      BinToHex(PAnsiChar(Bin), PAnsiChar(Result), L);
+      BinToHex(PAnsiChar(Pointer(Bin)), PAnsiChar(Pointer(Result)), L);
   end;
 begin
   L := 10000;
   SetLength(Bin, L);
-  for i := 0 to L do
-    Bin[i] := Ord(Random(255));
+  for i := 0 to L-1 do
+    Bin[i] := Byte(Random(255));
   Start := GetTickCount;
   S1 := TZBinToHex;
   Stop := GetTickCount;
