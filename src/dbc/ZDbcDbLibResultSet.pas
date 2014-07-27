@@ -82,7 +82,6 @@ type
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string);
-    destructor Destroy; override;
 
     procedure Close; override;
 
@@ -147,16 +146,6 @@ begin
 end;
 
 {**
-  Destroys this object and cleanups the memory.
-}
-destructor TZDBLibResultSet.Destroy;
-begin
-{ TODO -ofjanos -cGeneral : Does it need close here? }
-  Close;
-  inherited Destroy;
-end;
-
-{**
   Opens this recordset.
 }
 procedure TZDBLibResultSet.Open;
@@ -173,7 +162,7 @@ begin
   { Fills the column info }
   ColumnsInfo.Clear;
   DBLibColumnCount := FPlainDriver.dbnumcols(FHandle);
-  SetLength(DBLibColTypeCache, DBLibColumnCount{$IFNDEF GENERIC_INDEX} + 1{$ENDIF});
+  SetLength(DBLibColTypeCache, DBLibColumnCount);
   for I := 1 to DBLibColumnCount do
   begin
     ColName := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.dbColName(FHandle, I),
@@ -199,7 +188,7 @@ begin
 
     ColumnsInfo.Add(ColumnInfo);
 
-    DBLibColTypeCache[I{$IFDEF GENERIC_INDEX}-1{$ENDIF}] := ColType;
+    DBLibColTypeCache[I-1] := ColType;
   end;
   inherited Open;
 end;
@@ -424,12 +413,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
-  {$ENDIF}
-  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex);
+  //DBLib -----> Col/Param starts whith index 1
+  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
   AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := AnsiRec.P = nil;
   if LastWasNull then
     Result := ''
@@ -445,27 +438,27 @@ begin
       else
       {TDS protocol issue: we dont't know if UTF8(NCHAR) or ANSI(CHAR) fields are coming in: no idea about encoding..
        So selt's test encoding until we know it -----> bad for ASCII7 only }
-        case TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType of
+        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
           stAsciiStream, stUnicodeStream:  //DBlib doesn't convert NTEXT so in all cases we've ansi-Encoding
             Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
           else//stString, stUnicodeString:
-            if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage = zCP_NONE then
+            if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage = zCP_NONE then
               case ZDetectUTF8Encoding(AnsiRec.P, AnsiRec.Len) of
                 etUTF8:
                   begin
-                    TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage := zCP_UTF8;
+                    TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
                     Result := ZAnsiRecToUnicode(AnsiRec, zCP_UTF8);
                   end;
                 etAnsi:
                   begin
-                    TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                    TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
                     Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
                   end;
                 else //ASCII7
                   Result := USASCII7ToUnicodeString(AnsiRec.P, AnsiRec.Len);
               end
             else
-              Result := ZAnsiRecToUnicode(AnsiRec, TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage)
+              Result := ZAnsiRecToUnicode(AnsiRec, TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage)
         end
     end
     else if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
@@ -500,44 +493,45 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
   if LastWasNull then
     Result := ''
   else
   begin
     Result := '';
-    if Data <> nil then
+    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
+      (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
     begin
-      if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
-        (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
-      begin
-        while (DL > 0) and ({%H-}PAnsiChar({%H-}NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
-                Dec(DL);
-        if DL > 0 then
-        begin
-          SetLength(Result, DL);
-          Move(Data^, Pointer(Result)^, DL);
-        end;
-      end else
-      if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
+      while (DL > 0) and ({%H-}PAnsiChar({%H-}NativeUint(Data) + NativeUint(DL - 1))^ = ' ') do
+              Dec(DL);
+      if DL > 0 then
       begin
         SetLength(Result, DL);
-        Move(Data^, PAnsiChar(Result)^, DL);
-      end else
-      begin
-        SetLength(Result, 4001);
-        DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL,
-          FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(Result), Length(Result));
-        while (DL > 0) and (Result[DL] = ' ') do
-            Dec(DL);
-        SetLength(Result, DL);
+        Move(Data^, Pointer(Result)^, DL);
       end;
+    end else
+    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
+    begin
+      SetLength(Result, DL);
+      Move(Data^, PAnsiChar(Result)^, DL);
+    end else
+    begin
+      SetLength(Result, 4001);
+      DL := FPlainDriver.dbconvert(FHandle, DT, Data, DL,
+        FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(Result), Length(Result));
+      while (DL > 0) and (Result[DL] = ' ') do
+          Dec(DL);
+      SetLength(Result, DL);
     end;
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
@@ -561,12 +555,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
   Result := False;
@@ -599,14 +597,18 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
-  LastWasNull := Data = nil;
+  DT := DBLibColTypeCache[ColumnIndex];
 
+  LastWasNull := Data = nil;
   Result := 0;
   if Data <> nil then
   begin
@@ -637,12 +639,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
   Result := 0;
@@ -675,12 +681,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
   Result := 0;
@@ -725,12 +735,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
   Result := 0;
@@ -763,12 +777,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
   Result := 0;
@@ -817,10 +835,13 @@ begin
   CheckColumnIndex(ColumnIndex);
 
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
   FDBLibConnection.CheckDBLibError(lcOther, 'GETBYTES');
   LastWasNull := Data = nil;
 
@@ -877,12 +898,16 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  DT := DBLibColTypeCache[ColumnIndex];
   {$IFDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex +1; //DBLib -----> Col/Param starts whith index 1
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex);
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex);
+  DT := DBLibColTypeCache[ColumnIndex];
   LastWasNull := Data = nil;
 
   Result := 0;
@@ -919,8 +944,14 @@ begin
   CheckColumnIndex(ColumnIndex);
   CheckBlobColumn(ColumnIndex);
 
-  DL := FPlainDriver.dbdatlen(FHandle, ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
-  Data := FPlainDriver.dbdata(FHandle, ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF});
+  {$IFDEF GENERIC_INDEX}
+  //DBLib -----> Col/Param starts whith index 1
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  DL := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Data := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  {$ENDIF}
   LastWasNull := Data = nil;
 
   Result := nil;
