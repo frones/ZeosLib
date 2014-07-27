@@ -2424,24 +2424,24 @@ end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean; const Suffix: ZWideString;
   const Len: LengthInt; var Value: ZWideString; out P: PWideChar); overload;
-var SLen: LengthInt;
+var
+  SLen: LengthInt;
+  OrdQuoted: ShortInt;
 begin
   SLen := Length(Suffix);
+  OrdQuoted := Ord(Quoted);
   { prepare Value if required }
-  if Length(Value) <> len+(2*Ord(Quoted))+Slen then
-    System.SetString(Value, nil, len+(2*Ord(Quoted))+Slen);
+  if Length(Value) <> len+(2*OrdQuoted)+Slen then
+    System.SetString(Value, nil, len+(2*OrdQuoted)+Slen);
   P := Pointer(Value);
   if Quoted then
   begin
     P^ := #39; //starting quote
-    Inc(P); //skip first quote
+    Inc(P, OrdQuoted); //skip first quote
     (P+Len)^ := #39; //leading quote
-    if SLen > 0 then //move suffix after leading quote
-      System.Move(Pointer(Suffix)^, (P+Len+1)^, Slen*2);
-  end
-  else
-    if SLen > 0 then
-      System.Move(Pointer(Suffix)^, (P+Len)^, Slen*2);
+  end;
+  if SLen > 0 then //move suffix after leading quote
+    System.Move(Pointer(Suffix)^, (P+Len+OrdQuoted)^, Slen*2);
 end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean;
@@ -3239,7 +3239,7 @@ var I: LengthInt;
 begin
   for i := 0 to Len-1 do
   begin
-    PWord(Text)^ := TwoDigitLookupHexW[Byte(Buffer^)];
+    PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
     Inc(Buffer);
     Inc(Text, 2);
   end;
@@ -3250,7 +3250,7 @@ var I: LengthInt;
 begin
   for i := 0 to Len-1 do
   begin
-    PLongWord(Text)^ := TwoDigitLookupHexLW[Byte(Buffer^)];
+    PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
     Inc(Buffer);
     Inc(Text, 2);
   end;

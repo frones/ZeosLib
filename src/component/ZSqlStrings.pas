@@ -377,9 +377,8 @@ begin
     Exit;
   end;
 
-  Tokenizer:=GetTokenizer;
-  Tokens := Tokenizer.TokenizeBufferToList(Text,
-    [toSkipComments, toUnifyWhitespaces]);
+  Tokenizer := GetTokenizer;
+  Tokens := Tokenizer.TokenizeBufferToList(Text, [toSkipComments, toUnifyWhitespaces]);
   try
     TokenIndex := 0;
     repeat
@@ -398,10 +397,7 @@ begin
 
           ParamName := TokenValue;
           if (ParamName <> '') and CharInSet(ParamName[1], [#39, '`', '"', '[']) then
-          begin
-            ParamName := Tokenizer.GetQuoteState.
-              DecodeString(ParamName, ParamName[1]);
-          end;
+            ParamName := Tokenizer.GetQuoteState.DecodeString(ParamName, ParamName[1]);
 
           ParamIndex := FindParam(ParamName);
           if ParamIndex < 0 then

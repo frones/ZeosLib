@@ -1777,7 +1777,6 @@ uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSc
   ZGenericSqlToken, ZTokenizer, ZGenericSqlAnalyser, ZEncoding
   {$IFNDEF HAVE_UNKNOWN_CIRCULAR_REFERENCE_ISSUES}, ZAbstractDataset{$ENDIF} //see comment of Updatable property
   {$IFDEF WITH_DBCONSTS}, DBConsts {$ELSE}, DBConst{$ENDIF}
-  {$IFDEF WITH_WIDESTRUTILS}, WideStrUtils{$ENDIF}
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFNDEf WITH_FIELDDEFLIST}, RTLConsts{$ENDIF};
 
@@ -1785,7 +1784,7 @@ uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSc
 procedure RowAccessorStringFieldSetterFromRawAutoEncode(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar);
 begin
-  case DetectUTF8Encoding(Buffer) of
+  case ZDetectUTF8Encoding(Buffer, ZFastCode.StrLen(Buffer)) of
     etUSASCII: RowAccessor.SetRawByteString(ColumnIndex, Buffer);
     etAnsi: RowAccessor.SetAnsiString(ColumnIndex, Buffer);
     etUTF8: RowAccessor.SetUTF8String(ColumnIndex, Buffer);
