@@ -1060,7 +1060,7 @@ I have not find any reason for this yet. }
 type
   DBTYPEINFO = packed record
     Precision:  DBINT;
-	  Scale:      DBINT;
+    Scale:      DBINT;
   end;
   PDBTYPEINFO = ^DBTYPEINFO;
 
@@ -1164,6 +1164,7 @@ type
   Tdbcolsource = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
   Tdbcoltype = function(Proc: PDBPROCESS; Column: Integer): Integer; cdecl;
   Tdbcolutype = function(Proc: PDBPROCESS; Column: Integer): DBINT; cdecl;
+  Tdbcoltypeinfo = function(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO; cdecl;
   Tdbconvert = function(Proc: PDBPROCESS; SrcType: Integer; Src: PByte;
     SrcLen: DBINT; DestType: Integer; Dest: PByte; DestLen: DBINT): Integer; cdecl;
   Tdbiscount = function(Proc: PDBPROCESS): LongBool; cdecl;
@@ -1299,7 +1300,7 @@ type
   TFreeTDSdbcursoropen = function(Proc: PDBPROCESS; Sql: PAnsiChar; ScrollOpt,
     ConCurOpt: DBSHORT; nRows: DBUSMALLINT; PStatus: PDBINT): PDBCURSOR; cdecl;
 
-  TFreeTDSdbaltbind_ps    = function(dbproc: PDBPROCESS; ComputeId, Column: Integer; VarType: Integer; VarLen: DBINT; VarAddr: PByte; typinfo: PDBTYPEINFO): RETCODE;
+  TFreeTDSdbaltbind_ps    = function(dbproc: PDBPROCESS; ComputeId, Column: Integer; VarType: Integer; VarLen: DBINT; VarAddr: PByte; typinfo: PDBTYPEINFO): RETCODE; cdecl;
   TFreeTDSdbbind_ps       = function(dbproc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte; typinfo: PDBTYPEINFO): RETCODE; cdecl;
   TFreeTDSdbbufsize       = function(dbproc: PDBPROCESS): Integer; cdecl;
   TFreeTDSdbclose         = procedure(dbproc: PDBPROCESS); cdecl;
@@ -1532,7 +1533,7 @@ type
   TSybdbcollen = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcolname = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcolsource = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
-//  TSybdbcoltypeinfo = function(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcoltypeinfo = function(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcoltype = function(Proc: PDBPROCESS; Column: Integer): Integer; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcolutype = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbconvert = function(Proc: PDBPROCESS; SrcType: Integer; Src: PByte;
@@ -1706,6 +1707,7 @@ type
     dbcolsource           : Tdbcolsource;
     dbcoltype             : Tdbcoltype;
     dbcolutype            : Tdbcolutype;
+    dbcoltypeinfo         : Tdbcoltypeinfo;
     dbconvert             : Tdbconvert;
     dbcurcmd              : Tdbcurcmd;
     dbcurrow              : Tdbcurrow;
@@ -1983,7 +1985,7 @@ type
     dbcollen              : TSybdbcollen;
     dbcolname             : TSybdbcolname;
     dbcolsource           : TSybdbcolsource;
-  //  dbcoltypeinfo         : TSybdbcoltypeinfo;
+    dbcoltypeinfo         : TSybdbcoltypeinfo;
     dbcoltype             : TSybdbcoltype;
     dbcolutype            : TSybdbcolutype;
     dbconvert             : TSybdbconvert;

@@ -61,6 +61,9 @@ uses
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
+  Windows,
+  {$IFEND}
   ZDbcIntfs, ZDbcResultSet, ZCompatibility, ZDbcResultsetMetadata,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcDBLib,
   ZPlainDbLibConstants, ZPlainDBLibDriver;
@@ -256,23 +259,51 @@ end;
     value returned is <code>null</code>
 }
 function TZDBLibResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+var
+  DT: Integer;
+  AnsiRec: TZAnsiRec;
 begin
-  FRawTemp := InternalGetString(ColumnIndex);
-  {$IFNDEF GENERIC_INDEX}
+  CheckClosed;
+  CheckColumnIndex(ColumnIndex);
+
+  {$IFDEF GENERIC_INDEX}
+  //DBLib -----> Col/Param starts whith index 1
+  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  {$ELSE}
+  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
-  {TDS protocol issue: we dont't know if UTF8(NCHAR) or ANSI(CHAR) fields are coming in: no idea about encoding..
-   So selt's test encoding until we know it -----> bad for ASCII7 only }
-  if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage = zCP_NONE then
-    if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType in [stString, stUnicodeString, stAsciiStream, stUnicodeStream]  then
-      case ZDetectUTF8Encoding(FRawTemp) of
-        etUTF8:
-          TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
-        etAnsi:
-          TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-      end;
-  Result.P := PAnsiChar(FRawTemp);
-  Result.Len := Length(FRawTemp);
+  DT := DBLibColTypeCache[ColumnIndex];
+  LastWasNull := AnsiRec.P = nil;
+  if not LastWasNull then
+  begin
+    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
+      (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
+    begin
+      while (AnsiRec.Len > 0) and ((AnsiRec.P+AnsiRec.Len -1)^ = ' ') do Dec(AnsiRec.Len);
+      if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage = zCP_NONE then
+        case ZDetectUTF8Encoding(AnsiRec.P, AnsiRec.Len) of
+          etUTF8: TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
+          etAnsi: TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+          else
+            ;
+        end;
+    end
+    else
+    if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLIMAGE]) then
+      //do nothing here!
+    else
+    begin
+      SetLength(FRawTemp, 4001);
+      AnsiRec.Len := FPlainDriver.dbconvert(FHandle, DT, Pointer(AnsiRec.P), AnsiRec.Len,
+        FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(FRawTemp), 4001);
+      while (AnsiRec.Len > 0) and ((AnsiRec.P+AnsiRec.Len -1)^ = ' ') do Dec(AnsiRec.Len);
+      AnsiRec.P := Pointer(FRawTemp);
+    end;
+  end;
+  FDBLibConnection.CheckDBLibError(lcOther, 'GetAnsiRec');
 end;
 
 {**
@@ -428,7 +459,6 @@ begin
     Result := ''
   else
   begin
-    Result := '';
     if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
       (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
     begin
@@ -571,7 +601,7 @@ begin
   if Data <> nil then
   begin
     if DT = FPlainDriver.GetVariables.datatypes[Z_SQLBIT] then
-      Result := PBoolean(Data)^
+      Result := System.PBoolean(Data)^
     else
       FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLBIT],
         @Result, SizeOf(Result));
@@ -938,7 +968,6 @@ var
   DL: Integer;
   Data: Pointer;
   TempAnsi: RawByteString;
-  US: ZWideString;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
@@ -966,11 +995,24 @@ begin
             ConSettings^.ClientCodePage^.CP, ConSettings);
         end;
       stString, stUnicodeString:
-        begin
-          US := GetUnicodeString(ColumnIndex);
-          Result := TZAbstractClob.CreateWithData(PWideChar(US), Length(US),
-            ConSettings);
-        end
+        if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage = zCP_NONE then
+          case ZDetectUTF8Encoding(Data, DL) of
+            etUTF8:
+              begin
+                TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
+                Result := TZAbstractClob.CreateWithData(Data, DL, zCP_UTF8, ConSettings);
+              end;
+            etAnsi:
+              begin
+                TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
+                Result := TZAbstractClob.CreateWithData(Data, DL, ConSettings^.ClientCodePage^.CP, ConSettings);
+              end;
+            else //ASCII7
+              Result := TZAbstractClob.CreateWithData(Data, DL, zCP_us_ascii, ConSettings);
+          end
+        else
+          Result := TZAbstractClob.CreateWithData(Data, DL,
+            TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage, ConSettings);
       else
       begin
         TempAnsi := InternalGetString(ColumnIndex);

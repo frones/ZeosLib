@@ -104,6 +104,7 @@ type
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbcoltypeinfo(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
     function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
@@ -112,6 +113,7 @@ type
     function dbNextRow(dbProc: PDBPROCESS): STATUS;
     function dbGetRow(dbProc: PDBPROCESS; Row: DBINT): STATUS;
     function dbCount(dbProc: PDBPROCESS): DBINT;
+    function dbbind(Proc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
 
     function dbRpcInit(dbProc: PDBPROCESS; RpcName: PAnsiChar; Options: SmallInt): RETCODE;
     function dbRpcParam(dbProc: PDBPROCESS; ParamName: PAnsiChar; Status: Byte;
@@ -192,9 +194,11 @@ type
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; virtual; abstract;
+    function dbbind(Proc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
 
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
     function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT; virtual; abstract;
@@ -284,9 +288,11 @@ type
     function dbCmdRow(dbProc: PDBPROCESS): RETCODE;
     function dbNumCols(dbProc: PDBPROCESS): DBINT;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool;
+    function dbbind(Proc: PDBPROCESS; Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
 
     function dbColName(dbProc: PDBPROCESS; Column: DBINT): PAnsiChar;
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
+    function dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
     function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
@@ -775,6 +781,7 @@ begin
     @DBLibAPI.dbcolname             := GetAddress('dbcolname');
     @DBLibAPI.dbcolsource           := GetAddress('dbcolsource');
     @DBLibAPI.dbcoltype             := GetAddress('dbcoltype');
+    @DBLibAPI.dbcoltypeinfo         := GetAddress('dbcoltypeinfo');
     @DBLibAPI.dbcolutype            := GetAddress('dbcolutype');
     @DBLibAPI.dbconvert             := GetAddress('dbconvert');
     @DBLibAPI.dbcurcmd              := GetAddress('dbcurcmd');
@@ -967,6 +974,12 @@ begin
   Result := DBLibAPI.dbNumCols(dbProc);
 end;
 
+function TZDBLibBasePlainDriver.dbbind(Proc: PDBPROCESS;
+  Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
+begin
+  Result := DBLibAPI.dbbind(Proc, Column, VarType, VarLen, VarAddr);
+end;
+
 function TZDBLibBasePlainDriver.dbColName(dbProc: PDBPROCESS; Column: Integer): PAnsiChar;
 begin
   Result := DBLibAPI.dbColName(dbProc, Column);
@@ -975,6 +988,14 @@ end;
 function TZDBLibBasePlainDriver.dbColType(dbProc: PDBPROCESS; Column: Integer): Integer;
 begin
   Result := DBLibAPI.dbColType(dbProc, Column);
+end;
+
+function TZDBLibBasePlainDriver.dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
+begin
+  if Assigned(DBLibAPI.dbcoltypeinfo) then
+    Result := DBLibAPI.dbcoltypeinfo(dbProc, Column)
+  else
+    Result := nil
 end;
 
 function TZDBLibBasePlainDriver.dbColLen(dbProc: PDBPROCESS; Column: Integer): DBInt;
@@ -1204,7 +1225,7 @@ begin
     @SybaseAPI.dbcollen              := GetAddress('dbcollen');
     @SybaseAPI.dbcolname             := GetAddress('dbcolname');
     @SybaseAPI.dbcolsource           := GetAddress('dbcolsource');
-  //  @SybaseAPI.dbcoltypeinfo         := GetAddress('dbcoltypeinfo');
+    @SybaseAPI.dbcoltypeinfo         := GetAddress('dbcoltypeinfo');
     @SybaseAPI.dbcoltype             := GetAddress('dbcoltype');
     @SybaseAPI.dbcolutype            := GetAddress('dbcolutype');
     @SybaseAPI.dbconvert             := GetAddress('dbconvert');
@@ -1388,6 +1409,12 @@ begin
   Result := SybaseAPI.dbcolbrowse(Proc, Column);
 end;
 
+function TZDBLibSybaseASE125PlainDriver.dbbind(Proc: PDBPROCESS;
+  Column, VarType, VarLen: Integer; VarAddr: PByte): RETCODE;
+begin
+  Result := SybaseAPI.dbbind(Proc, Column, VarType, VarLen, VarAddr);
+end;
+
 function TZDBLibSybaseASE125PlainDriver.dbDead(dbProc: PDBPROCESS): Boolean;
 begin
   Result := SybaseAPI.dbDead(dbProc);
@@ -1551,6 +1578,14 @@ end;
 function TZDBLibSybaseASE125PlainDriver.dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
 begin
   Result := SybaseAPI.dbColType(dbProc, Column);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
+begin
+  if Assigned(SybaseAPI.dbcoltypeinfo) then
+    Result := SybaseAPI.dbcoltypeinfo(dbProc, Column)
+  else
+    Result := nil;
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;

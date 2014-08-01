@@ -541,11 +541,10 @@ TMYSQL_CLIENT_OPTIONS =
     size          :integer;    //size of MYSQL_BINDxx
     end;
 
-
   PDOBindRecord2 = record
-      buffer:    Array of Byte;
-      length:    ULong;
-      is_null:   Byte;
+    buffer:    Array of Byte;
+    length:    ULong;
+    is_null:   Byte;
   end;
 
   PMYSQL = ^MYSQL;

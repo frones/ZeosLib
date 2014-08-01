@@ -2349,7 +2349,7 @@ function RandomString( Len: integer): string;
 begin
   Result := '';
   while Length( Result) < Len do
-    Result := Result + ZFastCode.IntToStr({$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc( Random( High( Integer))));
+    Result := Result + ZFastCode.IntToStr(Random(High(Integer)));
   if Length( Result) > Len then
     Result := Copy( Result, 1, Len);
 end;
