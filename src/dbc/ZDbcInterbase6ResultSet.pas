@@ -990,7 +990,7 @@ begin
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
-          SQL_TEXT      : Result := RawToIntDef(DecodeString(True, ColumnIndex), 0);
+          SQL_TEXT      : Result := RawToIntDef(DecodeString(True, ColumnIndex), 0); //we actually don't have a trailing space ignoring routine
           SQL_VARYING   : Result := RawToIntDef(PAnsiChar(sqldata)+2{Inc SQLData by sizeof(smallint)}, 0);
           SQL_BLOB:
             if sqlsubtype = 1 then
@@ -1372,7 +1372,7 @@ begin
             end;
           SQL_BLOB      :
             Begin
-              FBlobTemp := GetBlob(ColumnIndex+1);  //localize interface to keep pointer alive
+              FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
               if FBlobTemp.IsClob then
               begin
                 Result.P := FBlobTemp.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
@@ -1390,7 +1390,7 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    Result.P := PAnsiChar(FRawTemp);
+    Result.P := Pointer(FRawTemp);
     Result.Len := Length(FRawTemp);
     {$IFOPT D+}
   {$R+}
@@ -1426,6 +1426,7 @@ function TZInterbase6XSQLDAResultSet.GetUTF8String(ColumnIndex: Integer): UTF8St
 var
   SQLCode: SmallInt;
   AnsiRec: TZAnsiRec;
+label AssignResult;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
@@ -1475,20 +1476,14 @@ begin
               AnsiRec.P := sqldata;
               if AnsiRec.Len > 0 then
                 while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do dec(AnsiRec.Len);
-              if sqlsubtype > High(FCodePageArray) then
-                Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
-              else
-                if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  Result := ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
-                else
-                  Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
+              goto AssignResult;
               Exit;
             end;
           SQL_VARYING :
             begin
               AnsiRec.P := PISC_VARYING(sqldata).str;
               AnsiRec.Len := PISC_VARYING(sqldata).strlen;
-              if sqlsubtype > High(FCodePageArray) then
+AssignResult: if sqlsubtype > High(FCodePageArray) then
                 Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
@@ -1499,7 +1494,7 @@ begin
             end;
           SQL_BLOB      :
             Begin
-              FBlobTemp := GetBlob(ColumnIndex);  //localize interface to keep pointer alive
+              FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
               if FBlobTemp.IsClob then
                 Result := FBlobTemp.GetUTF8String
               else
@@ -1531,6 +1526,7 @@ var
   SubType: SmallInt;
   SQLCode: SmallInt;
   AnsiRec: TZAnsiRec;
+label AssignResult;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1584,33 +1580,13 @@ begin
               AnsiRec.Len := sqllen;
               if AnsiRec.Len > 0 then
                 while ((AnsiRec.P+AnsiRec.Len-1)^ = ' ') do dec(AnsiRec.Len);
-              SubType := GetIbSqlSubType(ColumnIndex);
-              if SubType > High(FCodePageArray) then
-                {$IFDEF UNICODE}
-                Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP)
-                {$ELSE}
-                begin
-                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
-                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
-                    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
-                end
-                {$ENDIF}
-              else
-                {$IFDEF UNICODE}
-                Result := ZAnsiRecToUnicode(AnsiRec, FCodePageArray[SubType]);
-                {$ELSE}
-                begin
-                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
-                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
-                    FCodePageArray[SubType], ConSettings^.CTRL_CP);
-                end;
-                {$ENDIF}
+              goto AssignResult;
             end;
           SQL_VARYING :
             begin
               AnsiRec.P := PISC_VARYING(sqldata).str;
               AnsiRec.Len := PISC_VARYING(sqldata).strlen;
-              SubType := GetIbSqlSubType(ColumnIndex);
+AssignResult: SubType := GetIbSqlSubType(ColumnIndex);
               if SubType > High(FCodePageArray) then
                 {$IFDEF UNICODE}
                 Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP)

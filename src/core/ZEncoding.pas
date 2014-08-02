@@ -533,7 +533,7 @@ begin
         else
           if ZCompatibleCodePages(ZDefaultSystemCodePage,zCP_UTF8) then
           begin
-            ZSetString(Value.P, Value.Len, S);
+            ZSetString(Value.P, Value.Len, S{%H-});
             Result := ZWideString(S); //random success, we don't know ANY proper CP here
           end
           else
@@ -1266,7 +1266,7 @@ begin
         US := ZRawToUnicode(Src, RawCP);
         {$IFDEF WITH_RAWBYTESTRING}
         Raw := ZUnicodeToRaw(US, StringCP);
-        ZSetString(Pointer(Raw), PLengthInt(NativeInt(Raw) - StringLenOffSet)^, Result);
+        ZSetString(Pointer(Raw), {%H-}PLengthInt(NativeInt(Raw) - StringLenOffSet)^, Result);
         {$ELSE}
         Result := ZUnicodeToRaw(US, StringCP);
         {$ENDIF}
@@ -1356,7 +1356,7 @@ begin
   case ZDetectUTF8Encoding(Src) of
     etUSASCII:
       {$IFDEF WITH_RAWBYTESTRING}
-      ZSetString(Pointer(Src), PLengthInt(NativeInt(Src) - StringLenOffSet)^ , Result);
+      ZSetString(Pointer(Src), {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^ , Result);
       {$ELSE !WITH_RAWBYTESTRING}
       Result := Src;
       {$ENDIF WITH_RAWBYTESTRING}
@@ -1371,14 +1371,14 @@ begin
           Result := ZConvertStringToRaw(Src, StringCP, RawCP)
       else
         {$IFDEF WITH_RAWBYTESTRING}
-        ZSetString(Pointer(Src), PLengthInt(NativeInt(Src) - StringLenOffSet)^, Result);
+        ZSetString(Pointer(Src), {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^, Result);
         {$ELSE !WITH_RAWBYTESTRING}
         Result := Src;
         {$ENDIF WITH_RAWBYTESTRING}
     else //etUTF8:
       if (RawCP = zCP_UTF8) then
         {$IFDEF WITH_RAWBYTESTRING}
-        ZSetString(Pointer(Src), PLengthInt(NativeInt(Src) - StringLenOffSet)^, Result)
+        ZSetString(Pointer(Src), {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^, Result)
         {$ELSE !WITH_RAWBYTESTRING}
         Result := Src
         {$ENDIF WITH_RAWBYTESTRING}
@@ -1409,7 +1409,7 @@ begin
       {$IFDEF WITH_RAWBYTESTRING}
       US := ZWideString(Src);
       S := ZUnicodeToRaw(US, StringCP);
-      ZSetString(Pointer(S), PLengthInt(NativeInt(S) - StringLenOffSet)^, Result);
+      ZSetString(Pointer(S), {%H-}PLengthInt(NativeInt(S) - StringLenOffSet)^, Result);
       {$ELSE}
       US := UTF8Decode(Src);
       Result := ZUnicodeToRaw(US, StringCP);
@@ -1451,9 +1451,9 @@ begin
   {$IFDEF UNICODE}
     Result := UTF8String(Src);
  {$ELSE}
-    If ZDetectUTF8Encoding(Pointer(Src), PLengthInt(NativeInt(Src) - StringLenOffSet)^) in [etUSASCII, etUTF8] then
+    If ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^) in [etUSASCII, etUTF8] then
       {$IFDEF WITH_RAWBYTESTRING}
-      ZSetString(Pointer(Src), PLengthInt(NativeInt(Src) - StringLenOffSet), Result)
+      ZSetString(Pointer(Src), {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^, Result)
       {$ELSE}
       Result := Src
       {$ENDIF}
@@ -1464,7 +1464,7 @@ begin
       else
       begin
         AnsiRec.P := Pointer(Src);
-        AnsiRec.Len := PLengthInt(NativeInt(Src) - StringLenOffSet)^;
+        AnsiRec.Len := {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^;
         Tmp := ZAnsiRecToUnicode(AnsiRec, StringCP);
       end;
       Result := {$IFDEF WITH_RAWBYTESTRING}UTF8String{$ELSE}UTF8Encode{$ENDIF}(Tmp);
@@ -1486,7 +1486,7 @@ begin
     Result := AnsiString(Src);
     {$ELSE}
     AnsiRec.P := Pointer(Src);
-    AnsiRec.Len := PLengthInt(NativeInt(Src) - StringLenOffSet)^;
+    AnsiRec.Len := {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^;
     Tmp := ZAnsiRecToUnicode(AnsiRec, StringCP);
     Result := AnsiString(Tmp);
     {$ENDIF}
@@ -1505,7 +1505,7 @@ begin
     {$IFDEF UNICODE}
     Result := AnsiString(Src);
     {$ELSE}
-    case ZDetectUTF8Encoding(Pointer(Src), PLengthInt(NativeInt(Src) - StringLenOffSet)^) of
+    case ZDetectUTF8Encoding(Pointer(Src), {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^) of
       etUSASCII: Result := Src;
       etAnsi:
         if ZDefaultSystemCodePage = zCP_UTF8 then
@@ -1521,7 +1521,7 @@ begin
         else
         begin
           AnsiRec.P := Pointer(Src);
-          AnsiRec.Len := PLengthInt(NativeInt(Src) - StringLenOffSet)^;
+          AnsiRec.Len := {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^;
           Tmp := ZAnsiRecToUnicode(AnsiRec, zCP_UTF8);
           Result := AnsiString(Tmp);
         end;
@@ -1548,11 +1548,11 @@ begin
     {$ELSE}
     begin
       AnsiRec.P := Pointer(Src);
-      AnsiRec.Len := PLengthInt(NativeInt(Src) - StringLenOffSet)^;
+      AnsiRec.Len := {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^;
       UniTmp := ZAnsiRecToUnicode(AnsiRec, ZDefaultSystemCodePage);
       {$IFDEF WITH_RAWBYTESTRING}
       RawTemp := ZUnicodeToRaw(UniTmp, StringCP);
-      ZSetString(Pointer(RawTemp), LengthInt(NativeInt(RawTemp) - StringLenOffSet)^, Result);
+      ZSetString(Pointer(RawTemp), {%H-}PLengthInt(NativeInt(RawTemp) - StringLenOffSet)^, Result);
       {$ELSE !WITH_RAWBYTESTRING}
       Result := ZUnicodeToRaw(UniTmp, StringCP);
       {$ENDIF WITH_RAWBYTESTRING}
@@ -1575,7 +1575,7 @@ begin
     {$IFDEF WITH_RAWBYTESTRING}
     begin
       Tmp := ZUnicodeToRaw(Src, StringCP);
-      ZSetString(Pointer(Tmp), LengthInt(NativeInt(tmp) - StringLenOffSet)^, Result{%H-});
+      ZSetString(Pointer(Tmp), {%H-}PLengthInt(NativeInt(tmp) - StringLenOffSet)^, Result{%H-});
     end;
     {$ELSE WITH_RAWBYTESTRING}
     Result := ZUnicodeToRaw(Src, StringCP);
@@ -1598,7 +1598,7 @@ begin
     {$IFDEF WITH_RAWBYTESTRING}
     begin
       Tmp := UTF8Encode(Src);
-      ZSetString(Pointer(Tmp), LengthInt(NativeInt(tmp) - StringLenOffSet)^, Result);
+      ZSetString(Pointer(Tmp), {%H-}PLengthInt(NativeInt(tmp) - StringLenOffSet)^, Result);
     end;
     {$ELSE !WITH_RAWBYTESTRING}
     Result := UTF8Encode(Src);
@@ -1620,7 +1620,7 @@ begin
   else
   begin
     AnsiRec.P := Pointer(Src);
-    AnsiRec.Len := PLengthInt(NativeInt(src) - StringLenOffSet)^;
+    AnsiRec.Len := {%H-}PLengthInt(NativeInt(src) - StringLenOffSet)^;
     Result := ZAnsiRecToUnicode(AnsiRec, StringCP);
   end;
   {$ENDIF}
@@ -1640,7 +1640,7 @@ begin
   else
   begin
     AnsiRec.P := Pointer(Src);
-    AnsiRec.Len := PLengthInt(NativeInt(src) - StringLenOffSet)^;
+    AnsiRec.Len := {%H-}PLengthInt(NativeInt(src) - StringLenOffSet)^;
     Result := ZAnsiRecToUnicode(AnsiRec, zCP_UTF8);
   end;
   {$ENDIF}
@@ -1661,7 +1661,7 @@ begin
   else
   begin
     AnsiRec.P := Pointer(Src);
-    AnsiRec.Len := PLengthInt(NativeInt(src) - StringLenOffSet)^;
+    AnsiRec.Len := {%H-}PLengthInt(NativeInt(src) - StringLenOffSet)^;
     case ZDetectUTF8Encoding(AnsiRec.P, AnsiRec.Len) of
       etUSASCII: Result := USASCII7ToUnicodeString(AnsiRec.P, AnsiRec.Len);
       etUTF8: Result := ZAnsiRecToUnicode(AnsiRec, zCP_UTF8);

@@ -494,14 +494,6 @@ uses
   Variants, Math, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
   ZMessages, ZEncoding, ZFastCode, ZSysUtils;
 
-const
-  EmptyUnicodeString = ZWideString('');
-  EmptyAnsiString = AnsiString('');
-
-var
-  PEmptyUnicodeString: PWideChar;
-  PEmptyAnsiString: PAnsiChar;
-
 { TZDefaultVariantManager }
 
 {**
@@ -852,7 +844,7 @@ VStringToCharRec:
             end
             else
             begin
-              Result.VCharRec.Len := PLengthInt(NativeInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := PLengthInt(NativeUInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
             end;
           end;
@@ -867,7 +859,7 @@ VStringToCharRec:
             end
             else
             begin
-              Result.VCharRec.Len := PLengthInt(NativeInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length()
+              Result.VCharRec.Len := PLengthInt(NativeUInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length()
               Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL call of PChar conversion
             end;
           end;
@@ -882,7 +874,7 @@ VStringToCharRec:
             end
             else
             begin
-              Result.VCharRec.Len := PLengthInt(NativeInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := PLengthInt(NativeUInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL call of PChar conversion
             end;
           end;
@@ -2116,7 +2108,7 @@ AsVCharRecFromVString:
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VString); //avoid RTL call of PChar conversion
             end;
           end;
@@ -2131,7 +2123,7 @@ AsVCharRecFromVString:
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL call of PAnsiChar conversion
             end;
           end;
@@ -2146,7 +2138,7 @@ AsVCharRecFromVString:
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
               Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL call of PAnsiChar conversion
             end;
           end;
@@ -2525,7 +2517,7 @@ DateTimeFromUnicode:
               end
               else
               begin
-                Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
+                Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VRawByteString) - StringLenOffSet)^; //fast Length() helper
                 Result.VCharRec.P := Pointer(Result.VRawByteString); //avoid RTL conversion to PAnsiChar
               end;
             end
@@ -2551,7 +2543,7 @@ DateTimeFromUnicode:
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VString) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VString); //avoid RTL conversion to PAnsiChar
             end;
           end;
@@ -2566,7 +2558,7 @@ DateTimeFromUnicode:
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VAnsiString) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VAnsiString); //avoid RTL conversion to PAnsiChar
             end;
           end;
@@ -2581,7 +2573,7 @@ DateTimeFromUnicode:
             end
             else
             begin
-              Result.VCharRec.Len := {%H-}PLengthInt(NativeInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper
+              Result.VCharRec.Len := {%H-}PLengthInt(NativeUInt(Result.VUTF8String) - StringLenOffSet)^; //fast Length() helper
               Result.VCharRec.P := Pointer(Result.VUTF8String); //avoid RTL conversion to PAnsiChar
             end;
           end;
@@ -2708,7 +2700,7 @@ begin
         end
         else
         begin
-          Result.Len := {%H-}PLengthInt(NativeInt(Value.VUTF8String) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+          Result.Len := {%H-}PLengthInt(NativeUInt(Value.VUTF8String) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
           Result.P := Pointer(Value.VUTF8String); //avoid RTL conversion to PAnsiChar
         end;
       end
@@ -2725,7 +2717,7 @@ AsRBS:
         end
         else
         begin
-          Result.Len := {%H-}PLengthInt(NativeInt(Value.VRawByteString) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
+          Result.Len := {%H-}PLengthInt(NativeUInt(Value.VRawByteString) - StringLenOffSet)^; //fast Length() helper for D7..D9 where Length() isn't inlined;
           Result.P := Pointer(Value.VRawByteString); //avoid RTL conversion to PAnsiChar
         end;
       end;
@@ -3214,8 +3206,6 @@ initialization
   SoftVarManager := TZSoftVariantManager.Create;
   NullVariant    := EncodeNull;
 
-  PEmptyUnicodeString := PWideChar(EmptyUnicodeString);
-  PEmptyAnsiString := PAnsiChar(EmptyAnsiString);
 finalization
   {$IFDEF ZEOS_TEST_ONLY}
   DefVarManager  := nil;
