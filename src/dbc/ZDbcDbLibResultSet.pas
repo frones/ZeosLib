@@ -261,30 +261,29 @@ end;
 function TZDBLibResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
 var
   DT: Integer;
-  AnsiRec: TZAnsiRec;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
   {$IFDEF GENERIC_INDEX}
   //DBLib -----> Col/Param starts whith index 1
-  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
-  AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
+  Result.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex+1); //hint DBLib isn't #0 terminated @all
+  Result.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex+1));
   {$ELSE}
-  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
-  AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  Result.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex); //hint DBLib isn't #0 terminated @all
+  Result.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   DT := DBLibColTypeCache[ColumnIndex];
-  LastWasNull := AnsiRec.P = nil;
+  LastWasNull := Result.P = nil;
   if not LastWasNull then
   begin
     if (DT = FPlainDriver.GetVariables.datatypes[Z_SQLCHAR]) or
       (DT = FPlainDriver.GetVariables.datatypes[Z_SQLTEXT]) then
     begin
-      while (AnsiRec.Len > 0) and ((AnsiRec.P+AnsiRec.Len -1)^ = ' ') do Dec(AnsiRec.Len);
+      while (Result.Len > 0) and ((Result.P+Result.Len -1)^ = ' ') do Dec(Result.Len);
       if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage = zCP_NONE then
-        case ZDetectUTF8Encoding(AnsiRec.P, AnsiRec.Len) of
+        case ZDetectUTF8Encoding(Result.P, Result.Len) of
           etUTF8: TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
           etAnsi: TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
           else
@@ -297,10 +296,10 @@ begin
     else
     begin
       SetLength(FRawTemp, 4001);
-      AnsiRec.Len := FPlainDriver.dbconvert(FHandle, DT, Pointer(AnsiRec.P), AnsiRec.Len,
+      Result.Len := FPlainDriver.dbconvert(FHandle, DT, Pointer(Result.P), Result.Len,
         FPlainDriver.GetVariables.datatypes[Z_SQLCHAR], Pointer(FRawTemp), 4001);
-      while (AnsiRec.Len > 0) and ((AnsiRec.P+AnsiRec.Len -1)^ = ' ') do Dec(AnsiRec.Len);
-      AnsiRec.P := Pointer(FRawTemp);
+      while (Result.Len > 0) and ((Result.P+Result.Len -1)^ = ' ') do Dec(Result.Len);
+      Result.P := Pointer(FRawTemp);
     end;
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GetAnsiRec');
