@@ -56,7 +56,7 @@ interface
 {$I ZComponent.inc}
 
 uses Types, Classes, SysUtils, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
-  ZDbcIntfs, ZConnection, ZScriptParser, ZSqlStrings, ZCompatibility;
+  ZDbcIntfs, ZAbstractConnection, ZScriptParser, ZSqlStrings, ZCompatibility;
 
 type
 
@@ -86,7 +86,7 @@ type
     FParams: TParams;
     FScript: TZSQLStrings;
     FScriptParser: TZSQLScriptParser;
-    FConnection: TZConnection;
+    FConnection: TZAbstractConnection;
     FBeforeExecute: TZProcessorNotifyEvent;
     FAfterExecute: TZProcessorNotifyEvent;
     FOnError: TZProcessorErrorEvent;
@@ -96,7 +96,7 @@ type
     procedure SetScript(Value: TStrings);
     function GetStatementCount: Integer;
     function GetStatement(Index: Integer): string;
-    procedure SetConnection(Value: TZConnection);
+    procedure SetConnection(Value: TZAbstractConnection);
     function GetDelimiterType: TZDelimiterType;
     procedure SetDelimiterType(Value: TZDelimiterType);
     function GetDelimiter: string;
@@ -142,7 +142,7 @@ type
       default ':';
     property Params: TParams read FParams write SetParams;
     property Script: TStrings read GetScript write SetScript;
-    property Connection: TZConnection read FConnection write SetConnection;
+    property Connection: TZAbstractConnection read FConnection write SetConnection;
     property DelimiterType: TZDelimiterType read GetDelimiterType
       write SetDelimiterType default dtDefault;
     property Delimiter: string read GetDelimiter write SetDelimiter;
@@ -216,7 +216,7 @@ end;
   Sets a new SQL connection component.
   @param Value am SQL connection component.
 }
-procedure TZSQLProcessor.SetConnection(Value: TZConnection);
+procedure TZSQLProcessor.SetConnection(Value: TZAbstractConnection);
 begin
   if FConnection <> Value then
   begin
