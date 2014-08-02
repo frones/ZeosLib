@@ -1477,7 +1477,6 @@ begin
               if AnsiRec.Len > 0 then
                 while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do dec(AnsiRec.Len);
               goto AssignResult;
-              Exit;
             end;
           SQL_VARYING :
             begin
@@ -1487,7 +1486,7 @@ AssignResult: if sqlsubtype > High(FCodePageArray) then
                 Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  Result := ZMoveAnsiRecToUTF8(AnsiRec, zCP_UTF8)
+                  ZSetString(AnsiRec.P, AnsiRec.Len, Result)
                 else
                   Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
               Exit;
