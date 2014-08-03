@@ -462,19 +462,15 @@ begin
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
 
-  if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > FColumnCount{$IFNDEF GENERIC_INDEX}-1{$ENDIF}) then
-  begin
+  if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > FColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
 
   if not CheckConvertion(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}], ResultType) then
-  begin
     raise EZSQLException.Create(
       Format(SConvertionIsNotPossible, [ColumnIndex,
       DefineColumnTypeName(FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]),
       DefineColumnTypeName(ResultType)]));
-  end;
 end;
 
 {**
