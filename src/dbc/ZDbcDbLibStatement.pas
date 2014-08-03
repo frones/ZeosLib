@@ -222,7 +222,7 @@ begin
   if FPlainDriver.dbcancel(FHandle) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
-  if FPlainDriver.dbcmd(FHandle, PAnsiChar(Ansi)) <> DBSUCCEED then
+  if FPlainDriver.dbcmd(FHandle, Pointer(Ansi)) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcExecute, SQL);
 
   if FPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
