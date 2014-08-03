@@ -654,7 +654,7 @@ begin
         vtNull:
           Result.VString := '';
         vtBytes:
-          Result.VString := {$IFDEF UNICODE}String{$ENDIF}(BytesToStr(Value.VBytes));
+          ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtString:
           Result.VString := Value.VString;
         vtAnsiString:
@@ -693,7 +693,7 @@ begin
         vtNull:
           Result.VAnsiString := '';
         vtBytes:
-          Result.VAnsiString := BytesToStr(Value.VBytes);
+          ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtString:
           Result.VAnsiString := {$IFDEF UNICODE}AnsiString{$ENDIF}(Value.VString);
         vtAnsiString:
@@ -725,7 +725,7 @@ begin
         vtNull:
           Result.VUTF8String := '';
         vtBytes:
-          ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result.VUTF8String);
+          ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtString:
           Result.VUTF8String := ZStringToUTF8(Value.VString, FSystemCodePage);
        vtAnsiString:
@@ -757,7 +757,7 @@ begin
         vtNull:
           Result.VRawByteString := '';
         vtBytes:
-          ZSetString(PAnsiChar(Value.VBytes), Length(Value.VBytes), Result.VRawByteString);
+          ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtRawByteString:
           Result.VRawByteString := Value.VRawByteString;
         else
@@ -1831,9 +1831,7 @@ begin
           else
             Result.VString := 'FALSE';
         vtBytes:
-          begin
-            ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
-          end;
+          ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
           Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VInteger);
         vtUInteger:
@@ -2270,7 +2268,7 @@ DateTimeFromUnicode:
           else
             Result.VString := 'FALSE';
         vtBytes:
-          Result.VString := {$IFDEF UNICODE}String{$ENDIF}(BytesToStr(Value.VBytes));
+          ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result.VString);
         vtInteger:
           Result.VString := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(Value.VInteger);
         vtUInteger:
@@ -2612,7 +2610,7 @@ begin
       else
         Result := 'FALSE';
     vtBytes:
-      Result := BytesToStr(Value.VBytes);
+      ZSetString(Pointer(Value.VBytes), Length(Value.VBytes), Result);
     vtInteger:
       Result := IntToRaw(Value.VInteger);
     vtUInteger:

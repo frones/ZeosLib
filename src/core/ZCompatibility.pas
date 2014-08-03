@@ -684,14 +684,25 @@ begin
 end;
 
 procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+var
+  I: Cardinal;
+  P: PAnsiChar;
+  W: PWideChar;
 begin
   Dest := ''; //speeds up for SetLength
   if ( Len = 0 ) or ( Src = nil ) then
     Exit
   else
   begin
-    SetLength(Dest, Len div 2);
-    Move(Src^, Pointer(Dest)^, Len);
+    P := Src;
+    SetString(Dest, nil, Len);
+    W := Pointer(Dest);
+    for i := 1 to Len do
+    begin
+      PWord(W)^ := PByte(P)^;
+      Inc(P);
+      Inc(W);
+    end;
   end;
 end;
 
