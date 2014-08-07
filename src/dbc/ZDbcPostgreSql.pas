@@ -691,7 +691,7 @@ begin
 
     { Sets a client codepage if necessary }
     if ( FClientCodePage <> '' ) and (Temp <> FClientCodePage) then
-      SetServerSetting('CLIENT_ENCODING', NotEmptyStringToASCII7(FClientCodePage));
+      SetServerSetting('CLIENT_ENCODING', {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FClientCodePage));
 
     { Turn on transaction mode }
     StartTransactionSupport;
@@ -714,7 +714,7 @@ begin
     SCS := Info.Values[standard_conforming_strings];
     if SCS <> '' then
     begin
-      SetServerSetting(standard_conforming_strings, NotEmptyStringToASCII7(SCS));
+      SetServerSetting(standard_conforming_strings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
     end;
     //if not FOidAsBlob then
@@ -1262,7 +1262,7 @@ function TZPostgreSQLConnection.GetBinaryEscapeString(const Value: TBytes): Stri
 var Tmp: RawByteString;
 begin
   ZSetString(PAnsiChar(Value), Length(Value), Tmp{%H-});
-  Result := PosEmptyASCII7ToString(EncodeBinary(Tmp));
+  Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(EncodeBinary(Tmp));
   if GetAutoEncodeStrings then
     Result := GetDriver.GetTokenizer.GetEscapeString(Result);
 end;

@@ -424,7 +424,7 @@ begin
     begin
       QueryHandle := ExecuteInternal(GetDeallocateSQL, eicUnprepStmt);
       FPlainDriver.Clear(QueryHandle);
-      FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
+      FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
     end;
   end;
   inherited Unprepare;
@@ -455,7 +455,7 @@ begin
   case Category of
     eicPrepStmt:
       begin
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, Pointer(SQL));
         try
           Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
             FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
@@ -466,26 +466,26 @@ begin
         if not Findeterminate_datatype then
         begin
           FPlainDriver.Clear(Result);
-          FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
+          FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         end;
       end;
     eicExecPrepStmt:
       begin
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(FExecSQL));
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, Pointer(FExecSQL));
         CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
           lcUnprepStmt, ASQL, Result);
       end;
     eicUnprepStmt:
       if Assigned(FConnectionHandle) then
       begin
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, Pointer(SQL));
         CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
           lcUnprepStmt, ASQL, Result);
       end
       else Result := nil;
     else
       begin
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, Pointer(SQL));
         CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
           lcExecute, ASQL, Result);
       end;
@@ -547,7 +547,7 @@ begin
     eicPrepStmt:
       begin
         Result := FPlainDriver.Prepare(FConnectionHandle, FPRawPlanName,
-          PAnsiChar(SQL), InParamCount, nil);
+          Pointer(SQL), InParamCount, nil);
         try
           Findeterminate_datatype := (CheckPostgreSQLError(Connection, FPlainDriver,
             FConnectionHandle, lcPrepStmt, ASQL, Result) = '42P18');
@@ -557,7 +557,7 @@ begin
         end;
         if not Findeterminate_datatype then
         begin
-          FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
+          FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
           FPlainDriver.Clear(Result);
         end;
       end;
@@ -572,14 +572,14 @@ begin
     eicUnprepStmt:
       if Assigned(FConnectionHandle) then
         begin
-          Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+          Result := FPlainDriver.ExecuteQuery(FConnectionHandle, Pointer(SQL));
           CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
             lcUnprepStmt, ASQL, Result);
         end
       else Result := nil;
     else
       begin
-        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, PAnsiChar(SQL));
+        Result := FPlainDriver.ExecuteQuery(FConnectionHandle, Pointer(SQL));
         CheckPostgreSQLError(Connection, FPlainDriver, FConnectionHandle,
           lcExecute, ASQL, Result);
       end;

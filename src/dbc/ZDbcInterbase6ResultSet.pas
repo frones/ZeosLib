@@ -1644,7 +1644,7 @@ begin
                 {$ENDIF}
               else
                 {$IFDEF UNICODE}
-                Result := PosEmptyASCII7ToUnicodeString(FBlobTemp.GetRawByteString);
+                Result := ASCII7ToUnicodeString(FBlobTemp.GetRawByteString);
                 {$ELSE}
                 Result := FBlobTemp.GetRawByteString;
                 {$ENDIF}

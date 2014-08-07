@@ -80,7 +80,7 @@ type
   { Interbase blob Information structure
     contain iformation about blob size in bytes,
     segments count, segment size in bytes and blob type
-    Note: blob type can be text an binary }
+    Note: blob type can be text and binary }
   TIbBlobInfo = record
     NumSegments: Word;
     MaxSegmentSize: Word;
@@ -483,7 +483,7 @@ begin
       isc_dpb_num_buffers, isc_dpb_dbkey_scope, isc_dpb_force_write,
       isc_dpb_no_reserve, isc_dpb_damaged, isc_dpb_verify:
         begin
-          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(StrToInt(NotEmptyASCII7ToString(ParamValue)));
+          DPB := DPB + AnsiChar(ParamNo) + #1 + AnsiChar(ZFastCode.RawToInt(ParamValue));
           Inc(FDPBLength, 3);
         end;
       isc_dpb_sweep:
@@ -493,7 +493,7 @@ begin
         end;
       isc_dpb_sweep_interval:
         begin
-          PValue := StrToInt(NotEmptyASCII7ToString(ParamValue));
+          PValue := ZFastCode.RawToInt(ParamValue);
           DPB := DPB + AnsiChar(ParamNo) + #4 + PAnsiChar(@PValue)[0] +
                  PAnsiChar(@PValue)[1] + PAnsiChar(@PValue)[2] + PAnsiChar(@PValue)[3];
           Inc(FDPBLength, 6);
@@ -828,7 +828,7 @@ begin
   end;
   { Prepare an sql statement }
   PlainDriver.isc_dsql_prepare(@StatusVector, TrHandle, @StmtHandle,
-    0, PAnsiChar(SQL), Dialect, nil);
+    0, Pointer(SQL), Dialect, nil);
 
   iError := CheckInterbase6Error(PlainDriver, StatusVector, ConSettings, lcPrepStmt, SQL); //Check for disconnect AVZ
 
@@ -2081,7 +2081,7 @@ begin
       SQL_TYPE_DATE : FPlainDriver.isc_encode_sql_date(@TmpDate, PISC_DATE(sqldata));
       SQL_TYPE_TIME : begin
                         FPlainDriver.isc_encode_sql_time(@TmpDate, PISC_TIME(sqldata));
-                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ + msec*10;
+                        PISC_TIME(sqldata)^ := PISC_TIME(sqldata)^ {%H-}+ msec*10;
                       end;
       SQL_TIMESTAMP : begin
                         FPlainDriver.isc_encode_timestamp(@TmpDate,PISC_TIMESTAMP(sqldata));
@@ -2320,10 +2320,7 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
     if (sqlind <> nil) then
-      case Value of
-        True  : sqlind^ := -1; //NULL
-        False : sqlind^ :=  0; //NOT NULL
-      end;
+       sqlind^ := -Ord(Value);
   {$IFOPT D+}
 {$R+}
 {$ENDIF}

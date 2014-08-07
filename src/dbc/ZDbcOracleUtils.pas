@@ -57,6 +57,9 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IF defined(WITH_INLINE) and defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
+  Windows,
+  {$IFEND}
   ZSysUtils, ZDbcIntfs, ZVariant, ZPlainOracleDriver, ZDbcLogging,
   ZCompatibility, ZPlainOracleConstants;
 
@@ -600,12 +603,12 @@ var
   begin
     Variable^.oIndicatorArray^[I] := -1;
     Variable^.oDataSizeArray^[i] := 1; //place of #0
-    (PAnsiChar(NativeUInt(Variable^.Data)+I*Variable^.Length))^ := #0; //OCI expects the trailing $0 byte
+    ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length))^ := #0; //OCI expects the trailing $0 byte
   end;
   procedure MoveString(Const Data: Pointer; Iter: LongWord);
   begin
-    System.Move(Data^, Pointer(NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
-    (PAnsiChar(NativeUInt(Variable^.Data)+Iter*Variable^.Length)+Variable^.oDataSizeArray^[Iter]-1)^ := #0; //improve  StrLCopy... set a leadin #0 if truncation happens
+    System.Move(Data^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)^, Variable^.oDataSizeArray^[Iter]);
+    ({%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+Iter*Variable^.Length)+Variable^.oDataSizeArray^[Iter]-1)^ := #0; //improve  StrLCopy... set a leadin #0 if truncation happens
   end;
 begin
   OracleConnection := Connection as IZOracleConnection;
@@ -644,13 +647,13 @@ begin
         SQLT_LVB, SQLT_LVC:
             if Pointer(Value.VBytes) = nil then
             begin
-              Variable^.oIndicatorArray^[I] := -1;
+              Variable^.oIndicatorArray^[0] := -1;
               PInteger(Variable^.Data)^ := 0;
             end
             else
             begin
               PInteger(Variable^.Data)^ := Math.Min(System.Length(Value.VBytes), Variable^.oDataSize);
-              System.Move(Pointer(Value.VBytes)^, Pointer(NativeUInt(Variable^.Data)+SizeOf(Integer))^, PInteger(Variable^.Data)^);
+              System.Move(Pointer(Value.VBytes)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+SizeOf(Integer))^, PInteger(Variable^.Data)^);
             end;
         SQLT_BLOB:
           begin
@@ -737,7 +740,7 @@ begin
       begin
         Variable^.oIndicatorArray^[i] := -1; //set all null
         if Variable^.TypeCode = SQLT_STR then 
-          PAnsiChar(NativeUInt(Variable^.Data)+I*Variable^.Length)^ := #0; //oci expects a terminating $0 byte
+          {%H-}PAnsiChar(NativeUInt(Variable^.Data)+I*Variable^.Length)^ := #0; //oci expects a terminating $0 byte
         Exit; //we are ready here
       end
     else if (Value.VArray.VIsNullArray = nil) then
@@ -782,44 +785,44 @@ begin
     if ZData <> nil then
       case Variable^.ColType of
         stBoolean: //Oracle doesn't support boolean types so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do PLongInt(NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := Ord(ZBooleanArray[I]);
+          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := Ord(ZBooleanArray[I]);
         stByte: //Oracle doesn't support byte type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do PLongInt(NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZByteArray[I];
+          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZByteArray[I];
         stShort: //Oracle doesn't support ShortInt type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do PLongInt(NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZShortIntArray[I];
+          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZShortIntArray[I];
         stWord: //Oracle doesn't support word type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do PLongInt(NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZWordArray[I];
+          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZWordArray[I];
         stSmall: //Oracle doesn't support smallint type so lets use integers and OCI converts it..
-          for i := 0 to Iteration -1 do PLongInt(NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZSmallIntArray[I];
+          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZSmallIntArray[I];
         stLongWord:
           //since 11.2 we can use Int64 types too
           if Connection.GetClientVersion >= 11002000 then
-            for i := 0 to Iteration -1 do PInt64(NativeUInt(Variable^.Data)+I*SizeOf(Int64))^ := ZLongWordArray[I]
+            for i := 0 to Iteration -1 do {%H-}PInt64({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Int64))^ := ZLongWordArray[I]
           else
-            for i := 0 to Iteration -1 do PDouble(NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZLongWordArray[I];
+            for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZLongWordArray[I];
         stInteger: { no conversion required }
-          for i := 0 to Iteration -1 do PLongInt(NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZIntegerArray[I];
+          for i := 0 to Iteration -1 do {%H-}PLongInt({%H-}NativeUInt(Variable^.Data)+I*SizeOf(LongInt))^ := ZIntegerArray[I];
         stULong: //we use String types here
           for i := 0 to Iteration -1 do
           begin
             AnsiTemp := IntToRaw(ZUInt64Array[I]);
             Variable^.oDataSizeArray^[i] := Length(AnsiTemp)+1;
-            System.Move(Pointer(AnsiTemp)^, Pointer(NativeUInt(Variable^.Data)+I*Variable^.Length)^, Variable^.oDataSizeArray^[i]);
+            System.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^, Variable^.oDataSizeArray^[i]);
           end;
         stLong: //conversion required below 11.2
           //since 11.2 we can use Int64 types too
           if Connection.GetClientVersion >= 11002000 then
-            for i := 0 to Iteration -1 do PInt64(NativeUInt(Variable^.Data)+I*SizeOf(Int64))^ := ZInt64Array[I]
+            for i := 0 to Iteration -1 do {%H-}PInt64({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Int64))^ := ZInt64Array[I]
           else
-            for i := 0 to Iteration -1 do PDouble(NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZInt64Array[I];
+            for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZInt64Array[I];
         stFloat: //conversion required
-          for i := 0 to Iteration -1 do PDouble(NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZSingleArray[I];
+          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZSingleArray[I];
         stDouble: //no conversion required
-          for i := 0 to Iteration -1 do PDouble(NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZDoubleArray[I];
+          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZDoubleArray[I];
         stCurrency: //conversion required
-          for i := 0 to Iteration -1 do PDouble(NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZCurrencyArray[I];
+          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZCurrencyArray[I];
         stBigDecimal: //conversion required
-          for i := 0 to Iteration -1 do PDouble(NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZExtendedArray[I];
+          for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZExtendedArray[I];
         stString:
           case TZVariantType(Value.VArray.VArrayVariantType) of
             vtString:
@@ -944,20 +947,20 @@ begin
             if Pointer(ZBytesArray[I]) = nil then
             begin
               Variable^.oIndicatorArray^[I] := -1;
-              PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^ := 0;
+              {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := 0;
             end
             else
             begin
-              PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^ := Math.Min(System.Length(ZBytesArray[I]), Variable^.oDataSize);
-              System.Move(Pointer(ZBytesArray[I])^, Pointer(NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^, PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^);
+              {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := Math.Min(System.Length(ZBytesArray[I]), Variable^.oDataSize);
+              System.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-} PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^);
             end;
-        stGUID: //AFIAK OCI doesn't support GUID fields so let's convert them to stings
+        stGUID: //AFAIK OCI doesn't support GUID fields so let's convert them to stings
           for i := 0 to Iteration -1 do
             if (Variable^.oIndicatorArray^[I] = 0) then
             begin
-              AnsiTemp := {$IFDEF UNICODE}NotEmptyStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[I]));
+              AnsiTemp := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GuidToString(ZGUIDArray[I]));
               Variable^.oDataSizeArray^[i] := 39;
-              System.Move(Pointer(AnsiTemp)^, Pointer(NativeUInt(Variable^.Data)+I*39)^, 39);
+              System.Move(Pointer(AnsiTemp)^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*39)^, 39);
             end;
         stDate, stTime, stTimeStamp:
           for i := 0 to Iteration -1 do
@@ -967,7 +970,7 @@ begin
               DecodeTime(ZDateTimeArray[i], Hour, Min, Sec, MSec);
               CheckOracleError(PlainDriver, ErrorHandle,
                 PlainDriver.DateTimeConstruct(OracleConnection.GetConnectionHandle,
-                  ErrorHandle, PPOCIDescriptor(NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^, //direct addressing descriptore to array. So we don't need to free the mem again
+                  ErrorHandle, {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^, //direct addressing descriptore to array. So we don't need to free the mem again
                   Year, Month, Day, Hour, Min, Sec, MSec * 1000000, nil, 0),
                 lcOther, 'OCIDateTimeConstruct', ConSettings);
             end;
@@ -982,7 +985,7 @@ begin
                 WriteTempBlob := TZOracleClob.Create(PlainDriver,
                   nil, 0, OracleConnection.GetConnectionHandle,
                   OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                  PPOCIDescriptor(NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^, 
+                  {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                   ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
                 WriteTempBlob.CreateBlob;
                 LobBuffer := TempBlob.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
@@ -995,7 +998,7 @@ begin
                 LobBuffer := Pointer(AnsiTemp);
                 WriteTempBlob := TZOracleClob.Create(PlainDriver, nil, 0,
                   OracleConnection.GetConnectionHandle, OracleConnection.GetContextHandle,
-                  OracleConnection.GetErrorHandle, PPOCIDescriptor(NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
+                  OracleConnection.GetErrorHandle, {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                   ChunkSize, ConSettings, ConSettings^.ClientCodePage^.CP);
                 WriteTempBlob.CreateBlob;
                 WriteTempBlob.WriteLobFromBuffer(LobBuffer, Length(AnsiTemp));
@@ -1009,7 +1012,7 @@ begin
               TempBlob := ZInterfaceArray[I] as IZBLob;
               WriteTempBlob := TZOracleBlob.Create(PlainDriver, nil, 0,
                 OracleConnection.GetContextHandle, OracleConnection.GetErrorHandle,
-                PPOCIDescriptor(NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
+                {%H-}PPOCIDescriptor({%H-}NativeUInt(Variable^.Data)+I*SizeOf(PPOCIDescriptor))^,
                 ChunkSize, ConSettings);
               WriteTempBlob.CreateBlob;
               WriteTempBlob.WriteLobFromBuffer(TempBlob.GetBuffer, TempBlob.Length);

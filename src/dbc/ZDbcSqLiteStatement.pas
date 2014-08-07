@@ -287,9 +287,12 @@ end;
 
 procedure TZSQLiteCAPIPreparedStatement.Prepare;
 begin
-  FErrorCode := FPlainDriver.Prepare_v2(FHandle, PAnsiChar(ASQL), Length(ASQL), FStmtHandle, nil);
-  CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, ASQL, ConSettings);
-  inherited Prepare;
+  if not Prepared then
+  begin
+    FErrorCode := FPlainDriver.Prepare_v2(FHandle, PAnsiChar(ASQL), Length(ASQL), FStmtHandle, nil);
+    CheckSQLiteError(FPlainDriver, FHandle, FErrorCode, nil, lcPrepStmt, ASQL, ConSettings);
+    inherited Prepare;
+  end;
 end;
 
 procedure TZSQLiteCAPIPreparedStatement.Unprepare;
@@ -313,9 +316,8 @@ end;
 
 function TZSQLiteCAPIPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  if Not Prepared then
-     Prepare;
-
+  Prepare;
+  Result := nil;
   if FOpenResultSet <> nil then
     IZResultSet(FOpenResultSet).Close; // reset stmt-handle and free reference
   BindInParameters;
@@ -334,8 +336,7 @@ end;
 
 function TZSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
-  if Not Prepared then
-     Prepare;
+  Prepare;
   BindInParameters;
 
   Result := 0;
@@ -356,8 +357,7 @@ end;
 
 function TZSQLiteCAPIPreparedStatement.ExecutePrepared: Boolean;
 begin
-  if Not Prepared then
-     Prepare;
+  Prepare;
 
   BindInParameters;
 

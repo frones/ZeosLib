@@ -92,8 +92,8 @@ ExeDescription=Zeos Database Components
 [Directories]
 OutputDir=
 UnitOutputDir=build
-PackageDLLOutputDir=build
-PackageDCPOutputDir=build
+PackageDLLOutputDir=
+PackageDCPOutputDir=
 SearchPath=build
 Packages=
 Conditionals=

@@ -1353,9 +1353,9 @@ begin
             Result := TempBlob.GetPAnsiChar(ConSettings^.CTRL_CP)
             {$ENDIF}
           else
-            Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
+            Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
       end;
-    stBytes: Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(BytesToStr(GetBytes(ColumnIndex, IsNull)));
+    stBytes: Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(BytesToStr(GetBytes(ColumnIndex, IsNull)));
     stGUID:
       begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
@@ -1371,7 +1371,7 @@ begin
       begin
         TempBlob := GetBlobObject(FBuffer, ColumnIndex);
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
-          Result := {$IFDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
+          Result := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(TempBlob.GetString);
       end;
   end;
 end;
@@ -1607,17 +1607,17 @@ begin
             Exit;
           end
           else
-            FUniTemp := NotEmptyASCII7ToUnicodeString(TempBlob.GetString);
+            FUniTemp := ASCII7ToUnicodeString(TempBlob.GetString);
       end;
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        FUniTemp := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
+        FUniTemp := ASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
-        FUniTemp := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
+        FUniTemp := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
     stDate: FUniTemp := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
       ConSettings^.DisplayFormatSettings, False);
@@ -1668,17 +1668,17 @@ begin
           if TempBlob.IsClob then
             Result := TempBlob.GetUnicodeString
           else
-            Result := NotEmptyASCII7ToUnicodeString(TempBlob.GetString);
+            Result := ASCII7ToUnicodeString(TempBlob.GetString);
       end;
     stBytes, stBinaryStream:
       begin
         Bts := GetBytes(ColumnIndex, IsNull);
-        Result := NotEmptyASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
+        Result := ASCII7ToUnicodeString(Pointer(Bts), Length(Bts));
       end;
     stGUID:
       begin
         System.Move(Pointer(GetBytes(ColumnIndex, IsNull))^, GUID{%H-}, 16);
-        Result := {$IFNDEF UNICODE}NotEmptyASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
+        Result := {$IFNDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GUIDToString(GUID));
       end;
     stDate: Result := DateTimeToUnicodeSQLDate(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^,
       ConSettings^.DisplayFormatSettings, False);
@@ -3496,7 +3496,7 @@ begin
       else
       begin
         {$IFDEF UNICODE}
-        GUID := StringToGUID(NotEmptyASCII7ToString(Value.P, Value.Len));
+        GUID := StringToGUID(ASCII7ToUnicodeString(Value.P, Value.Len));
         {$ELSE}
         GUID := StringToGUID(Value.P);
         {$ENDIF}
@@ -3608,7 +3608,7 @@ begin
         SetNull(ColumnIndex)
       else
       begin
-        GUID := StringToGUID({$IFDEF UNICODE}Value.P{$ELSE}NotEmptyUnicodeStringToASCII7(Value.P, Value.Len){$ENDIF});
+        GUID := StringToGUID({$IFDEF UNICODE}Value.P{$ELSE}UnicodeStringToASCII7(Value.P, Value.Len){$ENDIF});
         SetLength(Bts, 16);
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
@@ -3713,7 +3713,7 @@ begin
         SetNull(ColumnIndex)
       else
       begin
-        GUID := StringToGUID({$IFDEF UNICODE}NotEmptyASCII7ToString{$ENDIF}(Value));
+        GUID := StringToGUID({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(Value));
         SetLength(Bts, 16);
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
@@ -3796,7 +3796,7 @@ begin
         SetNull(ColumnIndex)
       else
       begin
-        GUID := StringToGUID({$IFNDEF UNICODE}NotEmptyUnicodeStringToASCII7{$ENDIF}(Value));
+        GUID := StringToGUID({$IFNDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Value));
         SetLength(Bts, 16);
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);

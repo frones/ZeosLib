@@ -76,8 +76,6 @@ type
     FZBufferSize: Integer;
     FStatementType: ub2;
     FServerStmtCache: Boolean;
-    FConnectionHandle: POCIEnv;
-    FContextHandle: POCISvcCtx;
     FParamsBuffer: TByteDynArray; { holds all data for bindings }
     FIteration: Integer;
     FCanBindInt64: Boolean;
@@ -103,7 +101,6 @@ type
   end;
   TZOracleStatement = class(TZAbstractPreparedStatement);
 
-
   TZOracleCallableStatement = class(TZAbstractCallableStatement,
     IZParamNamedCallableStatement)
   private
@@ -116,7 +113,6 @@ type
     FOracleParamsCount: Integer;
     FParamNames: TStringDynArray;
     PackageIncludedList: TStrings;
-    FConnectionHandle: POCIEnv;
     FParamsBuffer: TByteDynArray;
     FRowPrefetchSize: ub4;
     FZBufferSize: Integer;
@@ -174,8 +170,6 @@ begin
   FCanBindInt64 := Connection.GetClientVersion >= 11002000;
   FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'row_prefetch_size', ''), 131072);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072);
-  FConnectionHandle := (Connection as IZOracleConnection).GetConnectionHandle;
-  FContextHandle := (Connection as IZOracleConnection).GetContextHandle;
 end;
 
 constructor TZOraclePreparedStatement.Create(PlainDriver: IZOraclePlainDriver;
@@ -278,7 +272,8 @@ begin
     CurrentVar := @FParams.Variables[I];
     CurrentVar.Handle := nil;
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
-    AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration, True);
+    AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
+      CurrentVar, FIteration, True);
     Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
       I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
       CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
@@ -308,7 +303,8 @@ end;
 }
 procedure TZOraclePreparedStatement.UnPrepareInParameters;
 begin
-  FreeOracleSQLVars(FPlainDriver, FParams, FIteration, FConnectionHandle, FErrorHandle, ConSettings)
+  FreeOracleSQLVars(FPlainDriver, FParams, FIteration,
+    (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings)
 end;
 
 {**
@@ -323,8 +319,8 @@ begin
     AllocateOracleStatementHandles(FPlainDriver, Connection,
         FHandle, FErrorHandle, False{FServerStmtCache});
     { prepare stmt }
-    PrepareOracleStatement(FPlainDriver, FContextHandle, ASQL, FHandle, FErrorHandle,
-        FRowPrefetchSize, False{FServerStmtCache}, ConSettings);
+    PrepareOracleStatement(FPlainDriver, (Connection as IZOracleConnection).GetContextHandle,
+      ASQL, FHandle, FErrorHandle, FRowPrefetchSize, False{FServerStmtCache}, ConSettings);
     { get Statemant type }
     FPlainDriver.AttrGet(FHandle, OCI_HTYPE_STMT, @FStatementType, nil,
       OCI_ATTR_STMT_TYPE, FErrorHandle);
@@ -629,7 +625,8 @@ begin
     CurrentVar := @FParams.Variables[I];
     CurrentVar.Handle := nil;
     SetVariableDataEntrys(CurrentBufferEntry, CurrentVar, FIteration);
-    AllocDesriptors(FPlainDriver, FConnectionHandle, CurrentVar, FIteration, True);
+    AllocDesriptors(FPlainDriver, (Connection as IZOracleConnection).GetConnectionHandle,
+      CurrentVar, FIteration, True);
     Status := FPlainDriver.BindByPos(FHandle, CurrentVar^.BindHandle, FErrorHandle,
       I + 1, CurrentVar^.Data, CurrentVar^.Length, CurrentVar^.TypeCode,
       CurrentVar^.oIndicatorArray, CurrentVar^.oDataSizeArray, nil, 0, nil, OCI_DEFAULT);
@@ -662,7 +659,8 @@ end;
 }
 procedure TZOracleCallableStatement.UnPrepareInParameters;
 begin
-  FreeOracleSQLVars(FPlainDriver, FParams, FIteration, FConnectionHandle, FErrorHandle, ConSettings)
+  FreeOracleSQLVars(FPlainDriver, FParams, FIteration,
+    (Connection as IZOracleConnection).GetConnectionHandle, FErrorHandle, ConSettings)
 end;
 
 procedure TZOracleCallableStatement.SortZeosOrderToOCIParamsOrder;
@@ -837,7 +835,7 @@ begin
     InParams := GenerateParamsStr( FOracleParamsCount );
     TempResult := 'BEGIN ' + sFunc +SQL + InParams+'; END;';
   end;
-  Result := NotEmptyStringToASCII7(TempResult);
+  Result := {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(TempResult);
 end;
 
 procedure TZOracleCallableStatement.ClearParameters;
@@ -860,7 +858,6 @@ begin
   FCanBindInt64 := Connection.GetClientVersion >= 11002000;
   FRowPrefetchSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'row_prefetch_size', ''), 131072);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072);
-  FConnectionHandle := (Connection as IZOracleConnection).GetConnectionHandle;
   FIteration := 1;
 end;
 
