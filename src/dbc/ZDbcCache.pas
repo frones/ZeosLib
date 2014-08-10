@@ -4433,11 +4433,23 @@ begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
         begin
-          AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
           AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
-          Result.P := PWideChar(FUniTemp);
-          Result.Len := Length(FUniTemp);
+          if AnsiRec.Len = 0 then //avoid all conversions
+          begin
+            Result.Len := 0;
+            Result.P := PEmptyUnicodeString;
+          end
+          else
+          begin
+            AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
+            FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+            Result.P := Pointer(FUniTemp);
+            {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+            Result.Len := {%H-}PLengthInt(NativeUInt(FUniTemp) - StringLenOffSet)^;
+            {$ELSE}
+            Result.Len := Length(FUniTemp);
+            {$ENDIF}
+          end;
         end
       else
         Result := inherited GetWideRec(ColumnIndex, IsNull);
@@ -4711,10 +4723,18 @@ begin
       stString, stUnicodeString:
         begin
           ZWideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          ZWideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
-          FRawTemp := ZWideRecToRaw(ZWideRec, ConSettings^.ClientCodePage^.CP);
-          Result.Len := Length(FRawTemp);
-          Result.P := PAnsiChar(FRawTemp);
+          if ZWideRec.Len = 0 then //avoid all conversions
+          begin
+            Result.Len := 0;
+            Result.P := PEmptyAnsiString;
+          end
+          else
+          begin
+            ZWideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
+            FRawTemp := ZWideRecToRaw(ZWideRec, ConSettings^.ClientCodePage^.CP);
+            Result.Len := {%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^;
+            Result.P := Pointer(FRawTemp);
+          end;
         end
       else
         Result := Inherited GetAnsiRec(ColumnIndex, IsNull);
