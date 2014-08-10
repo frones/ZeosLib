@@ -234,31 +234,6 @@ const
   Z_SETLOGINTIME          = 15;
   Z_SETFALLBACK           = 16;
 
-{ datatype plazeholders }
-  Z_SQLVOID               = 0;
-  Z_SQLTEXT               = 1;
-  Z_SQLVARBINARY          = 2;
-  Z_SQLINTN               = 3;
-  Z_SQLVARCHAR            = 4;
-  Z_SQLBINARY             = 5;
-  Z_SQLIMAGE              = 6;
-  Z_SQLCHAR               = 7;
-  Z_SQLINT1               = 8;
-  Z_SQLBIT                = 9;
-  Z_SQLINT2               = 10;
-  Z_SQLINT4               = 11;
-  Z_SQLMONEY              = 12;
-  Z_SQLDATETIME           = 13;
-  Z_SQLFLT8               = 14;
-  Z_SQLFLTN               = 15;
-  Z_SQLMONEYN             = 16;
-  Z_SQLDATETIMN           = 17;
-  Z_SQLFLT4               = 18;
-  Z_SQLMONEY4             = 19;
-  Z_SQLDATETIM4           = 20;
-  Z_SQLDECIMAL            = 21;
-  Z_SQLNUMERIC            = 22;
-
 { DBLib options }
 const
   DBLIBDBBUFFER               = 0;
@@ -356,7 +331,6 @@ const
   MSDBSETAPP                = 4;
   MSDBSETID                 = 5;
   MSDBSETLANG               = 6;
-
   MSDBSETSECURE             = 7;
   MSDBSET_LOGIN_TIME        = 10;
   MSDBSETFALLBACK           = 12;
@@ -412,31 +386,6 @@ const
   DBTDS_7_2               = 10;	{ Microsoft SQL Server 2005 }
   DBTDS_7_3               = 11;	{ Microsoft SQL Server 2008 }
 
-
-{ Data Type Tokens }
-  DBLIBSQLVOID               = $1f;
-  DBLIBSQLTEXT               = $23;
-  DBLIBSQLVARBINARY          = $25;
-  DBLIBSQLINTN               = $26; { all nullable integers }
-  DBLIBSQLVARCHAR            = $27;
-  DBLIBSQLBINARY             = $2d;
-  DBLIBSQLIMAGE              = $22;
-  DBLIBSQLCHAR               = $2f;
-  DBLIBSQLINT1               = $30;
-  DBLIBSQLBIT                = $32;
-  DBLIBSQLINT2               = $34;
-  DBLIBSQLINT4               = $38;
-  DBLIBSQLMONEY              = $3c;
-  DBLIBSQLDATETIME           = $3d;
-  DBLIBSQLFLT8               = $3e;
-  DBLIBSQLFLTN               = $6d;
-  DBLIBSQLMONEYN             = $6e;
-  DBLIBSQLDATETIMN           = $6f;
-  DBLIBSQLFLT4               = $3b;
-  DBLIBSQLMONEY4             = $7a;
-  DBLIBSQLDATETIM4           = $3a;
-  DBLIBSQLDECIMAL            = $6a;
-  DBLIBSQLNUMERIC            = $6c;
 
 { Data stream tokens }
   SQLCOLFMT             = $a1;
@@ -785,71 +734,53 @@ const
   INVALID_UROWNUM       = Cardinal(-1);
 
 
-{ copied from tds.h }
-//enum
-	SYBCHAR               = 47;		(* 0x2F *)
-	SYBVARCHAR            = 39;	  (* 0x27 *)
-	SYBINTN               = 38;		(* 0x26 *)
-	SYBINT1               = 48;		(* 0x30 *)
-	SYBINT2               = 52;		(* 0x34 *)
-	SYBINT4               = 56;		(* 0x38 *)
-	SYBINT8               = 127;	(* 0x7F *)
-	SYBFLT8               = 62;		(* 0x3E *)
-	SYBDATETIME           = 61;	  (* 0x3D *)
-	SYBBIT                = 50;		(* 0x32 *)
-	SYBBITN               = 104;	(* 0x68 *)
-	SYBTEXT               = 35;		(* 0x23 *)
-	SYBNTEXT              = 99;		(* 0x63 *)
-	SYBIMAGE              = 34;		(* 0x22 *)
-	SYBMONEY4             = 122;	(* 0x7A *)
-	SYBMONEY              = 60;		(* 0x3C *)
-	SYBDATETIME4          = 58;   (* 0x3A *)
-	SYBREAL               = 59;		(* 0x3B *)
-	SYBBINARY             = 45;		(* 0x2D *)
-	SYBVOID               = 31;		(* 0x1F *)
-	SYBVARBINARY          = 37;   (* 0x25 *)
-	SYBNUMERIC            = 108;	(* 0x6C *)
-	SYBDECIMAL            = 106;	(* 0x6A *)
-	SYBFLTN               = 109;	(* 0x6D *)
-	SYBMONEYN             = 110;	(* 0x6E *)
-	SYBDATETIMN           = 111;	(* 0x6F *)
-	SYBNVARCHAR           = 103;	(* 0x67 *)
-	XSYBCHAR              = 175;	(* 0xAF *)
-	XSYBVARCHAR           = 167;	(* 0xA7 *)
-	XSYBNVARCHAR          = 231;	(* 0xE7 *)
-	XSYBNCHAR             = 239;	(* 0xEF *)
-	XSYBVARBINARY         = 165;	(* 0xA5 *)
-	XSYBBINARY            = 173;	(* 0xAD *)
-	SYBUNIQUE             = 36;		(* 0x24 *)
-	SYBVARIANT            = 98;   (* 0x62 *)
-	SYBMSUDT              = 240;	(* 0xF0 *)
-	SYBMSXML              = 241;	(* 0xF1 *)
+{ common TDS protocol Data Type mapping of ntwdblib, dblib, freeTDS }
+type
+  { tabular data stream protocol types }
+  //Enum                  ordinal-value
+  TTDSType = (
+    tdsVoid               = 31,
+    tdsImage              = 34,
+    tdsText               = 35,
+    tdsUnique             = 36, //Unique identifier type
+    tdsVarBinary          = 37,
+    tdsIntN               = 38,
+    tdsVarchar            = 39,
+    tdsBinary             = 45,
+    tdsChar               = 47,
+    tdsInt1               = 48,
+    tdsBit                = 50,
+    tdsInt2               = 52,
+    tdsInt4               = 56,
+    tdsDateTime4          = 58,
+    tdsFlt4               = 59,
+    tdsMoney              = 60,
+    tdsDateTime           = 61,
+    tdsFlt8               = 62,
+    tdsVariant            = 98, {from tds.h -> sybase only}
+    tdsNText              = 99, {from tds.h -> sybase only}
+    tdsNVarChar           = 103, {from tds.h -> sybase only}
+    tdsBitN               = 104, {from tds.h -> sybase only}
+    tdsDecimal            = 106,
+    tdsNumeric            = 108,
+    tdsFltN               = 109,
+    tdsMoneyN             = 110,
+    tdsDateTimeN          = 111,
+    tdsMoney4             = 122,
+    {from tds.h -> sade, sybase only}
+    tdsInt8                  = 127,
+    tdsBigVarBinary          = 165,
+    tdsBigVarChar            = 167,
+    tdsBigBinary             = 173,
+    tdsBigChar               = 175,
+    tdsBigNVarChar           = 231,
+    tdsBigNChar              = 239,
+    tdsUDT                   = 240,
+    tdsMSXML                 = 241
+    );
 
-{ FreeTDS Data Type Tokens }
-  TDSSQLVOID               = SYBVOID;
-  TDSSQLTEXT               = SYBTEXT;
-  TDSSQLVARBINARY          = SYBVARBINARY;
-  TDSSQLINTN               = SYBINTN;
-  TDSSQLVARCHAR            = SYBVARCHAR;
-  TDSSQLBINARY             = SYBBINARY;
-  TDSSQLIMAGE              = SYBIMAGE;
-  TDSSQLCHAR               = SYBCHAR;
-  TDSSQLINT1               = SYBINT1;
-  TDSSQLBIT                = SYBBIT;
-  TDSSQLINT2               = SYBINT2;
-  TDSSQLINT4               = SYBINT4;
-  TDSSQLMONEY              = SYBMONEY;
-  TDSSQLDATETIME           = SYBDATETIME;
-  TDSSQLFLT8               = SYBFLT8;
-  TDSSQLFLTN               = SYBFLTN;
-  TDSSQLMONEYN             = SYBMONEYN;
-  TDSSQLDATETIMN           = SYBDATETIMN;
-  TDSSQLFLT4               = SYBREAL;
-  TDSSQLMONEY4             = SYBMONEY4;
-  TDSSQLDATETIM4           = SYBDATETIME4;
-  TDSSQLDECIMAL            = SYBDECIMAL;
-  TDSSQLNUMERIC            = SYBNUMERIC;
-
+const
+{ different type mappings / copied from tds.h -> sybase only!}
   SYBAOPCNT             = $4b;
   SYBAOPCNTU            = $4c;
   SYBAOPSUM             = $4d;
@@ -898,6 +829,17 @@ type
   RETCODE               = Integer;
   PRETCODE              = ^RETCODE;
   STATUS                = Integer;
+
+type
+  tdsVARYCHAR=packed record
+    len: DBINT;
+    str: array[0..DBMAXCHAR-1] of DBCHAR;
+  end;
+
+  dblibVARYCHAR=packed record
+    len: DBSMALLINT;
+    str: array[0..DBMAXCHAR-1] of DBCHAR;
+  end;
 
 //typedef int (*INTFUNCPTR) (void *, ...);
 //typedef int (*DBWAITFUNC) (void);
@@ -1012,7 +954,7 @@ type
   {$ELSE}
     {$A2}
   {$ENDIF}
-  {EH: THIS is a heack: we use entry of typ to have a generic access record }
+  {EH: THIS is a hack: we use entry of typ to have a generic access record }
   PZDBCOL = ^ZDBCOL;
   ZDBCOL = record
    	Typ:            DBSHORT;
@@ -1048,9 +990,9 @@ type
   PTDSDBCOL = ^TTDSDBCOL;
   TTDSDBCOL = record
     SizeOfStruct:   DBINT;
-    Name:           array[0..TDSMAXCOLNAMELEN+2] of DBCHAR;
-    ActualName:     array[0..TDSMAXCOLNAMELEN+2] of DBCHAR;
-    TableName:      array[0..TDSMAXTABLENAME+2] of DBCHAR;
+    Name:           array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
+    ActualName:     array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
+    TableName:      array[0..TDSMAXCOLNAMELEN+1] of DBCHAR;
     ColInfo:        ZDBCOL;
     (*Typ:            SmallInt;
     UserType:       DBINT;
@@ -1131,7 +1073,6 @@ type
   TDBVariables = record
     dboptions: array[0..44]  of ShortInt;
     dbSetLoginRec: array[0..16] of ShortInt;
-    datatypes: array[0..22] of Integer;
   End;
 
 {common FreeTDS(dblib.dll) and ntwdblib.dll definitions
