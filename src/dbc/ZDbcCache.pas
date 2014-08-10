@@ -462,7 +462,7 @@ begin
   if not Assigned(FBuffer) then
     raise EZSQLException.Create(SRowBufferIsNotAssigned);
 
-  if (ColumnIndex{$IFDEF GENERIC_INDEX}<{$ELSE}<={$ENDIF}0) or (ColumnIndex >= FColumnCount{$IFNDEF GENERIC_INDEX}-1{$ENDIF}) then
+  if (ColumnIndex < FirstDbcIndex) or (ColumnIndex > FColumnCount{$IFNDEF GENERIC_INDEX}-1{$ENDIF}) then
   begin
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));

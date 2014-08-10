@@ -64,9 +64,9 @@ uses
 type
   {** Implements a test case for . }
 
-  { TZGenericTestDbcResultSet }
+  { TZGenericTestDataSet }
 
-  TZGenericTestDbcResultSet = class(TZAbstractCompSQLTestCase)
+  TZGenericTestDataSet = class(TZAbstractCompSQLTestCase)
   private
   protected
     procedure TestQueryGeneric(Query: TDataset);
@@ -75,6 +75,7 @@ type
   published
     procedure TestConnection;
     procedure TestReadOnlyQuery;
+    procedure TestReadOnlyQueryUniDirectional;
     procedure TestQuery;
     procedure TestReadOnlyQueryExecSql;
     procedure TestQueryExecSql;
@@ -98,7 +99,7 @@ type
     procedure TestSpaced_Names;
   end;
 
-  TZGenericTestDbcResultSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
+  TZGenericTestDataSetMBCs = class(TZAbstractCompSQLTestCaseMBCs)
   published
     procedure TestVeryLargeBlobs;
   end;
@@ -109,12 +110,12 @@ uses
 {$IFNDEF VER130BELOW}
   Variants,
 {$ENDIF}
-  DateUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset,
+  DateUtils, ZSysUtils, ZTestConsts, ZAbstractRODataset, ZTestCase,
   ZDatasetUtils, strutils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
-{ TZGenericTestDbcResultSet }
+{ TZGenericTestDataSet }
 
-procedure TZGenericTestDbcResultSet.TestConnection;
+procedure TZGenericTestDataSet.TestConnection;
 var
   MetadataList: TStrings;
   Query: TZQuery;
@@ -188,7 +189,7 @@ end;
 {**
   Check functionality prepared statement
 }
-procedure TZGenericTestDbcResultSet.TestPreparedStatement;
+procedure TZGenericTestDataSet.TestPreparedStatement;
 var
   Ansi: AnsiString;
   WS: WideString;
@@ -385,7 +386,7 @@ end;
 {**
   Check functionality ParamChar
 }
-procedure TZGenericTestDbcResultSet.TestParamChar;
+procedure TZGenericTestDataSet.TestParamChar;
 var
   Query: TZQuery;
   s:string;
@@ -469,7 +470,7 @@ end;
 {**
   Check functionality of TZQuery
 }
-procedure TZGenericTestDbcResultSet.TestQuery;
+procedure TZGenericTestDataSet.TestQuery;
 var
   Query: TZQuery;
 begin
@@ -483,9 +484,9 @@ end;
 
 
 {**
-  Check functionality execute statement for  TZReadOnlyQuery
+  Check functionality execute statement for  TZQuery
 }
-procedure TZGenericTestDbcResultSet.TestQueryExecSql;
+procedure TZGenericTestDataSet.TestQueryExecSql;
 var
   Query: TZQuery;
 begin
@@ -543,7 +544,7 @@ end;
 {**
   Check functionality of TZReadOnlyQuery
 }
-procedure TZGenericTestDbcResultSet.TestReadOnlyQuery;
+procedure TZGenericTestDataSet.TestReadOnlyQuery;
 var
   Query: TZReadOnlyQuery;
 begin
@@ -555,7 +556,28 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestQueryUpdate;
+(**
+check Unidirectional behavior of TZReadOnlyQuery
+*)
+procedure TZGenericTestDataSet.TestReadOnlyQueryUnidirectional;
+var
+  Query: TZReadOnlyQuery;
+begin
+(*  {$IFDEF FPC}
+  if SkipForReason(srNonZeos) then Exit;
+  {$ENDIF}
+*)
+
+  Query := CreateReadOnlyQuery;
+  Query.IsUniDirectional := True;
+  try
+    TestQueryGeneric(Query);
+  finally
+    Query.Free;
+  end;
+end;
+
+procedure TZGenericTestDataSet.TestQueryUpdate;
 var
   Sql_: string;
   WS: ZWideString;
@@ -791,7 +813,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestQueryGeneric(Query: TDataset);
+procedure TZGenericTestDataSet.TestQueryGeneric(Query: TDataset);
 var
   SQL: string;
 begin
@@ -851,7 +873,8 @@ begin
   begin
     Open;
     CheckEquals(False, IsEmpty);
-    CheckEquals(2, RecordCount);
+    if not Query.IsUnidirectional then
+      CheckEquals(2, RecordCount);
 
     CheckEquals(1, RecNo);
     {$IFNDEF WITH_FPC_BOF_BUG}
@@ -870,7 +893,7 @@ begin
     CheckEquals(0, FieldByName('p_redundant').AsInteger);
 
     Next;
-    Next; // Fix
+    Next; // just a check for current RecNo = 2 / we are one EOF here
     CheckEquals(2, RecNo);
     {$IFNDEF WITH_FPC_BOF_BUG}
     CheckEquals(False, Bof);
@@ -944,8 +967,8 @@ begin
   with Query do
   begin
     Open;
-    CheckEquals(4, RecordCount);
-    CheckEquals(False, IsEmpty);
+    if not Query.IsUnidirectional then
+      CheckEquals(4, RecordCount);
     CheckEquals(False, IsEmpty);
 
     {$IFNDEF WITH_FPC_BOF_BUG}
@@ -961,13 +984,15 @@ begin
     Next;
     CheckEquals(True, Eof);
 
-    First;
-    {$IFNDEF WITH_FPC_BOF_BUG}
-    CheckEquals(True, Bof);
-    {$ENDIF}
-    Last;
-    CheckEquals(True, Eof);
-
+    if not Query.IsUnidirectional then
+    begin
+      First;
+      {$IFNDEF WITH_FPC_BOF_BUG}
+      CheckEquals(True, Bof);
+      {$ENDIF}
+      Last;
+      CheckEquals(True, Eof);
+    end;
     Close;
   end;
 
@@ -1007,7 +1032,7 @@ end;
 {**
    Check functionality execute statement for  TZReadOnlyQuery
 }
-procedure TZGenericTestDbcResultSet.TestReadOnlyQueryExecSql;
+procedure TZGenericTestDataSet.TestReadOnlyQueryExecSql;
 var
   Query: TZReadOnlyQuery;
 begin
@@ -1066,7 +1091,7 @@ end;
 {**
    Test for filtering recods in TZQuery
 }
-procedure TZGenericTestDbcResultSet.TestQueryFilter;
+procedure TZGenericTestDataSet.TestQueryFilter;
 var
   Query: TZQuery;
 begin
@@ -1081,7 +1106,7 @@ end;
 {**
    Generic test for filtering recods in dataset
 }
-procedure TZGenericTestDbcResultSet.TestFilterGeneric(Query: TDataset);
+procedure TZGenericTestDataSet.TestFilterGeneric(Query: TDataset);
 var
   SQL: string;
 begin
@@ -1164,7 +1189,7 @@ begin
   end;
 end;
 
-function TZGenericTestDbcResultSet.IsRealPreparableTest: Boolean;
+function TZGenericTestDataSet.IsRealPreparableTest: Boolean;
 begin
   Result:= true;
 end;
@@ -1172,7 +1197,7 @@ end;
 {**
   Test for locating recods in TZReadOnlyQuery
 }
-procedure TZGenericTestDbcResultSet.TestQueryLocate; 
+procedure TZGenericTestDataSet.TestQueryLocate;
 var
   Query: TZReadOnlyQuery;
   ResData : boolean; 
@@ -1195,7 +1220,7 @@ end;
 {**
   Test for filtering recods in TZReadOnlyQuery
 }
-procedure TZGenericTestDbcResultSet.TestReadOnlyQueryFilter;
+procedure TZGenericTestDataSet.TestReadOnlyQueryFilter;
 var
   Query: TZReadOnlyQuery;
 begin
@@ -1210,7 +1235,7 @@ end;
 {**
   Runs a test for filter expressions.
 }
-procedure TZGenericTestDbcResultSet.TestFilterExpression;
+procedure TZGenericTestDataSet.TestFilterExpression;
 var
   Query: TZReadOnlyQuery;
 begin
@@ -1237,7 +1262,7 @@ end;
 {**
   Runs a test for decoding sorted fields.
 }
-procedure TZGenericTestDbcResultSet.TestDecodingSortedFields;
+procedure TZGenericTestDataSet.TestDecodingSortedFields;
 var
   Query: TZReadOnlyQuery;
   FieldRefs: TObjectDynArray;
@@ -1275,7 +1300,7 @@ end;
 {**
   Runs a test for SmartOpen option.
 }
-procedure TZGenericTestDbcResultSet.TestSmartOpen;
+procedure TZGenericTestDataSet.TestSmartOpen;
 var
   Query: TZReadOnlyQuery;
 begin
@@ -1339,7 +1364,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestPrepare;
+procedure TZGenericTestDataSet.TestPrepare;
 var
   Query: TZReadOnlyQuery;
 begin
@@ -1381,7 +1406,7 @@ end;
 {**
 Runs a test for time filter expressions.
 }
-procedure TZGenericTestDbcResultSet.TestTimeFilterExpression;
+procedure TZGenericTestDataSet.TestTimeFilterExpression;
 var
   Query: TZQuery;
 begin
@@ -1411,7 +1436,7 @@ end;
 {**
 Runs a test for Datetime filter expressions.
 }
-procedure TZGenericTestDbcResultSet.TestDateTimeFilterExpression;
+procedure TZGenericTestDataSet.TestDateTimeFilterExpression;
 var
   Query: TZQuery;
   Date_came,Date_out : TDateTime;
@@ -1458,7 +1483,7 @@ end;
 {**
 Runs a test for time locate expressions.
 }
-procedure TZGenericTestDbcResultSet.TestTimeLocateExpression;
+procedure TZGenericTestDataSet.TestTimeLocateExpression;
 var
   Query: TZQuery;
 begin
@@ -1481,7 +1506,7 @@ end;
 {**
 Runs a test for Datetime locate expressions.
 }
-procedure TZGenericTestDbcResultSet.TestDateTimeLocateExpression;
+procedure TZGenericTestDataSet.TestDateTimeLocateExpression;
 var
   Query: TZQuery;
 begin
@@ -1501,7 +1526,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestDoubleFloatParams;
+procedure TZGenericTestDataSet.TestDoubleFloatParams;
 var
   Query: TZQuery;
 begin
@@ -1540,7 +1565,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestClobEmptyString;
+procedure TZGenericTestDataSet.TestClobEmptyString;
 var
   Query: TZQuery;
   TextLob: String;
@@ -1606,7 +1631,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestLobModes;
+procedure TZGenericTestDataSet.TestLobModes;
 const teststring = RawByteString('abcdefghijklmnopqrstuvwxyz');
 var
   Query: TZQuery;
@@ -1776,7 +1801,7 @@ begin
   end;
 end;
 
-procedure TZGenericTestDbcResultSet.TestSpaced_Names;
+procedure TZGenericTestDataSet.TestSpaced_Names;
 var
   Query: TZQuery;
   function GetNonQuotedAlias(const Value: String): String;
@@ -1874,9 +1899,9 @@ begin
   end;
 end;
 
-{ TZGenericTestDbcResultSetMBCs }
+{ TZGenericTestDataSetMBCs }
 
-procedure TZGenericTestDbcResultSetMBCs.TestVeryLargeBlobs;
+procedure TZGenericTestDataSetMBCs.TestVeryLargeBlobs;
 const teststring = '123456ייאא';
 var
   Query: TZQuery;
@@ -1990,7 +2015,7 @@ begin
 end;
 
 initialization
-  RegisterTest('component',TZGenericTestDbcResultSet.Suite);
-  RegisterTest('component',TZGenericTestDbcResultSetMBCs.Suite);
+  RegisterTest('component',TZGenericTestDataSet.Suite);
+  RegisterTest('component',TZGenericTestDataSetMBCs.Suite);
 end.
 

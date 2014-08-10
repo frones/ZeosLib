@@ -466,6 +466,10 @@ var
       {$ENDIF}
     {%H-});
 
+const
+  PEmptyUnicodeString: PWideChar = '';
+  PEmptyAnsiString: PAnsiChar = '';
+
 var
   ZDefaultSystemCodePage: Word;
 
@@ -650,13 +654,11 @@ begin
   if ( Len = 0 ) or ( Src = nil ) then
     Dest := ''
   else
-    {$IFNDEF FPC}
     if (Pointer(Dest) <> nil) and //Empty?
-       (PLongInt(NativeInt(Dest) - 8)^ = 1) {refcount} and
-       (PLongInt(NativeInt(Dest) - 4)^ = LongInt(Len)) {length} then
+       ({%H-}PRefCntInt(NativeInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
-    {$ENDIF}
       SetString(Dest, Src, Len);
 end;
 
@@ -665,13 +667,11 @@ begin
   if ( Len = 0 ) or ( Src = nil ) then
     Dest := ''
   else
-    {$IFNDEF FPC}
     if (Pointer(Dest) <> nil) and //Empty?
-       (PLongInt(NativeInt(Dest) - 8)^ = 1) {refcount} and
-       (PLongInt(NativeInt(Dest) - 4)^ = LongInt(Len)) {length} then
+       ({%H-}PRefCntInt(NativeInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
-    {$ENDIF}
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
@@ -701,13 +701,11 @@ begin
   if ( Len = 0 ) or ( Src = nil ) then
     Dest := ''
   else
-    {$IFNDEF FPC}
-    if (NativeUInt(Dest) <> 0) and //Empty?
-       (PLongInt(NativeInt(Dest) - 8)^ = 1) {refcount} and
-       (PLongInt(NativeInt(Dest) - 4)^ = LongInt(Len)) {length} then
+    if (Pointer(Dest) <> nil) and //Empty?
+       ({%H-}PRefCntInt(NativeInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
-    {$ENDIF}
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';

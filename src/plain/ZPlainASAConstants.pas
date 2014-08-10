@@ -705,15 +705,15 @@ const
   DT_LONGBINARY         = 528;
   DT_VARIABLE           = 600;
   DT_TINYINT            = 604;
-  DT_BIGINT	            = 608;
+  DT_BIGINT             = 608;
   DT_UNSINT             = 612;
-  DT_UNSSMALLINT	      = 616;
-  DT_UNSBIGINT	        = 620;
-  DT_BIT      	        = 624;
-  DT_NSTRING	          = 628;
-  DT_NFIXCHAR	          = 632;
-  DT_NVARCHAR	          = 636;
-  DT_LONGNVARCHAR	      = 640;
+  DT_UNSSMALLINT        = 616;
+  DT_UNSBIGINT          = 620;
+  DT_BIT                = 624;
+  DT_NSTRING            = 628;
+  DT_NFIXCHAR           = 632;
+  DT_NVARCHAR           = 636;
+  DT_LONGNVARCHAR       = 640;
 
 //Message Types Markus
    MESSAGE_TYPE_INFO	   = 0;

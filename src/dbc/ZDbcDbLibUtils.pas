@@ -55,7 +55,8 @@ interface
 
 {$I ZDbc.inc}
 
-uses Classes, SysUtils, ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility;
+uses Classes, SysUtils,
+  ZVariant, ZDbcIntfs, ZPlainDBLibDriver, ZCompatibility, ZPlainDbLibConstants;
 
 {**
   Converts an ODBC native types into ZDBC SQL types.
@@ -114,7 +115,7 @@ function PrepareSQLParameter(const Value: TZVariant; const ParamType: TZSQLType;
 
 implementation
 
-uses ZSysUtils, ZPlainDbLibConstants, ZEncoding, ZDbcUtils
+uses ZSysUtils, ZEncoding, ZDbcUtils
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -245,14 +246,14 @@ begin
   Result := -1;
   case FieldType of
     stBoolean: Result := DBLIBSQLBIT;
-    stByte: Result := DBLIBSQLINT1;
-    stSmall: Result := DBLIBSQLINT2;
-    stInteger: Result := DBLIBSQLINT4;
-    stLong: Result := DBLIBSQLFLT8;
+    stByte, stShort: Result := DBLIBSQLINT1;
+    stSmall, stWord: Result := DBLIBSQLINT2;
+    stInteger, stLongWord: Result := DBLIBSQLINT4;
+    stLong, stULong: Result := DBLIBSQLFLT8;
     stFloat: Result := DBLIBSQLFLT8;
     stDouble: Result := DBLIBSQLFLT8;
     stBigDecimal: Result := DBLIBSQLFLT8;
-    stString: Result := DBLIBSQLCHAR;
+    stString, stUnicodeString: Result := DBLIBSQLCHAR;
     stBytes: Result := DBLIBSQLBINARY;
     stDate: Result := DBLIBSQLDATETIME;
     stTime: Result := DBLIBSQLDATETIME;
@@ -301,10 +302,10 @@ begin
   Result := -1;
   case FieldType of
     stBoolean: Result := SYBBIT;
-    stByte: Result := SYBINT1;
-    stSmall: Result := SYBINT2;
-    stInteger: Result := SYBINT4;
-    stLong: Result := SYBFLT8;
+    stByte, stShort: Result := SYBINT1;
+    stSmall, stWord: Result := SYBINT2;
+    stInteger, stLongWord: Result := SYBINT4;
+    stLong, stUlong: Result := SYBFLT8;
     stFloat: Result := SYBFLT8;
     stDouble: Result := SYBFLT8;
     stBigDecimal: Result := SYBFLT8;
@@ -392,9 +393,9 @@ begin
         Result := ClientVarManager.GetAsRawByteString(Value);
       stString, stUnicodeString:
         if NChar then
-          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8)), #39)
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ClientVarManager.GetAsRawByteString(Value, zCP_UTF8), #39)
         else
-          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(PAnsiChar(ClientVarManager.GetAsRawByteString(Value)), #39);
+          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ClientVarManager.GetAsRawByteString(Value), #39);
       stBytes:
         begin
           TempBytes := ClientVarManager.GetAsBytes(Value);

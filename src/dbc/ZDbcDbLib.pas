@@ -288,7 +288,7 @@ begin
   else
     ASQL := SQL;
 
-    if GetPlainDriver.dbcmd(FHandle, PAnsiChar(ASQL)) <> DBSUCCEED then
+    if GetPlainDriver.dbcmd(FHandle, Pointer(ASQL)) <> DBSUCCEED then
       CheckDBLibError(lcExecute, ASQL);
   if GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
     CheckDBLibError(lcExecute, ASQL);

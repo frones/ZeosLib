@@ -148,7 +148,7 @@ begin
      instead of moving mem from A to B i set the mem-pointer to the lobs instead.
      But we have to validate the mem if required.. }
 
-    if Assigned(Self.Memory) then
+    if Memory <> nil then
     begin
       case FField.DataType of
         {$IFDEF WITH_WIDEMEMO}ftWideMemo, {$ENDIF} ftMemo:
@@ -291,7 +291,7 @@ begin
     result := ceUTF16 //exact
   else
     if FConSettings.AutoEncode then
-      case DetectUTF8Encoding(PAnsichar(Memory)) of
+      case ZDetectUTF8Encoding(Memory, Size -2) of
         etUSASCII: Result := ceDefault; //Exact!
         etAnsi:
           { Sure this isn't right in all cases!

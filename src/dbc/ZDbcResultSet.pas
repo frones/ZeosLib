@@ -4318,24 +4318,19 @@ begin
   Result := '';
   if FBlobSize > 0 then
     if ZCompatibleCodePages(FCurrentCodePage, ZDefaultSystemCodePage) then
-    begin
-      SetLength(Result, FBlobSize-1);
-      System.Move(FBlobData^, PAnsiChar(Result)^, FBlobSize-1);
-    end
+       System.SetString(Result, PAnsiChar(FBlobData), FBlobSize -1)
     else
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
-      begin
-        System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize div 2) -1);
-        Result := AnsiString(UniTemp)
-      end
+        System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize div 2) -1)
       else
       begin
         AnsiRec.P := FBlobData;
         AnsiRec.Len := FBlobSize-1;
-        Result := AnsiString(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage));
+        UniTemp := ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage); //localize possible COM based WideString to prevent overflow
       end;
+      Result := AnsiString(UniTemp);
       InternalSetAnsiString(Result);
     end;
 end;

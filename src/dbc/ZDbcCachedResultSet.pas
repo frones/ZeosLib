@@ -832,7 +832,19 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckAvailable;
 {$ENDIF}
-  Result := PChar(FRowAccessor.GetString(ColumnIndex, LastWasNull));
+  {$IFDEF UNICODE}
+  FUniTemp := FRowAccessor.GetString(ColumnIndex, LastWasNull);
+  if Pointer(FUniTemp) = nil then
+    Result := PEmptyUnicodeString
+  else
+    Result := Pointer(FUniTemp); // no RTL conversion!
+  {$ELSE}
+  FRawTemp := FRowAccessor.GetString(ColumnIndex, LastWasNull);
+  if Pointer(FRawTemp) = nil then
+    Result := PEmptyAnsiString
+  else
+    Result := Pointer(FRawTemp); // no RTL conversion!
+  {$ENDIF}
 end;
 
 {**
