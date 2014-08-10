@@ -459,6 +459,7 @@ type
     function SupportsNonEscapedSearchStrings: Boolean;
     function SupportsMilliseconds: Boolean;
     function SupportsUpdateAutoIncrementFields: Boolean;
+    function SupportsArrayBindings: Boolean;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer;

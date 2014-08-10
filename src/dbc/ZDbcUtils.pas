@@ -207,8 +207,7 @@ function GetValidatedUnicodeStream(const Ansi: RawByteString;
 
 implementation
 
-uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils,{$ENDIF}
-  ZMessages, ZSysUtils, ZEncoding, ZFastCode;
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode;
 
 {**
   Resolves a connection protocol and raises an exception with protocol

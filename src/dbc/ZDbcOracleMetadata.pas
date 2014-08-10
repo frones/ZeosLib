@@ -143,6 +143,7 @@ type
       const Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
     function SupportsNonEscapedSearchStrings: Boolean; override;
+    function SupportsArrayBindings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1128,6 +1129,15 @@ end;
 function TZOracleDatabaseInfo.SupportsNonEscapedSearchStrings: Boolean;
 begin
   Result := MetaData.GetConnection.GetClientVersion > 10000000;
+end;
+
+{**
+  Does the Database support binding arrays? Is the ZDbc ready for this?
+  @return <code>true</code> if the DataBase allows it.
+}
+function TZOracleDatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  Result := True;
 end;
 
 { TZOracleDatabaseMetadata }

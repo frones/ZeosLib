@@ -392,6 +392,7 @@ type
     function SupportsNonEscapedSearchStrings: Boolean; virtual;
     function SupportsMilliSeconds: Boolean; virtual;
     function SupportsUpdateAutoIncrementFields: Boolean; virtual;
+    function SupportsArrayBindings: Boolean; virtual;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; virtual;
@@ -1971,6 +1972,15 @@ end;
 function TZAbstractDatabaseInfo.SupportsUpdateAutoIncrementFields: Boolean;
 begin
   Result := True;
+end;
+
+{**
+  Does the Database support binding arrays? Is the ZDbc ready for this?
+  @return <code>true</code> if the DataBase allows it.
+}
+function TZAbstractDatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  Result := False;
 end;
 
 { TZAbstractDatabaseMetadata }
