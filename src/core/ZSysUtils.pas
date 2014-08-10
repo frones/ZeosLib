@@ -1285,24 +1285,11 @@ end;
   @return <code>"True"</code> or <code>"False"</code>
 }
 function BoolToUnicodeEx(Value: Boolean): ZWideString;
-const Uni: array[Boolean] of ZWideString = ('False', 'True');
 begin
-  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-  if (Pointer(Result) <> nil) and//empty
-     ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ = 1) then { unique string ? }
-     if Value and ({%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^ = 4 ) then //Proper size?
-       PUInt64(Pointer(Result))^ := PUInt64(Pointer(Uni[Value]))^ //Move 'True'
-     else
-       if not Value and ({%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^ = 5 ) then
-       begin
-         PUInt64(Pointer(Result))^ := PUInt64(Pointer(Uni[Value]))^; //Move 'Fals'
-         {%H-}PWord(NativeUInt(Result)+SizeOf(UInt64))^ := Word('e'); //Move 'e'
-       end
-       else //realloc by system
-         Result := Uni[Value]
-  else //alloc by system
-  {$ENDIF}
-    Result := Uni[Value];
+  if Value then
+    Result := 'True'
+  else
+    Result := 'False';
 end;
 
 {**
@@ -1311,22 +1298,11 @@ end;
   @return <code>"True"</code> or <code>"False"</code>
 }
 function BoolToRawEx(Value: Boolean): RawByteString;
-const Raw: array[Boolean] of AnsiString = ('False', 'True');
 begin
-  if (Pointer(Result) <> nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ = 1) then { unique string ? }
-     if Value and ({%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^ = 4 ) then //size fits?
-       PLongWord(Pointer(Result))^ := PLongWord(Pointer(Raw[Value]))^ //Move 'True'
-     else
-       if not Value and ({%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^ = 5 ) then //size fits?
-       begin
-         PLongWord(Pointer(Result))^ := PLongWord(Pointer(Raw[Value]))^; //Move 'Fals'
-         PByte(NativeUInt(Result)+SizeOf(LongWord))^ := Byte('e'); //Move 'e'
-       end
-       else //realloc by system
-         Result := Raw[Value]
-  else //alloc by system
-    Result := Raw[Value];
+  if Value then
+    Result := 'True'
+  else
+    Result := 'False';
 end;
 
 {$IFDEF ENABLE_POSTGRESQL}
