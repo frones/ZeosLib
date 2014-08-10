@@ -116,7 +116,6 @@ type
   { parameters interface sqlda}
   IZParamsSQLDA = interface(IZSQLDA)
     ['{D2C3D5E1-F3A6-4223-9A6E-3048B99A06C4}']
-    procedure WriteBlob(const Index: Integer; Stream: TStream);
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
     procedure UpdateNull(const Index: Integer; const Value: boolean);
     procedure UpdateBoolean(const Index: Integer; const Value: boolean);
@@ -127,7 +126,6 @@ type
     procedure UpdateDouble(const Index: Integer; const Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; const Value: Extended);
     procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
-    procedure UpdateString(const Index: Integer; const Value: RawByteString);
     procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; const Value: TDateTime);
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
@@ -182,11 +180,10 @@ type
   private
     procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString); overload;
     procedure EncodeString(const Code: Smallint; const Index: Word;
-      const Str: PAnsiChar; const Len: Cardinal); overload;
+      const Str: PAnsiChar; const Len: LengthInt); overload;
     procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TBytes);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
-    procedure WriteBlob(const Index: Integer; Stream: TStream);
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
 
     procedure UpdateNull(const Index: Integer; const Value: boolean);
@@ -198,7 +195,6 @@ type
     procedure UpdateDouble(const Index: Integer; const Value: Double);
     procedure UpdateBigDecimal(const Index: Integer; const Value: Extended);
     procedure UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
-    procedure UpdateString(const Index: Integer; const Value: RawByteString);
     procedure UpdateBytes(const Index: Integer; const Value: TBytes);
     procedure UpdateDate(const Index: Integer; const Value: TDateTime);
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
@@ -1582,7 +1578,7 @@ begin
       begin
         if SqlScale = 0 then
           Result := stLong
-        else if Abs(SqlScale) <= 4 then
+        else if SqlScale <= 4 then
           Result := stCurrency
         else
           Result := stBigDecimal;
@@ -1801,34 +1797,31 @@ end;
 
 procedure TZParamsSQLDA.EncodeString(const Code: Smallint; const Index: Word;
   const Str: RawByteString);
-var
-  Len: Cardinal;
 begin
-  Len := Length(Str);
-  EncodeString(Code, Index, PAnsiChar(Str), Len);
+  if Pointer(Str) = nil then //let's avoid RTL conversion!
+    EncodeString(Code, Index, PEmptyAnsiString, 0)
+  else
+    EncodeString(Code, Index, Pointer(Str), {%H-}PLengthInt(NativeUInt(Str) - StringLenOffSet)^);
 end;
 
 procedure TZParamsSQLDA.EncodeString(const Code: Smallint; const Index: Word;
-  const Str: PAnsiChar; const Len: Cardinal);
+  const Str: PAnsiChar; const Len: LengthInt);
 begin
   {$R-}
    with FXSQLDA.sqlvar[Index] do
     case Code of
       SQL_TEXT :
         begin
-          if (sqllen = 0) and (Len <> 0) then //Manits: #0000249/pktfag
-            GetMem(sqldata, Len)
-          else
-            IbReAlloc(sqldata, 0, Len + 1);
+          IbReAlloc(sqldata, 0, Len + 1);
           sqllen := Len;
-          Move(PAnsiChar(Str)^, sqldata^, sqllen);
+          Move(Str^, sqldata^, sqllen);
         end;
       SQL_VARYING :
         begin
           sqllen := Len + 2;
           IbReAlloc(sqldata, 0, Len + 2);
           PISC_VARYING(sqldata).strlen :=  Len;
-          Move(Str^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          Move(Str^, PISC_VARYING(sqldata).str, Len);
         end;
     end;
   {$IFOPT D+}
@@ -1854,20 +1847,14 @@ begin
     case Code of
       SQL_TEXT :
         begin
-          if (sqllen = 0) and ( Len <> 0 ) then //Manits: #0000249/pktfag
-            GetMem(sqldata, Len)
-          else
-            IbReAlloc(sqldata, 0, Len + 1);
+          IbReAlloc(sqldata, 0, Len);
           sqllen := Len;
           Move(Pointer(Value)^, sqldata^, sqllen);
         end;
       SQL_VARYING :
         begin
           sqllen := Len + 2;
-          if sqllen = 0 then   //Egonhugeist: Todo: Need test case. Can't believe this line is correct! sqllen is min 2
-            GetMem(sqldata, Len + 2)
-          else
-            IbReAlloc(sqldata, 0, Len + 2);
+          IbReAlloc(sqldata, 0, Len + 2);
           PISC_VARYING(sqldata).strlen :=  Len;
           Move(Pointer(Value)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
@@ -1989,8 +1976,6 @@ end;
 procedure TZParamsSQLDA.UpdateBytes(const Index: Integer; const Value: TBytes);
 var
  SQLCode: SmallInt;
- Stream: TStream;
- Len: Integer;
 begin
   CheckRange(Index);
 //  SetFieldType(Index, Length(Value) + 1, SQL_TEXT + 1, 0);
@@ -2010,18 +1995,8 @@ begin
       SQL_D_FLOAT,
       SQL_FLOAT     : PSingle (sqldata)^ := RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale];  //AVZ
       SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ - INT64 value was not recognized
-      SQL_BLOB, SQL_QUAD:
-        begin
-          Stream := TMemoryStream.Create;
-          try
-            Len := Length(Value);
-            Stream.Size := Len;
-            System.Move(Pointer(Value)^, TMemoryStream(Stream).Memory^, Len);
-            WriteBlob(index, Stream);
-          finally
-            Stream.Free;
-          end;
-        end;
+      SQL_BLOB,
+      SQL_QUAD      : WriteLobBuffer(Index, Pointer(Value), Length(Value));
     else
       raise EZIBConvertError.Create(SErrorConvertion);
     end;
@@ -2450,20 +2425,6 @@ begin
 end;
 
 {**
-   Set up parameter String value
-   @param Index the target parameter index
-   @param Value the source value
-}
-
-procedure TZParamsSQLDA.UpdateString(const Index: Integer; const Value: RawByteString);
-var
-  L: Cardinal;
-begin
-  L := Length(Value);
-  UpdatePAnsiChar(Index, PAnsiChar(Value), L);
-end;
-
-{**
    Set up parameter Time value
    @param Index the target parameter index
    @param Value the source value
@@ -2483,57 +2444,6 @@ procedure TZParamsSQLDA.UpdateTimestamp(const Index: Integer; const Value: TDate
 begin
   SetFieldType(Index, sizeof(TISC_QUAD), SQL_TIMESTAMP + 1, 0);
   UpdateDateTime(Index, Value);
-end;
-
-{**
-   Write stream to blob field
-   @param Index an index field number
-   @param Stream the souse data stream
-}
-procedure TZParamsSQLDA.WriteBlob(const Index: Integer; Stream: TStream);
-var
-  Buffer: PAnsiChar;
-  BlobId: TISC_QUAD;
-  BlobHandle: TISC_BLOB_HANDLE;
-  StatusVector: TARRAY_ISC_STATUS;
-  BlobSize, CurPos, SegLen: Integer;
-begin
-  BlobHandle := 0;
-  Stream.Seek(0, 0);
-
-  { create blob handle }
-  FPlainDriver.isc_create_blob2(@StatusVector, FHandle, FTransactionHandle,
-    @BlobHandle, @BlobId, 0, nil);
-  CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
-
-  Stream.Position := 0;
-  BlobSize := Stream.Size;
-  Buffer := AllocMem(BlobSize);
-  Try
-    Stream.ReadBuffer(Buffer^, BlobSize);
-
-    { put data to blob }
-    CurPos := 0;
-    SegLen := DefaultBlobSegmentSize;
-    while (CurPos < BlobSize) do
-    begin
-      if (CurPos + SegLen > BlobSize) then
-        SegLen := BlobSize - CurPos;
-      if FPlainDriver.isc_put_segment(@StatusVector, @BlobHandle, SegLen,
-            PAnsiChar(@Buffer[CurPos])) > 0 then
-        CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
-      Inc(CurPos, SegLen);
-    end;
-
-    { close blob handle }
-    FPlainDriver.isc_close_blob(@StatusVector, @BlobHandle);
-    CheckInterbase6Error(FPlainDriver, StatusVector, Consettings);
-
-    Stream.Seek(0, 0);
-    UpdateQuad(Index, BlobId);
-  Finally
-    Freemem(Buffer);
-  End;
 end;
 
 procedure TZParamsSQLDA.WriteLobBuffer(const Index: Integer;

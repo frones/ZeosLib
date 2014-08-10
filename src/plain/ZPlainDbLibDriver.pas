@@ -106,6 +106,8 @@ type
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbcoltypeinfo(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbcolinfo(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT;
+      ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;
     function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
@@ -200,6 +202,8 @@ type
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbColInfo(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT;
+      ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;
     function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT; virtual; abstract;
     function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
@@ -294,6 +298,8 @@ type
     function dbColType(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbcoltypeinfo(dbProc: PDBPROCESS; Column: Integer): PDBTYPEINFO;
     function dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
+    function dbColInfo(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT;
+      ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;
     function dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
     function dbDatLen(dbProc: PDBPROCESS; Column: DBINT): DBINT;
     function dbConvert(dbProc: PDBPROCESS; SrcType: DBINT; Src: PByte;
@@ -412,7 +418,6 @@ type
     function dbSetOpt(dbProc: PDBPROCESS; Option: Integer;
       Char_Param: PAnsiChar = nil; Int_Param: Integer = -1): RETCODE; override;
     function dbClose(dbProc: PDBPROCESS): RETCODE; override;
-    function dbColInfo(dbProc: PDBPROCESS; Column: Integer; var ADBInfo: DBCOL): RETCODE;
     function dbDatLen(dbProc: PDBPROCESS; Column: Integer): Integer; override;
     function dbCount(dbProc: PDBPROCESS): Integer; override;
     function dbcolbrowse(Proc: PDBPROCESS; Column: Integer): LongBool; override;
@@ -778,6 +783,7 @@ begin
     @DBLibAPI.dbcmd                 := GetAddress('dbcmd');
     @DBLibAPI.dbcmdrow              := GetAddress('dbcmdrow');
     @DBLibAPI.dbcollen              := GetAddress('dbcollen');
+    @DBLibAPI.dbcolinfo             := GetAddress('dbcolinfo');
     @DBLibAPI.dbcolname             := GetAddress('dbcolname');
     @DBLibAPI.dbcolsource           := GetAddress('dbcolsource');
     @DBLibAPI.dbcoltype             := GetAddress('dbcoltype');
@@ -1003,6 +1009,12 @@ begin
   Result := DBLibAPI.dbColLen(dbProc, Column);
 end;
 
+function TZDBLibBasePlainDriver.dbColInfo(pdbhandle: PDBHANDLE; _Type: Integer;
+  Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;
+begin
+  Result := DBLIBAPI.dbColInfo(pdbhandle, _Type, Column, ComputeId, lpdbcol);
+end;
+
 function TZDBLibBasePlainDriver.dbData(dbProc: PDBPROCESS; Column: Integer): PByte;
 begin
   Result := DBLibAPI.dbData(dbProc, Column);
@@ -1223,6 +1235,7 @@ begin
     @SybaseAPI.dbcmdrow              := GetAddress('dbcmdrow');
     @SybaseAPI.dbcolbrowse           := GetAddress('dbcolbrowse');
     @SybaseAPI.dbcollen              := GetAddress('dbcollen');
+    @SybaseAPI.dbcolinfo             := GetAddress('dbcolinfo');
     @SybaseAPI.dbcolname             := GetAddress('dbcolname');
     @SybaseAPI.dbcolsource           := GetAddress('dbcolsource');
     @SybaseAPI.dbcoltypeinfo         := GetAddress('dbcoltypeinfo');
@@ -1591,6 +1604,12 @@ end;
 function TZDBLibSybaseASE125PlainDriver.dbColLen(dbProc: PDBPROCESS; Column: DBINT): DBInt;
 begin
   Result := SybaseAPI.dbColLen(dbProc, Column);
+end;
+
+function TZDBLibSybaseASE125PlainDriver.dbColInfo(pdbhandle :PDBHANDLE; _Type:
+  Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;
+begin
+  Result := SybaseAPI.dbColInfo(pdbhandle, _Type, Column, ComputeId, lpdbcol);
 end;
 
 function TZDBLibSybaseASE125PlainDriver.dbData(dbProc: PDBPROCESS; Column: DBINT): PByte;
@@ -2289,14 +2308,6 @@ begin
     Result := FreeTDSAPI.dbHasRetStat(dbProc) <> 0
   else
     Result := False;
-end;
-
-function TZFreeTDSBasePlainDriver.dbColInfo(dbProc: PDBPROCESS;
-  Column: Integer; var ADBInfo: DBCOL): RETCODE;
-begin
-  FillChar(ADBInfo, SizeOf(DBCol), #0);
-  ADBInfo.SizeOfStruct := SizeOf(DBCol);
-  Result := FreeTDSAPI.dbcolinfo(dbProc, CI_REGULAR, Column, 0, @ADBInfo);
 end;
 
 { TZFreeTDS42MsSQLPlainDriver }

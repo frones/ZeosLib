@@ -1006,20 +1006,15 @@ type
   PDBDATEREC = ^DBDATEREC;
 
 type
-{ TODO -ofjanos -cAPI :
-Strange but I had to insert X1 and X2 into the structure to make it work.
-I have not find any reason for this yet. }
+  //EH: We need a size of 122 Bytes!
   {$IFDEF FPC}
     {$PACKRECORDS 2}
+  {$ELSE}
+    {$A2}
   {$ENDIF}
-  DBCOL = record
-   	SizeOfStruct:   DBINT;
-   	Name:           array[0..MAXCOLNAMELEN] of char;
-   	ActualName:     array[0..MAXCOLNAMELEN] of char;
-   	TableName:      array[0..MAXTABLENAME] of char;
-    {$IFNDEF FPC}
-    X1:             Byte;  //Record-Size diffs with C-Records
-    {$ENDIF}
+  {EH: THIS is a heack: we use entry of typ to have a generic access record }
+  PZDBCOL = ^ZDBCOL;
+  ZDBCOL = record
    	Typ:            DBSHORT;
    	UserType:       DBINT;
    	MaxLength:      DBINT;
@@ -1030,33 +1025,50 @@ I have not find any reason for this yet. }
    	CaseSensitive:  BYTE;     { TRUE, FALSE or DBUNKNOWN }
    	Updatable:      BYTE;     { TRUE, FALSE or DBUNKNOWN }
    	Identity:       LongBool; { TRUE, FALSE or DBUNKNOWN }
-    {$IFNDEF FPC}
-    X2:             Byte; //Record-Size diffs with C-Records
-    {$ENDIF}
   end;
-  {$IFDEF FPC}
-    {$PACKRECORDS DEFAULT}
-  {$ENDIF}
   PDBCOL = ^DBCOL;
+  DBCOL = record
+   	SizeOfStruct:   DBINT;
+   	Name:           array[0..MAXCOLNAMELEN] of DBCHAR;
+   	ActualName:     array[0..MAXCOLNAMELEN] of DBCHAR;
+   	TableName:      array[0..MAXTABLENAME] of DBCHAR;
+    ColInfo:        ZDBCOL;
+   	(*Typ:            DBSHORT;
+   	UserType:       DBINT;
+   	MaxLength:      DBINT;
+   	Precision:      BYTE;
+   	Scale:          BYTE;
+   	VarLength:      LongBool; { TRUE, FALSE }
+   	Null:           BYTE;     { TRUE, FALSE or DBUNKNOWN }
+   	CaseSensitive:  BYTE;     { TRUE, FALSE or DBUNKNOWN }
+   	Updatable:      BYTE;     { TRUE, FALSE or DBUNKNOWN }
+   	Identity:       LongBool; { TRUE, FALSE or DBUNKNOWN }*)
+  end;
 
   PTDSDBCOL = ^TTDSDBCOL;
-  TTDSDBCOL = packed record
-    SizeOfStruct: DBINT;
-    Name:       array[0..TDSMAXCOLNAMELEN+2] of AnsiChar;
-    ActualName: array[0..TDSMAXCOLNAMELEN+2] of AnsiChar;
-    TableName:  array[0..TDSMAXTABLENAME+2] of AnsiChar;
-    Typ:        SmallInt;
-    UserType:   DBINT;
-    MaxLength:  DBINT;
-    Precision:  Byte;
-    Scale:      Byte;
-    VarLength:  LongBool;{ TRUE, FALSE }
-    Null:       Byte;    { TRUE, FALSE or DBUNKNOWN }
-    CaseSensitive: Byte; { TRUE, FALSE or DBUNKNOWN }
-    Updatable:  Byte;    { TRUE, FALSE or DBUNKNOWN }
-    Identity:   LongBool;{ TRUE, FALSE }
+  TTDSDBCOL = record
+    SizeOfStruct:   DBINT;
+    Name:           array[0..TDSMAXCOLNAMELEN+2] of DBCHAR;
+    ActualName:     array[0..TDSMAXCOLNAMELEN+2] of DBCHAR;
+    TableName:      array[0..TDSMAXTABLENAME+2] of DBCHAR;
+    ColInfo:        ZDBCOL;
+    (*Typ:            SmallInt;
+    UserType:       DBINT;
+    MaxLength:      DBINT;
+    Precision:      Byte;
+    Scale:          Byte;
+    VarLength:      LongBool;{ TRUE, FALSE }
+    Null:           Byte;    { TRUE, FALSE or DBUNKNOWN }
+    CaseSensitive:  Byte; { TRUE, FALSE or DBUNKNOWN }
+    Updatable:      Byte;    { TRUE, FALSE or DBUNKNOWN }
+    Identity:       LongBool;{ TRUE, FALSE }*)
   end;
 
+  {$IFDEF FPC}
+    {$PACKRECORDS DEFAULT}
+  {$ELSE}
+    {$A+}
+  {$ENDIF}
 type
   DBTYPEINFO = packed record
     Precision:  DBINT;
@@ -1160,6 +1172,8 @@ type
   Tdbcmd = function(Proc: PDBPROCESS; Cmd: PAnsiChar): RETCODE; cdecl;
   Tdbcmdrow = function(Proc: PDBPROCESS): RETCODE; cdecl;
   Tdbcollen = function(Proc: PDBPROCESS; Column: Integer): DBINT; cdecl;
+  Tdbcolinfo = function(pdbhandle: PDBHANDLE; _Type: Integer;
+    Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE; cdecl;
   Tdbcolname = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
   Tdbcolsource = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; cdecl;
   Tdbcoltype = function(Proc: PDBPROCESS; Column: Integer): Integer; cdecl;
@@ -1531,6 +1545,7 @@ type
   TSybdbcmdrow = function(Proc: PDBPROCESS): RETCODE; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcolbrowse = function(Proc: PDBPROCESS; Column: Integer): LongBool; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcollen = function(Proc: PDBPROCESS; Column: Integer): DBINT; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  TSybdbcolinfo = function(pdbhandle :PDBHANDLE; _Type: Integer; Column: DBINT; ComputeId: DBINT; lpdbcol: PDBCOL): RETCODE;{$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcolname = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcolsource = function(Proc: PDBPROCESS; Column: Integer): PAnsiChar; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
   TSybdbcoltypeinfo = function(Proc: PDBPROCESS; Column: Integer): PDBTYPEINFO; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
@@ -1703,6 +1718,7 @@ type
     dbcmd                 : Tdbcmd;
     dbcmdrow              : Tdbcmdrow;
     dbcollen              : Tdbcollen;
+    dbcolinfo             : Tdbcolinfo;
     dbcolname             : Tdbcolname;
     dbcolsource           : Tdbcolsource;
     dbcoltype             : Tdbcoltype;
@@ -1983,6 +1999,7 @@ type
     dbcmdrow              : TSybdbcmdrow;
     dbcolbrowse           : TSybdbcolbrowse;
     dbcollen              : TSybdbcollen;
+    dbcolinfo             : TSybdbcolinfo;
     dbcolname             : TSybdbcolname;
     dbcolsource           : TSybdbcolsource;
     dbcoltypeinfo         : TSybdbcoltypeinfo;
