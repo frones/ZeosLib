@@ -107,7 +107,6 @@ type
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
-    destructor Destroy; override;
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -4844,14 +4843,6 @@ constructor TZVirtualResultSet.CreateWithColumns(ColumnsInfo: TObjectList;
   const SQL: string; ConSettings: PZConSettings);
 begin
   inherited CreateWithColumns(ColumnsInfo, SQL, ConSettings);
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZVirtualResultSet.Destroy;
-begin
-  inherited Destroy;
 end;
 
 {**

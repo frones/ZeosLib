@@ -169,7 +169,7 @@ type
     {BEGIN of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure UpdateAutoIncrementFields(Sender: IZCachedResultSet;
       {%H-}UpdateType: TZRowUpdateType;
-      {%H-}OldRowAccessor, NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
+      {%H-}OldRowAccessor, {%H-}NewRowAccessor: TZRowAccessor; Resolver: IZCachedResolver); virtual;
     {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
     procedure RefreshCurrentRow(Sender: IZCachedResultSet;{%H-}RowAccessor: TZRowAccessor); //FOS+ 07112006
 
