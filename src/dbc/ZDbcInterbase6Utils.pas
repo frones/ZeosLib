@@ -142,6 +142,7 @@ type
     FXSQLDA: PXSQLDA;
     FPlainDriver: IZInterbasePlainDriver;
     Temp: AnsiString;
+    FDecribedLengthArray: TSmallIntDynArray;
     procedure CheckRange(const Index: Word);
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -152,7 +153,7 @@ type
       ConSettings: PZConSettings);
     destructor Destroy; override;
     procedure InitFields(Parameters: boolean);
-    procedure AllocateSQLDA; virtual;
+    procedure AllocateSQLDA;
     procedure FreeParamtersValues;
 
     function IsBlob(const Index: Word): boolean;
@@ -178,10 +179,9 @@ type
     It clas can only write data to parameters/fields }
   TZParamsSQLDA = class (TZSQLDA, IZParamsSQLDA)
   private
-    procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString); overload;
-    procedure EncodeString(const Code: Smallint; const Index: Word;
-      const Str: PAnsiChar; const Len: LengthInt); overload;
-    procedure EncodeBytes(Code: Smallint; const Index: Word; const Value: TBytes);
+    procedure EncodeString(const Code: Smallint; const Index: Word; const Str: RawByteString);
+    procedure EncodePData(const Code: Smallint; const Index: Word;
+      const Value: PAnsiChar; const Len: LengthInt);
     procedure UpdateDateTime(const Index: Integer; Value: TDateTime);
   public
     procedure WriteLobBuffer(const Index: Integer; const Buffer: Pointer; const Len: Integer);
@@ -1382,18 +1382,14 @@ begin
   for I := 0 to FXSQLDA.sqld - 1 do
   begin
     SqlVar := @FXSQLDA.SqlVar[I];
+    FDecribedLengthArray[i] := SqlVar.sqllen;
     case SqlVar.sqltype and (not 1) of
       SQL_BOOLEAN, SQL_TEXT, SQL_TYPE_DATE, SQL_TYPE_TIME, SQL_DATE,
       SQL_BLOB, SQL_ARRAY, SQL_QUAD, SQL_SHORT,
       SQL_LONG, SQL_INT64, SQL_DOUBLE, SQL_FLOAT, SQL_D_FLOAT:
-        begin
-          if SqlVar.sqllen = 0 then
-            IbReAlloc(SqlVar.sqldata, 0, 1)
-          else
-            IbReAlloc(SqlVar.sqldata, 0, SqlVar.sqllen)
-        end;
+        IbReAlloc(SqlVar.sqldata, 0, Max(1, SqlVar.sqllen));
       SQL_VARYING:
-          IbReAlloc(SqlVar.sqldata, 0, SqlVar.sqllen + 2)
+        IbReAlloc(SqlVar.sqldata, 0, SqlVar.sqllen + 2)
     end;
 
     if Parameters then
@@ -1505,17 +1501,7 @@ end;
 }
 function TZSQLDA.GetFieldLength(const Index: Word): SmallInt;
 begin
-  {$R-}
-  case GetIbSqlType(Index) of
-    SQL_TEXT: Result := GetIbSqlLen(Index);
-    SQL_VARYING: Result := GetIbSqlLen(Index);
-    //SQL_VARYING: Result := FPlainDriver.isc_vax_integer(GetData.sqlvar[Index].sqldata, 2);  //AVZ
-    else
-      Result := GetIbSqlLen(Index);
-  end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
+  Result := GetIbSqlLen(Index);
 end;
 
 {**
@@ -1784,6 +1770,7 @@ procedure TZSQLDA.AllocateSQLDA;
 begin
   IbReAlloc(FXSQLDA, XSQLDA_LENGTH(FXSQLDA.sqln), XSQLDA_LENGTH(FXSQLDA.sqld));
   FXSQLDA.sqln := FXSQLDA.sqld;
+  SetLength(FDecribedLengthArray, FXSQLDA.sqld);
 end;
 
 { TParamsSQLDA }
@@ -1799,64 +1786,30 @@ procedure TZParamsSQLDA.EncodeString(const Code: Smallint; const Index: Word;
   const Str: RawByteString);
 begin
   if Pointer(Str) = nil then //let's avoid RTL conversion!
-    EncodeString(Code, Index, PEmptyAnsiString, 0)
+    EncodePData(Code, Index, PEmptyAnsiString, 0)
   else
-    EncodeString(Code, Index, Pointer(Str), {%H-}PLengthInt(NativeUInt(Str) - StringLenOffSet)^);
+    EncodePData(Code, Index, Pointer(Str), {%H-}PLengthInt(NativeUInt(Str) - StringLenOffSet)^);
 end;
 
-procedure TZParamsSQLDA.EncodeString(const Code: Smallint; const Index: Word;
-  const Str: PAnsiChar; const Len: LengthInt);
+procedure TZParamsSQLDA.EncodePData(const Code: Smallint; const Index: Word;
+  const Value: PAnsiChar; const Len: LengthInt);
 begin
   {$R-}
+  //EH: Hint it seems we don't need a #0 term here, sqlen is the indicator
    with FXSQLDA.sqlvar[Index] do
     case Code of
-      SQL_TEXT :
+      SQL_TEXT:
         begin
-          IbReAlloc(sqldata, 0, Len + 1);
-          sqllen := Len;
-          Move(Str^, sqldata^, sqllen);
+          sqllen := Min(Len, FDecribedLengthArray[Index]);
+          if Len > 0 then
+            Move(Value^, sqldata^, sqllen);
         end;
-      SQL_VARYING :
+      SQL_VARYING:
         begin
-          sqllen := Len + 2;
-          IbReAlloc(sqldata, 0, Len + 2);
-          PISC_VARYING(sqldata).strlen :=  Len;
-          Move(Str^, PISC_VARYING(sqldata).str, Len);
-        end;
-    end;
-  {$IFOPT D+}
-{$R+}
-{$ENDIF}
-end;
-
-{**
-   Encode Bytes dynamic array to Interbase paramter buffer
-   @param Code the Interbase data type
-   @param Index the index target filed
-   @param Value the source array
-}
-
-procedure TZParamsSQLDA.EncodeBytes(Code: Smallint; const Index: Word;
-  const Value: TBytes);
-var
-  Len: Cardinal;
-begin
-  Len := Length(Value);
-  {$R-}
-   with FXSQLDA.sqlvar[Index] do
-    case Code of
-      SQL_TEXT :
-        begin
-          IbReAlloc(sqldata, 0, Len);
-          sqllen := Len;
-          Move(Pointer(Value)^, sqldata^, sqllen);
-        end;
-      SQL_VARYING :
-        begin
-          sqllen := Len + 2;
-          IbReAlloc(sqldata, 0, Len + 2);
-          PISC_VARYING(sqldata).strlen :=  Len;
-          Move(Pointer(Value)^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+          PISC_VARYING(sqldata).strlen :=  Min(Len, FDecribedLengthArray[Index]);
+          sqllen := Len+SizeOf(Short);
+          if sqllen > 0 then
+            Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
         end;
     end;
   {$IFOPT D+}
@@ -1986,8 +1939,8 @@ begin
          Exit;
     SQLCode := (sqltype and not(1));
     case SQLCode of
-      SQL_TEXT      : EncodeBytes(SQL_TEXT, Index, Value);
-      SQL_VARYING   : EncodeBytes(SQL_VARYING, Index, Value);
+      SQL_TEXT      : EncodePData(SQL_TEXT, Index, Pointer(Value), Length(Value));
+      SQL_VARYING   : EncodePData(SQL_VARYING, Index, Pointer(Value), Length(Value));
       SQL_LONG      : PInteger (sqldata)^ := Round(RawToFloat(BytesToStr(Value)) * IBScaleDivisor[sqlscale]); //AVZ
       SQL_SHORT     : PInteger (sqldata)^ := RawToInt(BytesToStr(Value));
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, BytesToStr(Value));
@@ -2083,7 +2036,7 @@ var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(double), SQL_DOUBLE + 1, 0);
+  //SetFieldType(Index, sizeof(double), SQL_DOUBLE + 1, 0);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
@@ -2136,7 +2089,7 @@ var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(Single), SQL_FLOAT + 1, 1);
+  //SetFieldType(Index, sizeof(Single), SQL_FLOAT + 1, 1);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
@@ -2190,7 +2143,7 @@ var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(Integer), SQL_LONG + 1, 0);
+  //SetFieldType(Index, sizeof(Integer), SQL_LONG + 1, 0);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
@@ -2242,7 +2195,7 @@ var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, 0);
+  //SetFieldType(Index, sizeof(Int64), SQL_INT64 + 1, 0);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
@@ -2318,8 +2271,17 @@ begin
          Exit;
     SQLCode := (sqltype and not(1));
     case SQLCode of
-      SQL_TEXT      : EncodeString(SQL_TEXT, Index, Value, Len);
-      SQL_VARYING   : EncodeString(SQL_VARYING, Index, Value, Len);
+      SQL_TEXT      :
+        begin
+          sqllen := Min(Len, FDecribedLengthArray[Index]);
+          Move(Value^, sqldata^, sqllen);
+        end;
+      SQL_VARYING   :
+        begin
+          PISC_VARYING(sqldata).strlen :=  Min(Len, FDecribedLengthArray[Index]);
+          sqllen := Len+SizeOf(Short);
+          Move(Value^, PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen);
+        end;
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
       SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
@@ -2377,7 +2339,7 @@ var
   SQLCode: SmallInt;
 begin
   CheckRange(Index);
-  SetFieldType(Index, sizeof(Smallint), SQL_SHORT + 1, 0);
+  //SetFieldType(Index, sizeof(Smallint), SQL_SHORT + 1, 0);
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
