@@ -75,7 +75,7 @@ function ConvertAdoToTypeName(FieldType: SmallInt): string;
   @return a SQL undepended type.
 }
 function ConvertAdoToSqlType(const FieldType: SmallInt;
-  const CtrlsCPType: TZControlsCodePage; UseCtrsCPType: Boolean = True): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Converts a Zeos type into ADO types.
@@ -214,50 +214,44 @@ end;
   @return a SQL undepended type.
 }
 function ConvertAdoToSqlType(const FieldType: SmallInt;
-  const CtrlsCPType: TZControlsCodePage; UseCtrsCPType: Boolean = True): TZSQLType;
+  const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
+  //http://msdn.microsoft.com/en-us/library/windows/desktop/ms675318%28v=vs.85%29.aspx
   case FieldType of
-    adChar, adVarChar, adBSTR: Result := stString;
-    adWChar, adVarWChar: Result := stUnicodeString;
+    adChar, adVarChar,
+    adWChar, adVarWChar, adBSTR: Result := stString;
     adBoolean: Result := stBoolean;
-//Bug #889223, bug with tinyint on mssql
-//    adTinyInt, adUnsignedTinyInt: Result := stByte;
-    adTinyInt, adUnsignedTinyInt: Result := stSmall;
-    adSmallInt, adUnsignedSmallInt: Result := stSmall;
-    adInteger, adUnsignedInt: Result := stInteger;
-    adBigInt, adUnsignedBigInt: Result := stLong;
+    adTinyInt: Result := stShort;
+    adUnsignedTinyInt: Result := stByte;
+    adSmallInt: Result := stSmall;
+    adUnsignedSmallInt: Result := stWord;
+    adInteger, adError{Indicates a 32-bit error code}: Result := stInteger;
+    adUnsignedInt: Result := stLongWord;
+    adBigInt: Result := stLong;
+    adUnsignedBigInt: Result := stULong;
     adSingle: Result := stFloat;
     adDouble: Result := stDouble;
     adDecimal: Result := stBigDecimal;
     adNumeric, adVarNumeric: Result := stBigDecimal;
-    adCurrency: Result := stBigDecimal;
+    adCurrency: Result := stCurrency;
     adDBDate: Result := stDate;
     adDBTime: Result := stTime;
     adDate : Result := stDate;
     adDBTimeStamp, adFileTime: Result := stTimestamp;
     adLongVarChar: Result := stAsciiStream;
-    adLongVarWChar: Result := stUnicodeStream;
+    adLongVarWChar: Result := stAsciiStream;
     adBinary, adVarBinary: Result := stBytes;
     adLongVarBinary: Result := stBinaryStream;
     adGUID: Result := stGUID;
-
-    adEmpty, adError, AdArray, adChapter, adIDispatch, adIUnknown,
-    adPropVariant, adUserDefined, adVariant: Result := stString;
+    adEmpty, AdArray, adChapter,
+    adPropVariant, adUserDefined: Result := stString;
   else
-    Result := stString;
+    {adIDispatch, adIUnknown, adVariant: reserved, nut used tpyes}Result := stUnknown
   end;
-  if UseCtrsCPType then
-    case CtrlsCPType of
-      cCP_UTF16:
-        case Result of
-          stString: Result := stUnicodeString;
-          stAsciiStream: Result := stUnicodeStream;
-        end;
-      else
-        case Result of
-          stUnicodeString: Result := stString;
-          stUnicodeStream: Result := stAsciiStream;
-        end;
+  if CtrlsCPType = cCP_UTF16 then
+    case Result of
+      stString: Result := stUnicodeString;
+      stAsciiStream: Result := stUnicodeStream;
     end;
 end;
 

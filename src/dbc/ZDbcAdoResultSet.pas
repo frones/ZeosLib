@@ -355,8 +355,10 @@ end;
 }
 function TZAdoResultSet.IsNull(ColumnIndex: Integer): Boolean;
 begin
-  Result := VarIsNull(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value) or
-            VarIsEmpty(FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
 end;
 
 {**
@@ -374,18 +376,17 @@ var
 Label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
      Result := ''
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt);
       adSmallInt:         Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt);
-      adInteger:          Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
+      adInteger, adError: Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
       adBigInt:           Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64);
       adUnsignedTinyInt:  Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte);
       adUnsignedSmallInt: Result := {$IFDEF UNICODE}IntToUnicode{$ELSE}IntToRaw{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord);
@@ -401,14 +402,15 @@ begin
       adBoolean: Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
         {$IFDEF UNICODE}
-        System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 39);
+        System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38);
         {$ELSE}
         begin
           WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 39;
+          WideRec.Len := 38;
           Result := ZWideRecToRaw(WideRec, ConSettings^.CTRL_CP);
         end;
         {$ENDIF}
+      adBSTR,
       adChar:
         begin
           WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
@@ -418,7 +420,7 @@ begin
         begin
           WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
 ProcessFixedChar:
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VString;
           while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
           {$IFDEF UNICODE}
           System.SetString(Result, WideRec.P, WideRec.Len);
@@ -459,7 +461,6 @@ ProcessFixedChar:
           Result := '';
         end;
     end;
-  end;
 end;
 
 {**
@@ -477,18 +478,17 @@ var
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
      Result := ''
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt);
       adSmallInt:         Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt);
-      adInteger:          Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
+      adInteger, adError: Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
       adBigInt:           Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64);
       adUnsignedTinyInt:  Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte);
       adUnsignedSmallInt: Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord);
@@ -505,9 +505,10 @@ begin
       adGUID:
         begin
           WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 39;
+          WideRec.Len := 38;
           Result := ZWideRecToRaw(WideRec, ZDefaultSystemCodePage);
         end;
+      adBSTR,
       adChar:
         begin
           WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
@@ -542,7 +543,6 @@ ProcessFixedChar:
           Result := '';
         end;
     end;
-  end;
 end;
 
 {**
@@ -571,7 +571,7 @@ begin
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt);
       adSmallInt:         Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt);
-      adInteger:          Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
+      adInteger, adError: Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
       adBigInt:           Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64);
       adUnsignedTinyInt:  Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte);
       adUnsignedSmallInt: Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord);
@@ -588,9 +588,10 @@ begin
       adGUID:
         begin
           WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 39;
+          WideRec.Len := 38;
           Result := ZWideRecToRaw(WideRec, zCP_US_ASCII);
         end;
+      adBSTR,
       adChar:
         begin
           WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
@@ -643,18 +644,17 @@ var
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
      Result := ''
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt);
       adSmallInt:         Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt);
-      adInteger:          Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
+      adInteger, adError: Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
       adBigInt:           Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64);
       adUnsignedTinyInt:  Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte);
       adUnsignedSmallInt: Result := IntToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord);
@@ -671,7 +671,7 @@ begin
       adGUID:
         begin
           WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 39;
+          WideRec.Len := 38;
           Result := ZWideRecToRaw(WideRec, zCP_US_ASCII);
         end;
       adChar:
@@ -708,7 +708,6 @@ ProcessFixedChar:
           Result := '';
         end;
     end;
-  end;
 end;
 
 {**
@@ -725,18 +724,17 @@ var
   L: LengthInt;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Result := ''
+    Result := ''
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt);
       adSmallInt:         Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt);
-      adInteger:          Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
+      adInteger, adError: Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger);
       adBigInt:           Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64);
       adUnsignedTinyInt:  Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte);
       adUnsignedSmallInt: Result := IntToUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord);
@@ -750,7 +748,7 @@ begin
       adDouble:           Result := FloatToSQLUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
       adCurrency:         Result := CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
       adBoolean: Result := BoolToUnicodeEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
-      adGUID: System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 39);
+      adGUID: System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38);
       adChar:
         System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
           FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
@@ -777,7 +775,6 @@ begin
           Result := '';
         end;
     end;
-  end;
 end;
 
 {**
@@ -792,18 +789,17 @@ end;
 function TZAdoResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Result := False
-  else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
+    Result := False
+   else
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt <> 0;
       adSmallInt:         Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt  <> 0;
-      adInteger:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger  <> 0;
+      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger  <> 0;
       adBigInt:           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64  <> 0;
       adUnsignedTinyInt:  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte <> 0;
       adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord  <> 0;
@@ -833,7 +829,6 @@ begin
           Result := False;
         end;
     end;
-  end;
 end;
 
 {**
@@ -851,18 +846,17 @@ var
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Result := 0
+    Result := 0
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
       adSmallInt:         Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
-      adInteger:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
+      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
       adBigInt:           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
       adUnsignedTinyInt:  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
       adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
@@ -913,7 +907,6 @@ ProcessFixedChar:
           Result := 0;
         end;
     end;
-  end;
 end;
 
 {**
@@ -931,18 +924,17 @@ var
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Result := 0
+    Result := 0
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
       adSmallInt:         Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
-      adInteger:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
+      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
       adBigInt:           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
       adUnsignedTinyInt:  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
       adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
@@ -993,7 +985,6 @@ ProcessFixedChar:
           Result := 0;
         end;
     end;
-  end;
 end;
 
 {**
@@ -1011,18 +1002,17 @@ var
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Result := 0
+    Result := 0
   else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex-1;
-    {$ENDIF}
     case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
       adTinyInt:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
       adSmallInt:         Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
-      adInteger:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
+      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
       adBigInt:           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
       adUnsignedTinyInt:  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
       adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
@@ -1073,7 +1063,6 @@ ProcessFixedChar:
           Result := 0;
         end;
     end;
-  end;
 end;
 
 {**
@@ -1090,68 +1079,68 @@ var
   WideRec: TZWideRec;
 label ProcessFixedChar;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-     Exit;
   {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
+  ColumnIndex := ColumnIndex-1;
   {$ENDIF}
-  case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
-    adEmpty: Result := 0;
-    adTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
-    adSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
-    adInteger: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
-    adBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
-    adUnsignedTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
-    adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
-    adUnsignedInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord;
-    {$IFDEF WITH_VARIANT_UINT64}
-    adUnsignedBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64;
-    {$ELSE}
-    adUnsignedBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
-    {$ENDIF}
-    adSingle: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
-    adDouble: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
-    adCurrency: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
-    adBoolean: Result := Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
-    adChar:
-      begin
-        WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
-        goto ProcessFixedChar;
-      end;
-    adWChar: {fixed char fields}
-      begin
-        WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
-ProcessFixedChar:
-        WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-        while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
-        System.SetString(FUniTemp, WideRec.P, WideRec.Len);
-        Result := UnicodeToInt64Def(FUniTemp, 0);
-      end;
-    adVarChar,
-    adLongVarChar: {varying char fields}
-      begin
-        System.SetString(FUniTemp,
-          TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
-        Result := UnicodeToInt64Def(FUniTemp, 0);
-      end;
-    adVarWChar,
-    adLongVarWChar: {varying char fields}
-      begin
-        System.SetString(FUniTemp,
-          TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2); //OleDb returns size in Bytes!
-        Result := UnicodeToInt64Def(FUniTemp, 0);
-      end;
-    else
-      try
-        Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
-      except
-        Result := 0;
-      end;
-  end;
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
+  if LastWasNull then
+    Result := 0
+  else
+    case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
+      adEmpty:            Result := 0;
+      adTinyInt:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
+      adSmallInt:         Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
+      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
+      adBigInt:           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
+      adUnsignedTinyInt:  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
+      adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
+      adUnsignedInt:      Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord;
+      {$IFDEF WITH_VARIANT_UINT64}
+      adUnsignedBigInt:   Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64;
+      {$ELSE}
+      adUnsignedBigInt:   Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
+      {$ENDIF}
+      adSingle: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
+      adDouble: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
+      adCurrency: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
+      adBoolean: Result := Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
+      adChar:
+        begin
+          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          goto ProcessFixedChar;
+        end;
+      adWChar: {fixed char fields}
+        begin
+          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
+  ProcessFixedChar:
+          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
+          System.SetString(FUniTemp, WideRec.P, WideRec.Len);
+          Result := UnicodeToInt64Def(FUniTemp, 0);
+        end;
+      adVarChar,
+      adLongVarChar: {varying char fields}
+        begin
+          System.SetString(FUniTemp,
+            TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+          Result := UnicodeToInt64Def(FUniTemp, 0);
+        end;
+      adVarWChar,
+      adLongVarWChar: {varying char fields}
+        begin
+          System.SetString(FUniTemp,
+            TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2); //OleDb returns size in Bytes!
+          Result := UnicodeToInt64Def(FUniTemp, 0);
+        end;
+      else
+        try
+          Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+        except
+          Result := 0;
+        end;
+    end;
 end;
 
 {**
@@ -1168,68 +1157,68 @@ var
   WideRec: TZWideRec;
 label ProcessFixedChar;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-     Exit;
   {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex -1;
+  ColumnIndex := ColumnIndex-1;
   {$ENDIF}
-  case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
-    adEmpty: Result := 0;
-    adTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
-    adSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
-    adInteger: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
-    adBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
-    adUnsignedTinyInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
-    adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
-    adUnsignedInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord;
-    {$IFDEF WITH_VARIANT_UINT64}
-    adUnsignedBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64;
-    {$ELSE}
-    adUnsignedBigInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
-    {$ENDIF}
-    adSingle: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
-    adDouble: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
-    adCurrency: Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
-    adBoolean: Result := Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
-    adChar:
-      begin
-        WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
-        goto ProcessFixedChar;
-      end;
-    adWChar: {fixed char fields}
-      begin
-        WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
-ProcessFixedChar:
-        WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-        while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
-        System.SetString(FUniTemp, WideRec.P, WideRec.Len);
-        Result := UnicodeToUInt64Def(FUniTemp, 0);
-      end;
-    adVarChar,
-    adLongVarChar: {varying char fields}
-      begin
-        System.SetString(FUniTemp,
-          TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
-        Result := UnicodeToUInt64Def(FUniTemp, 0);
-      end;
-    adVarWChar,
-    adLongVarWChar: {varying char fields}
-      begin
-        System.SetString(FUniTemp,
-          TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2); //OleDb returns size in Bytes!
-        Result := UnicodeToUInt64Def(FUniTemp, 0);
-      end;
-    else
-      try
-        Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
-      except
-        Result := 0;
-      end;
-  end;
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
+  if LastWasNull then
+    Result := 0
+  else
+    case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
+      adEmpty: Result := 0;
+      adTinyInt:          Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VShortInt;
+      adSmallInt:         Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSmallInt;
+      adInteger, adError: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInteger;
+      adBigInt:           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
+      adUnsignedTinyInt:  Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VByte;
+      adUnsignedSmallInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VWord;
+      adUnsignedInt: Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VLongWord;
+      {$IFDEF WITH_VARIANT_UINT64}
+      adUnsignedBigInt:   Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VUInt64;
+      {$ELSE}
+      adUnsignedBigInt:   Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VInt64;
+      {$ENDIF}
+      adSingle:           Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
+      adDouble:           Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
+      adCurrency:         Result := Trunc(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
+      adBoolean:          Result := Ord(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
+      adChar:
+        begin
+          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          goto ProcessFixedChar;
+        end;
+      adWChar: {fixed char fields}
+        begin
+          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
+  ProcessFixedChar:
+          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
+          System.SetString(FUniTemp, WideRec.P, WideRec.Len);
+          Result := UnicodeToUInt64Def(FUniTemp, 0);
+        end;
+      adVarChar,
+      adLongVarChar: {varying char fields}
+        begin
+          System.SetString(FUniTemp,
+            TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+          Result := UnicodeToUInt64Def(FUniTemp, 0);
+        end;
+      adVarWChar,
+      adLongVarWChar: {varying char fields}
+        begin
+          System.SetString(FUniTemp,
+            TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2); //OleDb returns size in Bytes!
+          Result := UnicodeToUInt64Def(FUniTemp, 0);
+        end;
+      else
+        try
+          Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+        except
+          Result := 0;
+        end;
+    end;
 end;
 
 {**
@@ -1243,15 +1232,18 @@ end;
 }
 function TZAdoResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  except
-    Result := 0;
-  end;
+    Result := 0
+  else
+    try
+      Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+    except
+      Result := 0;
+    end;
 end;
 
 {**
@@ -1265,15 +1257,18 @@ end;
 }
 function TZAdoResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  except
-    Result := 0;
-  end;
+    Result := 0
+  else
+    try
+      Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+    except
+      Result := 0;
+    end;
 end;
 
 {**
@@ -1288,15 +1283,18 @@ end;
 }
 function TZAdoResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  except
-    Result := 0;
-  end;
+    Result := 0
+  else
+    try
+      Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+    except
+      Result := 0;
+    end;
 end;
 
 {**
@@ -1314,22 +1312,27 @@ var
   V: Variant;
   GUID: TGUID;
 begin
-  SetLength(Result, 0);
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  V := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  if VarType(V) = varByte then
-    Result := V
+    Result := nil
   else
-    if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnType = stGUID then
-    begin
-      SetLength(Result, 16);
-      GUID := StringToGUID(V);
-      System.Move(Pointer(@GUID)^, Pointer(Result)^, 16);
-    end
-    else
+  begin
+    V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+    if VarType(V) = varByte then
       Result := V
+    else
+      if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType = stGUID then
+      begin
+        SetLength(Result, 16);
+        GUID := StringToGUID(V);
+        System.Move(Pointer(@GUID)^, Pointer(Result)^, 16);
+      end
+      else
+        Result := V
+  end;
 end;
 
 {**
@@ -1343,15 +1346,18 @@ end;
 }
 function TZAdoResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  except
-    Result := 0;
-  end;
+    Result := 0
+  else
+    try
+      Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+    except
+      Result := 0;
+    end;
 end;
 
 {**
@@ -1365,15 +1371,18 @@ end;
 }
 function TZAdoResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  try
-    Result := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  except
-    Result := 0;
-  end;
+    Result := 0
+  else
+    try
+      Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+    except
+      Result := 0;
+    end;
 end;
 
 {**
@@ -1390,20 +1399,23 @@ function TZAdoResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var V: Variant;
 Failed: Boolean;
 begin
-  Result := 0;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex-1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-  try
-    V := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-    if VarIsStr(V) then
-      Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
-        Length(V), ConSettings^.ReadFormatSettings, Failed)
-    else
-      Result := V;
-  except
-    Result := 0;
-  end;
+    Result := 0
+  else
+    try
+      V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+      if VarIsStr(V) then
+        Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
+          Length(V), ConSettings^.ReadFormatSettings, Failed)
+      else
+        Result := V;
+    except
+      Result := 0;
+    end;
 end;
 
 {**
@@ -1417,28 +1429,48 @@ end;
 }
 function TZAdoResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
-  V: Variant;
-  P: Pointer;
+  L: LengthInt;
 begin
-  Result := nil;
-  LastWasNull := IsNull(ColumnIndex);
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
-     Exit;
-
-  V := FAdoRecordSet.Fields.Item[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].Value;
-  if VarIsStr(V) {$IFDEF UNICODE} or ( VarType(V) = varUString){$ENDIF} then
-  begin
-    Result := TZAbstractClob.CreateWithData(PWideChar(ZWideString(V)), Length(ZWideString(V)), ConSettings);
-  end;
-  if VarIsArray(V) then
-  begin
-    P := VarArrayLock(V);
-    try
-      Result := TZAbstractBlob.CreateWithData(P, VarArrayHighBound(V, 1)+1);
-    finally
-      VarArrayUnLock(V);
+    Result := nil
+  else
+    case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
+      adGUID:
+        Result := TZAbstractClob.CreateWithData(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, ConSettings);
+      adChar: { fixed char columns }
+        begin
+          L := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          while (TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr+L-1)^ = ' ' do dec(L);
+          Result := TZAbstractClob.CreateWithData( TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, L, ConSettings);
+        end;
+      adWChar: { fixed wchar columns }
+        begin
+          L := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2;
+          while (TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr+L-1)^ = ' ' do dec(L);
+          Result := TZAbstractClob.CreateWithData( TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, L, ConSettings);
+        end;
+      adVarChar,
+      adLongVarChar:
+        Result := TZAbstractClob.CreateWithData(
+          TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ConSettings);
+      adBSTR, adVarWChar,
+      adLongVarWChar:
+        Result := TZAbstractClob.CreateWithData(
+          TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2, ConSettings);
+      adBinary,
+      adVarBinary,
+      adLongVarBinary:
+        Result := TZAbstractBlob.CreateWithData(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VArray.Data,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+      else
+        Result := nil;
     end;
-  end;
 end;
 
 
@@ -1498,5 +1530,6 @@ begin
 end;
 
 end.
+
 
 
