@@ -2688,7 +2688,7 @@ begin
 
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_tables %s, %s, %s, %s',
-    [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes, '"')])) do
+    [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes)])) do
   begin
     while Next do
     begin
@@ -3654,7 +3654,7 @@ begin
   with GetStatement.ExecuteQuery(
     Format('exec sp_jdbc_getudts %s, %s, %s, %s',
     [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern, '''%'''),
-     ComposeObjectString(TypeNamePattern, '''%'''), ComposeObjectString(UDTypes, '"')])) do
+     ComposeObjectString(TypeNamePattern, '''%'''), ComposeObjectString(UDTypes)])) do
   begin
     while Next do
     begin
