@@ -40,6 +40,9 @@
 {                                 Zeos Development Group. }
 {********************************************************@}
 // Compilation directives for Lazarus
+
+{$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
+
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
   {$MODE DELPHI}
@@ -126,3 +129,10 @@
   {$UNDEF WITH_LCONVENCODING}
 {$IFEND}
 
+{$IFDEF WITH_LCONVENCODING}
+  {$IF declared(lcl_fullversion)}
+    {$if lcl_fullversion>=1000000} //Lazarus >= 1.0.0 with delphi fix.
+      {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
+    {$ifend}
+  {$ifend}
+{$ENDIF}

@@ -63,9 +63,7 @@ type
   TZReadOnlyQuery = class (TZAbstractRODataSet)
   published
     property Active;
-  {$IFDEF WITH_FUNIDIRECTIONAL}
     property IsUniDirectional;
-  {$ENDIF}
     property SQL;
     property ParamCheck;
     property Params;

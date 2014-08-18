@@ -727,6 +727,7 @@ var
   Data: Pointer;
   DT: Integer;
   TempDate: DBDATETIME;
+  tdsTempDate: TTDSDBDATETIME;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
@@ -740,14 +741,23 @@ begin
   if Assigned(Data) then
   begin
     if DT = FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME] then
-      Move(Data^, TempDate, SizeOf(TempDate))
+      if FDBLibConnection.FreeTDS then //type diff
+        Result := PTDSDBDATETIME(Data)^.dtdays + 2 + (PTDSDBDATETIME(Data)^.dttime / 25920000)
+      else
+        Result := PDBDATETIME(Data)^.dtdays + 2 + (PDBDATETIME(Data)^.dttime / 25920000)
     else
-    begin
-      FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME],
-        @TempDate, SizeOf(TempDate));
-    end;
-    Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
-    //Perfect conversion no need to crack and reencode the date.
+      if FDBLibConnection.FreeTDS then //type diff
+      begin
+        FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME],
+          @tdsTempDate, SizeOf(tdsTempDate));
+        Result := tdsTempDate.dtdays + 2 + (tdsTempDate.dttime / 25920000);
+      end
+      else
+      begin
+        FPlainDriver.dbconvert(FHandle, DT, Data, DL, FPlainDriver.GetVariables.datatypes[Z_SQLDATETIME],
+          @TempDate, SizeOf(TempDate));
+        Result := TempDate.dtdays + 2 + (TempDate.dttime / 25920000);
+      end;
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETTIMESTAMP');
 end;

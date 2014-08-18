@@ -135,7 +135,7 @@ const
   zCP_WIN1257 = 1257; {Microsoft Windows Codepage 1257 (BaltRim)}
   zCP_WIN1258 = 1258; {Microsoft Windows Codepage 1258 (Viet), TCVN-5712}
   ZCP_JOHAB = 1361; {Korean (Johab)}
-  zCP_KOREAN = 2022; {iso-2022-kr	50225	Koreanisch (ISO)}
+  zCP_KOREAN = 2022; {iso-2022-kr	50225	Korean (ISO)}
 
   zCP_macintosh = 10000; {MAC Roman; Western European (Mac)}
   zCP_x_mac_japanese = 10001; {Japanese (Mac)}
@@ -193,11 +193,11 @@ const
   zCP_cp1025 = 21025;	{IBM EBCDIC Cyrillic Serbian-Bulgarian}
   //21027 (deprecated)}}
   zCP_KOI8U = 21866; {KOI8-U is an 8-bit character encoding, designed to cover Ukrainian, which uses the Cyrillic alphabet.}
-  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets - Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
-  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets ?Part 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L1_ISO_8859_1 = 28591; {8-bit single-byte coded graphic character sets Part 1: Latin alphabet No. 1, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L2_ISO_8859_2 = 28592; {latin2	east european (ISO), 8-bit single-byte coded graphic character sets - Part 2: Latin alphabet No. 2, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
   zCP_L3_ISO_8859_3 = 28593; {ISO 8859-3 Latin 3}
   zCP_L4_ISO_8859_4 = 28594; {ISO 8859-4 Baltic}
-  zCP_L5_ISO_8859_5 = 28595; {-bit single-byte coded graphic character sets - Part 5: Latin/Cyrillic alphabet, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
+  zCP_L5_ISO_8859_5 = 28595; {8bit single-byte coded graphic character sets - Part 5: Latin/Cyrillic alphabet, is part of the ISO/IEC 8859 series of ASCII-based standard character encodings}
   zCP_L6_ISO_8859_6 = 28596; {ISO 8859-6 Arabic}
   zCP_L7_ISO_8859_7 = 28597; {ISO 8859-7 Greek}
   zCP_L8_ISO_8859_8 = 28598; {ISO 8859-8 Hebrew; Hebrew (ISO-Visual)}
@@ -280,16 +280,6 @@ function ZRawToUnicode(const S: RawByteString; const CP: Word): ZWideString;
 function ZUnicodeToRaw(const US: ZWideString; CP: Word): RawByteString;
 
 {converter functions for the String-types}
-{$IFDEF WITH_LCONVENCODING}
-  {$MACRO ON}
-  {$IF declared(lcl_fullversion)}
-    {$if defined(FPC) AND (lcl_fullversion>=1000000)} //Lazarus >= 1.0.0 with delphi fix.
-      {$DEFINE LCONVENCODING_HAS_CP852_FUNCTIONS}
-    {$ifend}
-  {$ELSE}
-    {$ERROR lcl_fullversion isn't defined!}
-  {$ifend}
-{$ENDIF}
 function ZConvertAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;
 function ZConvertRawToAnsi(const Src: RawByteString; const RawCP: Word): AnsiString;
 function ZConvertAnsiToUTF8(const Src: AnsiString): UTF8String;

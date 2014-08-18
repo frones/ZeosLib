@@ -186,8 +186,8 @@ begin
     Query.Insert;
     Query.FieldByName('b_id').AsInteger := row_id;
     Query.FieldByName('b_long').AsString := 'aaa';
-    Query.FieldByName('b_nclob').AsString := testString+testString;
-    Query.FieldByName('b_clob').AsString := testString+testString+testString;
+    Query.FieldByName('b_nclob').AsString := GetDBTestString(testString+testString, Connection.DbcConnection.GetConSettings);
+    Query.FieldByName('b_clob').AsString := GetDBTestString(testString+testString+testString, Connection.DbcConnection.GetConSettings);
     (Query.FieldByName('b_blob') as TBlobField).LoadFromStream(BinFileStream);
     Query.Post;
     Dir := GetBFILEDir;
@@ -201,8 +201,8 @@ begin
       Query.Open;
       CheckEquals(6, Query.Fields.Count);
       CheckEquals('aaa', Query.FieldByName('b_long').AsString, 'value of b_long field');
-      CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, 'value of b_nclob field');
-      CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, 'value of b_clob field');
+      CheckEquals(teststring+teststring, Query.FieldByName('b_nclob').AsString, Query.Connection.DbcConnection.GetConSettings, 'value of b_nclob field');
+      CheckEquals(teststring+teststring+teststring, Query.FieldByName('b_clob').AsString, Query.Connection.DbcConnection.GetConSettings, 'value of b_clob field');
 
       (Query.FieldByName('b_blob') as TBlobField).SaveToStream(BinaryStream);
       CheckEquals(BinFileStream, BinaryStream, 'b_blob');

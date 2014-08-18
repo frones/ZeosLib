@@ -60,6 +60,7 @@
  {$DEFINE WITH_CLASS_VARS}      // Class variables/methods are supported
  {$DEFINE WITH_INLINE}          // compiler supports inline methodes
  {$DEFINE WITH_FTGUID}          // ftGuid is supported (binary 16Bytes)
+ {$DEFINE WITH_FUNIDIRECTIONAL} //TDataSet have SetUniDirectional and GetUnidirectional
 {$ENDIF}
 
 // Compilation directives for Delphi4

@@ -117,7 +117,7 @@ type
   TZAbstractRODataset = class(TDataSet)
   {$ENDIF}
   private
-{$IFDEF WITH_FUNIDIRECTIONAL}
+{$IFNDEF WITH_FUNIDIRECTIONAL}
     FUniDirectional: Boolean;
 {$ENDIF}
     FCurrentRow: Integer;
@@ -203,6 +203,9 @@ type
     procedure WriteParamData(Writer: TWriter);
 
     procedure SetPrepared(Value : Boolean);
+    {$IFNDEF WITH_FUNIDIRECTIONAL}
+    procedure SetUniDirectional(const Value: boolean);
+    {$ENDIF}
     function  GetUniDirectional: boolean;
 
   protected
@@ -266,13 +269,8 @@ type
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default True;
     property ShowRecordTypes: TUpdateStatusSet read GetShowRecordTypes
       write SetShowRecordTypes default [usUnmodified, usModified, usInserted];
-{$IFDEF WITH_FUNIDIRECTIONAL}
-    property IsUniDirectional: Boolean read FUniDirectional
-      write FUnidirectional default False;
-{$ELSE}
     property IsUniDirectional: Boolean read GetUniDirectional
       write SetUniDirectional default False;
-{$ENDIF}
     property Properties: TStrings read FProperties write SetProperties;
     property Options: TZDatasetOptions read FOptions write SetOptions
       default [doCalcDefaults];
@@ -640,14 +638,19 @@ begin
   Result := FSQL;
 end;
 
+{$IFNDEF WITH_FUNIDIRECTIONAL}
+function TZAbstractRODataset.SetUniDirectional(const Value: boolean);
+begin
+  FUniDirectional := Value;
+end;
+{$ENDIF}
 {**
   Gets unidirectional state of dataset.
   @return the unidirectional flag (delphi).
 }
-
 function TZAbstractRODataset.GetUniDirectional: boolean;
 begin
-  Result := inherited IsUniDirectional;
+  Result := {$IFNDEF WITH_FUNIDIRECTIONAL}FUniDirectional{$ELSE}inherited IsUniDirectional{$ENDIF};
 end;
 
 {**
@@ -1145,7 +1148,7 @@ var
 begin
   // mad stub for unidirectional (problem in TDataSet.MoveBuffer) - dont know about FPC
   // we always use same TDataSet-level buffer, because we can see only one row
-  {$IFNDEF WITH_FUNIDIRECTIONAL}
+  {$IFNDEF WITH_UNIDIRECTIONALBUG}
   if IsUniDirectional then
     Buffer := {$IFDEF WITH_BUFFERS_IS_TRECBUF}Pointer{$ENDIF}(Buffers[0]);
   {$ENDIF}
@@ -3421,23 +3424,25 @@ end;
 
 procedure TZAbstractRODataset.CheckFieldCompatibility(Field: TField;FieldDef: TFieldDef);
 const
+  {EH: hint all commented types are the fields the RowAccessor can't handle -> avoid stack killing moves in Get/SetFieldData()
+  this Error trapping is made for User-added fields like calulateds ....}
   BaseFieldTypes: array[TFieldType] of TFieldType = (
     //generic TFieldTypes of FPC and Delphi(since D7, of course):
     ftUnknown, ftString, ftSmallint, ftInteger, ftWord, // 0..4
-    ftBoolean, ftFloat, ftCurrency, ftBCD, ftDate,  ftTime, ftDateTime, // 5..11
-    ftBytes, ftVarBytes, ftAutoInc, ftBlob, ftMemo, ftGraphic, ftFmtMemo, // 12..18
-    ftParadoxOle, ftDBaseOle, ftTypedBinary, ftCursor, ftFixedChar, ftWideString, // 19..24
-    ftLargeint, ftADT, ftArray, ftReference, ftDataSet, ftOraBlob, ftOraClob, // 25..31
-    ftVariant, ftInterface, ftIDispatch, ftGuid, ftTimeStamp, ftFMTBcd // 32..37
+    ftBoolean, ftFloat, ftCurrency, ftFloat{ftBCD}, ftDate,  ftTime, ftDateTime, // 5..11
+    ftBytes, ftBytes{ftVarBytes}, ftInteger{ftAutoInc}, ftBlob, ftMemo, ftBlob{ftGraphic}, ftMemo{ftFmtMemo}, // 12..18
+    ftBlob{ftParadoxOle}, ftBlob{ftDBaseOle}, ftBlob{ftTypedBinary}, ftUnknown{ftCursor}, ftString{ftFixedChar}, ftWideString, // 19..24
+    ftLargeint, ftUnknown{ftADT}, ftUnknown{ftArray}, ftUnknown{ftReference}, ftDataSet, ftBlob{ftOraBlob}, ftMemo{ftOraClob}, // 25..31
+    ftUnknown{ftVariant}, ftUnknown{ftInterface}, ftUnknown{ftIDispatch}, ftGuid, ftTimeStamp, ftFloat{ftFMTBcd} // 32..37
 {$IFDEF FPC} //addition types for FPC
-    , ftFixedWideChar, ftWideMemo // 38..39
+    , ftWideString{ftFixedWideChar}, ftWideMemo // 38..39
 {$ELSE !FPC}
 {$IF CompilerVersion >= 18} //additional Types since D2006 and D2007
-    , ftFixedWideChar, ftWideMemo, ftOraTimeStamp, ftOraInterval // 38..41
+    , ftWideString{ftFixedWideChar}, ftWideMemo, ftDateTime{ftOraTimeStamp}, ftDateTime{ftOraInterval} // 38..41
 {$IF CompilerVersion >= 20} //additional Types since D2009
-    , ftLongWord, ftShortint, ftByte, ftExtended, ftConnection, ftParams, ftStream //42..48
+    , ftLongWord, ftShortint, ftByte, ftExtended, ftUnknown{ftConnection}, ftUnknown{ftParams}, ftBlob{ftStream} //42..48
 {$IF CompilerVersion >= 21} //additional Types since D2010
-    , ftTimeStampOffset, ftObject, ftSingle //49..51
+    , ftDateTime{ftTimeStampOffset}, ftUnknown{ftObject}, ftSingle //49..51
 {$IFEND CompilerVersion >= 21}
 {$IFEND CompilerVersion >= 20}
 {$IFEND CompilerVersion >= 18}

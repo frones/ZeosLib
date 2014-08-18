@@ -195,7 +195,8 @@ var
   I: Integer;
 begin
   for i := 0 to FResults.Count -1 do
-    IZResultSet(FResults.Items[i]).Close;
+    if supports(FResults[i], IZResultSet) then    //possible IZUpdateCount
+      IZResultSet(FResults.Items[i]).Close;
   FResults.Clear;
   inherited Close;
 end;

@@ -926,7 +926,7 @@ begin
           CurrentVar.TypeCode := CurrentVar.DataType;
 
           CurrentVar._Obj := DescribeObject(FplainDriver, FConnection,
-            CurrentVar.Handle, FStmtHandle, nil, 0);
+            CurrentVar.Handle, FStmtHandle, 0);
 
           if FPlainDriver.TypeTypeCode(Connection.GetConnectionHandle,
               FerrorHandle, CurrentVar._Obj.tdo) = SQLT_NCO then
@@ -949,10 +949,11 @@ begin
     InitializeOracleVar(FPlainDriver, Connection, CurrentVar,
       CurrentVar.ColType, CurrentVar.TypeCode, CurrentVar.DataSize);
 
-    CheckOracleError(FPlainDriver, FErrorHandle,
-      FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
-      FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
-      @CurrentVar.Indicator, nil, nil, OCI_DEFAULT), lcExecute, FSQL);
+    if CurrentVar.ColType <> stUnknown then
+      CheckOracleError(FPlainDriver, FErrorHandle,
+        FPlainDriver.DefineByPos(FStmtHandle, CurrentVar.Define,
+        FErrorHandle, I, CurrentVar.Data, CurrentVar.Length, CurrentVar.TypeCode,
+        @CurrentVar.Indicator, nil, nil, OCI_DEFAULT), lcExecute, FSQL);
     if CurrentVar.DataType=SQLT_NTY then
     begin
       //second step: http://www.csee.umbc.edu/portal/help/oracle8/server.815/a67846/obj_bind.htm
