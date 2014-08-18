@@ -290,6 +290,7 @@ procedure TZOraclePreparedStatement.BindInParameters;
 var
   I: Integer;
 begin
+  FIteration := Max(1, Min(FIteration, ArrayCount));
   if FParams^.AllocNum > 0 then
   for I := 0 to FParams^.AllocNum - 1 do
     LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
@@ -643,6 +644,7 @@ procedure TZOracleCallableStatement.BindInParameters;
 var
   I: Integer;
 begin
+  FIteration := Max(1, Min(FIteration, ArrayCount));
   if FParams^.AllocNum > 0 then
     for I := 0 to FParams^.AllocNum - 1 do
       if (FOracleParams[i].pType in [1,3]) then
