@@ -2293,14 +2293,14 @@ begin
       SQL_BLOB, SQL_QUAD: WriteLobBuffer(Index, Value, Len);
       SQL_TYPE_DATE :
         begin
-          if Len = 0 then
+          if (Len = 0) or ((Value+2)^ = ':') then
             TempTimeStamp := 0
           else
-            if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-              TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            if Len = ConSettings^.WriteFormatSettings.DateFormatLen then
+              TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed{%H-})
             else
               TempTimeStamp := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                RawSQLTimeStampToDateTime(Value, Len, ConSettings^.ReadFormatSettings, Failed));
+                RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
           UpdateDateTime(Index, TempTimeStamp);
         end;
       SQL_TYPE_TIME:
@@ -2309,9 +2309,9 @@ begin
             TempTimeStamp := 0
           else
             if (Value+2)^ = ':' then //possible date if Len = 10 then
-              TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed{%H-})
             else
-              TempTimeStamp := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.ReadFormatSettings, Failed));
+              TempTimeStamp := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
           UpdateDateTime(Index, TempTimeStamp);
         end;
       SQL_TIMESTAMP:
@@ -2320,12 +2320,15 @@ begin
             TempTimeStamp := 0
           else
             if (Value+2)^ = ':' then
-              TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+              TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed{%H-})
             else
-              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
-                TempTimeStamp := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.ReadFormatSettings, Failed)
+              if (ConSettings^.WriteFormatSettings.DateTimeFormatLen - Len) <= 4 then
+                TempTimeStamp := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
               else
-                TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.ReadFormatSettings, Failed);
+                if (Value+4)^ = '-' then
+                  TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+                else
+                  TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
           UpdateDateTime(Index, TempTimeStamp);
         end;
     else
