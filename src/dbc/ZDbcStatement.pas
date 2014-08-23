@@ -206,7 +206,6 @@ type
     FInParamCount: Integer;
     FInitialArrayCount: Integer;
     FPrepared : Boolean;
-    FExecCount: Integer;
     FClientVariantManger: IZClientVariantManager;
     FCachedQueryRaw: TRawByteStringDynArray;
     FCachedQueryUni: TUnicodeStringDynArray;
@@ -230,7 +229,6 @@ type
     function GetOmitComments: Boolean; virtual;
     function GetCompareFirstKeywordStrings: TPreparablePrefixTokens; virtual;
 
-    property ExecCount: Integer read FExecCount;
     property InParamValues: TZVariantDynArray read GetInParamValues write SetInParamValues;
     property InParamTypes: TZSQLTypeArray read FInParamTypes write FInParamTypes;
     property InParamDefaultValues: TStringDynArray
@@ -1275,7 +1273,6 @@ begin
   FInParamValuesIndex := 0;
   SetInParamCount(0);
   FPrepared := False;
-  FExecCount := 0;
   FInitialArrayCount := 0;
 end;
 
@@ -1544,7 +1541,6 @@ function TZAbstractPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount);
 end;
 {$WARNINGS ON}
 {**
@@ -1562,7 +1558,6 @@ function TZAbstractPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount);
 end;
 {$WARNINGS ON}
 {**
@@ -2150,6 +2145,9 @@ begin
   V.VArray.VArray := Pointer(Value);
   V.VArray.VArrayVariantType := VariantType;
   V.VArray.VArrayType := Ord(SQLType);
+  V.VArray.VIsNullArray := nil;
+  V.VArray.VIsNullArrayType := 0;
+  V.VArray.VIsNullArrayVariantType := vtNull;
   SetInParam(ParameterIndex, SQLType, V);
 end;
 
@@ -2187,7 +2185,6 @@ function TZAbstractPreparedStatement.ExecutePrepared: Boolean;
 begin
   { Logging Execution }
   DriverManager.LogMessage(lcExecPrepStmt,Self);
-  Inc(FExecCount);
 end;
 {$WARNINGS ON}
 
@@ -2220,6 +2217,7 @@ begin
   end;
   UnPrepareInParameters;
   FPrepared := False;
+  Self.FInitialArrayCount := 0;
   SetLength(FCachedQueryRaw, 0);
   SetLength(FCachedQueryUni, 0);
 end;
