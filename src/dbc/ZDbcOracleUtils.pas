@@ -824,7 +824,7 @@ begin
         stBigDecimal: //conversion required
           for i := 0 to Iteration -1 do {%H-}PDouble({%H-}NativeUInt(Variable^.Data)+I*SizeOf(Double))^ := ZExtendedArray[I];
         stString:
-          case TZVariantType(Value.VArray.VArrayVariantType) of
+          case Value.VArray.VArrayVariantType of
             vtString:
               for i := 0 to Iteration -1 do
                 if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZStringArray[I]) = nil) then //Length = 0
@@ -901,7 +901,7 @@ begin
                     end
                 else
                   for i := 0 to Iteration -1 do
-                    if (Variable^.oIndicatorArray^[I] = -1) or (ZCharRecArray[I].Len = 0) then 
+                    if (Variable^.oIndicatorArray^[I] = -1) or (ZCharRecArray[I].Len = 0) then
                       SetEmptyString
                     else
                     begin
@@ -916,7 +916,7 @@ begin
               raise Exception.Create('Unsupported String Variant');
           end;
         stUnicodeString:
-          case TZVariantType(Value.VArray.VArrayVariantType) of
+          case Value.VArray.VArrayVariantType of
             vtUnicodeString:
               for i := 0 to Iteration -1 do
                 if (Variable^.oIndicatorArray^[I] = -1) or (Pointer(ZUnicodeStringArray[i]) = nil) then
