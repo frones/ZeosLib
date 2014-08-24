@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses 
+uses
    ZCompatibility; 
 
 const

@@ -72,12 +72,14 @@ type
     FResultXSQLDA: IZSQLDA;
     FIBConnection: IZInterbase6Connection;
     FCodePageArray: TWordDynArray;
-
-
     FStatusVector: TARRAY_ISC_STATUS;
     FStmtHandle: TISC_STMT_HANDLE;
     FStatementType: TZIbSqlStatementType;
+    FMemPerRow, FArrayOffSet: Integer;
+    FPreparedRowsOfArray: Integer;
+    FTypeTokens: TRawByteStringDynArray;
     function ExecuteInternal: Integer;
+    function InternalPrepare(const SQL: RawByteString; PrepareParams: Boolean): TZIbSqlStatementType;
   protected
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
@@ -94,6 +96,8 @@ type
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
+
+    procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
   TZInterbase6Statement = class(TZInterbase6PreparedStatement);
 type
@@ -152,6 +156,24 @@ begin
   end;
 end;
 
+function TZInterbase6PreparedStatement.InternalPrepare(const SQL: RawByteString;
+  PrepareParams: Boolean): TZIbSqlStatementType;
+begin
+  with Self.FIBConnection do
+  begin
+    Result := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
+      GetDBHandle, GetTrHandle, GetDialect, SQL, ConSettings, FStmtHandle); //allocate handle if required or reuse it
+    if PrepareParams then
+      PrepareInParameters;
+    if Result in [stSelect, stExecProc] then
+    begin
+      FResultXSQLDA := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
+      PrepareResultSqlData(GetPlainDriver, GetDialect,
+        SQL, FStmtHandle, FResultXSQLDA, ConSettings);
+    end;
+  end;
+end;
+
 procedure TZInterbase6PreparedStatement.PrepareInParameters;
 var
   StatusVector: TARRAY_ISC_STATUS;
@@ -177,8 +199,29 @@ end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
-  BindSQLDAInParameters(ClientVarManager, InParamValues,
-    InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings, FCodePageArray);
+  if (ArrayCount > 0) then
+    while True do
+      if (FArrayOffSet+FPreparedRowsOfArray >= ArrayCount) then
+      begin
+        if ArrayCount > FPreparedRowsOfArray then
+          Prepare; {rebuild new block and bind ramaing params*iters}
+        BindSQLDAInParameters(ClientVarManager, InParamValues,
+          InParamCount, FParamSQLData, GetConnection.GetConSettings,
+          FCodePageArray, FArrayOffSet, FPreparedRowsOfArray);
+        Break
+      end
+      else
+      begin
+        BindSQLDAInParameters(ClientVarManager, InParamValues,
+          InParamCount, FParamSQLData, GetConnection.GetConSettings,
+          FCodePageArray, FArrayOffSet, FPreparedRowsOfArray);
+        Inc(FArrayOffSet, FPreparedRowsOfArray);
+        ExecuteInternal; {left space for last execution}
+      end
+  else
+    BindSQLDAInParameters(ClientVarManager, InParamValues,
+      InParamTypes, InParamCount, FParamSQLData, GetConnection.GetConSettings,
+        FCodePageArray);
   inherited BindInParameters;
 end;
 
@@ -233,29 +276,34 @@ begin
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_drop);
     FStmtHandle := 0;
   end;
-  FResultXSQLDA := nil;
   FParamSQLData := nil;
 end;
 
 procedure TZInterbase6PreparedStatement.Prepare;
-begin
-  if not Prepared then
+  procedure PrepareArray(Iteration: Integer);
   begin
-    with FIBConnection do
-    begin
-      FStatementType := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
-        GetDBHandle, GetTrHandle, GetDialect, ASQL, ConSettings, FStmtHandle); //allocate handle if required or reuse it
-
-      if FStatementType in [stSelect, stExecProc] then
-      begin
-        FResultXSQLDA := TZSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
-        PrepareResultSqlData(GetPlainDriver, GetDialect,
-          ASQL, FStmtHandle, FResultXSQLDA, ConSettings);
-      end;
-    end;
+    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE);
+    FStatementType := InternalPrepare(GetExecuteBlockString(FParamSQLData,
+      IsParamIndex, InParamCount, Iteration, CachedQueryRaw,
+      FIBConnection.GetPlainDriver, FMemPerRow, FPreparedRowsOfArray,
+        FTypeTokens), False);
+  end;
+begin
+  if (not Prepared)  then
+  begin
+    FStatementType := InternalPrepare(ASQL, ArrayCount > 0);
+    if (FStatementType in [stInsert, stUpdate, stDelete]) and (ArrayCount > 0) and (FStmtHandle <> 0) then
+      PrepareArray(ArrayCount);
     CheckInterbase6Error(ASQL);
     inherited Prepare;
-  end;
+  end
+  else
+    if (ArrayCount > 0 ) and ((FArrayOffSet+FPreparedRowsOfArray >= ArrayCount ) or (FArrayOffSet = 0)) then
+    begin
+      PrepareArray(ArrayCount-FArrayOffSet);
+      CheckInterbase6Error(ASQL);
+      inherited Prepare;
+    end;
 end;
 
 procedure TZInterbase6PreparedStatement.Unprepare;
@@ -263,6 +311,8 @@ begin
   if FStmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
   FResultXSQLDA := nil;
+  SetLength(FTypeTokens, 0);
+  FMemPerRow := 0;
   inherited Unprepare;
 end;
 
@@ -384,6 +434,17 @@ begin
     Result := DISCONNECT_ERROR;
   end;
 
+end;
+
+procedure TZInterbase6PreparedStatement.SetDataArray(ParameterIndex: Integer;
+  const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
+begin
+  if ParameterIndex = FirstDbcIndex then
+  begin
+    Self.FArrayOffSet := 0;
+    Self.FPreparedRowsOfArray := 0;
+  end;
+  inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
 end;
 
 
