@@ -360,6 +360,11 @@
   {$DEFINE WITH_FLOATTOTEXT_DEPRECATED} //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
 {$ENDIF}
 
+{$IFDEF DELPHI20_UP}
+  {$DEFINE WITH_IPROVIDERSUPPORT_NG} //supports IProviderSupportNG / IProviderSupport is deprecated
+  {$DEFINE TFIELD_HAS_ASLONGWORD} //TField has supports virtual AsLongWord Gettet & Setter 
+{$ENDIF}
+
 {$IFNDEF WIN32} //global undefines
   {$UNDEF USE_FAST_TRUNC}
 {$ENDIF}

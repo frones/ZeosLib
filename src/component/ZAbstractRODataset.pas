@@ -648,7 +648,7 @@ type
     { unsigned integer values }
     function GetAsByte: Byte;
     function GetAsWord: Word;
-    function GetAsLongWord: LongWord;
+    function GetAsLongWord: LongWord; {$IFDEF TFIELD_HAS_ASLONGWORD}override;{$ENDIF}
     function GetAsUInt64: UInt64;
     { string values }
     function GetAsString: string; override;
@@ -686,7 +686,7 @@ type
     { unsigned integer values }
     procedure SetAsByte(Value: Byte); virtual;
     procedure SetAsWord(Value: Word); virtual;
-    procedure SetAsLongWord(Value: LongWord); virtual;
+    procedure SetAsLongWord(Value: LongWord); {$IFDEF TFIELD_HAS_ASLONGWORD}override;{$ELSE}virtual;{$ENDIF}
     procedure SetAsUInt64(Value: UInt64); virtual;
     { string values }
     procedure SetAsString(const Value: string); override;
@@ -5098,14 +5098,25 @@ var
     Pos, j: Integer;
     KeyFields, FieldName: string;
     {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-    PS : IProviderSupport;
+      {$IFDEF WITH_IPROVIDERSUPPORT_NG}
+      PS : IProviderSupportNG;
+      {$ELSE}
+      PS : IProviderSupport;
+      {$ENDIF}
     {$ENDIF WITH_IPROVIDERSUPPORT_GUID}
   begin
     {$IFDEF WITH_IPROVIDERSUPPORT_GUID}
-    if Supports(self, IProviderSupport, PS) then
-      KeyFields := PS.PSGetKeyFields
-    else
-      KeyFields := IProviderSupport(self).PSGetKeyFields;
+      {$IFDEF WITH_IPROVIDERSUPPORT_NG}
+      if Supports(self, IProviderSupportNG, PS) then
+        KeyFields := PS.PSGetKeyFields
+      else
+        KeyFields := IProviderSupportNG(self).PSGetKeyFields;
+      {$ELSE}
+      if Supports(self, IProviderSupport, PS) then
+        KeyFields := PS.PSGetKeyFields
+      else
+        KeyFields := IProviderSupport(self).PSGetKeyFields;
+      {$ENDIF}
     {$ELSE WITH_IPROVIDERSUPPORT_GUID}
       KeyFields := self.PSGetKeyFields;
     {$ENDIF WITH_IPROVIDERSUPPORT_GUID}
