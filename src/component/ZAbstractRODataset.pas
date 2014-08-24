@@ -83,7 +83,7 @@ type
   {** Options for dataset. }
   TZDatasetOption = (doOemTranslate, doCalcDefaults, doAlwaysDetailResync,
     doSmartOpen, doPreferPrepared, doDontSortOnPost, doUpdateMasterFirst,
-    doCachedLobs);
+    doCachedLobs, doNoAlignDisplayWidth);
 
   {** Set of dataset options. }
   TZDatasetOptions = set of TZDatasetOption;
@@ -3334,18 +3334,19 @@ begin
     if DefaultFields and not FRefreshInProgress then
     begin
       CreateFields;
-      for i := 0 to Fields.Count -1 do
-        if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
-          {$IFDEF WITH_FTGUID}
-          if Fields[i].DataType = ftGUID then
-            Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
-          else
-          {$ENDIF}
-            if not (ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = 0) then
-            begin
-              {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});{$ENDIF}
-              Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
-            end;
+      if not (doNoAlignDisplayWidth in FOptions) then
+        for i := 0 to Fields.Count -1 do
+          if Fields[i].DataType in [ftString, ftWideString{$IFDEF WITH_FTGUID}, ftGUID{$ENDIF}] then
+            {$IFDEF WITH_FTGUID}
+            if Fields[i].DataType = ftGUID then
+              Fields[i].DisplayWidth := 40 //to get a full view of the GUID values
+            else
+            {$ENDIF}
+              if not (ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}) = 0) then
+              begin
+                {$IFNDEF FPC}Fields[i].Size := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});{$ENDIF}
+                Fields[i].DisplayWidth := ResultSet.GetMetadata.GetColumnDisplaySize(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF});
+              end;
     end;
     BindFields(True);
 
