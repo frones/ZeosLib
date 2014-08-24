@@ -144,6 +144,7 @@ type
     function SupportsResultSetConcurrency(const _Type: TZResultSetType;
       const Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
+    function SupportsArrayBindings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1165,6 +1166,14 @@ begin
   Result := (_Type = rtScrollInsensitive) and (Concurrency = rcReadOnly);
 end;
 
+{**
+  Does the Database support binding arrays? Is the ZDbc ready for this?
+  @return <code>true</code> if the DataBase allows it.
+}
+function TZInterbase6DatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  Result := True;
+end;
 
 { TZInterbase6DatabaseMetadata }
 
