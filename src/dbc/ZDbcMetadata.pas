@@ -4532,8 +4532,7 @@ end;
 function TZAbstractDatabaseMetadata.GetProceduresCacheKey(const Catalog: string;
   const SchemaPattern: string; const ProcedureNamePattern: string): string;
 begin
-  Result := Format('get-procedures:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern]);
+  Result := 'get-procedures:'+Catalog+':'+SchemaPattern+':'+ProcedureNamePattern;
 end;
 
 {**
@@ -4548,8 +4547,8 @@ function TZAbstractDatabaseMetadata.GetProcedureColumnsCacheKey(const Catalog: s
   const SchemaPattern: string; const ProcedureNamePattern: string;
   const ColumnNamePattern: string): string;
 begin
-  Result := Format('get-procedure-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, ProcedureNamePattern, ColumnNamePattern]);
+  Result := 'get-procedure-columns:'+Catalog+':'+SchemaPattern+':'+
+    ProcedureNamePattern+':'+ColumnNamePattern;
 end;
 
 {**
@@ -4571,8 +4570,7 @@ begin
   for I := Low(Types) to High(Types) do
     Key := Key + ':' + Types[I];
 
-  Result := Format('get-tables:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, Key]);
+  Result := 'get-tables:'+Catalog+':'+SchemaPattern+':'+TableNamePattern+':'+Key;
 end;
 
 {**
@@ -4614,8 +4612,8 @@ function TZAbstractDatabaseMetadata.GetColumnsCacheKey(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): string;
 begin
-  Result := Format('get-columns:%s:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern]);
+  Result := 'get-columns:'+Catalog+':'+SchemaPattern+':'+TableNamePattern+':'+
+    ColumnNamePattern;
 end;
 
 {**
@@ -4630,8 +4628,8 @@ function TZAbstractDatabaseMetadata.GetColumnPrivilegesCacheKey(
   const Catalog: string; const Schema: string; const Table: string;
   const ColumnNamePattern: string): string;
 begin
-  Result := Format('get-column-privileges:%s:%s:%s:%s',
-    [Catalog, Schema, Table, ColumnNamePattern]);
+  Result := 'get-column-privileges:'+Catalog+':'+Schema+':'+Table+':'+
+    ColumnNamePattern;
 end;
 
 {**
@@ -4645,8 +4643,8 @@ function TZAbstractDatabaseMetadata.GetTablePrivilegesCacheKey(
   const Catalog: string; const SchemaPattern: string;
   const TableNamePattern: string): string;
 begin
-  Result := Format('get-table-privileges:%s:%s:%s',
-    [Catalog, SchemaPattern, TableNamePattern]);
+  Result := 'get-table-privileges:'+Catalog+':'+SchemaPattern+':'+
+    TableNamePattern;
 end;
 
 {**
@@ -4662,8 +4660,8 @@ function TZAbstractDatabaseMetadata.GetBestRowIdentifierCacheKey(
   const Catalog: string; const Schema: string; const Table: string;
   const Scope: Integer; const Nullable: Boolean): string;
 begin
-  Result := Format('get-best-row-identifier:%s:%s:%s:%d:%s',
-    [Catalog, Schema, Table, Scope, BoolToStr(Nullable)]);
+  Result := 'get-best-row-identifier:'+Catalog+':'+Schema+':'+Table+':'+
+    ZFastCode.IntToStr(Scope)+':'+BoolToStr(Nullable);
 end;
 
 {**
@@ -4676,7 +4674,7 @@ end;
 function TZAbstractDatabaseMetadata.GetVersionColumnsCacheKey(
   const Catalog: string; const Schema: string; const Table: string): string;
 begin
-  Result := Format('get-version-columns:%s:%s:%s', [Catalog, Schema, Table]);
+  Result := 'get-version-columns:'+Catalog+':'+Schema+':'+Table;
 end;
 
 {**
@@ -4689,7 +4687,7 @@ end;
 function TZAbstractDatabaseMetadata.GetPrimaryKeysCacheKey(const Catalog: string;
   const Schema: string; const Table: string): string;
 begin
-  Result := Format('get-primary-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Result := 'get-primary-keys:'+Catalog+':'+Schema+':'+Table;
 end;
 
 {**
@@ -4702,7 +4700,7 @@ end;
 function TZAbstractDatabaseMetadata.GetImportedKeysCacheKey(const Catalog: string;
   const Schema: string; const Table: string): string;
 begin
-  Result := Format('get-imported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Result := 'get-imported-keys:'+Catalog+':'+Schema+':'+Table;
 end;
 
 {**
@@ -4715,7 +4713,7 @@ end;
 function TZAbstractDatabaseMetadata.GetExportedKeysCacheKey(const Catalog: string;
   const Schema: string; const Table: string): string;
 begin
-  Result := Format('get-exported-keys:%s:%s:%s', [Catalog, Schema, Table]);
+  Result := 'get-exported-keys:'+Catalog+':'+Schema+':'+Table;
 end;
 
 {**
@@ -4733,9 +4731,8 @@ function TZAbstractDatabaseMetadata.GetCrossReferenceCacheKey(
   const PrimaryTable: string; const ForeignCatalog: string;
   const ForeignSchema: string; const ForeignTable: string): string;
 begin
-  Result := Format('get-cross-reference:%s:%s:%s:%s:%s:%s',
-    [PrimaryCatalog, PrimarySchema, PrimaryTable, ForeignCatalog,
-    ForeignSchema, ForeignTable]);
+  Result := 'get-cross-reference:'+PrimaryCatalog+':'+PrimarySchema+':'+
+    PrimaryTable+':'+ForeignCatalog+':'+ForeignSchema+':'+ForeignTable;
 end;
 
 {**
@@ -4764,8 +4761,8 @@ function TZAbstractDatabaseMetadata.GetIndexInfoCacheKey(const Catalog: string;
   const Schema: string; const Table: string; const Unique: Boolean;
   const Approximate: Boolean): string;
 begin
-  Result := Format('get-index-info:%s:%s:%s:%s:%s',
-    [Catalog, Schema, Table, BoolToStr(Unique), BoolToStr(Approximate)]);
+  Result := 'get-index-info:'+Catalog+':'+Schema+':'+Table+':'+
+    BoolToStr(Unique)+':'+BoolToStr(Approximate);
 end;
 
 {**
@@ -4778,8 +4775,7 @@ end;
 function TZAbstractDatabaseMetadata.GetSequencesCacheKey(const Catalog: string;
   const SchemaPattern: string; const SequenceNamePattern: string): string;
 begin
-  Result := Format('get-sequences:%s:%s:%s',
-    [Catalog, SchemaPattern, SequenceNamePattern]);
+  Result := 'get-sequences:'+Catalog+':'+SchemaPattern+':'+SequenceNamePattern;
 end;
 
 {**
@@ -4799,8 +4795,7 @@ begin
   Result := '';
   for I := Low(Types) to High(Types) do
     Result := Result + ':' + ZFastCode.IntToStr(Types[I]);
-  Result := Format('get-udts:%s:%s:%s%s',
-    [Catalog, SchemaPattern, TypeNamePattern, Result]);
+  Result := 'get-udts:'+Catalog+':'+SchemaPattern+':'+TypeNamePattern+':'+Result;
 end;
 
 {**

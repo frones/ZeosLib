@@ -255,7 +255,8 @@ type
 implementation
 
 uses
-  ZFastCode, Math, ZMessages, ZDbcMySqlUtils;
+  Math,
+  ZFastCode, ZMessages, ZDbcMySqlUtils;
 
 { TZMySQLDatabaseInfo }
 
