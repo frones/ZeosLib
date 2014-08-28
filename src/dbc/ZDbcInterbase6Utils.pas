@@ -2705,6 +2705,7 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
 const
   EBStart = AnsiString('EXECUTE BLOCK(');
   EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
+  EBSuspend =  AnsiString('SUSPEND;'+LineEnding); //required for RETURNING synatax
   EBEnd = AnsiString('end');
   LBlockLen = Length(EBStart)+Length(EBBegin)+Length(EBEnd);
 var
@@ -2713,6 +2714,7 @@ var
   HeaderLen, FullHeaderLen, StmtLength, StmtMem:  Integer;
   CodePageInfo: PZCodePage;
   PStmts, PResult: PAnsiChar;
+  ReturningFound: Boolean;
 
   procedure Put(const Args: array of RawByteString; var Dest: PAnsiChar);
   var I: Integer;
@@ -2827,6 +2829,7 @@ begin
   StmtLength := 0;
   FullHeaderLen := 0;
   StmtMem := 0;
+  ReturningFound := False;
   for J := 0 to RemainingArrayRows -1 do
   begin
     ParamIndex := 0;
@@ -2845,7 +2848,14 @@ begin
         Inc(ParamIndex);
       end
       else
+      begin
         Inc(SingleStmtLength, {%H-}PLengthInt(NativeUInt(CurrentSQLTokens[i]) - StringLenOffSet)^);
+        if not ReturningFound and (CurrentSQLTokens[i][1] in ['R', 'r']) then
+        begin
+          ReturningFound := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}UpperCase(CurrentSQLTokens[i]) = 'RETUNRING';
+          Inc(StmtLength, Ord(ReturningFound)*Length(EBSuspend));
+        end;
+      end;
     end;
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     Inc(StmtLength, HeaderLen+SingleStmtLength);
@@ -2889,6 +2899,8 @@ begin
     Put([';',LineEnding], PStmts);
   end;
   Put([EBBegin], PResult);
+  if ReturningFound then
+    Put([EBSuspend], PStmts);
   Put([EBEnd], PStmts);
   Inc(PreparedRowsOfArray);
 end;
