@@ -56,7 +56,8 @@ interface
 {$I ZComponent.inc}
 
 uses
-  SysUtils, Classes, ZDbcIntfs, ZAbstractRODataset;
+  SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
+  ZDbcIntfs, ZAbstractRODataset;
 
 type
 
