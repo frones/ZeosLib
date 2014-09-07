@@ -310,9 +310,6 @@ procedure AnsiMBCSToUCS2(Source: PAnsichar; SourceBytes: NativeUInt;
   const MapProc: TMBCSMapProc; var Dest: ZWideString);
 function UTF8ToWideChar(Source: PAnsichar; SourceBytes: NativeUInt; Dest: PWideChar): LengthInt;
 
-var
-  ZDefaultSystemCodePage: Word;
-
 const
   {$IFDEF USE_RAW2WIDE_PROCS} //compiler related: D7 is less optimal use MultibultToWidechar instead for known CP's
   CP437ToUnicodeMap: packed array[$00..$FF] of Word = ( {generated with MultiByteToWideChar}
@@ -1627,9 +1624,9 @@ A2U:
           begin
             wlen :=  PEnd-Source; //elimainate already processed chars
             {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-            SetLength(Result, wlen + UnicodeFromLocaleChars(CP, 0, Source, wlen, Dest, wlen));
+            SetLength(Result, LengthInt(SourceBytes) - wlen + UnicodeFromLocaleChars(CP, 0, Source, wlen, Dest, wlen));
             {$ELSE}
-            SetLength(Result, wlen + MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen)); //Convert Ansi to Wide with supported Chars
+            SetLength(Result, LengthInt(SourceBytes) - wlen + MultiByteToWideChar(CP, 0, Source, wlen, Dest, wlen)); //Convert Ansi to Wide with supported Chars
             {$ENDIF}
           end;
         end;

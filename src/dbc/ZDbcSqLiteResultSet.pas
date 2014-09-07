@@ -231,7 +231,7 @@ begin
       begin
         ColumnCodePage := zCP_UTF8;
         if ColumnType = stString then
-          if Zencoding.ZDefaultSystemCodePage = zCP_UTF8 then
+          if ZDefaultSystemCodePage = zCP_UTF8 then
             ColumnDisplaySize := FieldPrecision div 4
           else
             ColumnDisplaySize := FieldPrecision div 2;
