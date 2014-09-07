@@ -54,7 +54,9 @@
   {$DEFINE WITH_INLINE}           // compiler supports inline methodes
 {$ENDIF}
 {$DEFINE WITH_UNIDIRECTIONALBUG} //still buggy with IsUnidirectional prop of TDataSet FPC still moves the recordBuffer-> visit TestReadOnlyQueryUniDirectional and TZAbstractRODataset.GetRecord
-
+{$IFNDEF MSWINDOWS}
+ {$DEFINE USE_RAW2WIDE_PROCS} //FPC is really not optimal with code generation use MultibultToWidechar instead for known CP's
+{$ENDIF}
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
   {$MODE DELPHI}

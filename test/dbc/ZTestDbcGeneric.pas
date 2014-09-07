@@ -1091,6 +1091,7 @@ const
 var
   Statement: IZStatement;
   ResultSet: IZResultSet;
+  Len: NativeUInt;
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
@@ -1105,7 +1106,7 @@ begin
       CheckEquals('Vasia Pupkin', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Vasia Pupkin', ResultSet.GetPRaw(p_name_Index, Len));
       CheckEquals('Vasia Pupkin', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
@@ -1115,7 +1116,7 @@ begin
       CheckEquals('Andy Karto', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Andy Karto', ResultSet.GetPRaw(p_name_Index, Len));
       CheckEquals('Andy Karto', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
@@ -1125,7 +1126,7 @@ begin
       CheckEquals('Kristen Sato', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Kristen Sato', ResultSet.GetPRaw(p_name_Index, Len));
       CheckEquals('Kristen Sato', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
@@ -1135,7 +1136,7 @@ begin
       CheckEquals('Aleksey Petrov', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Aleksey Petrov', ResultSet.GetPRaw(p_name_Index, Len));
       CheckEquals('Aleksey Petrov', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(p_name_Index));
       Check(ResultSet.Next);
@@ -1145,7 +1146,7 @@ begin
       CheckEquals('Yan Pater', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetAnsiRec(p_name_Index).P);
+      CheckEquals('Yan Pater', ResultSet.GetPRaw(p_name_Index, Len));
       CheckEquals('Yan Pater', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetPWideChar(p_name_Index));
     finally

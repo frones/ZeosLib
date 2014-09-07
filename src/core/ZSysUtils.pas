@@ -2451,8 +2451,8 @@ begin
   SLen := Length(Suffix);
   { prepare Value if required }
   if (Pointer(Value) = nil) or//empty
-     ({%H-}PRefCntInt(NativeInt(Value) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (LengthInt(len+(2*Ord(Quoted))+Slen) <> {%H-}PLengthInt(NativeInt(Value) - StringLenOffSet)^) then { length as expected ? }
+     ({%H-}PRefCntInt(NativeUInt(Value) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+     (LengthInt(len+(2*Ord(Quoted))+Slen) <> {%H-}PLengthInt(NativeUInt(Value) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
       Value := '';
@@ -3129,7 +3129,7 @@ begin
     Result := ''
   else
   begin
-    l := {%H-}PLengthInt(NativeInt(Src) - StringLenOffSet)^;
+    l := {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^;
     SetString(result,nil,l);
     for i := 0 to l-1 do
       PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
@@ -3158,8 +3158,8 @@ begin
   else
   begin
     if (Pointer(Result) = nil) or //empty ?
-      ({%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-      (LengthInt(l) <> {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^) then { length as expected ? }
+      ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+      (LengthInt(l) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
       Result := ''; //speeds up SetLength x2
@@ -3182,8 +3182,8 @@ begin
   else
   begin
     if (Pointer(Result) = nil) or //empty ?
-      ({%H-}PRefCntInt(NativeInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-      (LengthInt(len) <> {%H-}PLengthInt(NativeInt(Result) - StringLenOffSet)^) then { length as expected ? }
+      ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+      (LengthInt(len) <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     begin
       Result := ''; //speeds up SetLength x2

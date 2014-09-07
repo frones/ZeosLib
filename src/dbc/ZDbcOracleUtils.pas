@@ -594,8 +594,6 @@ var
   ZBytesArray: TBytesDynArray absolute ZData;
   ZInterfaceArray: TInterfaceDynArray absolute ZData;
   ZGUIDArray: TGUIDDynArray absolute ZData;
-  WideRec: TZWideRec;
-  AnsiRec: TZAnsiRec;
   WS: ZWideString;
   LobBuffer: Pointer;
 
@@ -893,9 +891,7 @@ begin
                       SetEmptyString
                     else
                     begin
-                      WideRec.Len := ZCharRecArray[i].Len;
-                      WideRec.P := ZCharRecArray[i].P;
-                      AnsiTemp := ZWideRecToRaw(WideRec,ConSettings^.ClientCodePage^.CP); //convert to client encoding
+                      AnsiTemp := PUnicodeToRaw(ZCharRecArray[i].P, ZCharRecArray[i].Len,ConSettings^.ClientCodePage^.CP); //convert to client encoding
                       Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, Variable^.Length);
                       MoveString(Pointer(AnsiTemp), I);
                     end
@@ -905,9 +901,7 @@ begin
                       SetEmptyString
                     else
                     begin
-                      AnsiRec.Len := ZCharRecArray[i].Len;
-                      AnsiRec.P := ZCharRecArray[i].P;
-                      WS := ZAnsiRecToUnicode(AnsiRec, ZCharRecArray[i].CP); //localize ?WideString? to avoid overrun
+                      WS := PRawToUnicode(ZCharRecArray[i].P, ZCharRecArray[i].Len, ZCharRecArray[i].CP); //localize ?WideString? to avoid overrun
                       AnsiTemp := ZUnicodeToRaw(WS, ConSettings^.ClientCodePage^.CP); //convert to client encoding
                       Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, Variable^.Length);
                       MoveString(Pointer(AnsiTemp), I);
@@ -933,9 +927,7 @@ begin
                   SetEmptyString
                 else
                 begin
-                  WideRec.Len := ZCharRecArray[I].Len;
-                  WideRec.P := ZCharRecArray[I].P;
-                  AnsiTemp := ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP); //convert to client encoding
+                  AnsiTemp := PUnicodeToRaw(ZCharRecArray[I].P, ZCharRecArray[I].Len, ConSettings^.ClientCodePage^.CP); //convert to client encoding
                   Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, Variable^.Length);
                   MoveString(Pointer(AnsiTemp), I);
                 end;

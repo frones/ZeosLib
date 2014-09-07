@@ -2726,15 +2726,11 @@ var
     end;
   end;
   procedure AddParam(const Args: array of RawByteString; var Dest: RawByteString);
-  var I, Len: LengthInt;
-    P: PAnsiChar;
+  var I: Integer;
   begin
-    Len := 0;
+    Dest := '';
     for I := low(Args) to high(Args) do //Calc String Length
-      Len := Len + {%H-}PLengthInt(NativeUInt(Args[i]) - StringLenOffSet)^; //safe! ve don't have empty strings!
-    SetLength(Dest, Len);
-    P := Pointer(Dest);
-    Put(Args, P);
+      Dest := Dest + Args[i];
   end;
   function GetIntDigits(Value: Integer): Integer;
   begin

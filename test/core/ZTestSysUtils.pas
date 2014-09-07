@@ -58,6 +58,7 @@ interface
 {$I ZCore.inc}
 
 uses {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, SysUtils,
+  {$IFDEF MSWINDOWS}Windows,{$ENDIF}
   ZTestCase, ZSysUtils, ZClasses, ZVariant, ZMatchPattern, ZCompatibility;
 
 type
@@ -85,6 +86,10 @@ type
     procedure TestDateTimeToRawSQLTimeStamp;
     procedure TestDateTimeToUnicodeSQLTimeStamp;
     {$IFDEF BENCHMARK}
+    {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+    procedure TestAnsiToUnicodePerformance;
+    procedure TestUTF8ToUnicodePerformance;
+    {$IFEND}
     procedure TestIntToRaw_VS_IntToStr;
     procedure TestIntToUnicode_VS_IntToStr;
     procedure TestInt64ToRaw_VS_IntToStr;
@@ -810,6 +815,306 @@ begin
 end;
 
 {$IFDEF BENCHMARK}
+{$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+procedure TZTestSysUtilsCase.TestAnsiToUnicodePerformance;
+const CPArray: Array[0..42] of Word = (zCP_DOS437, zCP_DOS708, zCP_DOS720,
+  zCP_DOS737, zCP_DOS775, zCP_DOS850, zCP_DOS852, zCP_DOS857, zCP_DOS858,
+  zCP_DOS860, zCP_DOS861, zCP_DOS862, zCP_DOS863, zCP_DOS864, zCP_DOS865,
+  zCP_DOS866, zCP_DOS869, zCP_WIN874, zCP_WIN1250, zCP_WIN1251, zCP_WIN1252,
+  zCP_WIN1253, zCP_WIN1254, zCP_WIN1255, cCP_WIN1256, zCP_WIN1257, zCP_WIN1258,
+  zCP_macintosh, zCP_x_mac_ce, {zCP_x_IA5_Swedish, }zCP_us_ascii, zCP_KOI8R,
+  zCP_KOI8U, zCP_L1_ISO_8859_1, zCP_L2_ISO_8859_2, zCP_L3_ISO_8859_3,
+  zCP_L4_ISO_8859_4, zCP_L5_ISO_8859_5, zCP_L6_ISO_8859_6, zCP_L7_ISO_8859_7,
+  zCP_L8_ISO_8859_8, zCP_L5_ISO_8859_9, zCP_L7_ISO_8859_13, zCP_L9_ISO_8859_15);
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  RBS: RawByteString;
+  Loop, J: Integer;
+  I: Byte;
+  P: PAnsiChar;
+
+    procedure TestWinEncode(P: PAnsiChar; Len: NativeUInt; CP: Word; var Dest: ZWideString);
+    begin
+      Dest := '';
+      SetLength(Dest, Len);
+      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+      SetLength(Dest, UnicodeFromLocaleChars(CP, 0, P, Len, Pointer(Dest), Len));
+      {$ELSE}
+      SetLength(Dest, MultiByteToWideChar(CP, 0, P, Len, Pointer(Dest), Len)); //Convert Ansi to Wide with supported Chars
+      {$ENDIF}
+    end;
+
+    procedure TestZEncode(P: PAnsiChar; Len: NativeUInt; CP: Word; var Result: ZWideString);
+    var
+      S: RawByteString;
+      {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+      C: LongWord;
+      Dest: PWideChar;
+      wlen: LengthInt;
+      {$IFEND}
+    label A2U;
+    begin
+      if Len = 0 then
+        Result := ''
+      else
+        case CP of
+          zCP_NONE:
+            case ZDetectUTF8Encoding(P, Len) of
+              etUSASCII: Result := USASCII7ToUnicodeString(P, Len);
+              etUTF8:
+                begin
+                  CP := zCP_UTF8;
+                  goto A2U;
+                end
+              else
+                if ZCompatibleCodePages(ZDefaultSystemCodePage,zCP_UTF8) then
+                begin
+                  ZSetString(P, Len, S{%H-});
+                  Result := ZWideString(S); //random success, we don't know ANY proper CP here
+                end
+                else
+                begin
+                  CP := ZDefaultSystemCodePage; //still a random success here!
+                  goto A2U;
+                end;
+            end;
+          {$If (defined(FPC) and not defined(MSWINDOWS))}
+          //FPC code is less optimal ... very slow. Wasn't able to get a asm code running
+          //so i left the code for Non-Mindows OS's which will benefit here. No LIBICONV link is required.
+          //let's see what comming FPC 2.7.1 is able to do (if they have it's own codepage maps)
+          //Delphi7 needs 10% of time the FPC requires whereas the UnicodeIDE are 60% faster than D7
+          //So i exclude this code for the Ansi-Delphi with WideString sh.. too.
+          //here the code is fast as MultibyteToWideChar and we don't need this code
+          zCP_DOS437:   AnsiSBCSToUCS2(P, Len, Result, @CP437ToUnicodeMap);
+          zCP_DOS708:   AnsiSBCSToUCS2(P, Len, Result, @CP708ToUnicodeMap);
+          zCP_DOS720:   AnsiSBCSToUCS2(P, Len, Result, @CP720ToUnicodeMap);
+          zCP_DOS737:   AnsiSBCSToUCS2(P, Len, Result, @CP737ToUnicodeMap);
+          zCP_DOS775:   AnsiSBCSToUCS2(P, Len, Result, @CP775ToUnicodeMap);
+          zCP_DOS850:   AnsiSBCSToUCS2(P, Len, Result, @CP850ToUnicodeMap);
+          zCP_DOS852:   AnsiSBCSToUCS2(P, Len, Result, @CP852ToUnicodeMap);
+          zCP_DOS857:   AnsiSBCSToUCS2(P, Len, Result, @CP857ToUnicodeMap);
+          zCP_DOS858:   AnsiSBCSToUCS2(P, Len, Result, @CP858ToUnicodeMap);
+          zCP_DOS860:   AnsiSBCSToUCS2(P, Len, Result, @CP860ToUnicodeMap);
+          zCP_DOS861:   AnsiSBCSToUCS2(P, Len, Result, @CP861ToUnicodeMap);
+          zCP_DOS862:   AnsiSBCSToUCS2(P, Len, Result, @CP862ToUnicodeMap);
+          zCP_DOS863:   AnsiSBCSToUCS2(P, Len, Result, @CP863ToUnicodeMap);
+          zCP_DOS864:   AnsiSBCSToUCS2(P, Len, Result, @CP864ToUnicodeMap);
+          zCP_DOS865:   AnsiSBCSToUCS2(P, Len, Result, @CP865ToUnicodeMap);
+          zCP_DOS866:   AnsiSBCSToUCS2(P, Len, Result, @CP866ToUnicodeMap);
+          zCP_DOS869:   AnsiSBCSToUCS2(P, Len, Result, @CP869ToUnicodeMap);
+          zCP_WIN874:   AnsiSBCSToUCS2(P, Len, Result, @CP874ToUnicodeMap);
+          zCP_WIN1250:  AnsiSBCSToUCS2(P, Len, Result, @CP1250ToUnicodeMap);
+          zCP_WIN1251:  AnsiSBCSToUCS2(P, Len, Result, @CP1251ToUnicodeMap);
+          zCP_WIN1252:  AnsiSBCSToUCS2(P, Len, Result, @CP1252ToUnicodeMap);
+          zCP_WIN1253:  AnsiSBCSToUCS2(P, Len, Result, @CP1253ToUnicodeMap);
+          zCP_WIN1254:  AnsiSBCSToUCS2(P, Len, Result, @CP1254ToUnicodeMap);
+          zCP_WIN1255:  AnsiSBCSToUCS2(P, Len, Result, @CP1255ToUnicodeMap);
+          cCP_WIN1256:  AnsiSBCSToUCS2(P, Len, Result, @CP1256ToUnicodeMap);
+          zCP_WIN1257:  AnsiSBCSToUCS2(P, Len, Result, @CP1257ToUnicodeMap);
+          zCP_WIN1258:  AnsiSBCSToUCS2(P, Len, Result, @CP1258ToUnicodeMap);
+          zCP_macintosh: AnsiSBCSToUCS2(P, Len, Result, @CP10000ToUnicodeMap);
+          zCP_x_mac_ce: AnsiSBCSToUCS2(P, Len, Result, @CP10029ToUnicodeMap);
+          zCP_x_IA5_Swedish:  AnsiSBCSToUCS2(P, Len, Result, @CP20107ToUnicodeMap);
+          zCP_KOI8R:  AnsiSBCSToUCS2(P, Len, Result, @CP20866ToUnicodeMap);
+          zCP_us_ascii: AnsiSBCSToUCS2(P, Len, Result, @CP20127ToUnicodeMap);
+          zCP_KOI8U:  AnsiSBCSToUCS2(P, Len, Result, @CP21866ToUnicodeMap);
+          zCP_L1_ISO_8859_1: AnsiSBCSToUCS2(P, Len, MapByteToUCS2, Result);
+          zCP_L2_ISO_8859_2:  AnsiSBCSToUCS2(P, Len, Result, @CP28592ToUnicodeMap);
+          zCP_L3_ISO_8859_3:  AnsiSBCSToUCS2(P, Len, Result, @CP28593ToUnicodeMap);
+          zCP_L4_ISO_8859_4:  AnsiSBCSToUCS2(P, Len, Result, @CP28594ToUnicodeMap);
+          zCP_L5_ISO_8859_5:  AnsiSBCSToUCS2(P, Len, Result, @CP28595ToUnicodeMap);
+          zCP_L6_ISO_8859_6:  AnsiSBCSToUCS2(P, Len, Result, @CP28596ToUnicodeMap);
+          zCP_L7_ISO_8859_7:  AnsiSBCSToUCS2(P, Len, Result, @CP28597ToUnicodeMap);
+          zCP_L8_ISO_8859_8:  AnsiSBCSToUCS2(P, Len, Result, @CP28598ToUnicodeMap);
+          zCP_L5_ISO_8859_9:  AnsiSBCSToUCS2(P, Len, Result, @CP28599ToUnicodeMap);
+          zCP_L7_ISO_8859_13:  AnsiSBCSToUCS2(P, Len, Result, @CP28603ToUnicodeMap);
+          zCP_L9_ISO_8859_15:  AnsiSBCSToUCS2(P, Len, Result, @CP28605ToUnicodeMap);
+          {$IFEND}
+          (* remaing fast conversion for MBCS encodings
+          zCP_MSWIN921 = 921;
+          zCP_MSWIN923 = 923;
+          zCP_SHIFTJS = 932; {ANSI/OEM Japanese; Japanese (Shift-JIS)}
+          zCP_GB2312 = 936; {ANSI/OEM Simplified Chinese (PRC, Singapore); Chinese Simplified (GB2312)}
+          zCP_EUCKR = 949; {ANSI/OEM Korean (Unified Hangul Code)}
+          zCP_Big5 = 950; {ANSI/OEM Traditional Chinese (Taiwan; Hong Kong SAR, PRC); Chinese Traditional (Big5)}
+          ZCP_JOHAB = 1361; {Korean (Johab)}
+          zCP_EUC_JP = 20932; {Japanese (JIS 0208-1990 and 0121-1990)}
+
+          zCP_csISO2022JP = 50221;	{ISO 2022 Japanese with halfwidth Katakana; Japanese (JIS-Allow 1 byte Kana)}
+          zCP_euc_JP_win = 51932; {EUC Japanese}
+          zCP_EUC_CN = 51936; {EUC Simplified Chinese; Chinese Simplified (EUC)}
+          zCP_euc_kr = 51949; {EUC Korean}
+          zCP_GB18030 = 54936;	{Windows XP and later: GB18030 Simplified Chinese (4 byte); Chinese Simplified (GB18030)}
+          zCP_UTF7 = 65000;
+          *)
+          {.$IFEND}
+          zCP_UTF8: AnsiMBCSToUCS2(P, Len, UTF8ToWideChar, Result);
+          {not supported codepages by Windows MultiByteToWideChar}
+          zCP_L6_ISO_8859_10:  AnsiSBCSToUCS2(P, Len, Result, @CP28600ToUnicodeMap);
+          zCP_L8_ISO_8859_14:  AnsiSBCSToUCS2(P, Len, Result, @CP28604ToUnicodeMap);
+          zCP_L10_ISO_8859_16:  AnsiSBCSToUCS2(P, Len, Result, @CP28606ToUnicodeMap);
+          else
+      A2U:  {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
+            begin
+              wlen := Len;
+              Result := ''; //speeds up SetLength x2
+              SetLength(result, wlen);
+              Dest := Pointer(Result);
+              {first handle leading ASCII if possible }
+              while (Len >= 4) and (PLongWord(P)^ and $80808080 = 0) do
+              begin
+                C := PLongWord(P)^;
+                dec(Len,4);
+                inc(P,4);
+                PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
+                c := c shr 16;
+                PLongWord(Dest+2)^ := (c shl 8 or c) and $00ff00ff;
+                inc(Dest,4);
+              end;
+              while (Len > 0) and (PByte(P)^ and $80 = 0) do
+              begin
+                dec(Len);
+                PWord(Dest)^ := Byte(P^); //Shift Byte to Word
+                inc(P);
+                inc(Dest);
+              end;
+              if Len > 0 then //convert remaining characters with codepage agnostic
+              begin
+                wlen :=  wlen-LengthInt(Len); //elimainate already processed chars
+                {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+                wlen := wlen + UnicodeFromLocaleChars(CP, 0, P, Len, Dest, Len);
+                {$ELSE}
+                Wlen := wlen + MultiByteToWideChar(CP, 0, P, Len, Dest, Len); //Convert Ansi to Wide with supported Chars
+                {$ENDIF}
+                SetLength(Result, Wlen); //return with expected length
+              end;
+            end;
+            {$ELSE}
+              {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
+              WidestringManager.Ansi2UnicodeMoveProc(P, CP, Result, Len);
+              {$ELSE}
+              begin
+                ZSetString(P, Len, S);
+                if ZCompatibleCodePages(CP, zCP_UTF8) then
+                  Result := UTF8Decode(S)
+                else
+                  Result := ZWideString(S); //random success
+              end;
+              {$ENDIF}
+            {$IFEND}
+        end;
+      end;
+begin
+  SetLength(RBS, High(Byte));
+  P := Pointer(RBS);
+  for i := Low(Byte) to High(Byte)  do
+    PByte(P+i)^ := i;
+  RBS := RBS+RBS+RBS+RBS;
+  for J := Low(CPArray) to High(CPArray) do
+  begin
+    Start := GetTickCount;
+    for Loop := 0 to 5000000 do
+      TestWinEncode(P, High(Byte), CPArray[j], S1);
+    Stop := GetTickCount;
+    Between1 := Stop - Start;
+    Start := GetTickCount;
+    for Loop := 0 to 5000000 do
+      TestZEncode(P, High(Byte), CPArray[j], S2);
+    Stop := GetTickCount;
+    Between2 := Stop - Start;
+
+    system.WriteLn('');
+    system.WriteLn('Benchmarking(x 5.000.000): Ansi(CP '+IntToStr(CPArray[j])+') to Unicode');
+    system.WriteLn(Format('TestWinEncode: %d ms VS. TestZEncode: %d ms', [Between1, Between2]));
+    for i := low(Byte) to high(Byte) do
+      if Word(S1[I+1]) = Word(S2[I+1]) then
+        Check(True)
+      else
+        Check(True, 'Byte: '+IntToHex(I, 2)+' Expected('+IntToHex(Word(S1[I+1]), 4)+') was ('+IntToHex(Word(S2[I+1]), 4)+'(');
+    CheckEquals(s1, s2, 'CP: '+IntToStr(CPArray[j])+' Results of WinEncoding VS. ZeosEncoding');
+  end;
+end;
+
+procedure TZTestSysUtilsCase.TestUTF8ToUnicodePerformance;
+const
+  cS1 = ZWideString('Müller, Maier, Dödelö');
+  cS2 = ZWideString('Muhende Määäh''s');
+var
+  Between1, Between2: Cardinal;
+  Start, Stop: Cardinal;
+  S1, S2: ZWideString;
+  RBS: RawByteString;
+  P: PAnsiChar;
+  Len: NativeUInt;
+  Loop: Integer;
+  I: Byte;
+
+    procedure TestWinEncode(P: PAnsichar; Len: NativeUInt; CP: Word; var Dest: ZWideString);
+    begin
+      Dest := '';
+      SetLength(Dest, Len);
+      {$IFDEF WITH_UNICODEFROMLOCALECHARS}
+      SetLength(Dest, UnicodeFromLocaleChars(CP, 0, P, Len, Pointer(Dest), Len));
+      {$ELSE}
+      SetLength(Dest, MultiByteToWideChar(CP, 0, P, Len, Pointer(Dest), Len)); //Convert Ansi to Wide with supported Chars
+      {$ENDIF}
+    end;
+
+    procedure TestZEncode(P: PAnsichar; Len: NativeUInt; CP: Word; var Dest: ZWideString);
+    begin
+      Dest := '';
+      SetLength(Dest, Len);
+      SetLength(Dest, UTF8ToWideChar(P, Len, Pointer(Dest)));
+    end;
+begin
+  RBS := UTF8Encode(cS1);
+  P := Pointer(RBS);
+  Len := Length(RBS);
+  Start := GetTickCount;
+  for Loop := 0 to 10000000 do
+    TestWinEncode(P, Len, 65001, S1);
+  Stop := GetTickCount;
+  Between1 := Stop - Start;
+  RBS := UTF8Encode(cS2);
+  P := Pointer(RBS);
+  Len := Length(RBS);
+  Start := GetTickCount;
+  for Loop := 0 to 10000000 do
+    TestWinEncode(P, Len, 65001, S1);
+  Stop := GetTickCount;
+  Between1 := Between1+(Stop - Start);
+
+  RBS := UTF8Encode(cS1);
+  P := Pointer(RBS);
+  Len := Length(RBS);
+  Start := GetTickCount;
+  for Loop := 0 to 10000000 do
+    TestZEncode(P, Len, 65001, S2);
+  Stop := GetTickCount;
+  Between2 := Stop - Start;
+  RBS := UTF8Encode(cS2);
+  P := Pointer(RBS);
+  Len := Length(RBS);
+  Start := GetTickCount;
+  for Loop := 0 to 10000000 do
+    TestZEncode(P, Len, 65001, S2);
+  Stop := GetTickCount;
+  Between2 := Between2+(Stop - Start);
+
+  system.WriteLn('');
+  system.WriteLn('Benchmarking(x 20.000.000): Ansi(CP UTF8 to Unicode');
+  system.WriteLn(Format('TestWinEncode: %d ms VS. TestZEncode: %d ms', [Between1, Between2]));
+  for i := 1 to Length(S1) do
+    if Word(S1[I]) = Word(S2[I]) then
+      Check(True)
+    else
+      Check(True, 'Pos: '+IntToHex(I, 2)+' Expected('+IntToHex(Word(S1[I]), 4)+') was ('+IntToHex(Word(S2[I]), 4)+')');
+  CheckEquals(s1, s2, 'CP: UTF8 Results of WinEncoding VS. ZeosEncoding');
+end;
+{$IFEND}
+
 procedure TZTestSysUtilsCase.TestIntToRaw_VS_IntToStr;
 var
   Between1, Between2: Cardinal;

@@ -1847,16 +1847,16 @@ end;
 function RowAccessorStringFieldGetterFromAnsiRec(RowAccessor: TZRowAccessor;
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
 var
-  Ansirec: TZAnsiRec;
-  L: Integer;
+  P: PAnsiChar;
+  L: NativeUInt;
 begin
-  Ansirec := RowAccessor.GetAnsiRec(ColumnIndex, Result{%H-});
+  P := RowAccessor.GetPRaw(ColumnIndex, Result{%H-}, L);
   if Result then
     Buffer^ := #0
   else
   begin //instead of StrPLCopy
-    L := Min(AnsiRec.Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(AnsiRec.P^, Buffer^, L);
+    L := Min(L, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(P^, Buffer^, L);
     (Buffer+L)^ := #0;
   end;
 end;

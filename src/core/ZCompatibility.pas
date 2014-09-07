@@ -126,13 +126,6 @@ const
   StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
   {$ENDIF}
 type
-  {EH: Keep the Len, Pointer, x.... order in next three records! New field -> add it @the end!}
-  PZAnsiRec = ^TZAnsiRec;
-  TZAnsiRec = Record
-    Len: Cardinal;
-    P: PAnsiChar;
-  end;
-
   PZWideRec = ^TZWideRec;
   TZWideRec = Record
     Len: Cardinal;
@@ -292,7 +285,7 @@ type
   TZCharRecDynArray = array of TZCharRec;
 type
   {declare move or converter functions for the String Types}
-  TZAnsiRecToUTF8 = function(const Src: TZAnsiRec; const RawCP: Word): UTF8String;
+  TPRawToUTF8 = function(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
   TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): RawByteString;
   TZRawToAnsi = function (const Src: RawByteString; const RawCP: Word): AnsiString;
   TZAnsiToUTF8 = function (const Src: AnsiString): UTF8String;
@@ -309,7 +302,7 @@ type
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
-  TZAnsiRecToString = function (const Value: TZAnsiRec; const StringCP: Word): String;
+  TPRawToString = function (const Src: PAnsiChar; Len: LengthInt; const StringCP: Word): String;
   TZWideRecToString = function (const Value: TZWideRec; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
@@ -352,9 +345,9 @@ type
     ZRawToUnicode: TZRawToUnicode;
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
-    ZAnsiRecToString: TZAnsiRecToString;
+    ZPRawToString: TPRawToString;
     ZWideRecToString: TZWideRecToString;
-    ZAnsiRecToUTF8: TZAnsiRecToUTF8;
+    ZPRawToUTF8: TPRawToUTF8;
   end;
 
   TZFormatSettings = Record

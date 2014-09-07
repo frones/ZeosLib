@@ -91,7 +91,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -312,18 +312,18 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZSQLiteResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
   end
   else
   begin
-    Result.P := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
-    Result.Len := ZFastCode.StrLen(Result.P);
+    Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
+    Len := ZFastCode.StrLen(Result);
   end;
 end;
 
@@ -352,20 +352,19 @@ end;
     value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
-var AnsiRec: TZAnsiRec;
+var P: PAnsiChar;
+  Len: NativeUint;
 begin //rewritten because of performance reasons to avoid localized the RBS before
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
     Result := ''
   else
   begin
-    AnsiRec := GetAnsiRec(ColumnIndex);
+    P := GetPRaw(ColumnIndex, Len);
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Result := '';
-    SetLength(Result, AnsiRec.Len);
-    System.Move(AnsiRec.P^, PAnsiChar(Result)^, AnsiRec.Len);
+    ZSetString(P, Len, result);
     {$ELSE}
-    System.SetString(Result, AnsiRec.P, AnsiRec.Len);
+    System.SetString(Result, P, Len);
     {$ENDIF}
   end;
 end;

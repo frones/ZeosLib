@@ -471,7 +471,7 @@ begin
   AddCodePage('swe7', 8, ceAnsi, zCP_x_IA5_Swedish); {7bit Swedish}
   AddCodePage('ascii', 9, ceAnsi, zCP_us_ascii); {US ASCII}
   AddCodePage('hebrew', 12, ceAnsi, zCP_L8_ISO_8859_8); {ISO 8859-8 Hebrew}
-  AddCodePage('tis620', 13, ceAnsi, zCP_IBM_Thai); {TIS620 Thai}
+  AddCodePage('tis620', 13, ceAnsi, zCP_WIN874); {TIS620 Thai}
   AddCodePage('koi8u', 15, ceAnsi, zCP_KOI8U); {KOI8-U Ukrainian}
   AddCodePage('greek', 17, ceAnsi, zCP_L7_ISO_8859_7); {ISO 8859-7 Greek}
   AddCodePage('cp1250', 18, ceAnsi, zCP_WIN1250); {Windows Central European}

@@ -2635,6 +2635,7 @@ const
   RDB_TYPE_NAME = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   SQL: string;
+  Len: NativeUInt;
 begin
     Result:=inherited UncachedGetTypeInfo;
 
@@ -2645,7 +2646,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateAnsiRec(TypeInfoTypeNameIndex, GetAnsiRec(RDB_TYPE_NAME));
+        Result.UpdatePRaw(TypeInfoTypeNameIndex, GetPRaw(RDB_TYPE_NAME, Len), @Len);
         Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
           GetInt(RDB_TYPE), 0, 10, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
         Result.UpdateInt(TypeInfoPecisionIndex, 9);

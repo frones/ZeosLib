@@ -225,7 +225,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); override;
-    procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); override;
+    procedure UpdatePRaw(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUint); override;
     procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); override;
     procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
@@ -314,8 +314,10 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding
 
 procedure ZStringFieldAssignFromResultSet_AnsiRec(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
+var
+  Len: NativeUInt;
 begin
-  RowAccessor.SetAnsiRec(ColumnIndex, ResultSet.GetAnsiRec(ColumnIndex));
+  RowAccessor.SetPRaw(ColumnIndex, ResultSet.GetPRaw(ColumnIndex, Len), @Len);
 end;
 
 procedure ZStringFieldAssignFromResultSet_Unicode(RowAccessor: TZRowAccessor;
@@ -1591,14 +1593,14 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractCachedResultSet.UpdateAnsiRec(ColumnIndex: Integer;
-  const Value: TZAnsiRec);
+procedure TZAbstractCachedResultSet.UpdatePRaw(ColumnIndex: Integer;
+  Value: PAnsiChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetAnsiRec(ColumnIndex, Value);
+  FRowAccessor.SetPRaw(ColumnIndex, Value, Len);
 end;
 
 {**

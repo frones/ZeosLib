@@ -90,6 +90,7 @@
  {$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure
  {$DEFINE WITH_FIELD_VALIDATELOOKUPINFO} //TField has private ValidateLookupInfo() procedure
  {$DEFINE WITH_FUNIDIRECTIONAL} //TDataSet have SetUniDirectional and GetUnidirectional
+ {$DEFINE USE_RAW2WIDE_PROCS} //compiler related: D7 is less optimal use MultibultToWidechar instead for known CP's
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -117,6 +118,7 @@
   {$DEFINE Use_FastCodeFillChar}
   {$UNDEF HAVE_TBYTES} //D7 doesn't have TBytes
   {$UNDEF SUPPORTS_UINT64_CONSTS}      // D7 doesn't support integer constants with 20 digits
+  {$UNDEF USE_RAW2WIDE_PROCS}
 {$ENDIF}
 
 // Compilation directives for Delphi 8

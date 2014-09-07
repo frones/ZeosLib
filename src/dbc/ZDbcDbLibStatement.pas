@@ -697,7 +697,8 @@ var
   Temp: TZVariant;
   ParamType: TZSQLType;
   TempBlob: IZBlob;
-  AnsiRec: TZAnsiRec;
+  P: Pointer;
+  Len: NativeUInt;
   RetType: DBINT;
 begin
   S := Trim(Sql);
@@ -883,23 +884,21 @@ begin
           end;
         tdsChar, tdsVarchar, tdsBigChar, tdsBigVarChar:
           begin
-            AnsiRec.P := FPLainDriver.dbRetData(FHandle, ParamIndex);
-            AnsiRec.Len := FPLainDriver.dbRetLen(FHandle, ParamIndex);
-            case ZDetectUTF8Encoding(AnsiRec.P, AnsiRec.Len) of
+            P := FPLainDriver.dbRetData(FHandle, ParamIndex);
+            Len := NativeUInt(FPLainDriver.dbRetLen(FHandle, ParamIndex));
+            case ZDetectUTF8Encoding(P, Len) of
               etUTF8:
                 begin
-                  ZSetString(FPLainDriver.dbRetData(FHandle, ParamIndex),
-                    FPLainDriver.dbRetLen(FHandle, ParamIndex), DatString);
+                  ZSetString(P, Len, DatString);
                   ClientVarManager.SetAsUTF8String(Temp, DatString);
                 end;
               etUSASCII:
                 begin
-                  ZSetString(FPLainDriver.dbRetData(FHandle, ParamIndex),
-                    FPLainDriver.dbRetLen(FHandle, ParamIndex), DatString);
+                  ZSetString(P, Len, DatString);
                   ClientVarManager.SetAsRawByteString(Temp, DatString);
                 end;
               else
-                ClientVarManager.SetAsUnicodeString(Temp, USASCII7ToUnicodeString(AnsiRec.P, AnsiRec.Len));
+                ClientVarManager.SetAsUnicodeString(Temp, USASCII7ToUnicodeString(P, Len));
             end;
           end;
         tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:

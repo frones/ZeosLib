@@ -698,7 +698,6 @@ procedure TZOracleCallableStatement.FetchOutParamsFromOracleVars;
 var
   LobLocator: POCILobLocator;
   I: integer;
-  L: Cardinal;
   TempBlob: IZBlob;
 
   procedure SetOutParam(CurrentVar: PZSQLVar; Index: Integer);
@@ -707,7 +706,6 @@ var
     Year:SmallInt;
     Month, Day:Byte; Hour, Min, Sec:ub1; MSec: ub4;
     {$IFDEF UNICODE}
-    AnsiRec: TZAnsiRec;
     {$ELSE}
     RawTemp: RawByteString;
     {$ENDIF}
@@ -720,13 +718,11 @@ var
         SQLT_FLT: outParamValues[Index] := EncodeFloat(PDouble(CurrentVar^.Data)^ );
         SQLT_STR:
           begin
-            L := CurrentVar^.oDataSizeArray[0];
             {$IFDEF UNICODE}
-            AnsiRec.Len := L;
-            AnsiRec.P := CurrentVar^.Data;// .Data;
-            outParamValues[Index] := EncodeString(ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP));
+            outParamValues[Index] := EncodeString(PRawToUnicode(CurrentVar^.Data,
+              CurrentVar^.oDataSizeArray[0], ConSettings^.ClientCodePage^.CP));
             {$ELSE}
-            ZSetString(CurrentVar^.Data, L, RawTemp{%H-});
+            ZSetString(CurrentVar^.Data, CurrentVar^.oDataSizeArray[0], RawTemp{%H-});
             outParamValues[Index] := EncodeString(ConSettings.ConvFuncs.ZRawToString(RawTemp, ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
             {$ENDIF}
           end;

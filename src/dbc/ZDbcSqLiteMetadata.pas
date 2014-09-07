@@ -1316,6 +1316,7 @@ const
   dflt_value_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
+  Len: NativeUInt;
   Temp: string;
   Precision, Decimals, UndefinedVarcharAsStringLength: Integer;
   Temp_scheme: string;
@@ -1345,7 +1346,7 @@ begin
       //else Result.UpdateNull(CatalogNameIndex);
       //Result.UpdateNull(SchemaNameIndex);
       Result.UpdateString(TableNameIndex, TempTableNamePattern);
-      Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(name_index));
+      Result.UpdatePRaw(ColumnNameIndex, GetPRaw(name_index, Len), @Len);
       Result.UpdateInt(TableColColumnTypeIndex, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(type_index),
         UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
 
@@ -1356,7 +1357,6 @@ begin
       Result.UpdateString(TableColColumnTypeNameIndex, Temp);
 
       Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
-      //Result.UpdateNull(TableColColumnBufLengthIndex);
       Result.UpdateInt(TableColColumnDecimalDigitsIndex, Decimals);
       Result.UpdateInt(TableColColumnNumPrecRadixIndex, 0);
 
@@ -1371,14 +1371,8 @@ begin
         Result.UpdateRawByteString(TableColColumnIsNullableIndex, 'YES');
       end;
 
-      //Result.UpdateNull(TableColColumnRemarksIndex);
       if Trim(GetString(dflt_value_index)) <> '' then
-        Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(dflt_value_index));
-      //else
-        //Result.UpdateNull(TableColColumnColDefIndex);
-      //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
-      //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
-      //Result.UpdateNull(TableColColumnCharOctetLengthIndex);
+        Result.UpdatePRaw(TableColColumnColDefIndex, GetPRaw(dflt_value_index, Len), @Len);
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
 
       Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Temp = 'INTEGER'));
@@ -1426,6 +1420,7 @@ const
   {%H-}dflt_value_index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   pk_index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
+  Len: NativeUInt;
   Temp_scheme: string;
 begin
   Result:=inherited UncachedGetPrimaryKeys(Catalog, Schema, Table);
@@ -1446,12 +1441,9 @@ begin
       Result.MoveToInsertRow;
       if Schema <> '' then
         Result.UpdateString(CatalogNameIndex, Schema);
-      //else Result.UpdateNull(CatalogNameIndex);
-      //Result.UpdateNull(SchemaNameIndex);
       Result.UpdateString(TableNameIndex, Table);
-      Result.UpdateAnsiRec(PrimaryKeyColumnNameIndex, GetAnsiRec(name_index));
+      Result.UpdatePRaw(PrimaryKeyColumnNameIndex, GetPRaw(name_index, Len), @Len);
       Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
-      //Result.UpdateNull(PrimaryKeyPKNameIndex);
       Result.InsertRow;
     end;
     Close;
@@ -1625,6 +1617,7 @@ const
   {%H-}sub_cid_field_index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   sub_name_field_index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
+  Len: NativeUInt;
   MainResultSet, ResultSet: IZResultSet;
   Temp_scheme: string;
 begin
@@ -1649,23 +1642,16 @@ begin
           while ResultSet.Next do
           begin
             Result.MoveToInsertRow;
-
             if Schema <> '' then
               Result.UpdateString(CatalogNameIndex, Schema);
-            //else Result.UpdateNull(CatalogNameIndex);
-            //Result.UpdateNull(SchemaNameIndex);
             Result.UpdateString(TableNameIndex, Table);
             Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
-            //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-            Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, MainResultSet.GetAnsiRec(main_name_field_index));
-            //Result.UpdateNull(IndexInfoColTypeIndex);
+            Result.UpdatePRaw(IndexInfoColIndexNameIndex, MainResultSet.GetPRaw(main_name_field_index, Len), @Len);
             Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF});
-            Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, ResultSet.GetAnsiRec(sub_name_field_index));
+            Result.UpdatePRaw(IndexInfoColColumnNameIndex, ResultSet.GetPRaw(sub_name_field_index, Len), @Len);
             Result.UpdateString(IndexInfoColAscOrDescIndex, 'A');
             Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
             Result.UpdateInt(IndexInfoColPagesIndex, 0);
-            //Result.UpdateNull(IndexInfoColFilterConditionIndex);
-
             Result.InsertRow;
           end;
           ResultSet.Close;

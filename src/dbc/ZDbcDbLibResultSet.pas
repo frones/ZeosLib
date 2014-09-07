@@ -89,7 +89,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
@@ -154,9 +154,6 @@ end;
 procedure TZDBLibResultSet.Open;
 var
   ColumnInfo: TZColumnInfo;
-  {$IFDEF UNICODE}
-  AnsiRec: TZAnsiRec;
-  {$ENDIF}
   I: Integer;
   ColInfo: DBCOL;
   tdsColInfo: TTDSDBCOL;
@@ -196,9 +193,8 @@ begin
       if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @tdsColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
         goto AssignGeneric;
       {$IFDEF UNICODE}
-      AnsiRec.P := @tdsColInfo.Name[0];
-      AnsiRec.Len := ZFastCode.StrLen(tdsColInfo.Name);
-      ColumnInfo.ColumnName := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+      ColumnInfo.ColumnName := PRawToUnicode(@tdsColInfo.Name[0],
+        ZFastCode.StrLen(tdsColInfo.Name), ConSettings^.ClientCodePage^.CP);
       {$ELSE}
       ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.Name,
         ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
@@ -207,11 +203,8 @@ begin
         ColumnInfo.ColumnLabel := ColumnInfo.ColumnName
       else
       {$IFDEF UNICODE}
-      begin
-        AnsiRec.P := @tdsColInfo.ActualName[0];
-        AnsiRec.Len := ZFastCode.StrLen(tdsColInfo.ActualName);
-        ColumnInfo.ColumnLabel := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
-      end;
+        ColumnInfo.ColumnLabel := PRawToUnicode(@tdsColInfo.ActualName[0],
+          ZFastCode.StrLen(tdsColInfo.ActualName), ConSettings^.ClientCodePage^.CP);
       {$ELSE}
         ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(tdsColInfo.ActualName,
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
@@ -225,9 +218,8 @@ begin
         if FPlainDriver.dbcolinfo(FHandle, CI_REGULAR, I, 0, @ColInfo) <> DBSUCCEED then //might be possible for computed or cursor columns
           goto AssignGeneric;
         {$IFDEF UNICODE}
-        AnsiRec.P := @ColInfo.Name[0];
-        AnsiRec.Len := ZFastCode.StrLen(ColInfo.Name);
-        ColumnInfo.ColumnName := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+        ColumnInfo.ColumnName := PRawToUnicode(@ColInfo.Name[0],
+          ZFastCode.StrLen(ColInfo.Name), ConSettings^.ClientCodePage^.CP);
         {$ELSE}
         ColumnInfo.ColumnName := ConSettings^.ConvFuncs.ZRawToString(ColInfo.Name,
           ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
@@ -236,11 +228,8 @@ begin
           ColumnInfo.ColumnLabel := ColumnInfo.ColumnName
         else
         {$IFDEF UNICODE}
-        begin
-          AnsiRec.P := @ColInfo.ActualName[0];
-          AnsiRec.Len := ZFastCode.StrLen(ColInfo.ActualName);
-          ColumnInfo.ColumnLabel := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
-        end;
+          ColumnInfo.ColumnLabel := PRawToUnicode(@ColInfo.ActualName[0],
+            ZFastCode.StrLen(ColInfo.ActualName), ConSettings^.ClientCodePage^.CP);
         {$ELSE}
           ColumnInfo.ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(ColInfo.ActualName,
             ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
@@ -249,11 +238,8 @@ begin
           ColumnInfo.TableName := ''
         else
         {$IFDEF UNICODE}
-        begin
-          AnsiRec.P := @ColInfo.TableName[0];
-          AnsiRec.Len := ZFastCode.StrLen(ColInfo.TableName);
-          ColumnInfo.TableName := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
-        end;
+          ColumnInfo.TableName := PRawToUnicode(@ColInfo.TableName[0],
+            ZFastCode.StrLen(ColInfo.TableName), ConSettings^.ClientCodePage^.CP);
         {$ELSE}
           ColumnInfo.TableName := ConSettings^.ConvFuncs.ZRawToString(ColInfo.TableName,
             ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
@@ -341,7 +327,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZDBLibResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
   DT: TTDSType;
   label Convert{, DecLenByTrailingSpaces, AssignFromFRawTemp};
@@ -349,21 +335,21 @@ begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  Result.Len := 0;
+  Len := 0;
   DT := DBLibColTypeCache[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}];
   {$IFDEF GENERIC_INDEX}
   //DBLib -----> Col/Param starts whith index 1
   ColumnIndex := ColumnIndex +1;
   {$ENDIF}
-  Result.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
-  LastWasNull := Result.P = nil;
+  Result := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex));
+  LastWasNull := Result = nil;
   if not LastWasNull then
     if (DT = tdsChar) or (DT = tdsText) then
     begin
-      Result.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex);
-      while (Result.Len > 0) and ((Result.P+Result.Len -1)^ = ' ') do Dec(Result.Len);
+      Len := NativeUInt(FPlainDriver.dbDatLen(FHandle, ColumnIndex));
+      while (Len > 0) and ((Result+Len -1)^ = ' ') do Dec(Len);
       if TZColumnInfo(ColumnsInfo[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]).ColumnCodePage = zCP_NONE then
-        case ZDetectUTF8Encoding(Result.P, Result.Len) of
+        case ZDetectUTF8Encoding(Result, Len) of
           etUTF8: TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
           etAnsi: TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
           else
@@ -372,15 +358,15 @@ begin
     end
     else
     if (DT = tdsImage) then
-      Result.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex)
+      Len := NativeUInt(FPlainDriver.dbDatLen(FHandle, ColumnIndex))
     else
     begin
       Convert:
       SetLength(FRawTemp, 4001);
-      Result.Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(Result.P),
-        Result.Len, Ord(tdsChar), Pointer(FRawTemp), 4001);
-      while (Result.Len > 0) and ((Result.P+Result.Len -1)^ = ' ') do Dec(Result.Len);
-      Result.P := Pointer(FRawTemp);
+      Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(Result),
+        Len, Ord(tdsChar), Pointer(FRawTemp), 4001);
+      while (Len > 0) and ((Result+Len -1)^ = ' ') do Dec(Len);
+      Result := Pointer(FRawTemp);
     end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GetAnsiRec');
 end;
@@ -519,61 +505,62 @@ function TZDBLibResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 var
   DT: TTDSType;
   Tmp: RawByteString;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: LengthInt;
 begin
   CheckClosed;
   CheckColumnIndex(ColumnIndex);
 
-  AnsiRec.Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}); //hint DBLib isn't #0 terminated @all
-  AnsiRec.P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}));
+  Len := FPlainDriver.dbDatLen(FHandle, ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}); //hint DBLib isn't #0 terminated @all
+  P := Pointer(FPlainDriver.dbdata(FHandle, ColumnIndex{$IFDEF GENERIC_INDEX}+1{$ENDIF}));
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex -1;
   {$ENDIF}
   DT := DBLibColTypeCache[ColumnIndex];
-  LastWasNull := AnsiRec.P = nil;
+  LastWasNull := P = nil;
   if LastWasNull then
     Result := ''
   else
     if (DT = tdsChar) or (DT = tdsText) then
     begin
-      while (AnsiRec.Len > 0) and ((AnsiRec.P+AnsiRec.Len -1)^ = ' ') do Dec(AnsiRec.Len);
-      if AnsiRec.Len = 0 then
+      while (Len > 0) and ((P+Len -1)^ = ' ') do Dec(Len);
+      if Len = 0 then
         Result := ''
       else
       {TDS protocol issue: we dont't know if UTF8(NCHAR) or ANSI(CHAR) fields are coming in: no idea about encoding..
        So selt's test encoding until we know it -----> bad for ASCII7 only }
         case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
           stAsciiStream, stUnicodeStream:  //DBlib doesn't convert NTEXT so in all cases we've ansi-Encoding
-            Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+            Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP);
           else//stString, stUnicodeString:
             if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage = zCP_NONE then
-              case ZDetectUTF8Encoding(AnsiRec.P, AnsiRec.Len) of
+              case ZDetectUTF8Encoding(P, Len) of
                 etUTF8:
                   begin
                     TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := zCP_UTF8;
-                    Result := ZAnsiRecToUnicode(AnsiRec, zCP_UTF8);
+                    Result := PRawToUnicode(P, Len, zCP_UTF8);
                   end;
                 etAnsi:
                   begin
                     TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage := ConSettings^.ClientCodePage^.CP;
-                    Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+                    Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP);
                   end;
                 else //ASCII7
-                  Result := USASCII7ToUnicodeString(AnsiRec.P, AnsiRec.Len);
+                  Result := USASCII7ToUnicodeString(P, Len);
               end
             else
-              Result := ZAnsiRecToUnicode(AnsiRec, TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage)
+              Result := PRawToUnicode(P, Len, TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage)
         end
     end
     else if (DT = tdsImage) then
-      ZSetString(AnsiRec.P, AnsiRec.Len, Result)
+      ZSetString(P, Len, Result)
     else
     begin
       SetLength(Tmp, 4001);
-      AnsiRec.Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(AnsiRec.P), AnsiRec.Len,
+      Len := FPlainDriver.dbconvert(FHandle, Ord(DT), Pointer(P), Len,
         Ord(tdsChar), Pointer(tmp), 4001);
-      while (AnsiRec.Len > 0) and (tmp[AnsiRec.Len] = ' ') do Dec(AnsiRec.Len);
-      Result := USASCII7ToUnicodeString(Pointer(tmp), AnsiRec.Len);
+      while (Len > 0) and (tmp[Len] = ' ') do Dec(Len);
+      Result := USASCII7ToUnicodeString(Pointer(tmp), Len);
     end;
   FDBLibConnection.CheckDBLibError(lcOther, 'GETSTRING');
 end;

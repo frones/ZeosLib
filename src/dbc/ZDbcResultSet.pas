@@ -134,7 +134,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; virtual;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; virtual;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; virtual;
     function GetPWideChar(ColumnIndex: Integer): PWidechar; virtual;
     function GetWideRec(ColumnIndex: Integer): TZWideRec; virtual;
@@ -175,7 +175,7 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PChar; virtual;
-    function GetAnsiRecByName(const ColumnName: string): TZAnsiRec; virtual;
+    function GetPRawByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; virtual;
     function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; virtual;
     function GetPWideCharByName(const ColumnName: string): PWidechar; virtual;
     function GetWideRecByName(const ColumnName: string): TZWideRec; virtual;
@@ -277,7 +277,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); virtual;
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); virtual;
-    procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec); virtual;
+    procedure UpdatePRaw(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); virtual;
     procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); virtual;
     procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec); virtual;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
@@ -316,6 +316,7 @@ type
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double); virtual;
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency); virtual;
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended); virtual;
+    procedure UpdatePRawByName(const ColumnName: string; Value: PAnsiChar; Len: PNativeUInt); virtual;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); virtual;
     procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString); virtual;
@@ -794,14 +795,19 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZAbstractResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   FRawTemp := GetRawByteString(ColumnIndex);
-  Result.Len := Length(FRawTemp);
-  if Result.Len = 0 then
-    Result.P := PAnsiChar(FRawTemp) //RTL conversion ):
+  if Pointer(FRawTemp) = nil then
+  begin
+    Len := 0;
+    Result := PEmptyAnsiString;
+  end
   else
-    Result.P := Pointer(FRawTemp);
+  begin
+    Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
+    Result := Pointer(FRawTemp);
+  end;
 end;
 
 {**
@@ -816,7 +822,10 @@ end;
 function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
   FRawTemp := GetRawByteString(ColumnIndex);
-  Result := PAnsiChar(FRawTemp);
+  if Pointer(FRawTemp) = nil then
+    Result := PEmptyAnsiString
+  else
+    Result := Pointer(FRawTemp);
 end;
 
 {**
@@ -831,7 +840,10 @@ end;
 function TZAbstractResultSet.GetPWideChar(ColumnIndex: Integer): PWidechar;
 begin
   FUniTemp := GetUnicodeString(ColumnIndex);
-  Result := PWideChar(FUniTemp);
+  if Pointer(FUniTemp) = nil then
+    Result := PEmptyUnicodeString
+  else
+    Result := Pointer(FUniTemp);
 end;
 
 {**
@@ -862,11 +874,15 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
+{$IFDEF UNICODE}
+var Len: NativeUInt;
+{$ENDIF}
 begin
   {$IFDEF UNICODE}
-  Result := ZAnsiRecToUnicode(GetAnsiRec(ColumnIndex), ConSettings^.ClientCodePage^.CP);
+  Result := PRawToUnicode(GetPRaw(ColumnIndex, Len), Len, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
-  Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex),
+    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
   {$ENDIF}
 end;
 
@@ -895,9 +911,12 @@ end;
     value returned is <code>null</code>
 }
 function TZAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+var
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
-  Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(GetAnsiRec(ColumnIndex),
-    ConSettings^.ClientCodePage^.CP);
+  P := GetPRaw(ColumnIndex, Len);
+  Result := ConSettings^.ConvFuncs.ZPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.CP);
 end;
 
 {**
@@ -1516,9 +1535,10 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetAnsiRecByName(const ColumnName: string): TZAnsiRec;
+function TZAbstractResultSet.GetPRawByName(const ColumnName: string;
+  out Len: NativeUInt): PAnsiChar;
 begin
-  Result := GetAnsiRec(GetColumnIndex(ColumnName));
+  Result := GetPRaw(GetColumnIndex(ColumnName), Len);
 end;
 
 {**
@@ -2730,8 +2750,8 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateAnsiRec(ColumnIndex: Integer;
-  const Value: TZAnsiRec);
+procedure TZAbstractResultSet.UpdatePRaw(ColumnIndex: Integer;
+  Value: PAnsiChar; Len: PNativeUInt);
 begin
   RaiseReadOnlyException;
 end;
@@ -3256,6 +3276,11 @@ begin
   UpdateBigDecimal(GetColumnIndex(ColumnName), Value);
 end;
 
+procedure TZAbstractResultSet.UpdatePRawByName(const ColumnName: string;
+  Value: PAnsiChar; Len: PNativeUInt);
+begin
+  UpdatePRaw(GetColumnIndex(ColumnName), Value, Len);
+end;
 {**
   Updates the designated column with a <code>String</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
@@ -4275,30 +4300,21 @@ end;
 }
 function TZAbstractCLob.GetRawByteString: RawByteString;
 var
-  WideRec: TZWideRec;
-  AnsiRec: TZAnsiRec;
+  WS: ZWideString; //possible WideString which is COM based -> localize it
 begin
   Result := '';
   if FBlobSize > 0 then
     if ZCompatibleCodePages(FCurrentCodePage, FConSettings^.ClientCodePage^.CP) then
-    begin
-      SetLength(Result, FBlobSize-1);
-      System.Move(FBlobData^, PAnsiChar(Result)^, FBlobSize-1);
-    end
+      ZSetString(FBlobData, FBlobSize-1, Result)
     else
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
-      begin
-        WideRec.P := FBlobData;
-        WideRec.Len := (FBlobSize div 2) -1;
-        Result := ZWideRecToRaw(WideRec, FConSettings^.ClientCodePage^.CP)
-      end
+        Result := PUnicodeToRaw(FBlobData, (FBlobSize div 2) -1, FConSettings^.ClientCodePage^.CP)
       else
       begin
-        AnsiRec.P := FBlobData;
-        AnsiRec.Len := FBlobSize-1;
-        Result := ZUnicodeToRaw(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage), FConSettings^.ClientCodePage^.CP);
+        WS := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage);
+        Result := ZUnicodeToRaw(WS, FConSettings^.ClientCodePage^.CP);
       end;
       InternalSetRawByteString(Result, FConSettings^.ClientCodePage^.CP);
     end;
@@ -4312,7 +4328,6 @@ end;
 
 function TZAbstractCLob.GetAnsiString: AnsiString;
 var
-  AnsiRec: TZAnsiRec;
   UniTemp: ZWideString;
 begin
   Result := '';
@@ -4325,11 +4340,7 @@ begin
          ( FCurrentCodePage = zCP_UTF16BE ) then
         System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize div 2) -1)
       else
-      begin
-        AnsiRec.P := FBlobData;
-        AnsiRec.Len := FBlobSize-1;
-        UniTemp := ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage); //localize possible COM based WideString to prevent overflow
-      end;
+        UniTemp := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage); //localize possible COM based WideString to prevent overflow
       Result := AnsiString(UniTemp);
       InternalSetAnsiString(Result);
     end;
@@ -4343,7 +4354,6 @@ end;
 
 function TZAbstractCLob.GetUTF8String: UTF8String;
 var
-  AnsiRec: TZAnsiRec;
   Uni: ZWideString;
 begin
   Result := '';
@@ -4364,12 +4374,11 @@ begin
       end
       else
       begin
-        AnsiRec.P := FBlobData;
-        AnsiRec.Len := FBlobSize-1;
+        Uni := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage);
         {$IFDEF WITH_RAWBYTESTRING}
-        Result := UTF8String(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage));
+        Result := UTF8String(Uni);
         {$ELSE}
-        Result := UTF8Encode(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage));
+        Result := UTF8Encode(Uni);
         {$ENDIF}
       end;
       InternalSetUTF8String(Result);
@@ -4383,8 +4392,6 @@ begin
 end;
 
 function TZAbstractCLob.GetUnicodeString: ZWideString;
-var
-  AnsiRec: TZAnsiRec;
 begin
   Result := '';
   if FBlobSize > 0 then
@@ -4396,9 +4403,7 @@ begin
     end
     else
     begin
-      AnsiRec.P := FBlobData;
-      AnsiRec.Len := FBlobSize -1;
-      Result := ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage);
+      Result := PRawToUnicode(FBlobData, FBlobSize -1, FCurrentCodePage);
       InternalSetUnicodeString(Result);
     end;
 end;
@@ -4531,8 +4536,7 @@ end;
 function TZAbstractCLob.GetPAnsiChar(const CodePage: Word): PAnsiChar;
 var
   TempRaw: RawByteString;
-  WideRec: TZWideRec;
-  AnsiRec: TZAnsiRec;
+  WS: ZWideString;
 begin
   if FBlobData = nil then
     Result := nil
@@ -4543,16 +4547,11 @@ begin
     begin
       if (FCurrentCodePage = zCP_UTF16) or
          (FCurrentCodePage = zCP_UTF16BE) then
-      begin
-        WideRec.P := FBlobData;
-        WideRec.Len := (FBlobSize div 2) -1;
-        TempRaw := ZWideRecToRaw(WideRec, CodePage);
-      end
+        TempRaw := PUnicodeToRaw(FBlobData, (FBlobSize div 2) -1, CodePage)
       else
       begin
-        AnsiRec.P := FBlobData;
-        AnsiRec.Len := FBlobSize -1;
-        TempRaw := ZUniCodeToRaw(ZAnsiRecToUnicode(AnsiRec, FCurrentCodePage), CodePage);
+        WS := PRawToUnicode(FBlobData, FBlobSize -1, FCurrentCodePage);
+        TempRaw := ZUniCodeToRaw(WS, CodePage);
       end;
       InternalSetRawByteString(TempRaw, CodePage);
       Result := PAnsiChar(FBlobData);

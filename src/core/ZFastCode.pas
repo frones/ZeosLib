@@ -5229,7 +5229,6 @@ begin
         begin
           inc(Code);
           NegExp := (Ch = '-');
-          Ch := (S+code)^;
         end;
       while true do
         begin
@@ -5418,7 +5417,6 @@ begin
         begin
           inc(Code);
           NegExp := (Ch = '-');
-          Ch := (S+code)^;
         end;
       while true do
         begin

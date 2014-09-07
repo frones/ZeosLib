@@ -222,7 +222,7 @@ type
 implementation
 
 uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages;
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility;
 
 { TZUpdateSQL }
 
@@ -661,6 +661,7 @@ var
   RefreshColumnIndex: integer;
   RefreshColumnName: String;
   RefreshColumnType: TZSQLType;
+  Len: NativeUInt;
 begin
   if Assigned(RefreshResultSet) then begin
     if not RefreshResultSet.First then begin
@@ -692,7 +693,7 @@ begin
           stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
           stString, stUnicodeString:
             if Sender.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-              RefreshRowAccessor.SetAnsiRec(RefreshColumnIndex, RefreshResultSet.GetAnsiRec(I))
+              RefreshRowAccessor.SetPRaw(RefreshColumnIndex, RefreshResultSet.GetPRaw(I, Len), @Len)
             else
               RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
           stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));

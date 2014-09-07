@@ -695,7 +695,7 @@ type
     function IsNull(ColumnIndex: Integer): Boolean;
     function GetPChar(ColumnIndex: Integer): PChar;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
     function GetString(ColumnIndex: Integer): String;
     function GetAnsiString(ColumnIndex: Integer): AnsiString;
     function GetUTF8String(ColumnIndex: Integer): UTF8String;
@@ -736,7 +736,7 @@ type
     function IsNullByName(const ColumnName: string): Boolean;
     function GetPCharByName(const ColumnName: string): PChar;
     function GetPAnsiCharByName(const ColumnName: string): PAnsiChar;
-    function GetAnsiRecByName(const ColumnName: string): TZAnsiRec;
+    function GetPRawByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar;
     function GetStringByName(const ColumnName: string): String;
     function GetAnsiStringByName(const ColumnName: string): AnsiString;
     function GetUTF8StringByName(const ColumnName: string): UTF8String;
@@ -837,7 +837,7 @@ type
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended);
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar);
     procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar);
-    procedure UpdateAnsiRec(ColumnIndex: Integer; const Value: TZAnsiRec);
+    procedure UpdatePRaw(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt);
     procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar);
     procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec);
     procedure UpdateString(ColumnIndex: Integer; const Value: String);
@@ -876,6 +876,7 @@ type
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency);
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double);
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended);
+    procedure UpdatePRawByName(const ColumnName: string; Value: PAnsiChar; Len: PNativeUInt);
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar);
     procedure UpdateStringByName(const ColumnName: string; const Value: String);
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString);

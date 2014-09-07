@@ -80,7 +80,6 @@ type
   protected
     procedure Open; override;
     procedure PrepareUpdateSQLData; virtual;
-    function GetFieldValue(ColumnIndex: Integer): Variant;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;
@@ -105,7 +104,7 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     function Last: Boolean; override;
@@ -128,7 +127,6 @@ type
     procedure UpdateFloat(ColumnIndex: Integer; const Value: Single); override;
     procedure UpdateDouble(ColumnIndex: Integer; const Value: Double); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
-    procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString); override;
     procedure UpdateBytes(ColumnIndex: Integer; const Value: TBytes); override;
@@ -138,7 +136,6 @@ type
     procedure UpdateAsciiStream(ColumnIndex: Integer; const Value: TStream); override;
     procedure UpdateUnicodeStream(ColumnIndex: Integer; const Value: TStream); override;
     procedure UpdateBinaryStream(ColumnIndex: Integer; const Value: TStream); override;
-    procedure UpdateValue(ColumnIndex: Integer; const Value: TZVariant); override;
 
     procedure InsertRow; override;
     procedure UpdateRow; override;
@@ -208,29 +205,6 @@ begin
 end;
 
 {**
-   Return field value by it index
-   @param the index column 0 first, 1 second ...
-   @return the field value as variant type
-}
-function TZASAResultSet.GetFieldValue(ColumnIndex: Integer): Variant;
-begin
-  CheckClosed;
-  LastWasNull := IsNull(ColumnIndex);
-  if LastWasNull then
-    Result := NULL
-  else
-  begin
-    {$IFNDEF GENERIC_INDEX}
-    ColumnIndex := ColumnIndex -1;
-    {$ENDIF}
-    if FInsert or FUpdate then
-      Result := FUpdateSqlData.GetValue(ColumnIndex)
-    else
-      Result := FSqlData.GetValue(ColumnIndex);
-  end;
-end;
-
-{**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
   a <code>String</code> in the Java programming language.
@@ -240,6 +214,8 @@ end;
     value returned is <code>null</code>
 }
 function TZASAResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
+var Len: NativeUInt;
+ P: PAnsiChar;
 begin
   LastWasNull := IsNull(ColumnIndex);
   CheckColumnConvertion(ColumnIndex, stString);
@@ -251,9 +227,10 @@ begin
     ColumnIndex := ColumnIndex -1;
     {$ENDIF}
     if FInsert or FUpdate then
-      Result := FUpdateSqlData.GetString(ColumnIndex)
+      P := FUpdateSqlData.GetPRaw(ColumnIndex, Len)
     else
-      Result := FSqlData.GetString( ColumnIndex);
+      P := FSqlData.GetPRaw(ColumnIndex, Len);
+    ZSetString(P, Len, Result);
   end;
 end;
 
@@ -287,14 +264,14 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZASAResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   CheckColumnConvertion(ColumnIndex, stBoolean);
   LastWasNull := IsNull( ColumnIndex);
   if LastWasNull then
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
   end
   else
   begin
@@ -302,9 +279,9 @@ begin
     ColumnIndex := ColumnIndex -1;
     {$ENDIF}
     if FInsert or FUpdate then
-      Result := FUpdateSqlData.GetAnsiRec(ColumnIndex)
+      Result := FUpdateSqlData.GetPRaw(ColumnIndex, Len)
     else
-      Result := FSqlData.GetAnsiRec(ColumnIndex);
+      Result := FSqlData.GetPRaw(ColumnIndex, Len);
   end;
 end;
 {**
@@ -976,24 +953,19 @@ begin
   FUpdateSqlData.UpdateBigDecimal( ColumnIndex, Value);
 end;
 
-procedure TZASAResultSet.UpdatePChar(ColumnIndex: Integer; const Value: PChar);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdatePChar( ColumnIndex, Value);
-end;
-
 procedure TZASAResultSet.UpdateString(ColumnIndex: Integer; const Value: String);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateString(ColumnIndex, ConSettings^.ConvFuncs.ZStringToRaw(Value,
-            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP));
+  FRawTemp := ConSettings^.ConvFuncs.ZStringToRaw(Value,
+            ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
+  FUpdateSqlData.UpdatePRaw(ColumnIndex, Pointer(FRawTemp), Length(FRawTemp));
 end;
 
 procedure TZASAResultSet.UpdateUnicodeString(ColumnIndex: Integer; const Value: ZWideString);
 begin
   PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateString(ColumnIndex,
-    ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP));
+  FRawTemp := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
+  FUpdateSqlData.UpdatePRaw(ColumnIndex, Pointer(FRawTemp), Length(FRawTemp));
 end;
 
 procedure TZASAResultSet.UpdateBytes(ColumnIndex: Integer; const Value: TBytes);
@@ -1036,12 +1008,6 @@ procedure TZASAResultSet.UpdateBinaryStream(ColumnIndex: Integer; const Value: T
 begin
   PrepareUpdateSQLData;
   FUpdateSqlData.WriteBlob( ColumnIndex, Value, stBinaryStream);
-end;
-
-procedure TZASAResultSet.UpdateValue(ColumnIndex: Integer; const Value: TZVariant);
-begin
-  PrepareUpdateSQLData;
-  FUpdateSqlData.UpdateValue( ColumnIndex, EncodeVariant( Value));
 end;
 
 procedure TZASAResultSet.InsertRow;
@@ -1118,7 +1084,7 @@ end;
 constructor TZASABlob.Create(const SqlData: IZASASQLDA; const ColID: Integer);
 var
   Buffer: Pointer;
-  Len: Cardinal;
+  Len: NativeUInt;
 begin
   inherited Create;
   SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-});
@@ -1131,13 +1097,13 @@ constructor TZASAClob.Create(const SqlData: IZASASQLDA; const ColID: Integer;
   Const ConSettings: PZConSettings);
 var
   Buffer: Pointer;
-  Len: Cardinal;
+  Len: NativeUInt;
 begin
   inherited CreateWithData(nil, 0, ConSettings^.ClientCodePage^.CP, ConSettings);
   InternalClear;
 
   SQLData.ReadBlobToMem(ColId, Buffer{%H-}, Len{%H-}, False);
-  (PAnsiChar(Buffer)+NativeUInt(Len))^ := #0; //add leading terminator
+  (PAnsiChar(Buffer)+Len)^ := #0; //add leading terminator
   BlobData := Buffer;
   BlobSize := Len+1;
 end;

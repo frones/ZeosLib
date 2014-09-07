@@ -1872,15 +1872,15 @@ begin
       while Next do
       begin
         Result.Next;
-        TempRes := Result.GetAnsiRec(TableNameIndex);
-        TempIS := GetAnsiRec(TableNameIndex);
+        TempRes := Result.GetPRaw(TableNameIndex);
+        TempIS := GetPRaw(TableNameIndex);
         if MemLCompAnsi(TempRes.P, TempIS.P, Max(TempRes.Len, TempIS.Len)) then
         begin
-          TempRes := Result.GetAnsiRec(SchemaNameIndex);
-          TempIS := GetAnsiRec(SchemaNameIndex);
+          TempRes := Result.GetPRaw(SchemaNameIndex);
+          TempIS := GetPRaw(SchemaNameIndex);
           if MemLCompAnsi(TempRes.P, TempIS.P, Max(TempRes.Len, TempIS.Len)) then
           begin
-            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(CatalogNameIndex));
+            Result.UpdatePRaw(CatalogNameIndex, GetPRaw(CatalogNameIndex));
             Result.UpdateRow;
           end;
         end;
@@ -2049,6 +2049,7 @@ const
   adsrc_index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
   description_index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
 var
+  Len: NativeUInt;
   TypeOid, AttTypMod: Integer;
   SQL, PgType: string;
   SQLType: TZSQLType;
@@ -2124,10 +2125,9 @@ begin
       PgType := GetPostgreSQLType(TypeOid);
 
       Result.MoveToInsertRow;
-      //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(nspname_index));
-      Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(relname_index));
-      Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(attname_index));
+      Result.UpdatePRaw(SchemaNameIndex, GetPRaw(nspname_index, Len), @Len);
+      Result.UpdatePRaw(TableNameIndex, GetPRaw(relname_index, Len), @Len);
+      Result.UpdatePRaw(ColumnNameIndex, GetPRaw(attname_index, Len), @Len);
       SQLType := GetSQLTypeByOid(TypeOid);
       Result.UpdateInt(TableColColumnTypeIndex, Ord(SQLType));
       Result.UpdateString(TableColColumnTypeNameIndex, PgType);
@@ -2167,8 +2167,6 @@ begin
         Result.UpdateInt(TableColColumnSizeIndex, GetInt(attlen_index));
         Result.UpdateInt(TableColColumnNumPrecRadixIndex, 2);
       end;
-
-      //Result.UpdateNull(TableColColumnBufLengthIndex);
       if GetBoolean(attnotnull_index) then
       begin
         Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
@@ -2180,14 +2178,11 @@ begin
         Result.UpdateInt(TableColColumnNullableIndex, Ord(ntNullable));
       end;
 
-      Result.UpdateAnsiRec(TableColColumnRemarksIndex, GetAnsiRec(description_index {description}));
-      Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(adsrc_index {adsrc}));
-      //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
-      //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
+      Result.UpdatePRaw(TableColColumnRemarksIndex, GetPRaw(description_index {description}, Len), @Len);
+      Result.UpdatePRaw(TableColColumnColDefIndex, GetPRaw(adsrc_index {adsrc}, Len), @Len);
       Result.UpdateInt(TableColColumnCharOctetLengthIndex, Result.GetInt(attlen_index));
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(attnum_index));
 
-      //Result.UpdateNull(TableColColumnAutoIncIndex);
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex, IC.IsCaseSensitive(GetString(attname_index)));
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
       Result.UpdateBoolean(TableColColumnWritableIndex, True);
@@ -2303,7 +2298,6 @@ begin
               Grantable := 'YES'
             else Grantable := 'NO';
             Result.MoveToInsertRow;
-            Result.UpdateNull(CatalogNameIndex);
             Result.UpdateString(SchemaNameIndex, Schema);
             Result.UpdateString(TableNameIndex, Table);
             Result.UpdateString(ColumnNameIndex, Column);
@@ -2626,6 +2620,7 @@ const
   rf_unique_constraint_name_Index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
   tc_is_deferrable_Index = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
 var
+  Len: NativeUInt;
   SQL: string;
   TableNameCondition, SchemaCondition, CatalogCondition: string;
 begin
@@ -2667,19 +2662,19 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        //Result.UpdateAnsiRec(ImportedKeyColPKTableCatalogIndex, GetAnsiRec(tc_constraint_catalog_Index));
-        Result.UpdateAnsiRec(ImportedKeyColPKTableSchemaIndex, GetAnsiRec(tc_constraint_schema_Index));
-        Result.UpdateAnsiRec(ImportedKeyColPKTableNameIndex, GetAnsiRec(ccu_table_name_Index));
-        Result.UpdateAnsiRec(ImportedKeyColPKColumnNameIndex, GetAnsiRec(ccu_column_name_Index));
-        //Result.UpdateAnsiRec(ImportedKeyColFKTableCatalogIndex, GetAnsiRec(kcu_table_catalog_Index));
-        Result.UpdateAnsiRec(ImportedKeyColFKTableSchemaIndex, GetAnsiRec(kcu_constraint_schema_Index));
-        Result.UpdateAnsiRec(ImportedKeyColFKTableNameIndex, GetAnsiRec(kcu_table_name_Index));
-        Result.UpdateAnsiRec(ImportedKeyColFKColumnNameIndex, GetAnsiRec(kcu_column_name_Index));
+        //Result.UpdatePRaw(ImportedKeyColPKTableCatalogIndex, GetPRaw(tc_constraint_catalog_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColPKTableSchemaIndex, GetPRaw(tc_constraint_schema_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColPKTableNameIndex, GetPRaw(ccu_table_name_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColPKColumnNameIndex, GetPRaw(ccu_column_name_Index, Len), @Len);
+        //Result.UpdatePRaw(ImportedKeyColFKTableCatalogIndex, GetPRaw(kcu_table_catalog_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColFKTableSchemaIndex, GetPRaw(kcu_constraint_schema_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColFKTableNameIndex, GetPRaw(kcu_table_name_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColFKColumnNameIndex, GetPRaw(kcu_column_name_Index, Len), @Len);
         Result.UpdateSmall(ImportedKeyColKeySeqIndex, GetSmall(kcu_ordinal_position_Index));
         Result.UpdateSmall(ImportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(rf_update_rule_Index))));
         Result.UpdateSmall(ImportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(rf_delete_rule_Index))));
-        Result.UpdateAnsiRec(ImportedKeyColFKNameIndex, GetAnsiRec(kcu_constraint_name_Index));
-        Result.UpdateAnsiRec(ImportedKeyColPKNameIndex, GetAnsiRec(rf_unique_constraint_name_Index));
+        Result.UpdatePRaw(ImportedKeyColFKNameIndex, GetPRaw(kcu_constraint_name_Index, Len), @Len);
+        Result.UpdatePRaw(ImportedKeyColPKNameIndex, GetPRaw(rf_unique_constraint_name_Index, Len), @Len);
         if GetString(tc_is_deferrable_Index) = 'NO' then
           Result.UpdateSmall(ImportedKeyColDeferrabilityIndex, Ord(ikNotDeferrable))
         else
@@ -2778,6 +2773,7 @@ const
   rf_unique_constraint_name_Index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
   tc_is_deferrable_Index = {$IFDEF GENERIC_INDEX}13{$ELSE}14{$ENDIF};
 var
+  Len: NativeUInt;
   SQL: string;
   TableNameCondition, SchemaCondition, CatalogCondition: string;
 begin
@@ -2820,19 +2816,19 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        //Result.UpdateAnsiRec(ExportedKeyColPKTableCatalogIndex, GetAnsiRec(tc_constraint_catalog_Index));
-        Result.UpdateAnsiRec(ExportedKeyColPKTableSchemaIndex, GetAnsiRec(tc_constraint_schema_Index));
-        Result.UpdateAnsiRec(ExportedKeyColPKTableNameIndex, GetAnsiRec(ccu_table_name_Index));
-        Result.UpdateAnsiRec(ExportedKeyColPKColumnNameIndex, GetAnsiRec(ccu_column_name_Index));
-        //Result.UpdateAnsiRec(ExportedKeyColFKTableCatalogIndex, GetAnsiRec(kcu_table_catalog_Index));
-        Result.UpdateAnsiRec(ExportedKeyColFKTableSchemaIndex, GetAnsiRec(kcu_constraint_schema_Index));
-        Result.UpdateAnsiRec(ExportedKeyColFKTableNameIndex, GetAnsiRec(kcu_table_name_Index));
-        Result.UpdateAnsiRec(ExportedKeyColFKColumnNameIndex, GetAnsiRec(kcu_column_name_Index));
+        //Result.UpdatePRaw(ExportedKeyColPKTableCatalogIndex, GetPRaw(tc_constraint_catalog_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColPKTableSchemaIndex, GetPRaw(tc_constraint_schema_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColPKTableNameIndex, GetPRaw(ccu_table_name_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColPKColumnNameIndex, GetPRaw(ccu_column_name_Index, Len), @Len);
+        //Result.UpdatePRaw(ExportedKeyColFKTableCatalogIndex, GetPRaw(kcu_table_catalog_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColFKTableSchemaIndex, GetPRaw(kcu_constraint_schema_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColFKTableNameIndex, GetPRaw(kcu_table_name_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColFKColumnNameIndex, GetPRaw(kcu_column_name_Index, Len), @Len);
         Result.UpdateSmall(ExportedKeyColKeySeqIndex, GetSmall(kcu_ordinal_position_Index));
         Result.UpdateSmall(ExportedKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(rf_update_rule_Index))));
         Result.UpdateSmall(ExportedKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(rf_delete_rule_Index))));
-        Result.UpdateAnsiRec(ExportedKeyColFKNameIndex, GetAnsiRec(kcu_constraint_name_Index));
-        Result.UpdateAnsiRec(ExportedKeyColPKNameIndex, GetAnsiRec(rf_unique_constraint_name_Index));
+        Result.UpdatePRaw(ExportedKeyColFKNameIndex, GetPRaw(kcu_constraint_name_Index, Len), @Len);
+        Result.UpdatePRaw(ExportedKeyColPKNameIndex, GetPRaw(rf_unique_constraint_name_Index, Len), @Len);
         if GetString(tc_is_deferrable_Index) = 'NO' then
           Result.UpdateSmall(ExportedKeyColDeferrabilityIndex, Ord(ikNotDeferrable))
         else
@@ -2954,6 +2950,7 @@ const
   updaterule_index = {$IFDEF GENERIC_INDEX}11{$ELSE}12{$ENDIF};
   deleterule_index = {$IFDEF GENERIC_INDEX}12{$ELSE}13{$ENDIF};
 var
+  Len: NativeUInt;
   SQL, Select, From, Where: string;
   DeleteRule, UpdateRule, Rule: string;
   {FKeyName, }FKeyColumn, PKeyColumn, Targs: string;
@@ -3005,19 +3002,19 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        //Result.UpdateAnsiRec(CrossRefKeyColPKTableCatalogIndex, GetAnsiRec(tc_constraint_catalog_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColPKTableSchemaIndex, GetAnsiRec(tc_constraint_schema_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColPKTableNameIndex, GetAnsiRec(ccu_table_name_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColPKColumnNameIndex, GetAnsiRec(ccu_column_name_Index_74));
-        //Result.UpdateAnsiRec(CrossRefKeyColFKTableCatalogIndex, GetAnsiRec(kcu_table_catalog_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColFKTableSchemaIndex, GetAnsiRec(kcu_constraint_schema_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColFKTableNameIndex, GetAnsiRec(kcu_table_name_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColFKColumnNameIndex, GetAnsiRec(kcu_column_name_Index_74));
+        //Result.UpdatePRaw(CrossRefKeyColPKTableCatalogIndex, GetPRaw(tc_constraint_catalog_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColPKTableSchemaIndex, GetPRaw(tc_constraint_schema_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColPKTableNameIndex, GetPRaw(ccu_table_name_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColPKColumnNameIndex, GetPRaw(ccu_column_name_Index_74, Len), @Len);
+        //Result.UpdatePRaw(CrossRefKeyColFKTableCatalogIndex, GetPRaw(kcu_table_catalog_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColFKTableSchemaIndex, GetPRaw(kcu_constraint_schema_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColFKTableNameIndex, GetPRaw(kcu_table_name_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColFKColumnNameIndex, GetPRaw(kcu_column_name_Index_74, Len), @Len);
         Result.UpdateSmall(CrossRefKeyColKeySeqIndex, GetSmall(kcu_ordinal_position_Index_74));
         Result.UpdateSmall(CrossRefKeyColUpdateRuleIndex, Ord(GetRuleType(GetString(rf_update_rule_Index_74))));
         Result.UpdateSmall(CrossRefKeyColDeleteRuleIndex, Ord(GetRuleType(GetString(rf_delete_rule_Index_74))));
-        Result.UpdateAnsiRec(CrossRefKeyColFKNameIndex, GetAnsiRec(kcu_constraint_name_Index_74));
-        Result.UpdateAnsiRec(CrossRefKeyColPKNameIndex, GetAnsiRec(rf_unique_constraint_name_Index_74));
+        Result.UpdatePRaw(CrossRefKeyColFKNameIndex, GetPRaw(kcu_constraint_name_Index_74, Len), @Len);
+        Result.UpdatePRaw(CrossRefKeyColPKNameIndex, GetPRaw(rf_unique_constraint_name_Index_74, Len), @Len);
         if GetString(tc_is_deferrable_Index_74) = 'NO' then
           Result.UpdateSmall(CrossRefKeyColDeferrabilityIndex, Ord(ikNotDeferrable))
         else
@@ -3104,10 +3101,10 @@ begin
         while Next do
         begin
           Result.MoveToInsertRow;
-          Result.UpdateAnsiRec(CrossRefKeyColPKTableSchemaIndex, GetAnsiRec(pnspname_index));
-          Result.UpdateAnsiRec(CrossRefKeyColFKTableSchemaIndex, GetAnsiRec(fnspname_index));
-          Result.UpdateAnsiRec(CrossRefKeyColPKTableNameIndex, GetAnsiRec(prelname_index));
-          Result.UpdateAnsiRec(CrossRefKeyColFKTableNameIndex, GetAnsiRec(frelname_index));
+          Result.UpdatePRaw(CrossRefKeyColPKTableSchemaIndex, GetPRaw(pnspname_index, Len), @Len);
+          Result.UpdatePRaw(CrossRefKeyColFKTableSchemaIndex, GetPRaw(fnspname_index, Len), @Len);
+          Result.UpdatePRaw(CrossRefKeyColPKTableNameIndex, GetPRaw(prelname_index, Len), @Len);
+          Result.UpdatePRaw(CrossRefKeyColFKTableNameIndex, GetPRaw(frelname_index, Len), @Len);
 
           //FKeyName := GetString(t1_tgconstrname_index);
           UpdateRule := GetString(updaterule_index);
@@ -3239,6 +3236,7 @@ const
   typname_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
   SQL: string;
+  Len: NativeUInt;
 begin
     Result:=inherited UncachedGetTypeInfo;
 
@@ -3251,7 +3249,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateAnsiRec(TypeInfoTypeNameIndex, GetAnsiRec(typname_Index));
+        Result.UpdatePRaw(TypeInfoTypeNameIndex, GetPRaw(typname_Index, Len), @Len);
         Result.UpdateInt(TypeInfoDataTypeIndex, Ord(GetSQLTypeByName(GetString(typname_Index))));
         Result.UpdateInt(TypeInfoPecisionIndex, 9);
         Result.UpdateInt(TypeInfoNullAbleIndex, Ord(ntNoNulls));
@@ -3542,6 +3540,7 @@ const
   CHARACTER_SET_ID_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   enc_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+var Len: NativeUInt;
 begin
   Self.GetConnection.CreateStatement.Execute(
   ' CREATE OR REPLACE FUNCTION get_encodings() RETURNS INTEGER AS '''+
@@ -3572,7 +3571,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateAnsiRec(CHARACTER_SET_NAME_Index, GetAnsiRec(name_Index)); //CHARACTER_SET_NAME
+      Result.UpdatePRaw(CHARACTER_SET_NAME_Index, GetPRaw(name_Index, Len), @Len); //CHARACTER_SET_NAME
       Result.UpdateSmall(CHARACTER_SET_ID_Index, GetSmall(enc_Index)); //CHARACTER_SET_ID
       Result.InsertRow;
     end;

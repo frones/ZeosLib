@@ -372,7 +372,8 @@ end;
 }
 function TZAdoResultSet.GetString(ColumnIndex: Integer): String;
 var
-  WideRec: TZWideRec;
+  P: PWidechar;
+  Len: NativeUInt;
 Label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
@@ -404,28 +405,24 @@ begin
         {$IFDEF UNICODE}
         System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38);
         {$ELSE}
-        begin
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 38;
-          Result := ZWideRecToRaw(WideRec, ConSettings^.CTRL_CP);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, ConSettings^.CTRL_CP);
         {$ENDIF}
       adBSTR,
       adChar:
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
           goto ProcessFixedChar;
         end;
       adWChar: {fixed char fields}
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
 ProcessFixedChar:
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VString;
-          while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
+          P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VString;
+          while (P+Len-1)^ = ' ' do dec(Len);
           {$IFDEF UNICODE}
-          System.SetString(Result, WideRec.P, WideRec.Len);
+          System.SetString(Result, P, Len);
           {$ELSE}
-          Result := ZWideRecToRaw(WideRec, ConSettings^.CTRL_CP);
+          Result := PUnicodeToRaw(P, Len, ConSettings^.CTRL_CP);
           {$ENDIF}
         end;
       adVarChar,
@@ -435,24 +432,19 @@ ProcessFixedChar:
           TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
           FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
         {$ELSE}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, ConSettings^.CTRL_CP);
-        end;
+          Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ConSettings^.CTRL_CP);
         {$ENDIF}
       adVarWChar,
       adLongVarWChar: {varying char fields}
         {$IFDEF UNICODE}
         System.SetString(Result,
           TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2); //OleDb returns size in Bytes!
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
         {$ELSE}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, ConSettings^.CTRL_CP);
-        end;
+          Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+            ConSettings^.CTRL_CP);
         {$ENDIF}
       else
         try
@@ -474,7 +466,8 @@ end;
 }
 function TZAdoResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var
-  WideRec: TZWideRec;
+  P: PWideChar;
+  Len: NativeUInt;
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
@@ -503,39 +496,30 @@ begin
       adCurrency:         Result := {$IFDEF UNICODE}AnsiString{$ENDIF}(CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency));
       adBoolean:          Result := BoolToRawEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
-        begin
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 38;
-          Result := ZWideRecToRaw(WideRec, ZDefaultSystemCodePage);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, ZDefaultSystemCodePage);
       adBSTR,
       adChar:
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
           goto ProcessFixedChar;
         end;
       adWChar: {fixed char fields}
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
 ProcessFixedChar:
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
-          Result := ZWideRecToRaw(WideRec, ZDefaultSystemCodePage);
+          P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          while (P+Len-1)^ = ' ' do dec(Len);
+          Result := PUnicodeToRaw(P, Len, ZDefaultSystemCodePage);
         end;
       adVarChar,
       adLongVarChar: {varying char fields}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, ZDefaultSystemCodePage);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ZDefaultSystemCodePage);
       adVarWChar,
       adLongVarWChar: {varying char fields}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, ZDefaultSystemCodePage);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+          ZDefaultSystemCodePage);
       else
         try
           Result := AnsiString(FAdoRecordSet.Fields.Item[ColumnIndex].Value);
@@ -556,7 +540,8 @@ end;
 }
 function TZAdoResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var
-  WideRec: TZWideRec;
+  P: PWideChar;
+  Len: NativeUInt;
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
@@ -586,38 +571,31 @@ begin
       adCurrency:         Result := {$IFDEF UNICODE}UTF8String{$ENDIF}(CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency));
       adBoolean:          Result := BoolToRawEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
-        begin
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 38;
-          Result := ZWideRecToRaw(WideRec, zCP_US_ASCII);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, zCP_US_ASCII);
       adBSTR,
       adChar:
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
           goto ProcessFixedChar;
         end;
       adWChar: {fixed char fields}
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
 ProcessFixedChar:
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
-          Result := ZWideRecToRaw(WideRec, zCP_UTF8);
+          P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          while (P+Len-1)^ = ' ' do dec(Len);
+          Result := PUnicodeToRaw(P, Len, zCP_UTF8);
         end;
       adVarChar,
       adLongVarChar: {varying char fields}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, zCP_UTF8);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, zCP_UTF8);
       adVarWChar,
       adLongVarWChar: {varying char fields}
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, zCP_UTF8);
+          Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+            zCP_UTF8);
         end;
       else
         try
@@ -640,7 +618,8 @@ end;
 }
 function TZAdoResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
 var
-  WideRec: TZWideRec;
+  P: PWideChar;
+  Len: NativeUInt;
 label ProcessFixedChar;
 begin
   {ADO uses its own DataType-mapping different to System Variant type mapping}
@@ -669,38 +648,29 @@ begin
       adCurrency:         Result := {$IFDEF UNICODE}AnsiString{$ENDIF}(CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency));
       adBoolean:          Result := BoolToRawEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID:
-        begin
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          WideRec.Len := 38;
-          Result := ZWideRecToRaw(WideRec, zCP_US_ASCII);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38, zCP_US_ASCII);
       adChar:
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
           goto ProcessFixedChar;
         end;
       adWChar: {fixed char fields}
         begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
 ProcessFixedChar:
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          while (WideRec.P+WideRec.Len-1)^ = ' ' do dec(WideRec.Len);
-          Result := ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP);
+          P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
+          while (P+Len-1)^ = ' ' do dec(Len);
+          Result := PUnicodeToRaw(P, Len, ConSettings^.ClientCodePage^.CP);
         end;
       adVarChar,
       adLongVarChar: {varying char fields}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize;
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP);
-        end;
+        Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ConSettings^.ClientCodePage^.CP);
       adVarWChar,
       adLongVarWChar: {varying char fields}
-        begin
-          WideRec.Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2; //OleDb returns size in Bytes!
-          WideRec.P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Result := ZWideRecToRaw(WideRec, ConSettings^.ClientCodePage^.CP);
-        end;
+          Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize div 2, //OleDb returns size in Bytes!
+            ConSettings^.ClientCodePage^.CP);
       else
         try
           Result := RawByteString(FAdoRecordSet.Fields.Item[ColumnIndex].Value);

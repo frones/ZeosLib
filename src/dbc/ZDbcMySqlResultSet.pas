@@ -91,7 +91,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -133,7 +133,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -370,12 +370,12 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZMySQLResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
-  Len: ULong;
+  L: ULong;
 begin
-  Result.P := GetBufferAndLength(ColumnIndex, Len{%H-});
-  Result.Len := Len;
+  Result := GetBufferAndLength(ColumnIndex, L{%H-});
+  Len := L;
 end;
 
 {**
@@ -1010,7 +1010,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZMySQLPreparedResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsichar;
 var
   TmpDateTime, TmpDateTime2: TDateTime;
 begin
@@ -1020,8 +1020,8 @@ begin
   LastWasNull := FColumnArray[ColumnIndex].is_null =1;
   if LastWasNull then
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
   end
   else
   begin
@@ -1099,8 +1099,8 @@ begin
       FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB,
       FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING, FIELD_TYPE_GEOMETRY:
         begin
-          Result.P := PAnsiChar(FColumnArray[ColumnIndex].buffer);
-          Result.Len := FColumnArray[ColumnIndex].length;
+          Result := PAnsiChar(FColumnArray[ColumnIndex].buffer);
+          Len := FColumnArray[ColumnIndex].length;
           Exit;
         end;
       else
@@ -1108,8 +1108,8 @@ begin
           ['Field '+ZFastCode.IntToStr(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}),
             DefineColumnTypeName(GetMetadata.GetColumnType(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF}))]));
     end;
-    Result.Len := {$IF defined(WITH_INLINE) or defined(FPC)}Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeInt(FRawTemp) - 4)^{$IFEND};
-    Result.P := Pointer(FRawTemp);
+    Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
+    Result := Pointer(FRawTemp);
   end;
 end;
 
@@ -1123,8 +1123,9 @@ end;
     value returned is <code>null</code>
 }
 function TZMySQLPreparedResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var Len: NativeUInt;
 begin
-  Result := GetAnsiRec(ColumnIndex).P;
+  Result := GetPRaw(ColumnIndex, Len);
 end;
 
 {**

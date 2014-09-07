@@ -2232,6 +2232,7 @@ function TZAbstractDatabaseMetadata.CopyToVirtualResultSet(
 var
   I: Integer;
   Metadata: IZResultSetMetadata;
+  Len: NativeUInt;
 begin
   DestResultSet.SetType(rtScrollInsensitive);
   DestResultSet.SetConcurrency(rcUpdatable);
@@ -2269,7 +2270,7 @@ begin
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
           if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-            DestResultSet.UpdateAnsiRec(I, SrcResultSet.GetAnsiRec(I))
+            DestResultSet.UpdatePRaw(I, SrcResultSet.GetPRaw(I, Len), @Len)
           else
             DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
         stBytes, stBinaryStream:
