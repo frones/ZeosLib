@@ -534,9 +534,9 @@ begin
         RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          RowAccessor.SetPRaw(FieldIndex, ResultSet.GetPRaw(ColumnIndex, Len), @Len)
+          RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len)
         else
-          RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
+          RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
@@ -631,11 +631,11 @@ begin
           RowAccessor.GetCurrency(FieldIndex, WasNull));
       ftString, ftWidestring:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          ResultSet.UpdatePRaw(ColumnIndex,
-            RowAccessor.GetPRaw(FieldIndex, WasNull, Len), @Len)
+          ResultSet.UpdatePAnsiChar(ColumnIndex,
+            RowAccessor.GetPAnsiChar(FieldIndex, WasNull, Len), @Len)
         else
-          ResultSet.UpdateWideRec(ColumnIndex,
-            RowAccessor.GetWideRec(FieldIndex, WasNull));
+          ResultSet.UpdatePWideChar(ColumnIndex,
+            RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), @Len);
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:

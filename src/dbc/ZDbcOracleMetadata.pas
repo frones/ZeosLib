@@ -1547,9 +1547,9 @@ begin
         sName :=  sName+'.'+IC.Quote(GetString(PROCEDURE_NAME_Index));
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdatePRaw(SchemaNameIndex, GetPRaw(PROCEDURE_SCHEM_Index, Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_Index, Len), @Len);
       Result.UpdateString(ProcedureNameIndex, sName);
-      Result.UpdatePRaw(ProcedureOverloadIndex, GetPRaw(PROCEDURE_OVERLOAD_Index, Len), @Len);
+      Result.UpdatePAnsiChar(ProcedureOverloadIndex, GetPAnsiChar(PROCEDURE_OVERLOAD_Index, Len), @Len);
       if GetString(PROCEDURE_TYPE_Index) = 'FUNCTION' then
           Result.UpdateByte(ProcedureTypeIndex, Ord(prtReturnsResult))
         else if GetString(PROCEDURE_TYPE_Index) = 'PROCDEURE' then
@@ -1722,14 +1722,14 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePRaw(SchemaNameIndex, GetPRaw(OWNER_Index, Len), @Len);
-      Result.UpdatePRaw(TableNameIndex, GetPRaw(TABLE_NAME_Index, Len), @Len);
-      Result.UpdatePRaw(ColumnNameIndex, GetPRaw(COLUMN_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), @Len);
       oDataType := GetString(DATA_TYPE_Index);
       SQLType := ConvertOracleTypeToSQLType(oDataType,
         GetInt(DATA_PRECISION_Index), GetInt(DATA_SCALE_Index), ConSettings.CPType);
       Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
-      Result.UpdatePRaw(TableColColumnTypeNameIndex, GetPRaw(DATA_TYPE_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(DATA_TYPE_Index, Len), @Len);
       Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings,
         GetInt(DATA_LENGTH_Index), ConSettings.ClientCodePage.CharWidth));
       //Result.UpdateNull(TableColColumnBufLengthIndex);
@@ -1747,7 +1747,7 @@ begin
         Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
       end;
 
-      Result.UpdatePRaw(TableColColumnColDefIndex, GetPRaw(DATA_DEFAULT_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), @Len);
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index){$IFDEF GENERIC_INDEX}-1{$ENDIF});
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
@@ -2056,15 +2056,15 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePRaw(SchemaNameIndex, GetPRaw(OWNER_Index, Len), @Len);
-      Result.UpdatePRaw(TableNameIndex, GetPRaw(TABLE_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), @Len);
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex,
         UpperCase(GetString(UNIQUENESS_Index)) <> 'UNIQUE');
       //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-      Result.UpdatePRaw(IndexInfoColIndexNameIndex, GetPRaw(INDEX_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(INDEX_NAME_Index, Len), @Len);
       Result.UpdateInt(IndexInfoColTypeIndex, 3);
       Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(COLUMN_POSITION_Index));
-      Result.UpdatePRaw(IndexInfoColColumnNameIndex, GetPRaw(COLUMN_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), @Len);
       if GetString(DESCEND_Index) = 'ASC' then
         Result.UpdateString(IndexInfoColAscOrDescIndex, 'A')
       else Result.UpdateString(IndexInfoColAscOrDescIndex, 'D');

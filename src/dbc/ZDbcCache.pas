@@ -186,13 +186,13 @@ type
     //======================================================================
 
     function IsNull(Const ColumnIndex: Integer): Boolean;
-    function GetPRaw(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; virtual;
+    function GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; virtual;
     function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; virtual; abstract;
     function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; virtual;
     function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; virtual;
     function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; virtual;
     function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; virtual;
-    function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; virtual;
+    function GetPWideChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; virtual;
     function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; virtual;
     function GetBoolean(Const ColumnIndex: Integer; var IsNull: Boolean): Boolean;
     function GetByte(Const ColumnIndex: Integer; var IsNull: Boolean): Byte;
@@ -238,9 +238,9 @@ type
     procedure SetCurrency(Const ColumnIndex: Integer; const Value: Currency);
     procedure SetBigDecimal(Const ColumnIndex: Integer; const Value: Extended);
     procedure SetString(Const ColumnIndex: Integer; const Value: String); virtual;
-    procedure SetPRaw(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt);virtual;
-    procedure SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar); virtual;
-    procedure SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec);virtual;
+    procedure SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
+    procedure SetPAnsiChar(Const ColumnIndex: Integer; const Value: PAnsiChar); overload; virtual;
+    procedure SetPWideChar(Const ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); virtual;
     procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); virtual;
     procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); virtual;
     procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); virtual;
@@ -272,13 +272,13 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetPRaw(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
     function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
     function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; override;
     function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
     function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
     function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
-    function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
+    function GetPWideChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; override;
     function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
@@ -286,8 +286,8 @@ type
     //---------------------------------------------------------------------
 
     procedure SetString(Const ColumnIndex: Integer; const Value: String); override;
-    procedure SetPRaw(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
-    procedure SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec); override;
+    procedure SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
+    procedure SetPWideChar(Const ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); override;
     //procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); override;
     //procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); override;
     procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); override;
@@ -305,13 +305,13 @@ type
     // Methods for accessing results by column index
     //======================================================================
 
-    function GetPRaw(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PAnsiChar; override;
     function GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec; override;
     function GetString(Const ColumnIndex: Integer; var IsNull: Boolean): String; override;
     function GetAnsiString(Const ColumnIndex: Integer; var IsNull: Boolean): AnsiString; override;
     function GetUTF8String(Const ColumnIndex: Integer; var IsNull: Boolean): UTF8String; override;
     function GetRawByteString(Const ColumnIndex: Integer; var IsNull: Boolean): RawByteString; override;
-    function GetWideRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZWideRec; override;
+    function GetPWideChar(Const ColumnIndex: Integer; var IsNull: Boolean; out Len: NativeUInt): PWideChar; override;
     function GetUnicodeString(Const ColumnIndex: Integer; var IsNull: Boolean): ZWideString; override;
 
     //---------------------------------------------------------------------
@@ -319,8 +319,8 @@ type
     //---------------------------------------------------------------------
 
     procedure SetString(Const ColumnIndex: Integer; const Value: String); override;
-    procedure SetPRaw(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
-    procedure SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec); override;
+    procedure SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); override;
+    procedure SetPWideChar(Const ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); override;
     //procedure SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString); override;
     //procedure SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String); override;
     procedure SetRawByteString(Const ColumnIndex: Integer; const Value: RawByteString); override;
@@ -654,7 +654,7 @@ begin
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
     LStr := Length(Value);
-    LMem := LStr * 2;
+    LMem := LStr shl 1;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
     System.Move(Pointer(Value)^, (W^+PWideInc)^, LMem);
     PLongWord(W^)^ := LStr;
@@ -677,7 +677,7 @@ begin
     if NewPointer then
       PNativeUInt(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1])^ := 0;
     W := ZPPWideChar(@Buffer.Columns[FColumnOffsets[ColumnIndex] + 1]);
-    LMem := Len * 2;
+    LMem := Len shl 1;
     ReallocMem(W^, LMem+SizeOf(Cardinal)+2); //including #0#0 terminator
     System.Move(Value^, (W^+PWideInc)^, LMem);
     PLongWord(W^)^ := Len;
@@ -1203,7 +1203,17 @@ begin
   end;
 end;
 
-function TZRowAccessor.GetPRaw(Const ColumnIndex: Integer; var IsNull: Boolean;
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PAnsiChar</code> in the ObjectPascal programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the string in bytes
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZRowAccessor.GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 var
   Blob: IZBlob;
@@ -1541,14 +1551,15 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>TZWideRec/UnicodeString</code> in the ObjectPascal programming language.
+  a <code>PWideChar</code> in the ObjectPascal programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the Length of the string in codepoints
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRowAccessor.GetWideRec(Const ColumnIndex: Integer;
-  var IsNull: Boolean): TZWideRec;
+function TZRowAccessor.GetPWideChar(Const ColumnIndex: Integer;
+  var IsNull: Boolean; out Len: NativeUInt): PWideChar;
 var
   TempBlob: IZBlob;
   GUID: TGUID;
@@ -1574,8 +1585,8 @@ begin
         if (TempBlob <> nil) and not TempBlob.IsEmpty then
           if TempBlob.IsClob then
           begin
-            Result.P := TempBlob.GetPWideChar;
-            Result.Len := TempBlob.Length div 2;
+            Result := TempBlob.GetPWideChar;
+            Len := TempBlob.Length shr 1;
             Exit;
           end
           else
@@ -1600,8 +1611,8 @@ begin
     else
       FUniTemp := {$IFNDEF UNICODE}ZWideString{$ENDIF}(GetString(ColumnIndex, IsNull));
   end;
-  Result.P := PWideChar(FUniTemp);
-  Result.Len := Length(FuniTemp);
+  Result := Pointer(FUniTemp);
+  Len := Length(FuniTemp);
 end;
 {**
   Gets the value of the designated column in the current row
@@ -3430,9 +3441,9 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
-  @param Len the length of the String
+  @param Len the pointer to the length of the String in bytes
 }
-procedure TZRowAccessor.SetPRaw(Const ColumnIndex: Integer; Value: PAnsichar;
+procedure TZRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer; Value: PAnsichar;
   Len: PNativeUInt);
 var
   IsNull: Boolean;
@@ -3525,20 +3536,22 @@ procedure TZRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer; const Value: PA
 var Len: NativeUInt;
 begin
   Len := ZFastCode.StrLen(Value);
-  SetPRaw(ColumnIndex, Value, @Len);
+  SetPAnsiChar(ColumnIndex, Value, @Len);
 end;
 
 {**
-  Sets the designated column with a <code>TZWideRec</code> value.
+  Sets the designated column with a <code>PWideChar</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
   <code>insertRow</code> methods are called to Set the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the pointer to the length of the string in codepoints
   @param Value the new column value
 }
-procedure TZRowAccessor.SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec);
+procedure TZRowAccessor.SetPWideChar(Const ColumnIndex: Integer;
+  Value: PWideChar; Len: PNativeUInt);
 var
   IsNull: Boolean;
   GUID: TGUID;
@@ -3547,36 +3560,36 @@ var
   Failed: Boolean;
 begin
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
-    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value.P, False);
-    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value.P, 0);
-    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value.P, 0);
-    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value.P, 0);
-    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value.P, 0);
-    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value.P, 0);
-    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value.P, 0);
-    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value.P, 0);
-    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value.P, 0);
-    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
-    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
-    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
-    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value.P, 0, Value.Len);
+    stBoolean: PWordBool(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := StrToBoolEx(Value, False);
+    stByte: PByte(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
+    stShort: PShortInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
+    stWord: PWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
+    stSmall: PSmallInt(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
+    stLongWord: PCardinal(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
+    stInteger: PInteger(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToIntDef(Value, 0);
+    stULong: PUInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
+    stLong: PInt64(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := UnicodeToInt64Def(Value, 0);
+    stFloat: PSingle(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
+    stDouble: PDouble(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
+    stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
+    stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := SQLStrToFloatDef(Value, 0, Len^);
     //stUnicodeString, stString: do not handle here
     stAsciiStream, stUnicodeStream:
       begin
         Blob := GetBlob(ColumnIndex, IsNull{%H-});
         if Blob.IsClob then
-          Blob.SetPWideChar(Value.P, Value.Len)
+          Blob.SetPWideChar(Value, Len^)
         else
-          Blob.SetBuffer(Value.P, Value.Len*2);
+          Blob.SetBuffer(Value, Len^*2);
       end;
     stBytes:
-      SetBytes(ColumnIndex, StrToBytes(ZWideString(Value.P)));
+      SetBytes(ColumnIndex, StrToBytes(ZWideString(Value)));
     stGUID:
-      if Value.P = nil  then
+      if Value = nil  then
         SetNull(ColumnIndex)
       else
       begin
-        GUID := StringToGUID({$IFDEF UNICODE}Value.P{$ELSE}UnicodeStringToASCII7(Value.P, Value.Len){$ENDIF});
+        GUID := StringToGUID({$IFDEF UNICODE}Value{$ELSE}UnicodeStringToASCII7(Value, Len^){$ENDIF});
         SetLength(Bts, 16);
         System.Move(Pointer(@GUID)^, Pointer(Bts)^, 16);
         SetBytes(ColumnIndex, Bts);
@@ -3584,26 +3597,26 @@ begin
     stDate:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-          UnicodeSQLDateToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed{%H-});
+          UnicodeSQLDateToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed{%H-});
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
           {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-            UnicodeSQLTimeStampToDateTime(Value.P, Value.Len,
+            UnicodeSQLTimeStampToDateTime(Value, Len^,
               ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTime:
       begin
         PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        UnicodeSQLTimeToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed);
+        UnicodeSQLTimeToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
         if Failed then
           PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-            Frac(UnicodeSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed));
+            Frac(UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed));
       end;
     stTimestamp:
       PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ :=
-        UnicodeSQLTimeStampToDateTime(Value.P, Value.Len, ConSettings^.DisplayFormatSettings, Failed);
+        UnicodeSQLTimeStampToDateTime(Value, Len^, ConSettings^.DisplayFormatSettings, Failed);
     else
-      SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value.P, ConSettings^.CTRL_CP));
+      SetString(ColumnIndex, ConSettings^.ConvFuncs.ZUnicodeToString(Value, ConSettings^.CTRL_CP));
   end;
 end;
 
@@ -4070,7 +4083,6 @@ end;
 }
 procedure TZRowAccessor.SetValue(Const ColumnIndex: Integer; const Value: TZVariant);
 var
-  WideRec: TZWideRec;
   Len: NativeUInt;
 begin
   case Value.VType of
@@ -4088,16 +4100,15 @@ begin
     vtCharRec:
       if ZCompatibleCodePages(zCP_UTF16, Value.VCharRec.CP) then
       begin
-        WideRec.Len := Value.VCharRec.Len;
-        WideRec.P := Value.VCharRec.P;
-        SetWideRec(ColumnIndex, WideRec);
+        Len := Value.VCharRec.Len;
+        SetPWideChar(ColumnIndex, Value.VCharRec.P, @Len);
       end
       else
       begin
         if ZCompatibleCodePages(ConSettings^.ClientCodePage^.CP, Value.VCharRec.CP) then
         begin
           Len := Value.VCharRec.Len;
-          SetPRaw(ColumnIndex, Value.VCharRec.P, @Len)
+          SetPAnsiChar(ColumnIndex, Value.VCharRec.P, @Len)
         end
         else
           SetUnicodeString(ColumnIndex, PRawToUnicode(Value.VCharRec.P, Value.VCharRec.Len, Value.VCharRec.CP));
@@ -4181,7 +4192,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetPRaw(Const ColumnIndex: Integer; var IsNull: Boolean;
+function TZRawRowAccessor.GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4196,7 +4207,7 @@ begin
           Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
         end;
       else
-        Result := inherited GetPRaw(ColumnIndex, IsNull, Len);
+        Result := inherited GetPAnsiChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
   end
@@ -4211,7 +4222,7 @@ end;
 function TZRawRowAccessor.GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
 var Len: NativeUint;
 begin
-  Result.P := GetPRaw(ColumnIndex, IsNull, Len);
+  Result.P := GetPAnsiChar(ColumnIndex, IsNull, Len);
   Result.Len := Len;
   Result.CP := ConSettings^.ClientCodePage^.CP;
 end;
@@ -4387,11 +4398,12 @@ end;
   a <code>WideString/UnicodeString</code> in the ObjectPascal programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the length of the string in codepoints
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZRawRowAccessor.GetWideRec(Const ColumnIndex: Integer;
-  var IsNull: Boolean): TZWideRec;
+function TZRawRowAccessor.GetPWideChar(Const ColumnIndex: Integer;
+  var IsNull: Boolean; out Len: NativeUInt): PWideChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
@@ -4403,8 +4415,8 @@ begin
         begin
           if PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^ = 0 then //avoid all conversions
           begin
-            Result.Len := 0;
-            Result.P := PEmptyUnicodeString;
+            Len := 0;
+            Result := PEmptyUnicodeString;
           end
           else
           begin
@@ -4412,23 +4424,23 @@ begin
               PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
               PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
               ConSettings^.ClientCodePage^.CP);
-            Result.P := Pointer(FUniTemp);
+            Result := Pointer(FUniTemp);
             {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-            Result.Len := {%H-}PLengthInt(NativeUInt(FUniTemp) - StringLenOffSet)^;
+            Len := {%H-}PLengthInt(NativeUInt(FUniTemp) - StringLenOffSet)^;
             {$ELSE}
-            Result.Len := Length(FUniTemp);
+            Len := Length(FUniTemp);
             {$ENDIF}
           end;
         end
       else
-        Result := inherited GetWideRec(ColumnIndex, IsNull);
+        Result := inherited GetPWideChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
   end
   else
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
     IsNull := True;
   end;
 end;
@@ -4502,9 +4514,9 @@ end;
 
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
-  @param Len the Length of the new column value
+  @param Len pointer to the Length of the new column value in bytes
 }
-procedure TZRawRowAccessor.SetPRaw(Const ColumnIndex: Integer;
+procedure TZRawRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer;
   Value: PAnsiChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4519,35 +4531,37 @@ begin
           InternalSetPAnsiChar(FBuffer, ColumnIndex, Value, Len^);
           FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
         end;
-      else inherited SetPRaw(ColumnIndex, Value, Len)
+      else inherited SetPAnsiChar(ColumnIndex, Value, Len)
     end;
 end;
 
 {**
-  Sets the designated column with a <code>TZWideRec</code> value.
+  Sets the designated column with a <code>PWideChar</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
   <code>insertRow</code> methods are called to Set the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the pointer to the length of the string in codepoints
   @param x the new column value
 }
-procedure TZRawRowAccessor.SetWideRec(Const ColumnIndex: Integer; const Value: TZWideRec);
+procedure TZRawRowAccessor.SetPWideChar(Const ColumnIndex: Integer;
+  Value: PWideChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if Value.P = nil then
+  if Value = nil then
     SetNull(ColumnIndex)
   else
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
         begin
-          InternalSetString(FBuffer, ColumnIndex, PUnicodeToRaw(Value.P, Value.Len, ConSettings^.ClientCodePage^.CP));
+          InternalSetString(FBuffer, ColumnIndex, PUnicodeToRaw(Value, Len^, ConSettings^.ClientCodePage^.CP));
           FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
         end;
-      else inherited SetWideRec(ColumnIndex, Value)
+      else inherited SetPWideChar(ColumnIndex, Value, Len)
     end;
 end;
 
@@ -4679,7 +4693,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetPRaw(Const ColumnIndex: Integer; var IsNull: Boolean;
+function TZUnicodeRowAccessor.GetPAnsiChar(Const ColumnIndex: Integer; var IsNull: Boolean;
   out Len: NativeUInt): PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4706,7 +4720,7 @@ begin
           end;
         end
       else
-        Result := Inherited GetPRaw(ColumnIndex, IsNull, Len);
+        Result := Inherited GetPAnsiChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
   end
@@ -4719,12 +4733,11 @@ begin
 end;
 
 function TZUnicodeRowAccessor.GetCharRec(Const ColumnIndex: Integer; var IsNull: Boolean): TZCharRec;
-var WideRec: TZWideRec;
+var Len: NativeUInt;
 begin
-  WideRec := GetWideRec(ColumnIndex, IsNull);
-  Result.Len := WideRec.Len;
+  Result.P := GetPWideChar(ColumnIndex, IsNull, Len);
+  Result.Len := Len;
   Result.CP := zCP_UTF16;
-  Result.P := WideRec.P;
 end;
 {**
   Gets the value of the designated column in the current row
@@ -4870,11 +4883,12 @@ end;
   a <code>WideString/UnicodeString</code> in the ObjectPascal programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the length of the string in codepoints
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZUnicodeRowAccessor.GetWideRec(Const ColumnIndex: Integer;
-  var IsNull: Boolean): TZWideRec;
+function TZUnicodeRowAccessor.GetPWideChar(Const ColumnIndex: Integer;
+  var IsNull: Boolean; out Len: NativeUInt): PWideChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stUnicodeString);
@@ -4884,18 +4898,18 @@ begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
         begin
-          Result.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
-          Result.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
+          Result := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
+          Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
         end;
       else
-        Result := inherited GetWideRec(ColumnIndex, IsNull);
+        Result := inherited GetPWideChar(ColumnIndex, IsNull, Len);
     end;
     IsNull := False;
   end
   else
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
     IsNull := True;
   end;
 end;
@@ -4971,7 +4985,7 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param Value the new column value
 }
-procedure TZUnicodeRowAccessor.SetPRaw(Const ColumnIndex: Integer;
+procedure TZUnicodeRowAccessor.SetPAnsiChar(Const ColumnIndex: Integer;
   Value: PAnsiChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -4987,36 +5001,37 @@ begin
             Len^, ConSettings^.ClientCodePage^.CP));
           FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
         end;
-      else inherited SetPRaw(ColumnIndex, Value, Len)
+      else inherited SetPAnsiChar(ColumnIndex, Value, Len)
     end;
 end;
 
 {**
-  Sets the designated column with a <code>TZWideRec</code> value.
+  Sets the designated column with a <code>PWideChar</code> value.
   The <code>SetXXX</code> methods are used to Set column values in the
   current row or the insert row.  The <code>SetXXX</code> methods do not
   Set the underlying database; instead the <code>SetRow</code> or
   <code>insertRow</code> methods are called to Set the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param len the pointer to the length of the string in codepoints
   @param Value the new column value
 }
-procedure TZUnicodeRowAccessor.SetWideRec(Const ColumnIndex: Integer;
-  const Value: TZWideRec);
+procedure TZUnicodeRowAccessor.SetPWideChar(Const ColumnIndex: Integer;
+  Value: PWideChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
 {$ENDIF}
-  if Value.P = nil then
+  if Value = nil then
     SetNull(ColumnIndex)
   else
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stString, stUnicodeString:
         begin
-          InternalSetPWideChar(FBuffer, ColumnIndex, Value.P, Value.Len);
+          InternalSetPWideChar(FBuffer, ColumnIndex, Value, Len^);
           FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]] := bIsNotNull;
         end;
-      else inherited SetWideRec(ColumnIndex, Value)
+      else inherited SetPWideChar(ColumnIndex, Value, Len)
     end;
 end;
 

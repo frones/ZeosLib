@@ -104,7 +104,7 @@ type
     function GetDate(ColumnIndex: Integer): TDateTime; override;
     function GetTime(ColumnIndex: Integer): TDateTime; override;
     function GetTimestamp(ColumnIndex: Integer): TDateTime; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
 
     function Last: Boolean; override;
@@ -264,7 +264,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZASAResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZASAResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   CheckColumnConvertion(ColumnIndex, stBoolean);
   LastWasNull := IsNull( ColumnIndex);

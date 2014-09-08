@@ -544,7 +544,7 @@ begin
   case TmpSQLType of
     stString, stUnicodeString:
       begin
-        S := Length(RetValue.VUnicodeString)*2; //strange! Need size in bytes!!
+        S := Length(RetValue.VUnicodeString) shl 1; //strange! Need size in bytes!!
         if S = 0 then S := 1;
         //V := Null; patch by zx - see http://zeos.firmos.at/viewtopic.php?t=1255
       end;

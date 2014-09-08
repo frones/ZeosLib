@@ -91,7 +91,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -133,7 +133,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetByte(ColumnIndex: Integer): Byte; override;
@@ -370,7 +370,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZMySQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
   L: ULong;
 begin
@@ -1006,11 +1006,11 @@ end;
   a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
+  @param Len the Length of the String in bytes
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZMySQLPreparedResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsichar;
+function TZMySQLPreparedResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsichar;
 var
   TmpDateTime, TmpDateTime2: TDateTime;
 begin
@@ -1125,7 +1125,7 @@ end;
 function TZMySQLPreparedResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 var Len: NativeUInt;
 begin
-  Result := GetPRaw(ColumnIndex, Len);
+  Result := GetPAnsiChar(ColumnIndex, Len);
 end;
 
 {**

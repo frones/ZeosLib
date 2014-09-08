@@ -973,7 +973,7 @@ begin
       begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
-        Result.UpdatePRaw(TableNameIndex, GetPRaw(TABLES_TABLE_NAME_Index, Len), @Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLES_TABLE_NAME_Index, Len), @Len);
         Result.UpdateString(TableColumnsSQLType, 'TABLE');
         Result.InsertRow;
       end;
@@ -1030,7 +1030,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePRaw(CatalogNameIndex, GetPRaw(FirstDbcIndex, Len), @Len);
+        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(FirstDbcIndex, Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1173,7 +1173,7 @@ begin
             Result.UpdateString(CatalogNameIndex, TempCatalog);
             Result.UpdateString(SchemaNameIndex, '');
             Result.UpdateString(TableNameIndex, TempTableNamePattern) ;
-            Result.UpdatePRaw(ColumnNameIndex, GetPRaw(ColumnIndexes[1], Len), @Len);
+            Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
 
             ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
               ConSettings, TypeName,
@@ -1203,7 +1203,7 @@ begin
               Result.UpdateInt(TableColColumnNullableIndex, 0);
               Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
             end;
-            Result.UpdatePRaw(TableColColumnRemarksIndex, GetPRaw(ColumnIndexes[4], Len), @Len);
+            Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(ColumnIndexes[4], Len), @Len);
             // MySQL is a bit bizarre.
             if IsNull(ColumnIndexes[5]) then
             begin
@@ -1382,11 +1382,11 @@ begin
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdatePRaw(CatalogNameIndex, GetPRaw(db_Index, Len), @Len);
+            Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(db_Index, Len), @Len);
             //Result.UpdateNull(SchemaNameIndex);
             Result.UpdateString(TableNameIndex, Table);
-            Result.UpdatePRaw(ColumnNameIndex, GetPRaw(column_name_Index, Len), @Len);
-            Result.UpdatePRaw(TableColPrivGrantorIndex, GetPRaw(grantor_Index, Len), @Len);
+            Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(column_name_Index, Len), @Len);
+            Result.UpdatePAnsiChar(TableColPrivGrantorIndex, GetPAnsiChar(grantor_Index, Len), @Len);
             Result.UpdateString(TableColPrivGranteeIndex, FullUser);
             Result.UpdateString(TableColPrivPrivilegeIndex, Privilege);
             //Result.UpdateNull(TableColPrivIsGrantableIndex);
@@ -1488,10 +1488,10 @@ begin
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdatePRaw(CatalogNameIndex, GetPRaw(db_Index, Len), @Len);
+            Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(db_Index, Len), @Len);
             //Result.UpdateNull(SchemaNameIndex);
-            Result.UpdatePRaw(TableNameIndex, GetPRaw(table_name_Index, Len), @Len);
-            Result.UpdatePRaw(TablePrivGrantorIndex, GetPRaw(grantor_Index, Len), @Len);
+            Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(table_name_Index, Len), @Len);
+            Result.UpdatePAnsiChar(TablePrivGrantorIndex, GetPAnsiChar(grantor_Index, Len), @Len);
             Result.UpdateString(TablePrivGranteeIndex, FullUser);
             Result.UpdateString(TablePrivPrivilegeIndex, Privilege);
             //Result.UpdateNull(TablePrivIsGrantableIndex);
@@ -1561,7 +1561,7 @@ begin
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdateString(SchemaNameIndex, '');
           Result.UpdateString(TableNameIndex, Table);
-          Result.UpdatePRaw(PrimaryKeyColumnNameIndex, GetPRaw(ColumnIndexes[2], Len), @Len);
+          Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiChar(ColumnIndexes[2], Len), @Len);
           Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(ColumnIndexes[3]));
           Result.UpdateNull(PrimaryKeyPKNameIndex);
           Result.InsertRow;
@@ -1829,7 +1829,7 @@ begin
                   Result.UpdateString(ExportedKeyColPKTableCatalogIndex, KeyList.Strings[2]);
                   Result.UpdateString(ExportedKeyColPKTableNameIndex, Table);
                   Result.UpdateString(ExportedKeyColFKTableCatalogIndex, LCatalog);
-                  Result.UpdatePRaw(ExportedKeyColFKTableNameIndex, GetPRaw(ColumnIndexes[3], Len), @Len);
+                  Result.UpdatePAnsiChar(ExportedKeyColFKTableNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), @Len);
                   Result.UpdateString(ExportedKeyColFKColumnNameIndex, KeyList.Strings[0]);
                   Result.UpdateInt(ExportedKeyColKeySeqIndex, KeySeq);
                   Result.UpdateInt(ExportedKeyColUpdateRuleIndex, Ord(ikSetDefault));
@@ -2211,18 +2211,18 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
         //Result.UpdateNull(SchemaNameIndex);
-        Result.UpdatePRaw(TableNameIndex, GetPRaw(ColumnIndexes[1], Len), @Len);
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
         if GetInt(ColumnIndexes[2]) = 0 then
           Result.UpdateString(IndexInfoColNonUniqueIndex, 'true')
         else
           Result.UpdateString(IndexInfoColNonUniqueIndex, 'false');
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-        Result.UpdatePRaw(IndexInfoColIndexNameIndex, GetPRaw(ColumnIndexes[3], Len), @Len);
+        Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), @Len);
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
         Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(ColumnIndexes[4]));
-        Result.UpdatePRaw(IndexInfoColColumnNameIndex, GetPRaw(ColumnIndexes[5], Len), @Len);
-        Result.UpdatePRaw(IndexInfoColAscOrDescIndex, GetPRaw(ColumnIndexes[6], Len), @Len);
-        Result.UpdatePRaw(IndexInfoColCardinalityIndex, GetPRaw(ColumnIndexes[7], Len), @Len);
+        Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(ColumnIndexes[5], Len), @Len);
+        Result.UpdatePAnsiChar(IndexInfoColAscOrDescIndex, GetPAnsiChar(ColumnIndexes[6], Len), @Len);
+        Result.UpdatePAnsiChar(IndexInfoColCardinalityIndex, GetPAnsiChar(ColumnIndexes[7], Len), @Len);
         Result.UpdateInt(IndexInfoColPagesIndex, 0);
         //Result.UpdateNull(IndexInfoColFilterConditionIndex);
         Result.InsertRow;
@@ -2496,9 +2496,9 @@ begin
                   Params.Insert(0,'IN'); //Function in value
 
             Result.MoveToInsertRow;
-            Result.UpdatePRaw(CatalogNameIndex, GetPRaw(PROCEDURE_SCHEM_index, Len), @Len); //PROCEDURE_CAT
+            Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), @Len); //PROCEDURE_CAT
             //Result.UpdateNull(SchemaNameIndex); //PROCEDURE_SCHEM
-            Result.UpdatePRaw(ProcColProcedureNameIndex, GetPRaw(PROCEDURE_NAME_Index, Len), @Len); //PROCEDURE_NAME
+            Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), @Len); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
               ConSettings, TypeName, Temp,
               FieldType, ColumnSize, Precision);
@@ -2669,8 +2669,8 @@ begin
             Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
             Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
             Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
-            Result.UpdatePRaw(CollationNameIndex, GetPRawByName('COLLATION_NAME', Len), @Len); //COLLATION_NAME
-            Result.UpdatePRaw(CharacterSetNameIndex, GetPRawByName('CHARACTER_SET_NAME', Len), @Len); //CHARACTER_SET_NAME
+            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('COLLATION_NAME', Len), @Len); //COLLATION_NAME
+            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len); //CHARACTER_SET_NAME
             Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN')); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
@@ -2692,8 +2692,8 @@ begin
             Result.UpdateString(CatalogNameIndex, LCatalog);
             Result.UpdateString(SchemaNameIndex, LCatalog);
             Result.UpdateString(TableNameIndex, TableNamePattern);
-            Result.UpdatePRaw(CollationNameIndex, GetPRawByName('TABLE_COLLATION', Len), @Len);
-            Result.UpdatePRaw(CharacterSetNameIndex, GetPRawByName('CHARACTER_SET_NAME', Len), @Len);
+            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('TABLE_COLLATION', Len), @Len);
+            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len);
             Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN'));
             Result.InsertRow;
           end;
@@ -2716,8 +2716,8 @@ begin
           Result.MoveToInsertRow;
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdateString(SchemaNameIndex, LCatalog);
-          Result.UpdatePRaw(CollationNameIndex, GetPRawByName('DEFAULT_COLLATION_NAME', Len), @Len);
-          Result.UpdatePRaw(CharacterSetNameIndex, GetPRawByName('DEFAULT_CHARACTER_SET_NAME', Len), @Len);
+          Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('DEFAULT_COLLATION_NAME', Len), @Len);
+          Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('DEFAULT_CHARACTER_SET_NAME', Len), @Len);
           Result.UpdateNull(CharacterSetIDIndex); //CHARACTER_SET_ID
           Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
           Result.InsertRow;
@@ -2744,7 +2744,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdatePRaw(CharacterSetsNameIndex, GetPRawByName('CHARACTER_SET_NAME', Len), @Len);
+      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len);
       Result.InsertRow;
     end;
     Close;

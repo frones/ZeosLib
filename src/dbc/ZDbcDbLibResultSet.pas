@@ -89,7 +89,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetString(ColumnIndex: Integer): String; override;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
@@ -321,13 +321,14 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>TZAnsiRec</code> in the Java programming language.
+  a <code>PAnsiChar</code> in the Java programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the length of the string in bytes
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZDBLibResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZDBLibResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
   DT: TTDSType;
   label Convert{, DecLenByTrailingSpaces, AssignFromFRawTemp};

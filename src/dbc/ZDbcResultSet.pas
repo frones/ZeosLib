@@ -134,10 +134,10 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; virtual;
     function GetPChar(ColumnIndex: Integer): PChar; virtual;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; virtual;
-    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; virtual;
-    function GetPWideChar(ColumnIndex: Integer): PWidechar; virtual;
-    function GetWideRec(ColumnIndex: Integer): TZWideRec; virtual;
+    function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; overload; virtual;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; overload; virtual;
+    function GetPWideChar(ColumnIndex: Integer): PWidechar; overload; virtual;
+    function GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar; overload; virtual;
     function GetString(ColumnIndex: Integer): String; virtual;
     function GetAnsiString(ColumnIndex: Integer): AnsiString; virtual;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; virtual;
@@ -175,10 +175,10 @@ type
 
     function IsNullByName(const ColumnName: string): Boolean; virtual;
     function GetPCharByName(const ColumnName: string): PChar; virtual;
-    function GetPRawByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; virtual;
-    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; virtual;
-    function GetPWideCharByName(const ColumnName: string): PWidechar; virtual;
-    function GetWideRecByName(const ColumnName: string): TZWideRec; virtual;
+    function GetPAnsiCharByName(const ColumnName: string): PAnsiChar; overload; virtual;
+    function GetPAnsiCharByName(const ColumnName: string; out Len: NativeUInt): PAnsiChar; overload; virtual;
+    function GetPWideCharByName(const ColumnName: string): PWidechar; overload; virtual;
+    function GetPWideCharByName(const ColumnName: string; out Len: NativeUInt): PWideChar; overload; virtual;
     function GetStringByName(const ColumnName: string): String; virtual;
     function GetAnsiStringByName(const ColumnName: string): AnsiString; virtual;
     function GetUTF8StringByName(const ColumnName: string): UTF8String; virtual;
@@ -276,10 +276,10 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); virtual;
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); virtual;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); virtual;
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); virtual;
-    procedure UpdatePRaw(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); virtual;
-    procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); virtual;
-    procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec); virtual;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); overload; virtual;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); overload; virtual;
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUInt); overload; virtual;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); virtual;
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); virtual;
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); virtual;
@@ -316,8 +316,11 @@ type
     procedure UpdateDoubleByName(const ColumnName: string; const Value: Double); virtual;
     procedure UpdateCurrencyByName(const ColumnName: string; const Value: Currency); virtual;
     procedure UpdateBigDecimalByName(const ColumnName: string; const Value: Extended); virtual;
-    procedure UpdatePRawByName(const ColumnName: string; Value: PAnsiChar; Len: PNativeUInt); virtual;
+    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar); overload; virtual;
+    procedure UpdatePAnsiCharByName(const ColumnName: string; Value: PAnsiChar; Len: PNativeUInt); overload; virtual;
     procedure UpdatePCharByName(const ColumnName: string; const Value: PChar); virtual;
+    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar); overload; virtual;
+    procedure UpdatePWideCharByName(const ColumnName: string; Value: PWideChar; Len: PNativeUInt); overload; virtual;
     procedure UpdateStringByName(const ColumnName: string; const Value: String); virtual;
     procedure UpdateAnsiStringByName(const ColumnName: string; const Value: AnsiString); virtual;
     procedure UpdateUTF8StringByName(const ColumnName: string; const Value: UTF8String); virtual;
@@ -795,7 +798,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   FRawTemp := GetRawByteString(ColumnIndex);
   if Pointer(FRawTemp) = nil then
@@ -852,17 +855,20 @@ end;
   a <code>PWideChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the length of UCS2 string in codepoints
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetWideRec(ColumnIndex: Integer): TZWideRec;
+function TZAbstractResultSet.GetPWideChar(ColumnIndex: Integer;
+  out Len: NativeUInt): PWideChar;
 begin
   FUniTemp := GetUnicodeString(ColumnIndex);
-  Result.Len := Length(FUniTemp);
-  if Result.Len = 0 then
-    Result.P := PWideChar(FUniTemp) //RTL conversion
+  Len := Length(FUniTemp);
+  {no RTL conversion to PWideChar}
+  if Len = 0 then
+    Result := PEmptyUnicodeString
   else
-    Result.P := Pointer(FUniTemp); //No conversion
+    Result := Pointer(FUniTemp);
 end;
 {**
   Gets the value of the designated column in the current row
@@ -875,11 +881,14 @@ end;
 }
 function TZAbstractResultSet.GetString(ColumnIndex: Integer): String;
 {$IFDEF UNICODE}
-var Len: NativeUInt;
+var
+  Len: NativeUInt;
+  P: PAnsiChar;
 {$ENDIF}
 begin
   {$IFDEF UNICODE}
-  Result := PRawToUnicode(GetPRaw(ColumnIndex, Len), Len, ConSettings^.ClientCodePage^.CP);
+  P := GetPAnsiChar(ColumnIndex, Len);
+  Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP);
   {$ELSE}
   Result := ConSettings^.ConvFuncs.ZRawToString(InternalGetString(ColumnIndex),
     ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
@@ -915,7 +924,7 @@ var
   P: PAnsiChar;
   Len: NativeUInt;
 begin
-  P := GetPRaw(ColumnIndex, Len);
+  P := GetPAnsiChar(ColumnIndex, Len);
   Result := ConSettings^.ConvFuncs.ZPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.CP);
 end;
 
@@ -1535,21 +1544,6 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetPRawByName(const ColumnName: string;
-  out Len: NativeUInt): PAnsiChar;
-begin
-  Result := GetPRaw(GetColumnIndex(ColumnName), Len);
-end;
-
-{**
-  Gets the value of the designated column in the current row
-  of this <code>ResultSet</code> object as
-  a <code>PAnsiChar</code> in the Delphi programming language.
-
-  @param columnName the SQL name of the column
-  @return the column value; if the value is SQL <code>NULL</code>, the
-    value returned is <code>null</code>
-}
 function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string): PAnsiChar;
 begin
   Result := GetPAnsiChar(GetColumnIndex(ColumnName));
@@ -1558,15 +1552,33 @@ end;
 {**
   Gets the value of the designated column in the current row
   of this <code>ResultSet</code> object as
-  a <code>TZWideRec</code> in the Delphi programming language.
+  a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnName the SQL name of the column
+  @param Len the length in bytes
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZAbstractResultSet.GetWideRecByName(const ColumnName: string): TZWideRec;
+function TZAbstractResultSet.GetPAnsiCharByName(const ColumnName: string;
+  out Len: NativeUInt): PAnsiChar;
 begin
-  Result := GetWideRec(GetColumnIndex(ColumnName));
+  Result := GetPAnsiChar(GetColumnIndex(ColumnName), Len);
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>PWideChar</code> in the Delphi programming language.
+
+  @param columnName the SQL name of the column
+  @param Len the Length of th UCS2 string in codepoints
+  @return the column value; if the value is SQL <code>NULL</code>, the
+    value returned is <code>null</code>
+}
+function TZAbstractResultSet.GetPWideCharByName(const ColumnName: string;
+  out Len: NativeUInt): PWideChar;
+begin
+  Result := GetPWideChar(GetColumnIndex(ColumnName), Len);
 end;
 
 {**
@@ -2721,7 +2733,11 @@ end;
 procedure TZAbstractResultSet.UpdatePChar(ColumnIndex: Integer;
   const Value: PChar);
 begin
-  UpdateString(ColumnIndex, Value);
+  {$IFDEF UNICODE}
+  UpdatePWideChar(ColumnIndex, Value);
+  {$ELSE}
+  UpdatePAnsiChar(ColumnIndex, Value);
+  {$ENDIF}
 end;
 
 {**
@@ -2735,7 +2751,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
-  const Value: PAnsiChar);
+  Value: PAnsiChar);
 begin
   RaiseReadOnlyException;
 end;
@@ -2748,9 +2764,10 @@ end;
   <code>insertRow</code> methods are called to update the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len the pointer to length in bytes
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdatePRaw(ColumnIndex: Integer;
+procedure TZAbstractResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; Len: PNativeUInt);
 begin
   RaiseReadOnlyException;
@@ -2767,7 +2784,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdatePWideChar(ColumnIndex: Integer;
-  const Value: PWideChar);
+  Value: PWideChar);
 begin
   RaiseReadOnlyException;
 end;
@@ -2780,10 +2797,11 @@ end;
   <code>insertRow</code> methods are called to update the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len a pointer to length of the string in codepoints
   @param x the new column value
 }
-procedure TZAbstractResultSet.UpdateWideRec(ColumnIndex: Integer;
-  const Value: TZWideRec);
+procedure TZAbstractResultSet.UpdatePWideChar(ColumnIndex: Integer;
+  Value: PWideChar; Len: PNativeUInt);
 begin
   RaiseReadOnlyException;
 end;
@@ -3276,13 +3294,41 @@ begin
   UpdateBigDecimal(GetColumnIndex(ColumnName), Value);
 end;
 
-procedure TZAbstractResultSet.UpdatePRawByName(const ColumnName: string;
+{**
+  Updates the designated column with a <code>PAnsiChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdatePAnsiCharByName(const ColumnName: string;
+  Value: PAnsiChar);
+begin
+  UpdatePAnsiChar(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>PAnsiChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param Len the pointer to the length in bytes
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdatePAnsiCharByName(const ColumnName: string;
   Value: PAnsiChar; Len: PNativeUInt);
 begin
-  UpdatePRaw(GetColumnIndex(ColumnName), Value, Len);
+  UpdatePAnsiChar(GetColumnIndex(ColumnName), Value, Len);
 end;
+
 {**
-  Updates the designated column with a <code>String</code> value.
+  Updates the designated column with a <code>PChar</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
   update the underlying database; instead the <code>updateRow</code> or
@@ -3292,9 +3338,42 @@ end;
   @param x the new column value
 }
 procedure TZAbstractResultSet.UpdatePCharByName(const ColumnName: string;
-   const Value: PChar);
+  const Value: PChar);
 begin
   UpdatePChar(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>PWideChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdatePWideCharByName(const ColumnName: string;
+  Value: PWideChar);
+begin
+  UpdatePWideChar(GetColumnIndex(ColumnName), Value);
+end;
+
+{**
+  Updates the designated column with a <code>PWideChar</code> value.
+  The <code>updateXXX</code> methods are used to update column values in the
+  current row or the insert row.  The <code>updateXXX</code> methods do not
+  update the underlying database; instead the <code>updateRow</code> or
+  <code>insertRow</code> methods are called to update the database.
+
+  @param columnName the name of the column
+  @param Len the pointer to the length of the string in codepopints
+  @param x the new column value
+}
+procedure TZAbstractResultSet.UpdatePWideCharByName(const ColumnName: string;
+  Value: PWideChar; Len: PNativeUInt);
+begin
+  UpdatePWideChar(GetColumnIndex(ColumnName), Value, Len);
 end;
 
 {**
@@ -4183,7 +4262,7 @@ end;
 
 procedure TZAbstractCLob.InternalSetUnicodeString(const Value: ZWideString);
 begin
-  FBlobSize := (System.Length(Value)+1)*2;
+  FBlobSize := (System.Length(Value)+1) shl 1;
   FCurrentCodePage := zCP_UTF16;
   ReallocMem(FBlobData, FBlobSize);
   System.Move(PWideChar(Value)^, FBlobData^, FBlobSize);
@@ -4236,7 +4315,7 @@ begin
     FBlobSize := -1
   else
     if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
-      InternalSetPWidechar(TMemoryStream(Stream).Memory, Stream.Size div 2)
+      InternalSetPWidechar(TMemoryStream(Stream).Memory, Stream.Size shr 1)
     else
       InternalSetPAnsiChar(TMemoryStream(Stream).Memory, CodePage, Stream.Size);
   FUpdated := False;
@@ -4310,7 +4389,7 @@ begin
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
-        Result := PUnicodeToRaw(FBlobData, (FBlobSize div 2) -1, FConSettings^.ClientCodePage^.CP)
+        Result := PUnicodeToRaw(FBlobData, (FBlobSize shr 1) -1, FConSettings^.ClientCodePage^.CP)
       else
       begin
         WS := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage);
@@ -4338,7 +4417,7 @@ begin
     begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
-        System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize div 2) -1)
+        System.SetString(UniTemp, PWidechar(FBlobData), (FBlobSize shr 1) -1)
       else
         UniTemp := PRawToUnicode(FBlobData, FBlobSize-1, FCurrentCodePage); //localize possible COM based WideString to prevent overflow
       Result := AnsiString(UniTemp);
@@ -4365,7 +4444,7 @@ begin
       if ( FCurrentCodePage = zCP_UTF16 ) or
          ( FCurrentCodePage = zCP_UTF16BE ) then
       begin
-        System.SetString(Uni, PWidechar(FBlobData), (FBlobSize div 2) -1);
+        System.SetString(Uni, PWidechar(FBlobData), (FBlobSize shr 1) -1);
         {$IFDEF WITH_RAWBYTESTRING}
         Result := UTF8String(Uni)
         {$ELSE}
@@ -4398,7 +4477,7 @@ begin
     if (FCurrentCodePage = zCP_UTF16) or
        (FCurrentCodePage = zCP_UTF16BE) then
     begin
-      SetLength(Result, (FBlobSize div 2) -1);
+      SetLength(Result, (FBlobSize shr 1) -1);
       System.Move(FBlobData^, PWideChar(Result)^, FBlobSize - 2);
     end
     else
@@ -4444,7 +4523,7 @@ begin
   else
   begin
     if (CodePage = zCP_UTF16) or (CodePage = zCP_UTF16BE) then
-      SetPWideChar(TMemoryStream(Value).Memory, Value.Size div 2)
+      SetPWideChar(TMemoryStream(Value).Memory, Value.Size shr 1)
     else
       SetPAnsiChar(TMemoryStream(Value).Memory, CodePage, Value.Size)
   end;
@@ -4547,7 +4626,7 @@ begin
     begin
       if (FCurrentCodePage = zCP_UTF16) or
          (FCurrentCodePage = zCP_UTF16BE) then
-        TempRaw := PUnicodeToRaw(FBlobData, (FBlobSize div 2) -1, CodePage)
+        TempRaw := PUnicodeToRaw(FBlobData, (FBlobSize shr 1) -1, CodePage)
       else
       begin
         WS := PRawToUnicode(FBlobData, FBlobSize -1, FCurrentCodePage);
@@ -4610,7 +4689,7 @@ begin
     if Empty then
       Result := TZAbstractCLob.CreateWithData(nil, 0, FConSettings)
     else
-      Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize div 2)-1, FConSettings)
+      Result := TZAbstractCLob.CreateWithData(FBlobData, (FBlobSize shr 1)-1, FConSettings)
   else
     if Empty then
       Result := TZAbstractCLob.CreateWithData(nil, 0, FCurrentCodePage, FConSettings)

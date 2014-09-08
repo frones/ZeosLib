@@ -1346,7 +1346,7 @@ begin
       //else Result.UpdateNull(CatalogNameIndex);
       //Result.UpdateNull(SchemaNameIndex);
       Result.UpdateString(TableNameIndex, TempTableNamePattern);
-      Result.UpdatePRaw(ColumnNameIndex, GetPRaw(name_index, Len), @Len);
+      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
       Result.UpdateInt(TableColColumnTypeIndex, Ord(ConvertSQLiteTypeToSQLType(GetRawByteString(type_index),
         UndefinedVarcharAsStringLength, Precision{%H-}, Decimals{%H-}, ConSettings.CPType)));
 
@@ -1372,7 +1372,7 @@ begin
       end;
 
       if Trim(GetString(dflt_value_index)) <> '' then
-        Result.UpdatePRaw(TableColColumnColDefIndex, GetPRaw(dflt_value_index, Len), @Len);
+        Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(dflt_value_index, Len), @Len);
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(cid_index) +1);
 
       Result.UpdateBoolean(TableColColumnAutoIncIndex, (GetInt(pk_index) = 1) and (Temp = 'INTEGER'));
@@ -1442,7 +1442,7 @@ begin
       if Schema <> '' then
         Result.UpdateString(CatalogNameIndex, Schema);
       Result.UpdateString(TableNameIndex, Table);
-      Result.UpdatePRaw(PrimaryKeyColumnNameIndex, GetPRaw(name_index, Len), @Len);
+      Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiChar(name_index, Len), @Len);
       Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(cid_index)+1);
       Result.InsertRow;
     end;
@@ -1646,9 +1646,9 @@ begin
               Result.UpdateString(CatalogNameIndex, Schema);
             Result.UpdateString(TableNameIndex, Table);
             Result.UpdateBoolean(IndexInfoColNonUniqueIndex, MainResultSet.GetInt(main_unique_field_index) = 0);
-            Result.UpdatePRaw(IndexInfoColIndexNameIndex, MainResultSet.GetPRaw(main_name_field_index, Len), @Len);
+            Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, MainResultSet.GetPAnsiChar(main_name_field_index, Len), @Len);
             Result.UpdateInt(IndexInfoColOrdPositionIndex, ResultSet.GetInt(sub_seqno_field_index){$IFNDEF GENERIC_INDEX} + 1{$ENDIF});
-            Result.UpdatePRaw(IndexInfoColColumnNameIndex, ResultSet.GetPRaw(sub_name_field_index, Len), @Len);
+            Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, ResultSet.GetPAnsiChar(sub_name_field_index, Len), @Len);
             Result.UpdateString(IndexInfoColAscOrDescIndex, 'A');
             Result.UpdateInt(IndexInfoColCardinalityIndex, 0);
             Result.UpdateInt(IndexInfoColPagesIndex, 0);

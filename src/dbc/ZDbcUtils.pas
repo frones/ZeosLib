@@ -928,7 +928,7 @@ end;
 function GetValidatedAnsiStringFromBuffer(const Buffer: Pointer; Size: Cardinal;
   ConSettings: PZConSettings): RawByteString;
 var
-  US: ZWideString;
+  US: ZWideString; //possible com base widestring -> prevent overflow
   Bytes: TByteDynArray;
 begin
   if Size = 0 then
@@ -938,26 +938,30 @@ begin
     SetLength(Bytes, Size +2);
     System.move(Buffer^, Pointer(Bytes)^, Size);
     case TestEncoding(Bytes, Size, ConSettings) of
-      ceDefault: Result := PAnsiChar(Bytes);
+      ceDefault: ZSetString(Buffer, Size, Result);
       ceAnsi:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then
           if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
-            Result := PAnsiChar(Bytes)  //should be exact
+            ZSetString(Buffer, Size, Result)  //should be exact
           else
-            {$IFDEF WITH_LCONVENCODING}
-            Result := Consettings^.PlainConvertFunc(AnsiToUTF8(PAnsiChar(Bytes)))  //no other possibility
-            {$ELSE}
-            Result := ZUnicodeToRaw(ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP), ConSettings.ClientCodePage.CP)
-            {$ENDIF}
+          begin
+            US := PRawToUnicode(Pointer(Bytes), Size, ConSettings.CTRL_CP);
+            Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP)
+          end
         else  //Database expects UTF8
           if ( ConSettings.CTRL_CP = zCP_UTF8) then
-            Result := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
+            if ZDefaultSystemCodePage = zCP_UTF8 then
+              Result := AnsiToUTF8(String(PAnsiChar(Bytes))) //Can't localize the ansi CP
+            else
+            begin
+              US := PRawToUnicode(Pointer(Bytes), Size, ZDefaultSystemCodePage);
+              Result := ZUnicodeToRaw(US, ConSettings.ClientCodePage.CP);
+            end
           else
-            {$IFDEF WITH_LCONVENCODING}
-            Result := AnsiToUTF8(PAnsiChar(Bytes));
-            {$ELSE}
-            Result := UTF8Encode(ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP));
-            {$ENDIF}
+          begin
+            US := PRawToUnicode(Pointer(Bytes), Size, ConSettings.CTRL_CP);
+            Result := UTF8Encode(US);
+          end;
       ceUTF8:
         if ConSettings.ClientCodePage.Encoding = ceAnsi then //ansi expected
           {$IFDEF WITH_LCONVENCODING}
@@ -966,10 +970,10 @@ begin
           Result := ZUnicodeToRaw(UTF8ToString(PAnsiChar(Bytes)), ConSettings.ClientCodePage.CP)
           {$ENDIF}
          else //UTF8 Expected
-           Result := PAnsiChar(Bytes);
+           ZSetString(Buffer, Size, Result);  //should be exact
       ceUTF16:
         begin
-          SetLength(US, Size div 2);
+          SetLength(US, Size shr 1);
           System.Move(Bytes[0], US[1], Size);
           if ConSettings.ClientCodePage.Encoding = ceAnsi then
             {$IFDEF WITH_LCONVENCODING}
@@ -1025,12 +1029,6 @@ var
   Len: Integer;
   US: ZWideString;
   Bytes: TByteDynArray;
-
-  procedure SetFromWide;
-  begin
-    SetLength(US, Size div 2);
-    System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
-  end;
 begin
   Result := nil;
   US := '';
@@ -1042,33 +1040,21 @@ begin
       Result := GetValidatedUnicodeStream(PAnsiChar(Bytes), ConSettings, FromDB)
     else
       case TestEncoding(Bytes, Size, ConSettings) of
-        ceDefault:
-          case Consettings.ClientCodePage.Encoding of
-            ceUTF8: US := UTF8ToString(PAnsiChar(Bytes));
-            ceAnsi:
-              {$IFDEF WITH_LCONVENCODING}
-              US := ZWideString(PAnsiChar(Bytes)); //cast means random success
-              {$ELSE}
-              if ( ConSettings.CTRL_CP = zCP_UTF8) then
-                US := ZWideString(PAnsiChar(Bytes)) //random success
-              else
-                US := ZRawToUnicode(PAnsiChar(Bytes), ConSettings.CTRL_CP);
-             {$ENDIF}
-            end;
-        ceAnsi: //We've to start from the premisse we've got a Unicode string i there
+        ceDefault: US := USASCII7ToUnicodeString(Buffer, Size);
+        ceAnsi: //We've to start from the premisse we've got a Unicode string in here ):
           begin
-            SetLength(US, Size div 2);
+            SetLength(US, Size shr 1);
             System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
           end;
-        ceUTF8: US := UTF8ToString(PAnsiChar(Bytes));
+        ceUTF8: US := PRawToUnicode(Buffer, size, zCP_UTF8);
         ceUTF16:
           begin
-            SetLength(US, Size div 2);
+            SetLength(US, Size shr 1);
             System.Move(Pointer(Bytes)^, Pointer(US)^, Size);
           end;
       end;
 
-    Len := Length(US)*2;
+    Len := Length(US) shl 1;
     if not Assigned(Result) and (Len > 0) then
     begin
       Result := TMemoryStream.Create;
@@ -1097,7 +1083,7 @@ begin
     else
       case ZDetectUTF8Encoding(Ansi) of
         etUSASCII: US := USASCII7ToUnicodeString(Ansi);
-        etUTF8: US := UTF8ToString(Ansi);
+        etUTF8: US := PRawToUnicode(Pointer(Ansi), Length(Ansi), zCP_UTF8);
         etAnsi:
           {$IFDEF WITH_LCONVENCODING}
           US := ZWideString(Ansi); //random success

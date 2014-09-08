@@ -2646,7 +2646,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdatePRaw(TypeInfoTypeNameIndex, GetPRaw(RDB_TYPE_NAME, Len), @Len);
+        Result.UpdatePAnsiChar(TypeInfoTypeNameIndex, GetPAnsiChar(RDB_TYPE_NAME, Len), @Len);
         Result.UpdateInt(TypeInfoDataTypeIndex, Ord(ConvertInterbase6ToSqlType(
           GetInt(RDB_TYPE), 0, 10, ConSettings.CPType))); //added a scale > 4 since type_info doesn't deal with user defined scale
         Result.UpdateInt(TypeInfoPecisionIndex, 9);

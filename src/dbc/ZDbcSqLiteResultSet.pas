@@ -91,7 +91,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -308,11 +308,11 @@ end;
   a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
+  @param Len the Length of the String in bytes
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
@@ -360,7 +360,7 @@ begin //rewritten because of performance reasons to avoid localized the RBS befo
     Result := ''
   else
   begin
-    P := GetPRaw(ColumnIndex, Len);
+    P := GetPAnsiChar(ColumnIndex, Len);
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
     ZSetString(P, Len, result);
     {$ELSE}

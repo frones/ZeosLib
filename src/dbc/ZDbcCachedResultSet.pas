@@ -224,10 +224,10 @@ type
     procedure UpdateCurrency(ColumnIndex: Integer; const Value: Currency); override;
     procedure UpdateBigDecimal(ColumnIndex: Integer; const Value: Extended); override;
     procedure UpdatePChar(ColumnIndex: Integer; const Value: PChar); override;
-    procedure UpdatePAnsiChar(ColumnIndex: Integer; const Value: PAnsiChar); override;
-    procedure UpdatePRaw(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUint); override;
-    procedure UpdatePWideChar(ColumnIndex: Integer; const Value: PWideChar); override;
-    procedure UpdateWideRec(ColumnIndex: Integer; const Value: TZWideRec); override;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar); override;
+    procedure UpdatePAnsiChar(ColumnIndex: Integer; Value: PAnsiChar; Len: PNativeUint); override;
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar); override;
+    procedure UpdatePWideChar(ColumnIndex: Integer; Value: PWideChar; Len: PNativeUint); override;
     procedure UpdateString(ColumnIndex: Integer; const Value: String); override;
     procedure UpdateAnsiString(ColumnIndex: Integer; const Value: AnsiString); override;
     procedure UpdateUTF8String(ColumnIndex: Integer; const Value: UTF8String); override;
@@ -314,17 +314,16 @@ uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding
 
 procedure ZStringFieldAssignFromResultSet_AnsiRec(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
-var
-  Len: NativeUInt;
+var Len: NativeUInt;
 begin
-  RowAccessor.SetPRaw(ColumnIndex, ResultSet.GetPRaw(ColumnIndex, Len), @Len);
+  RowAccessor.SetPAnsiChar(ColumnIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len);
 end;
 
 procedure ZStringFieldAssignFromResultSet_Unicode(RowAccessor: TZRowAccessor;
     ResultSet: IZResultSet; const ColumnIndex: Integer);
+var Len: NativeUInt;
 begin
-  RowAccessor.SetUnicodeString(ColumnIndex, ResultSet.GetUnicodeString(ColumnIndex));
-  //EH: Hint using the TZWideRecs doesn't perform better here
+  RowAccessor.SetPWideChar(ColumnIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
 end;
 
 { TZAbstractCachedResultSet }
@@ -1574,7 +1573,7 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
-  const Value: PAnsiChar);
+  Value: PAnsiChar);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
@@ -1593,14 +1592,14 @@ end;
   @param columnIndex the first column is 1, the second is 2, ...
   @param x the new column value
 }
-procedure TZAbstractCachedResultSet.UpdatePRaw(ColumnIndex: Integer;
+procedure TZAbstractCachedResultSet.UpdatePAnsiChar(ColumnIndex: Integer;
   Value: PAnsiChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetPRaw(ColumnIndex, Value, Len);
+  FRowAccessor.SetPAnsiChar(ColumnIndex, Value, Len);
 end;
 
 {**
@@ -1614,40 +1613,39 @@ end;
   @param x the new column value
 }
 procedure TZAbstractCachedResultSet.UpdatePWideChar(ColumnIndex: Integer;
-  const Value: PWideChar);
-var
-  WideRec: TZWideRec;
+  Value: PWideChar);
+var Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  WideRec.P := Value;
   if Value = nil then
-    WideRec.Len := 0
+    Len := 0
   else
-    WideRec.Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(Value);
-  FRowAccessor.SetWideRec(ColumnIndex, WideRec);
+    Len := {$IFDEF WITH_PWIDECHAR_STRLEN}SysUtils.StrLen{$ELSE}Length{$ENDIF}(Value);
+  FRowAccessor.SetPWideChar(ColumnIndex, Value, @Len);
 end;
 
 {**
-  Updates the designated column with a <code>TZWideRec</code> value.
+  Updates the designated column with a <code>PWideChar</code> value.
   The <code>updateXXX</code> methods are used to update column values in the
   current row or the insert row.  The <code>updateXXX</code> methods do not
   update the underlying database; instead the <code>updateRow</code> or
   <code>insertRow</code> methods are called to update the database.
 
   @param columnIndex the first column is 1, the second is 2, ...
+  @param Len a pointer to the Length of the value in codepoints
   @param x the new column value
 }
-procedure TZAbstractCachedResultSet.UpdateWideRec(ColumnIndex: Integer;
-  const Value: TZWideRec);
+procedure TZAbstractCachedResultSet.UpdatePWideChar(ColumnIndex: Integer;
+  Value: PWideChar; Len: PNativeUInt);
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckUpdatable;
 {$ENDIF}
   PrepareRowForUpdates;
-  FRowAccessor.SetWideRec(ColumnIndex, Value);
+  FRowAccessor.SetPWideChar(ColumnIndex, Value, Len);
 end;
 
 

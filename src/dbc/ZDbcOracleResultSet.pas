@@ -94,7 +94,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -266,7 +266,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
+function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var
   SQLVarHolder: PZSQLVar;
   Blob: IZBlob;
@@ -393,7 +393,7 @@ end;
 function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 var Len: NativeUInt;
 begin
-  Result := GetPRaw(ColumnIndex, Len);
+  Result := GetPAnsiChar(ColumnIndex, Len);
 end;
 
 {**
@@ -1267,7 +1267,7 @@ begin
           Result := TZAbstractBlob.CreateWithData({%H-}PAnsiChar({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)+ SizeOf(Integer),
             {%H-}PInteger({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)^)
         else
-          Result := TZAbstractClob.CreateWithData(GetPRaw(ColumnIndex, Len), Len,
+          Result := TZAbstractClob.CreateWithData(GetPAnsiChar(ColumnIndex, Len), Len,
             ConSettings^.ClientCodePage^.CP, ConSettings);
 end;
 

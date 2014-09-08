@@ -1850,7 +1850,7 @@ var
   P: PAnsiChar;
   L: NativeUInt;
 begin
-  P := RowAccessor.GetPRaw(ColumnIndex, Result{%H-}, L);
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
   if Result then
     Buffer^ := #0
   else
@@ -2845,10 +2845,11 @@ function TZAbstractRODataset.GetFieldData(Field: TField;
   {$IFDEF WITH_VAR_TVALUEBUFFER}var{$ENDIF}Buffer:
     {$IFDEF WITH_TVALUEBUFFER}TValueBuffer{$ELSE}Pointer{$ENDIF}): Boolean;
 var
-  ColumnIndex, Len: Integer;
+  ColumnIndex: Integer;
+  Len: NativeUInt;
+  P: PWideChar;
   RowBuffer: PZRowBuffer;
   Bts: TBytes;
-  WideRec: TZWideRec;
 begin
   if GetActiveBuffer(RowBuffer{%H-}) then
   begin
@@ -2880,13 +2881,13 @@ begin
           Result := RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty;
         ftWideString:
           begin
-            WideRec := RowAccessor.GetWideRec(ColumnIndex, Result);
+            P := RowAccessor.GetPWidechar(ColumnIndex, Result, Len);
             if Result then
               PWideChar(Buffer)^ := WideChar(#0)
             else
             begin //instead of WStrCopy()
-              Len := Min(WideRec.Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-              System.Move(WideRec.P^, PWideChar(Buffer)^, Len*2);
+              Len := Min(Len, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+              System.Move(P^, Pointer(Buffer)^, Len shl 1);
               (PWideChar(Buffer)+Len)^ := WideChar(#0);
             end;
           end;
@@ -6606,7 +6607,7 @@ end;
 
 function TZWideStringField.GetDataSize: Integer;
 begin
-  Result := (Size +1)*2;
+  Result := (Size +1) shl 1;
 end;
 
 { TZFloatField }
@@ -7140,7 +7141,7 @@ begin
   begin
     for I := 0 to FOwnedFields.Count - 1 do
       Inc(Result, TZField(FOwnedFields[I]).GetDefaultWidth);
-    Result := Result div 2;
+    Result := Result shr 1;
   end;
 end;
 

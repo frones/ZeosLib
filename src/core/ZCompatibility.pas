@@ -126,12 +126,6 @@ const
   StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
   {$ENDIF}
 type
-  PZWideRec = ^TZWideRec;
-  TZWideRec = Record
-    Len: Cardinal;
-    P: PWideChar;
-  end;
-
   TZCharRec = Record
     Len: Cardinal; //Length of String
     P: Pointer;    //Allocated Mem of String including #0 terminator
@@ -303,7 +297,7 @@ type
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
   TPRawToString = function (const Src: PAnsiChar; Len: LengthInt; const StringCP: Word): String;
-  TZWideRecToString = function (const Value: TZWideRec; const StringCP: Word): String;
+  TPUnicodeToString = function (const Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -346,7 +340,7 @@ type
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
     ZPRawToString: TPRawToString;
-    ZWideRecToString: TZWideRecToString;
+    ZPUnicodeToString: TPUnicodeToString;
     ZPRawToUTF8: TPRawToUTF8;
   end;
 

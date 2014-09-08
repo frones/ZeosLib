@@ -95,7 +95,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetString(ColumnIndex: Integer): String; override;
@@ -504,7 +504,7 @@ begin
         SQL_TYPE_TIME : Result := 0;
         SQL_TEXT, SQL_VARYING:
           begin
-            P := GetPRaw(ColumnIndex, Len);
+            P := GetPAnsiChar(ColumnIndex, Len);
             if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
               Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1197,7 +1197,7 @@ begin
           end;
         SQL_TEXT, SQL_VARYING:
           begin
-            P := GetPRaw(ColumnIndex, Len);
+            P := GetPAnsiChar(ColumnIndex, Len);
             if (P+2)^ = ':' then //possible date if Len = 10 then
               Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1259,7 +1259,7 @@ begin
           end;
         SQL_TEXT, SQL_VARYING:
           begin
-            P := GetPRaw(ColumnIndex, Len);
+            P := GetPAnsiChar(ColumnIndex, Len);
             if (P+2)^ = ':' then
               Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
@@ -1309,7 +1309,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6XSQLDAResultSet.GetPRaw(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
   SQLCode: SmallInt;
 begin
@@ -1409,7 +1409,7 @@ end;
 function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 var Len: NativeUInt;
 begin
-  Result := GetPRaw(ColumnIndex, Len);
+  Result := GetPAnsiChar(ColumnIndex, Len);
 end;
 
 {**
@@ -1678,7 +1678,7 @@ begin
   begin
     SubType := GetIbSqlSubType(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
 
-    P := GetPRaw(ColumnIndex, Len);
+    P := GetPAnsiChar(ColumnIndex, Len);
     if SubType > High(FCodePageArray) then
       Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP)
     else
