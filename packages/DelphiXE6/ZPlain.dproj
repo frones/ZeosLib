@@ -4,7 +4,7 @@
         <MainSource>ZPlain.dpk</MainSource>
         <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
         <DCC_DCCCompiler>DCC32</DCC_DCCCompiler>
-        <DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documentos\RAD Studio\9.0\Bpl\ZPlain170.bpl</DCC_DependencyCheckOutputName>
+        <DCC_DependencyCheckOutputName>C:\Documents and Settings\All Users\Documentos\RAD Studio\9.0\Bpl\ZPlain200.bpl</DCC_DependencyCheckOutputName>
         <ProjectVersion>15.1</ProjectVersion>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Base>True</Base>
@@ -126,7 +126,7 @@
         <DCC_IncludePath>$(BDSCOMMONDIR)\Bpl;$(DCC_IncludePath)</DCC_IncludePath>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <DllSuffix>190</DllSuffix>
+        <DllSuffix>200</DllSuffix>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_MapFile>0</DCC_MapFile>
         <VerInfo_Locale>1033</VerInfo_Locale>
@@ -165,32 +165,6 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Parameters/>
-                <VersionInfo>
-                    <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
-                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
-                    <VersionInfo Name="MajorVer">1</VersionInfo>
-                    <VersionInfo Name="MinorVer">0</VersionInfo>
-                    <VersionInfo Name="Release">0</VersionInfo>
-                    <VersionInfo Name="Build">0</VersionInfo>
-                    <VersionInfo Name="Debug">False</VersionInfo>
-                    <VersionInfo Name="PreRelease">False</VersionInfo>
-                    <VersionInfo Name="Special">False</VersionInfo>
-                    <VersionInfo Name="Private">False</VersionInfo>
-                    <VersionInfo Name="DLL">False</VersionInfo>
-                    <VersionInfo Name="Locale">1031</VersionInfo>
-                    <VersionInfo Name="CodePage">1252</VersionInfo>
-                </VersionInfo>
-                <VersionInfoKeys>
-                    <VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
-                    <VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
-                    <VersionInfoKeys Name="CompanyName"/>
-                    <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="InternalName"/>
-                    <VersionInfoKeys Name="LegalCopyright"/>
-                    <VersionInfoKeys Name="LegalTrademarks"/>
-                    <VersionInfoKeys Name="OriginalFilename"/>
-                    <VersionInfoKeys Name="ProductName"/>
-                </VersionInfoKeys>
                 <Source>
                     <Source Name="MainSource">ZPlain.dpk</Source>
                 </Source>

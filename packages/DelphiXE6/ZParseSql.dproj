@@ -70,7 +70,7 @@
         <DllSuffix>170</DllSuffix>
         <DCC_Description>Zeos SQL Parsing Classes and Interfaces</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
-        <DCC_DependencyCheckOutputName>build\ZParseSql170.bpl</DCC_DependencyCheckOutputName>
+        <DCC_DependencyCheckOutputName>build\ZParseSql200.bpl</DCC_DependencyCheckOutputName>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <GenDll>true</GenDll>
@@ -134,19 +134,6 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="ZCore.dcp"/>
-        <DCCReference Include="..\..\src\parsesql\ZAdoToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZInterbaseAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZInterbaseToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZMySqlAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZMySqlToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZPostgreSqlAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZPostgreSqlToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSybaseAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSybaseToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZOracleToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZOracleAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSqLiteToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSqLiteAnalyser.pas"/>
         <DCCReference Include="..\..\src\parsesql\ZGenericSqlToken.pas"/>
         <DCCReference Include="..\..\src\parsesql\ZGenericSqlAnalyser.pas"/>
         <DCCReference Include="..\..\src\parsesql\ZScriptParser.pas"/>
@@ -170,33 +157,6 @@
         <BorlandProject>
             <Delphi.Personality>
                 <Parameters/>
-                <VersionInfo>
-                    <VersionInfo Name="IncludeVerInfo">True</VersionInfo>
-                    <VersionInfo Name="AutoIncBuild">False</VersionInfo>
-                    <VersionInfo Name="MajorVer">1</VersionInfo>
-                    <VersionInfo Name="MinorVer">0</VersionInfo>
-                    <VersionInfo Name="Release">0</VersionInfo>
-                    <VersionInfo Name="Build">0</VersionInfo>
-                    <VersionInfo Name="Debug">False</VersionInfo>
-                    <VersionInfo Name="PreRelease">False</VersionInfo>
-                    <VersionInfo Name="Special">False</VersionInfo>
-                    <VersionInfo Name="Private">False</VersionInfo>
-                    <VersionInfo Name="DLL">False</VersionInfo>
-                    <VersionInfo Name="Locale">1031</VersionInfo>
-                    <VersionInfo Name="CodePage">1252</VersionInfo>
-                </VersionInfo>
-                <VersionInfoKeys>
-                    <VersionInfoKeys Name="CompanyName"/>
-                    <VersionInfoKeys Name="FileDescription"/>
-                    <VersionInfoKeys Name="FileVersion">1.0.0.0</VersionInfoKeys>
-                    <VersionInfoKeys Name="InternalName"/>
-                    <VersionInfoKeys Name="LegalCopyright"/>
-                    <VersionInfoKeys Name="LegalTrademarks"/>
-                    <VersionInfoKeys Name="OriginalFilename"/>
-                    <VersionInfoKeys Name="ProductName"/>
-                    <VersionInfoKeys Name="ProductVersion">1.0.0.0</VersionInfoKeys>
-                    <VersionInfoKeys Name="Comments"/>
-                </VersionInfoKeys>
                 <Source>
                     <Source Name="MainSource">ZParseSql.dpk</Source>
                 </Source>
