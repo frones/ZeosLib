@@ -360,6 +360,11 @@
   {$DEFINE WITH_FLOATTOTEXT_DEPRECATED} //FloatToText(PAnsi...) is deprecated moved to AnsiStrings
 {$ENDIF}
 
+{$IFDEF DELPHI20_UP}
+  {$DEFINE WITH_IPROVIDERSUPPORT_NG} //supports IProviderSupportNG / IProviderSupport is deprecated
+  {$DEFINE TFIELD_HAS_ASLONGWORD} //TField has supports virtual AsLongWord Gettet & Setter 
+{$ENDIF}
+
 {$IFNDEF WIN32} //global undefines
   {$UNDEF USE_FAST_TRUNC}
 {$ENDIF}
@@ -406,6 +411,15 @@
 {$DEFINE DISABLE_CHECKING}
 {$ENDIF}
 
+// Uncomment these defines to disable some DB drivers (reduce binary size)
+{.$DEFINE ZEOS_DISABLE_MYSQL}
+{.$DEFINE ZEOS_DISABLE_POSTGRESQL}
+{.$DEFINE ZEOS_DISABLE_DBLIB}
+{.$DEFINE ZEOS_DISABLE_ADO}
+{.$DEFINE ZEOS_DISABLE_INTERBASE}
+{.$DEFINE ZEOS_DISABLE_SQLITE}
+{.$DEFINE ZEOS_DISABLE_ORACLE}
+{.$DEFINE ZEOS_DISABLE_ASA}
 
 // Enables MySQL support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_MYSQL}

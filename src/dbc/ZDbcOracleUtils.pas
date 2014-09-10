@@ -1275,9 +1275,10 @@ begin
   PrefetchCount := 0;
   if ServerCachedStmtHandle then
   begin
+    {indicate length + 1! see: https://sourceforge.net/p/zeoslib/tickets/93/}
     CheckOracleError(PlainDriver, ErrorHandle,
       PlainDriver.StmtPrepare2(ContextHandle, Handle, ErrorHandle,
-        Pointer(SQL), Length(SQL),nil,0,OCI_NTV_SYNTAX,OCI_DEFAULT),
+        Pointer(SQL), Length(SQL)+1,nil,0,OCI_NTV_SYNTAX,OCI_DEFAULT),
       lcExecute, SQL, ConSettings);
     CheckOracleError(PlainDriver, ErrorHandle,
      PlainDriver.AttrSet(Handle,OCI_HTYPE_STMT, @PrefetchCount ,0, OCI_ATTR_PREFETCH_ROWS,ErrorHandle),
@@ -1295,7 +1296,7 @@ begin
       PlainDriver.AttrSet(Handle,OCI_HTYPE_STMT,@PrefetchMemory,0,OCI_ATTR_PREFETCH_MEMORY,ErrorHandle),
         lcOther, 'Prefetch_Memory', ConSettings);
     CheckOracleError(PlainDriver, ErrorHandle, PlainDriver.StmtPrepare(Handle,
-      ErrorHandle, Pointer(SQL), Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT),
+      ErrorHandle, Pointer(SQL), Length(SQL)+1, OCI_NTV_SYNTAX, OCI_DEFAULT),
       lcExecute, SQL, ConSettings);
   end;
 end;
