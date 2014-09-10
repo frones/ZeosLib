@@ -650,29 +650,6 @@ begin
   FLoader := TZNativeLibraryLoader.Create([]);
   for i := 0 to high(DBVariables.DBoptions) do DBVariables.DBoptions[i] := -1;
   for i := 0 to high(DBVariables.DBSetLoginRec) do DBVariables.DBSetLoginRec[i] := -1;
-  DBVariables.datatypes[Z_SQLVOID]      := DBLIBSQLVOID;
-  DBVariables.datatypes[Z_SQLTEXT]      := DBLIBSQLTEXT;
-  DBVariables.datatypes[Z_SQLVARBINARY] := DBLIBSQLVARBINARY;
-  DBVariables.datatypes[Z_SQLINTN]      := DBLIBSQLINTN;
-  DBVariables.datatypes[Z_SQLVARCHAR]   := DBLIBSQLVARCHAR;
-  DBVariables.datatypes[Z_SQLBINARY]    := DBLIBSQLBINARY;
-  DBVariables.datatypes[Z_SQLIMAGE]     := DBLIBSQLIMAGE;
-  DBVariables.datatypes[Z_SQLCHAR]      := DBLIBSQLCHAR;
-  DBVariables.datatypes[Z_SQLINT1]      := DBLIBSQLINT1;
-  DBVariables.datatypes[Z_SQLBIT]       := DBLIBSQLBIT;
-  DBVariables.datatypes[Z_SQLINT2]      := DBLIBSQLINT2;
-  DBVariables.datatypes[Z_SQLINT4]      := DBLIBSQLINT4;
-  DBVariables.datatypes[Z_SQLMONEY]     := DBLIBSQLMONEY;
-  DBVariables.datatypes[Z_SQLDATETIME]  := DBLIBSQLDATETIME;
-  DBVariables.datatypes[Z_SQLFLT8]      := DBLIBSQLFLT8;
-  DBVariables.datatypes[Z_SQLFLTN]      := DBLIBSQLFLTN;
-  DBVariables.datatypes[Z_SQLMONEYN]    := DBLIBSQLMONEYN;
-  DBVariables.datatypes[Z_SQLDATETIMN]  := DBLIBSQLDATETIMN;
-  DBVariables.datatypes[Z_SQLFLT4]      := DBLIBSQLFLT4;
-  DBVariables.datatypes[Z_SQLMONEY4]    := DBLIBSQLMONEY4;
-  DBVariables.datatypes[Z_SQLDATETIM4]  := DBLIBSQLDATETIM4;
-  DBVariables.datatypes[Z_SQLDECIMAL]   := DBLIBSQLDECIMAL;
-  DBVariables.datatypes[Z_SQLNUMERIC]   := DBLIBSQLNUMERIC;
 end;
 
 procedure TZDBLibAbstractPlainDriver.CheckError(dbProc: Pointer);
@@ -1084,7 +1061,10 @@ end;
 
 function TZDBLibBasePlainDriver.dbRetType(dbProc: PDBPROCESS; RetNum: Integer): Integer;
 begin
-  Result := DBLibAPI.dbRetType(dbProc, RetNum);
+  if Assigned(DBLibAPI.dbRetType) then
+    Result := DBLibAPI.dbRetType(dbProc, RetNum)
+  else
+    Result := Ord(tdsVoid);
 end;
 
 function TZDBLibBasePlainDriver.dbrbuf(Proc: PDBPROCESS): DBINT;
@@ -2146,30 +2126,6 @@ begin
   DBVariables.DBSetLoginRec[Z_SETENCRYPT] := TDSDBSETENCRYPT;
   DBVariables.DBSetLoginRec[Z_SETLABELED] := TDSDBSETLABELED;
   DBVariables.DBSetLoginRec[Z_SETDBNAME]  := TDSDBSETDBNAME;
-  {datatypes}
-  DBVariables.datatypes[Z_SQLVOID]      := TDSSQLVOID;
-  DBVariables.datatypes[Z_SQLTEXT]      := TDSSQLTEXT;
-  DBVariables.datatypes[Z_SQLVARBINARY] := TDSSQLVARBINARY;
-  DBVariables.datatypes[Z_SQLINTN]      := TDSSQLINTN;
-  DBVariables.datatypes[Z_SQLVARCHAR]   := TDSSQLVARCHAR;
-  DBVariables.datatypes[Z_SQLBINARY]    := TDSSQLBINARY;
-  DBVariables.datatypes[Z_SQLIMAGE]     := TDSSQLIMAGE;
-  DBVariables.datatypes[Z_SQLCHAR]      := TDSSQLCHAR;
-  DBVariables.datatypes[Z_SQLINT1]      := TDSSQLINT1;
-  DBVariables.datatypes[Z_SQLBIT]       := TDSSQLBIT;
-  DBVariables.datatypes[Z_SQLINT2]      := TDSSQLINT2;
-  DBVariables.datatypes[Z_SQLINT4]      := TDSSQLINT4;
-  DBVariables.datatypes[Z_SQLMONEY]     := TDSSQLMONEY;
-  DBVariables.datatypes[Z_SQLDATETIME]  := TDSSQLDATETIME;
-  DBVariables.datatypes[Z_SQLFLT8]      := TDSSQLFLT8;
-  DBVariables.datatypes[Z_SQLFLTN]      := TDSSQLFLTN;
-  DBVariables.datatypes[Z_SQLMONEYN]    := TDSSQLMONEYN;
-  DBVariables.datatypes[Z_SQLDATETIMN]  := TDSSQLDATETIMN;
-  DBVariables.datatypes[Z_SQLFLT4]      := TDSSQLFLT4;
-  DBVariables.datatypes[Z_SQLMONEY4]    := TDSSQLMONEY4;
-  DBVariables.datatypes[Z_SQLDATETIM4]  := TDSSQLDATETIM4;
-  DBVariables.datatypes[Z_SQLDECIMAL]   := TDSSQLDECIMAL;
-  DBVariables.datatypes[Z_SQLNUMERIC]   := TDSSQLNUMERIC;
 end;
 
 destructor TZFreeTDSBasePlainDriver.Destroy;

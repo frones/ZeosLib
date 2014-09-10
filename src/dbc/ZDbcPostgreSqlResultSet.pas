@@ -82,7 +82,8 @@ type
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-      QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean; const Chunk_Size: Integer);
+      QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
+      const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 
     procedure Close; override;
 
@@ -151,7 +152,8 @@ uses
 }
 constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
   Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
-  QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean; const Chunk_Size: Integer);
+  QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
+  const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
 
@@ -159,8 +161,8 @@ begin
   FQueryHandle := QueryHandle;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
-  FChunk_Size := Chunk_Size; //size of red/write lob chunks
-  FUndefinedVarcharAsStringLength := (Statement.GetConnection as IZPostgreSQLConnection).GetUndefinedVarcharAsStringLength;
+  FChunk_Size := Chunk_Size; //size of read/write lob in chunks
+  FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FIs_bytea_output_hex := (Statement.GetConnection as IZPostgreSQLConnection).Is_bytea_output_hex;
   FCachedLob := CachedLob;
 

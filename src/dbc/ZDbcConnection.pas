@@ -94,7 +94,7 @@ type
       Const {$IFNDEF UNICODE}AutoEncode, {$ENDIF} SupportedsOnly: Boolean;
       CtrlsCPType: TZControlsCodePage = cCP_UTF16): TStringDynArray;
     function Connect(const Url: string; Info: TStrings = nil): IZConnection; overload; deprecated;
-    function Connect(const Url: TZURL): IZConnection; overload; virtual;
+    function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
     function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;

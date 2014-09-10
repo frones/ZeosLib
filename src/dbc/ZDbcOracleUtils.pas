@@ -740,7 +740,7 @@ begin
       begin
         Variable^.oIndicatorArray^[i] := -1; //set all null
         if Variable^.TypeCode = SQLT_STR then 
-          {%H-}PAnsiChar(NativeUInt(Variable^.Data)+I*Variable^.Length)^ := #0; //oci expects a terminating $0 byte
+          {%H-}PAnsiChar({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := #0; //oci expects a terminating $0 byte
         Exit; //we are ready here
       end
     else if (Value.VArray.VIsNullArray = nil) then

@@ -76,6 +76,7 @@ type
     FConnectionHandle: PZPostgreSQLConnect;
     Findeterminate_datatype: Boolean;
     FUseEmulatedStmtsOnly: Boolean;
+    FUndefinedVarcharAsStringLength: Integer;
   protected
     function CreateResultSet(QueryHandle: PZPostgreSQLResult): IZResultSet;
     function ExecuteInternal(const SQL: RawByteString;
@@ -141,6 +142,7 @@ type
   private
     Foidasblob: Boolean;
     FPlainDriver: IZPostgreSQLPlainDriver;
+    FUndefinedVarcharAsStringLength: Integer;
     function GetProcedureSql: string;
     function FillParams(const ASql: String): RawByteString;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString;
@@ -193,6 +195,7 @@ begin
   ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
+  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
   { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
     the pgBouncer does not support the RealPrepareds.... }
   FUseEmulatedStmtsOnly := StrToBoolEx(Self.Info.Values['EMULATE_PREPARES']);
@@ -211,7 +214,7 @@ var
   CachedResultSet: TZCachedResultSet;
 begin
   NativeResultSet := TZPostgreSQLResultSet.Create(FPlainDriver, Self, Self.SQL,
-  FConnectionHandle, QueryHandle, CachedLob, ChunkSize);
+  FConnectionHandle, QueryHandle, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
 
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
@@ -752,6 +755,7 @@ begin
   FPlainDriver := (Connection as IZPostgreSQLConnection).GetPlainDriver;
   Foidasblob := StrToBoolDef(Self.Info.Values['oidasblob'], False) or
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
+  FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
 end;
 
 {**
@@ -779,7 +783,7 @@ var
 begin
   ConnectionHandle := GetConnectionHandle();
   NativeResultSet := TZPostgreSQLResultSet.Create(GetPlainDriver, Self, SQL,
-    ConnectionHandle, QueryHandle, CachedLob, ChunkSize);
+    ConnectionHandle, QueryHandle, CachedLob, ChunkSize, FUndefinedVarcharAsStringLength);
   NativeResultSet.SetConcurrency(rcReadOnly);
   if GetResultSetConcurrency = rcUpdatable then
   begin

@@ -1940,9 +1940,9 @@ begin
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
+          Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
-          Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
+          Result := UnicodeToUInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
       stUnicodeStream, stAsciiStream: Result := RawToIntDef(GetBlob(ColumnIndex, IsNull).GetString, 0);
     end;
     IsNull := False;
@@ -2028,11 +2028,11 @@ begin
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
         if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
+          Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
-          Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
-      stAsciiStream: Result := RawToInt64Def(GetBlob(ColumnIndex, IsNull).GetPAnsiChar(zCP_us_ascii), 0);
-      stUnicodeStream: Result := UnicodeToInt64Def(GetBlob(ColumnIndex, IsNull).GetPWideChar, 0);
+          Result := UnicodeToUInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
+      stAsciiStream: Result := RawToUInt64Def(GetBlob(ColumnIndex, IsNull).GetPAnsiChar(zCP_us_ascii), 0);
+      stUnicodeStream: Result := UnicodeToUInt64Def(GetBlob(ColumnIndex, IsNull).GetPWideChar, 0);
     end;
     IsNull := False;
   end
@@ -4433,11 +4433,23 @@ begin
     case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] of
       stUnicodeString, stString:
         begin
-          AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
           AnsiRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
-          Result.P := PWideChar(FUniTemp);
-          Result.Len := Length(FUniTemp);
+          if AnsiRec.Len = 0 then //avoid all conversions
+          begin
+            Result.Len := 0;
+            Result.P := PEmptyUnicodeString;
+          end
+          else
+          begin
+            AnsiRec.P := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
+            FUniTemp := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP);
+            Result.P := Pointer(FUniTemp);
+            {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+            Result.Len := {%H-}PLengthInt(NativeUInt(FUniTemp) - StringLenOffSet)^;
+            {$ELSE}
+            Result.Len := Length(FUniTemp);
+            {$ENDIF}
+          end;
         end
       else
         Result := inherited GetWideRec(ColumnIndex, IsNull);
@@ -4711,10 +4723,18 @@ begin
       stString, stUnicodeString:
         begin
           ZWideRec.Len := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
-          ZWideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
-          FRawTemp := ZWideRecToRaw(ZWideRec, ConSettings^.ClientCodePage^.CP);
-          Result.Len := Length(FRawTemp);
-          Result.P := PAnsiChar(FRawTemp);
+          if ZWideRec.Len = 0 then //avoid all conversions
+          begin
+            Result.Len := 0;
+            Result.P := PEmptyAnsiString;
+          end
+          else
+          begin
+            ZWideRec.P := ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc;
+            FRawTemp := ZWideRecToRaw(ZWideRec, ConSettings^.ClientCodePage^.CP);
+            Result.Len := {%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^;
+            Result.P := Pointer(FRawTemp);
+          end;
         end
       else
         Result := Inherited GetAnsiRec(ColumnIndex, IsNull);

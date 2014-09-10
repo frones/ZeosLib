@@ -2624,18 +2624,17 @@ var
 begin
   if not (State in [dsInactive]) and not IsUniDirectional then
   begin
+    UpdateCursorPos; //see http://sourceforge.net/p/zeoslib/tickets/89/
     if (CurrentRow > 0) and (CurrentRow <= CurrentRows.Count) and
-      (CurrentRows.Count > 0) then
+       (CurrentRows.Count > 0) then
       RowNo := {%H-}NativeInt(CurrentRows[CurrentRow - 1])
     else
       RowNo := -1;
     CurrentRows.Clear;
 
     for I := 1 to FetchCount do
-    begin
       if FilterRow(I) then
         CurrentRows.Add({%H-}Pointer(I));
-    end;
 
     CurrentRow := CurrentRows.IndexOf({%H-}Pointer(RowNo)) + 1;
     CurrentRow := Min(Max(1, CurrentRow), CurrentRows.Count);

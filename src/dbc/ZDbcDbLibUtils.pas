@@ -70,8 +70,7 @@ function ConvertODBCToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePa
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertDBLibToSqlType(FieldType: SmallInt; CtrlsCPType: TZControlsCodePage): TZSQLType;
-function ConvertFreeTDSToSqlType(const FieldType: SmallInt;
+function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
@@ -86,8 +85,7 @@ function ConvertDBLibTypeToSqlType({%H-}Value: string): TZSQLType;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertSqlTypeToDBLibType(FieldType: TZSQLType): Integer;
-function ConvertSqlTypeToFreeTDSType(FieldType: TZSQLType): Integer;
+function ConvertSqlTypeToTDSType(FieldType: TZSQLType): TTDSType;
 
 {**
   Converts ZDBC SQL types into MS SQL native types.
@@ -152,77 +150,66 @@ begin
 end;
 
 {**
-  Converts a DBLib native types into ZDBC SQL types.
+  Converts a tabular data stream native types into ZDBC SQL types.
   @param FieldType dblibc native field type.
+  @param CtrlsCPType the string code Page of the IDE Controls
   @return a SQL undepended type.
 }
-function ConvertDBLibToSqlType(FieldType: SmallInt;
-  CtrlsCPType: TZControlsCodePage): TZSQLType;
-begin
-  case FieldType of
-    DBLIBSQLCHAR: Result := stString;
-    DBLIBSQLBIT: Result := stBoolean;
-//Bug #889223, bug with tinyint on mssql
-//    DBLIBSQLINT1: Result := stByte;
-    DBLIBSQLINT1: Result := stSmall;
-    DBLIBSQLINT2: Result := stSmall;
-    DBLIBSQLINT4: Result := stInteger;
-    DBLIBSQLFLT4: Result := stDouble;
-    DBLIBSQLFLT8: Result := stDouble;
-    DBLIBSQLMONEY4: Result := stCurrency;
-    DBLIBSQLMONEY: Result := stCurrency;
-    DBLIBSQLDATETIM4: Result := stTimestamp;
-    DBLIBSQLDATETIME: Result := stTimestamp;
-    DBLIBSQLTEXT: Result := stAsciiStream;
-    DBLIBSQLIMAGE: Result := stBinaryStream;
-    DBLIBSQLBINARY: Result := stBytes;
-    DBLIBSQLVARBINARY: Result := stBytes;
-  else
-    Result := stUnknown;
-  end;
-  if CtrlsCPType = cCP_UTF16 then
-  case Result of
-    stString: Result := stUnicodeString;
-    stAsciiStream: Result := stUnicodeStream;
-  end;
-end;
-
-{**
-  Converts a FreeTDS native types into ZDBC SQL types.
-  @param FieldType dblibc native field type.
-  @return a SQL undepended type.
-}
-function ConvertFreeTDSToSqlType(const FieldType: SmallInt;
+function ConvertTDSTypeToSqlType(const FieldType: TTDSType;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case FieldType of
-    SYBCHAR, SYBVARCHAR, XSYBCHAR, XSYBVARCHAR: Result := stString;
-    SYBINTN, SYBINT4:                           Result := stInteger;
-    SYBINT8:                                    Result := stLong;
-    SYBNUMERIC:                                 Result := stBigDecimal;
-    SYBINT1, SYBINT2:                           Result := stSmall;
-    SYBFLT8, SYBFLTN, SYBREAL, SYBDECIMAL:      Result := stDouble;
-    SYBDATETIME, SYBDATETIME4, SYBDATETIMN:     Result := stTimestamp;
-    SYBBIT, SYBBITN:                            Result := stBoolean;
-    SYBTEXT:                                    Result := stAsciiStream;
-    SYBNTEXT:                                   Result := stUnicodeStream;
-    SYBIMAGE:                                   Result := stBinaryStream;
-    SYBBINARY, SYBVARBINARY,
-    XSYBBINARY, XSYBVARBINARY:                  Result := stBytes;
-    SYBMONEY4, SYBMONEY, SYBMONEYN:             Result := stCurrency;
-    SYBVOID:                                    Result := stUnknown;
-    SYBNVARCHAR, XSYBNCHAR, XSYBNVARCHAR:       Result := stUnicodeString;
-    SYBMSXML:                                   Result := stBinaryStream;
-    SYBUNIQUE:                                  Result := stString;
-    SYBVARIANT:                                 Result := stString;
-    SYBMSUDT:                                   Result := stString;
+    tdsVoid, tdsUDT:
+      Result := stUnknown; //Null columns
+    tdsImage:
+      Result := stBinaryStream;
+    tdsText, tdsNText, tdsMSXML:
+      if CtrlsCPType = cCP_UTF16 then
+        Result := stUnicodeStream
+      else
+        Result := stAsciiStream;
+    tdsUnique: //EH: need to be checket(have no tascase for this type) -> unique identifier?
+      if CtrlsCPType = cCP_UTF16 then
+        Result := stUnicodeString
+      else
+        Result := stString;
+    tdsBinary, tdsVarBinary, tdsBigBinary, tdsBigVarBinary:
+      Result := stBytes;
+    tdsIntN:
+      Result := stInteger;
+    tdsVarchar, tdsNVarChar, tdsBigVarChar, tdsBigNVarChar:
+      if CtrlsCPType = cCP_UTF16 then
+        Result := stUnicodeString
+      else
+        Result := stString;
+    tdsChar, tdsBigChar, tdsBigNChar:
+      if CtrlsCPType = cCP_UTF16 then
+        Result := stUnicodeString
+      else
+        Result := stString;
+    tdsInt1:
+      Result := stByte;
+    tdsBit, tdsBitN:
+      Result := stBoolean;
+    tdsInt2:
+      Result := stSmall;
+    tdsInt4:
+      Result := stInteger;
+    tdsDateTime, tdsDateTimeN, tdsDateTime4:
+      Result := stTimeStamp;
+    tdsFlt4, tdsFltN:
+      Result := stFloat;
+    tdsMoney, tdsMoney4, tdsMoneyN:
+      Result := stCurrency;
+    tdsFlt8:
+      Result := stDouble;
+    tdsDecimal, tdsNumeric:
+      Result := stDouble;
+    //tdsVariant: {from tds.h -> sybase only -> na't test it}
+    tdsInt8:
+      Result := stLong;
     else
       Result := stUnknown;
-  end;
-  if CtrlsCPType = cCP_UTF16 then
-  case Result of
-    stString: Result := stUnicodeString;
-    stAsciiStream: Result := stUnicodeStream;
   end;
 end;
 
@@ -234,34 +221,6 @@ end;
 function ConvertDBLibTypeToSqlType(Value: string): TZSQLType;
 begin
   Result := stUnknown;
-end;
-
-{**
-  Converts ZDBC SQL types into DBLib native types.
-  @param FieldType dblibc native field type.
-  @return a SQL undepended type.
-}
-function ConvertSqlTypeToDBLibType(FieldType: TZSQLType): Integer;
-begin
-  Result := -1;
-  case FieldType of
-    stBoolean: Result := DBLIBSQLBIT;
-    stByte, stShort: Result := DBLIBSQLINT1;
-    stSmall, stWord: Result := DBLIBSQLINT2;
-    stInteger, stLongWord: Result := DBLIBSQLINT4;
-    stLong, stULong: Result := DBLIBSQLFLT8;
-    stFloat: Result := DBLIBSQLFLT8;
-    stDouble: Result := DBLIBSQLFLT8;
-    stBigDecimal: Result := DBLIBSQLFLT8;
-    stString, stUnicodeString: Result := DBLIBSQLCHAR;
-    stBytes: Result := DBLIBSQLBINARY;
-    stDate: Result := DBLIBSQLDATETIME;
-    stTime: Result := DBLIBSQLDATETIME;
-    stTimestamp: Result := DBLIBSQLDATETIME;
-    stAsciiStream: Result := DBLIBSQLTEXT;
-    stUnicodeStream: Result := DBLIBSQLIMAGE;
-    stBinaryStream: Result := DBLIBSQLIMAGE;
-  end;
 end;
 
 {**
@@ -297,27 +256,22 @@ end;
   @param FieldType dblibc native field type.
   @return a SQL undepended type.
 }
-function ConvertSqlTypeToFreeTDSType(FieldType: TZSQLType): Integer;
+function ConvertSqlTypeToTDSType(FieldType: TZSQLType): TTDSType;
 begin
-  Result := -1;
+  Result := tdsVoid;
   case FieldType of
-    stBoolean: Result := SYBBIT;
-    stByte, stShort: Result := SYBINT1;
-    stSmall, stWord: Result := SYBINT2;
-    stInteger, stLongWord: Result := SYBINT4;
-    stLong, stUlong: Result := SYBFLT8;
-    stFloat: Result := SYBFLT8;
-    stDouble: Result := SYBFLT8;
-    stBigDecimal: Result := SYBFLT8;
-    stString: Result := SYBCHAR;
-    stUnicodeString: Result := SYBNVARCHAR;
-    stBytes: Result := SYBBINARY;
-    stDate: Result := SYBDATETIME;
-    stTime: Result := SYBDATETIME;
-    stTimestamp: Result := SYBDATETIME;
-    stAsciiStream: Result := SYBTEXT;
-    stUnicodeStream: Result := SYBNTEXT;
-    stBinaryStream: Result := SYBIMAGE;
+    stBoolean: Result := tdsBit;
+    stByte: Result := tdsInt1;
+    stShort, stSmall: Result := tdsInt2;
+    stWord, stInteger: Result := tdsInt4;
+    stLongWord, stLong, stUlong: Result := tdsFlt8; //EH: Better would nbe tdsInt8
+    stFloat: Result := tdsFlt4;
+    stDouble, stBigDecimal: Result := tdsFlt8;
+    stString, stUnicodeString: Result := tdsVarChar;
+    stBytes: Result := tdsVarBinary;
+    stDate, stTime, stTimestamp: Result := tdsDateTime;
+    stAsciiStream, stUnicodeStream: Result := tdsText;
+    stBinaryStream: Result := tdsImage;
   end;
 end;
 

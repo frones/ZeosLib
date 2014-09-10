@@ -207,8 +207,7 @@ function GetValidatedUnicodeStream(const Ansi: RawByteString;
 
 implementation
 
-uses {$IFDEF WITH_WIDESTRUTILS}WideStrUtils,{$ENDIF}
-  ZMessages, ZSysUtils, ZEncoding, ZFastCode;
+uses ZMessages, ZSysUtils, ZEncoding, ZFastCode;
 
 {**
   Resolves a connection protocol and raises an exception with protocol
@@ -805,7 +804,7 @@ begin
       Add(Temp);
   end
   else
-    {$IFDEF UNICDE}
+    {$IFDEF UNICODE}
     Add(SQL);
     {$ELSE}
     Add(ConSettings^.ConvFuncs.ZStringToUnicode(SQL, ConSettings^.CTRL_CP));
@@ -820,23 +819,25 @@ var
   ParamIndex, I: Integer;
   HasRows: Boolean;
   SupportsMoveAbsolute: Boolean;
+  Meta: IZResultSetMetadata;
 begin
   SupportsMoveAbsolute := ResultSet.GetType <> rtForwardOnly;
   if SupportsMoveAbsolute then ResultSet.BeforeFirst;
   HasRows := ResultSet.Next;
 
   I := FirstDbcIndex;
+  Meta := ResultSet.GetMetadata;
   for ParamIndex := 0 to OutParamCount - 1 do
   begin
     if not (ParamTypes[ParamIndex] in [2, 3, 4]) then // ptOutput, ptInputOutput, ptResult
       Continue;
-    if I > ResultSet.GetMetadata.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
+    if I > Meta.GetColumnCount {$IFDEF GENERIC_INDEX}-1{$ENDIF} then
       Break;
 
     if (not HasRows) or (ResultSet.IsNull(I)) then
       OutParamValues[ParamIndex] := NullVariant
     else
-      case ResultSet.GetMetadata.GetColumnType(I) of
+      case Meta.GetColumnType(I) of
         stBoolean:
           OutParamValues[ParamIndex] := EncodeBoolean(ResultSet.GetBoolean(I));
         stByte:

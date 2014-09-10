@@ -655,8 +655,8 @@ begin
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
       SetString(Dest, Src, Len);
@@ -668,8 +668,8 @@ begin
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
@@ -713,8 +713,8 @@ begin
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
-       ({%H-}PRefCntInt(NativeInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
-       ({%H-}PLengthInt(NativeInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
+       ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
       Move(Src^, Pointer(Dest)^, Len)
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}

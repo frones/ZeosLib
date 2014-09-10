@@ -249,14 +249,14 @@ function StrToBoolEx(Str: PWideChar; const CheckInt: Boolean = True;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToStrEx(Bool: Boolean): String;
+function BoolToUnicodeEx(Value: Boolean): ZWideString;
 
 {**
   Converts a boolean into RawByteString value.
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToRawEx(Bool: Boolean): RawByteString;
+function BoolToRawEx(Value: Boolean): RawByteString;
 
 {$IFDEF ENABLE_POSTGRESQL}
 {**
@@ -1284,9 +1284,9 @@ end;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToStrEx(Bool: Boolean): String;
+function BoolToUnicodeEx(Value: Boolean): ZWideString;
 begin
-  if Bool then
+  if Value then
     Result := 'True'
   else
     Result := 'False';
@@ -1297,9 +1297,9 @@ end;
   @param Bool a boolean value.
   @return <code>"True"</code> or <code>"False"</code>
 }
-function BoolToRawEx(Bool: Boolean): RawByteString;
+function BoolToRawEx(Value: Boolean): RawByteString;
 begin
-  if Bool then
+  if Value then
     Result := 'True'
   else
     Result := 'False';

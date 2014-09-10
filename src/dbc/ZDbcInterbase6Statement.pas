@@ -161,18 +161,16 @@ begin
     {create the parameter bind structure}
     FParamSQLData := TZParamsSQLDA.Create(GetPlainDriver, GetDBHandle, GetTrHandle, ConSettings);
     {check dynamic sql}
-    GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,
-      FParamSQLData.GetData);
+    GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect, FParamSQLData.GetData);
     ZDbcInterbase6Utils.CheckInterbase6Error(GetPlainDriver, StatusVector, ConSettings, lcExecute, ASQL);
 
-    { Resize XSQLDA structure if needed }
+    { Resize XSQLDA structure if required }
     if FParamSQLData.GetData^.sqld > FParamSQLData.GetData^.sqln then
     begin
       FParamSQLData.AllocateSQLDA;
       GetPlainDriver.isc_dsql_describe_bind(@StatusVector, @FStmtHandle, GetDialect,FParamSQLData.GetData);
       ZDbcInterbase6Utils.CheckInterbase6Error(GetPlainDriver, StatusVector, ConSettings, lcExecute, ASQL);
     end;
-
     FParamSQLData.InitFields(True);
   end;
 end;

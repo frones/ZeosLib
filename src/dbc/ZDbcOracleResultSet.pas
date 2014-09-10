@@ -285,7 +285,7 @@ begin
           end;
         SQLT_INT:
           begin
-            FRawTemp := IntToRaw({%H-}PLongInt(NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
+            FRawTemp := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
             Result.P := Pointer(FRawTemp);
             Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
