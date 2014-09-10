@@ -2262,6 +2262,8 @@ end;
 procedure TZParamsSQLDA.UpdatePAnsiChar(const Index: Integer; const Value: PAnsiChar; const Len: Cardinal);
 var
  SQLCode: SmallInt;
+ TempTimeStamp: TDateTime;
+ Failed: Boolean;
 begin
   CheckRange(Index);
   {$R-}
@@ -2284,12 +2286,51 @@ begin
         end;
       SQL_LONG      : PInteger (sqldata)^ := RawToIntDef(Value, 0);
       SQL_SHORT     : PSmallint (sqldata)^ := RawToIntDef(Value, 0);
-      SQL_TYPE_DATE : EncodeString(SQL_DATE, Index, Value);
       SQL_DOUBLE    : PDouble (sqldata)^ := SQLStrToFloatDef(Value, 0);
       SQL_D_FLOAT,
       SQL_FLOAT     : PSingle (sqldata)^ := SQLStrToFloatDef(Value, 0);
       SQL_INT64     : PInt64(sqldata)^ := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(RoundTo(SQLStrToFloatDef(Value, 0, Len) * IBScaleDivisor[sqlscale], 0)); //AVZ - INT64 value was not recognized
       SQL_BLOB, SQL_QUAD: WriteLobBuffer(Index, Value, Len);
+      SQL_TYPE_DATE :
+        begin
+          if (Len = 0) or ((Value+2)^ = ':') then
+            TempTimeStamp := 0
+          else
+            if Len = ConSettings^.WriteFormatSettings.DateFormatLen then
+              TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+            else
+              TempTimeStamp := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
+                RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
+          UpdateDateTime(Index, TempTimeStamp);
+        end;
+      SQL_TYPE_TIME:
+        begin
+          if Len = 0 then
+            TempTimeStamp := 0
+          else
+            if (Value+2)^ = ':' then //possible date if Len = 10 then
+              TempTimeStamp := RawSQLTimeToDateTime(Value,Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+            else
+              TempTimeStamp := Frac(RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed));
+          UpdateDateTime(Index, TempTimeStamp);
+        end;
+      SQL_TIMESTAMP:
+        begin
+          if Len = 0 then
+            TempTimeStamp := 0
+          else
+            if (Value+2)^ = ':' then
+              TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+            else
+              if (ConSettings^.WriteFormatSettings.DateTimeFormatLen - Len) <= 4 then
+                TempTimeStamp := RawSQLTimeStampToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed)
+              else
+                if (Value+4)^ = '-' then
+                  TempTimeStamp := RawSQLDateToDateTime(Value,  Len, ConSettings^.WriteFormatSettings, Failed{%H-})
+                else
+                  TempTimeStamp := RawSQLTimeToDateTime(Value, Len, ConSettings^.WriteFormatSettings, Failed);
+          UpdateDateTime(Index, TempTimeStamp);
+        end;
     else
       raise EZIBConvertError.Create(SErrorConvertion);
     end;

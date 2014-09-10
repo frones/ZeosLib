@@ -2189,7 +2189,45 @@ label DateTimeFromAnsi, DateTimeFromUnicode;
 begin
   Result.VType := NewType;
   case NewType of
-    vtBoolean, vtBytes, vtInteger, vtUInteger, vtFloat, vtPointer, vtInterface:
+    vtBoolean:
+      case Value.VType of
+        vtNull:
+          Result.VBoolean := False;
+        vtBoolean:
+          Result.VBoolean := Value.VBoolean;
+        vtInteger, vtUInteger:
+          Result.VBoolean := Value.VInteger <> 0;
+        vtFloat:
+          Result.VBoolean := Value.VFloat <> 0;
+        vtBytes:
+          Result.VBoolean := Pointer(Value.VBytes) <> nil;
+        vtString:
+          Result.VBoolean := StrToBoolEx(Value.VString);
+        vtAnsiString:
+          Result.VBoolean := StrToBoolEx(Value.VAnsiString);
+        vtUTF8String:
+          Result.VBoolean := StrToBoolEx(Value.VUTF8String);
+        vtRawByteString:
+          Result.VBoolean := StrToBoolEx(Value.VRawByteString);
+        vtUnicodeString:
+          Result.VBoolean := StrToBoolEx(Value.VUnicodeString);
+        vtDateTime:
+          Result.VBoolean := Value.VDateTime <> 0;
+        vtPointer:
+          Result.VBoolean := Value.VPointer <> nil;
+        vtInterface:
+          Result.VBoolean := Value.VInterface <> nil;
+        vtCharRec:
+          if ZCompatibleCodePages(Value.VCharRec.CP, zCP_UTF16) then
+            Result.VBoolean := StrToBoolEx(PWideChar(Value.VCharRec.P))
+          else
+            Result.VBoolean := StrToBoolEx(PAnsiChar(Value.VCharRec.P));
+        vtArray:
+          Result.VBoolean := Value.VArray.VArray <> nil;
+        else
+          RaiseTypeMismatchError;
+      end;
+    vtBytes, vtInteger, vtUInteger, vtFloat, vtPointer, vtInterface:
       Result := inherited Convert(Value, NewType);
     vtDateTime:
       case Value.VType of

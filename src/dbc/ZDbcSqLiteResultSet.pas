@@ -768,7 +768,8 @@ begin
     Result := 0
   else
     case ColType of
-      SQLITE_INTEGER, SQLITE_FLOAT:
+      SQLITE_INTEGER,
+      SQLITE_FLOAT:
         Result := FPlainDriver.column_double(FStmtHandle, ColumnIndex)+JulianEpoch;
       else
       begin

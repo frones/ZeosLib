@@ -1183,7 +1183,9 @@ var
     Result := PStatement.ExecuteUpdatePrepared = 1;
   end;
 begin
-  Use_S_BIT := Not(StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or StartsWith(Protocol, 'FreeTDS'));
+  Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado') or
+    StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
+    StartsWith(Protocol, 'FreeTDS'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
@@ -1316,12 +1318,13 @@ var
 begin
   Info := TStringList.Create;
   Info.Add('preferprepared=True');
-  Use_S_BIT := Not(StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or StartsWith(Protocol, 'FreeTDS'));
+  Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado')
+    or StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
+    StartsWith(Protocol, 'FreeTDS'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar) values (?, ?, ?, ?, ?)');
-  PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)');
   CheckNotNull(PStatement);
   {Insert ShortInt test values}
   Check(InsertTestString(TEST_ROW_ID, IntToRaw(Low(Byte))));

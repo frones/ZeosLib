@@ -293,7 +293,7 @@ begin
   if FParams^.AllocNum > 0 then
   for I := 0 to FParams^.AllocNum - 1 do
     LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
-      InParamValues[i], ChunkSize, FIteration);
+      InParamValues[i], ChunkSize, Max(1, Min(FIteration, ArrayCount)));
 
   inherited BindInParameters;
 end;
@@ -643,14 +643,17 @@ procedure TZOracleCallableStatement.BindInParameters;
 var
   I: Integer;
 begin
+  FIteration := Max(1, Min(FIteration, ArrayCount));
   if FParams^.AllocNum > 0 then
     for I := 0 to FParams^.AllocNum - 1 do
       if (FOracleParams[i].pType in [1,3]) then
         LoadOracleVar(FPlainDriver, Connection, FErrorHandle, @FParams.Variables[I],
-          InParamValues[FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}], ChunkSize, FIteration)
+          InParamValues[FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}],
+            ChunkSize, Max(1, Min(FIteration, ArrayCount)))
       else
         LoadOracleVar(FPlainDriver, Connection, FErrorHandle,
-          @FParams.Variables[I], NullVariant, ChunkSize, FIteration);
+          @FParams.Variables[I], NullVariant, ChunkSize,
+            Max(1, Min(FIteration, ArrayCount)));
   inherited BindInParameters;
 end;
 
