@@ -4479,15 +4479,11 @@ end;
 }
 procedure TZAbstractDatabaseMetadata.FillWildcards;
 begin
-  try
-    {SetLength(WildcardsArray,1);
-    WildcardsArray[0]:='%';}
-    SetLength(WildcardsArray,2);
-    WildcardsArray[0]:='_';
-    WildcardsArray[1]:='%';
-  except
-    WildcardsArray:=nil;
-  end;
+  SetLength(WildcardsArray,1);
+  WildcardsArray[0]:='%';
+  {SetLength(WildcardsArray,2);
+  WildcardsArray[0]:='_';  <---- seems to be a trublemaker, no idea how to test it with our tests. See http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=13184
+  WildcardsArray[1]:='%';}
 end;
 
 function TZAbstractDatabaseMetadata.NormalizePatternCase(Pattern:String): string;
