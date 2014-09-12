@@ -2123,18 +2123,18 @@ begin
       stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
       stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
       stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
-        AssertLength({%H-}PLengthInt(NativeUInt(ZArray) - SizeOf(LengthInt))^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+        AssertLength({%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
       stString:
         case VariantType of
           vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
-            AssertLength({%H-}PLengthInt(NativeUInt(ZArray) - SizeOf(LengthInt))^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+            AssertLength({%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
           else
             raise Exception.Create('Invalid Variant-Type for String-Array binding!');
         end;
       stUnicodeString:
         case VariantType of
           vtUnicodeString, vtCharRec:
-            AssertLength({%H-}PLengthInt(NativeUInt(ZArray) - SizeOf(LengthInt))^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+            AssertLength({%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
           else
             raise Exception.Create('Invalid Variant-Type for String-Array binding!');
         end;

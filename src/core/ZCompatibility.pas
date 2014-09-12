@@ -104,13 +104,16 @@ type
   PUInt                 = ^UInt;
   ZPPWideChar           = ^PWideChar;//BCB issue: PPWideChar is not part of system
 
-  {EH: just a clear type/IDE to get the length of String or Array by reading back from
+  {EH: just a clear type/IDE to get the length of String reading back from
     initial entry(X) - SizeOf(LengthInt) = Length}
 
   PLengthInt            = ^LengthInt;
   LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
   PRefCntInt            = ^RefCntInt;
   RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
+
+  PArrayLenInt          = ^NativeInt;
+
 const
   {$IFDEF FPC}
   { ustrings.inc/astrings.inc:
@@ -125,6 +128,7 @@ const
   StringLenOffSet             = SizeOf(LongInt); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
   {$ENDIF}
+  ArrayLenOffSet              = SizeOf(NativeInt);
 type
   TZCharRec = Record
     Len: Cardinal; //Length of String
