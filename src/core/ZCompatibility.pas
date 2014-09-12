@@ -111,8 +111,9 @@ type
   LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
   PRefCntInt            = ^RefCntInt;
   RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
-
-  PArrayLenInt          = ^NativeInt;
+  {EH: just two types for determination DynArray Length if ever something changes we just need a define here.}
+  ArrayLenInt           = NativeInt;
+  PArrayLenInt          = ^ArrayLenInt;
 
 const
   {$IFDEF FPC}
@@ -128,7 +129,7 @@ const
   StringLenOffSet             = SizeOf(LongInt); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
   {$ENDIF}
-  ArrayLenOffSet              = SizeOf(NativeInt);
+  ArrayLenOffSet              = SizeOf(ArrayLenInt);
 type
   TZCharRec = Record
     Len: Cardinal; //Length of String

@@ -204,7 +204,7 @@ type
     FInParamTypes: TZSQLTypeArray;
     FInParamDefaultValues: TStringDynArray;
     FInParamCount: Integer;
-    FInitialArrayCount: Integer;
+    FInitialArrayCount: ArrayLenInt;
     FPrepared : Boolean;
     FClientVariantManger: IZClientVariantManager;
     FCachedQueryRaw: TRawByteStringDynArray;
@@ -241,7 +241,7 @@ type
     property IsNCharIndex: TBooleanDynArray read FNCharDetected;
     property IsPreparable: Boolean read FIsPraparable;
     property LastInParamValuesIndex: Integer read FInParamValuesIndex;
-    property ArrayCount: Integer read FInitialArrayCount;
+    property ArrayCount: ArrayLenInt read FInitialArrayCount;
     procedure SetASQL(const Value: RawByteString); override;
     procedure SetWSQL(const Value: ZWideString); override;
   public
@@ -2107,8 +2107,10 @@ var
   {using mem entry of ZData is faster then casting and save imbelievable many codelines for all possible types!}
   ZArray: Pointer absolute Value;
 
-  procedure AssertLength(const Len: LengthInt);
+  procedure AssertLength;
+  var Len: ArrayLenInt;
   begin
+    Len := {%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
     if (ParameterIndex = FirstDbcIndex) or ((ParameterIndex > FirstDbcIndex) and
        (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}].VArray.VArray = nil))  then
       FInitialArrayCount := Len
@@ -2119,22 +2121,22 @@ var
 begin
   if ZArray <> nil then
     case SQLType of
-      stUnknown:        raise Exception.Create('Invalid SQLType for Array binding!');
+      stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
       stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
       stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
       stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
-        AssertLength({%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+        AssertLength;
       stString:
         case VariantType of
           vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
-            AssertLength({%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+            AssertLength
           else
             raise Exception.Create('Invalid Variant-Type for String-Array binding!');
         end;
       stUnicodeString:
         case VariantType of
           vtUnicodeString, vtCharRec:
-            AssertLength({%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}); //FPC returns High() for this pointer location
+            AssertLength
           else
             raise Exception.Create('Invalid Variant-Type for String-Array binding!');
         end;
