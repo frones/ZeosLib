@@ -4119,16 +4119,25 @@ end;
 { TZRawRowAccessor }
 
 function TZRawRowAccessor.CompareString(ValuePtr1, ValuePtr2: Pointer): Integer;
+var S1, S2: ZWideString;
 begin
   if Assigned(PPAnsichar(ValuePtr1)^) and Assigned(PPAnsiChar(ValuePtr2)^) then
-    {$IFDEF MSWINDOWS}
-    Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
-      PAnsiChar(ValuePtr1^)+PAnsiInc, PLongWord(ValuePtr1^)^,
-      PAnsiChar(ValuePtr2^)+PAnsiInc, PLongWord(ValuePtr2^)^) - 2{CSTR_EQUAL}
-    {$ELSE}
-      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-        AnsiStrComp(PPAnsiChar(ValuePtr1)^+PAnsiInc, PPAnsiChar(ValuePtr2)^+PAnsiInc)
-    {$ENDIF}
+    //see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11096
+    if ConSettings^.ClientCodePage^.Encoding = ceUTF8 then
+    begin
+      S1 := PRawToUnicode(PAnsiChar(ValuePtr1^)+PAnsiInc, PLongWord(ValuePtr1^)^, zCP_UTF8);
+      S2 := PRawToUnicode(PAnsiChar(ValuePtr2^)+PAnsiInc, PLongWord(ValuePtr2^)^, zCP_UTF8);
+      Result := WideCompareStr(S1, S2);
+    end
+    else
+      {$IFDEF MSWINDOWS}
+      Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
+        PAnsiChar(ValuePtr1^)+PAnsiInc, PLongWord(ValuePtr1^)^,
+        PAnsiChar(ValuePtr2^)+PAnsiInc, PLongWord(ValuePtr2^)^) - 2{CSTR_EQUAL}
+      {$ELSE}
+        Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+          AnsiStrComp(PPAnsiChar(ValuePtr1)^+PAnsiInc, PPAnsiChar(ValuePtr2)^+PAnsiInc)
+      {$ENDIF}
   else
     if not Assigned(PPAnsichar(ValuePtr1)^) and not Assigned(PPAnsiChar(ValuePtr2)^) then
       Result := 0
