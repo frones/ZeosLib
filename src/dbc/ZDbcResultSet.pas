@@ -4345,7 +4345,7 @@ begin
   FConSettings := ConSettings;
   if Data <> nil then
   begin
-    FBlobSize := (Len+1) * 2; //include #0#0 terminator
+    FBlobSize := (Len+1) shl 1; //shl 1 = * 2 but faster, include #0#0 terminator
     GetMem(FBlobData, FBlobSize);
     System.Move(Data^, FBlobData^, FBlobSize);
     (PWideChar(FBlobData)+Len)^ := WideChar(#0);

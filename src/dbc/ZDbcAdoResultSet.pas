@@ -416,7 +416,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VString;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -441,10 +441,10 @@ ProcessFixedChar:
         {$IFDEF UNICODE}
         System.SetString(Result,
           TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
         {$ELSE}
           Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //shr 1 = div 2 but faster, OleDb returns size in Bytes!
             ConSettings^.CTRL_CP);
         {$ENDIF}
       else
@@ -506,7 +506,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -519,7 +519,7 @@ ProcessFixedChar:
       adVarWChar,
       adLongVarWChar: {varying char fields}
         Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           ZDefaultSystemCodePage);
       else
         try
@@ -581,7 +581,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -595,7 +595,7 @@ ProcessFixedChar:
       adLongVarWChar: {varying char fields}
         begin
           Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //shr 1 = div 2 but faster, OleDb returns size in Bytes!
             zCP_UTF8);
         end;
       else
@@ -657,7 +657,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -670,7 +670,7 @@ ProcessFixedChar:
       adVarWChar,
       adLongVarWChar: {varying char fields}
           Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //shr 1 = div 2 but faster, OleDb returns size in Bytes!
             ConSettings^.ClientCodePage^.CP);
       else
         try
@@ -736,7 +736,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (Result+Len-1)^ = ' ' do dec(Len);
           Exit;
@@ -752,7 +752,7 @@ begin
       adLongVarWChar: {varying char fields}
         begin
           Result := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Exit;
         end;
       else
@@ -810,7 +810,7 @@ begin
           FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
       adWChar: {fixed char fields}
         begin
-          L := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          L := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           while (TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr+L-1)^ = ' ' do dec(L);
           System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, L);
         end;
@@ -823,7 +823,7 @@ begin
       adLongVarWChar: {varying char fields}
         System.SetString(Result,
           TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
       else
         try
           Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
@@ -934,7 +934,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -954,7 +954,7 @@ ProcessFixedChar:
         begin
           System.SetString(FUniTemp,
             TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Result := UnicodeToIntDef(FUniTemp, 0);
         end;
       else
@@ -1013,7 +1013,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -1033,7 +1033,7 @@ ProcessFixedChar:
         begin
           System.SetString(FUniTemp,
             TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Result := UnicodeToIntDef(FUniTemp, 0);
         end;
       else
@@ -1092,7 +1092,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -1112,7 +1112,7 @@ ProcessFixedChar:
         begin
           System.SetString(FUniTemp,
             TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Result := UnicodeToIntDef(FUniTemp, 0);
         end;
       else
@@ -1171,7 +1171,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
   ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -1191,7 +1191,7 @@ begin
         begin
           System.SetString(FUniTemp,
             TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Result := UnicodeToInt64Def(FUniTemp, 0);
         end;
       else
@@ -1250,7 +1250,7 @@ begin
         end;
       adWChar: {fixed char fields}
         begin
-          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //OleDb returns size in Bytes!
+          Len := FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1; //shr 1 = div 2 but faster, OleDb returns size in Bytes!
   ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
@@ -1270,7 +1270,7 @@ begin
         begin
           System.SetString(FUniTemp,
             TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //OleDb returns size in Bytes!
+            FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1); //shr 1 = div 2 but faster, OleDb returns size in Bytes!
           Result := UnicodeToUInt64Def(FUniTemp, 0);
         end;
       else

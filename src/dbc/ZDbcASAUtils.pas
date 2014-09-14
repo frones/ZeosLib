@@ -546,7 +546,7 @@ begin
   if FSQLDA.sqlvar[Index].sqlType and $FFFE <> DT_DECIMAL then
     Result := FSQLDA.sqlvar[Index].sqlLen
   else
-    Result := (FSQLDA.sqlvar[Index].sqlLen and $FF) div 2 + 1;
+    Result := (FSQLDA.sqlvar[Index].sqlLen and $FF) shr 1 + 1; //shr 1 = div 2 but faster
 end;
 
 {**

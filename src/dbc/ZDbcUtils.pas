@@ -479,7 +479,7 @@ begin
   Result := ''; //init speeds setlength x2
   if ODBC then
   begin
-    SetLength(Result,(Len * 2)+2);
+    SetLength(Result,(Len shl 1)+2); //shl 1 = * 2 but faster
     P := Pointer(Result);
     P^ := '0';
     Inc(P);
@@ -489,14 +489,14 @@ begin
   end
   else
   begin
-    SetLength(Result, (Len * 2)+3);
+    SetLength(Result, (Len shl 1)+3); //shl 1 = * 2 but faster
     P := Pointer(Result);
     P^ := 'x';
     Inc(P);
     P^ := #39;
     Inc(P);
     ZBinToHex(Value, P, Len);
-    Inc(P, Len*2);
+    Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
   end;
 end;
@@ -507,7 +507,7 @@ begin
   Result := ''; //init speeds setlength x2
   if ODBC then
   begin
-    System.SetLength(Result,(Len * 2)+2);
+    System.SetLength(Result,(Len shl 1)+2);//shl 1 = * 2 but faster
     P := Pointer(Result);
     P^ := '0';
     Inc(P);
@@ -517,14 +517,14 @@ begin
   end
   else
   begin
-    SetLength(Result, (Len * 2)+3);
+    SetLength(Result, (Len shl 1)+3); //shl 1 = * 2 but faster
     P := Pointer(Result);
     P^ := 'x';
     Inc(P);
     P^ := #39;
     Inc(P);
     ZBinToHex(Value, P, Len);
-    Inc(P, Len*2);
+    Inc(P, Len shl 1); //shl 1 = * 2 but faster
     P^ := #39;
   end;
 end;
@@ -567,12 +567,12 @@ begin
       //the Field assumes Precision*SizeOf(Char)
       {$IFDEF UNICODE}
       if ConSettings^.ClientCodePage^.CharWidth >= 2 then //All others > 3 are UTF8
-        Result := TempPrecision * 2 //add more mem for a reserved thirt byte
+        Result := TempPrecision shl 1 //add more mem for a reserved thirt byte
       else //two and one byte AnsiChars are one WideChar
         Result := TempPrecision
       {$ELSE}
         if ( ConSettings^.CPType = cCP_UTF8 ) or (ConSettings^.CTRL_CP = zCP_UTF8) then
-          Result := TempPrecision * 4
+          Result := TempPrecision * shl 4
         else
           Result := TempPrecision * CharWidth
       {$ENDIF}
@@ -581,7 +581,7 @@ begin
       //the RowAccessor assumes 2*Precision+2!
       //the Field assumes 2*Precision ??Does it?
       if CharWidth > 2 then
-        Result := TempPrecision * 2
+        Result := TempPrecision shl 1
       else
         Result := TempPrecision;
   end

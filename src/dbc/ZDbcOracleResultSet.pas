@@ -1494,7 +1494,7 @@ begin
         FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
           @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
         if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-          ColumnDisplaySize := ColumnDisplaySize div 2;
+          ColumnDisplaySize := ColumnDisplaySize shr 1; //shr 1 = div 2 but faster
         Precision := GetFieldSize(ColumnType, ConSettings, ColumnDisplaySize,
           ConSettings.ClientCodePage^.CharWidth);
       end
@@ -1909,7 +1909,7 @@ constructor TZOracleClob.Create(const PlainDriver: IZOraclePlainDriver;
   const ConSettings: PZConSettings; const CodePage: Word);
 begin
   if ZCompatibleCodePages(CodePage, zCP_UTF16) then
-    inherited CreateWithData(Data, Size div 2, ConSettings)
+    inherited CreateWithData(Data, Size shr 1, ConSettings) //shr 1 = div 2 but faster
   else
     inherited CreateWithData(Data, Size, CodePage, ConSettings);
   FContextHandle := ContextHandle;

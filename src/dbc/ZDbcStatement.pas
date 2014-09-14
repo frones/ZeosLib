@@ -2119,38 +2119,43 @@ var
         raise Exception.Create('Array count does not equal with initial count!');
   end;
 begin
-  if ZArray <> nil then
-    case SQLType of
-      stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
-      stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
-      stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
-      stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
-        AssertLength;
-      stString:
-        case VariantType of
-          vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
-            AssertLength
-          else
-            raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-        end;
-      stUnicodeString:
-        case VariantType of
-          vtUnicodeString, vtCharRec:
-            AssertLength
-          else
-            raise Exception.Create('Invalid Variant-Type for String-Array binding!');
-        end;
-      stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
-      stDataSet: ;
-    end;
-  V.VType := vtArray;
-  V.VArray.VArray := Pointer(Value);
-  V.VArray.VArrayVariantType := VariantType;
-  V.VArray.VArrayType := Ord(SQLType);
-  V.VArray.VIsNullArray := nil;
-  V.VArray.VIsNullArrayType := 0;
-  V.VArray.VIsNullArrayVariantType := vtNull;
-  SetInParam(ParameterIndex, SQLType, V);
+  if Connection.GetMetadata.GetDatabaseInfo.SupportsArrayBindings then
+  begin
+    if ZArray <> nil then
+      case SQLType of
+        stUnknown: raise Exception.Create('Invalid SQLType for Array binding!');
+        stBoolean, stByte, stShort, stWord, stSmall, stLongWord, stInteger, stULong,
+        stLong, stFloat, stDouble, stCurrency, stBigDecimal, stBytes, stGUID, stDate,
+        stTime, stTimestamp, stAsciiStream, stUnicodeStream, stBinaryStream:
+          AssertLength;
+        stString:
+          case VariantType of
+            vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
+              AssertLength
+            else
+              raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+          end;
+        stUnicodeString:
+          case VariantType of
+            vtUnicodeString, vtCharRec:
+              AssertLength
+            else
+              raise Exception.Create('Invalid Variant-Type for String-Array binding!');
+          end;
+        stArray:          raise Exception.Create('Invalid SQL-Type for Array binding!');
+        stDataSet: ;
+      end;
+    V.VType := vtArray;
+    V.VArray.VArray := Pointer(Value);
+    V.VArray.VArrayVariantType := VariantType;
+    V.VArray.VArrayType := Ord(SQLType);
+    V.VArray.VIsNullArray := nil;
+    V.VArray.VIsNullArrayType := 0;
+    V.VArray.VIsNullArrayVariantType := vtNull;
+    SetInParam(ParameterIndex, SQLType, V);
+  end
+  else
+    raise EZSQLException.Create('ArrayBindings are not supported!');
 end;
 
 {**

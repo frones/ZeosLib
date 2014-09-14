@@ -232,12 +232,12 @@ begin
         ColumnCodePage := zCP_UTF8;
         if ColumnType = stString then
           if ZDefaultSystemCodePage = zCP_UTF8 then
-            ColumnDisplaySize := FieldPrecision div 4
+            ColumnDisplaySize := FieldPrecision shr 2 //shr 2 = div 4 but faster
           else
-            ColumnDisplaySize := FieldPrecision div 2;
+            ColumnDisplaySize := FieldPrecision shr 1; //shr 1 = div 2 but faster
 
         if ColumnType = stUnicodeString then
-          ColumnDisplaySize := FieldPrecision div 2;
+          ColumnDisplaySize := FieldPrecision shr 1; //shr 1 = div 2 but faster
       end
       else
         ColumnCodePage := zCP_NONE;

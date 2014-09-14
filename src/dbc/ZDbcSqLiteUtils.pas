@@ -213,10 +213,10 @@ begin
     end;
 
   if (Result = stString) then
-    Precision := Precision*{$IFDEF UNICODE}2{$ELSE}4{$ENDIF};//UTF8 assumes 4Byte/Char
+    Precision := Precision shl {$IFDEF UNICODE}1{$ELSE}2{$ENDIF};//UTF8 assumes 4Byte/Char
 
   if (Result = stUnicodeString) then
-    Precision := Precision * 2;//UTF8 assumes 4Byte/Char
+    Precision := Precision shl 1;//shl 1 = * 2 but faster UTF8 assumes 4Byte/Char
 end;
 
 {**

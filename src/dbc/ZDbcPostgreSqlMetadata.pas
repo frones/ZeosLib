@@ -3149,7 +3149,7 @@ begin
           {%H-}//$1\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
           {%H-}//$2\000ww\000vv\000UNSPECIFIED\000m\000a\000n\000b\000
 
-          Advance := 4 + (KeySequence - 1) * 2;
+          Advance := 4 + (KeySequence - 1) shl 1; //shl 1 = * 2 but faster
           PutSplitStringEx(List, Targs, '\000');
 
           if Advance <= List.Count-1 then
