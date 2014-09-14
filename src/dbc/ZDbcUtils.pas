@@ -899,7 +899,7 @@ begin
       I know this can lead to pain with two byte ansi chars, but what else can i do?
     step two: detect the encoding }
 
-  if ( ZFastCode.StrLen(PAnsiChar(Bytes)) {%H-}< Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
+  if (Size mod 2 = 0) and ( ZFastCode.StrLen(PAnsiChar(Bytes)) {%H-}< Size ) then //Sure PWideChar written!! A #0 was in the byte-sequence!
     result := ceUTF16
   else
     if ConSettings.AutoEncode then
