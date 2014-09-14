@@ -68,6 +68,8 @@ type
   protected
     procedure QuickSort(SortList: PPointerList; L, R: Integer;
       SCompare: TZListSortCompare);
+    procedure HybridSortSha_0AA(SortList: PPointerList; Count: integer;
+      SCompare: TZListSortCompare);
   public
     procedure Sort(Compare: TZListSortCompare);
   end;
@@ -678,31 +680,31 @@ begin
   P1T := P1;
   P2T := P2;
   {$IFDEF FPC}
-  while Len > SizeOf(QWord)*4 do //compare 32 Bytes per loop
+  while Len > SizeOf(UInt64) shl 2 do //compare 32 Bytes per loop
   begin
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    Dec(Len, SizeOf(QWord)*4)
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    Dec(Len, SizeOf(UInt64) shl 2)
   end;
   while Len > 16 do //compare 16 Bytes per loop
   begin
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    Dec(Len, SizeOf(QWord)*2)
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    Dec(Len, SizeOf(UInt64) shl 1)
   end;
-  while Len > SizeOf(QWord) do //compare 8 Bytes per loop
+  while Len > SizeOf(UInt64) do //compare 8 Bytes per loop
   begin
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    Dec(Len, SizeOf(QWord))
+    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
+    Dec(Len, SizeOf(UInt64))
   end;
   while Len > 0 do
   begin
@@ -717,9 +719,9 @@ begin
   end;
   Exit;
   Fail8:
-    for N := 0 to SizeOf(QWord)-1 do
+    for N := 0 to SizeOf(UInt64)-1 do
   {$ELSE}
-  while Len > SizeOf(LongWord)*4 do //compare 16 Bytes per loop
+  while Len > SizeOf(LongWord) shl 2 do //compare 16 Bytes per loop
   begin
     if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
@@ -729,7 +731,7 @@ begin
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
     if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord)*4);
+    Dec(Len, SizeOf(LongWord)shl 2);
   end;
   while Len > 8 do if Len > 8 then //compare 8 Bytes per loop
   begin
@@ -737,7 +739,7 @@ begin
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
     if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord)*2)
+    Dec(Len, SizeOf(LongWord) shl 1)
   end;
   while Len > SizeOf(LongWord) do //compare 4 Bytes per loop
   begin
@@ -2925,17 +2927,150 @@ begin
 end;
 
 {**
+  Performs Alexandr Sharakhov hybrid sort algorithm for the list.
+  see http://guildalfa.ru/alsha/
+}
+//~1.57 times faster than Delphi QuickSort on E6850
+{$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
+{$UNDEF SaveR} {$IFOPT R+} {$R-} {$DEFINE SaveR} {$ENDIF}
+const
+  InsCount = 35; //33..49;
+  InsLast = InsCount-1;
+  SOP = SizeOf(pointer);
+  MSOP = NativeUInt(-SOP);
+
+procedure TZSortedList.HybridSortSha_0AA(SortList: PPointerList; Count: integer; SCompare: TZListSortCompare);
+var
+  I, J, L, R: NativeUInt;
+  procedure QuickSortSha_0AA(L, R: NativeUInt; SCompare: TZListSortCompare);
+  var
+    I, J, P, T: NativeUInt;
+  begin;
+    while true do
+    begin
+      I := L;
+      J := R;
+      if J-I <= InsLast * SOP then break;
+      T := (J-I) shr 1 and MSOP + I;
+
+      if SCompare(PPointer(J)^, PPointer(I)^)<0 then
+      begin
+        P := PNativeUInt(I)^;
+        PNativeUInt(I)^ := PNativeUInt(J)^;
+        PNativeUInt(J)^ := P;
+      end;
+      P := PNativeUInt(T)^;
+      if SCompare(Pointer(P), PPointer(I)^)<0 then
+      begin
+        P := PNativeUInt(I)^;
+        PNativeUInt(I)^ := PNativeUInt(T)^;
+        PNativeUInt(T)^ := P;
+      end
+      else
+        if SCompare(PPointer(J)^, Pointer(P)) < 0 then
+        begin
+          P := PNativeUInt(J)^;
+          PNativeUInt(J)^ := PNativeUInt(T)^;
+          PNativeUInt(T)^ := P;
+        end;
+
+      repeat
+        Inc(I,SOP);
+      until not (SCompare(PPointer(I)^, Pointer(P)) < 0);
+      repeat
+        Dec(J,SOP)
+      until not (SCompare(pointer(P), PPointer(J)^) < 0);
+      if I < J then
+        repeat
+          T := PNativeUInt(I)^;
+          PNativeUInt(I)^ := PNativeUInt(J)^;
+          PNativeUInt(J)^ := T;
+          repeat
+            Inc(I,SOP);
+          until not (SCompare(PPointer(I)^, pointer(P)) < 0 );
+          repeat
+            Dec(J,SOP);
+          until not (SCompare(pointer(P), PPointer(J)^) < 0);
+        until I >= J;
+      Dec(I,SOP); Inc(J,SOP);
+
+      if I-L <= R-J then
+      begin
+        if L + InsLast * SOP < I then
+          QuickSortSha_0AA(L, I, SCompare);
+        L := J;
+      end
+      else
+      begin
+        if J + InsLast * SOP < R
+          then QuickSortSha_0AA(J, R, SCompare);
+        R := I;
+      end;
+    end;
+  end;
+begin;
+  if (List<>nil) and (Count>1) then
+  begin
+    L := NativeUInt(@List[0]);
+    R := NativeUInt(@List[Count-1]);
+    J := R;
+    if Count-1 > InsLast then
+    begin
+      J:=NativeUInt(@List[InsLast]);
+      QuickSortSha_0AA(L, R, SCompare);
+    end;
+
+    I := L;
+    repeat;
+      if SCompare(PPointer(J)^, PPointer(I)^) < 0 then I:=J;
+      dec(J,SOP);
+    until J <= L;
+
+    if I > L then
+    begin
+      J := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(L)^;
+      PNativeUInt(L)^ := J;
+    end;
+
+    J := L + SOP;
+    while true do
+    begin
+      repeat;
+        if J >= R then exit;
+        inc(J,SOP);
+      until SCompare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
+      I := J - SOP;
+      L := PNativeUInt(J)^;
+      repeat;
+        PNativeUInt(I+SOP)^ := PNativeUInt(I)^;
+        dec(I,SOP);
+      until not (SCompare(Pointer(L),PPointer(I)^) < 0);
+      PNativeUInt(I + SOP)^ := L;
+    end;
+  end;
+end;
+{$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
+{$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
+
+{**
   Performs sorting for this list.
   @param Compare a comparison function.
 }
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
+  {$IFDEF DELPHI16_UP}
+  HybridSortSha_0AA(@List, Count, Compare);
+  {$ELSE}
+  HybridSortSha_0AA(List, Count, Compare);
+  {$ENDIF}
+  (*
   if (List <> nil) and (Count > 0) then
     {$IFDEF DELPHI16_UP}
     QuickSort(@List, 0, Count - 1, Compare);
     {$ELSE}
     QuickSort(List, 0, Count - 1, Compare);
-    {$ENDIF}
+    {$ENDIF}*)
 end;
 
 {**
