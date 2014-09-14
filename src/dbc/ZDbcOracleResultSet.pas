@@ -94,7 +94,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -266,7 +266,7 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZOracleAbstractResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUint): PAnsiChar;
 var
   SQLVarHolder: PZSQLVar;
   Blob: IZBlob;
@@ -274,53 +274,52 @@ begin
   SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   if LastWasNull then
   begin
-    Result.Len := 0;
-    Result.P := nil;
+    Len := 0;
+    Result := nil;
   end
   else
     with SQLVarHolder^ do
       case TypeCode of
         SQLT_AFC:
           begin
-            Result.Len := oDataSize;
-            Result.P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (Result.P+Result.Len-1)^ = ' ' do Dec(Result.Len); //omit trailing spaces
+            Len := oDataSize;
+            Result := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (Result+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
           end;
         SQLT_INT:
           begin
             FRawTemp := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
-            Result.P := Pointer(FRawTemp);
-            Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+            Result := Pointer(FRawTemp);
+            Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
         SQLT_FLT:
           begin
             FRawTemp := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
-            Result.P := Pointer(FRawTemp);
-            Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+            Result := Pointer(FRawTemp);
+            Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
           end;
         SQLT_STR:
           begin
-            Result.P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            //Result.Len := ZFastCode.StrLen(Result.P);
-            Result.Len := oDataSizeArray^[FCurrentBufRowNo];
+            Result := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSizeArray^[FCurrentBufRowNo];
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           begin
-            Result.P := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)+ SizeOf(Integer));
-            Result.Len := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
+            Result := {%H-}Pointer({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)+ SizeOf(Integer));
+            Len := {%H-}PInteger({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
           end;
         SQLT_DAT, SQLT_TIMESTAMP:
           begin
             FRawTemp := ZSysUtils.DateTimeToRawSQLTimeStamp(GetAsDateTimeValue(SQLVarHolder),
               ConSettings^.ReadFormatSettings, False);
-            Result.P := Pointer(FRawTemp);
-            Result.Len := {$IFDEF WITH_INLINE}System.Length(FRawTemp){$ELSE}{%H-}PLongInt(NativeUInt(FRawTemp) - 4)^{$ENDIF};
+            Result := Pointer(FRawTemp);
+            Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
           end;
         SQLT_BLOB, SQLT_CLOB:
           begin
             Blob := GetBlob(ColumnIndex);
-            Result.P := Blob.GetBuffer;
-            Result.Len := Blob.Length;
+            Result := Blob.GetBuffer;
+            Len := Blob.Length;
           end;
         else
           raise Exception.Create('Missing OCI Type?');
@@ -339,8 +338,9 @@ end;
 function TZOracleAbstractResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
   Blob: IZBlob;
+  Len: NativeUInt;
+  P: PAnsiChar;
 begin
   SQLVarHolder := GetSQLVarHolder(ColumnIndex);
   if LastWasNull then
@@ -350,21 +350,18 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.CP)
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            Result := ConSettings^.ConvFuncs.ZPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.CP)
           end;
         SQLT_INT: Result := IntToRaw({%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_UIN: Result := IntToRaw({%H-}PLongWord({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_FLT: Result := FloatToSQLRaw({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
-          begin
-            AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            //AnsiRec.Len := ZFastCode.StrLen(AnsiRec.P);
-            Result := ConSettings^.ConvFuncs.ZAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.CP)
-          end;
+          Result := ConSettings^.ConvFuncs.ZPRawToUTF8(
+            {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length)),
+            NativeUInt(oDataSizeArray^[FCurrentBufRowNo]), ConSettings^.ClientCodePage^.CP);
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
           ZSetString({%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))+SizeOf(Integer),
             {%H-}PLongInt({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^, Result);
@@ -394,8 +391,9 @@ end;
     value returned is <code>null</code>
 }
 function TZOracleAbstractResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var Len: NativeUInt;
 begin
-  Result := GetAnsiRec(ColumnIndex).P;
+  Result := GetPAnsiChar(ColumnIndex, Len);
 end;
 
 {**
@@ -580,7 +578,8 @@ end;
 function TZOracleAbstractResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  LEn: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
@@ -599,10 +598,10 @@ begin
           Result := Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^) <> 0;
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := StrToBoolEx(FRawTemp);
           end;
         SQLT_STR:
@@ -630,7 +629,8 @@ end;
 function TZOracleAbstractResultSet.GetInt(ColumnIndex: Integer): Integer;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stInteger);
@@ -643,10 +643,10 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := RawToIntDef(FRawTemp, 0);
           end;
         SQLT_INT:
@@ -680,7 +680,8 @@ end;
 function TZOracleAbstractResultSet.GetLong(ColumnIndex: Integer): Int64;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stLong);
@@ -693,10 +694,10 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := RawToInt64Def(FRawTemp, 0);
           end;
         SQLT_INT:
@@ -730,7 +731,8 @@ end;
 function TZOracleAbstractResultSet.GetULong(ColumnIndex: Integer): UInt64;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stULong);
@@ -743,10 +745,10 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := RawToUInt64Def(FRawTemp, 0);
           end;
         SQLT_INT:
@@ -780,7 +782,8 @@ end;
 function TZOracleAbstractResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stFloat);
@@ -793,10 +796,10 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := SqlStrToFloatDef(FRawTemp, 0);
           end;
         SQLT_INT:
@@ -831,7 +834,8 @@ end;
 function TZOracleAbstractResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stDouble);
@@ -844,10 +848,10 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := SqlStrToFloatDef(FRawTemp, 0);
           end;
         SQLT_INT:
@@ -883,7 +887,8 @@ end;
 function TZOracleAbstractResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBigDecimal);
@@ -896,10 +901,10 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.Len := oDataSize;
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
-            ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+            Len := oDataSize;
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
+            ZSetString(P, Len, FRawTemp);
             Result := SqlStrToFloatDef(FRawTemp, 0);
           end;
         SQLT_INT:
@@ -953,7 +958,8 @@ function TZOracleAbstractResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
   Failed: Boolean;
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
   Blob: IZBlob;
 label ConvFromString;
 begin
@@ -968,9 +974,9 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            AnsiRec.Len := oDataSize;
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSize;
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
             goto ConvFromString;
           end;
         SQLT_INT:
@@ -981,14 +987,14 @@ begin
           Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
           begin
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSizeArray^[FCurrentBufRowNo];
     ConvFromString:
-            if AnsiRec.Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-              Result := RawSQLDateToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
+              Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
+                RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
             LastWasNull := Result = 0;
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
@@ -998,8 +1004,8 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             Blob := Getblob(ColumnIndex);
-            AnsiRec.P := Blob.GetBuffer;
-            AnsiRec.Len := Blob.Length;
+            P := Blob.GetBuffer;
+            Len := Blob.Length;
             goto ConvFromString;
           end;
       else
@@ -1019,7 +1025,8 @@ end;
 function TZOracleAbstractResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
   Failed: Boolean;
   Blob: IZBlob;
 label ConvFromString;
@@ -1035,9 +1042,9 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            AnsiRec.Len := oDataSize;
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSize;
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
             goto ConvFromString;
           end;
         SQLT_INT:
@@ -1048,13 +1055,13 @@ begin
           Result := Frac({%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^);
         SQLT_STR:
           begin
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSizeArray^[FCurrentBufRowNo];
     ConvFromString:
-            if (AnsiRec.P+2)^ = ':' then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            if (P+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
-              Result := Frac(RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
+              Result := Frac(RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-}));
             LastWasNull := Result = 0;
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
@@ -1064,8 +1071,8 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             Blob := Getblob(ColumnIndex);
-            AnsiRec.P := Blob.GetBuffer;
-            AnsiRec.Len := Blob.Length;
+            P := Blob.GetBuffer;
+            Len := Blob.Length;
             goto ConvFromString;
           end;
       else
@@ -1087,7 +1094,8 @@ function TZOracleAbstractResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime
 var
   Failed: Boolean;
   SQLVarHolder: PZSQLVar;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
   Blob: IZBlob;
 label ConvFromString;
 begin
@@ -1102,9 +1110,9 @@ begin
       case TypeCode of
         SQLT_AFC:
           begin
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            AnsiRec.Len := oDataSize;
-            while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do Dec(AnsiRec.Len); //omit trailing spaces
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSize;
+            while (P+Len-1)^ = ' ' do Dec(Len); //omit trailing spaces
             goto ConvFromString;
           end;
         SQLT_INT:
@@ -1115,16 +1123,16 @@ begin
           Result := {%H-}PDouble({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length))^;
         SQLT_STR:
           begin
-            AnsiRec.P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
-            AnsiRec.Len := oDataSizeArray^[FCurrentBufRowNo];
+            P := {%H-}PAnsiChar({%H-}NativeUInt(Data)+(FCurrentBufRowNo*Length));
+            Len := oDataSizeArray^[FCurrentBufRowNo];
     ConvFromString:
-            if (AnsiRec.P+2)^ = ':' then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            if (P+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
-              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - AnsiRec.Len) <= 4 then
-                Result := RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed)
+              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
+                Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
               else
-                Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed);
+                Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
             LastWasNull := Result = 0;
           end;
         SQLT_LVB, SQLT_LVC, SQLT_BIN:
@@ -1134,8 +1142,8 @@ begin
         SQLT_BLOB, SQLT_CLOB:
           begin
             Blob := Getblob(ColumnIndex);
-            AnsiRec.P := Blob.GetBuffer;
-            AnsiRec.Len := Blob.Length;
+            P := Blob.GetBuffer;
+            Len := Blob.Length;
             goto ConvFromString;
           end;
       else
@@ -1228,7 +1236,7 @@ function TZOracleAbstractResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 var
   SQLVarHolder: PZSQLVar;
   LobLocator: POCILobLocator;
-  AnsiRec: TZAnsiRec;
+  Len: NativeUInt;
 begin
   Result := nil ;
 {$IFNDEF DISABLE_CHECKING}
@@ -1259,11 +1267,8 @@ begin
           Result := TZAbstractBlob.CreateWithData({%H-}PAnsiChar({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)+ SizeOf(Integer),
             {%H-}PInteger({%H-}NativeUInt(Data)+FCurrentBufRowNo*Length)^)
         else
-        begin
-          AnsiRec := GetAnsiRec(ColumnIndex);
-          Result := TZAbstractClob.CreateWithData(AnsiRec.P, AnsiRec.Len,
+          Result := TZAbstractClob.CreateWithData(GetPAnsiChar(ColumnIndex, Len), Len,
             ConSettings^.ClientCodePage^.CP, ConSettings);
-        end;
 end;
 
 { TZOracleResultSet }
@@ -1278,7 +1283,7 @@ var
   CurrentVar: PZSQLVar;
   ColumnCount: ub4;
   TempColumnNameLen, CSForm: Integer;
-  NameRec: TZAnsiRec;
+  P: PAnsiChar;
   RowSize: Integer;
   BufferPos: PAnsiChar;
   DescriptorColumnCount,SubObjectColumnCount: Integer;
@@ -1465,18 +1470,15 @@ begin
     begin
       //ColumnName := ''; TableName := ''; ColumnDisplaySize := 0; AutoIncrement := False;
       ColumnCodePage := CurrentVar^.CodePage;
-      NameRec.P := nil;
+      P := nil;
       FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
-        @NameRec.P, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle);
-      if NameRec.P <> nil then
-      begin
+        @P, @TempColumnNameLen, OCI_ATTR_NAME, FErrorHandle);
+      if P <> nil then
         {$IFDEF UNICODE}
-        NameRec.Len := TempColumnNameLen;
-        ColumnLabel := ZEncoding.ZAnsiRecToUnicode(NameRec, ConSettings^.ClientCodePage^.CP);
+        ColumnLabel := ZEncoding.PRawToUnicode(P, TempColumnNameLen, ConSettings^.ClientCodePage^.CP)
         {$ELSE}
-        ColumnLabel := BufferToStr(NameRec.P, TempColumnNameLen);
+        ColumnLabel := BufferToStr(P, TempColumnNameLen)
         {$ENDIF}
-      end
       else
         ColumnLabel := 'Col_'+ZFastCode.IntToStr(I+1);
 
@@ -1492,7 +1494,7 @@ begin
         FPlainDriver.AttrGet(CurrentVar^.Handle, OCI_DTYPE_PARAM,
           @CSForm, nil, OCI_ATTR_CHARSET_FORM, FErrorHandle);
         if CSForm = SQLCS_NCHAR then //We should determine the NCHAR set on connect
-          ColumnDisplaySize := ColumnDisplaySize div 2;
+          ColumnDisplaySize := ColumnDisplaySize shr 1; //shr 1 = div 2 but faster
         Precision := GetFieldSize(ColumnType, ConSettings, ColumnDisplaySize,
           ConSettings.ClientCodePage^.CharWidth);
       end
@@ -1907,7 +1909,7 @@ constructor TZOracleClob.Create(const PlainDriver: IZOraclePlainDriver;
   const ConSettings: PZConSettings; const CodePage: Word);
 begin
   if ZCompatibleCodePages(CodePage, zCP_UTF16) then
-    inherited CreateWithData(Data, Size div 2, ConSettings)
+    inherited CreateWithData(Data, Size shr 1, ConSettings) //shr 1 = div 2 but faster
   else
     inherited CreateWithData(Data, Size, CodePage, ConSettings);
   FContextHandle := ContextHandle;

@@ -1533,7 +1533,7 @@ begin
   AddCodePage('CL8KOI8U', 51, ceAnsi, zCP_KOI8U);
   AddCodePage('AZ8ISO8859P9E', 52, ceAnsi);
   AddCodePage('EE8PC852', 150, ceAnsi, zCP_DOS852);
-  AddCodePage('RU8PC866', 152, ceAnsi, zCP_DOS856);
+  AddCodePage('RU8PC866', 152, ceAnsi, zCP_DOS866);
   AddCodePage('TR8PC857', 156, ceAnsi, zCP_DOS857);
   AddCodePage('EE8MSWIN1250', 170, ceAnsi, zCP_WIN1250);
   AddCodePage('CL8MSWIN1251', 171, ceAnsi, zCP_WIN1251);
@@ -1544,11 +1544,11 @@ begin
   AddCodePage('TR8MSWIN1254', 177, ceAnsi, zCP_WIN1254);
   AddCodePage('WE8MSWIN1252', 178, ceAnsi, zCP_WIN1252);
   AddCodePage('BLT8MSWIN1257', 179, ceAnsi, zCP_WIN1257);
-  AddCodePage('BLT8CP921', 191, ceAnsi, 921);
+  AddCodePage('BLT8CP921', 191, ceAnsi, zCP_MSWIN921);
   AddCodePage('CL8KOI8R', 196, ceAnsi, zCP_KOI8R);
   AddCodePage('BLT8PC775', 197, ceAnsi, zCP_DOS775);
   AddCodePage('EL8PC737', 382, ceAnsi, zCP_DOS737);
-  AddCodePage('AR8ASMO8X', 500, ceAnsi);
+  AddCodePage('AR8ASMO8X', 500, ceAnsi, zCP_DOS708);
   AddCodePage('AR8ADOS720', 558, ceAnsi, zCP_DOS720);
   AddCodePage('AR8MSWIN1256', 560, ceAnsi, cCP_WIN1256);
   AddCodePage('JA16EUC', 830, ceAnsi, zCP_euc_JP_win);
@@ -1558,7 +1558,7 @@ begin
   AddCodePage('KO16KSC5601', 840, ceAnsi, 601);
   AddCodePage('KO16MSWIN949', 846, ceAnsi, zCP_EUCKR);
   AddCodePage('ZHS16CGB231280', 850, ceAnsi, zCP_GB2312);
-  AddCodePage('ZHS16GBK', 852, ceAnsi);
+  AddCodePage('ZHS16GBK', 852, ceAnsi, zCP_GB2312);
   AddCodePage('ZHS32GB18030', 854, ceAnsi, zCP_GB18030);
   AddCodePage('ZHT32EUC', 860, ceAnsi, zCP_EUCKR);
   AddCodePage('ZHT16BIG5', 865, ceAnsi, zCP_Big5);

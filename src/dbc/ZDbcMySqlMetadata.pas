@@ -957,6 +957,7 @@ function TZMySQLDatabaseMetadata.UncachedGetTables(const Catalog: string;
 const
   TABLES_TABLE_NAME_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
 var
+  Len: NativeUInt;
   LCatalog, LTableNamePattern: string;
 begin
     Result := inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
@@ -972,7 +973,7 @@ begin
       begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
-        Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(TABLES_TABLE_NAME_Index));
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLES_TABLE_NAME_Index, Len), @Len);
         Result.UpdateString(TableColumnsSQLType, 'TABLE');
         Result.InsertRow;
       end;
@@ -1019,6 +1020,8 @@ end;
   catalog name
 }
 function TZMySQLDatabaseMetadata.UncachedGetCatalogs: IZResultSet;
+var
+  Len: NativeUInt;
 begin
     Result:=inherited UncachedGetCatalogs;
 
@@ -1027,7 +1030,7 @@ begin
       while Next do
       begin
         Result.MoveToInsertRow;
-        Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(FirstDbcIndex));
+        Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(FirstDbcIndex, Len), @Len);
         Result.InsertRow;
       end;
       Close;
@@ -1112,6 +1115,7 @@ function TZMySQLDatabaseMetadata.UncachedGetColumns(const Catalog: string;
   const SchemaPattern: string; const TableNamePattern: string;
   const ColumnNamePattern: string): IZResultSet;
 var
+  Len: NativeUInt;
   I: Integer;
   MySQLType: TZSQLType;
   TempCatalog, TempColumnNamePattern, TempTableNamePattern: string;
@@ -1169,7 +1173,7 @@ begin
             Result.UpdateString(CatalogNameIndex, TempCatalog);
             Result.UpdateString(SchemaNameIndex, '');
             Result.UpdateString(TableNameIndex, TempTableNamePattern) ;
-            Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(ColumnIndexes[1]));
+            Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
 
             ConvertMySQLColumnInfoFromString(GetString(ColumnIndexes[2]),
               ConSettings, TypeName,
@@ -1199,7 +1203,7 @@ begin
               Result.UpdateInt(TableColColumnNullableIndex, 0);
               Result.UpdateString(TableColColumnIsNullableIndex, 'NO');
             end;
-            Result.UpdateAnsiRec(TableColColumnRemarksIndex, GetAnsiRec(ColumnIndexes[4]));
+            Result.UpdatePAnsiChar(TableColColumnRemarksIndex, GetPAnsiChar(ColumnIndexes[4], Len), @Len);
             // MySQL is a bit bizarre.
             if IsNull(ColumnIndexes[5]) then
             begin
@@ -1327,6 +1331,7 @@ const
   column_name_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   column_priv_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
+  Len: NativeUInt;
   I: Integer;
   Host, User, FullUser: String;
   AllPrivileges, Privilege: String;
@@ -1377,11 +1382,11 @@ begin
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(db_Index));
+            Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(db_Index, Len), @Len);
             //Result.UpdateNull(SchemaNameIndex);
             Result.UpdateString(TableNameIndex, Table);
-            Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(column_name_Index));
-            Result.UpdateAnsiRec(TableColPrivGrantorIndex, GetAnsiRec(grantor_Index));
+            Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(column_name_Index, Len), @Len);
+            Result.UpdatePAnsiChar(TableColPrivGrantorIndex, GetPAnsiChar(grantor_Index, Len), @Len);
             Result.UpdateString(TableColPrivGranteeIndex, FullUser);
             Result.UpdateString(TableColPrivPrivilegeIndex, Privilege);
             //Result.UpdateNull(TableColPrivIsGrantableIndex);
@@ -1438,6 +1443,7 @@ const
   column_priv_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
   I: Integer;
+  Len: NativeUInt;
   Host, User, FullUser: String;
   AllPrivileges, Privilege: String;
   PrivilegesList: TStrings;
@@ -1482,10 +1488,10 @@ begin
           begin
             Result.MoveToInsertRow;
             Privilege := Trim(PrivilegesList.Strings[I]);
-            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(db_Index));
+            Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(db_Index, Len), @Len);
             //Result.UpdateNull(SchemaNameIndex);
-            Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(table_name_Index));
-            Result.UpdateAnsiRec(TablePrivGrantorIndex, GetAnsiRec(grantor_Index));
+            Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(table_name_Index, Len), @Len);
+            Result.UpdatePAnsiChar(TablePrivGrantorIndex, GetPAnsiChar(grantor_Index, Len), @Len);
             Result.UpdateString(TablePrivGranteeIndex, FullUser);
             Result.UpdateString(TablePrivPrivilegeIndex, Privilege);
             //Result.UpdateNull(TablePrivIsGrantableIndex);
@@ -1524,6 +1530,7 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetPrimaryKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
+  Len: NativeUInt;
   KeyType: string;
   LCatalog, LTable: string;
   ColumnIndexes : Array[1..3] of integer;
@@ -1554,7 +1561,7 @@ begin
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdateString(SchemaNameIndex, '');
           Result.UpdateString(TableNameIndex, Table);
-          Result.UpdateAnsiRec(PrimaryKeyColumnNameIndex, GetAnsiRec(ColumnIndexes[2]));
+          Result.UpdatePAnsiChar(PrimaryKeyColumnNameIndex, GetPAnsiChar(ColumnIndexes[2], Len), @Len);
           Result.UpdateInt(PrimaryKeyKeySeqIndex, GetInt(ColumnIndexes[3]));
           Result.UpdateNull(PrimaryKeyPKNameIndex);
           Result.InsertRow;
@@ -1776,6 +1783,7 @@ function TZMySQLDatabaseMetadata.UncachedGetExportedKeys(const Catalog: string;
   const Schema: string; const Table: string): IZResultSet;
 var
   I: Integer;
+  Len: NativeUInt;
   KeySeq: Integer;
   LCatalog, LTable: string;
   TableType, Comment, Keys: String;
@@ -1819,18 +1827,13 @@ begin
                   PutSplitString(KeyList, Keys, '() /');
 
                   Result.UpdateString(ExportedKeyColPKTableCatalogIndex, KeyList.Strings[2]);
-                  //Result.UpdateNull(ExportedKeyColPKTableSchemaIndex);
                   Result.UpdateString(ExportedKeyColPKTableNameIndex, Table);
-                  //Result.UpdateNull(ExportedKeyColPKColumnNameIndex);
                   Result.UpdateString(ExportedKeyColFKTableCatalogIndex, LCatalog);
-                  //Result.UpdateNull(ExportedKeyColFKTableSchemaIndex);
-                  Result.UpdateAnsiRec(ExportedKeyColFKTableNameIndex, GetAnsiRec(ColumnIndexes[3]));
+                  Result.UpdatePAnsiChar(ExportedKeyColFKTableNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), @Len);
                   Result.UpdateString(ExportedKeyColFKColumnNameIndex, KeyList.Strings[0]);
                   Result.UpdateInt(ExportedKeyColKeySeqIndex, KeySeq);
                   Result.UpdateInt(ExportedKeyColUpdateRuleIndex, Ord(ikSetDefault));
                   Result.UpdateInt(ExportedKeyColDeleteRuleIndex, Ord(ikSetDefault));
-                  //Result.UpdateNull(ExportedKeyColFKNameIndex);
-                  //Result.UpdateNull(ExportedKeyColPKNameIndex);
                   Result.UpdateInt(ExportedKeyColDeferrabilityIndex, Ord(ikSetDefault));
                   Inc(KeySeq);
                   Result.InsertRow;
@@ -2179,6 +2182,7 @@ function TZMySQLDatabaseMetadata.UncachedGetIndexInfo(const Catalog: string;
   const Schema: string; const Table: string; Unique: Boolean;
   Approximate: Boolean): IZResultSet;
 var
+  Len: NativeUInt;
   LCatalog, LTable: string;
   ColumnIndexes : Array[1..7] of integer;
 begin
@@ -2207,18 +2211,18 @@ begin
         Result.MoveToInsertRow;
         Result.UpdateString(CatalogNameIndex, LCatalog);
         //Result.UpdateNull(SchemaNameIndex);
-        Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(ColumnIndexes[1]));
+        Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(ColumnIndexes[1], Len), @Len);
         if GetInt(ColumnIndexes[2]) = 0 then
           Result.UpdateString(IndexInfoColNonUniqueIndex, 'true')
         else
           Result.UpdateString(IndexInfoColNonUniqueIndex, 'false');
         //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-        Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, GetAnsiRec(ColumnIndexes[3]));
+        Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(ColumnIndexes[3], Len), @Len);
         Result.UpdateByte(IndexInfoColTypeIndex, Ord(tiOther));
         Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(ColumnIndexes[4]));
-        Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, GetAnsiRec(ColumnIndexes[5]));
-        Result.UpdateAnsiRec(IndexInfoColAscOrDescIndex, GetAnsiRec(ColumnIndexes[6]));
-        Result.UpdateAnsiRec(IndexInfoColCardinalityIndex, GetAnsiRec(ColumnIndexes[7]));
+        Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(ColumnIndexes[5], Len), @Len);
+        Result.UpdatePAnsiChar(IndexInfoColAscOrDescIndex, GetPAnsiChar(ColumnIndexes[6], Len), @Len);
+        Result.UpdatePAnsiChar(IndexInfoColCardinalityIndex, GetPAnsiChar(ColumnIndexes[7], Len), @Len);
         Result.UpdateInt(IndexInfoColPagesIndex, 0);
         //Result.UpdateNull(IndexInfoColFilterConditionIndex);
         Result.InsertRow;
@@ -2358,6 +2362,7 @@ const
   {%H-}PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   RETURN_VALUES_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
+  Len: NativeUInt;
   SQL, TypeName, Temp: string;
   ParamList, Params, Names, Returns: TStrings;
   I, ColumnSize, Precision: Integer;
@@ -2491,9 +2496,9 @@ begin
                   Params.Insert(0,'IN'); //Function in value
 
             Result.MoveToInsertRow;
-            Result.UpdateAnsiRec(CatalogNameIndex, GetAnsiRec(PROCEDURE_SCHEM_index)); //PROCEDURE_CAT
+            Result.UpdatePAnsiChar(CatalogNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_index, Len), @Len); //PROCEDURE_CAT
             //Result.UpdateNull(SchemaNameIndex); //PROCEDURE_SCHEM
-            Result.UpdateAnsiRec(ProcColProcedureNameIndex, GetAnsiRec(PROCEDURE_NAME_Index)); //PROCEDURE_NAME
+            Result.UpdatePAnsiChar(ProcColProcedureNameIndex, GetPAnsiChar(PROCEDURE_NAME_Index, Len), @Len); //PROCEDURE_NAME
             ConvertMySQLColumnInfoFromString(Params[2],
               ConSettings, TypeName, Temp,
               FieldType, ColumnSize, Precision);
@@ -2613,6 +2618,7 @@ end;
 function TZMySQLDatabaseMetadata.UncachedGetCollationAndCharSet(const Catalog, SchemaPattern,
   TableNamePattern, ColumnNamePattern: string): IZResultSet; //EgonHugeist
 var
+  Len: NativeUInt;
   SQL, LCatalog: string;
   ColumnNameCondition, TableNameCondition, SchemaCondition: string;
 begin
@@ -2663,8 +2669,8 @@ begin
             Result.UpdateString(SchemaNameIndex, LCatalog);   //COLLATION_SCHEMA
             Result.UpdateString(TableNameIndex, TableNamePattern); //COLLATION_TABLE
             Result.UpdateString(ColumnNameIndex, ColumnNamePattern);//COLLATION_COLUMN
-            Result.UpdateAnsiRec(CollationNameIndex, GetAnsiRecByName('COLLATION_NAME')); //COLLATION_NAME
-            Result.UpdateAnsiRec(CharacterSetNameIndex, GetAnsiRecByName('CHARACTER_SET_NAME')); //CHARACTER_SET_NAME
+            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('COLLATION_NAME', Len), @Len); //COLLATION_NAME
+            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len); //CHARACTER_SET_NAME
             Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN')); //CHARACTER_SET_SIZE
             Result.InsertRow;
           end;
@@ -2686,8 +2692,8 @@ begin
             Result.UpdateString(CatalogNameIndex, LCatalog);
             Result.UpdateString(SchemaNameIndex, LCatalog);
             Result.UpdateString(TableNameIndex, TableNamePattern);
-            Result.UpdateAnsiRec(CollationNameIndex, GetAnsiRecByName('TABLE_COLLATION'));
-            Result.UpdateAnsiRec(CharacterSetNameIndex, GetAnsiRecByName('CHARACTER_SET_NAME'));
+            Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('TABLE_COLLATION', Len), @Len);
+            Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len);
             Result.UpdateSmall(CharacterSetSizeIndex, GetSmallByName('MAXLEN'));
             Result.InsertRow;
           end;
@@ -2710,8 +2716,8 @@ begin
           Result.MoveToInsertRow;
           Result.UpdateString(CatalogNameIndex, LCatalog);
           Result.UpdateString(SchemaNameIndex, LCatalog);
-          Result.UpdateAnsiRec(CollationNameIndex, GetAnsiRecByName('DEFAULT_COLLATION_NAME'));
-          Result.UpdateAnsiRec(CharacterSetNameIndex, GetAnsiRecByName('DEFAULT_CHARACTER_SET_NAME'));
+          Result.UpdatePAnsiChar(CollationNameIndex, GetPAnsiCharByName('DEFAULT_COLLATION_NAME', Len), @Len);
+          Result.UpdatePAnsiChar(CharacterSetNameIndex, GetPAnsiCharByName('DEFAULT_CHARACTER_SET_NAME', Len), @Len);
           Result.UpdateNull(CharacterSetIDIndex); //CHARACTER_SET_ID
           Result.UpdateSmall(CharacterSetSizeIndex, GetSmall(FindColumn('MAXLEN'))); //CHARACTER_SET_SIZE
           Result.InsertRow;
@@ -2727,6 +2733,7 @@ end;
   @return <code>ResultSet</code> - each row is a CharacterSetName and it's ID
 }
 function TZMySQLDatabaseMetadata.UncachedGetCharacterSets: IZResultSet; //EgonHugeist
+var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetCharacterSets;
 
@@ -2737,7 +2744,7 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      Result.UpdateAnsiRec(CharacterSetsNameIndex, GetAnsiRecByName('CHARACTER_SET_NAME'));
+      Result.UpdatePAnsiChar(CharacterSetsNameIndex, GetPAnsiCharByName('CHARACTER_SET_NAME', Len), @Len);
       Result.InsertRow;
     end;
     Close;

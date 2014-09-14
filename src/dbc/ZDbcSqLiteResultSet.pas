@@ -91,7 +91,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -231,13 +231,13 @@ begin
       begin
         ColumnCodePage := zCP_UTF8;
         if ColumnType = stString then
-          if Zencoding.ZDefaultSystemCodePage = zCP_UTF8 then
-            ColumnDisplaySize := FieldPrecision div 4
+          if ZDefaultSystemCodePage = zCP_UTF8 then
+            ColumnDisplaySize := FieldPrecision shr 2 //shr 2 = div 4 but faster
           else
-            ColumnDisplaySize := FieldPrecision div 2;
+            ColumnDisplaySize := FieldPrecision shr 1; //shr 1 = div 2 but faster
 
         if ColumnType = stUnicodeString then
-          ColumnDisplaySize := FieldPrecision div 2;
+          ColumnDisplaySize := FieldPrecision shr 1; //shr 1 = div 2 but faster
       end
       else
         ColumnCodePage := zCP_NONE;
@@ -308,22 +308,22 @@ end;
   a <code>PAnsiChar</code> in the Delphi programming language.
 
   @param columnIndex the first column is 1, the second is 2, ...
-  @param Len the Length of the PAnsiChar String
+  @param Len the Length of the String in bytes
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZSQLiteResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
   end
   else
   begin
-    Result.P := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
-    Result.Len := ZFastCode.StrLen(Result.P);
+    Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
+    Len := ZFastCode.StrLen(Result);
   end;
 end;
 
@@ -352,20 +352,19 @@ end;
     value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
-var AnsiRec: TZAnsiRec;
+var P: PAnsiChar;
+  Len: NativeUint;
 begin //rewritten because of performance reasons to avoid localized the RBS before
   LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
   if LastWasNull then
     Result := ''
   else
   begin
-    AnsiRec := GetAnsiRec(ColumnIndex);
+    P := GetPAnsiChar(ColumnIndex, Len);
     {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    Result := '';
-    SetLength(Result, AnsiRec.Len);
-    System.Move(AnsiRec.P^, PAnsiChar(Result)^, AnsiRec.Len);
+    ZSetString(P, Len, result);
     {$ELSE}
-    System.SetString(Result, AnsiRec.P, AnsiRec.Len);
+    System.SetString(Result, P, Len);
     {$ENDIF}
   end;
 end;

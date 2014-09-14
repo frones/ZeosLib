@@ -481,6 +481,7 @@ var
   I, FieldIndex: Integer;
   Current: TField;
   ColumnIndex, ColumnCount: Integer;
+  Len: NativeUInt;
 begin
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
   ColumnCount := ResultSet.GetMetadata.GetColumnCount;
@@ -533,9 +534,9 @@ begin
         RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          RowAccessor.SetAnsiRec(FieldIndex, ResultSet.GetAnsiRec(ColumnIndex))
+          RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len)
         else
-          RowAccessor.SetUnicodeString(FieldIndex, ResultSet.GetUnicodeString(ColumnIndex));
+          RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         RowAccessor.SetBytes(FieldIndex, ResultSet.GetBytes(ColumnIndex));
       ftDate:
@@ -573,6 +574,7 @@ var
   WasNull: Boolean;
   ColumnIndex, ColumnCount: Integer;
   Blob: IZBlob;
+  Len: NativeUInt;
 begin
   WasNull := False;
   RowAccessor.RowBuffer.Index := ResultSet.GetRow;
@@ -629,11 +631,11 @@ begin
           RowAccessor.GetCurrency(FieldIndex, WasNull));
       ftString, ftWidestring:
         if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-          ResultSet.UpdateAnsiRec(ColumnIndex,
-            RowAccessor.GetAnsiRec(FieldIndex, WasNull))
+          ResultSet.UpdatePAnsiChar(ColumnIndex,
+            RowAccessor.GetPAnsiChar(FieldIndex, WasNull, Len), @Len)
         else
-          ResultSet.UpdateWideRec(ColumnIndex,
-            RowAccessor.GetWideRec(FieldIndex, WasNull));
+          ResultSet.UpdatePWideChar(ColumnIndex,
+            RowAccessor.GetPWideChar(FieldIndex, WasNull, Len), @Len);
       ftBytes{$IFDEF WITH_FTGUID}, ftGuid{$ENDIF}:
         ResultSet.UpdateBytes(ColumnIndex, RowAccessor.GetBytes(FieldIndex, WasNull));
       ftDate:

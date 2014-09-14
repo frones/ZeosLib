@@ -1519,6 +1519,7 @@ const
   PROCEDURE_OVERLOAD_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   PROCEDURE_TYPE_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
 var
+  Len: NativeUInt;
   SQL: string;
   LProcedureNamePattern, LSchemaNamePattern: string;
   sName:string;
@@ -1546,12 +1547,9 @@ begin
         sName :=  sName+'.'+IC.Quote(GetString(PROCEDURE_NAME_Index));
       Result.MoveToInsertRow;
       //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(PROCEDURE_SCHEM_Index));
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(PROCEDURE_SCHEM_Index, Len), @Len);
       Result.UpdateString(ProcedureNameIndex, sName);
-      Result.UpdateAnsiRec(ProcedureOverloadIndex, GetAnsiRec(PROCEDURE_OVERLOAD_Index));
-      //Result.UpdateNull(ProcedureReserverd1Index);
-      //Result.UpdateNull(ProcedureReserverd2Index);
-      //Result.UpdateNull(ProcedureRemarksIndex);
+      Result.UpdatePAnsiChar(ProcedureOverloadIndex, GetPAnsiChar(PROCEDURE_OVERLOAD_Index, Len), @Len);
       if GetString(PROCEDURE_TYPE_Index) = 'FUNCTION' then
           Result.UpdateByte(ProcedureTypeIndex, Ord(prtReturnsResult))
         else if GetString(PROCEDURE_TYPE_Index) = 'PROCDEURE' then
@@ -1684,6 +1682,7 @@ const
   DATA_DEFAULT_Index = {$IFDEF GENERIC_INDEX}8{$ELSE}9{$ENDIF};
   COLUMN_ID_Index = {$IFDEF GENERIC_INDEX}9{$ELSE}10{$ENDIF};
 var
+  Len: NativeUInt;
   SQL, oDataType: string;
   SQLType: TZSQLType;
   OwnerCondition,TableCondition,ColumnCondition: String;
@@ -1723,15 +1722,14 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-      //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(OWNER_Index));
-      Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(TABLE_NAME_Index));
-      Result.UpdateAnsiRec(ColumnNameIndex, GetAnsiRec(COLUMN_NAME_Index));
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), @Len);
+      Result.UpdatePAnsiChar(ColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), @Len);
       oDataType := GetString(DATA_TYPE_Index);
       SQLType := ConvertOracleTypeToSQLType(oDataType,
         GetInt(DATA_PRECISION_Index), GetInt(DATA_SCALE_Index), ConSettings.CPType);
       Result.UpdateByte(TableColColumnTypeIndex, Ord(SQLType));
-      Result.UpdateAnsiRec(TableColColumnTypeNameIndex, GetAnsiRec(DATA_TYPE_Index));
+      Result.UpdatePAnsiChar(TableColColumnTypeNameIndex, GetPAnsiChar(DATA_TYPE_Index, Len), @Len);
       Result.UpdateInt(TableColColumnSizeIndex, GetFieldSize(SQLType, ConSettings,
         GetInt(DATA_LENGTH_Index), ConSettings.ClientCodePage.CharWidth));
       //Result.UpdateNull(TableColColumnBufLengthIndex);
@@ -1749,14 +1747,9 @@ begin
         Result.UpdateString(TableColColumnIsNullableIndex, 'YES');
       end;
 
-      //Result.UpdateNull(TableColColumnRemarksIndex);
-      Result.UpdateAnsiRec(TableColColumnColDefIndex, GetAnsiRec(DATA_DEFAULT_Index));
-      //Result.UpdateNull(TableColColumnSQLDataTypeIndex);
-      //Result.UpdateNull(TableColColumnSQLDateTimeSubIndex);
-      //Result.UpdateNull(TableColColumnCharOctetLengthIndex);
+      Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), @Len);
       Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index){$IFDEF GENERIC_INDEX}-1{$ENDIF});
 
-      //Result.UpdateNull(TableColColumnAutoIncIndex);
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
         IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));
       Result.UpdateBoolean(TableColColumnSearchableIndex, True);
@@ -2025,6 +2018,7 @@ const
   COLUMN_NAME_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
   DESCEND_Index = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
+  Len: NativeUint;
   SQL: string;
   OwnerCondition,TableCondition: String;
 
@@ -2062,17 +2056,15 @@ begin
     while Next do
     begin
       Result.MoveToInsertRow;
-
-      //Result.UpdateNull(CatalogNameIndex);
-      Result.UpdateAnsiRec(SchemaNameIndex, GetAnsiRec(OWNER_Index));
-      Result.UpdateAnsiRec(TableNameIndex, GetAnsiRec(TABLE_NAME_Index));
+      Result.UpdatePAnsiChar(SchemaNameIndex, GetPAnsiChar(OWNER_Index, Len), @Len);
+      Result.UpdatePAnsiChar(TableNameIndex, GetPAnsiChar(TABLE_NAME_Index, Len), @Len);
       Result.UpdateBoolean(IndexInfoColNonUniqueIndex,
         UpperCase(GetString(UNIQUENESS_Index)) <> 'UNIQUE');
       //Result.UpdateNull(IndexInfoColIndexQualifierIndex);
-      Result.UpdateAnsiRec(IndexInfoColIndexNameIndex, GetAnsiRec(INDEX_NAME_Index));
+      Result.UpdatePAnsiChar(IndexInfoColIndexNameIndex, GetPAnsiChar(INDEX_NAME_Index, Len), @Len);
       Result.UpdateInt(IndexInfoColTypeIndex, 3);
       Result.UpdateInt(IndexInfoColOrdPositionIndex, GetInt(COLUMN_POSITION_Index));
-      Result.UpdateAnsiRec(IndexInfoColColumnNameIndex, GetAnsiRec(COLUMN_NAME_Index));
+      Result.UpdatePAnsiChar(IndexInfoColColumnNameIndex, GetPAnsiChar(COLUMN_NAME_Index, Len), @Len);
       if GetString(DESCEND_Index) = 'ASC' then
         Result.UpdateString(IndexInfoColAscOrDescIndex, 'A')
       else Result.UpdateString(IndexInfoColAscOrDescIndex, 'D');

@@ -146,7 +146,7 @@ type
 implementation
 
 uses ZSysUtils, ZDbcUtils, ZMessages, ZPlainASAConstants, ZDbcASAResultSet,
-  ZDbcResultSet;
+  ZDbcResultSet, ZEncoding;
 
 { TZASAStatement }
 
@@ -943,7 +943,7 @@ end;
 procedure TZASACallableStatement.FetchOutParams( Value: IZASASQLDA);
 var
   I: Integer;
-  L: LongWord;
+  L: NativeUInt;
   TempBlob: IZBlob;
   P: Pointer;
 begin
@@ -971,11 +971,20 @@ begin
       stBigDecimal:
         OutParamValues[I] := EncodeFloat(Value.GetBigDecimal(I));
       stString:
-        OutParamValues[I] := EncodeString(ConSettings^.ConvFuncs.ZRawToString(
-          Value.GetString(I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP));
+        begin
+          P := Value.GetPRaw(I, L);
+          {$IFDEF UNICODE}
+          OutParamValues[I] := EncodeString(PRawToUnicode(P, L, ConSettings^.ClientCodePage^.CP));
+          {$ELSE}
+          OutParamValues[I] := EncodeString(ConSettings^.ConvFuncs.ZPRawToString(
+            P, L, ConSettings^.CTRL_CP));
+          {$ENDIF}
+        end;
       stUnicodeString:
-        OutParamValues[I] := EncodeUnicodeString(ConSettings^.ConvFuncs.ZRawToUnicode(
-          Value.GetString(I), ConSettings^.ClientCodePage^.CP));
+        begin
+          P := Value.GetPRaw(I, L);
+          OutParamValues[I] := EncodeUnicodeString(PRawToUnicode(P, L, ConSettings^.ClientCodePage^.CP));
+        end;
       stBytes:
         OutParamValues[I] := EncodeBytes(Value.GetBytes( I));
       stDate:

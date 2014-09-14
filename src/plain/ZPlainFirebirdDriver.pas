@@ -574,7 +574,7 @@ procedure AddFireBird21CodePages(PlainDriver: TZAbstractPlainDriver);
 begin
   PlainDriver.AddCodePage('CP943C', CS_CP943C, ceAnsi, 943, '', 2); {Japanese}
   PlainDriver.AddCodePage('GBK', CS_GBK, ceAnsi, zCP_GB2312, '', 2); {Chinese}
-  PlainDriver.AddCodePage('TIS620', CS_TIS620, ceAnsi, zCP_IBM_Thai); {Thai}
+  PlainDriver.AddCodePage('TIS620', CS_TIS620, ceAnsi, zCP_WIN874); {Thai}
 end;
 
 { IZFirebirdPlainDriver }
@@ -609,7 +609,7 @@ begin
   Self.AddCodePage('GB_2312', CS_GB_2312, ceAnsi, zCP_GB2312, '', 2); {Simplified Chinese (Hong Kong, PRC)}
   Self.AddCodePage('ISO8859_1', CS_ISO8859_1, ceAnsi, zCP_L1_ISO_8859_1); {Latin 1}
   Self.AddCodePage('KSC_5601', CS_KSC_5601, ceAnsi, zCP_EUCKR, '', 2); {Korean (Unified Hangeul)}
-  Self.AddCodePage('NEXT', CS_NEXT);  {NeXTSTEP encoding}
+  Self.AddCodePage('NEXT', CS_NEXT);  {apple NeXTSTEP encoding}
   Self.AddCodePage('NONE', CS_NONE, ceAnsi, ZDefaultSystemCodePage, '', 1, False); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
   Self.AddCodePage('OCTETS', CS_BINARY, ceAnsi, $fffd); {Binary character}
   Self.AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_EUC_JP, '', 2); {Japanese}

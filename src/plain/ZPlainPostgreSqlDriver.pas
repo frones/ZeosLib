@@ -941,7 +941,7 @@ begin
   AddCodePage('ALT', Ord(csALT), ceAnsi, zCP_DOS866); { Windows CP866 }
   AddCodePage('WIN1256', Ord(csWIN1256), ceAnsi, cCP_WIN1256);  { Windows CP1256 	Arabic }
   AddCodePage('TCVN', Ord(csTCVN), ceAnsi, zCP_WIN1258); { TCVN-5712/Windows CP1258 (Vietnamese) }
-  AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_DOS874); { Windows CP874 (Thai) }
+  AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_WIN874); { Windows CP874 (Thai) }
 end;
 
 procedure TZPostgreSQLBaseDriver.LoadApi;
@@ -1783,10 +1783,10 @@ begin
   AddCodePage('GB18030', Ord(csGB18030), ceAnsi, zCP_GB18030, '', 2); { National Standard 	Chinese }
   AddCodePage('GBK', Ord(csGBK), ceAnsi, zCP_GB2312, '', 2); { Extended National Standard 	Simplified Chinese }
   AddCodePage('SJIS', Ord(csSJIS), ceAnsi, zCP_SHIFTJS, '', 2); { Shift JIS 	Japanese }
-  AddCodePage('UHC', Ord(csUHC), ceAnsi, zCP_EUCKR, '', 2); { Unified Hangul Code 	Korean }
+  AddCodePage('UHC', Ord(csUHC), ceAnsi, zCP_EUCKR, '', 2); { Unified Hangul Code Korean }
   {SingleByte}
   ResetCodePage(Ord(csALT), 'WIN866', Ord(csWIN866), ceAnsi, zCP_DOS866); { Windows CP866 	Cyrillic } //No longer in use
-  AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_DOS874); { Windows CP874 	Thai }
+  AddCodePage('WIN874', Ord(csWIN874), ceAnsi, zCP_WIN874); { Windows CP874 	Thai }
   AddCodePage('WIN1250', Ord(csWIN1250), ceAnsi, zCP_WIN1250); { Windows CP1250 	Central European }
   ResetCodePage(Ord(csWIN), 'WIN1251', Ord(csWIN1251), ceAnsi, zCP_WIN1251); { Windows CP1251 	Cyrillic } //No longer in use
   AddCodePage('WIN1252', Ord(csWIN1252), ceAnsi, zCP_WIN1252); { Windows CP1252 	Western European }

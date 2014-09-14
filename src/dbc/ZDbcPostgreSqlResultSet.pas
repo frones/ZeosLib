@@ -74,7 +74,7 @@ type
     FCachedLob: boolean;
     FFixedCharFields: TBooleanDynArray;
     FBinaryFields: TBooleanDynArray;
-    function GetBuffer(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    function GetBuffer(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
@@ -88,7 +88,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -349,7 +349,7 @@ begin
     ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}) <> 0;
 end;
 
-function TZPostgreSQLResultSet.GetBuffer(ColumnIndex: Integer; var Len: Cardinal): PAnsiChar;
+function TZPostgreSQLResultSet.GetBuffer(ColumnIndex: Integer; var Len: NativeUint): PAnsiChar;
 var RNo: Integer;
 begin
   RNo := RowNo - 1;
@@ -391,9 +391,9 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZPostgreSQLResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
-  Result.P := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Result{%H-}.Len);
+  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len);
 end;
 
 {**
@@ -421,7 +421,7 @@ end;
 }
 function TZPostgreSQLResultSet.InternalGetString(ColumnIndex: Integer): RawByteString;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
   Buffer := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
@@ -547,7 +547,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetFloat(ColumnIndex: Integer): Single;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -575,7 +575,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetDouble(ColumnIndex: Integer): Double;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -604,7 +604,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -650,7 +650,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -685,7 +685,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -718,7 +718,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
-  Len: Cardinal;
+  Len: NativeUInt;
   Buffer: PAnsiChar;
   Failed: Boolean;
 begin
@@ -750,7 +750,7 @@ var
   BlobOid: Oid;
   Connection: IZConnection;
   Buffer: PAnsiChar;
-  Len: Cardinal;
+  Len: NativeUInt;
   SQLType: TZSQLType;
 begin
 {$IFNDEF DISABLE_CHECKING}

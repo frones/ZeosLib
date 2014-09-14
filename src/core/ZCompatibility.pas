@@ -104,13 +104,17 @@ type
   PUInt                 = ^UInt;
   ZPPWideChar           = ^PWideChar;//BCB issue: PPWideChar is not part of system
 
-  {EH: just a clear type/IDE to get the length of String or Array by reading back from
+  {EH: just a clear type/IDE to get the length of String reading back from
     initial entry(X) - SizeOf(LengthInt) = Length}
 
   PLengthInt            = ^LengthInt;
   LengthInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
   PRefCntInt            = ^RefCntInt;
   RefCntInt             = {$IFDEF FPC}SizeInt{$ELSE}LongInt{$ENDIF};
+  {EH: just two types for determination DynArray Length if ever something changes we just need a define here.}
+  ArrayLenInt           = NativeInt;
+  PArrayLenInt          = ^ArrayLenInt;
+
 const
   {$IFDEF FPC}
   { ustrings.inc/astrings.inc:
@@ -125,20 +129,8 @@ const
   StringLenOffSet             = SizeOf(LongInt); {PStrRec.Len}
   StringRefCntOffSet          = SizeOf(LongInt){PStrRec.RefCnt}+SizeOf(LongInt){PStrRec.Len};
   {$ENDIF}
+  ArrayLenOffSet              = SizeOf(ArrayLenInt);
 type
-  {EH: Keep the Len, Pointer, x.... order in next three records! New field -> add it @the end!}
-  PZAnsiRec = ^TZAnsiRec;
-  TZAnsiRec = Record
-    Len: Cardinal;
-    P: PAnsiChar;
-  end;
-
-  PZWideRec = ^TZWideRec;
-  TZWideRec = Record
-    Len: Cardinal;
-    P: PWideChar;
-  end;
-
   TZCharRec = Record
     Len: Cardinal; //Length of String
     P: Pointer;    //Allocated Mem of String including #0 terminator
@@ -292,7 +284,7 @@ type
   TZCharRecDynArray = array of TZCharRec;
 type
   {declare move or converter functions for the String Types}
-  TZAnsiRecToUTF8 = function(const Src: TZAnsiRec; const RawCP: Word): UTF8String;
+  TPRawToUTF8 = function(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
   TZAnsiToRaw = function (const Src: AnsiString; const RawCP: Word): RawByteString;
   TZRawToAnsi = function (const Src: RawByteString; const RawCP: Word): AnsiString;
   TZAnsiToUTF8 = function (const Src: AnsiString): UTF8String;
@@ -309,8 +301,8 @@ type
   TZUnicodeToRaw = function (const US: ZWideString; CP: Word): RawByteString;
   TZUnicodeToString = function (const Src: ZWideString; const StringCP: Word): String;
   TZStringToUnicode = function (const Src: String; const StringCP: Word): ZWideString;
-  TZAnsiRecToString = function (const Value: TZAnsiRec; const StringCP: Word): String;
-  TZWideRecToString = function (const Value: TZWideRec; const StringCP: Word): String;
+  TPRawToString = function (const Src: PAnsiChar; Len: LengthInt; const StringCP: Word): String;
+  TPUnicodeToString = function (const Src: PWideChar; CodePoints: NativeUInt; const StringCP: Word): String;
 
   {** Defines the Target Ansi codepages for the Controls }
   TZControlsCodePage = ({$IFDEF UNICODE}cCP_UTF16, cCP_UTF8, cGET_ACP{$ELSE}{$IFDEF FPC}cCP_UTF8, cCP_UTF16, cGET_ACP{$ELSE}cGET_ACP, cCP_UTF8, cCP_UTF16{$ENDIF}{$ENDIF});
@@ -352,9 +344,9 @@ type
     ZRawToUnicode: TZRawToUnicode;
     ZUnicodeToString: TZUnicodeToString;
     ZStringToUnicode: TZStringToUnicode;
-    ZAnsiRecToString: TZAnsiRecToString;
-    ZWideRecToString: TZWideRecToString;
-    ZAnsiRecToUTF8: TZAnsiRecToUTF8;
+    ZPRawToString: TPRawToString;
+    ZPUnicodeToString: TPUnicodeToString;
+    ZPRawToUTF8: TPRawToUTF8;
   end;
 
   TZFormatSettings = Record

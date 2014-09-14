@@ -95,7 +95,7 @@ type
     procedure Close; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
-    function GetAnsiRec(ColumnIndex: Integer): TZAnsiRec; override;
+    function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetString(ColumnIndex: Integer): String; override;
@@ -475,7 +475,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 var
   TempDate: TCTimeStructure;
-  AnsiRec: TZAnsiRec;
+  Len: NativeUInt;
+  P: PAnsiChar;
   Failed: Boolean;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -503,12 +504,12 @@ begin
         SQL_TYPE_TIME : Result := 0;
         SQL_TEXT, SQL_VARYING:
           begin
-            AnsiRec := GetAnsiRec(ColumnIndex);
-            if AnsiRec.Len = ConSettings^.ReadFormatSettings.DateFormatLen then
-              Result := RawSQLDateToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            P := GetPAnsiChar(ColumnIndex, Len);
+            if Len = ConSettings^.ReadFormatSettings.DateFormatLen then
+              Result := RawSQLDateToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
               Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(
-                RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed));
+                RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed));
             LastWasNull := Result = 0;
           end;
         else
@@ -1168,7 +1169,8 @@ function TZInterbase6XSQLDAResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 var
   TempDate: TCTimeStructure;
   Failed: Boolean;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stTime);
@@ -1195,11 +1197,11 @@ begin
           end;
         SQL_TEXT, SQL_VARYING:
           begin
-            AnsiRec := GetAnsiRec(ColumnIndex);
-            if (AnsiRec.P+2)^ = ':' then //possible date if Len = 10 then
-              Result := RawSQLTimeToDateTime(AnsiRec.P,AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            P := GetPAnsiChar(ColumnIndex, Len);
+            if (P+2)^ = ':' then //possible date if Len = 10 then
+              Result := RawSQLTimeToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
-              Result := Frac(RawSQLTimeStampToDateTime(AnsiRec.P,AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed));
+              Result := Frac(RawSQLTimeStampToDateTime(P,Len, ConSettings^.ReadFormatSettings, Failed));
           end;
         else
           Result := Frac(GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}));
@@ -1222,7 +1224,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 var
   Failed: Boolean;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
   TempDate: TCTimeStructure;
 begin
 {$IFNDEF DISABLE_CHECKING}
@@ -1256,14 +1259,14 @@ begin
           end;
         SQL_TEXT, SQL_VARYING:
           begin
-            AnsiRec := GetAnsiRec(ColumnIndex);
-            if (AnsiRec.P+2)^ = ':' then
-              Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed{%H-})
+            P := GetPAnsiChar(ColumnIndex, Len);
+            if (P+2)^ = ':' then
+              Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed{%H-})
             else
-              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - AnsiRec.Len) <= 4 then
-                Result := RawSQLTimeStampToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed)
+              if (ConSettings^.ReadFormatSettings.DateTimeFormatLen - Len) <= 4 then
+                Result := RawSQLTimeStampToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed)
               else
-                Result := RawSQLTimeToDateTime(AnsiRec.P, AnsiRec.Len, ConSettings^.ReadFormatSettings, Failed);
+                Result := RawSQLTimeToDateTime(P, Len, ConSettings^.ReadFormatSettings, Failed);
           end;
         else
           Result := GetDouble(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
@@ -1306,27 +1309,24 @@ end;
   @return the column value; if the value is SQL <code>NULL</code>, the
     value returned is <code>null</code>
 }
-function TZInterbase6XSQLDAResultSet.GetAnsiRec(ColumnIndex: Integer): TZAnsiRec;
+function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 var
   SQLCode: SmallInt;
 begin
   LastWasNull := IsNull(ColumnIndex);
   if LastWasNull then
   begin
-    Result.P := nil;
-    Result.Len := 0;
+    Result := nil;
+    Len := 0;
   end
   else
   begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
     {$ENDIF}
-    FRawTemp := '';
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
-      if (sqlind <> nil) and (sqlind^ = -1) then
-           Exit;
       SQLCode := (sqltype and not(1));
 
       if (sqlscale < 0)  then
@@ -1357,17 +1357,16 @@ begin
           SQL_INT64     : FRawTemp := IntToRaw(PInt64(sqldata)^);
           SQL_TEXT      :
             begin
-              Result.P := sqldata;
+              Result := sqldata;
               // Trim only trailing spaces. TrimRight also removes other characters)
-              Result.Len := sqllen;
-              if Result.Len > 0 then
-                while ((Result.P+Result.Len-1)^ = ' ') do dec(Result.Len);
+              Len := sqllen;
+              if Len > 0 then while (Result+Len-1)^ = ' ' do dec(Len);
               Exit;
             end;
           SQL_VARYING :
             begin
-              Result.P := PISC_VARYING(sqldata).str;
-              Result.Len := PISC_VARYING(sqldata).strlen;
+              Result := PISC_VARYING(sqldata).str;
+              Len := PISC_VARYING(sqldata).strlen;
               Exit;
             end;
           SQL_BLOB      :
@@ -1375,13 +1374,13 @@ begin
               FBlobTemp := GetBlob(ColumnIndex{$IFNDEF GENERIC_INDEX}+1{$ENDIF});  //localize interface to keep pointer alive
               if FBlobTemp.IsClob then
               begin
-                Result.P := FBlobTemp.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
-                Result.Len := FBlobTemp.Length;
+                Result := FBlobTemp.GetPAnsiChar(ConSettings^.ClientCodePage^.CP);
+                Len := FBlobTemp.Length;
               end
               else
               begin
-                Result.P := FBlobTemp.GetBuffer;
-                Result.Len := FBlobTemp.Length;
+                Result := FBlobTemp.GetBuffer;
+                Len := FBlobTemp.Length;
               End;
               Exit;
             End;
@@ -1390,8 +1389,8 @@ begin
             [FIZSQLDA.GetFieldAliasName(ColumnIndex), GetNameSqlType(SQLCode)]));
         end;
     end;
-    Result.P := Pointer(FRawTemp);
-    Result.Len := Length(FRawTemp);
+    Result := Pointer(FRawTemp);
+    Len := NativeUInt({%H-}PLengthInt(NativeUInt(FRawTemp) - StringLenOffSet)^);
     {$IFOPT D+}
   {$R+}
   {$ENDIF}
@@ -1408,8 +1407,9 @@ end;
     value returned is <code>null</code>
 }
 function TZInterbase6XSQLDAResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
+var Len: NativeUInt;
 begin
-  Result := GetAnsiRec(ColumnIndex).P;
+  Result := GetPAnsiChar(ColumnIndex, Len);
 end;
 
 {**
@@ -1425,7 +1425,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var
   SQLCode: SmallInt;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 label AssignResult;
 begin
   LastWasNull := IsNull(ColumnIndex);
@@ -1472,24 +1473,23 @@ begin
           SQL_TEXT      :
             begin
               // Trim only trailing spaces. TrimRight also removes other characters)
-              AnsiRec.Len := sqllen;
-              AnsiRec.P := sqldata;
-              if AnsiRec.Len > 0 then
-                while (AnsiRec.P+AnsiRec.Len-1)^ = ' ' do dec(AnsiRec.Len);
+              Len := sqllen;
+              P := sqldata;
+              if Len > 0 then
+                while (P+Len-1)^ = ' ' do dec(Len);
               goto AssignResult;
             end;
           SQL_VARYING :
             begin
-              AnsiRec.P := PISC_VARYING(sqldata).str;
-              AnsiRec.Len := PISC_VARYING(sqldata).strlen;
+              P := PISC_VARYING(sqldata).str;
+              Len := PISC_VARYING(sqldata).strlen;
 AssignResult: if sqlsubtype > High(FCodePageArray) then
-                Result := ZConvertAnsiRecToUTF8(AnsiRec, ConSettings^.ClientCodePage^.cp)
+                Result := ZConvertPRawToUTF8(P, Len, ConSettings^.ClientCodePage^.cp)
               else
                 if (FCodePageArray[sqlsubtype] = zCP_UTF8) then
-                  ZSetString(AnsiRec.P, AnsiRec.Len, Result)
+                  ZSetString(P, Len, Result)
                 else
-                  Result := ZConvertAnsiRecToUTF8(AnsiRec, sqlsubtype);
-              Exit;
+                  Result := ZConvertPRawToUTF8(P, Len, sqlsubtype);
             end;
           SQL_BLOB      :
             Begin
@@ -1498,7 +1498,6 @@ AssignResult: if sqlsubtype > High(FCodePageArray) then
                 Result := FBlobTemp.GetUTF8String
               else
                 Result := FBlobTemp.GetString;
-              Exit;
             End;
         else
           raise EZIBConvertError.Create(Format(SErrorConvertionField,
@@ -1524,8 +1523,8 @@ function TZInterbase6XSQLDAResultSet.GetString(ColumnIndex: Integer): String;
 var
   SubType: SmallInt;
   SQLCode: SmallInt;
-  AnsiRec: TZAnsiRec;
-label AssignResult;
+  P: PAnsiChar;
+  Len: LengthInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1538,7 +1537,6 @@ begin
     {$IFNDEF GENERIC_INDEX}
     ColumnIndex := ColumnIndex -1;
     {$ENDIF}
-    AnsiRec.P := nil;
     {$R-}
     with FXSQLDA.sqlvar[ColumnIndex] do
     begin
@@ -1574,34 +1572,54 @@ begin
           SQL_INT64     : Result := ZFastCode.IntToStr(PInt64(sqldata)^);
           SQL_TEXT      :
             begin
-              AnsiRec.P := sqldata;
+              P := sqldata;
               // Trim only trailing spaces. TrimRight also removes other characters)
-              AnsiRec.Len := sqllen;
-              if AnsiRec.Len > 0 then
-                while ((AnsiRec.P+AnsiRec.Len-1)^ = ' ') do dec(AnsiRec.Len);
-              goto AssignResult;
-            end;
-          SQL_VARYING :
-            begin
-              AnsiRec.P := PISC_VARYING(sqldata).str;
-              AnsiRec.Len := PISC_VARYING(sqldata).strlen;
-AssignResult: SubType := GetIbSqlSubType(ColumnIndex);
+              Len := sqllen;
+              if Len > 0 then
+                while ((P+Len-1)^ = ' ') do dec(Len);
+              SubType := GetIbSqlSubType(ColumnIndex);
               if SubType > High(FCodePageArray) then
                 {$IFDEF UNICODE}
-                Result := ZAnsiRecToUnicode(AnsiRec, ConSettings^.ClientCodePage^.CP)
+                Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP)
                 {$ELSE}
                 begin
-                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+                  ZSetString(P, Len, FRawTemp);
                   Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
                     ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
                 end
                 {$ENDIF}
               else
                 {$IFDEF UNICODE}
-                Result := ZAnsiRecToUnicode(AnsiRec, FCodePageArray[SubType]);
+                Result := PRawToUnicode(P, Len, FCodePageArray[SubType]);
                 {$ELSE}
                 begin
-                  ZSetString(AnsiRec.P, AnsiRec.Len, FRawTemp);
+                  ZSetString(P, Len, FRawTemp);
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
+                    FCodePageArray[SubType], ConSettings^.CTRL_CP);
+                end;
+                {$ENDIF}
+            end;
+          SQL_VARYING :
+            begin
+              SubType := GetIbSqlSubType(ColumnIndex);
+              if SubType > High(FCodePageArray) then
+                {$IFDEF UNICODE}
+                Result := PRawToUnicode(PISC_VARYING(sqldata).str,
+                  PISC_VARYING(sqldata).strlen, ConSettings^.ClientCodePage^.CP)
+                {$ELSE}
+                begin
+                  ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, FRawTemp);
+                  Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
+                    ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+                end
+                {$ENDIF}
+              else
+                {$IFDEF UNICODE}
+                Result := PRawToUnicode(PISC_VARYING(sqldata).str,
+                  PISC_VARYING(sqldata).strlen, FCodePageArray[SubType]);
+                {$ELSE}
+                begin
+                  ZSetString(PISC_VARYING(sqldata).str, PISC_VARYING(sqldata).strlen, FRawTemp);
                   Result := ConSettings^.ConvFuncs.ZRawToString(FRawTemp,
                     FCodePageArray[SubType], ConSettings^.CTRL_CP);
                 end;
@@ -1647,6 +1665,8 @@ end;
 function TZInterbase6XSQLDAResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
 var
   SubType: SmallInt;
+  P: PAnsiChar;
+  Len: NativeUInt;
 begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stString);
@@ -1657,12 +1677,12 @@ begin
   else
   begin
     SubType := GetIbSqlSubType(ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
+
+    P := GetPAnsiChar(ColumnIndex, Len);
     if SubType > High(FCodePageArray) then
-      Result := ZAnsiRecToUnicode(GetAnsiRec(ColumnIndex),
-        ConSettings^.ClientCodePage^.CP)
+      Result := PRawToUnicode(P, Len, ConSettings^.ClientCodePage^.CP)
     else
-      Result := ZAnsiRecToUnicode(GetAnsiRec(ColumnIndex),
-        FCodePageArray[SubType]);
+      Result := PRawToUnicode(P, Len, FCodePageArray[SubType]);
   end;
 end;
 

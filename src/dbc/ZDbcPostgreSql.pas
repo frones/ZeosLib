@@ -252,15 +252,13 @@ var
   end;
 
   function GetString(const Row, Col: Integer): String;
-  var
-    AnsiRec: TZAnsiRec;
   begin
-    AnsiRec.Len := FPlainDriver.GetLength(QueryHandle, Row, Col);
-    AnsiRec.P := FPlainDriver.GetValue(QueryHandle, Row, Col);
     {$IFDEF UNICODE}
-    Result := ZAnsiRecToUnicode(AnsiRec, FConSettings^.ClientCodePage^.CP);
+    Result := PRawToUnicode(FPlainDriver.GetValue(QueryHandle, Row, Col),
+      FPlainDriver.GetLength(QueryHandle, Row, Col), FConSettings^.ClientCodePage^.CP);
     {$ELSE}
-    SetString(Result, AnsiRec.P, AnsiRec.Len);
+    SetString(Result, FPlainDriver.GetValue(QueryHandle, Row, Col),
+      FPlainDriver.GetLength(QueryHandle, Row, Col));
     {$ENDIF}
   end;
 begin

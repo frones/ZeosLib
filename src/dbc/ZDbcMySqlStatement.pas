@@ -786,6 +786,7 @@ begin
   end;
 end;
 
+{$WARNINGS OFF} //Len & P might not be init...
 procedure TZMysqlPreparedStatement.BindInParameters;
 var
   PBuffer: Pointer;
@@ -799,7 +800,8 @@ var
   Signed: Boolean;
   TempBytes: TBytes;
   ChunkedData: Boolean;
-  AnsiRec: TZAnsiRec;
+  P: PAnsiChar;
+  Len: NativeUInt;
 label JmpClob, JmpInherited, JmpCharRec;
 begin
   ChunkedData := False;
@@ -996,48 +998,49 @@ JmpInherited:
             if inParamTypes[i] in [stAsciiStream, stUnicodeStream] then
             begin
               TempBlob := InParamValues[i].VInterface as IZBlob;
-              AnsiRec.P := TempBlob.GetBuffer;
-              AnsiRec.Len := TempBlob.Length;
+              P := TempBlob.GetBuffer;
+              Len := TempBlob.Length;
             end
             else
             begin
               CharRec := ClientVarManager.GetAsCharRec(InParamValues[I], ConSettings^.ClientCodePage^.CP);
-              AnsiRec.Len := CharRec.Len;
-              AnsiRec.P := CharRec.P;
+              Len := CharRec.Len;
+              P := CharRec.P;
             end;
           FIELD_TYPE_TINY_BLOB:
             begin
-              AnsiRec.P := Pointer(InParamValues[i].vBytes);
-              AnsiRec.Len := Length(InParamValues[i].vBytes);
+              P := Pointer(InParamValues[i].vBytes);
+              Len := Length(InParamValues[i].vBytes);
             end;
           FIELD_TYPE_BLOB:
             begin
               TempBlob := (InParamValues[I].VInterface as IZBlob);
-              AnsiRec.Len := TempBlob.Length;
-              AnsiRec.P := TempBlob.GetBuffer;
+              Len := TempBlob.Length;
+              P := TempBlob.GetBuffer;
             end;
           else
             Continue;
         end;
         OffSet := 0;
         PieceSize := ChunkSize;
-        while OffSet < AnsiRec.Len do
+        while OffSet < Len do
         begin
-          if OffSet+PieceSize > AnsiRec.Len then
-            PieceSize := AnsiRec.Len - OffSet;
-          if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, AnsiRec.P, PieceSize) <> 0) then
+          if OffSet+PieceSize > Len then
+            PieceSize := Len - OffSet;
+          if (FPlainDriver.SendPreparedLongData(FStmtHandle, I, P, PieceSize) <> 0) then
           begin
             checkMySQLPrepStmtError (FPlainDriver, FStmtHandle, lcPrepStmt,
               ConvertZMsgToRaw(SBindingFailure, ZMessages.cCodePage,
               ConSettings^.ClientCodePage^.CP), ConSettings);
             exit;
           end
-          else Inc(AnsiRec.P, PieceSize);
+          else Inc(P, PieceSize);
           Inc(OffSet, PieceSize);
         end;
         TempBlob:=nil;
       end;
 end;
+{$WARNINGS ON}
 
 procedure TZMySQLPreparedStatement.UnPrepareInParameters;
 begin

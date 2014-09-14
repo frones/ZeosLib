@@ -90,6 +90,7 @@
  {$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure
  {$DEFINE WITH_FIELD_VALIDATELOOKUPINFO} //TField has private ValidateLookupInfo() procedure
  {$DEFINE WITH_FUNIDIRECTIONAL} //TDataSet have SetUniDirectional and GetUnidirectional
+ {$DEFINE USE_RAW2WIDE_PROCS} //compiler related: D7 is less optimal use MultibultToWidechar instead for known CP's
 {$ENDIF}
 
 // Compilation directives for Delphi4
@@ -117,6 +118,7 @@
   {$DEFINE Use_FastCodeFillChar}
   {$UNDEF HAVE_TBYTES} //D7 doesn't have TBytes
   {$UNDEF SUPPORTS_UINT64_CONSTS}      // D7 doesn't support integer constants with 20 digits
+  {$UNDEF USE_RAW2WIDE_PROCS}
 {$ENDIF}
 
 // Compilation directives for Delphi 8
@@ -169,7 +171,7 @@
 {$IFDEF VER210}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_URW1111_ISSUE} //D2010 can't compile for some strange reasons with inlined code.
@@ -179,7 +181,7 @@
 {$IFDEF VER220}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -192,7 +194,7 @@
 {$IFDEF VER230}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
@@ -204,7 +206,7 @@
 {$IFDEF VER240}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in code
@@ -216,7 +218,7 @@
 {$IFDEF VER250}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
@@ -229,7 +231,7 @@
 {$IFDEF VER260}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
@@ -243,13 +245,29 @@
 {$IFDEF VER270}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
   {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
+// Compilation directives for Delphi XE6 by miab3
+{$IFDEF VER280}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} // used in tests only
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI18_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI19_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
+  {$DEFINE DELPHI21_UP} //currently not used just reserved
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}

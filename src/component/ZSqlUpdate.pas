@@ -222,7 +222,7 @@ type
 implementation
 
 uses ZGenericSqlToken, ZDatasetUtils, ZAbstractRODataset,ZAbstractDataset,
-  ZSysUtils, ZDbcUtils, ZMessages;
+  ZSysUtils, ZDbcUtils, ZMessages, ZCompatibility;
 
 { TZUpdateSQL }
 
@@ -661,6 +661,7 @@ var
   RefreshColumnIndex: integer;
   RefreshColumnName: String;
   RefreshColumnType: TZSQLType;
+  Len: NativeUInt;
 begin
   if Assigned(RefreshResultSet) then begin
     if not RefreshResultSet.First then begin
@@ -692,9 +693,9 @@ begin
           stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
           stString, stUnicodeString:
             if Sender.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-              RefreshRowAccessor.SetAnsiRec(RefreshColumnIndex, RefreshResultSet.GetAnsiRec(I))
+              RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), @Len)
             else
-              RefreshRowAccessor.SetUnicodeString(RefreshColumnIndex, RefreshResultSet.GetUnicodeString(I));
+              RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), @Len);
           stBytes: RefreshRowAccessor.SetBytes(RefreshColumnIndex, RefreshResultSet.GetBytes(I));
           stDate: RefreshRowAccessor.SetDate(RefreshColumnIndex, RefreshResultSet.GetDate(I));
           stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
