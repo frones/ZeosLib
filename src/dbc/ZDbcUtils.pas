@@ -572,7 +572,7 @@ begin
         Result := TempPrecision
       {$ELSE}
         if ( ConSettings^.CPType = cCP_UTF8 ) or (ConSettings^.CTRL_CP = zCP_UTF8) then
-          Result := TempPrecision * shl 4
+          Result := TempPrecision shl 2 // = *4
         else
           Result := TempPrecision * CharWidth
       {$ENDIF}
