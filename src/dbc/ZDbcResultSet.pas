@@ -443,7 +443,7 @@ type
     procedure InternalSetAnsiString(Const Value: AnsiString);
     procedure InternalSetUTF8String(Const Value: UTF8String);
     procedure InternalSetUnicodeString(const Value: ZWideString);
-    procedure InternalSetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
+    procedure InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
     procedure InternalSetPWideChar(const Buffer: PWideChar; const Len: Cardinal);
     property Updated: Boolean read FUpdated write FUpdated;
     property CurrentCodePage: Word read FCurrentCodePage;
@@ -4268,19 +4268,40 @@ begin
   System.Move(PWideChar(Value)^, FBlobData^, FBlobSize);
 end;
 
-procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; const CodePage: Word; const Len: Cardinal);
+procedure TZAbstractCLob.InternalSetPAnsiChar(const Buffer: PAnsiChar; CodePage: Word; const Len: Cardinal);
 var RawTemp: RawByteString;
+label SetData;
 begin
   InternalClear;
   if Buffer <> nil then
   begin
     if CodePage = zCP_NONE then
     begin
-      RawTemp := GetValidatedAnsiStringFromBuffer(Buffer, Len, FConSettings);
-      InternalSetRawByteString(RawTemp, FConSettings^.ClientCodePage^.CP);
+      if Len mod 2 = 0 then //could be UTF16
+      begin
+        RawTemp := GetValidatedAnsiStringFromBuffer(Buffer, Len, FConSettings);
+        InternalSetRawByteString(RawTemp, FConSettings^.ClientCodePage^.CP);
+      end
+      else //can't be UCS2
+      begin
+        case ZEncoding.ZDetectUTF8Encoding(Buffer, Len) of
+          etUSASCII: CodePage := FConSettings^.ClientCodePage^.CP;
+          etUTF8: CodePage := zCP_UTF8;
+          else
+            if zCompatibleCodePages(FConSettings^.ClientCodePage^.CP, zCP_UTF8) then
+              if ZCompatibleCodePages(FConSettings^.CTRL_CP, zCP_UTF8) then
+                CodePage := zDefaultSystemCodePage
+              else
+                CodePage := FConSettings^.CTRL_CP
+            else
+              CodePage := FConSettings^.ClientCodePage^.CP;
+        end;
+        goto SetData;
+      end;
     end
     else
     begin
+SetData:
       FBlobSize := Len +1;
       FCurrentCodePage := CodePage;
       GetMem(FBlobData, FBlobSize);
