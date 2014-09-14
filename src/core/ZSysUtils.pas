@@ -680,31 +680,31 @@ begin
   P1T := P1;
   P2T := P2;
   {$IFDEF FPC}
-  while Len > SizeOf(UInt64) shl 2 do //compare 32 Bytes per loop
+  while Len > SizeOf(QWord)*4 do //compare 32 Bytes per loop
   begin
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    Dec(Len, SizeOf(UInt64) shl 2)
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    Dec(Len, SizeOf(QWord)*4)
   end;
   while Len > 16 do //compare 16 Bytes per loop
   begin
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    Dec(Len, SizeOf(UInt64) shl 1)
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    Dec(Len, SizeOf(QWord)*2)
   end;
-  while Len > SizeOf(UInt64) do //compare 8 Bytes per loop
+  while Len > SizeOf(QWord) do //compare 8 Bytes per loop
   begin
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    Dec(Len, SizeOf(UInt64))
+    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
+    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
+    Dec(Len, SizeOf(QWord))
   end;
   while Len > 0 do
   begin
@@ -719,9 +719,9 @@ begin
   end;
   Exit;
   Fail8:
-    for N := 0 to SizeOf(UInt64)-1 do
+    for N := 0 to SizeOf(QWord)-1 do
   {$ELSE}
-  while Len > SizeOf(LongWord) shl 2 do //compare 16 Bytes per loop
+  while Len > SizeOf(LongWord)*4 do //compare 16 Bytes per loop
   begin
     if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
@@ -731,7 +731,7 @@ begin
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
     if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord)shl 2);
+    Dec(Len, SizeOf(LongWord)*4);
   end;
   while Len > 8 do if Len > 8 then //compare 8 Bytes per loop
   begin
@@ -739,7 +739,7 @@ begin
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
     if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
     Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord) shl 1)
+    Dec(Len, SizeOf(LongWord)*2)
   end;
   while Len > SizeOf(LongWord) do //compare 4 Bytes per loop
   begin
