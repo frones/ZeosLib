@@ -68,7 +68,7 @@ type
   protected
     procedure QuickSort(SortList: PPointerList; L, R: Integer;
       SCompare: TZListSortCompare);
-    procedure HybridSortSha_0AA(SortList: PPointerList; Count: integer;
+    procedure HybridSortSha_0AA(Count: integer;
       SCompare: TZListSortCompare);
   public
     procedure Sort(Compare: TZListSortCompare);
@@ -2938,10 +2938,12 @@ const
   InsLast = InsCount-1;
   SOP = SizeOf(pointer);
   MSOP = NativeUInt(-SOP);
-
-procedure TZSortedList.HybridSortSha_0AA(SortList: PPointerList; Count: integer; SCompare: TZListSortCompare);
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
+procedure TZSortedList.HybridSortSha_0AA(Count: integer; SCompare: TZListSortCompare);
 var
-  I, J, L, R: NativeUInt;
+  I, J, {$IFDEF FPC}J2,{$ENDIF} L, R: NativeUInt;
   procedure QuickSortSha_0AA(L, R: NativeUInt; SCompare: TZListSortCompare);
   var
     I, J, P, T: NativeUInt;
@@ -3039,7 +3041,12 @@ begin;
       repeat;
         if J >= R then exit;
         inc(J,SOP);
+      {$IFDEF FPC}
+        J2 := J+MSOP;
+      until SCompare(PPointer(J)^,PPointer(J2)^) < 0;
+      {$ELSE}
       until SCompare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
+      {$ENDIF}
       I := J - SOP;
       L := PNativeUInt(J)^;
       repeat;
@@ -3050,6 +3057,9 @@ begin;
     end;
   end;
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 {$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
 {$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
 
@@ -3060,9 +3070,9 @@ end;
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
   {$IFDEF DELPHI16_UP}
-  HybridSortSha_0AA(@List, Count, Compare);
+  HybridSortSha_0AA(Count, Compare);
   {$ELSE}
-  HybridSortSha_0AA(List, Count, Compare);
+  HybridSortSha_0AA(Count, Compare);
   {$ENDIF}
   (*
   if (List <> nil) and (Count > 0) then
