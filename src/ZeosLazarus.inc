@@ -57,6 +57,9 @@
 {$IFNDEF MSWINDOWS}
  {$DEFINE USE_RAW2WIDE_PROCS} //FPC is really not optimal with code generation use MultibultToWidechar instead for known CP's
 {$ENDIF}
+{$IFNDEF CPU386}
+  {$DEFINE WITH_IE200706094} //Fatal: Internal error 200706094 see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11096#p34381
+{$ENDIF}
 // These are in a spearate file as Delphi compilers don't digest the macros stuff very well
 {$MACRO ON}             // Macros needed for FPC_VERSION and FPC_RELEASE
   {$MODE DELPHI}

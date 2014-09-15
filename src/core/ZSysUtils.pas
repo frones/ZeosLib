@@ -2927,8 +2927,10 @@ begin
 end;
 
 {**
-  Performs Alexandr Sharakhov hybrid sort algorithm for the list.
+  Origial Autor: Aleksandr Sharahov
   see http://guildalfa.ru/alsha/
+  Performs hybrid sort algorithm for the list.
+  changes: Replace cardinal casts by using our NativeUInt to make it 64Bit compatible too
 }
 //~1.57 times faster than Delphi QuickSort on E6850
 {$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
@@ -2943,7 +2945,7 @@ const
 {$ENDIF}
 procedure TZSortedList.HybridSortSha_0AA(Count: integer; SCompare: TZListSortCompare);
 var
-  I, J, {$IFDEF FPC}J2,{$ENDIF} L, R: NativeUInt;
+  I, J, {$IFDEF WITH_IE200706094}J2,{$ENDIF} L, R: NativeUInt;
   procedure QuickSortSha_0AA(L, R: NativeUInt; SCompare: TZListSortCompare);
   var
     I, J, P, T: NativeUInt;
@@ -3041,7 +3043,7 @@ begin;
       repeat;
         if J >= R then exit;
         inc(J,SOP);
-      {$IFDEF FPC}
+      {$IFDEF WITH_IE200706094} //FPC 64Bit raises an internal Error 200706094!
         J2 := J+MSOP;
       until SCompare(PPointer(J)^,PPointer(J2)^) < 0;
       {$ELSE}
@@ -3069,11 +3071,7 @@ end;
 }
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
-  {$IFDEF DELPHI16_UP}
   HybridSortSha_0AA(Count, Compare);
-  {$ELSE}
-  HybridSortSha_0AA(Count, Compare);
-  {$ENDIF}
   (*
   if (List <> nil) and (Count > 0) then
     {$IFDEF DELPHI16_UP}
