@@ -82,11 +82,17 @@ type
   PPLongWord            = ^PLongWord;
   {$IFEND}
 {$IFDEF FPC}
+  {$IF not declared(NativeInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   NativeInt             = PtrInt;
+  {$IFEND}
+  {$IF not declared(NativeUInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   NativeUInt            = PtrUInt;
+  {$IFEND}
+  {$IF not declared(PNativeUInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   PNativeUInt           = ^NativeUInt;
+  {$IFEND}
 {$ELSE}
-  {$IFNDEF DELPHI16_UP}
+  {$IFNDEF HAVE_TRUE_NATIVE_TYPES}  //introduced since D2007 but "stable" since XE2
   NativeInt             = Integer;
   NativeUInt            = LongWord;
   PNativeUInt           = ^NativeUInt;

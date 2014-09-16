@@ -196,7 +196,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
@@ -208,7 +208,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -220,7 +220,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
@@ -233,7 +233,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP}
@@ -247,7 +247,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
@@ -262,7 +262,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
@@ -348,6 +348,8 @@
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
   {$DEFINE WITH_SYSTEM_PREFIX}
+  {$DEFINE TLIST_ISNOT_PPOINTERLIST} //since XE2 TList is is TPointerList not PPointerList
+  {$DEINFE HAVE_TRUE_NATIVE_TYPES} //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}

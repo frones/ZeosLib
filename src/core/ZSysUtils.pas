@@ -68,8 +68,6 @@ type
   protected
     procedure QuickSort(SortList: PPointerList; L, R: Integer;
       SCompare: TZListSortCompare);
-    procedure HybridSortSha_0AA(Count: integer;
-      SCompare: TZListSortCompare);
   public
     procedure Sort(Compare: TZListSortCompare);
   end;
@@ -2943,90 +2941,91 @@ const
 {$IFDEF FPC}
   {$HINTS OFF}
 {$ENDIF}
-procedure TZSortedList.HybridSortSha_0AA(Count: integer; SCompare: TZListSortCompare);
+procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
-  I, J, {$IFDEF WITH_IE200706094}J2,{$ENDIF} L, R: NativeUInt;
-  procedure QuickSortSha_0AA(L, R: NativeUInt; SCompare: TZListSortCompare);
-  var
-    I, J, P, T: NativeUInt;
-  begin;
-    while true do
+  I, J, P, T: NativeUInt;
+begin;
+  while true do
+  begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * SOP then break;
+    T := (J-I) shr 1 and MSOP + I;
+
+    if Compare(PPointer(J)^, PPointer(I)^)<0 then
     begin
-      I := L;
-      J := R;
-      if J-I <= InsLast * SOP then break;
-      T := (J-I) shr 1 and MSOP + I;
-
-      if SCompare(PPointer(J)^, PPointer(I)^)<0 then
+      P := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(J)^;
+      PNativeUInt(J)^ := P;
+    end;
+    P := PNativeUInt(T)^;
+    if Compare(Pointer(P), PPointer(I)^)<0 then
+    begin
+      P := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(T)^;
+      PNativeUInt(T)^ := P;
+    end
+    else
+      if Compare(PPointer(J)^, Pointer(P)) < 0 then
       begin
-        P := PNativeUInt(I)^;
-        PNativeUInt(I)^ := PNativeUInt(J)^;
-        PNativeUInt(J)^ := P;
-      end;
-      P := PNativeUInt(T)^;
-      if SCompare(Pointer(P), PPointer(I)^)<0 then
-      begin
-        P := PNativeUInt(I)^;
-        PNativeUInt(I)^ := PNativeUInt(T)^;
+        P := PNativeUInt(J)^;
+        PNativeUInt(J)^ := PNativeUInt(T)^;
         PNativeUInt(T)^ := P;
-      end
-      else
-        if SCompare(PPointer(J)^, Pointer(P)) < 0 then
-        begin
-          P := PNativeUInt(J)^;
-          PNativeUInt(J)^ := PNativeUInt(T)^;
-          PNativeUInt(T)^ := P;
-        end;
-
-      repeat
-        Inc(I,SOP);
-      until not (SCompare(PPointer(I)^, Pointer(P)) < 0);
-      repeat
-        Dec(J,SOP)
-      until not (SCompare(pointer(P), PPointer(J)^) < 0);
-      if I < J then
-        repeat
-          T := PNativeUInt(I)^;
-          PNativeUInt(I)^ := PNativeUInt(J)^;
-          PNativeUInt(J)^ := T;
-          repeat
-            Inc(I,SOP);
-          until not (SCompare(PPointer(I)^, pointer(P)) < 0 );
-          repeat
-            Dec(J,SOP);
-          until not (SCompare(pointer(P), PPointer(J)^) < 0);
-        until I >= J;
-      Dec(I,SOP); Inc(J,SOP);
-
-      if I-L <= R-J then
-      begin
-        if L + InsLast * SOP < I then
-          QuickSortSha_0AA(L, I, SCompare);
-        L := J;
-      end
-      else
-      begin
-        if J + InsLast * SOP < R
-          then QuickSortSha_0AA(J, R, SCompare);
-        R := I;
       end;
+
+    repeat
+      Inc(I,SOP);
+    until not (Compare(PPointer(I)^, Pointer(P)) < 0);
+    repeat
+      Dec(J,SOP)
+    until not (Compare(pointer(P), PPointer(J)^) < 0);
+    if I < J then
+      repeat
+        T := PNativeUInt(I)^;
+        PNativeUInt(I)^ := PNativeUInt(J)^;
+        PNativeUInt(J)^ := T;
+        repeat
+          Inc(I,SOP);
+        until not (Compare(PPointer(I)^, pointer(P)) < 0 );
+        repeat
+          Dec(J,SOP);
+        until not (Compare(pointer(P), PPointer(J)^) < 0);
+      until I >= J;
+    Dec(I,SOP); Inc(J,SOP);
+
+    if I-L <= R-J then
+    begin
+      if L + InsLast * SOP < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end
+    else
+    begin
+      if J + InsLast * SOP < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
     end;
   end;
+end;
+
+procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListSortCompare);
+var
+  I, J, {$IFDEF WITH_IE200706094}J2,{$ENDIF} L, R: NativeUInt;
 begin;
   if (List<>nil) and (Count>1) then
   begin
-    L := NativeUInt(@List[0]);
-    R := NativeUInt(@List[Count-1]);
+    L := NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[0]);
+    R := NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[Count-1]);
     J := R;
     if Count-1 > InsLast then
     begin
-      J:=NativeUInt(@List[InsLast]);
-      QuickSortSha_0AA(L, R, SCompare);
+      J:=NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[InsLast]);
+      QuickSortSha_0AA(L, R, Compare);
     end;
 
     I := L;
     repeat;
-      if SCompare(PPointer(J)^, PPointer(I)^) < 0 then I:=J;
+      if Compare(PPointer(J)^, PPointer(I)^) < 0 then I:=J;
       dec(J,SOP);
     until J <= L;
 
@@ -3045,16 +3044,16 @@ begin;
         inc(J,SOP);
       {$IFDEF WITH_IE200706094} //FPC 64Bit raises an internal Error 200706094!
         J2 := J+MSOP;
-      until SCompare(PPointer(J)^,PPointer(J2)^) < 0;
+      until Compare(PPointer(J)^,PPointer(J2)^) < 0;
       {$ELSE}
-      until SCompare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
+      until Compare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
       {$ENDIF}
       I := J - SOP;
       L := PNativeUInt(J)^;
       repeat;
         PNativeUInt(I+SOP)^ := PNativeUInt(I)^;
         dec(I,SOP);
-      until not (SCompare(Pointer(L),PPointer(I)^) < 0);
+      until not (Compare(Pointer(L),PPointer(I)^) < 0);
       PNativeUInt(I + SOP)^ := L;
     end;
   end;
@@ -3071,10 +3070,14 @@ end;
 }
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
-  HybridSortSha_0AA(Count, Compare);
+  {$IFDEF TLIST_ISNOT_PPOINTERLIST}
+  HybridSortSha_0AA(@List, Count, Compare);
+  {$ELSE}
+  HybridSortSha_0AA(List, Count, Compare);
+  {$ENDIF}
   (*
   if (List <> nil) and (Count > 0) then
-    {$IFDEF DELPHI16_UP}
+    {$IFDEF TLIST_ISNOT_PPOINTERLIST}
     QuickSort(@List, 0, Count - 1, Compare);
     {$ELSE}
     QuickSort(List, 0, Count - 1, Compare);
