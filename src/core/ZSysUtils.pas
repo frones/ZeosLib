@@ -2928,7 +2928,11 @@ end;
   Origial Autor: Aleksandr Sharahov
   see http://guildalfa.ru/alsha/
   Performs hybrid sort algorithm for the list.
-  changes: Replace cardinal casts by using our NativeUInt to make it 64Bit compatible too
+  changes by EgonHugeist:
+  Replace cardinal casts by using our NativeUInt to make it 64Bit compatible too
+  Note Alexandr wrote: For max of speed it is very impotant to use procedures
+    QuickSort_0AA and HybridSort_0AA as is (not in class, not included
+    in other procedure, and not changed parameters and code).
 }
 //~1.57 times faster than Delphi QuickSort on E6850
 {$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
