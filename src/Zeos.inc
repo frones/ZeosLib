@@ -351,7 +351,7 @@
   {$DEFINE WITH_VCL_PREFIX}
   {$DEFINE WITH_SYSTEM_PREFIX}
   {$DEFINE TLIST_ISNOT_PPOINTERLIST} //since XE2 TList is is TPointerList not PPointerList
-  {$DEINFE HAVE_TRUE_NATIVE_TYPES} //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
+  {$DEFINE HAVE_TRUE_NATIVE_TYPES} //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
