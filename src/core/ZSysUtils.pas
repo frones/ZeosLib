@@ -595,6 +595,9 @@ function FloatToSqlUnicode(const Value: Extended): ZWideString;
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
 
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PAnsiChar; const SetTerm: Boolean = False); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PWideChar; const SetTerm: Boolean = False); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
 function GUIDToRaw(const GUID: TGUID): RawByteString; overload;
 function GUIDToRaw(const Bts: TBytes): RawByteString; overload;
 function GUIDToRaw(Buffer: Pointer; Len: NativeInt): RawByteString; overload;
@@ -603,7 +606,8 @@ function GUIDToUnicode(const GUID: TGUID): ZWideString; overload;
 function GUIDToUnicode(const Bts: TBytes): ZWideString; overload;
 function GUIDToUnicode(Buffer: Pointer; Len: NativeInt): ZWideString; overload;
 
-procedure ValidRawGUIDToGUIDBytes(Src, Dest: PAnsiChar);
+procedure ValidGUIDToBinary(Src, Dest: PAnsiChar); overload;
+procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
 
 implementation
 
@@ -3438,54 +3442,88 @@ begin
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
-function GUIDToRaw(const GUID: TGUID): RawByteString; overload;
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PAnsiChar;
+  const SetTerm: Boolean = False);
 var
-  P: PAnsiChar;
+  D1: Cardinal;
+  W: Word;
+  I: Integer;
+begin
+  Dest^ := '{';
+  Inc(Dest);
+  D1 := PCardinal(Source)^; //Process D1
+  for i := 3 downto 0 do
+  begin
+    PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(@D1)^];
+    if D1 > 0 then D1 := D1 shr 8;
+  end;
+  Inc(Dest, 8);
+  Dest^ := '-';
+  W := PWord(Source+4)^; //Process D2
+  PWord(Dest+3)^ := TwoDigitLookupHexW[PByte(@W)^];
+  if W > 0 then W := W shr 8;
+  PWord(Dest+1)^ := TwoDigitLookupHexW[PByte(@W)^];
+  Inc(Dest, 5);
+  Dest^ := '-';
+  W := PWord(Source+6)^; //Process D3
+  PWord(Dest+3)^ := TwoDigitLookupHexW[PByte(@W)^];
+  if W > 0 then W := W shr 8;
+  PWord(Dest+1)^ := TwoDigitLookupHexW[PByte(@W)^];
+  Inc(Dest, 5);
+  (Dest)^ := '-'; //Process D4
+  PWord(Dest+1)^ := TwoDigitLookupHexW[PByte(Source+8)^];
+  PWord(Dest+3)^ := TwoDigitLookupHexW[PByte(Source+9)^];
+  (Dest+5)^ := '-';
+  Inc(Dest, 6);
+  for i := 0 to 5 do
+    PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(Source+10+i)^];
+  (Dest+12)^ := '}';
+  if SetTerm then (Dest+13)^ := #0; //set trailing term
+end;
+
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PWideChar; const SetTerm: Boolean = False);
+var
   I: Integer;
   D1: Cardinal;
   W: Word;
 begin
-  if (Pointer(Result{%H-}) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (38 <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Value := '';
-      SetLength(Result, 38);
-    end;
-    {$ELSE}
-    SetString(Result, nil, 38);
-    {$ENDIF}
-  P := Pointer(Result);
-  P^ := '{';
-  Inc(P);
-  D1 := GUID.D1;
+  Dest^ := '{';
+  Inc(Dest);
+  D1 := PCardinal(Source)^; //Process D1
   for i := 3 downto 0 do
   begin
-    PWord(P+(I shl 1))^ := TwoDigitLookupHexW[PByte(@D1)^];
+    PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(@D1)^];
     if D1 > 0 then D1 := D1 shr 8;
   end;
-  Inc(P, 8);
-  P^ := '-';
-  W := Guid.D2;
-  PWord(P+3)^ := TwoDigitLookupHexW[PByte(@W)^];
+  Inc(Dest, 8);
+  Dest^ := '-';
+  W := PWord(Source+4)^; //Process D2
+  PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
-  PWord(P+1)^ := TwoDigitLookupHexW[PByte(@W)^];
-  Inc(P, 5);
-  P^ := '-';
-  W := Guid.D3;
-  PWord(P+3)^ := TwoDigitLookupHexW[PByte(@W)^];
+  PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
+  Inc(Dest, 5);
+  Dest^ := '-';
+  W := PWord(Source+6)^; //Process D3
+  PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
   if W > 0 then W := W shr 8;
-  PWord(P+1)^ := TwoDigitLookupHexW[PByte(@W)^];
-  Inc(P, 5);
-  (P)^ := '-';
-  PWord(P+1)^ := TwoDigitLookupHexW[GUID.D4[0]];
-  PWord(P+3)^ := TwoDigitLookupHexW[GUID.D4[1]];
-  (P+5)^ := '-';
-  Inc(P, 6);
+  PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
+  Inc(Dest, 5);
+  (Dest)^ := '-'; //Process D4
+  PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(Source+8)^];
+  PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(Source+9)^];
+  (Dest+5)^ := '-';
+  Inc(Dest, 6);
   for i := 0 to 5 do
-    PWord(P+(I shl 1))^ := TwoDigitLookupHexW[GUID.D4[2+i]];
-  (P+12)^ := '}';
+    PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(Source+10+i)^];
+  (Dest+12)^ := '}';
+  if SetTerm then (Dest+13)^ := #0; //set trailing term
+end;
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToRaw(const GUID: TGUID): RawByteString; overload;
+begin
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(PAnsiChar(@GUID.D1), PAnsiChar(Pointer(Result)));
 end;
 
 {$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
@@ -3495,105 +3533,55 @@ type
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(const Bts: TBytes): RawByteString; overload;
-var
-  GUID: TGUID;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  Move(Bts[0], {%H-}GUID.D1, 16);
-  Result := GUIDToRaw(GUID);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Pointer(Bts), PAnsiChar(Pointer(Result)));
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToRaw(Buffer: Pointer; Len: NativeInt): RawByteString; overload;
-var
-  GUID: TGUID;
 begin
   if (Buffer = Nil) or (Len <> 16) then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  Move(Buffer^, {%H-}GUID.D1, 16);
-  Result := GUIDToRaw(GUID);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Buffer, PAnsiChar(Pointer(Result)));
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const GUID: TGUID): ZWideString; overload;
-var
-  P: PWideChar;
-  I: Integer;
-  D1: Cardinal;
-  W: Word;
 begin
-  {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
-  if (Pointer(Result{%H-}) = nil) or//empty
-     ({%H-}PRefCntInt(NativeUInt(Result) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-     (38 <> {%H-}PLengthInt(NativeUInt(Result) - StringLenOffSet)^) then { length as expected ? }
-    {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
-    begin
-      Value := '';
-      SetLength(Result, 38);
-    end;
-    {$ELSE}
-    SetString(Result, nil, 38);
-    {$ENDIF}
-  {$ELSE}
-  SetString(Result, nil, 38);
-  {$ENDIF}
-  P := Pointer(Result);
-  P^ := '{';
-  Inc(P);
-  D1 := GUID.D1;
-  for i := 3 downto 0 do
-  begin
-    PLongWord(P+(I shl 1))^ := TwoDigitLookupHexLW[PByte(@D1)^];
-    if D1 > 0 then D1 := D1 shr 8;
-  end;
-  Inc(P, 8);
-  P^ := '-';
-  W := Guid.D2;
-  PLongWord(P+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
-  if W > 0 then W := W shr 8;
-  PLongWord(P+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
-  Inc(P, 5);
-  P^ := '-';
-  W := Guid.D3;
-  PLongWord(P+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
-  if W > 0 then W := W shr 8;
-  PLongWord(P+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
-  Inc(P, 5);
-  (P)^ := '-';
-  PLongWord(P+1)^ := TwoDigitLookupHexLW[GUID.D4[0]];
-  PLongWord(P+3)^ := TwoDigitLookupHexLW[GUID.D4[1]];
-  (P+5)^ := '-';
-  Inc(P, 6);
-  for i := 0 to 5 do
-    PLongWord(P+(I shl 1))^ := TwoDigitLookupHexLW[GUID.D4[2+i]];
-  (P+12)^ := '}';
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(PAnsiChar(@GUID.D1), PWideChar(Pointer(Result)));
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(const Bts: TBytes): ZWideString; overload;
-var
-  GUID: TGUID;
 begin
   if Length(Bts) <> 16 then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  Move(Bts[0], {%H-}GUID.D1, 16);
-  Result := GUIDToUnicode(GUID);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Pointer(Bts), PWideChar(Pointer(Result)));
 end;
 
 //EgonHugeist: my conversion is 10x faster than IDE's
 function GUIDToUnicode(Buffer: Pointer; Len: NativeInt): ZWideString; overload;
-var
-  GUID: TGUID;
 begin
   if (Buffer = Nil) or (Len <> 16) then
     raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
-  Move(Buffer^, {%H-}GUID.D1, 16);
-  Result := GUIDToUnicode(GUID);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Buffer, PWideChar(Pointer(Result)));
 end;
 
-//EgonHugeist: my conversion is 1,5x faster than IDE's
-procedure ValidRawGUIDToGUIDBytes(Src, Dest: PAnsiChar);
+{**
+  EgonHugeist: my conversion is 1,5x faster than IDE's
+  converty hex-dezimal guid-string into a binary format
+  @param Src a Pointer to the ansi Source-String
+  @param Dest a Pointer to a 16-Bytes buffer
+    Note it works with TGUID using @GUID.D1 and all other Buffers
+}
+procedure ValidGUIDToBinary(Src, Dest: PAnsiChar);
   function HexChar(c: AnsiChar): Byte;
   begin
     case c of
@@ -3636,10 +3624,58 @@ begin
   end;
 end;
 
+{**
+  EgonHugeist: my conversion is 1,5x faster than IDE's
+  converty hex-dezimal unicode guid-string into a binary format
+  @param Src a Pointer to the Unicode Source-String
+  @param Dest a Pointer to a 16-Bytes buffer
+    Note it works with TGUID using @GUID.D1 and all other Buffers
+}
+procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar);
+  function HexChar(c: WideChar): Byte;
+  begin
+    case c of
+      '0'..'9':  Result := Byte(c) - Byte('0');
+      'a'..'f':  Result := (Byte(c) - Byte('a')) + 10;
+      'A'..'F':  Result := (Byte(c) - Byte('A')) + 10;
+    else
+      Result := 0;
+    end;
+  end;
+
+  function HexByte(p: PWideChar): Byte;
+  begin
+    Result := Byte((HexChar(p^) shl 4) + HexChar((p+1)^));
+  end;
+var
+  i: Integer;
+begin
+  Inc(Src);
+  for i := 0 to 3 do //process D1
+    PByte(dest+I)^ := HexByte(Src+(3-i) shl 1);
+  Inc(src, 9);
+  Inc(dest, 4);
+  for i := 0 to 1 do //D2, D3
+  begin
+    PByte(dest)^ := HexByte(src+2);
+    PByte(dest+1)^ := HexByte(src);
+    Inc(dest, 2);
+    Inc(src, 5);
+  end;
+  PByte(dest)^ := HexByte(src);
+  PByte(dest+1)^ := HexByte(src+2);
+  Inc(dest, 2);
+  Inc(src, 5);
+  for i := 0 to 5 do
+  begin
+    PByte(dest)^ := HexByte(src);
+    Inc(dest);
+    Inc(src, 2);
+  end;
+end;
+
 initialization
-
 HexFiller;  //build up lookup table
-
 
 end.
 

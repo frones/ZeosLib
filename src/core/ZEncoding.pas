@@ -2693,7 +2693,7 @@ end;
 
 function ZMovePRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
 begin
-  ZSetString(Src, Len, Result);
+  ZSetString(Src, Len, Result{%H-});
 end;
 
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;

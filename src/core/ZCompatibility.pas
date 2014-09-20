@@ -412,11 +412,11 @@ function UTF8ToString(const s: RawByteString): ZWideString;
 function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
 {$ENDIF}
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
-procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 var
@@ -649,32 +649,36 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
-  if ( Len = 0 ) or ( Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
+    begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+    end
     else
       SetString(Dest, Src, Len);
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
 begin
-  if ( Len = 0 ) or ( Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
+    begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+    end
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);
@@ -687,19 +691,28 @@ var
   P: PAnsiChar;
   W: PWideChar;
 begin
-  Dest := ''; //speeds up for SetLength
-  if ( Len = 0 ) or ( Src = nil ) then
-    Exit
+  if ( Len = 0 ) then
+    Dest := ''
   else
   begin
-    P := Src;
+    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+    if (Pointer(Dest{%H-}) = nil) or//empty
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+       (LengthInt(Len) <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
+      SetString(Dest, nil, Len);
+    {$ELSE}
     SetString(Dest, nil, Len);
-    W := Pointer(Dest);
-    for i := 1 to Len do
+    {$ENDIF}
+    if Src <> nil then
     begin
-      PWord(W)^ := PByte(P)^;
-      Inc(P);
-      Inc(W);
+      P := Src;
+      W := Pointer(Dest);
+      for i := 1 to Len do
+      begin
+        PWord(W)^ := PByte(P)^;
+        Inc(P);
+        Inc(W);
+      end;
     end;
   end;
 end;
@@ -707,19 +720,21 @@ end;
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
-  if ( Len = 0 ) or ( Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
+    begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+    end
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);

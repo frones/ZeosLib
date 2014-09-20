@@ -1371,7 +1371,6 @@ end;
 function TZAdoResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 var
   V: Variant;
-  GUID: TGUID;
 begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
@@ -1380,20 +1379,30 @@ begin
   if LastWasNull then
     Result := nil
   else
-  begin
-    V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
-    if VarType(V) = varByte then
-      Result := V
-    else
-      if TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType = stGUID then
-      begin
-        SetLength(Result, 16);
-        GUID := StringToGUID(V);
-        System.Move(Pointer(@GUID)^, Pointer(Result)^, 16);
-      end
+    case FAdoRecordSet.Fields.Item[ColumnIndex].Type_ of
+      adGUID:
+        begin
+          SetLength(Result, 16);
+          ValidGUIDToBinary(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, Pointer(Result));
+        end;
+      adBinary,
+      adVarBinary,
+      adLongVarBinary:
+        begin
+          SetLength(Result, FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+          System.Move(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VArray.Data^,
+            Result[0], FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize);
+        end;
       else
-        Result := V
-  end;
+        begin
+          V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
+          try
+            Result := V
+          except
+            Result := nil;
+          end;
+        end;
+    end;
 end;
 
 {**
