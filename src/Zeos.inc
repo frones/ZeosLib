@@ -309,6 +309,7 @@
   {$DEFINE WITH_PARAM_ASLARGEINT}       // TParam.AsLargint is supported
   {$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
   {$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
+  {$DEFINE WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
@@ -328,6 +329,7 @@
       {$DEFINE PUREPASCAL}
     {$ENDIF}
   {$ENDIF}
+  {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
 {$ENDIF}
 
 {$IFDEF VER150BELOW}

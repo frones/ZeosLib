@@ -3784,7 +3784,7 @@ asm
   jmp   @@HexLoop
 {$ELSE}
   //function StrToInt32_JOH_PAS_7_c(const s: string): Longint;
-  //originally wrtten by John O'Harrow
+  //originally written by John O'Harrow
   //http://fastcode.sourceforge.net/
   //EgonHugeist:
   //Patched to use PAnsiChar values only

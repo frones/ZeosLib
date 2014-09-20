@@ -2848,6 +2848,7 @@ var
   ColumnIndex: Integer;
   Len: NativeUInt;
   P: PWideChar;
+  PA: PAnsiChar;
   RowBuffer: PZRowBuffer;
   Bts: TBytes;
 begin
@@ -2893,8 +2894,13 @@ begin
           end;
         {$IFDEF WITH_FTGUID}
         ftGUID:
-          {$IFDEF WITH_STRPLCOPY_DEPRECATED}AnsiStrings.{$ENDIF}StrPLCopy(
-            PAnsiChar(Buffer), RowAccessor.GetAnsiString(ColumnIndex, Result), 38);
+          begin
+            PA := RowAccessor.GetPAnsiChar(ColumnIndex, Result, Len);
+            if Result then
+              PAnsiChar(Buffer)^ := #0
+            else
+              System.Move(PA^,Pointer(Buffer)^, 39);
+          end;
         {$ENDIF}
         ftString:
           Result := FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
@@ -2949,6 +2955,7 @@ var
   ColumnIndex: Integer;
   RowBuffer: PZRowBuffer;
   WasNull: Boolean;
+  Bts: TBytes;
 begin
   WasNull := False;
   if not Active then
@@ -2996,7 +3003,12 @@ begin
           FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
         {$IFDEF WITH_FTGUID}
         ftGUID:
-          FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
+          begin
+            SetLength(Bts, 16);
+            ValidRawGUIDToGUIDBytes(PAnsiChar(Buffer), Pointer(Bts));
+            RowAccessor.SetBytes(ColumnIndex, Bts);
+          end;
+          //FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
         {$ENDIF}
         ftCurrency:
           RowAccessor.SetCurrency(ColumnIndex, PDouble(Buffer)^); //cast Double to Currency

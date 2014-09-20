@@ -43,6 +43,7 @@
 
 {$DEFINE PUREPASCAL}
 
+{$DEFINE WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported since?????
 {$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
 {$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
 {$DEFINE WITH_TFIELD_FREEBUFFERS} //TField has virtual FreeBuffers procedure

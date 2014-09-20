@@ -358,6 +358,13 @@ begin
         end;
     end
     else
+    if DT = tdsUnique then
+    begin
+      FRawTemp := GUIDToRaw(Result, 16);
+      Result := Pointer(FRawTemp);
+      Len := 38;
+    end
+    else
     if (DT = tdsImage) then
       Len := NativeUInt(FPlainDriver.dbDatLen(FHandle, ColumnIndex))
     else
@@ -552,7 +559,9 @@ begin
             else
               Result := PRawToUnicode(P, Len, TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnCodePage)
         end
-    end
+    end else
+    if DT = tdsUnique then
+      Result := GUIDToUnicode(P, 16)
     else if (DT = tdsImage) then
       ZSetString(P, Len, Result)
     else
@@ -611,6 +620,9 @@ begin
         Move(Data^, Pointer(Result)^, DL);
       end;
     end else
+    if DT = tdsUnique then
+      FRawTemp := GUIDToRaw(Data, 16)
+    else
     if (DT = tdsImage) then
       ZSetString(Data, DL, Result)
     else
