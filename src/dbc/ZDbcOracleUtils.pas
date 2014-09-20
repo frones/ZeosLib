@@ -831,7 +831,7 @@ begin
                 else
                 begin
                   AnsiTemp := ConSettings^.ConvFuncs.ZStringToRaw(ZStringArray[I], ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):);
-                  Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                   MoveString(Pointer(AnsiTemp), I);
                 end;
             vtAnsiString:
@@ -841,7 +841,7 @@ begin
                 else
                 begin
                   AnsiTemp := ConSettings^.ConvFuncs.ZAnsiToRaw(ZAnsiStringArray[I], ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):);
-                  Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                   MoveString(Pointer(AnsiTemp), I);
                 end;
             vtUTF8String:
@@ -851,7 +851,7 @@ begin
                     SetEmptyString
                   else
                   begin
-                    Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(ZUTF8StringArray[I])+1), Variable^.Length);
+                    Variable^.oDataSizeArray^[i] := Math.Min(Length(ZUTF8StringArray[I])+1, LengthInt(Variable^.Length));
                     MoveString(Pointer(ZUTF8StringArray[I]), I);
                   end
               else
@@ -861,7 +861,7 @@ begin
                   else
                   begin
                     AnsiTemp := ConSettings^.ConvFuncs.ZUTF8ToRaw(ZUTF8StringArray[I], ConSettings^.ClientCodePage^.CP); //conversion possible or just an inc of RefCount? ):);
-                    Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                    Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                     MoveString(Pointer(AnsiTemp), I);
                   end;
             vtRawByteString:
@@ -881,7 +881,7 @@ begin
                     SetEmptyString
                   else
                   begin
-                    Variable^.oDataSizeArray^[i] := {%H-}Math.Min(NativeUInt(ZCharRecArray[I].Len+1), Variable^.Length);
+                    Variable^.oDataSizeArray^[i] := {%H-}Math.Min(ZCharRecArray[I].Len+1, LengthInt(Variable^.Length));
                     MoveString(Pointer(ZCharRecArray[I].P), I);
                   end
               else
@@ -892,7 +892,7 @@ begin
                     else
                     begin
                       AnsiTemp := PUnicodeToRaw(ZCharRecArray[i].P, ZCharRecArray[i].Len,ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                      Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                      Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                       MoveString(Pointer(AnsiTemp), I);
                     end
                 else
@@ -903,7 +903,7 @@ begin
                     begin
                       WS := PRawToUnicode(ZCharRecArray[i].P, ZCharRecArray[i].Len, ZCharRecArray[i].CP); //localize ?WideString? to avoid overrun
                       AnsiTemp := ZUnicodeToRaw(WS, ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                      Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                      Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                       MoveString(Pointer(AnsiTemp), I);
                     end;
             else
@@ -918,7 +918,7 @@ begin
                 else
                 begin
                   AnsiTemp := ZUnicodeToRaw(ZUnicodeStringArray[i], ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                  Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                   MoveString(Pointer(AnsiTemp), I);
                 end;
             vtCharRec:
@@ -928,7 +928,7 @@ begin
                 else
                 begin
                   AnsiTemp := PUnicodeToRaw(ZCharRecArray[I].P, ZCharRecArray[I].Len, ConSettings^.ClientCodePage^.CP); //convert to client encoding
-                  Variable^.oDataSizeArray^[i] := Math.Min(NativeUInt(Length(AnsiTemp)+1), Variable^.Length);
+                  Variable^.oDataSizeArray^[i] := Math.Min(Length(AnsiTemp)+1, LengthInt(Variable^.Length));
                   MoveString(Pointer(AnsiTemp), I);
                 end;
             else
