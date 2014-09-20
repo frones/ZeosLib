@@ -414,7 +414,7 @@ function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
-procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
@@ -685,11 +685,11 @@ begin
       {$ENDIF}
 end;
 
-procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+//EgonHugeist fast ByteToWord shift without encoding maps and/or alloc a ZWideString
+procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;
 var
-  I: Cardinal;
-  P: PAnsiChar;
-  W: PWideChar;
+  PEnd: PAnsiChar;
+  PW: PWideChar;
 begin
   if ( Len = 0 ) then
     Dest := ''
@@ -698,20 +698,30 @@ begin
     {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
     if (Pointer(Dest{%H-}) = nil) or//empty
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
-       (LengthInt(Len) <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
+       (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
       SetString(Dest, nil, Len);
     {$ELSE}
     SetString(Dest, nil, Len);
     {$ENDIF}
     if Src <> nil then
     begin
-      P := Src;
-      W := Pointer(Dest);
-      for i := 1 to Len do
+      PW := Pointer(Dest);
+      PEnd := Src+Len-4;
+      while Src < PEnd do //quad conversion per loop
       begin
-        PWord(W)^ := PByte(P)^;
-        Inc(P);
-        Inc(W);
+        PWord(PW)^ := PByte(Src)^;
+        PWord(PW+1)^ := PByte(Src+1)^;
+        PWord(PW+2)^ := PByte(Src+2)^;
+        PWord(PW+3)^ := PByte(Src+3)^;
+        Inc(Src, 4);
+        Inc(PW, 4);
+      end;
+      Inc(PEnd, 4);
+      while Src < PEnd do
+      begin
+        PWord(PW)^ := PByte(Src)^;
+        Inc(Src);
+        Inc(PW);
       end;
     end;
   end;

@@ -581,9 +581,9 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
-function ASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString; overload;
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString; overload;
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
-function UnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
+function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
 
 //function ValUnicodeInt(const s: ZWideString; var code: Integer): Integer;
 
@@ -3290,30 +3290,16 @@ begin
 end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
-var i, l: integer;
 begin
   if Pointer(Src) = nil then
     Result := ''
   else
-  begin
-    l := {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^;
-    SetString(result,nil,l);
-    for i := 0 to l-1 do
-      PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  end;
+    ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result);
 end;
 
-function ASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString;
-var i: integer;
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
 begin
-  if (Src = nil) or (Len = 0) then
-    Result := ''
-  else
-  begin
-    System.SetString(result, nil, Len);
-    for i := 0 to Len-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  end;
+  ZSetString(Src, Len, Result);
 end;
 
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
@@ -3341,7 +3327,7 @@ begin
 end;
 
 
-function UnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
+function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString;
 var i: integer;
 begin
   if (Src = nil) or (Len = 0) then
@@ -3401,10 +3387,27 @@ begin
   Result := ASCII7ToUnicodeString(FloatToSqlRaw(Value));
 end;
 
+//EgonHugeist: my RTL replacemnet is 2x faster
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt);
-var I: LengthInt;
+var
+  PEnd: PAnsiChar;
 begin
-  for i := 0 to Len-1 do
+  PEnd := Buffer+Len-8;
+  while Buffer < PEnd do //try to convert 8Byte per loop
+  begin
+    PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
+    PWord(Text+2)^ := TwoDigitLookupHexW[Ord((Buffer+1)^)];
+    PWord(Text+4)^ := TwoDigitLookupHexW[Ord((Buffer+2)^)];
+    PWord(Text+6)^ := TwoDigitLookupHexW[Ord((Buffer+3)^)];
+    PWord(Text+8)^ := TwoDigitLookupHexW[Ord((Buffer+4)^)];
+    PWord(Text+10)^ := TwoDigitLookupHexW[Ord((Buffer+5)^)];
+    PWord(Text+12)^ := TwoDigitLookupHexW[Ord((Buffer+6)^)];
+    PWord(Text+14)^ := TwoDigitLookupHexW[Ord((Buffer+7)^)];
+    Inc(Buffer, 8);
+    Inc(Text, 16);
+  end;
+  Inc(PEnd, 8);
+  while Buffer < PEnd do
   begin
     PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
     Inc(Buffer);
@@ -3412,10 +3415,27 @@ begin
   end;
 end;
 
+//EgonHugeist: my RTL replacemnet is 5x faster (BinToHex+Wide-Conv)
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt);
-var I: LengthInt;
+var
+  PEnd: PAnsiChar;
 begin
-  for i := 0 to Len-1 do
+  PEnd := Buffer+Len-8;
+  while Buffer < PEnd do  //try to convert 8Byte per loop
+  begin
+    PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
+    PLongWord(Text+2)^ := TwoDigitLookupHexLW[Ord((Buffer+1)^)];
+    PLongWord(Text+4)^ := TwoDigitLookupHexLW[Ord((Buffer+2)^)];
+    PLongWord(Text+6)^ := TwoDigitLookupHexLW[Ord((Buffer+3)^)];
+    PLongWord(Text+8)^ := TwoDigitLookupHexLW[Ord((Buffer+4)^)];
+    PLongWord(Text+10)^ := TwoDigitLookupHexLW[Ord((Buffer+5)^)];
+    PLongWord(Text+12)^ := TwoDigitLookupHexLW[Ord((Buffer+6)^)];
+    PLongWord(Text+14)^ := TwoDigitLookupHexLW[Ord((Buffer+7)^)];
+    Inc(Buffer, 8);
+    Inc(Text, 16);
+  end;
+  Inc(PEnd, 8);
+  while Buffer < PEnd do
   begin
     PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
     Inc(Buffer);
