@@ -173,7 +173,6 @@ const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
-function Hash(S : AnsiString) : LongWord; overload;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
@@ -408,9 +407,8 @@ function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; over
 function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
 
-{$IFDEF UNICODE}
-function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
-{$ENDIF}
+function Hash(const S : RawByteString) : LongWord; overload;
+function Hash(const Key : ZWideString) : Cardinal; overload;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
@@ -564,7 +562,10 @@ end;
   {$ENDIF}
 {$ENDIF}
 
-{$IFDEF UNICODE}
+{$IFOPT Q+}
+  {$DEFINE OverFlowCheckEnabled}
+  {$OVERFLOWCHECKS OFF}
+{$ENDIF}
 function Hash(const key: ZWideString): Cardinal;
 var
   I: integer;
@@ -576,38 +577,102 @@ begin
     Result := Result xor Cardinal(key[I]);
   end;
 end; { Hash }
-{$ENDIF}
 
-{$IFNDEF FPC}
-function Hash(S : AnsiString) : LongWord;
+(*function Hash(const S: RawByteString): Cardinal; //perform the FPC used ELF Hash algorithm -> pretty slow(byte hashed) but tiny
 Var
   thehash,g,I : LongWord;
 begin
-   thehash:=0;
-   For I:=1 to Length(S) do { 0 terminated }
-     begin
-     thehash:=thehash shl 4;
-     {$IFOPT Q+}
-       {$DEFINE OverFlowCheckEnabled}
-       {$OVERFLOWCHECKS OFF}
-     {$ENDIF}
-     inc(theHash,Ord(S[i]));
-     {$IFDEF OverFlowCheckEnabled}
-       {$OVERFLOWCHECKS ON}
-     {$ENDIF}
-     g:=thehash and LongWord($f shl 28);
-     if g<>0 then
-       begin
-       thehash:=thehash xor (g shr 24);
-       thehash:=thehash xor g;
-       end;
-     end;
-   If theHash=0 then
-     Hash:=$ffffffff
+  thehash:=0;
+  For I:=1 to Length(S) do { 0 terminated }
+  begin
+    thehash:=thehash shl 4;
+    inc(theHash,Ord(S[i]));
+    g:=thehash and $f0000000;;
+    if g<>0 then
+    begin
+      thehash:=thehash xor (g shr 24);
+      thehash:=thehash xor g;
+    end;
+  end;
+  If theHash=0 then
+     Result := $ffffffff
    else
-     Hash:=TheHash;
+     Result :=TheHash;
+end;*)
+
+{ ported from http://stofl.org/questions/3690608/simple-string-hashing-function}
+//perform a MurmurHash2 algorithm by Austin Appleby loads faster (4Byte aligned)
+//Changes by EgonHugeist:
+//use PAnsiChar instead of S[] to inc the 4Byte blocks -> faster!
+//note: we can also use 64Bit versions: http://factgrabber.com/index.php?q=MurmurHash&lcid=xrnmicaJ5olmGUbBZJlkwWah5plkiYaJJpkGgSexJhkm
+//function MurmurHash2(const S: RawByteString; const Seed: LongWord=$9747b28c): LongWord;
+function Hash(const S: RawByteString): LongWord;
+var
+  k: LongWord;
+  Len: LongWord;
+  P, PEnd: PAnsiChar;
+const
+  // 'm' and 'r' are mixing constants generated offline.
+  // They're not really 'magic', they just happen to work well.
+  m = $5bd1e995;
+  r = 24;
+begin
+  //The default seed, $9747b28c, is from the original C library
+  P := Pointer(S);
+  if P = nil then
+    Result := $ffffffff
+  else
+  begin
+    Len := {%Result-}PLengthInt(P - StringLenOffSet)^;
+    // Initialize the hash to a 'random' value
+    Result := $9747b28c xor len;
+
+    // Mix 4 bytes at a time into the hash
+    PEnd := P + Len - 4;
+    while P < PEnd do
+    begin
+      k := PLongWord(P)^;
+
+      k := k * m;
+      k := k xor (k shr r);
+      k := k * m;
+
+      Result := Result * m;
+      Result := Result xor k;
+
+      Inc(P, 4);
+    end;
+    Inc(PEnd, 4);
+    Len := PEnd-P;
+
+    {   Handle the last few bytes of the input array
+            P: ... $69 $18 $2f
+    }
+    if len = 3 then
+      Result := Result xor (LongWord((P+2)^) shl 16);
+    if len >= 2 then
+      Result := Result xor (LongWord((P+1)^) shl 8);
+    if len >= 1 then
+    begin
+      Result := Result xor (LongWord(P^));
+      Result := Result * m;
+    end;
+
+    // Do a few final mixes of the hash to ensure the last few
+    // bytes are well-incorporated.
+    Result := Result xor (Result shr 13);
+    Result := Result * m;
+    Result := Result xor (Result shr 15);
+
+    Result := Result;
+  end;
 end;
 
+{$IFDEF OverFlowCheckEnabled}
+  {$OVERFLOWCHECKS ON}
+{$ENDIF}
+
+{$IFNDEF FPC}
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 var
   P,PE : PChar;
@@ -685,7 +750,7 @@ begin
       {$ENDIF}
 end;
 
-//EgonHugeist fast ByteToWord shift without encoding maps and/or alloc a ZWideString
+//EgonHugeist: my fast ByteToWord shift without encoding maps and/or alloc a ZWideString
 procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;
 var
   PEnd: PAnsiChar;
