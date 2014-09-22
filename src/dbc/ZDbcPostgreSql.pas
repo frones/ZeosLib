@@ -124,6 +124,7 @@ type
     function ClientSettingsChanged: Boolean;
     function GetUndefinedVarcharAsStringLength: Integer;
     function GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
+    function CheckFieldVisibility: Boolean;
   end;
 
   {** Implements PostgreSQL Database Connection. }
@@ -145,6 +146,7 @@ type
     FClientSettingsChanged: Boolean;
     FTableInfoCache: TZPGTableInfoCache;
     FIs_bytea_output_hex: Boolean;
+    FCheckFieldVisibility: Boolean;
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
@@ -184,6 +186,7 @@ type
 
     function IsOidAsBlob: Boolean;
     function Is_bytea_output_hex: Boolean;
+    function CheckFieldVisibility: Boolean;
 
     function GetTypeNameByOid(Id: Oid): string;
     function GetPlainDriver: IZPostgreSQLPlainDriver;
@@ -459,6 +462,7 @@ begin
   else
     FOidAsBlob := False;
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
+  FCheckFieldVisibility := StrToBoolEx(Info.Values['CheckFieldVisibility']);
 
   OnPropertiesChange(nil);
 
@@ -571,6 +575,15 @@ end;
 function TZPostgreSQLConnection.Is_bytea_output_hex: Boolean;
 begin
   Result := FIs_bytea_output_hex;
+end;
+
+{**
+  Checks if DataBaseMetaData should check FieldVisibility too.
+  @return <code>True</code> if user did set it.
+}
+function TZPostgreSQLConnection.CheckFieldVisibility: Boolean;
+begin
+  Result := FCheckFieldVisibility;
 end;
 
 {**
