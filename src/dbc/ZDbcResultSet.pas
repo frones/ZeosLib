@@ -512,7 +512,7 @@ type
 implementation
 
 uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
-  {$IFDEF WITH_UNITANISSTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZAbstractResultSet }
 
@@ -1441,45 +1441,31 @@ begin
 {$ENDIF}
   Metadata := TZAbstractResultSetMetadata(FMetadata);
 {$IFNDEF DISABLE_CHECKING}
-  if (Metadata = nil) or (ColumnIndex <= 0)
-    or (ColumnIndex > Metadata.GetColumnCount) then
-  begin
+  if (Metadata = nil) or (ColumnIndex < FirstDbcIndex)
+    or (ColumnIndex > Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
 {$ENDIF}
 
   case Metadata.GetColumnType(ColumnIndex) of
     stBoolean:
-      begin
-        Result.VType := vtBoolean;
-        Result.VBoolean := GetBoolean(ColumnIndex);
-      end;
-    stByte, stSmall, stInteger, stLong:
-      begin
-        Result.VType := vtInteger;
-        Result.VInteger := GetLong(ColumnIndex);
-      end;
+      Result := EncodeBoolean(GetBoolean(ColumnIndex));
+    stShort, stSmall, stInteger, stLong:
+      Result := EncodeInteger(GetLong(ColumnIndex));
+    stByte, stWord, stLongWord, stULong:
+      Result := EncodeUInteger(GetULong(ColumnIndex));
     stFloat, stDouble, stBigDecimal:
-      begin
-        Result.VType := vtFloat;
-        Result.VFloat := GetBigDecimal(ColumnIndex);
-      end;
+      Result := EncodeFloat(GetBigDecimal(ColumnIndex));
     stDate, stTime, stTimestamp:
-      begin
-        Result.VType := vtDateTime;
-        Result.VDateTime := GetTimestamp(ColumnIndex);
-      end;
-    stString, stBytes, stAsciiStream, stBinaryStream:
-      begin
-        Result.VType := vtString;
-        Result.VString := String(GetString(ColumnIndex));
-      end;
-    stUnicodeString, stUnicodeStream:
-      begin
-        Result.VType := vtUnicodeString;
-        Result.VUnicodeString := GetUnicodeString(ColumnIndex);
-      end;
+      Result := EncodeDateTime(GetTimestamp(ColumnIndex));
+    stBytes, stBinaryStream:
+      Result := EncodeBytes(GetBytes(ColumnIndex));
+    stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+      if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+          (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+        Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex))
+      else
+        Result := EncodeRawByteString(GetRawByteString(ColumnIndex));
     else
       Result.VType := vtNull;
   end;
@@ -3732,18 +3718,6 @@ var
   ColumnIndex: Integer;
   SaveRowNo: Integer;
   Value1, Value2: TZVariant;
-
-  function CompareFloat(Value1, Value2: Extended): Integer;
-  begin
-    Value1 := Value1 - Value2;
-    if Value1 > 0 then
-      Result := 1
-    else if Value1 < 0 then
-      Result := -1
-    else
-      Result := 0;
-  end;
-
 begin
   Result := 0;
   SaveRowNo := RowNo;
@@ -3773,22 +3747,18 @@ begin
       end;
       case Value1.VType of
         vtBoolean:
-          begin
-            if Value1.VBoolean = Value2.VBoolean then
-              Result := 0
-            else if Value1.VBoolean = True then
-              Result := 1
-            else
-              Result := -1;
-          end;
+          Result := Ord(Value1.VBoolean > Value2.VBoolean)-Ord(Value1.VBoolean < Value2.VBoolean);
         vtInteger:
-          Result := Value1.VInteger - Value2.VInteger;
+          Result := Ord(Value1.VInteger > Value2.VInteger)-Ord(Value1.VInteger < Value2.VInteger);
+        vtUInteger:
+          Result := Ord(Value1.VUInteger > Value2.VUInteger)-Ord(Value1.VUInteger < Value2.VUInteger);
         vtFloat:
-          Result := CompareFloat(Value1.VFloat, Value2.VFloat);
+          Result := Ord(Value1.VFloat > Value2.VFloat)-Ord(Value1.VFloat < Value2.VFloat);
         vtDateTime:
-          Result := CompareFloat(Value1.VDateTime, Value2.VDateTime);
-        vtString:
-          Result := AnsiCompareStr(Value1.VString, Value2.VString);
+          Result := Ord(Value1.VDateTime > Value2.VDateTime)-Ord(Value1.VDateTime < Value2.VDateTime);
+        vtRawByteString:
+          Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+            AnsiStrComp(PAnsiChar(Value1.VRawByteString), PAnsiChar(Value2.VRawByteString));
         vtUnicodeString:
           Result := WideCompareStr(Value1.VUnicodeString, Value2.VUnicodeString);
       end;
