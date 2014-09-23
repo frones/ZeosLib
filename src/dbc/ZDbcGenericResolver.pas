@@ -405,7 +405,7 @@ begin
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnIndices[0] := I;
-      CompareFuncs[0] := NewRowAccessor.GetCompareFunc(I);
+      CompareFuncs[0] := NewRowAccessor.GetCompareFunc(I, True);
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) and (OldRowAccessor.CompareBuffers(
         OldRowAccessor.RowBuffer, NewRowAccessor.RowBuffer, ColumnIndices,

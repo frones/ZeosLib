@@ -95,7 +95,7 @@ type
   EZSQLWarning = class(EZSQLThrowable);
 
   {** EH: sort helper procs }
-  TCompareFunc = function(const V1, V2): Integer of object;
+  TCompareFunc = function(const V1, V2): Integer;
   TCompareFuncs = Array of TCompareFunc;
 
 // Data types

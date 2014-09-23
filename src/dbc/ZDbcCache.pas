@@ -70,9 +70,7 @@ type
   TZRowUpdateType = (utUnmodified, utModified, utInserted, utDeleted);
   TZRowUpdateTypes = set of TZRowUpdateType;
 
-  {$IFNDEF NO_COLUMN_LIMIT}
   TZByteArray = array[0..4096 * SizeOf(Pointer)] of Byte;
-  {$ENDIF}
   {** Defines a header for row buffer. }
   {ludob. Notes on alignment:
   Columns contains a record per field with the structure
@@ -91,11 +89,7 @@ type
     {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
     dummyalign:pointer;
     {$endif}
-    {$IFDEF NO_COLUMN_LIMIT}
-    Columns: array of Byte;
-    {$ELSE}
     Columns: TZByteArray;
-    {$ENDIF}
   end;
   PZRowBuffer = ^TZRowBuffer;
 
@@ -140,29 +134,8 @@ type
       ColumnIndex: Integer; const Value: PWideChar;
       Const Len: Cardinal; const NewPointer: Boolean = False); {$IFDEF WITHINLINE} inline; {$ENDIF}
   protected
-    {EH: sort compare procs for scollable native resultsets }
-    function CompareNothing(const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
-    function CompareBoolean(const V1, V2): Integer;
-    function CompareByte(const V1, V2): Integer;
-    function CompareShort(const V1, V2): Integer;
-    function CompareWord(const V1, V2): Integer;
-    function CompareSmallInt(const V1, V2): Integer;
-    function CompareLongWord(const V1, V2): Integer;
-    function CompareInteger(const V1, V2): Integer;
-    function CompareInt64(const V1, V2): Integer;
-    function CompareUInt64(const V1, V2): Integer;
-    function CompareSingle(const V1, V2): Integer;
-    function CompareDouble(const V1, V2): Integer;
-    function CompareExtended(const V1, V2): Integer;
-    function CompareDateTime(const V1, V2): Integer;
-    function CompareGUID(const V1, V2): Integer;
-    function CompareBytes(const V1, V2): Integer;
-    function CompareCLob(const V1, V2): Integer;
-    function CompareBlob(const V1, V2): Integer;
-
     procedure CheckColumnIndex(Const ColumnIndex: Integer);
     procedure CheckColumnConvertion(Const ColumnIndex: Integer; ResultType: TZSQLType);
-    function CompareString(const V1, V2): Integer; virtual; abstract;
     property ConSettings: PZConSettings read FConSettings;
   public
     constructor Create(ColumnsInfo: TObjectList; ConSettings: PZConSettings);
@@ -179,7 +152,7 @@ type
       const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray;
       const CompareFuncs: TCompareFuncs): Integer;
     function GetCompareFunc(ColumnIndex: Integer{;
-      Ascending: Boolean}): TCompareFunc;
+      Ascending: Boolean}; const BinaryCompare: Boolean = False): TCompareFunc;
     function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
       const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
 
@@ -288,8 +261,6 @@ type
 
   {** Implements a raw-string based column buffer accessor. }
   TZRawRowAccessor = class(TZRowAccessor)
-  protected
-    function CompareString(const V1, V2): Integer; override;
   public
     procedure CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer; const CloneLobs: Boolean = False); override;
 
@@ -321,8 +292,6 @@ type
 
   {** Implements a unicode-string based column buffer accessor. }
   TZUnicodeRowAccessor = class(TZRowAccessor)
-  protected
-    function CompareString(const V1, V2): Integer; override;
   public
     procedure CopyBuffer(SrcBuffer: PZRowBuffer; DestBuffer: PZRowBuffer; const CloneLobs: Boolean = False); override;
 
@@ -353,7 +322,7 @@ type
   end;
 
 const
-  RowHeaderSize = SizeOf(TZRowBuffer){$IFNDEF NO_COLUMN_LIMIT} - SizeOf(TZByteArray){$ENDIF};
+  RowHeaderSize = SizeOf(TZRowBuffer) - SizeOf(TZByteArray);
   {we revert the normal Boolean anlogy. We Use True = 0 and False = 1! Beacuse:
     This avoids an extra Setting of Null bytes after calling FillChar(x,y,#0)}
   bIsNull = Byte(0);
@@ -367,6 +336,246 @@ uses ZFastcode, Math, ZMessages, ZSysUtils, ZDbcUtils, ZEncoding
 const
   PAnsiInc = SizeOf(Cardinal);
   PWideInc = SizeOf(Word); //PWide inc assumes allways two byte
+
+function CompareNothing(const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
+begin
+  Result := 0;
+end;
+
+function CompareBoolean(const V1, V2): Integer;
+begin
+  Result := Ord((PWordBool(V1)^ > PWordBool(V2)^))-Ord((PWordBool(V1)^ < PWordBool(V2)^));
+end;
+
+function CompareByte(const V1, V2): Integer;
+begin
+  Result := Ord((PByte(V1)^ > PByte(V2)^))-Ord((PByte(V1)^ < PByte(V2)^));
+end;
+
+function CompareShort(const V1, V2): Integer;
+begin
+  Result := Ord((PShortInt(V1)^ > PShortInt(V2)^))-Ord((PShortInt(V1)^ < PShortInt(V2)^));
+end;
+
+function CompareWord(const V1, V2): Integer;
+begin
+  Result := Ord((PWord(V1)^ > PWord(V2)^))-Ord((PWord(V1)^ < PWord(V2)^));
+end;
+
+function CompareSmallInt(const V1, V2): Integer;
+begin
+  Result := Ord((PSmallInt(V1)^ > PSmallInt(V2)^))-Ord((PSmallInt(V1)^ < PSmallInt(V2)^));
+end;
+
+function CompareLongWord(const V1, V2): Integer;
+begin
+  Result := Ord((PLongWord(V1)^ > PLongWord(V2)^))-Ord((PLongWord(V1)^ < PLongWord(V2)^));
+end;
+
+function CompareInteger(const V1, V2): Integer;
+begin
+  Result := Ord((PLongInt(V1)^ > PLongInt(V2)^))-Ord((PLongInt(V1)^ < PLongInt(V2)^));
+end;
+
+function CompareInt64(const V1, V2): Integer;
+begin
+  Result := Ord((PInt64(V1)^ > PInt64(V2)^))-Ord((PInt64(V1)^ < PInt64(V2)^));
+end;
+
+function CompareUInt64(const V1, V2): Integer;
+begin
+  Result := Ord((PUInt64(V1)^ > PUInt64(V2)^))-Ord((PUInt64(V1)^ < PUInt64(V2)^));
+end;
+
+function CompareSingle(const V1, V2): Integer;
+begin
+  Result := Ord((PSingle(V1)^ > PSingle(V2)^))-Ord((PSingle(V1)^ < PSingle(V2)^));
+end;
+
+function CompareDouble(const V1, V2): Integer;
+begin
+  Result := Ord((PDouble(V1)^ > PDouble(V2)^))-Ord((PDouble(V1)^ < PDouble(V2)^));
+end;
+
+function CompareExtended(const V1, V2): Integer;
+begin
+  Result := Ord((PExtended(V1)^ > PExtended(V2)^))-Ord((PExtended(V1)^ < PExtended(V2)^));
+end;
+
+function CompareDateTime(const V1, V2): Integer;
+begin
+  Result := Ord((PDateTime(V1)^ > PDateTime(V2)^))-Ord((PDateTime(V1)^ < PDateTime(V2)^));
+end;
+
+function CompareGUID(const V1, V2): Integer;
+begin
+  Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
+end;
+
+function CompareBytes(const V1, V2): Integer;
+var
+  ALength: SmallInt;
+begin
+  ALength := PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^;
+  Result := ALength - PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^; //overflow safe!
+  if Result = 0 then
+    Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, ALength);
+end;
+
+function CompareBinaryRaw(const V1, V2): Integer;
+begin
+  Result := PLongWord(Pointer(V1)^)^ - PLongWord(Pointer(V2)^)^;
+  if Result = 0 then
+     Result := ZMemLComp(PAnsiChar(Pointer(V1)^)+PAnsiInc,
+                         PAnsiChar(Pointer(V2)^)+PAnsiInc,  
+                         PLongWord(Pointer(V1)^)^);
+end;
+
+function CompareNativeRaw(const V1, V2): Integer;
+begin
+  {$IFDEF MSWINDOWS}
+  Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
+    PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
+    PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2{CSTR_EQUAL}
+  {$ELSE}
+    if Assigned(PPAnsichar(Pointer(V1)^) and Assigned(PPAnsiChar(Pointer(V2)^) then
+      Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+        AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
+    else //we've found out on other (FPC)OS's a nil compare crahs!
+      if not Assigned(PPAnsichar(Pointer(V1)^) and not Assigned(PPAnsiChar(Pointer(V1)^) then
+        Result := 0
+      else
+        Result := -1
+  {$ENDIF}
+end;
+
+function CompareUnicodeFromUTF8(const V1, V2): Integer;
+var
+  S1, S2: ZWideString;
+begin
+  S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
+  S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
+  Result := WideCompareStr(S1, S2);
+end;
+
+function CompareUnicode(const V1, V2): Integer;
+{$IFDEF MSWINDOWS}
+begin
+  SetLastError(0);
+  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+    PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^,
+    PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^) - 2{CSTR_EQUAL};
+  if GetLastError <> 0 then
+    RaiseLastOSError;
+end;
+{$ELSE}
+var S1, S2: ZWideString;
+begin
+  System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^);
+  System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^);
+  Result := WideCompareStr(S1, S2);
+end;
+{$ENDIF}
+
+function CompareBinaryUnicode(const V1, V2): Integer;
+begin
+  Result := PLongWord(Pointer(V1)^)^ - PLongWord(Pointer(V2)^)^; 
+  if Result = 0 then
+     Result := ZMemLComp(Pointer(PWideChar(Pointer(V1)^)+PWideInc),
+                         Pointer(PWideChar(Pointer(V2)^)+PWideInc),  
+                         PLongWord(Pointer(V1)^)^ shl 1);
+end;
+
+
+function CompareNativeCLob(const V1, V2): Integer;
+var
+  Blob1, Blob2: IZBlob;
+  BlobEmpty1, BlobEmpty2: Boolean;
+begin
+  Blob1 := IZBlob(PPointer(V1)^);
+  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
+  Blob2 := IZBlob(PPointer(V2)^);
+  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
+  if BlobEmpty1 and BlobEmpty2 then
+    Result := 0
+  else if (BlobEmpty1 <> BlobEmpty2) then
+    if BlobEmpty1 then
+      Result := -1
+    else
+      Result := 1
+  else
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+    else
+      Result := 0;
+end;
+
+function CompareUnicodeCLob(const V1, V2): Integer;
+var
+  Blob1, Blob2: IZBlob;
+  BlobEmpty1, BlobEmpty2: Boolean;
+  {$IFDEF MSWINDOWS}
+  ValuePtr1, ValuePtr2: Pointer;
+  {$ENDIF}
+begin
+  Blob1 := IZBlob(PPointer(V1)^);
+  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
+  Blob2 := IZBlob(PPointer(V2)^);
+  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
+  if BlobEmpty1 and BlobEmpty2 then
+    Result := 0
+  else if (BlobEmpty1 <> BlobEmpty2) then
+    if BlobEmpty1 then
+      Result := -1
+    else
+      Result := 1
+  else
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+      if Blob1.IsClob and Blob2.IsClob then
+      begin
+        {$IFDEF MSWINDOWS}
+        ValuePtr1 := Blob1.GetPWideChar;
+        ValuePtr2 := Blob2.GetPWideChar;
+        SetLastError(0);
+        Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
+          ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
+        if GetLastError <> 0 then RaiseLastOSError;
+        {$ELSE}
+        Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
+        {$ENDIF}
+      end
+      else
+        Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
+    else
+      Result := 0;
+end;
+
+function CompareBlob(const V1, V2): Integer;
+var
+  Blob1, Blob2: IZBlob;
+  BlobEmpty1, BlobEmpty2: Boolean;
+begin
+  Blob1 := IZBlob(PPointer(V1)^);
+  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
+  Blob2 := IZBlob(PPointer(V2)^);
+  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
+  if BlobEmpty1 and BlobEmpty2 then
+    Result := 0
+  else if (BlobEmpty1 <> BlobEmpty2) then
+    if BlobEmpty1 then
+      Result := -1
+    else
+      Result := 1
+  else
+    if Blob1.IsUpdated or Blob2.IsUpdated then
+    begin
+      Result := Blob1.Length - Blob2.Length;
+      if Result = 0 then //possible same lenngth but data diffs
+        Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length);
+    end
+    else
+      Result := 0;
+end;
 
 { TZRowAccessor }
 
@@ -435,11 +644,6 @@ begin
       SetLength(FDataSetCols, Length(FDataSetCols)+1);
       FDataSetCols[High(FDataSetCols)] := I;
     end;
-
-    {$IFNDEF NO_COLUMN_LIMIT}
-    if FColumnsSize > SizeOf(TZByteArray)-1 then
-      raise EZSQLException.Create(SRowBufferWidthExceeded);
-    {$ENDIF}
   end;
   FHighBytesCols := Length(FBytesCols)-1;
   FHighStringCols := Length(FStringCols)-1;
@@ -452,183 +656,6 @@ begin
   FHasLobs := FHighLobCols > -1;
   FHasDataSets := FHighDataSetCols > -1;
   FRowSize := FColumnsSize + RowHeaderSize;
-end;
-
-function TZRowAccessor.CompareNothing(const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
-begin
-  Result := 0;
-end;
-
-function TZRowAccessor.CompareBoolean(const V1, V2): Integer;
-begin
-  Result := Ord((PWordBool(V1)^ > PWordBool(V2)^))-Ord((PWordBool(V1)^ < PWordBool(V2)^));
-end;
-
-function TZRowAccessor.CompareByte(const V1, V2): Integer;
-begin
-  Result := Ord((PByte(V1)^ > PByte(V2)^))-Ord((PByte(V1)^ < PByte(V2)^));
-end;
-
-function TZRowAccessor.CompareShort(const V1, V2): Integer;
-begin
-  Result := Ord((PShortInt(V1)^ > PShortInt(V2)^))-Ord((PShortInt(V1)^ < PShortInt(V2)^));
-end;
-
-function TZRowAccessor.CompareWord(const V1, V2): Integer;
-begin
-  Result := Ord((PWord(V1)^ > PWord(V2)^))-Ord((PWord(V1)^ < PWord(V2)^));
-end;
-
-function TZRowAccessor.CompareSmallInt(const V1, V2): Integer;
-begin
-  Result := Ord((PSmallInt(V1)^ > PSmallInt(V2)^))-Ord((PSmallInt(V1)^ < PSmallInt(V2)^));
-end;
-
-function TZRowAccessor.CompareLongWord(const V1, V2): Integer;
-begin
-  Result := Ord((PLongWord(V1)^ > PLongWord(V2)^))-Ord((PLongWord(V1)^ < PLongWord(V2)^));
-end;
-
-function TZRowAccessor.CompareInteger(const V1, V2): Integer;
-begin
-  Result := Ord((PLongInt(V1)^ > PLongInt(V2)^))-Ord((PLongInt(V1)^ < PLongInt(V2)^));
-end;
-
-function TZRowAccessor.CompareInt64(const V1, V2): Integer;
-begin
-  Result := Ord((PInt64(V1)^ > PInt64(V2)^))-Ord((PInt64(V1)^ < PInt64(V2)^));
-end;
-
-function TZRowAccessor.CompareUInt64(const V1, V2): Integer;
-begin
-  Result := Ord((PUInt64(V1)^ > PUInt64(V2)^))-Ord((PUInt64(V1)^ < PUInt64(V2)^));
-end;
-
-function TZRowAccessor.CompareSingle(const V1, V2): Integer;
-begin
-  Result := Ord((PSingle(V1)^ > PSingle(V2)^))-Ord((PSingle(V1)^ < PSingle(V2)^));
-end;
-
-function TZRowAccessor.CompareDouble(const V1, V2): Integer;
-begin
-  Result := Ord((PDouble(V1)^ > PDouble(V2)^))-Ord((PDouble(V1)^ < PDouble(V2)^));
-end;
-
-function TZRowAccessor.CompareExtended(const V1, V2): Integer;
-begin
-  Result := Ord((PExtended(V1)^ > PExtended(V2)^))-Ord((PExtended(V1)^ < PExtended(V2)^));
-end;
-
-function TZRowAccessor.CompareDateTime(const V1, V2): Integer;
-begin
-  Result := Ord((PDateTime(V1)^ > PDateTime(V2)^))-Ord((PDateTime(V1)^ < PDateTime(V2)^));
-end;
-
-function TZRowAccessor.CompareGUID(const V1, V2): Integer;
-begin
-  Result := ZMemLComp(Pointer(V1), Pointer(V2), 16);
-end;
-
-function TZRowAccessor.CompareBytes(const V1, V2): Integer;
-var
-  ALength: SmallInt;
-begin
-  ALength := PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^;
-  Result := ALength - PSmallInt(PAnsiChar(V1)+SizeOf(Pointer))^; //overflow safe!
-  if Result = 0 then
-    Result := ZMemLComp(PPointer(V1)^, PPointer(V2)^, ALength);
-end;
-
-function TZRowAccessor.CompareCLob(const V1, V2): Integer;
-var
-  Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
-  ValuePtr1, ValuePtr2: Pointer;
-begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then
-    Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then
-    if BlobEmpty1 then
-      Result := -1
-    else
-      Result := 1
-  else
-    if Blob1.IsUpdated or Blob2.IsUpdated then
-      {if FColumnTypes[ColumnIndex] = stBinaryStream then
-      begin
-        Result := Blob1.Length - Blob2.Length;
-        if Result = 0 then //possible same lenngth but data diffs
-          Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length);
-      end
-      else}
-        if Blob1.IsClob and Blob2.IsClob then
-          case ConSettings^.CPType of
-            cCP_UTF16:
-              begin
-                {$IFDEF MSWINDOWS}
-                ValuePtr1 := Blob1.GetPWideChar;
-                ValuePtr2 := Blob2.GetPWideChar;
-                SetLastError(0);
-                Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-                  ValuePtr1, Blob1.Length, ValuePtr2, Blob2.Length) - 2{CSTR_EQUAL};
-                if GetLastError <> 0 then RaiseLastOSError;
-                {$ELSE}
-                Result := WideCompareStr(Blob1.GetUnicodeString, Blob2.GetUnicodeString);
-                {$ENDIF}
-              end;
-            cCP_UTF8:
-              begin
-                ValuePtr1 := Blob1.GetPAnsiChar(zCP_UTF8);
-                ValuePtr2 := Blob2.GetPAnsiChar(zCP_UTF8);
-                Result := ZMemLComp(ValuePtr1, ValuePtr2, Max(Blob1.Length, Blob2.Length));
-              end;
-            else
-              begin
-                {$IFDEF MSWINDOWS}
-                ValuePtr1 := Blob1.GetPAnsiChar(ConSettings^.CTRL_CP);
-                ValuePtr2 := Blob2.GetPAnsiChar(ConSettings^.CTRL_CP);
-                  Result := CompareStringA(LOCALE_USER_DEFAULT, 0, ValuePtr1, Blob1.Length,
-                    ValuePtr2, Blob2.Length) - 2;
-                {$ELSE}
-                  Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString);
-                {$ENDIF}
-              end;
-          end
-        else
-          Result := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiCompareStr(Blob1.GetString, Blob2.GetString)
-      else
-        Result := 0;
-end;
-
-function TZRowAccessor.CompareBlob(const V1, V2): Integer;
-var
-  Blob1, Blob2: IZBlob;
-  BlobEmpty1, BlobEmpty2: Boolean;
-begin
-  Blob1 := IZBlob(PPointer(V1)^);
-  BlobEmpty1 := (Blob1 = nil) or (Blob1.IsEmpty);
-  Blob2 := IZBlob(PPointer(V2)^);
-  BlobEmpty2 := (Blob2 = nil) or (Blob2.IsEmpty);
-  if BlobEmpty1 and BlobEmpty2 then
-    Result := 0
-  else if (BlobEmpty1 <> BlobEmpty2) then
-    if BlobEmpty1 then
-      Result := -1
-    else
-      Result := 1
-  else
-    if Blob1.IsUpdated or Blob2.IsUpdated then
-    begin
-      Result := Blob1.Length - Blob2.Length;
-      if Result = 0 then //possible same lenngth but data diffs
-        Result := ZMemLComp(Blob1.GetBuffer, Blob2.GetBuffer, Blob1.Length);
-    end
-    else
-      Result := 0;
 end;
 
 {**
@@ -914,12 +941,7 @@ end;
 }
 function TZRowAccessor.AllocBuffer(var Buffer: PZRowBuffer): PZRowBuffer;
 begin
-  {$IFDEF NO_COLUMN_LIMIT}
-  Buffer := New(PZRowBuffer);
-  SetLength(Buffer^.Columns, FColumnsSize);
-  {$ELSE}
   GetMem(Buffer, FRowSize);
-  {$ENDIF}
   InitBuffer(Buffer);
   Result := Buffer;
 end;
@@ -933,11 +955,7 @@ begin
   if Buffer <> nil then
   begin
     ClearBuffer(Buffer, False);
-    {$IFDEF NO_COLUMN_LIMIT}
-    System.Dispose(Buffer);
-    {$ELSE}
     FreeMem(Buffer);
-    {$ENDIF}
   end;
 end;
 
@@ -952,15 +970,7 @@ begin
     Buffer^.Index := 0;
     Buffer^.BookmarkFlag := 0;//bfCurrent;
     Buffer^.UpdateType := utUnmodified;
-    {$IFDEF NO_COLUMN_LIMIT}
-      {$IFNDEF DELPHI}
-      //EH: actually i'm not able to find the dyn-array helpers for FPC
-      //Delphi SetLength=DynArraySetLength already execute FillChar(x, Y*elem-size, 0), if RefCount of Array = 1
-      FillChar(Pointer(Buffer^.Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-      {$ENDIF}
-    {$ELSE}
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-    {$ENDIF}
   end;
 end;
 
@@ -1036,8 +1046,15 @@ begin
   end;
 end;
 
+{**
+  Return an array of Compare funtions
+  @param ColumnIndex the columnIndex first is 1, second is 2 ....
+  @param Ascending indicate if a Ascending compare should be used
+  @param BinaryCompare indicate if we string comparsion should happen by mem(update comparsion) or human(sorts f.e.) kind
+  returns the array of "best fit" compare functions
+}
 function TZRowAccessor.GetCompareFunc(ColumnIndex: Integer{;
-  Ascending: Boolean}): TCompareFunc;
+  Ascending: Boolean}; const BinaryCompare: Boolean = False): TCompareFunc;
 begin
   case FColumnTypes[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
     stBoolean: Result := CompareBoolean;
@@ -1056,8 +1073,25 @@ begin
     stGUID: Result := CompareGUID;
     stBytes: Result := CompareBytes;
     stBinaryStream: Result := CompareBLob;
-    stString, stUnicodeString: Result := CompareString;
-    stAsciiStream, stUnicodeStream: Result := CompareCLob;
+    stString, stUnicodeString: 
+      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        if BinaryCompare then
+          Result := CompareBinaryRaw
+        else
+          if ConSettings.ClientCodePage^.CP = zCP_UTF8 then
+            Result := CompareUnicodeFromUTF8
+          else
+            Result := CompareNativeRaw
+      else
+        if BinaryCompare then
+          Result := CompareBinaryUnicode
+        else
+          Result := CompareUnicode;
+    stAsciiStream, stUnicodeStream:
+      if ConSettings^.CPType in [cCP_UTF16, cCP_UTF8] then
+        Result := CompareUnicodeCLob
+      else
+        Result := CompareNativeCLob
     else
       Result := CompareNothing; //unresolveble compares like arrays, cursors or object fields
   end;
@@ -1097,11 +1131,7 @@ begin
         end;
     end;
   if WithFillChar then
-    {$IFDEF  NO_COLUMN_LIMIT}
-    FillChar(Pointer(Buffer^.Columns)^, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-    {$ELSE}
     FillChar(Buffer^.Columns, FColumnsSize, {$IFDEF Use_FastCodeFillChar}#0{$ELSE}0{$ENDIF});
-    {$ENDIF}
 end;
 
 {**
@@ -4196,34 +4226,6 @@ end;
 
 { TZRawRowAccessor }
 
-function TZRawRowAccessor.CompareString(const V1, V2): Integer;
-var
-  S1, S2: ZWideString;
-begin
-  if Assigned(PPAnsichar(V1)^) and Assigned(PPAnsiChar(V2)^) then
-    //see: http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11096
-    if ConSettings^.ClientCodePage^.Encoding = ceUTF8 then
-    begin
-      S1 := PRawToUnicode(PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^, zCP_UTF8);
-      S2 := PRawToUnicode(PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^, zCP_UTF8);
-      Result := WideCompareStr(S1, S2);
-    end
-    else
-      {$IFDEF MSWINDOWS}
-      Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
-        PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
-        PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2{CSTR_EQUAL}
-      {$ELSE}
-        Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
-          AnsiStrComp(PPAnsiChar(Pointer(V1))^+PAnsiInc, PPAnsiChar(Pointer(V2))^+PAnsiInc)
-      {$ENDIF}
-  else
-    if not Assigned(PPAnsichar(V1)^) and not Assigned(PPAnsiChar(V2)^) then
-      Result := 0
-    else
-      Result := -1
-end;
-
 {**
   Copies the row buffer from source to destination row.
   @param SrcBuffer a pointer to source row buffer.
@@ -4238,11 +4240,7 @@ begin
   DestBuffer^.Index := SrcBuffer^.Index;
   DestBuffer^.UpdateType := SrcBuffer^.UpdateType;
   DestBuffer^.BookmarkFlag := SrcBuffer^.BookmarkFlag;
-  {$IFDEF NO_COLUMN_LIMIT}
-  System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(DestBuffer^.Columns)^, FColumnsSize);
-  {$ELSE}
   System.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
-  {$ENDIF}
   if FHasBytes then
     for i := 0 to FHighBytesCols do
       InternalSetBytes(DestBuffer, FBytesCols[i] {$IFNDEF GENERIC_INDEX}+1{$ENDIF},
@@ -4705,25 +4703,6 @@ end;
 
 { TZUnicodeRowAccessor }
 
-function TZUnicodeRowAccessor.CompareString(const V1, V2): Integer;
-{$IFDEF MSWINDOWS}
-begin
-  SetLastError(0);
-  Result := CompareStringW(LOCALE_USER_DEFAULT, 0,
-    PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^,
-    PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^) - 2{CSTR_EQUAL};
-  if GetLastError <> 0 then
-    RaiseLastOSError;
-end;
-{$ELSE}
-var S1, S2: ZWideString;
-begin
-  System.SetString(S1, PWideChar(Pointer(V1)^)+PWideInc, PCardinal(Pointer(V1)^)^);
-  System.SetString(S2, PWideChar(Pointer(V2)^)+PWideInc, PCardinal(Pointer(V2)^)^);
-  Result := WideCompareStr(S1, S2);
-end;
-{$ENDIF}
-
 {**
   Copies the row buffer from source to destination row.
   @param SrcBuffer a pointer to source row buffer.
@@ -4739,11 +4718,7 @@ begin
   DestBuffer^.Index := SrcBuffer^.Index;
   DestBuffer^.UpdateType := SrcBuffer^.UpdateType;
   DestBuffer^.BookmarkFlag := SrcBuffer^.BookmarkFlag;
-  {$IFDEF NO_COLUMN_LIMIT}
-  System.Move(Pointer(SrcBuffer^.Columns)^, Pointer(DestBuffer^.Columns)^, FColumnsSize);
-  {$ELSE}
   System.Move(SrcBuffer^.Columns, DestBuffer^.Columns, FColumnsSize);
-  {$ENDIF}
   if FHasBytes then
     for i := 0 to FHighBytesCols do
       InternalSetBytes(DestBuffer, FBytesCols[i]{$IFNDEF GENERIC_INDEX} +1{$ENDIF},
