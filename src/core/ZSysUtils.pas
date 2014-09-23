@@ -98,7 +98,7 @@ function LastDelimiter(const Delimiters, Str: string): Integer;
   @param P2 seconds Pointer
   @return <code>Integer</code> if the memory equals else return PByte(P1)-PByte(B2)
 }
-function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
+function ZMemLComp(P1, P2: PAnsiChar; Len: Cardinal): Integer;
 
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
@@ -667,7 +667,7 @@ end;
 }
 function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
 begin
-  Result := ZMemLComp(P1, P2, Len*2) = 0;
+  Result := ZMemLComp(Pointer(P1), Pointer(P2), Len shl 1) = 0;
 end;
 
 {**  EH:
@@ -677,123 +677,54 @@ end;
   @return <code>Integer</code> 0 if the memory at P1 and P2 are equal, otherwise
     return the byte difference
 }
-{$ifopt Q+}
-  {$define OverflowCheckEnabled}
-  {$Q-}
-{$endif}
-{$ifopt R+}
-  {$define RangeCheckEnabled}
-  {$R-}
-{$endif}
-function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
-Label {$IFDEF FPC}Fail8{$ELSE}Fail4{$ENDIF};
+function ZMemLComp(P1, P2: PAnsiChar; Len: Cardinal): Integer;
+Label Fail;
 var
-  N: Cardinal;
-  P1T, P2T: PAnsiChar;
+  PEnd: PAnsiChar;
 begin
   Result := 0;
-  P1T := P1;
-  P2T := P2;
-  {$IFDEF FPC}
-  while Len > SizeOf(QWord)*4 do //compare 32 Bytes per loop
+  PEnd := P1 + Len;
+  while P1+32 < PEnd do //compare 32 Bytes per loop
   begin
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    Dec(Len, SizeOf(QWord)*4)
+    {$IFDEF CPUX64} //32Bit targets a less optimal comparing 8Byte values
+    if (PUInt64(P1)^ <> PUInt64(P2)^) then goto Fail;
+    if (PUInt64(P1+8)^ <> PUInt64(P2+8)^) then goto Fail;
+    if (PUInt64(P1+16)^ <> PUInt64(P2+16)^) then goto Fail;
+    if (PUInt64(P1+24)^ <> PUInt64(P2+24)^) then goto Fail;
+    {$ELSE}
+    if (PLongWord(P1)^ <> PLongWord(P2)^) then goto Fail;
+    if (PLongWord(P1+4)^ <> PLongWord(P2+4)^) then goto Fail;
+    if (PLongWord(P1+8)^ <> PLongWord(P2+8)^) then goto Fail;
+    if (PLongWord(P1+12)^ <> PLongWord(P2+12)^) then goto Fail;
+    if (PLongWord(P1+16)^ <> PLongWord(P2+16)^) then goto Fail;
+    if (PLongWord(P1+20)^ <> PLongWord(P2+20)^) then goto Fail;
+    if (PLongWord(P1+24)^ <> PLongWord(P2+24)^) then goto Fail;
+    if (PLongWord(P1+28)^ <> PLongWord(P2+28)^) then goto Fail;
+    {$ENDIF}
+    Inc(P1, 32); Inc(P2, 32);
   end;
-  while Len > 16 do //compare 16 Bytes per loop
+  while P1+8 < PEnd do //compare 8 Bytes per loop
   begin
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    Dec(Len, SizeOf(QWord)*2)
+    {$IFDEF CPUX64}
+    if (PUInt64(P1)^ <> PUInt64(P2)^) then goto Fail; //not overflow save so let's check the bytes
+    {$ELSE}
+    if (PLongWord(P1)^ <> PLongWord(P2)^) then goto Fail;
+    if (PLongWord(P1+4)^ <> PLongWord(P2+4)^) then goto Fail;
+    {$ENDIF}
+    Inc(P1, 8); Inc(P2, 8);
   end;
-  while Len > SizeOf(QWord) do //compare 8 Bytes per loop
+Fail:
+  while P1 < PEnd do
   begin
-    if (PQWord(P1T)^ - PQWord(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(QWord)); Inc(P2T, SizeOf(QWord));
-    Dec(Len, SizeOf(QWord))
-  end;
-  while Len > 0 do
-  begin
-    Result := PByte(P1T)^ - PByte(P2T)^;
+    Result := PByte(P1)^ - PByte(P2)^; //overflow save
     if Result = 0 then
     begin
-      Inc(P1T); Inc(P2T);
+      Inc(P1); Inc(P2);
     end
     else
       Exit;
-    Dec(Len);
   end;
-  Exit;
-  Fail8:
-    for N := 0 to SizeOf(QWord)-1 do
-  {$ELSE}
-  while Len > SizeOf(LongWord)*4 do //compare 16 Bytes per loop
-  begin
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord)*4);
-  end;
-  while Len > 8 do if Len > 8 then //compare 8 Bytes per loop
-  begin
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord)*2)
-  end;
-  while Len > SizeOf(LongWord) do //compare 4 Bytes per loop
-  begin
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord))
-  end;
-  while Len > 0 do
-  begin
-    Result := PByte(P1T)^ - PByte(P2T)^;
-    if Result = 0 then
-    begin
-      Inc(P1T); Inc(P2T);
-    end
-    else
-      Exit;
-    Dec(Len);
-  end;
-  Exit;
-  Fail4:
-    for N := 0 to SizeOf(LongWord)-1 do
-  {$ENDIF}
-    begin
-      Result := PByte(P1T)^ - PByte(P2T)^;
-      if Result = 0 then
-      begin
-        Inc(P1T);
-        Inc(P2T);
-      end
-      else
-        Exit;
-    end;
 end;
-{$IFDEF OverflowCheckEnabled}
-  {$Q+}
-{$endif}
-{$IFDEF RangeCheckEnabled}
-  {$R+}
-{$endif}
 
 {**
   Compares two PAnsiChars without stopping at #0
@@ -3299,7 +3230,7 @@ end;
 
 function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
 begin
-  ZSetString(Src, Len, Result);
+  ZSetString(Src, Len, Result{%H-});
 end;
 
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
