@@ -161,8 +161,8 @@ type
   TFieldDefListClass = class of TZFieldDefList;
 
   {$ENDIF WITH_FIELDDEFLIST}
-  TStringFieldSetter = procedure(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar);
-  TStringFieldGetter = function(RowAccessor: TZRowAccessor; ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+  TStringFieldSetter = procedure(ColumnIndex: Integer; Buffer: PAnsiChar) of object;
+  TStringFieldGetter = function(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean of object;
 
   {$IFNDEF WITH_TDATASETFIELD}
   TDataSetField = class;
@@ -224,6 +224,7 @@ type
     FSortedFieldIndices: TIntegerDynArray;
     FSortedFieldDirs: TBooleanDynArray;
     FSortedOnlyDataFields: Boolean;
+    FCompareFuncs: TCompareFuncs;
     FSortRowBuffer1: PZRowBuffer;
     FSortRowBuffer2: PZRowBuffer;
     FPrepared: Boolean;
@@ -255,6 +256,14 @@ type
     {$IFDEF WITH_ZSTRINGFIELDS}
     procedure SetUseZFields(const Value: Boolean);
     {$ENDIF}
+    {$IFNDEF UNICODE}
+    procedure StringFieldSetterFromRawAutoEncode(ColumnIndex: Integer; Buffer: PAnsiChar);
+    procedure StringFieldSetterFromRaw(ColumnIndex: Integer; Buffer: PAnsiChar);
+    function StringFieldGetterFromUTF8(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+    {$ENDIF}
+    procedure StringFieldSetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar);
+    function StringFieldGetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+    function StringFieldGetterFromAnsiRec(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
   private
     function GetReadOnly: Boolean;
     procedure SetReadOnly(Value: Boolean);
@@ -1780,87 +1789,6 @@ uses ZFastCode, Math, ZVariant, ZMessages, ZDatasetUtils, ZStreamBlob, ZSelectSc
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF}
   {$IFNDEf WITH_FIELDDEFLIST}, RTLConsts{$ENDIF};
 
-{$IFNDEF UNICODE}
-procedure RowAccessorStringFieldSetterFromRawAutoEncode(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar);
-begin
-  case ZDetectUTF8Encoding(Buffer, ZFastCode.StrLen(Buffer)) of
-    etUSASCII: RowAccessor.SetRawByteString(ColumnIndex, Buffer);
-    etAnsi: RowAccessor.SetAnsiString(ColumnIndex, Buffer);
-    etUTF8: RowAccessor.SetUTF8String(ColumnIndex, Buffer);
-  end;
-end;
-{$ENDIF}
-
-procedure RowAccessorStringFieldSetterFromUTF8(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar);
-begin
-  RowAccessor.SetUTF8String(ColumnIndex, Buffer);
-end;
-
-procedure RowAccessorStringFieldSetterFromAnsi(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar);
-begin
-  RowAccessor.SetAnsiString(ColumnIndex, Buffer);
-end;
-
-procedure RowAccessorStringFieldSetterFromRaw(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar);
-begin
-  RowAccessor.SetRawByteString(ColumnIndex, Buffer);
-end;
-
-function RowAccessorStringFieldGetterFromUTF8(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
-var
-  UTF8: UTF8String;
-  L: Integer;
-begin
-  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result{%H-});
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := Min(Length(UTF8), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(UTF8[1], Buffer^, L);
-    (Buffer+L)^ := #0;
-  end;
-end;
-
-function RowAccessorStringFieldGetterFromAnsi(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
-var
-  L: Integer;
-  Ansi: AnsiString;
-begin
-  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result{%H-});
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := Min(Length(Ansi), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(Ansi[1], Buffer^, L);
-    (Buffer+L)^ := #0;
-  end;
-end;
-
-function RowAccessorStringFieldGetterFromAnsiRec(RowAccessor: TZRowAccessor;
-  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
-var
-  P: PAnsiChar;
-  L: NativeUInt;
-begin
-  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
-  if Result then
-    Buffer^ := #0
-  else
-  begin //instead of StrPLCopy
-    L := Min(L, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
-    System.Move(P^, Buffer^, L);
-    (Buffer+L)^ := #0;
-  end;
-end;
-
 { EZDatabaseError }
 
 {**
@@ -2117,6 +2045,81 @@ begin
   inherited Destroy;
 end;
 
+{$IFNDEF UNICODE}
+procedure TZAbstractRODataset.StringFieldSetterFromRawAutoEncode(
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  case ZDetectUTF8Encoding(Buffer, ZFastCode.StrLen(Buffer)) of
+    etUSASCII: RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+    etAnsi: RowAccessor.SetAnsiString(ColumnIndex, Buffer);
+    etUTF8: RowAccessor.SetUTF8String(ColumnIndex, Buffer);
+  end;
+end;
+
+procedure TZAbstractRODataset.StringFieldSetterFromRaw(
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  RowAccessor.SetRawByteString(ColumnIndex, Buffer);
+end;
+
+function TZAbstractRODataset.StringFieldGetterFromUTF8(
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  UTF8: UTF8String;
+  L: Integer;
+begin
+  UTF8 := RowAccessor.GetUTF8String(ColumnIndex, Result{%H-});
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(Length(UTF8), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(UTF8[1], Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
+end;
+{$ENDIF}
+
+procedure TZAbstractRODataset.StringFieldSetterFromAnsi(
+  ColumnIndex: Integer; Buffer: PAnsiChar);
+begin
+  RowAccessor.SetAnsiString(ColumnIndex, Buffer);
+end;
+
+function TZAbstractRODataset.StringFieldGetterFromAnsi(
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  L: Integer;
+  Ansi: AnsiString;
+begin
+  Ansi := RowAccessor.GetAnsiString(ColumnIndex, Result{%H-});
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(Length(Ansi), RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(Ansi[1], Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
+end;
+
+function TZAbstractRODataset.StringFieldGetterFromAnsiRec(
+  ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
+var
+  P: PAnsiChar;
+  L: NativeUInt;
+begin
+  P := RowAccessor.GetPAnsiChar(ColumnIndex, Result{%H-}, L);
+  if Result then
+    Buffer^ := #0
+  else
+  begin //instead of StrPLCopy
+    L := Min(L, RowAccessor.GetColumnDataSize(ColumnIndex)); //left for String truncation if option FUndefinedVarcharAsStringLength is <> 0
+    System.Move(P^, Buffer^, L);
+    (Buffer+L)^ := #0;
+  end;
+end;
+
 {**
   Sets database connection object.
   @param Value a database connection object.
@@ -2192,23 +2195,23 @@ begin
   //two/four byte sequense wich lead to data loss. So success is randomly!!
   if Connection.AutoEncodeStrings then
   begin
-    FStringFieldSetter := @RowAccessorStringFieldSetterFromRawAutoEncode;
+    FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
     if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
-      FStringFieldGetter := @RowAccessorStringFieldGetterFromUTF8
+      FStringFieldGetter := StringFieldGetterFromUTF8
     else
-      FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
+      FStringFieldGetter := StringFieldGetterFromAnsi;
   end
   else
   begin
-    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsiRec;
-    FStringFieldSetter := @RowAccessorStringFieldSetterFromRaw;
+    FStringFieldGetter := StringFieldGetterFromAnsiRec;
+    FStringFieldSetter := StringFieldSetterFromRaw;
   end;
   {$ELSE}
   if ZCompatibleCodePages(ZDefaultSystemCodePage, Connection.DbcConnection.GetConSettings^.ClientCodePage^.CP) then
-    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsiRec
+    FStringFieldGetter := StringFieldGetterFromAnsiRec
   else
-    FStringFieldGetter := @RowAccessorStringFieldGetterFromAnsi;
-  FStringFieldSetter := @RowAccessorStringFieldSetterFromAnsi;
+    FStringFieldGetter := StringFieldGetterFromAnsi;
+  FStringFieldSetter := StringFieldSetterFromAnsi;
   {$ENDIF}
 end;
 
@@ -2902,7 +2905,7 @@ begin
           end;
         {$ENDIF}
         ftString:
-          Result := FStringFieldGetter(RowAccessor, ColumnIndex, PAnsiChar(Buffer));
+          Result := FStringFieldGetter(ColumnIndex, PAnsiChar(Buffer));
         {$IFDEF WITH_FTDATASETSUPPORT}
         ftDataSet:
           Result := RowAccessor.GetDataSet(ColumnIndex, Result).IsEmpty;
@@ -2998,7 +3001,7 @@ begin
           RowAccessor.SetUnicodeString(ColumnIndex, PWideString(Buffer)^);
           {$ENDIF}
         ftString: { Processes string fields. }
-          FStringFieldSetter(RowAccessor, ColumnIndex, PAnsichar(Buffer));
+          FStringFieldSetter(ColumnIndex, PAnsichar(Buffer));
         {$IFDEF WITH_FTGUID}
         ftGUID:
           begin
@@ -4677,6 +4680,7 @@ begin
         for I := 0 to High(FSortedFieldRefs) do
           FSortedFieldIndices[I] := TField(FSortedFieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
         { Performs a sorting. }
+        FCompareFuncs := ResultSet.GetCompareFuncs(FSortedFieldIndices);
         CurrentRows.Sort(LowLevelSort);
       end
       else
@@ -4695,6 +4699,7 @@ begin
               TField(FSortedFieldRefs[I]));
           end;
           { Performs sorting. }
+          FCompareFuncs := RowAccessor.GetCompareFuncs(FSortedFieldIndices);
           CurrentRows.Sort(HighLevelSort);
         finally
           { Disposed buffers for sorting. }
@@ -4765,7 +4770,7 @@ begin
 
   { Compare both records. }
   Result := RowAccessor.CompareBuffers(FSortRowBuffer1, FSortRowBuffer2,
-    FSortedFieldIndices, FSortedFieldDirs);
+    FSortedFieldIndices, FSortedFieldDirs, FCompareFuncs);
 end;
 
 {**
@@ -4780,7 +4785,7 @@ end;
 function TZAbstractRODataset.LowLevelSort(Item1, Item2: Pointer): Integer;
 begin
   Result := ResultSet.CompareRows(Integer(Item1), Integer(Item2),
-    FSortedFieldIndices, FSortedFieldDirs);
+    FSortedFieldIndices, FSortedFieldDirs, FCompareFuncs);
 end;
 
 {**

@@ -372,6 +372,7 @@ var
   I: Integer;
   ColumnIndices: TIntegerDynArray;
   ColumnDirs: TBooleanDynArray;
+  CompareFuncs: TCompareFuncs;
 begin
   { Use precached parameters. }
   if UpdateAll and (UpdateColumns.Count > 0) then
@@ -399,14 +400,16 @@ begin
   begin
     SetLength(ColumnIndices, 1);
     SetLength(ColumnDirs, 1);
+    SetLength(CompareFuncs, 1);
     ColumnDirs[0] := True;
     for I := FirstDbcIndex to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnIndices[0] := I;
+      CompareFuncs[0] := NewRowAccessor.GetCompareFunc(I);
       if (Metadata.GetTableName(I) <> '') and (Metadata.GetColumnName(I) <> '')
         and Metadata.IsWritable(I) and (OldRowAccessor.CompareBuffers(
         OldRowAccessor.RowBuffer, NewRowAccessor.RowBuffer, ColumnIndices,
-        ColumnDirs) <> 0)then
+        ColumnDirs, CompareFuncs) <> 0)then
       begin
         Columns.Add(TZResolverParameter.Create(I,
           Metadata.GetColumnName(I), Metadata.GetColumnType(I), True, ''));

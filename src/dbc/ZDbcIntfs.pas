@@ -94,6 +94,10 @@ type
   {** Generic SQL warning. }
   EZSQLWarning = class(EZSQLThrowable);
 
+  {** EH: sort helper procs }
+  TCompareFunc = function(const V1, V2): Integer of object;
+  TCompareFuncs = Array of TCompareFunc;
+
 // Data types
 type
   {** Defines supported SQL types. }
@@ -911,7 +915,9 @@ type
 //      Boolean;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const ColumnDirs: TBooleanDynArray): Integer;
+      const ColumnDirs: TBooleanDynArray; const CompareFuncs: TCompareFuncs): Integer;
+    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
+      const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
 
     function GetStatement: IZStatement;
     function GetConSettings: PZConsettings;
