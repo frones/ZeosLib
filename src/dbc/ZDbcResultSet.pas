@@ -558,7 +558,7 @@ end;
 
 function CompareRawByteString(const V1, V2): Integer;
 begin
-  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings{$ENDIF}
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
     AnsiStrComp(PAnsiChar(TZVariant(V1).VRawByteString), PAnsiChar(TZVariant(V2).VRawByteString));
 end;
 
