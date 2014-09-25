@@ -102,8 +102,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZMySQLTokenizer = class (TZTokenizer)
-  protected
-    procedure CreateTokenStates; override;
+  public
+    constructor Create;
   end;
 
 implementation
@@ -412,9 +412,10 @@ end;
 { TZMySQLTokenizer }
 
 {**
-  Constructs a default state table (as described in the class comment).
+  Constructs a tokenizer with a default state table (as
+  described in the class comment).
 }
-procedure TZMySQLTokenizer.CreateTokenStates;
+constructor TZMySQLTokenizer.Create;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 

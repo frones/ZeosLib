@@ -88,8 +88,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZGenericSQLTokenizer = class (TZTokenizer)
-  protected
-    procedure CreateTokenStates; override;
+  public
+    constructor Create;
   end;
 
 implementation
@@ -294,9 +294,10 @@ end;
 { TZGenericSQLTokenizer }
 
 {**
-  Constructs a default state table (as described in the class comment).
+  Constructs a tokenizer with a default state table (as
+  described in the class comment).
 }
-procedure TZGenericSQLTokenizer.CreateTokenStates;
+constructor TZGenericSQLTokenizer.Create;
 begin
   NumberState := TZNumberState.Create;
   QuoteState := TZGenericSQLQuoteState.Create;

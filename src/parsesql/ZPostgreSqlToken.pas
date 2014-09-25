@@ -117,9 +117,9 @@ type
   protected
     function CheckEscapeState(const ActualState: TZTokenizerState; Stream: TStream;
         const FirstChar: Char): TZTokenizerState; override;
-    procedure CreateTokenStates; override;
   public
     procedure SetStandardConformingStrings(const Value: Boolean);
+    constructor Create;
   end;
 
 implementation
@@ -412,7 +412,7 @@ begin
   LastChar := #0;
   NestedLevel := 1;
   Result := '';
-  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, 1 * SizeOf(Char)) > 0 do
   begin
     Result := Result + ReadChar;
     if (LastChar = '*') and (ReadChar = '/') then
@@ -519,9 +519,10 @@ begin
 end;
 
 {**
-  Constructs a default state table (as described in the class comment).
+  Constructs a tokenizer with a default state table (as
+  described in the class comment).
 }
-procedure TZPostgreSQLTokenizer.CreateTokenStates;
+constructor TZPostgreSQLTokenizer.Create;
 begin
   EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;

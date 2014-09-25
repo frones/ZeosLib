@@ -102,8 +102,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZSQLiteTokenizer = class (TZTokenizer)
-  protected
-    procedure CreateTokenStates; override;
+  public
+    constructor Create;
   end;
 
 implementation
@@ -357,7 +357,7 @@ end;
   Constructs a tokenizer with a default state table (as
   described in the class comment).
 }
-procedure TZSQLiteTokenizer.CreateTokenStates;
+constructor TZSQLiteTokenizer.Create;
 begin
   EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;
