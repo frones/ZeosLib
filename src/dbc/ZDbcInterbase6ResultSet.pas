@@ -1866,14 +1866,9 @@ begin
         ReadOnly := (TableName = '') or (ColumnName = '') or
           (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
-        if FIZSQLDA.IsNullable(I) then
-          Nullable := ntNullable
-        else
-          Nullable := ntNoNulls;
-
+        Nullable := TZColumnNullableType(Ord(FIZSQLDA.IsNullable(I)));
         Scale := FIZSQLDA.GetFieldScale(I);
-        AutoIncrement := False; //FB doesn't support Auto-incremented fields
-        //CaseSensitive := True;
+        CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
