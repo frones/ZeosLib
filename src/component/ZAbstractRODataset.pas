@@ -260,8 +260,9 @@ type
     procedure StringFieldSetterFromRawAutoEncode(ColumnIndex: Integer; Buffer: PAnsiChar);
     procedure StringFieldSetterFromRaw(ColumnIndex: Integer; Buffer: PAnsiChar);
     function StringFieldGetterFromUTF8(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
-    {$ENDIF}
+    {$ELSE}
     procedure StringFieldSetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar);
+    {$ENDIF}
     function StringFieldGetterFromAnsi(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
     function StringFieldGetterFromAnsiRec(ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
   private
@@ -2078,13 +2079,13 @@ begin
     (Buffer+L)^ := #0;
   end;
 end;
-{$ENDIF}
-
+{$ELSE}
 procedure TZAbstractRODataset.StringFieldSetterFromAnsi(
   ColumnIndex: Integer; Buffer: PAnsiChar);
 begin
   RowAccessor.SetAnsiString(ColumnIndex, Buffer);
 end;
+{$ENDIF}
 
 function TZAbstractRODataset.StringFieldGetterFromAnsi(
   ColumnIndex: Integer; Buffer: PAnsiChar): Boolean;
