@@ -451,6 +451,8 @@ begin
   begin
     System.Move(FList^[Index + 1], FList^[Index],
       (FCount - Index) * SizeOf(IZInterface));
+    {now nil pointer or on replacing the entry we'll get a bad interlockdecrement}
+    Pointer(FList^[FCount]) := nil; //see http://sourceforge.net/p/zeoslib/tickets/100/
   end;
 end;
 
@@ -546,7 +548,6 @@ begin
   { Find ordinary objects }
   else
   begin
-//    Unknown := Item as IZInterface;
     Unknown := Item;
     for I := 0 to FCount - 1 do
     begin
@@ -577,8 +578,9 @@ begin
   begin
     System.Move(FList^[Index], FList^[Index + 1],
       (FCount - Index) * SizeOf(IZInterface));
+    {now nil pointer or on replacing the entry we'll get a bad interlockdecrement}
+    Pointer(Flist^[Index]) := nil; //see http://sourceforge.net/p/zeoslib/tickets/100/
   end;
-//  FList^[Index] := Item as IZInterface; //MEMORY HOG
   FList^[Index] := Item;
   Inc(FCount);
 end;
@@ -603,7 +605,6 @@ begin
   if (Index < 0) or (Index >= FCount) then
     Error(SListIndexError, Index);
 {$ENDIF}
-//  FList^[Index] := Item as IZInterface; //MEMORY HOG
   FList^[Index] := Item;
 end;
 
