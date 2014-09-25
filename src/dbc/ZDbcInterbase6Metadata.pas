@@ -1792,7 +1792,7 @@ begin
         Result.UpdateNull(TableColColumnBufLengthIndex);    //BUFFER_LENGTH
 
         if FieldScale < 0 then
-          Result.UpdateInt(TableColColumnDecimalDigitsIndex, -1 * FieldScale)    //DECIMAL_DIGITS
+          Result.UpdateInt(TableColColumnDecimalDigitsIndex, -FieldScale)    //DECIMAL_DIGITS
         else
           Result.UpdateInt(TableColColumnDecimalDigitsIndex, 0); //DECIMAL_DIGITS
 
