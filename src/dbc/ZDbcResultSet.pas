@@ -552,8 +552,10 @@ end;
 
 function CompareBytes(const V1, V2): Integer;
 begin
-  Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
-    Max(Length(TZVariant(V1).VBytes), Length(TZVariant(V2).VBytes)));
+  Result := Length(TZVariant(V1).VBytes) - Length(TZVariant(V2).VBytes); //overflow save!
+  if Result = 0 then
+    Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
+      Max(Length(TZVariant(V1).VBytes), Length(TZVariant(V2).VBytes)));
 end;
 
 function CompareRawByteString(const V1, V2): Integer;
