@@ -104,8 +104,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZExpressionTokenizer = class (TZTokenizer)
-  public
-    constructor Create;
+  protected
+    procedure CreateTokenStates; override;
   end;
 
 implementation
@@ -372,10 +372,9 @@ end;
 { TZExpressionTokenizer }
 
 {**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
+  Constructs a default state table (as described in the class comment).
 }
-constructor TZExpressionTokenizer.Create;
+procedure TZExpressionTokenizer.CreateTokenStates;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 
