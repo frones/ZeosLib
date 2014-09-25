@@ -1835,15 +1835,17 @@ begin
 
         if FieldSqlType in [stString, stUnicodeString] then
         begin
+          MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
           CP := GetIbSqlSubType(I);
-          if CP > High(FCodePageArray) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
+          if (CP = ConSettings^.ClientCodePage^.ID) or //avoid the loops if we allready have the info's we need
+             (CP > High(FCodePageArray)) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
             //see test Bug#886194, we retrieve 565 as CP...
-            ZCodePageInfo := ConSettings^.ClientCodePage //not safe @all!!!
+            ZCodePageInfo := ConSettings^.ClientCodePage
           else
             //see: http://sourceforge.net/p/zeoslib/tickets/97/
             ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
           ColumnCodePage := ZCodePageInfo^.CP;
-          Precision := GetFieldSize(ColumnType, ConSettings, FIZSQLDA.GetIbSqlLen(I),
+          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
             ZCodePageInfo^.CharWidth, @ColumnDisplaySize, True);
         end
         else
@@ -1853,7 +1855,10 @@ begin
           begin
             ColumnCodePage := zCP_NONE;
             if FieldSQLType = stBytes then
-              Precision := FIZSQLDA.GetIbSqlLen(I)
+            begin
+              MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
+              Precision := MaxLenghtBytes;
+            end
             else
               Signed := FieldSqlType in [stShort, stSmall, stInteger, stLong];
           end;
@@ -1868,7 +1873,6 @@ begin
 
         Scale := FIZSQLDA.GetFieldScale(I);
         AutoIncrement := False; //FB doesn't support Auto-incremented fields
-        //Signed := False;
         //CaseSensitive := True;
       end;
       ColumnsInfo.Add(ColumnInfo);
