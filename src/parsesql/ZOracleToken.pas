@@ -90,8 +90,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZOracleTokenizer = class (TZTokenizer)
-  public
-    constructor Create;
+  protected
+    procedure CreateTokenStates; override;
   end;
 
 implementation
@@ -131,10 +131,9 @@ end;
 { TZOracleTokenizer }
 
 {**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
+  Constructs a default state table (as described in the class comment).
 }
-constructor TZOracleTokenizer.Create;
+procedure TZOracleTokenizer.CreateTokenStates;
 begin
   EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;

@@ -454,6 +454,8 @@ type
     {$IFEND}
   end;
 
+  TTokenizerStream = Class(TMemoryStream); //just a hack to get protected access
+
   {** Implements a default tokenizer object. }
   TZTokenizer = class (TZAbstractObject, IZTokenizer)
   private
@@ -464,8 +466,10 @@ type
     FSymbolState: TZSymbolState;
     FWhitespaceState: TZWhitespaceState;
     FWordState: TZWordState;
-    FEscapeState: TZEscapeState; //EgonHugeist
+    FEscapeState: TZEscapeState;
+    FStream: TTokenizerStream;
   protected
+    procedure CreateTokenStates; virtual;
     function CheckEscapeState(const ActualState: TZTokenizerState;
       Stream: TStream; const FirstChar: Char): TZTokenizerState; virtual;
   public
@@ -1321,10 +1325,40 @@ end;
 { TZTokenizer }
 
 {**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
+  Constructs a tokenizer with a default Stream reader).
 }
 constructor TZTokenizer.Create;
+begin
+  FStream := TTokenizerStream.Create;
+  CreateTokenStates;
+end;
+
+{**
+  Destroys this object and cleanups the memory.
+}
+destructor TZTokenizer.Destroy;
+begin
+  if FEscapeState <> nil then     FreeAndNil(FEscapeState);
+  if FCommentState <> nil then    FreeAndNil(FCommentState);
+  if FNumberState <> nil then     FreeAndNil(FNumberState);
+  if FQuoteState <> nil then      FreeAndNil(FQuoteState);
+  if FSymbolState <> nil then     FreeAndNil(FSymbolState);
+  if FWhitespaceState <> nil then FreeAndNil(FWhitespaceState);
+  if FWordState <> nil then       FreeAndNil(FWordState);
+
+  if FStream <> nil then
+  begin
+    FStream.SetPointer(nil, 0);
+    FreeAndNil(FStream);
+  end;
+
+  inherited Destroy;
+end;
+
+{**
+  Constructs a default state table (as described in the class comment).
+}
+procedure TZTokenizer.CreateTokenStates;
 begin
   FSymbolState := TZSymbolState.Create;
   with TZSymbolState(FSymbolState) do
@@ -1352,31 +1386,8 @@ begin
   SetCharacterState('"', '"', FQuoteState);
   SetCharacterState('''', '''', FQuoteState);
   SetCharacterState('/', '/', FCommentState);
+
 end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZTokenizer.Destroy;
-begin
-  if FEscapeState <> nil then
-    FEscapeState.Free;
-  if FCommentState <> nil then
-    FCommentState.Free;
-  if FNumberState <> nil then
-    FNumberState.Free;
-  if FQuoteState <> nil then
-    FQuoteState.Free;
-  if FSymbolState <> nil then
-    FSymbolState.Free;
-  if FWhitespaceState <> nil then
-    FWhitespaceState.Free;
-  if FWordState <> nil then
-    FWordState.Free;
-
-  inherited Destroy;
-end;
-
 {**
   Gets an initial state object for the specified character.
   @return an initial state object for the character.
@@ -1414,15 +1425,12 @@ end;
 }
 function TZTokenizer.TokenizeBuffer(const Buffer: string;
   Options: TZTokenOptions): TZTokenDynArray;
-var
-  Stream: TStream;
 begin
-  Stream := TStringStream.Create(Buffer{$IFDEF WITH_TENCODING_CLASS}, TEncoding.Unicode{$ENDIF});
-  try
-    Result := TokenizeStream(Stream, Options);
-  finally
-    Stream.Free;
-  end;
+  FStream.Position := 0;
+  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char));
+  Result := TokenizeStream(FStream, Options);
+  FStream.Position := 0;
+  FStream.SetPointer(nil, 0);
 end;
 
 {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
@@ -1489,15 +1497,12 @@ end;
 }
 function TZTokenizer.TokenizeBufferToList(const Buffer: string;
   Options: TZTokenOptions): TStrings;
-var
-  Stream: TStream;
 begin
-  Stream := TStringStream.Create(Buffer{$IFDEF WITH_TENCODING_CLASS}, TEncoding.Unicode{$ENDIF});
-  try
-    Result := TokenizeStreamToList(Stream, Options);
-  finally
-    Stream.Free;
-  end;
+  FStream.Position := 0;
+  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char));
+  Result := TokenizeStreamToList(FStream, Options);
+  FStream.Position := 0;
+  FStream.SetPointer(nil, 0);
 end;
 
 {**
