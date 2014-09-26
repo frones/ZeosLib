@@ -1348,7 +1348,7 @@ begin
 
   if FStream <> nil then
   begin
-    FStream.SetPointer(nil, 0);
+    FStream.SetPointer(nil, 0); //take care we nil the pointer else we're trying to release memory the Stream doesn't own
     FreeAndNil(FStream);
   end;
 
@@ -1386,7 +1386,6 @@ begin
   SetCharacterState('"', '"', FQuoteState);
   SetCharacterState('''', '''', FQuoteState);
   SetCharacterState('/', '/', FCommentState);
-
 end;
 {**
   Gets an initial state object for the specified character.
@@ -1426,11 +1425,8 @@ end;
 function TZTokenizer.TokenizeBuffer(const Buffer: string;
   Options: TZTokenOptions): TZTokenDynArray;
 begin
-  FStream.Position := 0;
-  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char));
+  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
   Result := TokenizeStream(FStream, Options);
-  FStream.Position := 0;
-  FStream.SetPointer(nil, 0);
 end;
 
 {$IF defined(FPC) and defined(WITH_RAWBYTESTRING)}
@@ -1498,11 +1494,8 @@ end;
 function TZTokenizer.TokenizeBufferToList(const Buffer: string;
   Options: TZTokenOptions): TStrings;
 begin
-  FStream.Position := 0;
-  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char));
+  FStream.SetPointer(Pointer(Buffer), Length(Buffer) * SizeOf(Char)); //instead of alloc+moving mem
   Result := TokenizeStreamToList(FStream, Options);
-  FStream.Position := 0;
-  FStream.SetPointer(nil, 0);
 end;
 
 {**
@@ -1601,6 +1594,7 @@ begin
   { Adds an EOF if option is not set. }
   if not (toSkipEOF in Options) then
     Result.AddObject('', TObject(Ord(ttEOF)));
+  FStream.Position := 0; //allways seek back to beginning else D7/FPC crashs
 end;
 
 {**
