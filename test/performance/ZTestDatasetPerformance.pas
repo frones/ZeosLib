@@ -93,6 +93,8 @@ type
     procedure RunTestLocate; override;
     procedure SetUpTestLookup; override;
     procedure RunTestLookup; override;
+    procedure SetUpTestSort; override;
+    procedure RunTestSort; override;
   end;
 
 implementation
@@ -564,6 +566,19 @@ begin
     Query.Connection.Commit;
 end;
 
+procedure TZDatasetPerformanceTestCase.SetUpTestSort;
+begin
+  inherited;
+  Query.SQL.Text := 'SELECT * FROM '+PerformanceTable+' ORDER BY '+PerformancePrimaryKey;
+end;
+
+procedure TZDatasetPerformanceTestCase.RunTestSort;
+begin
+  Query.SortedFields := PerformancePrimaryKey +' Desc';
+  Query.Open;
+  Query.SortedFields := PerformancePrimaryKey;
+  Query.Open;
+end;
 initialization
   RegisterTest('performance', TZDatasetPerformanceTestCase.Suite);
 end.
