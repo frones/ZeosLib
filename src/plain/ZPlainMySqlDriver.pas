@@ -554,6 +554,7 @@ begin
 
   @MYSQL_API.mysql_server_init            := GetAddress('mysql_server_init');
   @MYSQL_API.mysql_server_end             := GetAddress('mysql_server_end');
+  @MYSQL_API.mysql_library_end            := GetAddress('mysql_library_end');
 
   @MYSQL_API.mysql_change_user            := GetAddress('mysql_change_user');
   @MYSQL_API.mysql_field_count            := GetAddress('mysql_field_count');
@@ -663,9 +664,12 @@ begin
   for i := 0 to ServerArgsLen - 1 do
     {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
 
-  if (FLoader.Loaded) and (@MYSQL_API.mysql_server_end <> nil) then
-    MYSQL_API.mysql_server_end;
-
+  if (FLoader.Loaded) then
+    if (@MYSQL_API.mysql_library_end <> nil) then
+      MYSQL_API.mysql_library_end //since 5.0.3
+    else
+      if (@MYSQL_API.mysql_server_end <> nil) then
+        MYSQL_API.mysql_server_end; //deprected since 5.0.3
   inherited Destroy;
 end;
 
