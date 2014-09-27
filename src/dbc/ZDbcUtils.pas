@@ -629,7 +629,7 @@ begin
   ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
   if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
   begin
-    Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
+    Tokens := Tokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
     Temp := '';
     SQL := '';
     NextIsNChar := False;
@@ -736,7 +736,7 @@ begin
   ParamFound := ({$IFDEF USE_FAST_CHARPOS}ZFastCode.CharPos{$ELSe}Pos{$ENDIF}('?', SQL) > 0);
   if ParamFound or ConSettings^.AutoEncode or Assigned(ComparePrefixTokens) then
   begin
-    Tokens := Tokenizer.TokenizeBuffer(SQL, [toUnifyWhitespaces]);
+    Tokens := Tokenizer.TokenizeBuffer(SQL, [toSkipEOF]);
 
     Temp := '';
     SQL := '';
