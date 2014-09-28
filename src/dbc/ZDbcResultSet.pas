@@ -4357,7 +4357,7 @@ begin
     Clear
   else
   begin
-    FBlobSize := (Len +1) *2;
+    FBlobSize := (Len +1) shl 1; //shl 1 = * 2 but faster
     FCurrentCodePage := zCP_UTF16;
     ReallocMem(FBlobData, FBlobSize);
     System.Move(Buffer^, FBlobData^, FBlobSize-2);
