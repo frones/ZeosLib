@@ -5206,25 +5206,25 @@ begin
   AscCount:=0;
   DescCount:=0;
   s:=StringReplace(FIndexFieldNames,';',',',[rfReplaceAll]);
-  while Pos(',',s)>0 do
+  while ZFastCode.Pos(',',s)>0 do
   begin
-    if Pos(' DESC',UpperCase(Copy(s,1,Pos(',',s))))>0 then
+    if ZFastCode.Pos(' DESC',UpperCase(Copy(s,1,ZFastCode.Pos(',',s))))>0 then
       Inc(DescCount)
     else
       Inc(AscCount);
-    s:=Copy(s,Pos(',',s)+1,Length(s)-Pos(',',s));
+    s:=Copy(s,ZFastCode.Pos(',',s)+1,Length(s)-ZFastCode.Pos(',',s));
   end;
   if Length(s)>0 then
-    if Pos(' DESC',UpperCase(s))>0 then
+    if ZFastCode.Pos(' DESC',UpperCase(s))>0 then
       Inc(DescCount)
     else
       Inc(AscCount);
   if (DescCount > 0) and (AscCount > 0) then
-     Result:=stIgnored
+    Result:=stIgnored
   else if (DescCount > 0) then
-     Result:=stDescending
+    Result:=stDescending
   else
-     Result:=stAscending;
+    Result:=stAscending;
 end;
 
 procedure TZAbstractRODataset.SetSortType(Value: TSortType);
@@ -5234,15 +5234,15 @@ begin
     FSortType := Value;
     if (FSortType <> stIgnored) then
     begin {pawelsel modification}
-       FSortedFields:=StringReplace(FSortedFields,' Desc','',[rfReplaceAll,rfIgnoreCase]);
-       FSortedFields:=StringReplace(FSortedFields,' Asc','',[rfReplaceAll,rfIgnoreCase]);
+      FSortedFields:=StringReplace(FSortedFields,' Desc','',[rfReplaceAll,rfIgnoreCase]);
+      FSortedFields:=StringReplace(FSortedFields,' Asc','',[rfReplaceAll,rfIgnoreCase]);
     end;
     FIndexFieldNames:=GetIndexFieldNames;
     if Active then
-       if (FSortedFields = '') then
-          Self.InternalRefresh
+      if (FSortedFields = '') then
+        Self.InternalRefresh
       else
-          InternalSort;
+        InternalSort;
   end;
 end;
 

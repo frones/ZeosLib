@@ -169,7 +169,7 @@ procedure AddStringFunctions(Functions : TZFunctionsList);
 implementation
 
 uses
-  Math, StrUtils, ZMessages, ZCompatibility;
+  Math, StrUtils, ZMessages, ZCompatibility, ZFastCode;
 
 Function Capitalize(const s:string; Delims : string = '') : string;
 var
@@ -401,7 +401,7 @@ function TZStrPosFunction.Execute(Stack: TZExecutionStack;
   VariantManager: IZVariantManager): TZVariant;
 begin
   CheckParamsCount(Stack, 2);
-  VariantManager.SetAsInteger(Result, Pos(
+  VariantManager.SetAsInteger(Result, ZFastCode.Pos(
     VariantManager.GetAsString(Stack.GetParameter(2)),
     VariantManager.GetAsString(Stack.GetParameter(1))));
 end;

@@ -332,42 +332,44 @@ begin
     AValue := Value;
 
     // APrefix
-    I := Pos(':', AValue);
+    I := ZFastCode.Pos(':', AValue);
     if I = 0 then
       raise Exception.Create('TZURL.SetURL - The prefix is missing');
     APrefix := Copy(AValue, 1, I - 1);
     Delete(AValue, 1, I);
 
     // AProtocol
-    I := Pos(':', AValue);
+    I := ZFastCode.Pos(':', AValue);
     if I = 0 then
       raise Exception.Create('TZURL.SetURL - The protocol is missing');
     AProtocol := Copy(AValue, 1, I - 1);
     Delete(AValue, 1, I);
 
     // AHostName
-    if Pos('//', AValue) = 1 then
+    if ZFastCode.Pos('//', AValue) = 1 then
     begin
       Delete(AValue, 1, 2);
-      if (Pos(':', AValue) > 0) and ((Pos(':', AValue) < Pos('/', AValue)) or (Pos('/', AValue)=0)) then
-        AHostName := Copy(AValue, 1, Pos(':', AValue) - 1)
-      else if Pos('/', AValue) > 0 then
-        AHostName := Copy(AValue, 1, Pos('/', AValue) - 1)
-      else if Pos('?', AValue) > 0 then
-        AHostName := Copy(AValue, 1, Pos('?', AValue) - 1)
+      if (ZFastCode.Pos(':', AValue) > 0) and
+         ((ZFastCode.Pos(':', AValue) < ZFastCode.Pos('/', AValue)) or
+         (ZFastCode.Pos('/', AValue)=0)) then
+        AHostName := Copy(AValue, 1, ZFastCode.Pos(':', AValue) - 1)
+      else if ZFastCode.Pos('/', AValue) > 0 then
+        AHostName := Copy(AValue, 1, ZFastCode.Pos('/', AValue) - 1)
+      else if ZFastCode.Pos('?', AValue) > 0 then
+        AHostName := Copy(AValue, 1, ZFastCode.Pos('?', AValue) - 1)
       else
         AHostName := AValue;
 
       Delete(AValue, 1, Length(AHostName));
 
       // APort
-      if Pos(':', AValue) = 1 then
+      if ZFastCode.Pos(':', AValue) = 1 then
       begin
         Delete(AValue, 1, 1);
-        if Pos('/', AValue) > 0 then
-          APort := Copy(AValue, 1, Pos('/', AValue) - 1)
-        else if Pos('?', AValue) > 0 then
-          APort := Copy(AValue, 1, Pos('?', AValue) - 1)
+        if ZFastCode.Pos('/', AValue) > 0 then
+          APort := Copy(AValue, 1, ZFastCode.Pos('/', AValue) - 1)
+        else if ZFastCode.Pos('?', AValue) > 0 then
+          APort := Copy(AValue, 1, ZFastCode.Pos('?', AValue) - 1)
         else
           APort := AValue;
 
@@ -375,11 +377,11 @@ begin
       end;
     end;
 
-    if Pos('/', AValue) = 1 then
+    if ZFastCode.Pos('/', AValue) = 1 then
       Delete(AValue, 1, 1);
 
     // ADatabase
-    I := Pos('?', AValue);
+    I := ZFastCode.Pos('?', AValue);
     if I > 0 then
     begin
       ADatabase := Copy(AValue, 1, I - 1);

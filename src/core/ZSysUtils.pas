@@ -629,7 +629,7 @@ begin
   Result := 0;
   for I := 1 to Length(Delimiters) do
   begin
-    Index := Pos(Delimiters[I], Str);
+    Index := ZFastCode.Pos(Delimiters[I], Str);
     if (Index > 0) and ((Index < Result) or (Result = 0)) then
       Result := Index;
   end;
@@ -648,7 +648,7 @@ begin
   Result := 0;
   for I := Length(Str) downto 1 do
   begin
-    Index := Pos(Str[I], Delimiters);
+    Index := ZFastCode.Pos(Str[I], Delimiters);
     if (Index > 0) then
     begin
       Result := I;
@@ -1622,7 +1622,7 @@ var
     dotPos := 0;
     MSec := 0;
     if Length(AString) > 8 then
-      dotPos :=Pos ('.', AString);
+      dotPos := ZFastCode.Pos('.', AString);
 
     //if the dot are found, milliseconds are present.
     if dotPos > 0 then begin

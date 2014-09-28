@@ -3,7 +3,7 @@
 {                 Zeos Database Objects                   }
 {           System Utility Classes and Functions          }
 {                                                         }
-{          Originally written by Sergey Seroukhov         }
+{            Originally written by EgonHugeist            }
 {                                                         }
 {*********************************************************}
 
@@ -37,6 +37,9 @@
 { If you do not wish to do so, delete this exception      }
 { statement from your version.                            }
 {                                                         }
+{ Contributor(s): Aleksandr Sharahov,                     }
+{                 Dennis Kjaer Christensen                }
+{                 John O'Harrow                           }
 {                                                         }
 { The project web site is located on:                     }
 {   http://zeos.firmos.at  (FORUM)                        }
@@ -341,6 +344,10 @@ function Trunc(const X: Double): Int64; overload;
 function Trunc(const X: Single): Int64; overload;
 {$ENDIF USE_FAST_TRUNC}
 
+{.$IFDEF USE_FAST_POS}
+function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
+function Pos(const SubStr, Str: ZWideString): Integer; overload;
+{.$ENDIF}
 implementation
 
 uses
@@ -5999,6 +6006,363 @@ Matched:
 Return:
   end;
 {$ENDIF USE_FAST_CHARPOS}
+
+{$IF defined(Delphi) and defined(WIN32)} //had no success with FPC here
+//Author:            John O'Harrow
+//Date:              20/10 2010
+//Instructionset(s): IA32
+//  function Pos_JOH_IA32_6(const SubStr : AnsiString; const Str : AnsiString) : Integer;
+function Pos(const SubStr : RawByteString; const Str : RawByteString) : Integer; overload;
+asm {Slightly Cut-Down version of PosEx_JOH_6}
+  push    ebx
+  cmp     eax, 1
+  sbb     ebx, ebx         {-1 if SubStr = '' else 0}
+  sub     edx, 1           {-1 if S = ''}
+  sbb     ebx, 0           {Negative if S = '' or SubStr = '' else 0}
+  jl      @@InvalidInput
+  push    edi
+  push    esi
+  push    ebp
+  push    edx
+  mov     edi, [eax-4]     {Length(SubStr)}
+  mov     esi, [edx-3]     {Length(S)}
+  cmp     edi, esi
+  jg      @@NotFound       {Offset to High for a Match}
+  test    edi, edi
+  jz      @@NotFound       {Length(SubStr = 0)}
+  lea     ebp, [eax+edi]   {Last Character Position in SubStr + 1}
+  add     esi, edx         {Last Character Position in S}
+  movzx   eax, [ebp-1]     {Last Character of SubStr}  //FPC don't compile here!!!
+  add     edx, edi         {Search Start Position in S for Last Character}
+  mov     ah, al
+  neg     edi              {-Length(SubStr)}
+  mov     ecx, eax
+  shl     eax, 16
+  or      ecx, eax         {All 4 Bytes = Last Character of SubStr}
+@@MainLoop:
+  add     edx, 4
+  cmp     edx, esi
+  ja      @@Remainder      {1 to 4 Positions Remaining}
+  mov     eax, [edx-4]     {Check Next 4 Bytes of S}
+  xor     eax, ecx         {Zero Byte at each Matching Position}
+  lea     ebx, [eax-$01010101]
+  not     eax
+  and     eax, ebx
+  and     eax, $80808080   {Set Byte to $80 at each Match Position else $00}
+  jz      @@MainLoop       {Loop Until any Match on Last Character Found}
+  bsf     eax, eax         {Find First Match Bit}
+  shr     eax, 3           {Byte Offset of First Match (0..3)}
+  lea     edx, [eax+edx-3] {Address of First Match on Last Character + 1}
+@@Compare:
+  cmp     edi, -4
+  jle     @@Large          {Lenght(SubStr) >= 4}
+  cmp     edi, -1
+  je      @@SetResult      {Exit with Match if Lenght(SubStr) = 1}
+  movzx   eax, word ptr [ebp+edi] {Last Char Matches - Compare First 2 Chars}
+  cmp     ax, [edx+edi]
+  jne     @@MainLoop       {No Match on First 2 Characters}
+@@SetResult:               {Full Match}
+  lea     eax, [edx+edi]   {Calculate and Return Result}
+  pop     edx
+  pop     ebp
+  pop     esi
+  pop     edi
+  pop     ebx
+  sub     eax, edx         {Subtract Start Position}
+  ret
+@@NotFound:
+  pop     edx              {Dump Start Position}
+  pop     ebp
+  pop     esi
+  pop     edi
+@@InvalidInput:
+  pop     ebx
+  xor     eax, eax         {No Match Found - Return 0}
+  ret
+@@Remainder:               {Check Last 1 to 4 Characters}
+  mov     eax, [esi-3]     {Last 4 Characters of S - May include Length Bytes}
+  xor     eax, ecx         {Zero Byte at each Matching Position}
+  lea     ebx, [eax-$01010101]
+  not     eax
+  and     eax, ebx
+  and     eax, $80808080   {Set Byte to $80 at each Match Position else $00}
+  jz      @@NotFound       {No Match Possible}
+  lea     eax, [edx-4]     {Check Valid Match Positions}
+  cmp     cl, [eax]
+  lea     edx, [eax+1]
+  je      @@Compare
+  cmp     edx, esi
+  ja      @@NotFound
+  lea     edx, [eax+2]
+  cmp     cl, [eax+1]
+  je      @@Compare
+  cmp     edx, esi
+  ja      @@NotFound
+  lea     edx, [eax+3]
+  cmp     cl, [eax+2]
+  je      @@Compare
+  cmp     edx, esi
+  ja      @@NotFound
+  lea     edx, [eax+4]
+  jmp     @@Compare
+@@Large:
+  mov     eax, [ebp-4]     {Compare Last 4 Characters of S and SubStr}
+  cmp     eax, [edx-4]
+  jne     @@MainLoop       {No Match on Last 4 Characters}
+  mov     ebx, edi
+@@CompareLoop:             {Compare Remaining Characters}
+  add     ebx, 4           {Compare 4 Characters per Loop}
+  jge     @@SetResult      {All Characters Matched}
+  mov     eax, [ebp+ebx-4]
+  cmp     eax, [edx+ebx-4]
+  je      @@CompareLoop    {Match on Next 4 Characters}
+  jmp     @@MainLoop       {No Match}
+end;
+//Author:            Dennis Kjaer Christensen
+//Date:              20/10 2010
+//Instructionset(s): IA32
+
+//SubStr ptr - eax
+//Str ptr - edx
+//SubStrLen - ecx
+//StrLen - [esp]
+//Temp - ebx
+//I - edi
+//J - esi
+//Index - [esp+$04]
+//Result - [esp+$08]
+//OuterLoopEnd - [esp+$14]
+//Match - [esp+$10]
+
+//function PosUnicode32_DKC_IA32_3_a(const SubStr, Str: UnicodeString): Integer; overload;
+//changes by EgonHugeist: ZWideString might be a WideString(D7-D007, old FPC)
+//where length address returns size in bytes -> shrink to codepoints
+function Pos(const SubStr, Str: ZWideString): Integer; overload;
+asm
+ push  ebx
+ push  esi
+ push  edi
+ add   esp,-$18
+ //Result := 0;
+ xor   ebx,ebx
+ mov   [esp+$08],ebx //Save Result=0
+ //StrLen := Length(Str);
+ mov   ebx,edx       //StrLen=0 if Str=nil
+ mov   [esp],ebx     //Save StrLen
+ test  edx,edx       //Str <> nil
+ jz    @L1
+ mov   ebx,[edx-4]   //StrLen in ebx
+ {$IFNDEF PWIDECHAR_IS_PUNICODECHAR} //widestrlen is Length in bytes !!
+ shr   ebx, 1 //shrink to Length in codepoints
+ {$ENDIF}
+ mov   [esp],ebx     //Save StrLen
+@L1 :
+ //SubStrLen := Length(SubStr);
+ mov   ecx,eax       //SubStrLen=0 if SubStr=nil
+ test  eax,eax       //SubStr <> nil
+ jz    @L2
+ mov   ecx,[eax-4]   //SubStrLen in ecx
+ {$IFNDEF PWIDECHAR_IS_PUNICODECHAR} //widestrlen is Length in bytes !!
+ shr   ecx, 1 //shrink to Length in codepoints
+ {$ENDIF}
+@L2 :
+ //if (SubStrLen <> 0) then
+ test  ecx,ecx
+ jz    @Done
+ //if (StrLen >= SubStrLen) then
+ mov   ebx,[esp]
+ cmp   ebx,ecx
+ jl    @Done
+ //for I := 1 to StrLen-SubStrLen+1 do
+ mov   ebx,[esp]
+ sub   ebx,ecx
+ inc   ebx
+ mov   [esp+$0c],ebx
+ test  ebx,ebx
+ jle   @Done
+ mov   [esp+$14],ebx
+ mov   edi,1         //I=1
+ //if Str[I] = SubStr[1] then
+@OuterLoop:
+ movzx ebx,word ptr [edx+edi*2-$02]
+ cmp   bx,[eax]
+ jnz   @L5
+ //Match := True;
+ mov   byte ptr [esp+$10],1
+ //for J := 1 to SubStrLen do
+ test  ecx,ecx
+ jle   @L6
+ mov   esi,1
+ //Index := I+J-1;
+@L9 :
+ lea   ebx,[edi+esi]
+ dec   ebx
+ mov   [esp+$04],ebx
+ //if StrLen > Index then
+ cmp   ebx,[esp]
+ ja   @L7
+ //if Str[Index] <> SubStr[J] then
+ mov   ebx,[esp+$04]
+ movzx ebx,word ptr [edx+ebx*2-$02]
+ cmp   bx,[eax+esi*2-$02]
+ jz    @L8
+ //Match := False;
+ mov   byte ptr [esp+$10],0
+ //Break;
+ jmp   @L6
+ //Match := False;
+@L7 :
+ mov   byte ptr [esp+$10],0
+@L8 :
+ inc   esi
+ //for J := 1 to SubStrLen do
+ cmp   esi,ecx
+ jle   @L9
+@L6 :
+ //if Match then
+ cmp   byte ptr [esp+$10],$00
+ jz    @L5
+ //Result := I;
+ mov   [esp+$08],edi //Save Result
+ //Break;
+ jmp   @Done
+@L5 :
+ inc   edi
+ //for I := 1 to StrLen-SubStrLen+1 do
+ mov   ebx,[esp+$0c]
+ cmp   edi,ebx
+ jle   @OuterLoop
+@Done:
+ mov   eax,[esp+$08] //Load Result
+ add   esp,$18
+ pop   edi
+ pop   esi
+ pop   ebx
+end;
+{$ELSE}
+//Author:            Aleksandr Sharahov
+//function Pos_Sha_Pas_3(const SubStr: AnsiString; const Str: AnsiString): Integer;
+//faster than Delphi and FPC RTL
+function Pos(const SubStr: RawByteString; const Str: RawByteString): Integer; overload;
+var
+  len, lenSub: LengthInt;
+  ch: AnsiChar;
+  p, pSub, pStart, pStop: PAnsiChar;
+label
+  Ret, Ret0, Ret1, Next0, Next1;
+begin;
+  p:=pointer(Str);
+  pSub:=pointer(SubStr);
+
+  if (p=nil) or (pSub=nil) then begin;
+    Result:=0;
+    exit;
+    end;
+
+  len:=PLengthInt(p-StringLenOffSet)^;
+  lenSub:=PLengthInt(pSub-StringLenOffSet)^;
+  if (len<lenSub) or (lenSub<=0) then begin;
+    Result:=0;
+    exit;
+    end;
+
+  lenSub:=lenSub-1;
+  pStop:=p+len;
+  p:=p+lenSub;
+  pSub:=pSub+lenSub;
+  pStart:=p;
+
+  ch:=pSub[0];
+
+  if lenSub=0 then begin;
+    repeat;
+      if ch=p[0] then goto Ret0;
+      if ch=p[1] then goto Ret1;
+      p:=p+2;
+      until p>=pStop;
+    Result:=0;
+    exit;
+    end;
+
+  lenSub:=-lenSub;
+  repeat;
+    if ch=p[0] then begin;
+      len:=lenSub;
+      repeat;
+        if pword(psub+len)^<>pword(p+len)^ then goto Next0;
+        len:=len+2;
+        until len>=0;
+      goto Ret0;
+Next0:end;
+
+    if ch=p[1] then begin;
+      len:=lenSub;
+      repeat;
+        if pword(@psub[len])^<>pword(@p[len+1])^ then goto Next1;
+        len:=len+2;
+        until len>=0;
+      goto Ret1;
+Next1:end;
+
+    p:=p+2;
+    until p>=pStop;
+  Result:=0;
+  exit;
+
+Ret1:
+  p:=p+2;
+  if p<=pStop then goto Ret;
+  Result:=0;
+  exit;
+Ret0:
+  inc(p);
+Ret:
+  Result:=p-pStart;
+  end;
+//Author:            Dennis Kjaer Christensen
+//Date:              18/07 2012
+//faster than Delphi and FPC RTL
+function Pos(const SubStr, Str: ZWideString): Integer; overload;
+var
+ I, J, StrLen, SubStrLen, Index : Integer;
+ Match: Boolean;
+
+begin
+  Result := 0;
+  StrLen := Length(Str);  //Length returns 0 if Str=nil
+  SubStrLen := Length(SubStr);
+  if (SubStrLen <> 0) and (StrLen >= SubStrLen) then
+  begin
+    for I := 1 to StrLen-SubStrLen+1 do
+    begin
+      if Str[I] = SubStr[1] then
+      begin
+        Match := True;
+        for J := 1 to SubStrLen do
+        begin
+          Index := I+J-1;
+          if Index <= StrLen then
+          begin
+            if Str[Index] <> SubStr[J] then
+            begin
+             // No Match
+             Match := False;
+             Break;
+            end;
+          end
+          else
+            Match := False;
+        end;
+        if Match then
+        begin
+          Result := I;
+          Break;
+        end;
+      end;
+    end;
+  end;
+end;
+{$IFEND}
 
 {$If defined(Use_FastCodeFillChar) or defined(PatchSystemMove) or defined(USE_FAST_STRLEN) or defined(USE_FAST_CHARPOS)}
 type

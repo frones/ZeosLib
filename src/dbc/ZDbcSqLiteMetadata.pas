@@ -245,7 +245,7 @@ type
 implementation
 
 uses
-  ZDbcUtils, ZDbcSqLite;
+  ZDbcUtils, ZDbcSqLite, ZFastCode;
 
 { TZSQLiteDatabaseInfo }
 
@@ -1352,8 +1352,8 @@ begin
 
       { Defines a table name. }
       Temp := UpperCase(GetString(type_index));
-      if Pos('(', Temp) > 0 then
-        Temp := Copy(Temp, 1, Pos('(', Temp) - 1);
+      if ZFastCode.Pos('(', Temp) > 0 then
+        Temp := Copy(Temp, 1, ZFastCode.Pos('(', Temp) - 1);
       Result.UpdateString(TableColColumnTypeNameIndex, Temp);
 
       Result.UpdateInt(TableColColumnSizeIndex, Precision);  //Precision will be converted higher up
@@ -1634,7 +1634,7 @@ begin
     begin
       while MainResultSet.Next do
       begin
-        if (Pos(' autoindex ', MainResultSet.GetString(main_name_field_index)) = 0)
+        if (ZFastCode.Pos(AnsiString(' autoindex '), MainResultSet.GetRawByteString(main_name_field_index)) = 0)
           and ((Unique = False) or (MainResultSet.GetInt(main_unique_field_index) = 0)) then
         begin
           ResultSet := GetConnection.CreateStatement.ExecuteQuery(

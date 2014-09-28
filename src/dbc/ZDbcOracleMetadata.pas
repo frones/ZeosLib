@@ -1356,7 +1356,7 @@ var
     begin
       PackageName := '';
       ProcName := 'Value';
-      iPos := Pos('.', Value);
+      iPos := ZFastCode.Pos('.', Value);
         if (iPos > 0) then
         begin
           PackageNameCondition := ConstructNameCondition(Copy(Value, 1, iPos-1),'package_name');

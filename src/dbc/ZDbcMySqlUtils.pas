@@ -163,7 +163,7 @@ function MySQLPrepareAnsiSQLParam(Handle: PZMySQLConnect; Value: TZVariant;
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
-  ZMessages, ZDbcUtils;
+  ZMessages, ZDbcUtils, ZFastCode;
 
 threadvar
   SilentMySQLError: Integer;
@@ -308,7 +308,7 @@ begin
   if Posi > 0 then
     Spec := Copy(TypeNameFull, Posi + 1, Length(TypeNameFull)-Posi);
 
-  IsUnsigned := Pos('UNSIGNED', Spec) > 0;
+  IsUnsigned := ZFastCode.Pos('UNSIGNED', Spec) > 0;
 
   if TypeName = 'TINYINT' then
   begin
@@ -695,7 +695,7 @@ begin
   end
   else
     { the column type is decimal }
-    if ( Pos(',', TypeInfoSecond) > 0 ) and not ( TypeInfoFirst = 'set' ) then
+    if ( ZFastCode.Pos(',', TypeInfoSecond) > 0 ) and not ( TypeInfoFirst = 'set' ) then
     begin
       TempPos := FirstDelimiter(',', TypeInfoSecond);
       ColumnSize := StrToIntDef(Copy(TypeInfoSecond, 1, TempPos - 1), 0);

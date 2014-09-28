@@ -4971,7 +4971,7 @@ begin
   begin
     Keywords := ',' + AnsiSQLKeywords + ','
       + LowerCase(Metadata.GetDatabaseInfo.GetSQLKeywords) + ',';
-    Result := Pos(',' + LowerCase(Value) + ',', Keywords) > 0;
+    Result := ZFastCode.Pos(',' + LowerCase(Value) + ',', Keywords) > 0;
   end;
 end;
 

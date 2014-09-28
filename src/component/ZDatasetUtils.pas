@@ -1287,7 +1287,7 @@ begin
       if Result <> '' then
         Result := Result + ',';
       Temp := Fields[I].FieldName;
-      if (Pos(' ', Temp) > 0) or (Pos('-', Temp) > 0) or (Pos('.', Temp) > 0) then
+      if (ZFastCode.Pos(' ', Temp) > 0) or (ZFastCode.Pos('-', Temp) > 0) or (ZFastCode.Pos('.', Temp) > 0) then
         Temp := '"' + Temp + '"';
       Result := Result + Temp;
     end;
