@@ -516,7 +516,7 @@ Var
   begin
     if test is TTestSuite then
       begin
-      p := pos ('.', ATestName);
+      p := System.pos ('.', ATestName);
       if p > 0 then
         begin
         s := copy (ATestName, 1, p-1);
@@ -563,7 +563,7 @@ var
   begin
     if Supports(test, ITestSuite) then
       begin
-      p := pos ('.', ATestName);
+      p := System.pos('.', ATestName);
       if p > 0 then
         begin
         s := copy (ATestName, 1, p-1);
