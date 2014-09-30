@@ -101,8 +101,12 @@ cCodePage = 20127; {US-ASCII (7-bit)}
 {$ENDIF GERMAN}
 {$ENDIF DUTCH}
 {$ENDIF PORTUGUESE}
+
 resourcestring
 
+  {$IFNDEF WITH_RTLCONSTS_SInvalidGuidArray}
+    SInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
+  {$ENDIF}
   cSLibraryNotCompatible = 'Client-Library %s found but could not be loaded. Check compile-target and library compatibility!';
 // -> ms, 09/05/2005
 {$IFDEF PORTUGUESE}

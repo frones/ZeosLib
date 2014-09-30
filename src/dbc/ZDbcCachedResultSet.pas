@@ -254,7 +254,9 @@ type
     procedure MoveToCurrentRow; override;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const ColumnDirs: TBooleanDynArray): Integer; override;
+      const ColumnDirs: TBooleanDynArray; const CompareFuncs: TCompareFuncs): Integer; override;
+    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
+      const ColumnDirs: TBooleanDynArray}): TCompareFuncs; override;
 
     //---------------------------------------------------------------------
     // Cached Updates
@@ -277,8 +279,7 @@ type
     procedure DisposeCachedUpdates; virtual;
   end;
 
-  TZStringFieldAssignFromResultSet = procedure(RowAccessor: TZRowAccessor;
-    ResultSet: IZResultSet; const ColumnIndex: Integer);
+  TZStringFieldAssignFromResultSet = procedure(ColumnIndex: Integer) of object;
 
   {**
     Implements Abstract cached ResultSet. This class should be extended
@@ -288,6 +289,8 @@ type
   private
     FResultSet: IZResultSet;
     FStringFieldAssignFromResultSet: TZStringFieldAssignFromResultSet;
+    procedure ZStringFieldAssignFromResultSet_AnsiRec(ColumnIndex: Integer);
+    procedure ZStringFieldAssignFromResultSet_Unicode(ColumnIndex: Integer);
   protected
     procedure Open; override;
     function Fetch: Boolean; virtual;
@@ -312,19 +315,6 @@ implementation
 
 uses ZMessages, ZDbcResultSetMetadata, ZDbcGenericResolver, ZDbcUtils, ZEncoding;
 
-procedure ZStringFieldAssignFromResultSet_AnsiRec(RowAccessor: TZRowAccessor;
-    ResultSet: IZResultSet; const ColumnIndex: Integer);
-var Len: NativeUInt;
-begin
-  RowAccessor.SetPAnsiChar(ColumnIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len);
-end;
-
-procedure ZStringFieldAssignFromResultSet_Unicode(RowAccessor: TZRowAccessor;
-    ResultSet: IZResultSet; const ColumnIndex: Integer);
-var Len: NativeUInt;
-begin
-  RowAccessor.SetPWideChar(ColumnIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
-end;
 
 { TZAbstractCachedResultSet }
 
@@ -2234,7 +2224,8 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractCachedResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray): Integer;
+  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray;
+  const CompareFuncs: TCompareFuncs): Integer;
 var
   RowBuffer1, RowBuffer2: PZRowBuffer;
 begin
@@ -2245,7 +2236,13 @@ begin
   RowBuffer1 := PZRowBuffer(FRowsList[Row1 - 1]);
   RowBuffer2 := PZRowBuffer(FRowsList[Row2 - 1]);
   Result := FRowAccessor.CompareBuffers(RowBuffer1, RowBuffer2,
-    ColumnIndices, ColumnDirs);
+    ColumnIndices, ColumnDirs, CompareFuncs);
+end;
+
+function TZAbstractCachedResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
+  const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
+begin
+  Result := FRowAccessor.GetCompareFuncs(ColumnIndices{, ColumnDirs});
 end;
 
 { TZCachedResultSet }
@@ -2266,10 +2263,22 @@ begin
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   if Statement.GetConnection.GetIZPlainDriver.IsAnsiDriver and
     ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_AnsiRec
+      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_AnsiRec
     else
-      FStringFieldAssignFromResultSet := @ZStringFieldAssignFromResultSet_Unicode;
+      FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_Unicode;
   Open;
+end;
+
+procedure TZCachedResultSet.ZStringFieldAssignFromResultSet_AnsiRec(ColumnIndex: Integer);
+var Len: NativeUInt;
+begin
+  RowAccessor.SetPAnsiChar(ColumnIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len);
+end;
+
+procedure TZCachedResultSet.ZStringFieldAssignFromResultSet_Unicode(ColumnIndex: Integer);
+var Len: NativeUInt;
+begin
+  RowAccessor.SetPWideChar(ColumnIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
 end;
 
 {**
@@ -2311,7 +2320,7 @@ begin
         stDouble: RowAccessor.SetDouble(I, ResultSet.GetDouble(I));
         stCurrency: RowAccessor.SetCurrency(I, ResultSet.GetCurrency(I));
         stBigDecimal: RowAccessor.SetBigDecimal(I, ResultSet.GetBigDecimal(I));
-        stString, stUnicodeString: FStringFieldAssignFromResultSet(RowAccessor, ResultSet, i);
+        stString, stUnicodeString: FStringFieldAssignFromResultSet(i);
         stBytes,stGUID: RowAccessor.SetBytes(I, ResultSet.GetBytes(I));
         stDate: RowAccessor.SetDate(I, ResultSet.GetDate(I));
         stTime: RowAccessor.SetTime(I, ResultSet.GetTime(I));

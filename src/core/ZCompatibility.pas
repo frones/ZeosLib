@@ -82,11 +82,17 @@ type
   PPLongWord            = ^PLongWord;
   {$IFEND}
 {$IFDEF FPC}
+  {$IF not declared(NativeInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   NativeInt             = PtrInt;
+  {$IFEND}
+  {$IF not declared(NativeUInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   NativeUInt            = PtrUInt;
+  {$IFEND}
+  {$IF not declared(PNativeUInt)} //since FPC2.7 this type is declared too avoid inconsitent builds
   PNativeUInt           = ^NativeUInt;
+  {$IFEND}
 {$ELSE}
-  {$IFNDEF DELPHI16_UP}
+  {$IFNDEF HAVE_TRUE_NATIVE_TYPES}  //introduced since D2007 but "stable" since XE2
   NativeInt             = Integer;
   NativeUInt            = LongWord;
   PNativeUInt           = ^NativeUInt;
@@ -167,7 +173,6 @@ const
   Brackets = ['(',')','[',']','{','}'];
   StdWordDelims = [#0..' ',',','.',';','/','\',':','''','"','`'] + Brackets;
 
-function Hash(S : AnsiString) : LongWord; overload;
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 
 {$ENDIF}
@@ -402,15 +407,14 @@ function CharInSet(const C: WideChar; const CharSet: TSysCharSet): Boolean; over
 function UTF8ToString(const s: RawByteString): ZWideString;
 {$IFEND}
 
-{$IFDEF UNICODE}
-function Hash(const Key : ZWideString) : Cardinal; {$IFNDEF FPC}overload;{$ENDIF}
-{$ENDIF}
+function Hash(const S : RawByteString) : LongWord; overload;
+function Hash(const Key : ZWideString) : Cardinal; overload;
 
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;
-procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
+procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$IFDEF WITH_RAWBYTESTRING}
-procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;
+procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString); overload;// {$IFDEF WITH_INLINE}Inline;{$ENDIF}
 {$ENDIF}
 
 var
@@ -558,7 +562,10 @@ end;
   {$ENDIF}
 {$ENDIF}
 
-{$IFDEF UNICODE}
+{$IFOPT Q+}
+  {$DEFINE OverFlowCheckEnabled}
+  {$OVERFLOWCHECKS OFF}
+{$ENDIF}
 function Hash(const key: ZWideString): Cardinal;
 var
   I: integer;
@@ -570,38 +577,102 @@ begin
     Result := Result xor Cardinal(key[I]);
   end;
 end; { Hash }
-{$ENDIF}
 
-{$IFNDEF FPC}
-function Hash(S : AnsiString) : LongWord;
+(*function Hash(const S: RawByteString): Cardinal; //perform the FPC used ELF Hash algorithm -> pretty slow(byte hashed) but tiny
 Var
   thehash,g,I : LongWord;
 begin
-   thehash:=0;
-   For I:=1 to Length(S) do { 0 terminated }
-     begin
-     thehash:=thehash shl 4;
-     {$IFOPT Q+}
-       {$DEFINE OverFlowCheckEnabled}
-       {$OVERFLOWCHECKS OFF}
-     {$ENDIF}
-     inc(theHash,Ord(S[i]));
-     {$IFDEF OverFlowCheckEnabled}
-       {$OVERFLOWCHECKS ON}
-     {$ENDIF}
-     g:=thehash and LongWord($f shl 28);
-     if g<>0 then
-       begin
-       thehash:=thehash xor (g shr 24);
-       thehash:=thehash xor g;
-       end;
-     end;
-   If theHash=0 then
-     Hash:=$ffffffff
+  thehash:=0;
+  For I:=1 to Length(S) do { 0 terminated }
+  begin
+    thehash:=thehash shl 4;
+    inc(theHash,Ord(S[i]));
+    g:=thehash and $f0000000;;
+    if g<>0 then
+    begin
+      thehash:=thehash xor (g shr 24);
+      thehash:=thehash xor g;
+    end;
+  end;
+  If theHash=0 then
+     Result := $ffffffff
    else
-     Hash:=TheHash;
+     Result :=TheHash;
+end;*)
+
+{ ported from http://stofl.org/questions/3690608/simple-string-hashing-function}
+//perform a MurmurHash2 algorithm by Austin Appleby loads faster (4Byte aligned)
+//Changes by EgonHugeist:
+//use PAnsiChar instead of S[] to inc the 4Byte blocks -> faster!
+//note: we can also use 64Bit versions: http://factgrabber.com/index.php?q=MurmurHash&lcid=xrnmicaJ5olmGUbBZJlkwWah5plkiYaJJpkGgSexJhkm
+//function MurmurHash2(const S: RawByteString; const Seed: LongWord=$9747b28c): LongWord;
+function Hash(const S: RawByteString): LongWord;
+var
+  k: LongWord;
+  Len: LongWord;
+  P, PEnd: PAnsiChar;
+const
+  // 'm' and 'r' are mixing constants generated offline.
+  // They're not really 'magic', they just happen to work well.
+  m = $5bd1e995;
+  r = 24;
+begin
+  //The default seed, $9747b28c, is from the original C library
+  P := Pointer(S);
+  if P = nil then
+    Result := $ffffffff
+  else
+  begin
+    Len := {%Result-}PLengthInt(P - StringLenOffSet)^;
+    // Initialize the hash to a 'random' value
+    Result := $9747b28c xor len;
+
+    // Mix 4 bytes at a time into the hash
+    PEnd := P + Len - 4;
+    while P < PEnd do
+    begin
+      k := PLongWord(P)^;
+
+      k := k * m;
+      k := k xor (k shr r);
+      k := k * m;
+
+      Result := Result * m;
+      Result := Result xor k;
+
+      Inc(P, 4);
+    end;
+    Inc(PEnd, 4);
+    Len := PEnd-P;
+
+    {   Handle the last few bytes of the input array
+            P: ... $69 $18 $2f
+    }
+    if len = 3 then
+      Result := Result xor (LongWord((P+2)^) shl 16);
+    if len >= 2 then
+      Result := Result xor (LongWord((P+1)^) shl 8);
+    if len >= 1 then
+    begin
+      Result := Result xor (LongWord(P^));
+      Result := Result * m;
+    end;
+
+    // Do a few final mixes of the hash to ensure the last few
+    // bytes are well-incorporated.
+    Result := Result xor (Result shr 13);
+    Result := Result * m;
+    Result := Result xor (Result shr 15);
+
+    Result := Result;
+  end;
 end;
 
+{$IFDEF OverFlowCheckEnabled}
+  {$OVERFLOWCHECKS ON}
+{$ENDIF}
+
+{$IFNDEF FPC}
 function AnsiProperCase(const S: string; const WordDelims: TSysCharSet): string;
 var
   P,PE : PChar;
@@ -643,57 +714,80 @@ end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: AnsiString);
 begin
-  if ( Len = 0 ) or ( Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
+    begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+    end
     else
       SetString(Dest, Src, Len);
 end;
 
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: UTF8String);
 begin
-  if ( Len = 0 ) or ( Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
+    begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
+    end
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);
       {$ENDIF}
 end;
 
-procedure ZSetString(const Src: Pointer; const Len: Cardinal; var Dest: ZWideString); overload;
+//EgonHugeist: my fast ByteToWord shift without encoding maps and/or alloc a ZWideString
+procedure ZSetString(Src: PAnsiChar; const Len: LengthInt; var Dest: ZWideString); overload;
 var
-  I: Cardinal;
-  P: PAnsiChar;
-  W: PWideChar;
+  PEnd: PAnsiChar;
+  PW: PWideChar;
 begin
-  Dest := ''; //speeds up for SetLength
-  if ( Len = 0 ) or ( Src = nil ) then
-    Exit
+  if ( Len = 0 ) then
+    Dest := ''
   else
   begin
-    P := Src;
+    {$IFDEF PWIDECHAR_IS_PUNICODECHAR}
+    if (Pointer(Dest{%H-}) = nil) or//empty
+       ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ <> 1) or { unique string ? }
+       (Len <> {%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^) then { length as expected ? }
+      SetString(Dest, nil, Len);
+    {$ELSE}
     SetString(Dest, nil, Len);
-    W := Pointer(Dest);
-    for i := 1 to Len do
+    {$ENDIF}
+    if Src <> nil then
     begin
-      PWord(W)^ := PByte(P)^;
-      Inc(P);
-      Inc(W);
+      PW := Pointer(Dest);
+      PEnd := Src+Len-4;
+      while Src < PEnd do //quad conversion per loop
+      begin
+        PWord(PW)^ := PByte(Src)^;
+        PWord(PW+1)^ := PByte(Src+1)^;
+        PWord(PW+2)^ := PByte(Src+2)^;
+        PWord(PW+3)^ := PByte(Src+3)^;
+        Inc(Src, 4);
+        Inc(PW, 4);
+      end;
+      Inc(PEnd, 4);
+      while Src < PEnd do
+      begin
+        PWord(PW)^ := PByte(Src)^;
+        Inc(Src);
+        Inc(PW);
+      end;
     end;
   end;
 end;
@@ -701,19 +795,21 @@ end;
 {$IFDEF WITH_RAWBYTESTRING}
 procedure ZSetString(const Src: PAnsiChar; const Len: Cardinal; var Dest: RawByteString);
 begin
-  if ( Len = 0 ) or ( Src = nil ) then
+  if ( Len = 0 ) then
     Dest := ''
   else
     if (Pointer(Dest) <> nil) and //Empty?
        ({%H-}PRefCntInt(NativeUInt(Dest) - StringRefCntOffSet)^ = 1) {refcount} and
        ({%H-}PLengthInt(NativeUInt(Dest) - StringLenOffSet)^ = LengthInt(Len)) {length} then
-      Move(Src^, Pointer(Dest)^, Len)
+    begin
+      if Src <> nil then Move(Src^, Pointer(Dest)^, Len)
+    end
     else
       {$IFDEF MISS_RBS_SETSTRING_OVERLOAD}
       begin
         Dest := '';
         SetLength(Dest, Len);
-        Move(Src^, Pointer(Dest)^, Len);
+        if Src <> nil then Move(Src^, Pointer(Dest)^, Len);
       end;
       {$ELSE}
       SetString(Dest, Src, Len);

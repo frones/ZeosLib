@@ -1178,7 +1178,7 @@ var
 begin
   PEnd := Source+SourceBytes-8;
   {all Bytes[0..255] have a equivalient Word expression }
-  while Source <= PEnd do
+  while Source < PEnd do
   begin
     PWord(Dest)^ := PByte(Source)^;
     PWord(Dest+1)^ := PByte(Source+1)^;
@@ -1215,7 +1215,7 @@ begin
     System.SetLength(Dest, SourceBytes);
   P := Pointer(Dest);
   PEnd := Source+SourceBytes-4;
-  while Source <= PEnd do //convert remaining characters with codepage agnostic
+  while Source < PEnd do //convert remaining characters with codepage agnostic
   begin
     { quad ASCII conversion by SHA }
     if (PLongWord(Source)^ and $80808080 = 0) then  //all in range $00..$79 ASCII7
@@ -1491,7 +1491,7 @@ Quit:
 end;
 {$IFEND}
 
-function PRawToUnicode(Source: PAnsiChar; const SourceBytes: NativeUInt; 
+function PRawToUnicode(Source: PAnsiChar; const SourceBytes: NativeUInt;
   CP: Word): ZWideString;
 var
   S: RawByteString;
@@ -1604,7 +1604,7 @@ A2U:
           SetLength(result, SourceBytes);
           Dest := Pointer(Result);
           {first handle leading ASCII if possible }
-          while (Source <= PEnd ) and (PLongWord(Source)^ and $80808080 = 0) do
+          while (Source < PEnd ) and (PLongWord(Source)^ and $80808080 = 0) do
           begin
             C := PLongWord(Source)^;
             PLongWord(Dest)^ := (c shl 8 or (c and $FF)) and $00ff00ff;
@@ -1614,7 +1614,7 @@ A2U:
             inc(Dest,4);
           end;
           inc(PEnd, 4);
-          while (Source <= PEnd) and (PByte(Source)^ and $80 = 0) do
+          while (Source < PEnd) and (PByte(Source)^ and $80 = 0) do
           begin
             PWord(Dest)^ := Byte(Source^); //Shift Byte to Word
             inc(Source);
@@ -2693,7 +2693,7 @@ end;
 
 function ZMovePRawToUTF8(const Src: PAnsiChar; Len: NativeUInt; const RawCP: Word): UTF8String;
 begin
-  ZSetString(Src, Len, Result);
+  ZSetString(Src, Len, Result{%H-});
 end;
 
 function ZMoveAnsiToRaw(const Src: AnsiString; const RawCP: Word): RawByteString;

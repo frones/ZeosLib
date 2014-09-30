@@ -68,8 +68,6 @@ type
   protected
     procedure QuickSort(SortList: PPointerList; L, R: Integer;
       SCompare: TZListSortCompare);
-    procedure HybridSortSha_0AA(SortList: PPointerList; Count: integer;
-      SCompare: TZListSortCompare);
   public
     procedure Sort(Compare: TZListSortCompare);
   end;
@@ -100,7 +98,7 @@ function LastDelimiter(const Delimiters, Str: string): Integer;
   @param P2 seconds Pointer
   @return <code>Integer</code> if the memory equals else return PByte(P1)-PByte(B2)
 }
-function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
+function ZMemLComp(P1, P2: PAnsiChar; Len: Cardinal): Integer;
 
 {**
   Compares two PWideChars without stopping at #0 (Unicode Version)
@@ -583,9 +581,9 @@ function EncodeSQLVersioning(const MajorVersion: Integer;
 function FormatSQLVersion( const SQLVersion: Integer ): String;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString; overload;
-function ASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString; overload;
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString; overload;
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString; overload;
-function UnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString; overload;
+function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString; overload;
 
 //function ValUnicodeInt(const s: ZWideString; var code: Integer): Integer;
 
@@ -597,9 +595,26 @@ function FloatToSqlUnicode(const Value: Extended): ZWideString;
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt); overload;
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt); overload;
 
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PAnsiChar; const SetTerm: Boolean = False); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PWideChar; const SetTerm: Boolean = False); overload; {$IFDEF WITH_INLINE} inline;{$ENDIF}
+
+function GUIDToRaw(const GUID: TGUID): RawByteString; overload;
+function GUIDToRaw(const Bts: TBytes): RawByteString; overload;
+function GUIDToRaw(Buffer: Pointer; Len: NativeInt): RawByteString; overload;
+
+function GUIDToUnicode(const GUID: TGUID): ZWideString; overload;
+function GUIDToUnicode(const Bts: TBytes): ZWideString; overload;
+function GUIDToUnicode(Buffer: Pointer; Len: NativeInt): ZWideString; overload;
+
+procedure ValidGUIDToBinary(Src, Dest: PAnsiChar); overload;
+procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
+
 implementation
 
 uses DateUtils, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
+  {$IFDEF DELPHI}
+    {$IFDEF WITH_RTLCONSTS_SInvalidGuidArray}RTLConsts{$ELSE}SysConst{$ENDIF},
+  {$ENDIF}
   ZFastCode;
 
 
@@ -652,7 +667,7 @@ end;
 }
 function MemLCompUnicode(P1, P2: PWideChar; Len: Integer): Boolean;
 begin
-  Result := ZMemLComp(P1, P2, Len*2) = 0;
+  Result := ZMemLComp(Pointer(P1), Pointer(P2), Len shl 1) = 0;
 end;
 
 {**  EH:
@@ -662,123 +677,54 @@ end;
   @return <code>Integer</code> 0 if the memory at P1 and P2 are equal, otherwise
     return the byte difference
 }
-{$ifopt Q+}
-  {$define OverflowCheckEnabled}
-  {$Q-}
-{$endif}
-{$ifopt R+}
-  {$define RangeCheckEnabled}
-  {$R-}
-{$endif}
-function ZMemLComp(const P1, P2: Pointer; Len: Cardinal): Integer;
-Label {$IFDEF FPC}Fail8{$ELSE}Fail4{$ENDIF};
+function ZMemLComp(P1, P2: PAnsiChar; Len: Cardinal): Integer;
+Label Fail;
 var
-  N: Cardinal;
-  P1T, P2T: PAnsiChar;
+  PEnd: PAnsiChar;
 begin
   Result := 0;
-  P1T := P1;
-  P2T := P2;
-  {$IFDEF FPC}
-  while Len > SizeOf(UInt64) shl 2 do //compare 32 Bytes per loop
+  PEnd := P1 + Len;
+  while P1+32 < PEnd do //compare 32 Bytes per loop
   begin
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    Dec(Len, SizeOf(UInt64) shl 2)
+    {$IFDEF CPUX64} //32Bit targets a less optimal comparing 8Byte values
+    if (PUInt64(P1)^ <> PUInt64(P2)^) then goto Fail;
+    if (PUInt64(P1+8)^ <> PUInt64(P2+8)^) then goto Fail;
+    if (PUInt64(P1+16)^ <> PUInt64(P2+16)^) then goto Fail;
+    if (PUInt64(P1+24)^ <> PUInt64(P2+24)^) then goto Fail;
+    {$ELSE}
+    if (PLongWord(P1)^ <> PLongWord(P2)^) then goto Fail;
+    if (PLongWord(P1+4)^ <> PLongWord(P2+4)^) then goto Fail;
+    if (PLongWord(P1+8)^ <> PLongWord(P2+8)^) then goto Fail;
+    if (PLongWord(P1+12)^ <> PLongWord(P2+12)^) then goto Fail;
+    if (PLongWord(P1+16)^ <> PLongWord(P2+16)^) then goto Fail;
+    if (PLongWord(P1+20)^ <> PLongWord(P2+20)^) then goto Fail;
+    if (PLongWord(P1+24)^ <> PLongWord(P2+24)^) then goto Fail;
+    if (PLongWord(P1+28)^ <> PLongWord(P2+28)^) then goto Fail;
+    {$ENDIF}
+    Inc(P1, 32); Inc(P2, 32);
   end;
-  while Len > 16 do //compare 16 Bytes per loop
+  while P1+8 < PEnd do //compare 8 Bytes per loop
   begin
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    Dec(Len, SizeOf(UInt64) shl 1)
+    {$IFDEF CPUX64}
+    if (PUInt64(P1)^ <> PUInt64(P2)^) then goto Fail; //not overflow save so let's check the bytes
+    {$ELSE}
+    if (PLongWord(P1)^ <> PLongWord(P2)^) then goto Fail;
+    if (PLongWord(P1+4)^ <> PLongWord(P2+4)^) then goto Fail;
+    {$ENDIF}
+    Inc(P1, 8); Inc(P2, 8);
   end;
-  while Len > SizeOf(UInt64) do //compare 8 Bytes per loop
+Fail:
+  while P1 < PEnd do
   begin
-    if (PUInt64(P1T)^ - PUInt64(P2T)^) <> 0 then goto Fail8;
-    Inc(P1T, SizeOf(UInt64)); Inc(P2T, SizeOf(UInt64));
-    Dec(Len, SizeOf(UInt64))
-  end;
-  while Len > 0 do
-  begin
-    Result := PByte(P1T)^ - PByte(P2T)^;
+    Result := PByte(P1)^ - PByte(P2)^; //overflow save
     if Result = 0 then
     begin
-      Inc(P1T); Inc(P2T);
+      Inc(P1); Inc(P2);
     end
     else
       Exit;
-    Dec(Len);
   end;
-  Exit;
-  Fail8:
-    for N := 0 to SizeOf(UInt64)-1 do
-  {$ELSE}
-  while Len > SizeOf(LongWord) shl 2 do //compare 16 Bytes per loop
-  begin
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord)shl 2);
-  end;
-  while Len > 8 do if Len > 8 then //compare 8 Bytes per loop
-  begin
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord) shl 1)
-  end;
-  while Len > SizeOf(LongWord) do //compare 4 Bytes per loop
-  begin
-    if (PLongWord(P1T)^ - PLongWord(P2T)^) <> 0 then goto Fail4;
-    Inc(P1T, SizeOf(LongWord)); Inc(P2T, SizeOf(LongWord));
-    Dec(Len, SizeOf(LongWord))
-  end;
-  while Len > 0 do
-  begin
-    Result := PByte(P1T)^ - PByte(P2T)^;
-    if Result = 0 then
-    begin
-      Inc(P1T); Inc(P2T);
-    end
-    else
-      Exit;
-    Dec(Len);
-  end;
-  Exit;
-  Fail4:
-    for N := 0 to SizeOf(LongWord)-1 do
-  {$ENDIF}
-    begin
-      Result := PByte(P1T)^ - PByte(P2T)^;
-      if Result = 0 then
-      begin
-        Inc(P1T);
-        Inc(P2T);
-      end
-      else
-        Exit;
-    end;
 end;
-{$IFDEF OverflowCheckEnabled}
-  {$Q+}
-{$endif}
-{$IFDEF RangeCheckEnabled}
-  {$R+}
-{$endif}
 
 {**
   Compares two PAnsiChars without stopping at #0
@@ -2927,8 +2873,14 @@ begin
 end;
 
 {**
-  Performs Alexandr Sharakhov hybrid sort algorithm for the list.
+  Origial Autor: Aleksandr Sharahov
   see http://guildalfa.ru/alsha/
+  Performs hybrid sort algorithm for the list.
+  changes by EgonHugeist:
+  Replace cardinal casts by using our NativeUInt to make it 64Bit compatible too
+  Note Alexandr wrote: For max of speed it is very impotant to use procedures
+    QuickSort_0AA and HybridSort_0AA as is (not in class, not included
+    in other procedure, and not changed parameters and code).
 }
 //~1.57 times faster than Delphi QuickSort on E6850
 {$UNDEF SaveQ} {$IFOPT Q+} {$Q-} {$DEFINE SaveQ} {$ENDIF}
@@ -2938,91 +2890,94 @@ const
   InsLast = InsCount-1;
   SOP = SizeOf(pointer);
   MSOP = NativeUInt(-SOP);
-
-procedure TZSortedList.HybridSortSha_0AA(SortList: PPointerList; Count: integer; SCompare: TZListSortCompare);
+{$IFDEF FPC}
+  {$HINTS OFF}
+{$ENDIF}
+procedure QuickSortSha_0AA(L, R: NativeUInt; Compare: TZListSortCompare);
 var
-  I, J, L, R: NativeUInt;
-  procedure QuickSortSha_0AA(L, R: NativeUInt; SCompare: TZListSortCompare);
-  var
-    I, J, P, T: NativeUInt;
-  begin;
-    while true do
+  I, J, P, T: NativeUInt;
+begin;
+  while true do
+  begin
+    I := L;
+    J := R;
+    if J-I <= InsLast * SOP then break;
+    T := (J-I) shr 1 and MSOP + I;
+
+    if Compare(PPointer(J)^, PPointer(I)^)<0 then
     begin
-      I := L;
-      J := R;
-      if J-I <= InsLast * SOP then break;
-      T := (J-I) shr 1 and MSOP + I;
-
-      if SCompare(PPointer(J)^, PPointer(I)^)<0 then
+      P := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(J)^;
+      PNativeUInt(J)^ := P;
+    end;
+    P := PNativeUInt(T)^;
+    if Compare(Pointer(P), PPointer(I)^)<0 then
+    begin
+      P := PNativeUInt(I)^;
+      PNativeUInt(I)^ := PNativeUInt(T)^;
+      PNativeUInt(T)^ := P;
+    end
+    else
+      if Compare(PPointer(J)^, Pointer(P)) < 0 then
       begin
-        P := PNativeUInt(I)^;
-        PNativeUInt(I)^ := PNativeUInt(J)^;
-        PNativeUInt(J)^ := P;
-      end;
-      P := PNativeUInt(T)^;
-      if SCompare(Pointer(P), PPointer(I)^)<0 then
-      begin
-        P := PNativeUInt(I)^;
-        PNativeUInt(I)^ := PNativeUInt(T)^;
+        P := PNativeUInt(J)^;
+        PNativeUInt(J)^ := PNativeUInt(T)^;
         PNativeUInt(T)^ := P;
-      end
-      else
-        if SCompare(PPointer(J)^, Pointer(P)) < 0 then
-        begin
-          P := PNativeUInt(J)^;
-          PNativeUInt(J)^ := PNativeUInt(T)^;
-          PNativeUInt(T)^ := P;
-        end;
-
-      repeat
-        Inc(I,SOP);
-      until not (SCompare(PPointer(I)^, Pointer(P)) < 0);
-      repeat
-        Dec(J,SOP)
-      until not (SCompare(pointer(P), PPointer(J)^) < 0);
-      if I < J then
-        repeat
-          T := PNativeUInt(I)^;
-          PNativeUInt(I)^ := PNativeUInt(J)^;
-          PNativeUInt(J)^ := T;
-          repeat
-            Inc(I,SOP);
-          until not (SCompare(PPointer(I)^, pointer(P)) < 0 );
-          repeat
-            Dec(J,SOP);
-          until not (SCompare(pointer(P), PPointer(J)^) < 0);
-        until I >= J;
-      Dec(I,SOP); Inc(J,SOP);
-
-      if I-L <= R-J then
-      begin
-        if L + InsLast * SOP < I then
-          QuickSortSha_0AA(L, I, SCompare);
-        L := J;
-      end
-      else
-      begin
-        if J + InsLast * SOP < R
-          then QuickSortSha_0AA(J, R, SCompare);
-        R := I;
       end;
+
+    repeat
+      Inc(I,SOP);
+    until not (Compare(PPointer(I)^, Pointer(P)) < 0);
+    repeat
+      Dec(J,SOP)
+    until not (Compare(pointer(P), PPointer(J)^) < 0);
+    if I < J then
+      repeat
+        T := PNativeUInt(I)^;
+        PNativeUInt(I)^ := PNativeUInt(J)^;
+        PNativeUInt(J)^ := T;
+        repeat
+          Inc(I,SOP);
+        until not (Compare(PPointer(I)^, pointer(P)) < 0 );
+        repeat
+          Dec(J,SOP);
+        until not (Compare(pointer(P), PPointer(J)^) < 0);
+      until I >= J;
+    Dec(I,SOP); Inc(J,SOP);
+
+    if I-L <= R-J then
+    begin
+      if L + InsLast * SOP < I then
+        QuickSortSha_0AA(L, I, Compare);
+      L := J;
+    end
+    else
+    begin
+      if J + InsLast * SOP < R
+        then QuickSortSha_0AA(J, R, Compare);
+      R := I;
     end;
   end;
+end;
+
+procedure HybridSortSha_0AA(List: PPointerList; Count: integer; Compare: TZListSortCompare);
+var
+  I, J, {$IFDEF WITH_IE200706094}J2,{$ENDIF} L, R: NativeUInt;
 begin;
   if (List<>nil) and (Count>1) then
   begin
-    L := NativeUInt(@List[0]);
-    R := NativeUInt(@List[Count-1]);
+    L := NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[0]);
+    R := NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[Count-1]);
     J := R;
     if Count-1 > InsLast then
     begin
-      J:=NativeUInt(@List[InsLast]);
-      QuickSortSha_0AA(L, R, SCompare);
+      J:=NativeUInt(@List{$IFDEF TLIST_ISNOT_PPOINTERLIST}^{$ENDIF}[InsLast]);
+      QuickSortSha_0AA(L, R, Compare);
     end;
 
     I := L;
     repeat;
-      if SCompare(PPointer(J)^, PPointer(I)^) < 0 then I:=J;
+      if Compare(PPointer(J)^, PPointer(I)^) < 0 then I:=J;
       dec(J,SOP);
     until J <= L;
 
@@ -3039,17 +2994,25 @@ begin;
       repeat;
         if J >= R then exit;
         inc(J,SOP);
-      until SCompare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
+      {$IFDEF WITH_IE200706094} //FPC 64Bit raises an internal Error 200706094!
+        J2 := J+MSOP;
+      until Compare(PPointer(J)^,PPointer(J2)^) < 0;
+      {$ELSE}
+      until Compare(PPointer(J)^,PPointer(J+MSOP)^) < 0;
+      {$ENDIF}
       I := J - SOP;
       L := PNativeUInt(J)^;
       repeat;
         PNativeUInt(I+SOP)^ := PNativeUInt(I)^;
         dec(I,SOP);
-      until not (SCompare(Pointer(L),PPointer(I)^) < 0);
+      until not (Compare(Pointer(L),PPointer(I)^) < 0);
       PNativeUInt(I + SOP)^ := L;
     end;
   end;
 end;
+{$IFDEF FPC}
+  {$HINTS ON}
+{$ENDIF}
 {$IFDEF SaveQ} {$Q+} {$UNDEF SaveQ} {$ENDIF}
 {$IFDEF SaveR} {$R+} {$UNDEF SaveR} {$ENDIF}
 
@@ -3059,14 +3022,14 @@ end;
 }
 procedure TZSortedList.Sort(Compare: TZListSortCompare);
 begin
-  {$IFDEF DELPHI16_UP}
+  {$IFDEF TLIST_ISNOT_PPOINTERLIST}
   HybridSortSha_0AA(@List, Count, Compare);
   {$ELSE}
   HybridSortSha_0AA(List, Count, Compare);
   {$ENDIF}
   (*
   if (List <> nil) and (Count > 0) then
-    {$IFDEF DELPHI16_UP}
+    {$IFDEF TLIST_ISNOT_PPOINTERLIST}
     QuickSort(@List, 0, Count - 1, Compare);
     {$ELSE}
     QuickSort(List, 0, Count - 1, Compare);
@@ -3258,30 +3221,16 @@ begin
 end;
 
 function ASCII7ToUnicodeString(const Src: RawByteString): ZWideString;
-var i, l: integer;
 begin
   if Pointer(Src) = nil then
     Result := ''
   else
-  begin
-    l := {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^;
-    SetString(result,nil,l);
-    for i := 0 to l-1 do
-      PWordArray(result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  end;
+    ZSetString(Pointer(Src), {%H-}PLengthInt(NativeUInt(Src) - StringLenOffSet)^, Result);
 end;
 
-function ASCII7ToUnicodeString(const Src: PAnsiChar; const Len: Cardinal): ZWideString;
-var i: integer;
+function ASCII7ToUnicodeString(Src: PAnsiChar; const Len: LengthInt): ZWideString;
 begin
-  if (Src = nil) or (Len = 0) then
-    Result := ''
-  else
-  begin
-    System.SetString(result, nil, Len);
-    for i := 0 to Len-1 do
-      PWordArray(Result)[i] := PByteArray(Src)[i]; //0..255 equals to widechars
-  end;
+  ZSetString(Src, Len, Result{%H-});
 end;
 
 function UnicodeStringToASCII7(const Src: ZWideString): RawByteString;
@@ -3309,7 +3258,7 @@ begin
 end;
 
 
-function UnicodeStringToASCII7(const Src: PWideChar; const Len: Cardinal): RawByteString;
+function UnicodeStringToASCII7(const Src: PWideChar; const Len: LengthInt): RawByteString;
 var i: integer;
 begin
   if (Src = nil) or (Len = 0) then
@@ -3369,10 +3318,27 @@ begin
   Result := ASCII7ToUnicodeString(FloatToSqlRaw(Value));
 end;
 
+//EgonHugeist: my RTL replacemnet is 2x faster
 procedure ZBinToHex(Buffer, Text: PAnsiChar; const Len: LengthInt);
-var I: LengthInt;
+var
+  PEnd: PAnsiChar;
 begin
-  for i := 0 to Len-1 do
+  PEnd := Buffer+Len-8;
+  while Buffer < PEnd do //try to convert 8Byte per loop
+  begin
+    PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
+    PWord(Text+2)^ := TwoDigitLookupHexW[Ord((Buffer+1)^)];
+    PWord(Text+4)^ := TwoDigitLookupHexW[Ord((Buffer+2)^)];
+    PWord(Text+6)^ := TwoDigitLookupHexW[Ord((Buffer+3)^)];
+    PWord(Text+8)^ := TwoDigitLookupHexW[Ord((Buffer+4)^)];
+    PWord(Text+10)^ := TwoDigitLookupHexW[Ord((Buffer+5)^)];
+    PWord(Text+12)^ := TwoDigitLookupHexW[Ord((Buffer+6)^)];
+    PWord(Text+14)^ := TwoDigitLookupHexW[Ord((Buffer+7)^)];
+    Inc(Buffer, 8);
+    Inc(Text, 16);
+  end;
+  Inc(PEnd, 8);
+  while Buffer < PEnd do
   begin
     PWord(Text)^ := TwoDigitLookupHexW[Ord(Buffer^)];
     Inc(Buffer);
@@ -3380,10 +3346,27 @@ begin
   end;
 end;
 
+//EgonHugeist: my RTL replacemnet is 5x faster (BinToHex+Wide-Conv)
 procedure ZBinToHex(Buffer: PAnsiChar; Text: PWideChar; const Len: LengthInt);
-var I: LengthInt;
+var
+  PEnd: PAnsiChar;
 begin
-  for i := 0 to Len-1 do
+  PEnd := Buffer+Len-8;
+  while Buffer < PEnd do  //try to convert 8Byte per loop
+  begin
+    PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
+    PLongWord(Text+2)^ := TwoDigitLookupHexLW[Ord((Buffer+1)^)];
+    PLongWord(Text+4)^ := TwoDigitLookupHexLW[Ord((Buffer+2)^)];
+    PLongWord(Text+6)^ := TwoDigitLookupHexLW[Ord((Buffer+3)^)];
+    PLongWord(Text+8)^ := TwoDigitLookupHexLW[Ord((Buffer+4)^)];
+    PLongWord(Text+10)^ := TwoDigitLookupHexLW[Ord((Buffer+5)^)];
+    PLongWord(Text+12)^ := TwoDigitLookupHexLW[Ord((Buffer+6)^)];
+    PLongWord(Text+14)^ := TwoDigitLookupHexLW[Ord((Buffer+7)^)];
+    Inc(Buffer, 8);
+    Inc(Text, 16);
+  end;
+  Inc(PEnd, 8);
+  while Buffer < PEnd do
   begin
     PLongWord(Text)^ := TwoDigitLookupHexLW[Ord(Buffer^)];
     Inc(Buffer);
@@ -3409,10 +3392,241 @@ begin
   end;
 end;
 
+//EgonHugeist: my conversion is 10x faster than IDE's
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PAnsiChar;
+  const SetTerm: Boolean = False);
+var
+  D1: Cardinal;
+  W: Word;
+  I: Integer;
+begin
+  Dest^ := '{';
+  Inc(Dest);
+  D1 := PCardinal(Source)^; //Process D1
+  for i := 3 downto 0 do
+  begin
+    PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(@D1)^];
+    if D1 > 0 then D1 := D1 shr 8;
+  end;
+  Inc(Dest, 8);
+  Dest^ := '-';
+  W := PWord(Source+4)^; //Process D2
+  PWord(Dest+3)^ := TwoDigitLookupHexW[PByte(@W)^];
+  if W > 0 then W := W shr 8;
+  PWord(Dest+1)^ := TwoDigitLookupHexW[PByte(@W)^];
+  Inc(Dest, 5);
+  Dest^ := '-';
+  W := PWord(Source+6)^; //Process D3
+  PWord(Dest+3)^ := TwoDigitLookupHexW[PByte(@W)^];
+  if W > 0 then W := W shr 8;
+  PWord(Dest+1)^ := TwoDigitLookupHexW[PByte(@W)^];
+  Inc(Dest, 5);
+  (Dest)^ := '-'; //Process D4
+  PWord(Dest+1)^ := TwoDigitLookupHexW[PByte(Source+8)^];
+  PWord(Dest+3)^ := TwoDigitLookupHexW[PByte(Source+9)^];
+  (Dest+5)^ := '-';
+  Inc(Dest, 6);
+  for i := 0 to 5 do
+    PWord(Dest+(I shl 1))^ := TwoDigitLookupHexW[PByte(Source+10+i)^];
+  (Dest+12)^ := '}';
+  if SetTerm then (Dest+13)^ := #0; //set trailing term
+end;
+
+procedure GUIDToBuffer(const Source: PAnsiChar; Dest: PWideChar; const SetTerm: Boolean = False);
+var
+  I: Integer;
+  D1: Cardinal;
+  W: Word;
+begin
+  Dest^ := '{';
+  Inc(Dest);
+  D1 := PCardinal(Source)^; //Process D1
+  for i := 3 downto 0 do
+  begin
+    PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(@D1)^];
+    if D1 > 0 then D1 := D1 shr 8;
+  end;
+  Inc(Dest, 8);
+  Dest^ := '-';
+  W := PWord(Source+4)^; //Process D2
+  PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
+  if W > 0 then W := W shr 8;
+  PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
+  Inc(Dest, 5);
+  Dest^ := '-';
+  W := PWord(Source+6)^; //Process D3
+  PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(@W)^];
+  if W > 0 then W := W shr 8;
+  PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(@W)^];
+  Inc(Dest, 5);
+  (Dest)^ := '-'; //Process D4
+  PLongWord(Dest+1)^ := TwoDigitLookupHexLW[PByte(Source+8)^];
+  PLongWord(Dest+3)^ := TwoDigitLookupHexLW[PByte(Source+9)^];
+  (Dest+5)^ := '-';
+  Inc(Dest, 6);
+  for i := 0 to 5 do
+    PLongWord(Dest+(I shl 1))^ := TwoDigitLookupHexLW[PByte(Source+10+i)^];
+  (Dest+12)^ := '}';
+  if SetTerm then (Dest+13)^ := #0; //set trailing term
+end;
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToRaw(const GUID: TGUID): RawByteString; overload;
+begin
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(PAnsiChar(@GUID.D1), PAnsiChar(Pointer(Result)));
+end;
+
+{$IFNDEF WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
+type
+  EArgumentException = Class(Exception);
+{$ENDIF}
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToRaw(const Bts: TBytes): RawByteString; overload;
+begin
+  if Length(Bts) <> 16 then
+    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Pointer(Bts), PAnsiChar(Pointer(Result)));
+end;
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToRaw(Buffer: Pointer; Len: NativeInt): RawByteString; overload;
+begin
+  if (Buffer = Nil) or (Len <> 16) then
+    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Buffer, PAnsiChar(Pointer(Result)));
+end;
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToUnicode(const GUID: TGUID): ZWideString; overload;
+begin
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(PAnsiChar(@GUID.D1), PWideChar(Pointer(Result)));
+end;
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToUnicode(const Bts: TBytes): ZWideString; overload;
+begin
+  if Length(Bts) <> 16 then
+    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Pointer(Bts), PWideChar(Pointer(Result)));
+end;
+
+//EgonHugeist: my conversion is 10x faster than IDE's
+function GUIDToUnicode(Buffer: Pointer; Len: NativeInt): ZWideString; overload;
+begin
+  if (Buffer = Nil) or (Len <> 16) then
+    raise EArgumentException.CreateResFmt(@SInvalidGuidArray, [16]);
+  ZSetString(nil, 38, Result{%H-});
+  GUIDToBuffer(Buffer, PWideChar(Pointer(Result)));
+end;
+
+{**
+  EgonHugeist: my conversion is 1,5x faster than IDE's
+  converty hex-dezimal guid-string into a binary format
+  @param Src a Pointer to the ansi Source-String
+  @param Dest a Pointer to a 16-Bytes buffer
+    Note it works with TGUID using @GUID.D1 and all other Buffers
+}
+procedure ValidGUIDToBinary(Src, Dest: PAnsiChar);
+  function HexChar(c: AnsiChar): Byte;
+  begin
+    case c of
+      '0'..'9':  Result := Byte(c) - Byte('0');
+      'a'..'f':  Result := (Byte(c) - Byte('a')) + 10;
+      'A'..'F':  Result := (Byte(c) - Byte('A')) + 10;
+    else
+      Result := 0;
+    end;
+  end;
+
+  function HexByte(p: PAnsiChar): Byte;
+  begin
+    Result := Byte((HexChar(p^) shl 4) + HexChar((p+1)^));
+  end;
+var
+  i: Integer;
+begin
+  Inc(Src);
+  for i := 0 to 3 do //process D1
+    PByte(dest+I)^ := HexByte(Src+(3-i) shl 1);
+  Inc(src, 9);
+  Inc(dest, 4);
+  for i := 0 to 1 do //D2, D3
+  begin
+    PByte(dest)^ := HexByte(src+2);
+    PByte(dest+1)^ := HexByte(src);
+    Inc(dest, 2);
+    Inc(src, 5);
+  end;
+  PByte(dest)^ := HexByte(src);
+  PByte(dest+1)^ := HexByte(src+2);
+  Inc(dest, 2);
+  Inc(src, 5);
+  for i := 0 to 5 do
+  begin
+    PByte(dest)^ := HexByte(src);
+    Inc(dest);
+    Inc(src, 2);
+  end;
+end;
+
+{**
+  EgonHugeist: my conversion is 1,5x faster than IDE's
+  converty hex-dezimal unicode guid-string into a binary format
+  @param Src a Pointer to the Unicode Source-String
+  @param Dest a Pointer to a 16-Bytes buffer
+    Note it works with TGUID using @GUID.D1 and all other Buffers
+}
+procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar);
+  function HexChar(c: WideChar): Byte;
+  begin
+    case c of
+      '0'..'9':  Result := Byte(c) - Byte('0');
+      'a'..'f':  Result := (Byte(c) - Byte('a')) + 10;
+      'A'..'F':  Result := (Byte(c) - Byte('A')) + 10;
+    else
+      Result := 0;
+    end;
+  end;
+
+  function HexByte(p: PWideChar): Byte;
+  begin
+    Result := Byte((HexChar(p^) shl 4) + HexChar((p+1)^));
+  end;
+var
+  i: Integer;
+begin
+  Inc(Src);
+  for i := 0 to 3 do //process D1
+    PByte(dest+I)^ := HexByte(Src+(3-i) shl 1);
+  Inc(src, 9);
+  Inc(dest, 4);
+  for i := 0 to 1 do //D2, D3
+  begin
+    PByte(dest)^ := HexByte(src+2);
+    PByte(dest+1)^ := HexByte(src);
+    Inc(dest, 2);
+    Inc(src, 5);
+  end;
+  PByte(dest)^ := HexByte(src);
+  PByte(dest+1)^ := HexByte(src+2);
+  Inc(dest, 2);
+  Inc(src, 5);
+  for i := 0 to 5 do
+  begin
+    PByte(dest)^ := HexByte(src);
+    Inc(dest);
+    Inc(src, 2);
+  end;
+end;
+
 initialization
-
 HexFiller;  //build up lookup table
-
 
 end.
 

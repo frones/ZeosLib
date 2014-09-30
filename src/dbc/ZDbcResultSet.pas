@@ -346,7 +346,9 @@ type
     procedure MoveToCurrentRow; virtual;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const ColumnDirs: TBooleanDynArray): Integer; virtual;
+      const ColumnDirs: TBooleanDynArray; const CompareFuncs: TCompareFuncs): Integer; virtual;
+    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
+      const ColumnDirs: TBooleanDynArray}): TCompareFuncs; virtual;
 
     function GetStatement: IZStatement; virtual;
 
@@ -511,8 +513,59 @@ type
 
 implementation
 
-uses ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
-  {$IFDEF WITH_UNITANISSTRINGS}, AnsiStrings{$ENDIF};
+uses Math, ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
+  {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+
+function CompareNothing(const V1, V2): Integer; //emergency exit for types we cant sort like arrays, dataset ...
+begin
+  Result := 0;
+end;
+
+function CompareBoolean(const V1, V2): Integer;
+begin
+  Result := Ord(TZVariant(V1).VBoolean)-Ord(TZVariant(V2).VBoolean);
+end;
+
+function CompareInt64(const V1, V2): Integer;
+begin
+  Result := Ord(TZVariant(V1).VInteger > TZVariant(V2).VInteger)-
+            Ord(TZVariant(V1).VInteger < TZVariant(V2).VInteger);
+end;
+
+function CompareUInt64(const V1, V2): Integer;
+begin
+  Result := Ord(TZVariant(V1).VUInteger > TZVariant(V2).VUInteger)-
+            Ord(TZVariant(V1).VUInteger < TZVariant(V2).VUInteger);
+end;
+
+function CompareFloat(const V1, V2): Integer;
+begin
+  Result := Ord(TZVariant(V1).VFloat > TZVariant(V2).VFloat)-
+            Ord(TZVariant(V1).VFloat < TZVariant(V2).VFloat);
+end;
+
+function CompareDateTime(const V1, V2): Integer;
+begin
+  Result := Ord(TZVariant(V1).VDateTime > TZVariant(V2).VDateTime)-
+            Ord(TZVariant(V1).VDateTime < TZVariant(V2).VDateTime);
+end;
+
+function CompareBytes(const V1, V2): Integer;
+begin
+  Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
+    Max(Length(TZVariant(V1).VBytes), Length(TZVariant(V2).VBytes)));
+end;
+
+function CompareRawByteString(const V1, V2): Integer;
+begin
+  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+    AnsiStrComp(PAnsiChar(TZVariant(V1).VRawByteString), PAnsiChar(TZVariant(V2).VRawByteString));
+end;
+
+function CompareUnicodeString(const V1, V2): Integer;
+begin
+  Result := WideCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+end;
 
 { TZAbstractResultSet }
 
@@ -1441,45 +1494,31 @@ begin
 {$ENDIF}
   Metadata := TZAbstractResultSetMetadata(FMetadata);
 {$IFNDEF DISABLE_CHECKING}
-  if (Metadata = nil) or (ColumnIndex <= 0)
-    or (ColumnIndex > Metadata.GetColumnCount) then
-  begin
+  if (Metadata = nil) or (ColumnIndex < FirstDbcIndex)
+    or (ColumnIndex > Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF}) then
     raise EZSQLException.Create(
       Format(SColumnIsNotAccessable, [ColumnIndex]));
-  end;
 {$ENDIF}
 
   case Metadata.GetColumnType(ColumnIndex) of
     stBoolean:
-      begin
-        Result.VType := vtBoolean;
-        Result.VBoolean := GetBoolean(ColumnIndex);
-      end;
-    stByte, stSmall, stInteger, stLong:
-      begin
-        Result.VType := vtInteger;
-        Result.VInteger := GetLong(ColumnIndex);
-      end;
+      Result := EncodeBoolean(GetBoolean(ColumnIndex));
+    stShort, stSmall, stInteger, stLong:
+      Result := EncodeInteger(GetLong(ColumnIndex));
+    stByte, stWord, stLongWord, stULong:
+      Result := EncodeUInteger(GetULong(ColumnIndex));
     stFloat, stDouble, stBigDecimal:
-      begin
-        Result.VType := vtFloat;
-        Result.VFloat := GetBigDecimal(ColumnIndex);
-      end;
+      Result := EncodeFloat(GetBigDecimal(ColumnIndex));
     stDate, stTime, stTimestamp:
-      begin
-        Result.VType := vtDateTime;
-        Result.VDateTime := GetTimestamp(ColumnIndex);
-      end;
-    stString, stBytes, stAsciiStream, stBinaryStream:
-      begin
-        Result.VType := vtString;
-        Result.VString := String(GetString(ColumnIndex));
-      end;
-    stUnicodeString, stUnicodeStream:
-      begin
-        Result.VType := vtUnicodeString;
-        Result.VUnicodeString := GetUnicodeString(ColumnIndex);
-      end;
+      Result := EncodeDateTime(GetTimestamp(ColumnIndex));
+    stBytes, stBinaryStream:
+      Result := EncodeBytes(GetBytes(ColumnIndex));
+    stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+      if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+          (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+        Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex))
+      else
+        Result := EncodeRawByteString(GetRawByteString(ColumnIndex));
     else
       Result.VType := vtNull;
   end;
@@ -3726,24 +3765,13 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray): Integer;
+  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray;
+  const CompareFuncs: TCompareFuncs): Integer;
 var
   I: Integer;
   ColumnIndex: Integer;
   SaveRowNo: Integer;
   Value1, Value2: TZVariant;
-
-  function CompareFloat(Value1, Value2: Extended): Integer;
-  begin
-    Value1 := Value1 - Value2;
-    if Value1 > 0 then
-      Result := 1
-    else if Value1 < 0 then
-      Result := -1
-    else
-      Result := 0;
-  end;
-
 begin
   Result := 0;
   SaveRowNo := RowNo;
@@ -3756,6 +3784,7 @@ begin
       Value1 := GetValue(ColumnIndex);
       MoveAbsolute(Row2);
       Value2 := GetValue(ColumnIndex);
+      //Compare(Value1, Value2, CompareInt64);
 
       { Checks for both Null columns. }
       if (Value1.VType = vtNull) and (Value2.VType = vtNull) then
@@ -3771,27 +3800,7 @@ begin
           Result := -Result;
         Break;
       end;
-      case Value1.VType of
-        vtBoolean:
-          begin
-            if Value1.VBoolean = Value2.VBoolean then
-              Result := 0
-            else if Value1.VBoolean = True then
-              Result := 1
-            else
-              Result := -1;
-          end;
-        vtInteger:
-          Result := Value1.VInteger - Value2.VInteger;
-        vtFloat:
-          Result := CompareFloat(Value1.VFloat, Value2.VFloat);
-        vtDateTime:
-          Result := CompareFloat(Value1.VDateTime, Value2.VDateTime);
-        vtString:
-          Result := AnsiCompareStr(Value1.VString, Value2.VString);
-        vtUnicodeString:
-          Result := WideCompareStr(Value1.VUnicodeString, Value2.VUnicodeString);
-      end;
+      Result := CompareFuncs[i](Value1, Value2);
       if Result <> 0 then
       begin
         if not ColumnDirs[I] then
@@ -3804,6 +3813,35 @@ begin
   end;
 end;
 
+function TZAbstractResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
+  const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
+var I: Integer;
+begin
+  SetLength(Result, Length(ColumnIndices));
+  for i := low(ColumnIndices) to high(ColumnIndices) do
+    case TZAbstractResultSetMetadata(FMetadata).GetColumnType(ColumnIndices[i]) of
+      stBoolean:
+        Result[i] := CompareBoolean;
+      stShort, stSmall, stInteger, stLong:
+        Result[i] := CompareInt64;
+      stByte, stWord, stLongWord, stULong:
+        Result[i] := CompareUInt64;
+      stFloat, stDouble, stBigDecimal:
+        Result[i] := CompareFloat;
+      stDate, stTime, stTimestamp:
+        Result[i] := CompareDateTime;
+      stBytes, stBinaryStream, stGUID:
+        Result[i] := CompareBytes;
+      stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+        if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+            (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+          Result[i] := CompareUnicodeString
+        else
+          Result[I] := CompareRawByteString;
+      else
+        Result[i] := CompareNothing;
+    end;
+end;
 {**
   Returns the <code>Statement</code> object that produced this
   <code>ResultSet</code> object.

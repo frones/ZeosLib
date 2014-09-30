@@ -196,7 +196,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
   {$DEFINE WITH_FASTCODE_INTTOSTR} //Since XE2 the full purepascal IntToStr func is included
@@ -208,7 +208,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -220,7 +220,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
@@ -233,7 +233,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP}
@@ -247,7 +247,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
@@ -262,7 +262,7 @@
   {$DEFINE DELPHI12_UP} // Used in code
   {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
-  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
@@ -309,6 +309,7 @@
   {$DEFINE WITH_PARAM_ASLARGEINT}       // TParam.AsLargint is supported
   {$DEFINE WITH_VARIANT_UINT64}         // System.TVariant supports UInt64 Values
   {$DEFINE WITH_VARIANT_UNICODESTRING}  // System.TVariant supports UnicodeString Values
+  {$DEFINE WITH_EARGUMENTEXCEPTION}     // EArgumentException is supported
 {$ENDIF}
 
 {$IFDEF DELPHI14_UP}
@@ -328,6 +329,7 @@
       {$DEFINE PUREPASCAL}
     {$ENDIF}
   {$ENDIF}
+  {$DEFINE WITH_RTLCONSTS_SInvalidGuidArray}
 {$ENDIF}
 
 {$IFDEF VER150BELOW}
@@ -348,6 +350,8 @@
   {$DEFINE WITH_MAXLISTSIZE_DEPRECATED} //Since XE2 64Bit Integer = Int64 this value is deprecated
   {$DEFINE WITH_VCL_PREFIX}
   {$DEFINE WITH_SYSTEM_PREFIX}
+  {$DEFINE TLIST_ISNOT_PPOINTERLIST} //since XE2 TList is is TPointerList not PPointerList
+  {$DEFINE HAVE_TRUE_NATIVE_TYPES} //since XE2 NativeInt, NativeUint are fixed and behave like FPC SizeInt, PtrInt (4/8Byte)
 {$ENDIF}
 
 {$IFDEF DELPHI17_UP}
@@ -548,9 +552,6 @@
 // The SynEdit component must be installed on your system.
 // You can get SynEdit at http://synedit.sourceforge.net/
 {.$DEFINE USE_SYNEDIT}
-
-//NO COLUMN-LIMITATION!
-{.$DEFINE NO_COLUMN_LIMIT}
 
 //run ZSysUtils benchmarks
 {.$DEFINE BENCHMARK}
