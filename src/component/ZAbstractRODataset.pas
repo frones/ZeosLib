@@ -222,7 +222,7 @@ type
     FSortedFields: string;
     FSortedFieldRefs: TObjectDynArray;
     FSortedFieldIndices: TIntegerDynArray;
-    FSortedFieldDirs: TBooleanDynArray;
+    FSortedComparsionKinds: TComparisonKindArray;
     FSortedOnlyDataFields: Boolean;
     FCompareFuncs: TCompareFuncs;
     FSortRowBuffer1: PZRowBuffer;
@@ -3767,12 +3767,14 @@ begin
     end;
     FSortedFields := Value;
     if Active then
-      {InternalSort;}
-      {bangfauzan modification}
-      if (FSortedFields = '') then
-        Self.InternalRefresh
+      if not ({$IFDEF FPC}Updatable{$ELSE}Self is TZAbstractDataSet{$ENDIF}) then
+        InternalSort //enables clearsort which prevents rereading data
       else
-        InternalSort;
+        {bangfauzan modification}
+        if (FSortedFields = '') then
+          InternalRefresh
+        else
+          InternalSort;
       {end of bangfauzan modification}
   end;
 end;
@@ -4653,12 +4655,12 @@ var
   RowNo: NativeInt;
   SavedRowBuffer: PZRowBuffer;
 begin
-  if FIndexFieldNames = '' then exit; {bangfauzan addition}
+  //if FIndexFieldNames = '' then exit; {bangfauzan addition}
   if (ResultSet <> nil) and not IsUniDirectional then
   begin
     FIndexFieldNames := Trim(FIndexFieldNames); {bangfauzan modification}
     DefineSortedFields(Self, {FSortedFields} FIndexFieldNames {bangfauzan modification},
-    FSortedFieldRefs, FSortedFieldDirs, FSortedOnlyDataFields);
+    FSortedFieldRefs, FSortedComparsionKinds, FSortedOnlyDataFields);
 
     if (CurrentRow <= CurrentRows.Count) and (CurrentRows.Count > 0)
       and (CurrentRow > 0) then
@@ -4681,7 +4683,7 @@ begin
         for I := 0 to High(FSortedFieldRefs) do
           FSortedFieldIndices[I] := TField(FSortedFieldRefs[I]).FieldNo{$IFDEF GENERIC_INDEX}-1{$ENDIF};
         { Performs a sorting. }
-        FCompareFuncs := ResultSet.GetCompareFuncs(FSortedFieldIndices);
+        FCompareFuncs := ResultSet.GetCompareFuncs(FSortedFieldIndices, FSortedComparsionKinds);
         CurrentRows.Sort(LowLevelSort);
       end
       else
@@ -4700,7 +4702,7 @@ begin
               TField(FSortedFieldRefs[I]));
           end;
           { Performs sorting. }
-          FCompareFuncs := RowAccessor.GetCompareFuncs(FSortedFieldIndices);
+          FCompareFuncs := RowAccessor.GetCompareFuncs(FSortedFieldIndices, FSortedComparsionKinds);
           CurrentRows.Sort(HighLevelSort);
         finally
           { Disposed buffers for sorting. }
@@ -4727,7 +4729,8 @@ end;
 }
 function TZAbstractRODataset.ClearSort(Item1, Item2: Pointer): Integer;
 begin
-  Result := NativeInt({%H-}NativeUInt(Item1) - NativeUInt(Item2));
+  //no real pointer addresses here, just a Integer represented as Pointer! -> overflow save!
+  Result := {%H-}NativeInt(Item1) - {%H-}NativeInt(Item2);
 end;
 
 {**
@@ -4771,7 +4774,7 @@ begin
 
   { Compare both records. }
   Result := RowAccessor.CompareBuffers(FSortRowBuffer1, FSortRowBuffer2,
-    FSortedFieldIndices, FSortedFieldDirs, FCompareFuncs);
+    FSortedFieldIndices, FCompareFuncs);
 end;
 
 {**
@@ -4786,7 +4789,7 @@ end;
 function TZAbstractRODataset.LowLevelSort(Item1, Item2: Pointer): Integer;
 begin
   Result := ResultSet.CompareRows(Integer(Item1), Integer(Item2),
-    FSortedFieldIndices, FSortedFieldDirs, FCompareFuncs);
+    FSortedFieldIndices, FCompareFuncs);
 end;
 
 {**
