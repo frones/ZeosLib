@@ -1596,7 +1596,7 @@ A2U:
       zCP_UTF7 = 65000;
       *)
       zCP_UTF8: AnsiMBCSToUCS2(Source, SourceBytes, UTF8ToWideChar, Result);
-      else
+      else //for these where we do not have a conversion routine...
         {$IF defined(MSWINDOWS) or defined(WITH_UNICODEFROMLOCALECHARS)}
         begin
           PEnd := Source+SourceBytes-4;
@@ -1710,7 +1710,7 @@ function PUnicodeToRaw(Source: PWideChar; CodePoints: NativeUInt; CP: Word): Raw
 var
   US: ZWideString;
 begin
-  SetString(US, Value.P, Value.Len);
+  SetString(US, Source, CodePoints);
   Result := ZUnicodeToRaw(US, CP);
 end;
 {$ELSE}
@@ -1730,9 +1730,9 @@ begin
     ULen := Min(Integer(CodePoints) * 4, High(Integer)-1);
     setlength(Result, ulen); //oversized
     {$IFDEF WITH_UNICODEFROMLOCALECHARS}
-    SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, CodePoints, PAnsiChar(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
+    SetLength(Result, LocaleCharsFromUnicode(CP, 0, Source, CodePoints, Pointer(Result), ulen, NIL, NIL)); // Convert Unicode down to Ansi
     {$ELSE}
-    SetLength(Result, WideCharToMultiByte(CP,0, Source, CodePoints, PAnsiChar(Result), ulen, nil, nil)); // Convert Wide down to Ansi
+    SetLength(Result, WideCharToMultiByte(CP,0, Source, CodePoints, Pointer(Result), ulen, nil, nil)); // Convert Wide down to Ansi
     {$ENDIF}
     {$ELSE}
       {$IFDEF FPC_HAS_BUILTIN_WIDESTR_MANAGER} //FPC2.7+
