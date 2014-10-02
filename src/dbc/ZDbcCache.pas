@@ -335,7 +335,7 @@ const
   PAnsiInc = SizeOf(Cardinal);
   PWideInc = SizeOf(Word); //PWide inc assumes allways two byte
 
-function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
+function CompareNothing(const {%H-}Null1, {%H-}Null2: Boolean; const {%H-}V1, {%H-}V2): Integer; //emergency exit for types we can't sort like arrays, dataset ...
 begin
   Result := 0;
 end;
@@ -661,13 +661,14 @@ begin
     {$IFDEF MSWINDOWS}
     Result := CompareStringA(LOCALE_USER_DEFAULT, 0,
       PAnsiChar(Pointer(V1)^)+PAnsiInc, PLongWord(Pointer(V1)^)^,
-      PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2{CSTR_EQUAL}
+      PAnsiChar(Pointer(V2)^)+PAnsiInc, PLongWord(Pointer(V2)^)^) - 2;{CSTR_EQUAL}
     {$ELSE}
-      if Assigned(PPAnsichar(Pointer(V1)^) and Assigned(PPAnsiChar(Pointer(V2)^) then
+      if Assigned(PPAnsichar(Pointer(V1)^)) and Assigned(PPAnsiChar(Pointer(V2)^)) then
         Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
           AnsiStrComp(PPAnsiChar(V1)^+PAnsiInc, PPAnsiChar(V2)^+PAnsiInc)
       else //we've found out on other (FPC)OS's a nil compare crahs!
-        if Assigned(PPAnsichar(Pointer(V1)^) then Result := 1
+        if Assigned(PPAnsichar(Pointer(V1)^))
+        then Result := 1
         else Result := -1;
     {$ENDIF}
 end;
@@ -755,7 +756,7 @@ begin
   else Result := 0;
 end;
 
-function CompareUnicodeCLob_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+function CompareUnicodeCLob_Equals(const {%H-}Null1, Null2: Boolean; const V1, V2): Integer;
 var
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
