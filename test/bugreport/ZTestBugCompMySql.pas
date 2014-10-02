@@ -732,6 +732,7 @@ var
   Stream: TStream;
 begin
   if SkipForReason(srClosedBug) then Exit;
+  Stream := nil;
 
   Query := CreateQuery;
   try

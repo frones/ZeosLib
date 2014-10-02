@@ -877,7 +877,8 @@ var
   SL: TStringList;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
-
+  SL := nil;
+  StrStream1 := nil;
   Query := CreateQuery;
   try
     with Query do
