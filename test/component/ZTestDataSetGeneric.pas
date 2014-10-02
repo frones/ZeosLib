@@ -587,6 +587,11 @@ var
   StrStream1, BinStream1: TMemoryStream;
 begin
   Query := CreateQuery;
+  { FPC init -> if test fails we've random addresses so we're trying to free a non created object -> PFC, puff puff puff}
+  StrStream := nil;
+  BinStream := nil;
+  StrStream1 := nil;
+  BinStream1 := nil;
   try
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
