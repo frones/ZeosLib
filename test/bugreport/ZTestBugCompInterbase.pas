@@ -878,9 +878,9 @@ var
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
   Query := CreateQuery;
+  SL := TStringList.Create;
+  StrStream1 := TMemoryStream.Create;
   try
-    SL := TStringList.Create;
-    StrStream1 := TMemoryStream.Create;
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
