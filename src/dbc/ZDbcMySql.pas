@@ -277,6 +277,7 @@ begin
      Self.Port := MYSQL_PORT;
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
+  FHandle := nil;
 
   { Processes connection properties. }
   Open;
@@ -295,10 +296,11 @@ end;
 }
 procedure TZMySQLConnection.Open;
 var
-  ConnectTimeoutRaw, LogMessage: RawByteString;
+  LogMessage: RawByteString;
   OldLevel: TZTransactIsolationLevel;
   OldAutoCommit: Boolean;
-  ConnectTimeout: Integer;
+  UIntOpt: UInt;
+  MyBoolOpt: Byte;
   ClientFlag : Cardinal;
   SslCa, SslCaPath, SslKey, SslCert, SslCypher: PAnsiChar;
   myopt: TMySQLOption;
@@ -307,14 +309,14 @@ var
   sMy_client_Opt, sMy_client_Char_Set:String;
   ClientVersion: Integer;
   SQL: RawByteString;
+label setuint;
 begin
   if not Closed then
     Exit;
 
   LogMessage := 'CONNECT TO "'+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(Database)+
     '" AS USER "'+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(User)+'"';
-
-  GetPlainDriver.Init(FHandle);
+  FHandle := GetPlainDriver.Init(FHandle);
   {EgonHugeist: Arrange Client-CodePage/CharacterSet first
     Now we know if UTFEncoding is neccessary or not}
   sMy_client_Char_Set := {$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(GetPlainDriver.GetConnectionCharacterSet(FHandle));
@@ -333,28 +335,76 @@ begin
        Port := MYSQL_PORT;
 
     { Turn on compression protocol. }
-    if StrToBoolEx(Info.Values['compress']) then
-      GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_COMPRESS, nil);
+    if StrToBoolEx(Info.Values['compress']) and
+      (Info.Values['MYSQL_OPT_COMPRESS'] = '') and
+       (Info.IndexOf('MYSQL_OPT_COMPRESS') = -1) then
+      Info.Values['MYSQL_OPT_COMPRESS'] := Info.Values['compress']; //check if user allready did set the value!
     { Sets connection timeout. }
-    ConnectTimeout := StrToIntDef(Info.Values['timeout'], 0);
-    if ConnectTimeout >= 0 then
-    begin
-      ConnectTimeoutRaw := IntToRaw(ConnectTimeout);
-      GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_CONNECT_TIMEOUT, PAnsiChar(ConnectTimeoutRaw));
-    end;
+    if (StrToIntDef(Info.Values['timeout'], 0) >= 0) and
+       (Info.Values['MYSQL_OPT_CONNECT_TIMEOUT'] = '') then //check if user allready did set the value!
+      Info.Values['MYSQL_OPT_CONNECT_TIMEOUT'] := Info.Values['timeout'];
 
    (*Added lines to handle option parameters 21 november 2007 marco cotroneo*)
+    ClientVersion := GetPlainDriver.GetClientVersion;
     for myopt := low(TMySQLOption) to high(TMySQLOption) do
     begin
       sMyOpt:= GetEnumName(typeInfo(TMySQLOption), integer(myOpt));
-      if Info.Values[sMyOpt] <> '' then
-        GetPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(AnsiString(Info.Values[sMyOpt])));
+      if ClientVersion >= TMySqlOptionMinimumVersion[myopt] then //version checked (:
+        case myopt of
+          {unsigned int options ...}
+          MYSQL_OPT_CONNECT_TIMEOUT,
+          MYSQL_OPT_PROTOCOL,
+          MYSQL_OPT_READ_TIMEOUT,
+          MYSQL_OPT_WRITE_TIMEOUT:
+            if Info.Values[sMyOpt] <> '' then
+            begin
+setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
+              GetPlainDriver.SetOptions(FHandle, myopt, @UIntOpt);
+            end;
+          MYSQL_OPT_LOCAL_INFILE: {optional empty or unsigned int}
+            if Info.Values[sMyOpt] <> '' then
+              goto setuint
+            else
+              if Info.IndexOf(sMyOpt) > -1 then
+                GetPlainDriver.SetOptions(FHandle, myopt, nil);
+          { no value options }
+          MYSQL_OPT_COMPRESS,
+          MYSQL_OPT_GUESS_CONNECTION,
+          MYSQL_OPT_NAMED_PIPE,
+          MYSQL_OPT_USE_REMOTE_CONNECTION,
+          MYSQL_OPT_USE_EMBEDDED_CONNECTION,
+          MYSQL_OPT_USE_RESULT,
+          MYSQL_OPT_CONNECT_ATTR_RESET:
+            if (Info.Values[sMyOpt] <> '') or (Info.IndexOf(sMyOpt) > -1) then
+              GetPlainDriver.SetOptions(FHandle, myopt, nil);
+          { my_bool * options}
+          MYSQL_REPORT_DATA_TRUNCATION,
+          MYSQL_SECURE_AUTH,
+          MYSQL_OPT_RECONNECT,
+          MYSQL_OPT_SSL_VERIFY_SERVER_CERT,
+          MYSQL_ENABLE_CLEARTEXT_PLUGIN,
+          MYSQL_OPT_CAN_HANDLE_EXPIRED_PASSWORDS,
+          MYSQL_OPT_SSL_ENFORCE:
+            if Info.Values[sMyOpt] <> '' then
+            begin
+              MyBoolOpt := Ord(StrToBoolEx(Info.Values[sMyOpt]));
+              GetPlainDriver.SetOptions(FHandle, myopt, @MyBoolOpt);
+            end;
+          { unsigned char * options }
+          MYSQL_OPT_SSL_KEY, MYSQL_OPT_SSL_CERT,
+          MYSQL_OPT_SSL_CA, MYSQL_OPT_SSL_CAPATH, MYSQL_OPT_SSL_CIPHER: ;//skip, processed down below
+          else
+            if Info.Values[sMyOpt] <> '' then
+              GetPlainDriver.SetOptions(FHandle, myopt, PAnsiChar(
+                ConSettings^.ConvFuncs.ZStringToRaw(Info.Values[sMyOpt],
+                  ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)));
+        end;
     end;
 
     { Set ClientFlag }
     ClientFlag := 0;
     if Not StrToBoolEx(Info.Values['dbless'])
-       then ClientFlag := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}trunc(power(2, GetEnumValue(   TypeInfo(TMYSQL_CLIENT_OPTIONS),'_CLIENT_CONNECT_WITH_DB')));
+       then ClientFlag := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}trunc(power(2, GetEnumValue(TypeInfo(TMYSQL_CLIENT_OPTIONS),'_CLIENT_CONNECT_WITH_DB')));
 
     for my_client_Opt := low(TMYSQL_CLIENT_OPTIONS) to high(TMYSQL_CLIENT_OPTIONS) do
     begin
@@ -364,11 +414,7 @@ begin
     end;
 
   { Set SSL properties before connect}
-  SslKey := nil;
-  SslCert := nil;
-  SslCa := nil;
-  SslCaPath := nil;
-  SslCypher := nil;
+  SslKey := nil; SslCert := nil; SslCa := nil; SslCaPath := nil; SslCypher := nil;
   if StrToBoolEx(Info.Values['MYSQL_SSL']) then
     begin
        if Info.Values['MYSQL_SSL_KEY'] <> '' then
@@ -407,12 +453,12 @@ begin
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
     { Fix Bugs in certain Versions where real_conncet resets the Reconnect flag }
-    if StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']) then
+    if (Info.Values['MYSQL_OPT_RECONNECT'] <> '') and
+      ((ClientVersion>=50013) and (ClientVersion<50019)) or
+      ((ClientVersion>=50100) and (ClientVersion<50106)) then
     begin
-      ClientVersion := GetPlainDriver.GetClientVersion;
-      if ((ClientVersion>=50013) and (ClientVersion<50019)) or
-         ((ClientVersion>=50100) and (ClientVersion<50106)) then
-        GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, 'true');
+      MyBoolOpt := Ord(StrToBoolEx(Info.Values['MYSQL_OPT_RECONNECT']));
+      GetPlainDriver.SetOptions(FHandle, MYSQL_OPT_RECONNECT, @MyBoolOpt);
     end;
     if (FClientCodePage = '') and (sMy_client_Char_Set <> '') then
       FClientCodePage := sMy_client_Char_Set;
