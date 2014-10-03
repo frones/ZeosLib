@@ -77,6 +77,7 @@ type
     procedure TestNestedDataSetFields1;
     procedure TestNestedDataSetFields2;
     procedure TestNCLOBValues;
+    procedure TestTicket96;
   end;
 
 implementation
@@ -229,6 +230,37 @@ begin
   end;
 end;
 
+procedure ZTestCompOracleBugReport.TestTicket96;
+var
+  Query: TZQuery;
+begin
+  if SkipForReason(srClosedBug) then Exit;
+  Query := CreateQuery;
+  try
+    Query.ParamCheck := True;
+    Query.SQL.Text := 'begin ';
+    Query.SQL.Add('  P_TICKET96.Update_Doc(:Param1);');
+    Query.SQL.Add('end;');
+    Query.ParamByName('Param1').AsInteger := 1;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'begin ';
+    Query.SQL.Add('  P_TICKET96.Update_Doc(:Param1, :Param2, :Param3);');
+    Query.SQL.Add('end;');
+    Query.ParamByName('Param1').AsInteger := 1;
+    Query.ParamByName('Param2').AsInteger := 2;
+    Query.ParamByName('Param3').AsInteger := 3;
+    Query.ExecSQL;
+
+    Query.SQL.Text := 'begin ';
+    Query.SQL.Add('  P_TICKET96.Update_Doc(:Param1);');
+    Query.SQL.Add('end;');
+    Query.ParamByName('Param1').AsInteger := 1;
+    Query.ExecSQL;
+  finally
+    Query.Free;
+  end;
+end;
 
 initialization
   RegisterTest('bugreport', ZTestCompOracleBugReport.Suite);
