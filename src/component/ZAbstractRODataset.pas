@@ -5055,7 +5055,7 @@ begin
       for I := 0 to AParams.Count - 1 do
       begin
         ParamValue := AParams[I];
-        SetStatementParam(I+1, Statement, ParamValue);
+        SetStatementParam(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, Statement, ParamValue);
       end;
     Result := Statement.ExecuteUpdatePrepared;
   end
