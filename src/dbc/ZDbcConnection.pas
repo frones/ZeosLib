@@ -886,13 +886,8 @@ end;
   @return a new Statement object
 }
 function TZAbstractConnection.CreateStatement: IZStatement;
-var
-  Info: TStrings;
 begin
-  Info := nil;
-  Result := CreateStatementWithParams(Info);
-  If Info <> nil then
-    Info.Free;
+  Result := CreateStatementWithParams(nil);
 end;
 
 {**
@@ -911,14 +906,18 @@ end;
 }
 function TZAbstractConnection.CreateStatementWithParams(Info: TStrings):
   IZStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    begin
-      If Info = nil then
-        Info := TSTringList.Create;
-      Info.Append('preferprepared=TRUE');
+  begin
+    If UsedInfo = nil then
+        UsedInfo := TSTringList.Create;
+      UsedInfo.Append('preferprepared=TRUE');
     end;
-  Result := CreateRegularStatement(Info);
+  Result := CreateRegularStatement(UsedInfo);
+  if UsedInfo <> Info then
+    UsedInfo.Free;
 end;
 
 {**
