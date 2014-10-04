@@ -583,7 +583,7 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
   const Msg: string = ''); overload;
 begin
-  Check(Expected <> Actual, Msg);
+  Check(Expected = Actual, Msg);
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
