@@ -130,6 +130,8 @@ type
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
+    procedure UpdateArray(const Index: Word; const Value; const SQLType: TZSQLType;
+      const VariantType: TZVariantType = vtNull);
   end;
 
   { Base class contain core functions to work with sqlda structure
@@ -142,6 +144,8 @@ type
     FPlainDriver: IZInterbasePlainDriver;
     Temp: AnsiString;
     FDecribedLengthArray: TSmallIntDynArray;
+    FDecribedScaleArray: TSmallIntDynArray;
+    FDecribedTypeArray: TSmallIntDynArray;
     procedure CheckRange(const Index: Word);
     procedure IbReAlloc(var P; OldSize, NewSize: Integer);
     procedure SetFieldType(const Index: Word; Size: Integer; Code: Smallint;
@@ -199,6 +203,8 @@ type
     procedure UpdateTime(const Index: Integer; const Value: TDateTime);
     procedure UpdateTimestamp(const Index: Integer; const Value: TDateTime);
     procedure UpdateQuad(const Index: Word; const Value: TISC_QUAD);
+    procedure UpdateArray(const Index: Word; const Value; const SQLType: TZSQLType;
+      const VariantType: TZVariantType = vtNull);
   end;
 
 function RandomString(Len: integer): RawByteString;
@@ -1115,7 +1121,8 @@ var
   Len: Integer;
   RawTemp: RawByteString;
   CharRec: TZCharRec;
-  Value, NullValue: TZVariant;
+  Value: TZVariant;
+  IsNull: Boolean;
 
   { array DML bindings }
   ZData: Pointer; //array entry
@@ -1155,49 +1162,53 @@ begin
       else
       begin
         case TZSQLType(InParamValues[I].VArray.VIsNullArrayType) of
-          stBoolean: NullValue := EncodeBoolean(ZBooleanArray[J]);
-          stByte: NullValue := EncodeInteger(ZByteArray[J]);
-          stShort: NullValue := EncodeInteger(ZShortIntArray[J]);
-          stWord: NullValue := EncodeInteger(ZWordArray[J]);
-          stSmall: NullValue := EncodeInteger(ZSmallIntArray[J]);
-          stLongWord: NullValue := EncodeInteger(ZLongWordArray[J]);
-          stInteger: NullValue := EncodeInteger(ZIntegerArray[J]);
-          stLong: NullValue := EncodeInteger(ZInt64Array[J]);
-          stULong: NullValue := EncodeUInteger(ZUInt64Array[J]);
-          stFloat: NullValue := EncodeFloat(ZSingleArray[J]);
-          stDouble: NullValue := EncodeFloat(ZDoubleArray[J]);
-          stCurrency: NullValue := EncodeFloat(ZCurrencyArray[J]);
-          stBigDecimal: NullValue := EncodeFloat(ZExtendedArray[J]);
+          stBoolean: IsNull := ZBooleanArray[J];
+          stByte: IsNull := ZByteArray[J] <> 0;
+          stShort: IsNull := ZShortIntArray[J] <> 0;
+          stWord: IsNull := ZWordArray[J] <> 0;
+          stSmall: IsNull := ZSmallIntArray[J] <> 0;
+          stLongWord: IsNull := ZLongWordArray[J] <> 0;
+          stInteger: IsNull := ZIntegerArray[J] <> 0;
+          stLong: IsNull := ZInt64Array[J] <> 0;
+          stULong: IsNull := ZUInt64Array[J] <> 0;
+          stFloat: IsNull := ZSingleArray[J] <> 0;
+          stDouble: IsNull := ZDoubleArray[J] <> 0;
+          stCurrency: IsNull := ZCurrencyArray[J] <> 0;
+          stBigDecimal: IsNull := ZExtendedArray[J] <> 0;
           stGUID:
-            NullValue := EncodeRawByteString({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GUIDToString(ZGUIDArray[j])));
+            IsNull := True;
           stString, stUnicodeString:
             begin
               case InParamValues[i].VArray.VIsNullArrayVariantType of
-                vtString: NullValue := EncodeString(ZStringArray[j]);
-                vtAnsiString: NullValue := EncodeAnsiString(ZAnsiStringArray[j]);
-                vtUTF8String: NullValue := EncodeUTF8String(ZUTF8StringArray[j]);
-                vtRawByteString: NullValue := EncodeRawByteString(ZRawByteStringArray[j]);
-                vtUnicodeString: NullValue := EncodeUnicodeString(ZUnicodeStringArray[j]);
-                vtCharRec: NullValue := EncodeCharRec(ZCharRecArray[j]);
-                vtNull: NullValue := EncodeBoolean(True);
+                vtString: IsNull := StrToBoolEx(ZStringArray[j]);
+                vtAnsiString: IsNull := StrToBoolEx(ZAnsiStringArray[j]);
+                vtUTF8String: IsNull := StrToBoolEx(ZUTF8StringArray[j]);
+                vtRawByteString: IsNull := StrToBoolEx(ZRawByteStringArray[j]);
+                vtUnicodeString: IsNull := StrToBoolEx(ZUnicodeStringArray[j]);
+                vtCharRec:
+                  if ZCompatibleCodePages(ZCharRecArray[j].CP, zCP_UTF16) then
+                    IsNull := StrToBoolEx(PWideChar(ZCharRecArray[j].P))
+                  else
+                    IsNull := StrToBoolEx(PAnsiChar(ZCharRecArray[j].P));
+                vtNull: IsNull := True;
                 else
                   raise Exception.Create('Unsupported String Variant');
               end;
             end;
           stBytes:
-            NullValue := EncodeBytes(ZBytesArray[j]);
+            IsNull := ZBytesArray[j] = nil;
           stDate, stTime, stTimestamp:
-            NullValue := EncodeDateTime(ZDateTimeArray[j]);
+            IsNull := ZDateTimeArray[j] <> 0;
           stAsciiStream,
           stUnicodeStream,
           stBinaryStream:
-            NullValue := EncodeBoolean(True);
+            IsNull := ZInterfaceArray[j] = nil;
           else
             raise EZIBConvertError.Create(SUnsupportedParameterType);
         end;
 
         ZData := InParamValues[I].VArray.VArray;
-        if (ZData = nil) or (ClientVarManager.GetAsBoolean(NullValue)) then
+        if (ZData = nil) or (IsNull) then
           ParamSqlData.UpdateNull(ParamIndex, True)
         else
           case TZSQLType(InParamValues[I].VArray.VArrayType) of
@@ -1584,6 +1595,8 @@ begin
   begin
     SqlVar := @FXSQLDA.SqlVar[I];
     FDecribedLengthArray[i] := SqlVar.sqllen;
+    FDecribedScaleArray[i] := SqlVar.sqlscale;
+    FDecribedTypeArray[i] := SqlVar.sqltype;
     case SqlVar.sqltype and (not 1) of
       SQL_BOOLEAN, SQL_TEXT, SQL_TYPE_DATE, SQL_TYPE_TIME, SQL_DATE,
       SQL_BLOB, SQL_ARRAY, SQL_QUAD, SQL_SHORT,
@@ -1972,6 +1985,8 @@ begin
   IbReAlloc(FXSQLDA, XSQLDA_LENGTH(FXSQLDA.sqln), XSQLDA_LENGTH(FXSQLDA.sqld));
   FXSQLDA.sqln := FXSQLDA.sqld;
   SetLength(FDecribedLengthArray, FXSQLDA.sqld);
+  SetLength(FDecribedScaleArray, FXSQLDA.sqld);
+  SetLength(FDecribedTypeArray, FXSQLDA.sqld);
 end;
 
 { TParamsSQLDA }
@@ -2032,6 +2047,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
        Exit;
 
@@ -2084,6 +2101,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
        Exit;
     SQLCode := (sqltype and not(1));
@@ -2137,6 +2156,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
          Exit;
     SQLCode := (sqltype and not(1));
@@ -2242,6 +2263,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
          Exit;
     SQLCode := (sqltype and not(1));
@@ -2295,6 +2318,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
        Exit;
     SQLCode := (sqltype and not(1));
@@ -2348,6 +2373,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
        Exit;
     SQLCode := (sqltype and not(1));
@@ -2399,6 +2426,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
          Exit;
     SQLCode := (sqltype and not(1));
@@ -2469,6 +2498,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
          Exit;
     SQLCode := (sqltype and not(1));
@@ -2578,6 +2609,60 @@ begin
 {$ENDIF}
 end;
 
+procedure TZParamsSQLDA.UpdateArray(const Index: Word; const Value; const SQLType: TZSQLType;
+  const VariantType: TZVariantType = vtNull);
+//var
+  //SQLCode: SmallInt;
+begin
+  CheckRange(Index);
+  {$R-}
+  with FXSQLDA.sqlvar[Index] do
+  begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, SizeOf(TISC_QUAD), SQL_ARRAY, 0);
+    if (sqlind <> nil) and (sqlind^ = -1) then
+       Exit;
+//    SQLCode := (sqltype and not(1));
+    (*
+    if (sqlscale < 0)  then
+    begin
+      case SQLCode of
+        SQL_SHORT  : PSmallInt(sqldata)^ := Value * IBScaleDivisor[sqlscale];
+        SQL_LONG   : PInteger(sqldata)^  := Value * IBScaleDivisor[sqlscale];
+        SQL_INT64,
+        SQL_QUAD   : PInt64(sqldata)^    := Value * IBScaleDivisor[sqlscale];
+        SQL_DOUBLE : PDouble(sqldata)^   := Value;
+      else
+        raise EZIBConvertError.Create(SUnsupportedParameterType);
+      end;
+    end
+    else
+      case SQLCode of
+        SQL_D_FLOAT,
+        SQL_DOUBLE    : PDouble(sqldata)^   := Value;
+        SQL_LONG      : PInteger(sqldata)^ := Value;
+        SQL_FLOAT     : PSingle(sqldata)^ := Value;
+        SQL_BOOLEAN:
+                     begin
+                       if FPlainDriver.GetProtocol <> 'interbase-7' then
+                         raise EZIBConvertError.Create(SUnsupportedDataType);
+                       PSmallint(sqldata)^ := Value;
+                     end;
+        SQL_SHORT     : PSmallint(sqldata)^ := Value;
+        SQL_INT64     : PInt64(sqldata)^ := Value;
+        SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(Value));
+        SQL_VARYING   : EncodeString(SQL_VARYING, Index, IntToRaw(Value));
+      else
+        raise EZIBConvertError.Create(SUnsupportedParameterType);
+      end;*)
+    if (sqlind <> nil) then
+       sqlind^ := 0; // not null
+  end;
+  {$IFOPT D+}
+{$R+}
+{$ENDIF}
+  {$IFOPT D+} {$R+} {$ENDIF}
+end;
 {**
    Set up parameter Byte value
    @param Index the target parameter index
@@ -2591,6 +2676,8 @@ begin
   {$R-}
   with FXSQLDA.sqlvar[Index] do
   begin
+    if not FDecribedTypeArray[Index] = sqltype then
+      SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
     if (sqlind <> nil) and (sqlind^ = -1) then
        Exit;
     SQLCode := (sqltype and not(1));
