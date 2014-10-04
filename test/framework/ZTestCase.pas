@@ -183,6 +183,9 @@ uses
 {$ELSE}
   Windows,
 {$ENDIF}
+{$IFDEF WITH_STRLEN_DEPRECATED}
+  AnsiStrings,
+{$ENDIF}
   ZSysUtils, ZTestConfig, Math, ZEncoding;
 
 {$IFDEF FPC}
@@ -558,13 +561,17 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: PAnsiChar;
   const Msg: string = '');
 begin
-  Check(MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+  Check(MemLCompAnsi(Expected, Actual, Max(
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: PAnsiChar;
   const Msg: string = '');
 begin
-  Check(not MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+  Check(not MemLCompAnsi(Expected, Actual, Max(
+    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
+    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
 end;
 
 {$IFDEF FPC}
