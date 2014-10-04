@@ -137,12 +137,6 @@ type
     procedure CheckNotEquals(Expected, Actual: PAnsiChar;
       const Msg: string = ''); overload;
     {$IFDEF FPC}
-    {$IFDEF WITH_RAWBYTESTRING}
-    procedure CheckEquals(Expected, Actual: UnicodeString;
-      const Msg: string = ''); overload;
-    procedure CheckNotEquals(Expected, Actual: UnicodeString;
-      const Msg: string = ''); overload;
-    {$ENDIF}
     procedure CheckEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
@@ -574,20 +568,6 @@ begin
 end;
 
 {$IFDEF FPC}
-{$IFDEF WITH_RAWBYTESTRING}
-procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UnicodeString;
-  const Msg: string = '');
-begin
-  Check(Expected = Actual, Msg);
-end;
-
-procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UnicodeString;
-  const Msg: string = '');
-begin
-  Check(Expected <> Actual, Msg);
-end;
-
-{$ENDIF}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: WideString;
   const Msg: string = '');
 begin
