@@ -333,21 +333,29 @@ begin
 end;
 
 function TZSQLiteCAPIPreparedStatement.ExecuteUpdatePrepared: Integer;
+var ErrorCode: Integer;
 begin
   Prepare;
   BindInParameters;
 
   Result := 0;
-  try
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.Step(FStmtHandle),
-      nil, lcExecPrepStmt, ASQL, ConSettings); //exec prepared
+  ErrorCode := FPlainDriver.Step(FStmtHandle);
+  if (ErrorCode in [SQLITE_OK, SQLITE_ROW, SQLITE_DONE]) then
+  begin
     Result := FPlainDriver.Changes(FHandle);
-    inherited ExecuteUpdatePrepared; //log values
-  finally
     CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
       nil, lcOther, 'Reset', ConSettings); //reset handle
     LastUpdateCount := Result;
-  end;
+    inherited ExecuteUpdatePrepared; //log values
+  end
+  else
+    try //reason for this ugly try except thing: we need the reset!
+      CheckSQLiteError(FPlainDriver, FStmtHandle, ErrorCode,
+        nil, lcOther, 'Reset', ConSettings); //reset handle
+    except
+      FPlainDriver.reset(FStmtHandle);
+      raise; //handle exception else leak memory
+    end;
   { Autocommit statement. }
   if Connection.GetAutoCommit then
     Connection.Commit;
