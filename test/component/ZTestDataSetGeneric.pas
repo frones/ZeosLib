@@ -587,6 +587,11 @@ var
   StrStream1, BinStream1: TMemoryStream;
 begin
   Query := CreateQuery;
+  { FPC init -> if test fails we've random addresses so we're trying to free a non created object -> PFC, puff puff puff}
+  StrStream := nil;
+  BinStream := nil;
+  StrStream1 := nil;
+  BinStream1 := nil;
   try
     Query.SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
     Query.ExecSQL;
@@ -1266,7 +1271,7 @@ procedure TZGenericTestDataSet.TestDecodingSortedFields;
 var
   Query: TZReadOnlyQuery;
   FieldRefs: TObjectDynArray;
-  FieldDirs: TBooleanDynArray;
+  FieldComparsionKinds: TComparisonKindArray;
   OnlyDataFields: Boolean;
 begin
   Query := CreateReadOnlyQuery;
@@ -1274,21 +1279,21 @@ begin
     Query.SQL.Text := 'SELECT p_id, p_dep_id, p_name FROM people';
     Query.Open;
 
-    DefineSortedFields(Query, 'p_id', FieldRefs, FieldDirs, OnlyDataFields);
+    DefineSortedFields(Query, 'p_id', FieldRefs, FieldComparsionKinds, OnlyDataFields);
     CheckEquals(1, Length(FieldRefs));
     CheckEquals(Integer(Query.Fields[0]), Integer(FieldRefs[0]));
-    CheckEquals(1, Length(FieldDirs));
-    CheckEquals(True, FieldDirs[0]);
+    CheckEquals(1, Length(FieldComparsionKinds));
+    CheckEquals(Ord(ckAscending), Ord(FieldComparsionKinds[0]));
     CheckEquals(True, OnlyDataFields);
 
     DefineSortedFields(Query, 'p_id ASC, p_name DESC', FieldRefs,
-      FieldDirs, OnlyDataFields);
+      FieldComparsionKinds, OnlyDataFields);
     CheckEquals(2, Length(FieldRefs));
     CheckEquals(Integer(Query.Fields[0]), Integer(FieldRefs[0]));
     CheckEquals(Integer(Query.Fields[2]), Integer(FieldRefs[1]));
-    CheckEquals(2, Length(FieldDirs));
-    CheckEquals(True, FieldDirs[0]);
-    CheckEquals(False, FieldDirs[1]);
+    CheckEquals(2, Length(FieldComparsionKinds));
+    CheckEquals(Ord(ckAscending), Ord(FieldComparsionKinds[0]));
+    CheckEquals(Ord(ckDescending), Ord(FieldComparsionKinds[1]));
     CheckEquals(True, OnlyDataFields);
 
     Query.Close;

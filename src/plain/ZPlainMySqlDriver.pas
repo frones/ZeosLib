@@ -129,7 +129,7 @@ type
     function GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
     // info
-    function Init(var Handle: PZMySQLConnect): PZMySQLConnect;
+    function Init(const Handle: PZMySQLConnect): PZMySQLConnect;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
     function Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
     function GetBindOffsets: MYSQL_BINDOFFSETS;
@@ -139,7 +139,7 @@ type
     function GetListTables(Handle: PZMySQLConnect; const Wild: PAnsiChar): PZMySQLResult;
     // num_fields
     function GetNumRows(Res: PZMySQLResult): Int64;
-    function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption; const Arg: PAnsiChar): Integer;
+    function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption; const Arg: Pointer): Integer;
     function Ping(Handle: PZMySQLConnect): Integer;
     function ExecQuery(Handle: PZMySQLConnect; const Query: PAnsiChar): Integer; overload;
     function RealConnect(Handle: PZMySQLConnect; const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar; ClientFlag: Cardinal): PZMySQLConnect;
@@ -154,7 +154,6 @@ type
     function GetThreadId(Handle: PZMySQLConnect): Cardinal;
     function UseResult(Handle: PZMySQLConnect): PZMySQLResult;
 
-    // my_init
     // thread_init
     // thread_end
     // thread_safe
@@ -254,7 +253,7 @@ type
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
     function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
-    function Init(var Handle: PZMySQLConnect): PZMySQLConnect; virtual;
+    function Init(const Handle: PZMySQLConnect): PZMySQLConnect; virtual;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
     procedure Despose(var Handle: PZMySQLConnect);
 
@@ -319,7 +318,7 @@ type
 
     function GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
     function SetOptions(Handle: PZMySQLConnect; Option: TMySQLOption;
-      const Arg: PAnsiChar): Integer;
+      const Arg: Pointer): Integer;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
       ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; override;
     function GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
@@ -862,12 +861,11 @@ begin
   Result := MYSQL_API.mysql_thread_id(Handle);
 end;
 
-function TZMySQLBaseDriver.Init(var Handle: PZMySQLConnect): PZMySQLConnect;
+function TZMySQLBaseDriver.Init(const Handle: PZMySQLConnect): PZMySQLConnect;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
     MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
-  Handle := MYSQL_API.mysql_init(nil);
-  Result := Handle;
+  Result := MYSQL_API.mysql_init(Handle);
 end;
 
 function TZMySQLBaseDriver.GetLastInsertID(Handle: PZMySQLConnect): Int64;
@@ -935,7 +933,7 @@ begin
 end;
 
 function TZMySQLBaseDriver.SetOptions(Handle: PZMySQLConnect;
-  Option: TMySQLOption; const Arg: PAnsiChar): Integer;
+  Option: TMySQLOption; const Arg: Pointer): Integer;
 begin
   Result := MYSQL_API.mysql_options(Handle,TMySqlOption(Option), Arg);
 end;
@@ -946,34 +944,18 @@ begin
 end;
 
 function TZMySQLBaseDriver.SetAutocommit(Handle: PZMySQLConnect; mode: Boolean): Boolean;
-var
-    my_bool, my_mode: Byte;
 begin
-    if (mode = True) then
-        my_mode := 1
-    else
-        my_mode := 0;
-    my_bool := MYSQL_API.mysql_autocommit(PMYSQL(Handle), my_mode);
-    Result := (my_bool = 0);
+  Result := MYSQL_API.mysql_autocommit(PMYSQL(Handle), Byte(Ord(Mode))) = 0;
 end;
 
 function TZMySQLBaseDriver.Commit(Handle: PZMySQLConnect): Boolean;
-var
-    my_bool: Byte;
 begin
-    my_bool := MYSQL_API.mysql_commit(PMYSQL(Handle));
-    Result := (my_bool = 0);
+  Result := MYSQL_API.mysql_commit(PMYSQL(Handle)) = 0;
 end;
 
 function TZMySQLBaseDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
-var
-    my_bool: Byte;
 begin
-    my_bool :=  MYSQL_API.mysql_more_results (PMYSQL(Handle));
-    if (my_bool = 0) then
-        Result := False
-    else
-        Result := True;
+  Result := MYSQL_API.mysql_more_results (PMYSQL(Handle)) <> 0;
 end;
 
 function TZMySQLBaseDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
@@ -982,16 +964,13 @@ begin
 end;
 
 function TZMySQLBaseDriver.Rollback (Handle: PZMySQLConnect): Boolean;
-var
-    my_bool: Byte;
 begin
-    my_bool := MYSQL_API.mysql_rollback(PMYSQL(Handle));
-    Result := (my_bool = 0);
+  Result := MYSQL_API.mysql_rollback(PMYSQL(Handle)) = 0;
 end;
 
 function TZMySQLBaseDriver.GetSQLState(Handle: PZMySQLConnect): AnsiString;
 begin
-    Result := MYSQL_API.mysql_sqlstate (PMYSQL(Handle));
+  Result := MYSQL_API.mysql_sqlstate (PMYSQL(Handle));
 end;
 
 function TZMySQLBaseDriver.StmtAttrSet(stmt: PZMySqlPrepStmt;
@@ -1016,14 +995,11 @@ begin
 end;
 
 function TZMySQLBaseDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
-var
-    my_bool: Byte;
 begin
-    my_bool := MYSQL_API.mysql_stmt_close(PMYSQL_STMT(PrepStmtHandle));
-    if (my_bool = 0) then
-        Result := nil
-    else
-        Result := PrepStmtHandle;
+  if (MYSQL_API.mysql_stmt_close(PMYSQL_STMT(PrepStmtHandle)) = 0) then
+    Result := nil
+  else
+    Result := PrepStmtHandle;
 end;
 
 procedure TZMySQLBaseDriver.SeekPreparedData(PrepStmtHandle: PZMySqlPrepStmt; Offset: Cardinal);

@@ -254,9 +254,9 @@ type
     procedure MoveToCurrentRow; override;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const ColumnDirs: TBooleanDynArray; const CompareFuncs: TCompareFuncs): Integer; override;
-    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
-      const ColumnDirs: TBooleanDynArray}): TCompareFuncs; override;
+      const CompareFuncs: TCompareFuncs): Integer; override;
+    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
+      const CompareKinds: TComparisonKindArray): TCompareFuncs; override;
 
     //---------------------------------------------------------------------
     // Cached Updates
@@ -2224,8 +2224,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractCachedResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray;
-  const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
 var
   RowBuffer1, RowBuffer2: PZRowBuffer;
 begin
@@ -2236,13 +2235,13 @@ begin
   RowBuffer1 := PZRowBuffer(FRowsList[Row1 - 1]);
   RowBuffer2 := PZRowBuffer(FRowsList[Row2 - 1]);
   Result := FRowAccessor.CompareBuffers(RowBuffer1, RowBuffer2,
-    ColumnIndices, ColumnDirs, CompareFuncs);
+    ColumnIndices, CompareFuncs);
 end;
 
-function TZAbstractCachedResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
-  const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
+function TZAbstractCachedResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
+  const CompareKinds: TComparisonKindArray): TCompareFuncs;
 begin
-  Result := FRowAccessor.GetCompareFuncs(ColumnIndices{, ColumnDirs});
+  Result := FRowAccessor.GetCompareFuncs(ColumnIndices, CompareKinds);
 end;
 
 { TZCachedResultSet }

@@ -94,10 +94,6 @@ type
   {** Generic SQL warning. }
   EZSQLWarning = class(EZSQLThrowable);
 
-  {** EH: sort helper procs }
-  TCompareFunc = function(const V1, V2): Integer;
-  TCompareFuncs = Array of TCompareFunc;
-
 // Data types
 type
   {** Defines supported SQL types. }
@@ -684,6 +680,14 @@ type
       ParamTypeName: String; const ParamName: String; Const ColumnSize, Precision: Integer);
   end;
 
+  {** EH: sort helper procs }
+  TCompareFunc = function(const Null1, Null2: Boolean; const V1, V2): Integer;
+  TCompareFuncs = Array of TCompareFunc;
+
+  {** Defines Column-Comparison kinds }
+  TComparisonKind = (ckAscending{greater than}, ckDescending{less than}, ckEquals);
+  TComparisonKindArray = Array of TComparisonKind;
+
   {** Rows returned by SQL query. }
   IZResultSet = interface(IZInterface)
     ['{8F4C4D10-2425-409E-96A9-7142007CC1B2}']
@@ -915,9 +919,9 @@ type
 //      Boolean;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const ColumnDirs: TBooleanDynArray; const CompareFuncs: TCompareFuncs): Integer;
-    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
-      const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
+      const CompareFuncs: TCompareFuncs): Integer;
+    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
+      const CompareKinds: TComparisonKindArray): TCompareFuncs;
 
     function GetStatement: IZStatement;
     function GetConSettings: PZConsettings;

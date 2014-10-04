@@ -346,9 +346,9 @@ type
     procedure MoveToCurrentRow; virtual;
 
     function CompareRows(Row1, Row2: NativeInt; const ColumnIndices: TIntegerDynArray;
-      const ColumnDirs: TBooleanDynArray; const CompareFuncs: TCompareFuncs): Integer; virtual;
-    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
-      const ColumnDirs: TBooleanDynArray}): TCompareFuncs; virtual;
+      const CompareFuncs: TCompareFuncs): Integer; virtual;
+    function GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
+      const CompareKinds: TComparisonKindArray): TCompareFuncs; virtual;
 
     function GetStatement: IZStatement; virtual;
 
@@ -516,57 +516,119 @@ implementation
 uses Math, ZMessages, ZDbcUtils, ZDbcResultSetMetadata, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
-function CompareNothing(const V1, V2): Integer; //emergency exit for types we cant sort like arrays, dataset ...
+function CompareNothing(const Null1, Null2: Boolean; const V1, V2): Integer; //emergency exit for complex types we can't sort quickly like arrays, dataset ...
 begin
   Result := 0;
 end;
 
-function CompareBoolean(const V1, V2): Integer;
+function CompareBoolean_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := Ord(TZVariant(V1).VBoolean)-Ord(TZVariant(V2).VBoolean);
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VBoolean)-Ord(TZVariant(V2).VBoolean);
 end;
 
-function CompareInt64(const V1, V2): Integer;
+function CompareBoolean_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := Ord(TZVariant(V1).VInteger > TZVariant(V2).VInteger)-
-            Ord(TZVariant(V1).VInteger < TZVariant(V2).VInteger);
+  Result := -CompareBoolean_Asc(Null1, Null2, V1, V2);
 end;
 
-function CompareUInt64(const V1, V2): Integer;
+function CompareInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := Ord(TZVariant(V1).VUInteger > TZVariant(V2).VUInteger)-
-            Ord(TZVariant(V1).VUInteger < TZVariant(V2).VUInteger);
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 0
+  else Result := Ord(TZVariant(V1).VInteger > TZVariant(V2).VInteger)-Ord(TZVariant(V1).VInteger < TZVariant(V2).VInteger);
 end;
 
-function CompareFloat(const V1, V2): Integer;
+function CompareInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := Ord(TZVariant(V1).VFloat > TZVariant(V2).VFloat)-
-            Ord(TZVariant(V1).VFloat < TZVariant(V2).VFloat);
+  Result := -CompareInt64_Asc(Null1, Null2, V1, V2);
 end;
 
-function CompareDateTime(const V1, V2): Integer;
+function CompareUInt64_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := Ord(TZVariant(V1).VDateTime > TZVariant(V2).VDateTime)-
-            Ord(TZVariant(V1).VDateTime < TZVariant(V2).VDateTime);
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VUInteger > TZVariant(V2).VUInteger)-Ord(TZVariant(V1).VUInteger < TZVariant(V2).VUInteger);
 end;
 
-function CompareBytes(const V1, V2): Integer;
+function CompareUInt64_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := Length(TZVariant(V1).VBytes) - Length(TZVariant(V2).VBytes); //overflow save!
-  if Result = 0 then
-    Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
-      Max(Length(TZVariant(V1).VBytes), Length(TZVariant(V2).VBytes)));
+  Result := -CompareUInt64_Asc(Null1, Null2, V1, V2);
 end;
 
-function CompareRawByteString(const V1, V2): Integer;
+function CompareFloat_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VFloat > TZVariant(V2).VFloat)-Ord(TZVariant(V1).VFloat < TZVariant(V2).VFloat);
+end;
+
+function CompareFloat_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareFloat_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareDateTime_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(TZVariant(V1).VDateTime > TZVariant(V2).VDateTime)-Ord(TZVariant(V1).VDateTime < TZVariant(V2).VDateTime);
+end;
+
+function CompareDateTime_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareDateTime_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareBytes_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1 else
+  begin
+    Result := Length(TZVariant(V1).VBytes) - Length(TZVariant(V2).VBytes); //overflow save!
+    if Result = 0 then
+      Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
+        Length(TZVariant(V1).VBytes));
+  end;
+end;
+
+function CompareBytes_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareBytes_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareRawByteString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := {$IFDEF WITH_ANSISTRCOMP_DEPRECATED}AnsiStrings.{$ENDIF}
     AnsiStrComp(PAnsiChar(TZVariant(V1).VRawByteString), PAnsiChar(TZVariant(V2).VRawByteString));
 end;
 
-function CompareUnicodeString(const V1, V2): Integer;
+function CompareRawByteString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
-  Result := WideCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+  Result := -CompareRawByteString_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareUnicodeString_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := WideCompareStr(TZVariant(V1).VUnicodeString, TZVariant(V2).VUnicodeString);
+end;
+
+function CompareUnicodeString_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareUnicodeString_Asc(Null1, Null2, V1, V2);
 end;
 
 { TZAbstractResultSet }
@@ -3767,8 +3829,7 @@ end;
   @param ColumnDirs compare direction for each columns.
 }
 function TZAbstractResultSet.CompareRows(Row1, Row2: NativeInt;
-  const ColumnIndices: TIntegerDynArray; const ColumnDirs: TBooleanDynArray;
-  const CompareFuncs: TCompareFuncs): Integer;
+  const ColumnIndices: TIntegerDynArray; const CompareFuncs: TCompareFuncs): Integer;
 var
   I: Integer;
   ColumnIndex: Integer;
@@ -3786,62 +3847,68 @@ begin
       Value1 := GetValue(ColumnIndex);
       MoveAbsolute(Row2);
       Value2 := GetValue(ColumnIndex);
-      //Compare(Value1, Value2, CompareInt64);
-
-      { Checks for both Null columns. }
-      if (Value1.VType = vtNull) and (Value2.VType = vtNull) then
-        Continue;
-      { Checks for not-Null and Null columns. }
-      if (Value1.VType = vtNull) or (Value2.VType = vtNull) then
-      begin
-        if Value1.VType <> vtNull then
-          Result := 1
-        else
-          Result := -1;
-        if not ColumnDirs[I] then
-          Result := -Result;
-        Break;
-      end;
-      Result := CompareFuncs[i](Value1, Value2);
-      if Result <> 0 then
-      begin
-        if not ColumnDirs[I] then
-          Result := -Result;
-        Break;
-      end;
+      Result := CompareFuncs[i]((Value1.VType = vtNull), (Value2.VType = vtNull), Value1, Value2);
+      if Result <> 0 then Break;
     end;
   finally
     MoveAbsolute(SaveRowNo);
   end;
 end;
 
-function TZAbstractResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray{;
-  const ColumnDirs: TBooleanDynArray}): TCompareFuncs;
+function TZAbstractResultSet.GetCompareFuncs(const ColumnIndices: TIntegerDynArray;
+  const CompareKinds: TComparisonKindArray): TCompareFuncs;
 var I: Integer;
 begin
   SetLength(Result, Length(ColumnIndices));
   for i := low(ColumnIndices) to high(ColumnIndices) do
-    case TZAbstractResultSetMetadata(FMetadata).GetColumnType(ColumnIndices[i]) of
-      stBoolean:
-        Result[i] := CompareBoolean;
-      stShort, stSmall, stInteger, stLong:
-        Result[i] := CompareInt64;
-      stByte, stWord, stLongWord, stULong:
-        Result[i] := CompareUInt64;
-      stFloat, stDouble, stBigDecimal:
-        Result[i] := CompareFloat;
-      stDate, stTime, stTimestamp:
-        Result[i] := CompareDateTime;
-      stBytes, stBinaryStream, stGUID:
-        Result[i] := CompareBytes;
-      stString, stAsciiStream, stUnicodeString, stUnicodeStream:
-        if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-            (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
-          Result[i] := CompareUnicodeString
-        else
-          Result[I] := CompareRawByteString;
-      else
-        Result[i] := CompareNothing;
+    case CompareKinds[i] of
+      ckAscending:
+        case TZAbstractResultSetMetadata(FMetadata).GetColumnType(ColumnIndices[i]) of
+          stBoolean:
+            Result[i] := CompareBoolean_Asc;
+          stShort, stSmall, stInteger, stLong:
+            Result[i] := CompareInt64_Asc;
+          stByte, stWord, stLongWord, stULong:
+            Result[i] := CompareUInt64_Asc;
+          stFloat, stDouble, stBigDecimal:
+            Result[i] := CompareFloat_Asc;
+          stDate, stTime, stTimestamp:
+            Result[i] := CompareDateTime_Asc;
+          stBytes, stBinaryStream, stGUID:
+            Result[i] := CompareBytes_Asc;
+          stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+            if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+                (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+              Result[i] := CompareUnicodeString_Asc
+            else
+              Result[I] := CompareRawByteString_Asc
+          else
+            Result[i] := CompareNothing;
+        end;
+      ckDescending:
+        case TZAbstractResultSetMetadata(FMetadata).GetColumnType(ColumnIndices[i]) of
+          stBoolean:
+            Result[i] := CompareBoolean_Desc;
+          stShort, stSmall, stInteger, stLong:
+            Result[i] := CompareInt64_Desc;
+          stByte, stWord, stLongWord, stULong:
+            Result[i] := CompareUInt64_Desc;
+          stFloat, stDouble, stBigDecimal:
+            Result[i] := CompareFloat_Desc;
+          stDate, stTime, stTimestamp:
+            Result[i] := CompareDateTime_Desc;
+          stBytes, stBinaryStream, stGUID:
+            Result[i] := CompareBytes_Desc;
+          stString, stAsciiStream, stUnicodeString, stUnicodeStream:
+            if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+                (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+              Result[i] := CompareUnicodeString_Desc
+            else
+              Result[I] := CompareRawByteString_Desc
+          else
+            Result[i] := CompareNothing;
+        end;
+      ckEquals: raise Exception.Create('Compare Equals is not allowed here!');
     end;
 end;
 {**

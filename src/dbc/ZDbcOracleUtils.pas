@@ -944,7 +944,7 @@ begin
             else
             begin
               {%H-}PInteger({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length)^ := Math.Min(System.Length(ZBytesArray[I]), Variable^.oDataSize);
-              System.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-} PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^);
+              System.Move(Pointer(ZBytesArray[I])^, {%H-}Pointer({%H-}NativeUInt(Variable^.Data)+I*Variable^.Length+SizeOf(Integer))^,{%H-} {%H-}PInteger(NativeUInt(Variable^.Data)+I*Variable^.Length)^);
             end;
         stGUID: //AFAIK OCI doesn't support GUID fields so let's convert them to stings
           for i := 0 to Iteration -1 do

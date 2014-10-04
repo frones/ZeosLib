@@ -232,7 +232,7 @@ function CompareKeyFields(Field1: TField; ResultSet: IZResultSet;
 }
 procedure DefineSortedFields(DataSet: TDataset;
   const SortedFields: string; var FieldRefs: TObjectDynArray;
-  var FieldDirs: TBooleanDynArray; var OnlyDataFields: Boolean);
+  var CompareKinds: TComparisonKindArray; var OnlyDataFields: Boolean);
 
 {**
   Creates a fields lookup table to define fixed position
@@ -1441,7 +1441,7 @@ end;
 }
 procedure DefineSortedFields(DataSet: TDataset;
   const SortedFields: string; var FieldRefs: TObjectDynArray;
-  var FieldDirs: TBooleanDynArray; var OnlyDataFields: Boolean);
+  var CompareKinds: TComparisonKindArray; var OnlyDataFields: Boolean);
 var
   I: Integer;
   Tokens: TStrings;
@@ -1453,7 +1453,7 @@ begin
   OnlyDataFields := True;
   FieldCount := 0;
   SetLength(FieldRefs, FieldCount);
-  SetLength(FieldDirs, FieldCount);
+  SetLength(CompareKinds, FieldCount);
   Tokens := CommonTokenizer.TokenizeBufferToList(SortedFields,
     [toSkipEOF, toSkipWhitespaces, toUnifyNumbers, toDecodeStrings]);
 
@@ -1468,7 +1468,10 @@ begin
       if ((UpperCase(TokenValue) = 'DESC')
         or (UpperCase(TokenValue) = 'ASC')) and (FieldCount > 0) then
       begin
-        FieldDirs[FieldCount - 1] := (UpperCase(TokenValue) <> 'DESC');
+        if UpperCase(TokenValue) = 'DESC' then
+          CompareKinds[FieldCount - 1] := ckDescending
+        else
+          CompareKinds[FieldCount - 1] := ckAscending;
       end
       else if TokenType in [ttWord, ttQuoted] then
       begin
@@ -1489,9 +1492,9 @@ begin
         OnlyDataFields := OnlyDataFields and (Field.FieldKind = fkData);
         Inc(FieldCount);
         SetLength(FieldRefs, FieldCount);
-        SetLength(FieldDirs, FieldCount);
+        SetLength(CompareKinds, FieldCount);
         FieldRefs[FieldCount - 1] := Field;
-        FieldDirs[FieldCount - 1] := True;
+        CompareKinds[FieldCount - 1] := ckAscending;
       end;
     end;
   finally

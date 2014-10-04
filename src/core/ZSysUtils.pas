@@ -65,9 +65,6 @@ type
 
   {** Modified list of pointers. }
   TZSortedList = class (TList)
-  protected
-    procedure QuickSort(SortList: PPointerList; L, R: Integer;
-      SCompare: TZListSortCompare);
   public
     procedure Sort(Compare: TZListSortCompare);
   end;
@@ -2838,39 +2835,6 @@ end;
 { TZSortedList }
 
 {**
-  Performs quick sort algorithm for the list.
-}
-procedure TZSortedList.QuickSort(SortList: PPointerList; L, R: Integer;
-  SCompare: TZListSortCompare);
-var
-  I, J: Integer;
-  P, T: Pointer;
-begin
-  repeat
-    I := L;
-    J := R;
-    P := SortList^[(L + R) shr 1];
-    repeat
-      while (I < R) And (SCompare(SortList^[I], P) < 0) do //check I against R too since the pointer can be nil
-        Inc(I);
-      while (J > L) And (SCompare(SortList^[J], P) > 0) do //check j against L too since the pointer can be nil
-        Dec(J);
-      if I <= J then
-      begin
-        T := SortList^[I];
-        SortList^[I] := SortList^[J];
-        SortList^[J] := T;
-        Inc(I);
-        Dec(J);
-      end;
-    until I > J;
-    if L < J then
-      QuickSort(SortList, L, J, SCompare);
-    L := I;
-  until I >= R;
-end;
-
-{**
   Origial Autor: Aleksandr Sharahov
   see http://guildalfa.ru/alsha/
   Performs hybrid sort algorithm for the list.
@@ -3025,13 +2989,6 @@ begin
   {$ELSE}
   HybridSortSha_0AA(List, Count, Compare);
   {$ENDIF}
-  (*
-  if (List <> nil) and (Count > 0) then
-    {$IFDEF TLIST_ISNOT_PPOINTERLIST}
-    QuickSort(@List, 0, Count - 1, Compare);
-    {$ELSE}
-    QuickSort(List, 0, Count - 1, Compare);
-    {$ENDIF}*)
 end;
 
 {**
