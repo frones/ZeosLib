@@ -552,8 +552,10 @@ end;
 
 function CompareBytes(const V1, V2): Integer;
 begin
-  Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
-    Max(Length(TZVariant(V1).VBytes), Length(TZVariant(V2).VBytes)));
+  Result := Length(TZVariant(V1).VBytes) - Length(TZVariant(V2).VBytes); //overflow save!
+  if Result = 0 then
+    Result := ZMemLComp(Pointer(TZVariant(V1).VBytes), Pointer(TZVariant(V2).VBytes),
+      Max(Length(TZVariant(V1).VBytes), Length(TZVariant(V2).VBytes)));
 end;
 
 function CompareRawByteString(const V1, V2): Integer;
@@ -4355,7 +4357,7 @@ begin
     Clear
   else
   begin
-    FBlobSize := (Len +1) *2;
+    FBlobSize := (Len +1) shl 1; //shl 1 = * 2 but faster
     FCurrentCodePage := zCP_UTF16;
     ReallocMem(FBlobData, FBlobSize);
     System.Move(Buffer^, FBlobData^, FBlobSize-2);

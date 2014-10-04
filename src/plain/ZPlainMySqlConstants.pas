@@ -717,6 +717,7 @@ type
   Tmysql_stmt_store_result      = function(stmt: PMYSQL_STMT): Integer;                              {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tmysql_get_character_set_info = procedure(Handle: PMYSQL; cs: PMY_CHARSET_INFO);                     {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_library_end            = procedure; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
 
 { ************** Collection of Plain API Function types definition ************* }
 TZMYSQL_API = record
@@ -832,6 +833,7 @@ TZMYSQL_API = record
   mysql_stmt_store_result:      Tmysql_stmt_store_result;       {mysql 4.1.0}
 
   mysql_get_character_set_info: Tmysql_get_character_set_info;  {mysql 5.0.10}
+  mysql_library_end:            Tmysql_library_end;             {mysql 5.0.3} //see http://dev.mysql.com/doc/refman/5.0/en/mysql-library-end.html
 end;
 
 const

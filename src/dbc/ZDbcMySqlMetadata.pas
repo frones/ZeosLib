@@ -1229,15 +1229,15 @@ begin
                 // For ENUM types, '' means: default value is first value in enum set
                 // For other types, '' means: no default value
                 HasDefaultValue := false;
-                if Pos('blob', TypeName) > 0 then HasDefaultValue := true;
-                if Pos('text', TypeName) > 0 then HasDefaultValue := true;
-                if Pos('char', TypeName) > 0 then HasDefaultValue := true;
+                if ZFastCode.Pos('blob', TypeName) > 0 then HasDefaultValue := true;
+                if ZFastCode.Pos('text', TypeName) > 0 then HasDefaultValue := true;
+                if ZFastCode.Pos('char', TypeName) > 0 then HasDefaultValue := true;
                 if 'set' = TypeName then HasDefaultValue := true;
                 if 'enum' =  TypeName then
                   begin
                     HasDefaultValue := true;
                     DefaultValue := Copy(TypeInfoSecond, 2,length(TypeInfoSecond)-1);
-                    DefaultValue := Copy(DefaultValue, 1, Pos('''', DefaultValue) - 1);
+                    DefaultValue := Copy(DefaultValue, 1, ZFastCode.Pos('''', DefaultValue) - 1);
                   end;
               end;
             end;
@@ -2405,25 +2405,25 @@ var
     for I := 0 to AList.Count -1 do
       if J < AList.Count then
       begin
-        if (Pos('(', (AList[J])) > 0) and (Pos(')', (AList[J])) = 0) then
-          if ( Pos('real', LowerCase(AList[J])) > 0 ) or
-             ( Pos('float', LowerCase(AList[J])) > 0 ) or
-             ( Pos('decimal', LowerCase(AList[J])) > 0 ) or
-             ( Pos('numeric', LowerCase(AList[J])) > 0 ) or
-             ( Pos('double', LowerCase(AList[J])) > 0 ) then
+        if (ZFastCode.Pos('(', (AList[J])) > 0) and (ZFastCode.Pos(')', (AList[J])) = 0) then
+          if ( ZFastCode.Pos('real', LowerCase(AList[J])) > 0 ) or
+             ( ZFastCode.Pos('float', LowerCase(AList[J])) > 0 ) or
+             ( ZFastCode.Pos('decimal', LowerCase(AList[J])) > 0 ) or
+             ( ZFastCode.Pos('numeric', LowerCase(AList[J])) > 0 ) or
+             ( ZFastCode.Pos('double', LowerCase(AList[J])) > 0 ) then
           begin
             AddTempString(AList[j]+','+AList[j+1]);
             Inc(j);
           end
           else
-            if ( Pos('set', LowerCase(AList[J])) > 0 ) and
-              ( Pos(')', LowerCase(AList[J])) = 0 ) then
+            if ( ZFastCode.Pos('set', LowerCase(AList[J])) > 0 ) and
+              ( ZFastCode.Pos(')', LowerCase(AList[J])) = 0 ) then
             begin
               TypeName := AList[J];
               for N := J+1 to AList.Count-1 do
               begin
                 TypeName := TypeName +','+AList[N];
-                if Pos(')', AList[N]) > 0 then
+                if ZFastCode.Pos(')', AList[N]) > 0 then
                   Break;
               end;
               AddTempString(TypeName);

@@ -102,8 +102,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZSybaseTokenizer = class (TZTokenizer)
-  public
-    constructor Create;
+  protected
+    procedure CreateTokenStates; override;
   end;
 
 implementation
@@ -386,10 +386,9 @@ end;
 { TZSybaseTokenizer }
 
 {**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
+  Constructs a default state table (as described in the class comment).
 }
-constructor TZSybaseTokenizer.Create;
+procedure TZSybaseTokenizer.CreateTokenStates;
 begin
   EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;

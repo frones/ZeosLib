@@ -562,7 +562,7 @@ var
 begin
   FOracleParams[ParameterIndex].pName := ParamName;
   FOracleParams[ParameterIndex].pTypeName := ParamTypeName;
-  iPos := Pos('.', ParamName);
+  iPos := ZFastCode.Pos('.', ParamName);
   if iPos > 0 then
   begin
     ProcName := Copy(ParamName, 1, iPos-1); //extract function or Procedure names

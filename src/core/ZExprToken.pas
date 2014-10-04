@@ -104,8 +104,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZExpressionTokenizer = class (TZTokenizer)
-  public
-    constructor Create;
+  protected
+    procedure CreateTokenStates; override;
   end;
 
 implementation
@@ -124,7 +124,7 @@ const
 //     of the read var, like Stream.Read(LastChar, 1), to read 1 char
 //
 //     Instead, operations should use SizeOf(Type), like this:
-//     Stream.Read(LastChar, 1 * SizeOf(Char))
+//     Stream.Read(LastChar, SizeOf(Char))
 //
 //     This is unicode safe and ansi (Delphi under 2009) compatible
 
@@ -143,7 +143,7 @@ var
   begin
     Result := '';
     LastChar := #0;
-    while Stream.Read(LastChar, 1 * SizeOf(Char)) > 0 do
+    while Stream.Read(LastChar, SizeOf(Char)) > 0 do
     begin
       if CharInSet(LastChar, ['0'..'9']) then
       begin
@@ -152,7 +152,7 @@ var
       end
       else
       begin
-        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
         Break;
       end;
     end;
@@ -171,7 +171,7 @@ begin
     FloatPoint := LastChar = '.';
     if FloatPoint then
     begin
-      Stream.Read(TempChar{%H-}, 1 * SizeOf(Char));
+      Stream.Read(TempChar{%H-}, SizeOf(Char));
       Result.Value := Result.Value + TempChar;
     end;
   end;
@@ -183,11 +183,11 @@ begin
   { Reads a power part of the number }
   if CharInSet(LastChar, ['e', 'E']) then
   begin
-    Stream.Read(TempChar, 1 * SizeOf(Char));
+    Stream.Read(TempChar, SizeOf(Char));
     Result.Value := Result.Value + TempChar;
     FloatPoint := True;
 
-    Stream.Read(TempChar, 1 * SizeOf(Char));
+    Stream.Read(TempChar, SizeOf(Char));
     if CharInSet(TempChar, ['0'..'9', '-', '+']) then
       Result.Value := Result.Value + TempChar + ReadDecDigits
     else
@@ -234,11 +234,11 @@ begin
   Result.Value := FirstChar;
   LastChar := #0;
 
-  while Stream.Read(ReadChar{%H-}, 1 * SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
     if (LastChar = FirstChar) and (ReadChar <> FirstChar) then
     begin
-      Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
+      Stream.Seek(-SizeOf(Char), soFromCurrent);
       Break;
     end;
     Result.Value := Result.Value + ReadChar;
@@ -300,7 +300,7 @@ begin
 
   if FirstChar = '/' then
   begin
-    ReadNum := Stream.Read(ReadChar{%H-}, 1 * SizeOf(Char));
+    ReadNum := Stream.Read(ReadChar{%H-}, SizeOf(Char));
     if (ReadNum > 0) and (ReadChar = '*') then
     begin
       Result.TokenType := ttComment;
@@ -309,7 +309,7 @@ begin
     else
     begin
       if ReadNum > 0 then
-        Stream.Seek(-(1 * SizeOf(Char)), soFromCurrent);
+        Stream.Seek(-SizeOf(Char), soFromCurrent);
     end;
   end;
 
@@ -372,10 +372,9 @@ end;
 { TZExpressionTokenizer }
 
 {**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
+  Constructs a default state table (as described in the class comment).
 }
-constructor TZExpressionTokenizer.Create;
+procedure TZExpressionTokenizer.CreateTokenStates;
 begin
   WhitespaceState := TZWhitespaceState.Create;
 

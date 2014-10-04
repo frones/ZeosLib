@@ -612,9 +612,7 @@ procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar); overload;
 implementation
 
 uses DateUtils, StrUtils, {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF}
-  {$IFDEF DELPHI}
-    {$IFDEF WITH_RTLCONSTS_SInvalidGuidArray}RTLConsts{$ELSE}SysConst{$ENDIF},
-  {$ENDIF}
+  {$IFDEF WITH_RTLCONSTS_SInvalidGuidArray}RTLConsts,{$ENDIF}SysConst,
   ZFastCode;
 
 
@@ -631,7 +629,7 @@ begin
   Result := 0;
   for I := 1 to Length(Delimiters) do
   begin
-    Index := Pos(Delimiters[I], Str);
+    Index := ZFastCode.Pos(Delimiters[I], Str);
     if (Index > 0) and ((Index < Result) or (Result = 0)) then
       Result := Index;
   end;
@@ -650,7 +648,7 @@ begin
   Result := 0;
   for I := Length(Str) downto 1 do
   begin
-    Index := Pos(Str[I], Delimiters);
+    Index := ZFastCode.Pos(Str[I], Delimiters);
     if (Index > 0) then
     begin
       Result := I;
@@ -1624,7 +1622,7 @@ var
     dotPos := 0;
     MSec := 0;
     if Length(AString) > 8 then
-      dotPos :=Pos ('.', AString);
+      dotPos := ZFastCode.Pos('.', AString);
 
     //if the dot are found, milliseconds are present.
     if dotPos > 0 then begin
@@ -1828,7 +1826,7 @@ var
     end;
   end;
 begin
-  DateFormat := ZFormatSettings.PDateFormat;
+  DateFormat := Pointer(ZFormatSettings.DateFormat);
   Failed := False;
   if (Value = nil) or (ValLen = 0) then
     Result := 0
@@ -2015,7 +2013,7 @@ var
   end;
 begin
   Failed := False;
-  TimeFormat := ZFormatSettings.PTimeFormat;
+  TimeFormat := Pointer(ZFormatSettings.TimeFormat);
   if (Value = nil) or (ValLen = 0) then
     Result := 0
   else
@@ -2349,7 +2347,7 @@ begin
     Result := 0
   else
   begin
-    TimeStampFormat := ZFormatSettings.PDateTimeFormat;
+    TimeStampFormat := Pointer(ZFormatSettings.DateTimeFormat);
     TryExtractTimeStampFromFormat(Value);
     if Failed then
       TryExtractTimeStampFromVaryingSize;
@@ -2380,7 +2378,7 @@ begin
   OrdQuoted := Ord(Quoted);
   { prepare Value if required }
   if Length(Value) <> len+(2*OrdQuoted)+Slen then
-    System.SetString(Value, nil, len+(2*OrdQuoted)+Slen);
+    ZSetString(nil, len+(2*OrdQuoted)+Slen, Value);
   P := Pointer(Value);
   if Quoted then
   begin
@@ -2389,7 +2387,7 @@ begin
     (P+Len)^ := #39; //leading quote
   end;
   if SLen > 0 then //move suffix after leading quote
-    System.Move(Pointer(Suffix)^, (P+Len+OrdQuoted)^, Slen*2);
+    System.Move(Pointer(Suffix)^, (P+Len+OrdQuoted)^, Slen shl 1);
 end;
 
 procedure PrepareDateTimeStr(const Quoted: Boolean;
@@ -2443,7 +2441,7 @@ begin
   PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-}, PA);
 
   I := ConFormatSettings.DateFormatLen-1;
-  DateFormat := ConFormatSettings.PDateFormat;
+  DateFormat := Pointer(ConFormatSettings.DateFormat);
   while I > 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
@@ -2496,7 +2494,7 @@ begin
   PrepareDateTimeStr(Quoted, Suffix, ConFormatSettings.DateFormatLen, Result{%H-}, PW);
 
   I := ConFormatSettings.DateFormatLen-1;
-  DateFormat := ConFormatSettings.PDateFormat;
+  DateFormat := Pointer(ConFormatSettings.DateFormat);
   while I > 0 do
     case (DateFormat+i)^ of
       'Y', 'y':
@@ -2551,7 +2549,7 @@ begin
   ZSet := False;
 
   I := ConFormatSettings.TimeFormatLen-1;
-  TimeFormat := ConFormatSettings.PTimeFormat;
+  TimeFormat := Pointer(ConFormatSettings.TimeFormat);
   while I > 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
@@ -2611,7 +2609,7 @@ begin
   ZSet := False;
 
   I := ConFormatSettings.TimeFormatLen-1;
-  TimeFormat := ConFormatSettings.PTimeFormat;
+  TimeFormat := Pointer(ConFormatSettings.TimeFormat);
   while I > 0 do
     case (TimeFormat+i)^ of
       'H', 'h':
@@ -2673,7 +2671,7 @@ begin
   YearSet := False;
 
   I := ConFormatSettings.DateTimeFormatLen-1;
-  TimeStampFormat := ConFormatSettings.PDateTimeFormat;
+  TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
   while I > 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
@@ -2755,7 +2753,7 @@ begin
   YearSet := False;
 
   I := ConFormatSettings.DateTimeFormatLen-1;
-  TimeStampFormat := ConFormatSettings.PDateTimeFormat;
+  TimeStampFormat := Pointer(ConFormatSettings.DateTimeFormat);
   while I > 0 do
     case (TimeStampFormat+i)^ of
       'Y', 'y':
@@ -3525,6 +3523,10 @@ begin
   GUIDToBuffer(Buffer, PWideChar(Pointer(Result)));
 end;
 
+procedure InvalidGUID(C: Char);
+begin
+  raise EArgumentException.CreateResFmt(@SInvalidGUID, [String(C)]);
+end;
 {**
   EgonHugeist: my conversion is 1,5x faster than IDE's
   converty hex-dezimal guid-string into a binary format
@@ -3540,7 +3542,10 @@ procedure ValidGUIDToBinary(Src, Dest: PAnsiChar);
       'a'..'f':  Result := (Byte(c) - Byte('a')) + 10;
       'A'..'F':  Result := (Byte(c) - Byte('A')) + 10;
     else
-      Result := 0;
+      begin
+        Result := 0; //satisfy compiler!
+        InvalidGUID(Char(C));
+      end;
     end;
   end;
 
@@ -3551,9 +3556,11 @@ procedure ValidGUIDToBinary(Src, Dest: PAnsiChar);
 var
   i: Integer;
 begin
+  if Src^ <> '{' then InvalidGUID(Char(Src^));
   Inc(Src);
   for i := 0 to 3 do //process D1
     PByte(dest+I)^ := HexByte(Src+(3-i) shl 1);
+  if (Src+8)^ <> '-' then InvalidGUID(Char((Src+8)^));
   Inc(src, 9);
   Inc(dest, 4);
   for i := 0 to 1 do //D2, D3
@@ -3561,11 +3568,13 @@ begin
     PByte(dest)^ := HexByte(src+2);
     PByte(dest+1)^ := HexByte(src);
     Inc(dest, 2);
+    if (Src+4)^ <> '-' then InvalidGUID(Char((Src+4)^));
     Inc(src, 5);
   end;
   PByte(dest)^ := HexByte(src);
   PByte(dest+1)^ := HexByte(src+2);
   Inc(dest, 2);
+  if (Src+4)^ <> '-' then InvalidGUID(Char((Src+4)^));
   Inc(src, 5);
   for i := 0 to 5 do
   begin
@@ -3573,6 +3582,7 @@ begin
     Inc(dest);
     Inc(src, 2);
   end;
+  if Src^ <> '}' then InvalidGUID(Char(Src^));
 end;
 
 {**
@@ -3590,7 +3600,10 @@ procedure ValidGUIDToBinary(Src: PWideChar; Dest: PAnsiChar);
       'a'..'f':  Result := (Byte(c) - Byte('a')) + 10;
       'A'..'F':  Result := (Byte(c) - Byte('A')) + 10;
     else
-      Result := 0;
+      begin
+        InvalidGUID(Char(C));
+        Result := 0; //satisfy compiler
+      end;
     end;
   end;
 
@@ -3604,6 +3617,7 @@ begin
   Inc(Src);
   for i := 0 to 3 do //process D1
     PByte(dest+I)^ := HexByte(Src+(3-i) shl 1);
+  if (Src+8)^ <> '-' then InvalidGUID(Char((Src+8)^));
   Inc(src, 9);
   Inc(dest, 4);
   for i := 0 to 1 do //D2, D3
@@ -3611,11 +3625,13 @@ begin
     PByte(dest)^ := HexByte(src+2);
     PByte(dest+1)^ := HexByte(src);
     Inc(dest, 2);
+    if (Src+4)^ <> '-' then InvalidGUID(Char((Src+4)^));
     Inc(src, 5);
   end;
   PByte(dest)^ := HexByte(src);
   PByte(dest+1)^ := HexByte(src+2);
   Inc(dest, 2);
+  if (Src+4)^ <> '-' then InvalidGUID(Char((Src+4)^));
   Inc(src, 5);
   for i := 0 to 5 do
   begin
@@ -3623,6 +3639,7 @@ begin
     Inc(dest);
     Inc(src, 2);
   end;
+  if Src^ <> '}' then InvalidGUID(Char(Src^));
 end;
 
 initialization

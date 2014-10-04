@@ -665,23 +665,14 @@ begin
   ConSettings^.WriteFormatSettings.DateFormatLen := Length(ConSettings^.WriteFormatSettings.DateFormat);
   ConSettings^.ReadFormatSettings.DateFormatLen := Length(ConSettings^.ReadFormatSettings.DateFormat);
   ConSettings^.DisplayFormatSettings.DateFormatLen := Length(ConSettings^.DisplayFormatSettings.DateFormat);
-  ConSettings^.WriteFormatSettings.PDateFormat := Pointer(ConSettings^.WriteFormatSettings.DateFormat);
-  ConSettings^.ReadFormatSettings.PDateFormat := Pointer(ConSettings^.ReadFormatSettings.DateFormat);
-  ConSettings^.DisplayFormatSettings.PDateFormat := Pointer(ConSettings^.DisplayFormatSettings.DateFormat);
 
   ConSettings^.WriteFormatSettings.TimeFormatLen := Length(ConSettings^.WriteFormatSettings.TimeFormat);
   ConSettings^.ReadFormatSettings.TimeFormatLen := Length(ConSettings^.ReadFormatSettings.TimeFormat);
   ConSettings^.DisplayFormatSettings.TimeFormatLen := Length(ConSettings^.DisplayFormatSettings.TimeFormat);
-  ConSettings^.WriteFormatSettings.PTimeFormat := Pointer(ConSettings^.WriteFormatSettings.TimeFormat);
-  ConSettings^.ReadFormatSettings.PTimeFormat := Pointer(ConSettings^.ReadFormatSettings.TimeFormat);
-  ConSettings^.DisplayFormatSettings.PTimeFormat := Pointer(ConSettings^.DisplayFormatSettings.TimeFormat);
 
   ConSettings^.WriteFormatSettings.DateTimeFormatLen := Length(ConSettings^.WriteFormatSettings.DateTimeFormat);
   ConSettings^.ReadFormatSettings.DateTimeFormatLen := Length(ConSettings^.ReadFormatSettings.DateTimeFormat);
   ConSettings^.DisplayFormatSettings.DateTimeFormatLen := Length(ConSettings^.DisplayFormatSettings.DateTimeFormat);
-  ConSettings^.WriteFormatSettings.PDateTimeFormat := Pointer(ConSettings^.WriteFormatSettings.DateTimeFormat);
-  ConSettings^.ReadFormatSettings.PDateTimeFormat := Pointer(ConSettings^.ReadFormatSettings.DateTimeFormat);
-  ConSettings^.DisplayFormatSettings.PDateTimeFormat := Pointer(ConSettings^.DisplayFormatSettings.DateTimeFormat);
 end;
 
 procedure TZAbstractConnection.ResetCurrentClientCodePage(const Name: String);

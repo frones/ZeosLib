@@ -357,13 +357,10 @@ type
   TZFormatSettings = Record
     DateFormat: RawByteString;
     DateFormatLen: Cardinal;
-    PDateFormat: PAnsiChar;
     TimeFormat: RawByteString;
     TimeFormatLen: Cardinal;
-    PTimeFormat: PAnsiChar;
     DateTimeFormat: RawByteString;
     DateTimeFormatLen: Cardinal;
-    PDateTimeFormat: PAnsiChar;
   End;
 
   PZConSettings = ^TZConSettings;
@@ -429,33 +426,24 @@ var
       DisplayFormatSettings:
         (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
-          PDateFormat: 'DD-MM-YYYY';
           TimeFormat: 'HH:NN:SS.ZZZ';
           TimeFormatLen: 12;
-          PTimeFormat: 'HH:NN:SS.ZZZ';
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS';
-          DateTimeFormatLen: 23;
-          PDateTimeFormat: 'DD-MM-YYYY HH:NN:SS');
+          DateTimeFormatLen: 23);
       ReadFormatSettings:
           (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
-          PDateFormat: 'DD-MM-YYYY';
           TimeFormat: 'HH:NN:SS.ZZZ';
           TimeFormatLen: 12;
-          PTimeFormat: 'HH:NN:SS.ZZZ';
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
-          DateTimeFormatLen: 23;
-          PDateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ');
+          DateTimeFormatLen: 23);
       WriteFormatSettings:
           (DateFormat: 'DD-MM-YYYY';
           DateFormatLen: 10;
-          PDateFormat: 'DD-MM-YYYY';
           TimeFormat: 'HH:NN:SS.ZZZ';
           TimeFormatLen: 12;
-          PTimeFormat: 'HH:NN:SS.ZZZ';
           DateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ';
-          DateTimeFormatLen: 23;
-          PDateTimeFormat: 'DD-MM-YYYY HH:NN:SS.ZZZ');
+          DateTimeFormatLen: 23);
       {$IFDEF WITH_LCONVENCODING}
       PlainConvertFunc: @NoConvert;
       DbcConvertFunc: @NoConvert;

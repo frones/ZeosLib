@@ -2151,8 +2151,10 @@ begin
           Result.VBoolean := False;
         vtBoolean:
           Result.VBoolean := Value.VBoolean;
-        vtInteger, vtUInteger:
+        vtInteger:
           Result.VBoolean := Value.VInteger <> 0;
+        vtUInteger:
+          Result.VBoolean := Value.VUInteger <> 0;
         vtFloat:
           Result.VBoolean := Value.VFloat <> 0;
         vtBytes:

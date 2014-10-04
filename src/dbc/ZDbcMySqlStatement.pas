@@ -1415,28 +1415,28 @@ begin
   FParamNames[ParameterIndex] := ConSettings^.ConvFuncs.ZStringToRaw(ParamName,
     ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   ParamTypeName := LowerCase(ParamTypeName);
-  if ( Pos('char', ParamTypeName) > 0 ) or
-     ( Pos('set', ParamTypeName) > 0 ) then
+  if ( ZFastCode.Pos('char', ParamTypeName) > 0 ) or
+     ( ZFastCode.Pos('set', ParamTypeName) > 0 ) then
     FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
   else
-    if ( Pos('set', ParamTypeName) > 0 ) then
+    if ( ZFastCode.Pos('set', ParamTypeName) > 0 ) then
       FParamTypeNames[ParameterIndex] := 'CHAR('+ZFastCode.IntToRaw(ColumnSize)+')'
     else
-      if ( Pos('datetime', ParamTypeName) > 0 ) or
-         ( Pos('timestamp', ParamTypeName) > 0 ) then
+      if ( ZFastCode.Pos('datetime', ParamTypeName) > 0 ) or
+         ( ZFastCode.Pos('timestamp', ParamTypeName) > 0 ) then
         FParamTypeNames[ParameterIndex] := 'DATETIME'
       else
-        if ( Pos('date', ParamTypeName) > 0 ) then
+        if ( ZFastCode.Pos('date', ParamTypeName) > 0 ) then
           FParamTypeNames[ParameterIndex] := 'DATE'
         else
-          if ( Pos('time', ParamTypeName) > 0 ) then
+          if ( ZFastCode.Pos('time', ParamTypeName) > 0 ) then
             FParamTypeNames[ParameterIndex] := 'TIME'
           else
-            if ( Pos('int', ParamTypeName) > 0 ) or
-               ( Pos('year', ParamTypeName) > 0 ) then
+            if ( ZFastCode.Pos('int', ParamTypeName) > 0 ) or
+               ( ZFastCode.Pos('year', ParamTypeName) > 0 ) then
               FParamTypeNames[ParameterIndex] := 'SIGNED'
             else
-              if ( Pos('binary', ParamTypeName) > 0 ) then
+              if ( ZFastCode.Pos('binary', ParamTypeName) > 0 ) then
                 FParamTypeNames[ParameterIndex] := 'BINARY('+ZFastCode.IntToRaw(ColumnSize)+')'
               else
                 FParamTypeNames[ParameterIndex] := '';

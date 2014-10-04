@@ -1814,6 +1814,7 @@ var
   I: Word;
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
+  ZCodePageInfo: PZCodePage;
   CP: Word;
 begin
   if FStmtHandle=0 then
@@ -1834,47 +1835,40 @@ begin
 
         if FieldSqlType in [stString, stUnicodeString] then
         begin
+          MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
           CP := GetIbSqlSubType(I);
-          if CP > High(FCodePageArray) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
+          if (CP = ConSettings^.ClientCodePage^.ID) or //avoid the loops if we allready have the info's we need
+             (CP > High(FCodePageArray)) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
             //see test Bug#886194, we retrieve 565 as CP...
-            ColumnCodePage := ConSettings^.ClientCodePage^.CP
+            ZCodePageInfo := ConSettings^.ClientCodePage
           else
-            ColumnCodePage := FCodePageArray[CP];
+            //see: http://sourceforge.net/p/zeoslib/tickets/97/
+            ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
+          ColumnCodePage := ZCodePageInfo^.CP;
+          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+            ZCodePageInfo^.CharWidth, @ColumnDisplaySize, True);
         end
         else
           if FieldSqlType in [stAsciiStream, stUnicodeStream] then
             ColumnCodePage := ConSettings^.ClientCodePage^.CP
           else
-            ColumnCodePage := zCP_NONE;
-
-        if FieldSqlType in [stBytes, stString, stUnicodeString] then
-        begin
-          MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
-          if (FIZSQLDA.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
           begin
-            if not ( FieldSQLType = stBytes ) then
-              if ConSettings.ClientCodePage^.ID = CS_NONE then
+            ColumnCodePage := zCP_NONE;
+            if FieldSQLType = stBytes then
+            begin
+              MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
+              Precision := MaxLenghtBytes;
+            end
             else
-              ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
-            Precision := MaxLenghtBytes;
-          end
-          else
-            Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
-              ConSettings^.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
-        end;
+              Signed := FieldSqlType in [stShort, stSmall, stInteger, stLong];
+          end;
 
-        ReadOnly := (FIZSQLDA.GetFieldRelationName(I) = '') or (FIZSQLDA.GetFieldSqlName(I) = '')
-          or (FIZSQLDA.GetFieldSqlName(I) = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
+        ReadOnly := (TableName = '') or (ColumnName = '') or
+          (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
-        if FIZSQLDA.IsNullable(I) then
-          Nullable := ntNullable
-        else
-          Nullable := ntNoNulls;
-
+        Nullable := TZColumnNullableType(Ord(FIZSQLDA.IsNullable(I)));
         Scale := FIZSQLDA.GetFieldScale(I);
-        AutoIncrement := False;
-        //Signed := False;
-        //CaseSensitive := True;
+        CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fiels are uppercased by default
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;

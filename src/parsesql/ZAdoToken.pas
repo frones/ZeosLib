@@ -71,8 +71,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZAdoSQLTokenizer = class (TZGenericSQLTokenizer)
-  public
-    constructor Create;
+  protected
+    procedure CreateTokenStates; override;
   end;
 
 implementation
@@ -154,11 +154,11 @@ end;
 
 
 { TZAdoSQLTokenizer }
+
 {**
-  Constructs a tokenizer with a default state table (as
-  described in the class comment).
+  Constructs a default state table (as described in the class comment).
 }
-constructor TZAdoSQLTokenizer.Create;
+procedure TZAdoSQLTokenizer.CreateTokenStates;
 begin
   EscapeState := TZEscapeState.Create;
   NumberState := TZNumberState.Create;
@@ -188,7 +188,6 @@ begin
   SetCharacterState(']', ']', QuoteState);
 
   SetCharacterState('/', '/', CommentState);
-
 end;
 
 end.

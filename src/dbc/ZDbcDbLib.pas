@@ -155,7 +155,7 @@ implementation
 
 uses
   {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF}
-  ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding,
+  ZSysUtils, ZMessages, ZDbcUtils, ZDbcDbLibStatement, ZEncoding, ZFastCode,
   ZDbcDbLibMetadata, ZSybaseToken, ZSybaseAnalyser{$IFDEF OLDFPC}, ZClasses{$ENDIF};
 
 { TZDBLibDriver }
@@ -234,20 +234,20 @@ end;
 procedure TZDBLibConnection.InternalCreate;
 begin
   FDisposeCodePage := False;
-  if Pos('mssql', LowerCase(Url.Protocol)) > 0  then
+  if ZFastCode.Pos('mssql', LowerCase(Url.Protocol)) > 0  then
   begin
     FMetadata := TZMsSqlDatabaseMetadata.Create(Self, Url);
     FProvider := dpMsSQL;
   end
   else
-    if Pos('sybase', LowerCase(Url.Protocol)) > 0 then
+    if ZFastCode.Pos('sybase', LowerCase(Url.Protocol)) > 0 then
     begin
       FMetadata := TZSybaseDatabaseMetadata.Create(Self, Url);
       FProvider := dpSybase;
     end
     else
       FMetadata := nil;
-  FFreeTDS := Pos('FreeTDS', Url.Protocol) > 0;
+  FFreeTDS := ZFastCode.Pos('FreeTDS', Url.Protocol) > 0;
 
   FHandle := nil;
 end;

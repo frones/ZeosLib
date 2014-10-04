@@ -157,7 +157,6 @@ begin
   for I := 0 to Params.Count - 1 do
   begin
     CallableStatement.RegisterParamType( I{$IFNDEF GENERIC_INDEX}+1{$ENDIF}, ord(Params[I].ParamType));
-
     if Params[I].ParamType in [ptResult, ptOutput, ptInputOutput] then
       CallableStatement.RegisterOutParameter(I{$IFNDEF GENERIC_INDEX}+1{$ENDIF},
         Ord(ConvertDatasetToDbcType(Params[I].DataType)));

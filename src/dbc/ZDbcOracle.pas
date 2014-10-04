@@ -886,7 +886,7 @@ begin
   Result := inherited FormCalculateStatement(Columns);
   if Result <> '' then
   begin
-    iPos := pos('FROM', uppercase(Result));
+    iPos := ZFastCode.pos('FROM', uppercase(Result));
     if iPos > 0 then
     begin
       Result := copy(Result, 1, iPos+3) + ' DUAL';

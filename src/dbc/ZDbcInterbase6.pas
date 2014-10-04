@@ -838,15 +838,11 @@ begin
   Result := inherited FormCalculateStatement(Columns);
   if Result <> '' then
   begin
-    iPos := pos('FROM', uppercase(Result));
+    iPos := ZFastCode.pos('FROM', uppercase(Result));
     if iPos > 0 then
-    begin
-      Result := copy(Result, 1, iPos+3) + ' RDB$DATABASE';
-    end
+      Result := copy(Result, 1, iPos+3) + ' RDB$DATABASE'
     else
-    begin
       Result := Result + ' FROM RDB$DATABASE';
-    end;
   end;
 // <-- ms
 end;

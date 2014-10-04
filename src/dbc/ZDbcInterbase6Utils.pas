@@ -1149,10 +1149,6 @@ begin
   for J := ArrayOffSet to ArrayOffSet+ArrayItersCount-1 do
     for i := 0 to InParamCount -1 do
     begin
-      if (j = 49) and (I = InParamCount -1) then
-        ZData := InParamValues[I].VArray.VIsNullArray;
-
-
       ZData := InParamValues[I].VArray.VIsNullArray;
       if (ZData = nil) then
         ParamSqlData.UpdateNull(ParamIndex, False)
@@ -1176,7 +1172,7 @@ begin
             NullValue := EncodeRawByteString({$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(GUIDToString(ZGUIDArray[j])));
           stString, stUnicodeString:
             begin
-              case InParamValues[i].VArray.VArrayVariantType of
+              case InParamValues[i].VArray.VIsNullArrayVariantType of
                 vtString: NullValue := EncodeString(ZStringArray[j]);
                 vtAnsiString: NullValue := EncodeAnsiString(ZAnsiStringArray[j]);
                 vtUTF8String: NullValue := EncodeUTF8String(ZUTF8StringArray[j]);

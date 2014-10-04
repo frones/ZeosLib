@@ -89,8 +89,8 @@ type
 
   {** Implements a default tokenizer object. }
   TZInterbaseTokenizer = class (TZTokenizer)
-  public
-    constructor Create;
+  protected
+    procedure CreateTokenStates; override;
   end;
 
 implementation
@@ -128,9 +128,7 @@ end;
 
 { TZInterbaseTokenizer }
 
-{ TZInterbaseTokenizer }
-
-constructor TZInterbaseTokenizer.Create;
+procedure TZInterbaseTokenizer.CreateTokenStates;
 begin
   EscapeState := TZEscapeState.Create;
   WhitespaceState := TZWhitespaceState.Create;

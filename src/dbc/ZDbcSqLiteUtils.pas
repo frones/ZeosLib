@@ -117,13 +117,13 @@ begin
   Precision := 0;
   Decimals := 0;
 
-  P1 := Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
-  P2 := Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName);
+  P1 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('('), TypeName);
+  P2 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(')'), TypeName);
   if (P1 > 0) and (P2 > 0) then
   begin
     Temp := Copy(TypeName, P1 + 1, P2 - P1 - 1);
     TypeName := Copy(TypeName, 1, P1 - 1);
-    P1 := Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), Temp);
+    P1 := ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}(','), Temp);
     if P1 > 0 then
     begin
       Precision := RawToIntDef(Copy(Temp, 1, P1 - 1), 0);
@@ -179,11 +179,11 @@ begin
     Result := stTimestamp
   else if TypeName = {$IFDEF UNICODE}RawByteString{$ENDIF}('DATETIME') then
     Result := stTimestamp
-  else if Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('BLOB'), TypeName) > 0 then
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('BLOB'), TypeName) > 0 then
     Result := stBinaryStream
-  else if Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('CLOB'), TypeName) > 0 then
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('CLOB'), TypeName) > 0 then
     Result := stAsciiStream
-  else if Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('TEXT'), TypeName) > 0 then
+  else if ZFastCode.Pos({$IFDEF UNICODE}RawByteString{$ENDIF}('TEXT'), TypeName) > 0 then
     Result := stAsciiStream;
 
   if (Result = stInteger) and (Precision <> 0) then
@@ -267,10 +267,10 @@ var
   s:string;
 begin
   s:=String(SQLiteVersion);
-  MajorVersion:=StrToIntDef(copy(s,1,pos('.',s)-1),0);
-  delete(s,1,pos('.',s));
-  MinorVersion:=StrToIntDef(copy(s,1,pos('.',s)-1),0);
-  delete(s,1,pos('.',s));
+  MajorVersion:=StrToIntDef(copy(s,1,ZFastCode.pos('.',s)-1),0);
+  delete(s,1,ZFastCode.pos('.',s));
+  MinorVersion:=StrToIntDef(copy(s,1,ZFastCode.pos('.',s)-1),0);
+  delete(s,1,ZFastCode.pos('.',s));
   SubVersion:=StrToIntDef(s,0);
   Result := EncodeSQLVersioning(MajorVersion,MinorVersion,SubVersion);
 end;
