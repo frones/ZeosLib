@@ -440,6 +440,8 @@ end;
 procedure TZPostgreSQLConnection.InternalCreate;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
+  FPreparedStmts := nil;
+  FTableInfoCache := nil;
 
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
@@ -482,9 +484,10 @@ end;
 }
 destructor TZPostgreSQLConnection.Destroy;
 begin
-  if FTableInfoCache <> nil then FreeAndNil(FTableInfoCache);
   if FTypeList <> nil then FreeAndNil(FTypeList);
   inherited Destroy;
+  if FTableInfoCache <> nil then FreeAndNil(FTableInfoCache);
+  if FPreparedStmts <> nil then FreeAndNil(FPreparedStmts);
 end;
 
 {**
@@ -687,7 +690,6 @@ begin
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
     { Set the notice processor (default = nil)}
-
     GetPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
     { Gets the current codepage }
@@ -699,10 +701,6 @@ begin
 
     { Turn on transaction mode }
     StartTransactionSupport;
-    { Setup notification mechanism }
-    //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
-
-    FPreparedStmts := TStringList.Create;
     inherited Open;
 
     { Gets the current codepage if it wasn't set..}
@@ -714,7 +712,10 @@ begin
       FClientSettingsChanged := True;
     end;
 
-    FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
+    if FPreparedStmts = nil then
+      FPreparedStmts := TStringList.Create;
+    if FTableInfoCache = nil then
+      FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
@@ -968,7 +969,8 @@ begin
     LogMessage := 'DEALLOCATE "'+{$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FPreparedStmts[i])+'";';
     GetPlainDriver.ExecuteQuery(FHandle, Pointer(LogMessage));
   end;
-  FreeAndNil(FPreparedStmts);
+  FPreparedStmts.Clear;
+  FTableInfoCache.Clear;
 
   GetPlainDriver.Finish(FHandle);
   FHandle := nil;
