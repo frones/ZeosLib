@@ -698,7 +698,7 @@ begin
       Inc(I);
   end;
   if S <> '' then
-    raise Exception.Create(String(S));
+    raise Exception.Create(S);
 end;
 
 function TZDBLibAbstractPlainDriver.GetVariables: TDBVariables;
@@ -2480,7 +2480,7 @@ finalization
 //Free any record in the list if any
   while SQLErrors.Count > 0 do
   begin
-    Dispose(SQLErrors.Items[0]);
+    Dispose(PDBLibError(SQLErrors.Items[0]));
     SQLErrors.Delete(0);
   end;
   if SQLErrors <> nil then
@@ -2489,7 +2489,7 @@ finalization
 //Free any record in the list if any
   while SQLMessages.Count > 0 do
   begin
-    Dispose(SQLMessages.Items[0]);
+    Dispose(PDBLibMessage(SQLMessages.Items[0]));
     SQLMessages.Delete(0);
   end;
   if SQLMessages <> nil then

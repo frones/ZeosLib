@@ -91,7 +91,6 @@ type
 
   TZPGTableInfoCache = class(TObject)
     protected
-      FConn: IZConnection;
       FTblInfo: Array of TZPGTableInfo;
       FConSettings: PZconSettings;
       FPlainDriver: IZPostgreSQLPlainDriver;
@@ -1064,7 +1063,7 @@ begin
       SQL := 'SELECT oid, typname, typbasetype,typtype FROM pg_type' +
              ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid';
 
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsichar(SQL));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
@@ -1164,7 +1163,7 @@ begin
   if Closed then
     Open;
   SQL := 'SELECT version()';
-  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
