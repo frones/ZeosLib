@@ -1571,11 +1571,11 @@ begin
       Result := EncodeInteger(GetLong(ColumnIndex));
     stByte, stWord, stLongWord, stULong:
       Result := EncodeUInteger(GetULong(ColumnIndex));
-    stFloat, stDouble, stBigDecimal:
+    stFloat, stDouble, stCurrency, stBigDecimal:
       Result := EncodeFloat(GetBigDecimal(ColumnIndex));
     stDate, stTime, stTimestamp:
       Result := EncodeDateTime(GetTimestamp(ColumnIndex));
-    stBytes, stBinaryStream:
+    stBytes, stBinaryStream, stGUID:
       Result := EncodeBytes(GetBytes(ColumnIndex));
     stString, stAsciiStream, stUnicodeString, stUnicodeStream:
       if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or

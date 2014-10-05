@@ -568,6 +568,26 @@ begin
   else Result := Ord(PDouble(V1)^ <> PDouble(V2)^);
 end;
 
+function CompareCurrency_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 then Result := -1
+  else if Null2 then Result := 1
+  else Result := Ord(PCurrency(V1)^ > PCurrency(V2)^)-Ord(PCurrency(V1)^ < PCurrency(V2)^);
+end;
+
+function CompareCurrency_Desc(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  Result := -CompareDouble_Asc(Null1, Null2, V1, V2);
+end;
+
+function CompareCurrency_Equals(const Null1, Null2: Boolean; const V1, V2): Integer;
+begin
+  if Null1 and Null2 then Result := 0
+  else if Null1 <> Null2 then Result := 1
+  else Result := Ord(PCurrency(V1)^ <> PCurrency(V2)^);
+end;
+
 function CompareExtended_Asc(const Null1, Null2: Boolean; const V1, V2): Integer;
 begin
   if Null1 and Null2 then Result := 0
@@ -1332,6 +1352,12 @@ begin
         ckAscending:  Result := CompareDouble_Asc;
         ckDescending: Result := CompareDouble_Desc;
         ckEquals:     Result := CompareDouble_Equals;
+      end;
+    stCurrency:
+      case CompareKind of
+        ckAscending:  Result := CompareCurrency_Asc;
+        ckDescending: Result := CompareCurrency_Desc;
+        ckEquals:     Result := CompareCurrency_Equals;
       end;
     stBigDecimal:
       case CompareKind of
