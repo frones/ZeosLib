@@ -86,7 +86,6 @@ type
   TZAbstractPlainDriver = class(TInterfacedObject, IZPlainDriver)
   protected
     FCodePages: array of TZCodePage;
-    FTokenizer: IZTokenizer;
     FLoader: TZNativeLibraryLoader;
     procedure LoadApi; virtual;
     function IsAnsiDriver: Boolean; virtual;
@@ -99,7 +98,6 @@ type
       ConSettings: PZConSettings): ZWideString; overload;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
       ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; overload; virtual;
-    function GetTokenizer: IZTokenizer;
   public
     constructor Create;
     constructor CreateWithLibrary(const LibName : String);
@@ -217,13 +215,10 @@ end;
 {$ENDIF}
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
   const Value: ZWideString; ConSettings: PZConSettings): ZWideString;
-var
-  StrFrom: RawByteString;
-  Outbuffer: RawByteString;
 begin
-  StrFrom := ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP);
-  Outbuffer := EscapeString(Handle, StrFrom, ConSettings, True);
-  Result := ConSettings^.ConvFuncs.ZRawToUnicode(OutBuffer, ConSettings^.ClientCodePage^.CP);
+  Result := ConSettings^.ConvFuncs.ZRawToUnicode(EscapeString(Handle,
+    ConSettings^.ConvFuncs.ZUnicodeToRaw(Value, ConSettings^.ClientCodePage^.CP),
+    ConSettings, True) , ConSettings^.ClientCodePage^.CP);
 end;
 
 function TZAbstractPlainDriver.EscapeString(Handle: Pointer;
@@ -234,11 +229,6 @@ end;
 {$IFDEF FPC}
   {$HINTS ON}
 {$ENDIF}
-
-function TZAbstractPlainDriver.GetTokenizer: IZTokenizer;
-begin
-  Result := FTokenizer;
-end;
 
 procedure TZAbstractPlainDriver.AddCodePage(const Name: String;
       const ID:  Integer; Encoding: TZCharEncoding = ceAnsi;
@@ -358,13 +348,11 @@ end;
 constructor TZAbstractPlainDriver.Create;
 begin
   inherited Create;
-  FTokenizer := TZTokenizer.Create;
 end;
 
 destructor TZAbstractPlainDriver.Destroy;
 begin
   SetLength(FCodePages, 0);
-  FTokenizer := nil;
   if Assigned(FLoader) then
     FreeAndNil(FLoader);
   inherited Destroy;
