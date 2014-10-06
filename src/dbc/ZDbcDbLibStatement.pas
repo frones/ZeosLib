@@ -109,7 +109,6 @@ type
     FDBLibConnection: IZDBLibConnection;
     FPlainDriver: IZDBLibPlainDriver;
     FHandle: PDBPROCESS;
-    FResults: IZCollection;
     FLastRowsAffected: Integer;//Workaround for sybase
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
@@ -550,7 +549,6 @@ begin
     FPLainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
-  FResults := TZCollection.Create;
 end;
 
 procedure TZDBLibCallableStatement.FetchResults;
@@ -572,13 +570,13 @@ begin
       CachedResultSet.Last;
       CachedResultSet.BeforeFirst; //!!!Just to invoke fetchall
       CachedResultSet.SetConcurrency(GetResultSetConcurrency);
-      FResults.Add(CachedResultSet);
+      FResultSets.Add(CachedResultSet);
     end
     else
     begin
       FLastRowsAffected := FPlainDriver.dbCount(FHandle);
       if FLastRowsAffected > -1 then
-        FResults.Add(TZUpdateCount.Create(FLastRowsAffected));
+        FResultSets.Add(TZUpdateCount.Create(FLastRowsAffected));
     end;
   end;
   FDBLibConnection.CheckDBLibError(lcOther, 'FETCHRESULTS');
@@ -601,7 +599,7 @@ begin
       finally
         NativeResultset.Close;
       end;
-      FResults.Add(TZUpdateCount.Create(FLastRowsAffected));
+      FResultSets.Add(TZUpdateCount.Create(FLastRowsAffected));
     finally
       FPlainDriver.dbCancel(FHandle);
     end;
@@ -632,19 +630,19 @@ begin
   Result := False;
   FRetrievedResultSet := nil;
   FRetrievedUpdateCount := -1;
-  if FResults.Count > 0 then
+  if FResultSets.Count > 0 then
   begin
     try
-      Result := FResults.Items[0].QueryInterface(IZResultSet, ResultSet) = 0;
+      Result := Supports(FResultSets.Items[0], IZResultSet, ResultSet);
       if Result then
       begin
         FRetrievedResultSet := ResultSet;
         FRetrievedUpdateCount := 0;
       end
       else
-        if FResults.Items[0].QueryInterface(IZUpdateCount, UpdateCount) = 0 then
+        if Supports(FResultSets.Items[0], IZUpdateCount, UpdateCount) then
           FRetrievedUpdateCount := UpdateCount.GetCount;
-      FResults.Delete(0);
+      FResultSets.Delete(0);
     finally
       ResultSet := nil;
       UpdateCount := nil;
@@ -681,7 +679,7 @@ end;
 
 function TZDBLibCallableStatement.ExecutePrepared: Boolean;
 var
-  S: string;
+  S: RawByteString;
   I, ParamIndex, DatLen: Integer;
   RetParam: Byte;
   DatBoolean: Boolean;
@@ -701,8 +699,8 @@ var
   Len: NativeUInt;
   RetType: DBINT;
 begin
-  S := Trim(Sql);
-  if FPLainDriver.dbRPCInit(FHandle, PAnsiChar(AnsiString(S)), 0) <> DBSUCCEED then
+  S := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(ASql);
+  if FPLainDriver.dbRPCInit(FHandle, Pointer(S), 0) <> DBSUCCEED then
     FDBLibConnection.CheckDBLibError(lcOther, 'EXECUTEPREPARED:dbRPCInit');
 
   for I := 1 to InParamCount - 1 do//The 0 parameter is the return value
