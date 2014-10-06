@@ -140,26 +140,29 @@ begin
     'INSERT INTO department(dep_id,dep_name,dep_shname,dep_address)'
     + ' VALUES(?,?,?,?)');
   CheckNotNull(Statement);
-
-  Statement.SetInt(dep_id_index, TEST_ROW_ID);
-  Statement.SetString(dep_name_index, 'xyz');
-  Statement.SetNull(dep_shname_index, stString);
-  Stream := TStringStream.Create('abc'#10'def'#13'hgi');
   try
-    Statement.SetAsciiStream(dep_address_index, Stream);
+    Statement.SetInt(dep_id_index, TEST_ROW_ID);
+    Statement.SetString(dep_name_index, 'xyz');
+    Statement.SetNull(dep_shname_index, stString);
+    Stream := TStringStream.Create('abc'#10'def'#13'hgi');
+    try
+      Statement.SetAsciiStream(dep_address_index, Stream);
+    finally
+      Stream.Free;
+    end;
+    CheckEquals(1, Statement.ExecuteUpdatePrepared);
+
+    Statement := Connection.PrepareStatement(
+      'DELETE FROM department WHERE dep_id=?');
+    CheckNotNull(Statement);
+
+    Statement.SetInt(dep_id_index, TEST_ROW_ID);
+    CheckEquals(1, Statement.ExecuteUpdatePrepared);
+    Statement.ExecutePrepared;
+    CheckEquals(0, Statement.GetUpdateCount);
   finally
-    Stream.Free;
+    Statement.Close;
   end;
-  CheckEquals(1, Statement.ExecuteUpdatePrepared);
-
-  Statement := Connection.PrepareStatement(
-    'DELETE FROM department WHERE dep_id=?');
-  CheckNotNull(Statement);
-
-  Statement.SetInt(dep_id_index, TEST_ROW_ID);
-  CheckEquals(1, Statement.ExecuteUpdatePrepared);
-  Statement.ExecutePrepared;
-  CheckEquals(0, Statement.GetUpdateCount);
 end;
 
 {**
@@ -171,12 +174,15 @@ var
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
+  try
+    Statement.ExecuteUpdate('UPDATE equipment SET eq_name=eq_name');
+    Statement.ExecuteUpdate('SELECT * FROM equipment');
 
-  Statement.ExecuteUpdate('UPDATE equipment SET eq_name=eq_name');
-  Statement.ExecuteUpdate('SELECT * FROM equipment');
-
-  Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
-  Check(Statement.Execute('SELECT * FROM equipment'));
+    Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
+    Check(Statement.Execute('SELECT * FROM equipment'));
+  finally
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -191,14 +197,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True);
-  ResultSet.Close;
-
-  Statement.Close;
-  Connection.Close;
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True);
+    ResultSet.Close;
+  finally
+    Statement.Close;
+    Connection.Close;
+  end;
 end;
 
 {**
@@ -213,14 +220,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, False);
-  ResultSet.Close;
-
-  Statement.Close;
-  Connection.Close;
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, False);
+    ResultSet.Close;
+  finally
+    Statement.Close;
+    Connection.Close;
+  end;
 end;
 
 {**
@@ -243,29 +251,30 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
+  try
+    Statement.ExecuteUpdate('delete from default_values');
 
-  Statement.ExecuteUpdate('delete from default_values');
+    ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3,d_fld4,d_fld5,d_fld6 FROM default_values');
+    CheckNotNull(ResultSet);
 
-  ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3,d_fld4,d_fld5,d_fld6 FROM default_values');
-  CheckNotNull(ResultSet);
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(D_ID, 1);
+    ResultSet.InsertRow;
 
-  ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(D_ID, 1);
-  ResultSet.InsertRow;
+    Check(ResultSet.GetInt(D_ID) <> 0);
+    CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+    CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+    CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+    CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+    CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
+    CheckEquals(EncodeDate(2003, 12, 11) +
+      EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
-  Check(ResultSet.GetInt(D_ID) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
-  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
-  CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
-
-  ResultSet.DeleteRow;
-
-  ResultSet.Close;
-  Statement.Close;
+    ResultSet.DeleteRow;
+  finally
+    ResultSet.Close;
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -283,32 +292,38 @@ var
 begin
   CallableStatement := Connection.PrepareCallWithParams(
     'procedure1', nil);
-  with CallableStatement do
-  begin
-    RegisterOutParameter(RETURN_VALUE_Index, Ord(stInteger)); //stupid RETURN_VALUE
-    SetInt(P1_Index, 12345);
-    RegisterOutParameter(R1_Index, Ord(stInteger));
-    ExecutePrepared;
-    CheckEquals(12346, GetInt(R1_Index));
+  try
+    with CallableStatement do
+    begin
+      RegisterOutParameter(RETURN_VALUE_Index, Ord(stInteger)); //stupid RETURN_VALUE
+      SetInt(P1_Index, 12345);
+      RegisterOutParameter(R1_Index, Ord(stInteger));
+      ExecutePrepared;
+      CheckEquals(12346, GetInt(R1_Index));
+    end;
+  finally
+    CallableStatement.Close;
   end;
-  CallableStatement.Close;
 
   CallableStatement := Connection.PrepareCallWithParams(
     'procedure2', nil);
-  ResultSet := CallableStatement.ExecuteQueryPrepared;
-  with ResultSet do
-  begin
-    CheckEquals(True, Next);
-    CheckEquals('Computer', GetString(eq_name_Index));
-    CheckEquals(True, Next);
-    CheckEquals('Laboratoy', GetString(eq_name_Index));
-    CheckEquals(True, Next);
-    CheckEquals('Radiostation', GetString(eq_name_Index));
-    CheckEquals(True, Next);
-    CheckEquals('Volvo', GetString(eq_name_Index));
-    Close;
+  try
+    ResultSet := CallableStatement.ExecuteQueryPrepared;
+    with ResultSet do
+    begin
+      CheckEquals(True, Next);
+      CheckEquals('Computer', GetString(eq_name_Index));
+      CheckEquals(True, Next);
+      CheckEquals('Laboratoy', GetString(eq_name_Index));
+      CheckEquals(True, Next);
+      CheckEquals('Radiostation', GetString(eq_name_Index));
+      CheckEquals(True, Next);
+      CheckEquals('Volvo', GetString(eq_name_Index));
+      Close;
+    end;
+  finally
+    CallableStatement.Close;
   end;
-  CallableStatement.Close;
 end;
 
 initialization
