@@ -120,6 +120,7 @@ type
     procedure SetInParamCount(const NewParamCount: Integer); override;
   public
     constructor Create(Connection: IZConnection; ProcName: string; Info: TStrings);
+    procedure Close; override;
 
     procedure RegisterOutParameter(ParameterIndex: Integer;
       SqlType: Integer); override;
@@ -199,6 +200,7 @@ begin
     if supports(FResults[i], IZResultSet, RS) then    //possible IZUpdateCount
       RS.Close;
   FResults.Clear;
+  FRetrievedResultSet := nil;
   inherited Close;
 end;
 
@@ -554,6 +556,12 @@ begin
     FPLainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
+end;
+
+procedure TZDBLibCallableStatement.Close;
+begin
+  FRetrievedResultSet := nil;
+  inherited Close;
 end;
 
 procedure TZDBLibCallableStatement.FetchResults;
