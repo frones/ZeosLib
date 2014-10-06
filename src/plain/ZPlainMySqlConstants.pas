@@ -127,30 +127,6 @@ const
   FIELD_IN_ADD_INDEX     = $100000; { Intern: Field used in ADD INDEX }
   FIELD_IS_RENAMED       = $200000; { Intern: Field is being renamed}
 
-{ Client Connection Options }
-  _CLIENT_LONG_PASSWORD	  = 1;	  { new more secure passwords }
-  _CLIENT_FOUND_ROWS	  = 2;	  { Found instead of affected rows }
-  _CLIENT_LONG_FLAG	  = 4;	  { Get all column flags }
-  _CLIENT_CONNECT_WITH_DB = 8;	  { One can specify db on connect }
-  _CLIENT_NO_SCHEMA	  = 16;	  { Don't allow database.table.column }
-  _CLIENT_COMPRESS	  = 32;	  { Can use compression protcol }
-  _CLIENT_ODBC		  = 64;	  { Odbc client }
-  _CLIENT_LOCAL_FILES	  = 128;  { Can use LOAD DATA LOCAL }
-  _CLIENT_IGNORE_SPACE	  = 256;  { Ignore spaces before '(' }
-  _CLIENT_CHANGE_USER     = 512;  { Support the mysql_change_user() }
-  _CLIENT_INTERACTIVE     = 1024; { This is an interactive client }
-  _CLIENT_SSL             = 2048; { Switch to SSL after handshake }
-  _CLIENT_IGNORE_SIGPIPE  = 4096; { IGNORE sigpipes }
-  _CLIENT_TRANSACTIONS    = 8196; { Client knows about transactions }
-  _CLIENT_RESERVED        = 16384; { Old flag for 4.1 protocol  }
-  _CLIENT_SECURE_CONNECTION = 32768; { New 4.1 authentication }
-  _CLIENT_MULTI_STATEMENTS = 65536; { Enable/disable multi-stmt support }
-  _CLIENT_MULTI_RESULTS   = 131072; { Enable/disable multi-results }
-  _CLIENT_PS_MULTI_RESULTS = 262144; { Enable Multi-results in PS-protocol }
-  _CLIENT_PLUGIN_AUTH      = 524288;
-  _CLIENT_SSL_VERIFY_SERVER_CERT = 1073741824;
-  _CLIENT_REMEMBER_OPTIONS = 2147483648; {Enable/disable multi-results }
-
 {THD: Killable}
   MYSQL_SHUTDOWN_KILLABLE_CONNECT    = 1;
   MYSQL_SHUTDOWN_KILLABLE_TRANS      = 2;
