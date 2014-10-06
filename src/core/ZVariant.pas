@@ -626,6 +626,24 @@ begin
             Result.VInteger := 0;
         vtInteger:
           Result.VInteger := Value.VInteger;
+        vtUInteger:
+          Result.VInteger := Value.VUInteger;
+        else
+          RaiseTypeMismatchError;
+      end;
+    vtUInteger:
+      case Value.VType of
+        vtNull:
+          Result.VUInteger := 0;
+        vtBoolean:
+          if Value.VBoolean then
+            Result.VUInteger := 1
+          else
+            Result.VUInteger := 0;
+        vtInteger:
+          Result.VUInteger := Value.VInteger;
+        vtUInteger:
+          Result.VUInteger := Value.VUInteger;
         else
           RaiseTypeMismatchError;
       end;
