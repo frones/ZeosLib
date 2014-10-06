@@ -483,7 +483,6 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     SetAutoCommit(OldAutoCommit);
   except
     GetPlainDriver.Close(FHandle);
-    GetPlainDriver.Despose(FHandle);
     FHandle := nil;
     raise;
   end;
@@ -680,7 +679,6 @@ begin
     Exit;
 
   GetPlainDriver.Close(FHandle);
-  GetPlainDriver.Despose(FHandle);
   FHandle := nil;
   LogMessage := 'DISCONNECT FROM "'+ConSettings^.Database+'"';
   DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
