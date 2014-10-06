@@ -193,10 +193,11 @@ end;
 procedure TZDBLibStatement.Close;
 var
   I: Integer;
+  RS: IZResultSet;
 begin
   for i := 0 to FResults.Count -1 do
-    if supports(FResults[i], IZResultSet) then    //possible IZUpdateCount
-      IZResultSet(FResults.Items[i]).Close;
+    if supports(FResults[i], IZResultSet, RS) then    //possible IZUpdateCount
+      RS.Close;
   FResults.Clear;
   inherited Close;
 end;
@@ -284,8 +285,12 @@ procedure TZDBLibStatement.FetchResults;
 var
   NativeResultSet: TZDBLibResultSet;
   CachedResultSet: TZCachedResultSet;
+  RS: IZResultSet;
   RowsAffected: Integer;
 begin
+  for RowsAffected := 0 to FResults.Count -1 do
+    if Supports(FResults[RowsAffected], IZResultSet, RS) then
+      RS.Close;
   FResults.Clear;
 //Sybase does not seem to return dbCount at all, so a workaround is made
   RowsAffected := -2;
@@ -633,14 +638,14 @@ begin
   if FResultSets.Count > 0 then
   begin
     try
-      Result := Supports(FResultSets.Items[0], IZResultSet, ResultSet);
+      Result := Supports(FResultSets[0], IZResultSet, ResultSet);
       if Result then
       begin
         FRetrievedResultSet := ResultSet;
         FRetrievedUpdateCount := 0;
       end
       else
-        if Supports(FResultSets.Items[0], IZUpdateCount, UpdateCount) then
+        if Supports(FResultSets[0], IZUpdateCount, UpdateCount) then
           FRetrievedUpdateCount := UpdateCount.GetCount;
       FResultSets.Delete(0);
     finally
