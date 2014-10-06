@@ -99,7 +99,6 @@ type
   private
     FProvider: TDBLibProvider;
     FFreeTDS: Boolean;
-    FDisposeCodePage: Boolean;
     function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure ReStartTransactionSupport;
@@ -694,7 +693,10 @@ begin
      (GetPlainDriver.dbnextrow(FHandle) <> REG_ROW) then
     CheckDBLibError(lcOther, Tmp)
   else
-    Result := RawToInt(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)));
+  begin
+    ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Tmp);
+    Result := RawToInt(Tmp);
+  end;
   GetPlainDriver.dbCancel(FHandle);
 end;
 
@@ -786,11 +788,6 @@ begin
       InternalExecuteStatement('if @@trancount > 0 rollback');
 
     LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
-    if FDisposeCodePage then
-    begin
-      Dispose(ConSettings^.ClientCodePage);
-      ConSettings^.ClientCodePage := nil;
-    end;
 
     if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
       CheckDBLibError(lcDisConnect, LogMessage);
