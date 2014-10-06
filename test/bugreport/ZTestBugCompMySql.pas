@@ -592,14 +592,22 @@ begin
     Query.SQL.Text := 'select * from table768163';
     Query.Open;
     Query.Append;
+    {$IFDEF WITH_FTLONGWORD}
+    TLongWordField(Query.Fields[0]).Value := 2147483647;
+    {$ELSE}
     TLargeIntField(Query.Fields[0]).AsLargeInt := 2147483647;
+    {$ENDIF}
     TLargeIntField(Query.Fields[1]).AsLargeInt := -5;//-2147483648;
     Query.Post;
     Query.Close;
 
     Query.SQL.Text := 'select * from table768163';
     Query.Open;
+    {$IFDEF WITH_FTLONGWORD}
+    CheckEquals(2147483647, TLongWordField(Query.Fields[0]).Value);
+    {$ELSE}
     CheckEquals(2147483647, TLargeIntField(Query.Fields[0]).AsLargeInt);
+    {$ENDIF}
     CheckEquals(-5{-2147483648}, TLargeIntField(Query.Fields[1]).AsLargeInt);
     Query.Close;
   finally
