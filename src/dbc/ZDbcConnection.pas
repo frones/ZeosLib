@@ -916,8 +916,7 @@ begin
       UsedInfo.Append('preferprepared=TRUE');
     end;
   Result := CreateRegularStatement(Info);
-  if UsedInfo <> Info then
-    UsedInfo.Free;
+  if UsedInfo <> Info then UsedInfo.Free;
 end;
 
 {**
@@ -961,13 +960,8 @@ end;
     pre-compiled statement
 }
 function TZAbstractConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
-var
-  Info: TStrings;
 begin
-  Info := nil;
-  Result := CreatePreparedStatement(SQL, Info);
-  If Info <> nil then
-    Info.Free;
+  Result := CreatePreparedStatement(SQL, nil);
 end;
 
 {**
@@ -982,14 +976,17 @@ end;
 }
 function TZAbstractConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
     begin
-      If Info = nil then
-        Info := TSTringList.Create;
-      Info.Append('preferprepared=TRUE');
+      If UsedInfo = nil then
+        UsedInfo := TSTringList.Create;
+      UsedInfo.Append('preferprepared=TRUE');
     end;
-  Result := CreatePreparedStatement(SQL, Info);
+  Result := CreatePreparedStatement(SQL, UsedInfo);
+  if UsedInfo <> Info then UsedInfo.Free;
 end;
 
 procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
@@ -1038,13 +1035,8 @@ end;
 
 function TZAbstractConnection.PrepareCall(
   const SQL: string): IZCallableStatement;
-var
-  Info: TStrings;
 begin
-  Info := nil;
-  Result := CreateCallableStatement(SQL, Info);
-  If Info <> nil then
-    Info.Free;
+  Result := CreateCallableStatement(SQL, nil);
 end;
 
 {**
@@ -1063,14 +1055,17 @@ end;
 }
 function TZAbstractConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
     begin
-      If Info = nil then
-        Info := TSTringList.Create;
-      Info.Append('preferprepared=TRUE');
+      If UsedInfo = nil then
+        UsedInfo := TSTringList.Create;
+      UsedInfo.Append('preferprepared=TRUE');
     end;
-  Result := CreateCallableStatement(SQL, Info);
+  Result := CreateCallableStatement(SQL, UsedInfo);
+  if UsedInfo <> Info then UsedInfo.Free;
 end;
 
 {**
