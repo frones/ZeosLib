@@ -203,6 +203,8 @@ type
     batch:           boolean;
     norebuild:       boolean;
     suite:           boolean;
+    memcheck:        boolean;
+    memcheck_file:   String;
     suiteitems:      TStringDynArray;
     sqlmonitor:      boolean;
     sqlmonitorfile:  String;
@@ -228,7 +230,7 @@ var
   TestGroup: string;
 
   {$IFDEF FPC}
-  function CreateTestSuite:TTestSuite;
+  function GetExecutedTests: TFPList;
   {$ELSE}
   function CreateTestSuite:ITestSuite;
   {$ENDIF}
@@ -253,7 +255,6 @@ type
 
 var
   SQLMonitor : TZSQLMonitor;
-
 
 {**
   Splits string using the delimiter string.
@@ -422,10 +423,6 @@ begin
     MemCheck.MemCheckLogFileName := FMemCheckLogFile;
     MemCheck.MemChk;
   end;
-{$ELSE}
-  {$IFDEF WITH_REPORTMEMORYLEAKSONSHUTDOWN}
-  ReportMemoryLeaksOnShutdown := FEnableMemCheck;
-  {$ENDIF}
 {$ENDIF}
 end;
 
@@ -478,6 +475,11 @@ begin
   CommandLineSwitches.runall := Application.HasOption('a', 'all');
   CommandLineSwitches.batch := Application.HasOption('b', 'batch');
   CommandLineSwitches.norebuild := Application.HasOption('n', 'norebuild');
+  CommandLineSwitches.memcheck := Application.HasOption('memcheck');
+  if CommandLineSwitches.memcheck then
+    CommandLineSwitches.memcheck_file := Application.GetOptionValue('memcheck')
+  else
+    CommandLineSwitches.memcheck_file := '';
   CommandLineSwitches.suite := Application.HasOption('suite');
   If CommandLineSwitches.suite then
     CommandLineSwitches.suiteitems := SplitStringToArray(Application.GetOptionValue('suite'),LIST_DELIMITERS);
@@ -491,6 +493,11 @@ begin
   CommandLineSwitches.runall := (FindCmdLineSwitch('A',true) or FindCmdLineSwitch('All',true));
   CommandLineSwitches.batch := (FindCmdLineSwitch('B',true) or FindCmdLineSwitch('Batch',true));
   CommandLineSwitches.norebuild := (FindCmdLineSwitch('N',true) or FindCmdLineSwitch('NoRebuild',true));
+  CommandLineSwitches.memcheck := FindCmdLineSwitch('MemCheck',true);
+  if CommandLineSwitches.memcheck then
+    CommandLineSwitches.memcheck_file := GetCommandLineSwitchValue('MemCheck', 'memcheck')
+  else
+    CommandLineSwitches.memcheck_file := '';
   CommandLineSwitches.suite := (FindCmdLineSwitch('S',true) or FindCmdLineSwitch('Suite',true));
   If CommandLineSwitches.suite then
     CommandLineSwitches.suiteitems := SplitStringToArray(GetCommandLineSwitchValue('S' ,'Suite'),LIST_DELIMITERS);
@@ -506,9 +513,8 @@ end;
   Unfortunately fpcunit and DUnit need different approaches
 }
 {$IFDEF FPC}
-function CreateTestSuite:TTestSuite;
+function GetExecutedTests: TFPList;
 Var
-  TempRunTests : TTestSuite;
   I, J: integer;
   procedure CheckTestRegistry (test:TTest; ATestName:string);
   var s, c : string;
@@ -528,7 +534,7 @@ Var
         c := ATestName;
         end;
       if comparetext(c, test.TestName) = 0 then
-        TempRunTests.AddTest(test)
+        Result.Add(test)
       else if (CompareText( s, Test.TestName) = 0) or (s = '') then
         for I := 0 to TTestSuite(test).Tests.Count - 1 do
           CheckTestRegistry (TTest(TTestSuite(test).Tests[I]), c)
@@ -536,26 +542,24 @@ Var
     else // if test is TTestCase then
       begin
       if comparetext(test.TestName, ATestName) = 0 then
-        TempRunTests.AddTest(test);
+        Result.Add(test);
       end;
   end;
 begin
+  Result := TFPList.Create;
   If CommandLineSwitches.Suite then
-    begin
-      TempRunTests := TTestSuite.Create('Suite');
-      for J := 0 to High(CommandLineSwitches.suiteitems) do
-        for I := 0 to GetTestregistry.Tests.count-1 do
-          CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
-    end
+  begin
+    for J := 0 to High(CommandLineSwitches.suiteitems) do
+      for I := 0 to GetTestregistry.Tests.count-1 do
+        CheckTestRegistry (GetTestregistry[I], CommandLineSwitches.suiteitems[J]);
+  end
   else
-    TempRuntests := GetTestregistry;
-  Result := TempRunTests;
+    Result.Assign(GetTestregistry.Tests);
 end;
 
 {$ELSE}
 function CreateTestSuite:ITestSuite;
 var
-  TempRunTests : ITestSuite;
   I, J: integer;
   procedure CheckTestRegistry (test:ITest; ATestName:string);
   var s, c : string;
@@ -615,7 +619,6 @@ end;
 
 initialization
   SQLMonitor := nil;
-
   GetCommandLineSwitches;
 
   TestGroup := COMMON_GROUP;
