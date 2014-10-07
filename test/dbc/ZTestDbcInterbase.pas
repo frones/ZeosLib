@@ -81,8 +81,6 @@ type
     procedure TestMsec;
     procedure TestEmptyStrings;
     procedure TestArrayBindings;
-    procedure TestArrayFields;
-    procedure TestArraySelect;
   end;
 
 implementation
@@ -947,40 +945,6 @@ begin
   end;
 end;
 {$WARNINGS ON} //implizit string conversion of...
-
-procedure TZTestDbcInterbaseCase.TestArrayFields;
-var Statement: IZPreparedStatement;
-begin
-  Statement := Connection.PrepareStatement('select * from array_values');
-  try
-    with Statement.ExecuteQueryPrepared do
-    begin
-      CheckEquals(15, GetMetaData.GetColumnCount);
-    end;
-  finally
-    Statement.Close;
-  end;
-end;
-
-procedure TZTestDbcInterbaseCase.TestArraySelect;
-var
-  Statement: IZPreparedStatement;
-  FArray: TSmallIntDynArray;
-begin
-  Statement := Connection.PrepareStatement('select * from people where p_id in (?)');
-  try
-    SetLength(FArray, 2);
-    FArray[0] := 2;
-    FArray[1] := 4;
-    Statement.SetDataArray(1, FArray, stSmall);
-    with Statement.ExecuteQueryPrepared do
-    begin
-      CheckEquals(15, GetMetaData.GetColumnCount);
-    end;
-  finally
-    Statement.Close;
-  end;
-end;
 
 initialization
   RegisterTest('dbc',TZTestDbcInterbaseCase.Suite);
