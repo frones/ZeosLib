@@ -580,7 +580,7 @@ var
         end;
       if comparetext(c, test.Name) = 0 then
         begin
-          TempRunTests.AddTest(test);
+          Result.AddTest(test);
         end
       else if (CompareText( s, Test.Name) = 0) or (s = '') then
         for I := 0 to test.Tests.Count - 1 do
@@ -590,21 +590,21 @@ var
       begin
       if comparetext(test.Name, ATestName) = 0 then
         begin
-          TempRunTests.AddTest(test);
+          Result.AddTest(test);
         end;
       end;
   end;
 begin
   If CommandLineSwitches.Suite then
     begin
-      TempRunTests := TTestSuite.Create('Suite');
+      Result := TTestSuite.Create('Suite');
       for J := 0 to High(CommandLineSwitches.suiteitems) do
         for I := 0 to RegisteredTests.Tests.count-1 do
           CheckTestRegistry (ITest(RegisteredTests.Tests[I]), CommandLineSwitches.suiteitems[J]);
+      RegisteredTests.Tests.Clear;
     end
   else
-    TempRuntests := RegisteredTests;
-  Result := TempRunTests;
+    Result := RegisteredTests;
 end;
 {$ENDIF}
 
