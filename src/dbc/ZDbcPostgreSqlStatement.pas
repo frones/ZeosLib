@@ -198,7 +198,7 @@ begin
   FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
   { see http://zeoslib.sourceforge.net/viewtopic.php?f=20&t=10695&p=30151#p30151
     the pgBouncer does not support the RealPrepareds.... }
-  FUseEmulatedStmtsOnly := StrToBoolEx(Self.Info.Values['EMULATE_PREPARES']);
+  FUseEmulatedStmtsOnly := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'EMULATE_PREPARES', 'FALSE'));
 end;
 
 constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainDriver;
