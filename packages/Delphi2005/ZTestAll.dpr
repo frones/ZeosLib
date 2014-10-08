@@ -77,7 +77,7 @@ begin
     EnableZSQLMonitor;
 
   If CommandLineSwitches.batch then
-    TextTestRunner.RunTest(CreateTestSuite)
+    TextTestRunner.RunTest(CreateTestSuite).Free
   else
     GUITestRunner.RunTest(CreateTestSuite);
 end.
