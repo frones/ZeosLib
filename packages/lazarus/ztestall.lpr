@@ -118,7 +118,7 @@ begin
   writeln('  -v or --verbose                      show full output (otherwise compact report is used)');
   writeln('  -n or --norebuild                    don''t rebuild the databases');
   writeln('  -m <filename> or -monitor <filename> sqlmonitor file name');
-  writeln(' --suite="<layer>.<optional testname>.<optianal MethodeName>"');
+  writeln(' --suite="<layer>.<optional testname>.<optional MethodeName>"');
   writeln(' --memcheck <filename>')
 end;
 
@@ -184,7 +184,7 @@ begin
   longopts.Add('verbose');
   longopts.Add('norebuild');
   longopts.Add('monitor:');
-  longopts.Add('suite');
+  longopts.Add('suite:');
 end;
 
 destructor TMyTestRunner.Destroy;
