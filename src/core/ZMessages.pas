@@ -154,8 +154,8 @@ resourcestring
   cSCanNotRetrieveResultSetData = 'Ne peut récupérer l''ensemble de données résultant';
   cSRowBufferIsNotAssigned = 'Le buffer de ligne n''est pas assigné';
   cSColumnIsNotAccessable = 'Colonne d''index %d inaccessible';
-  cSConvertionIsNotPossible = 'Conversion impssible de la colonne %d de %s vers %s';
-  cSCanNotAccessBlobRecord = 'Ne peut accèder au blob de la colonne %d avec le type %s';
+  cSConvertionIsNotPossible = 'Conversion impossible de la colonne %d de %s vers %s';
+  cSCanNotAccessBlobRecord = 'Ne peut accéder au blob de la colonne %d avec le type %s';
   cSRowDataIsNotAvailable = 'Ligne de données non disponible';
   cSResolverIsNotSpecified = 'L''objet Resolver n''est pas indiqué';
   cSResultsetIsAlreadyOpened = 'L''ensemble résultat est déjà ouvert';
@@ -168,7 +168,7 @@ resourcestring
   cSCanNotUpdateThisQueryType = 'Ne peut mettre à jour ce type de requête';
   cSDriverWasNotFound = 'Le driver de base de données demandé n''a pas été trouvé';
   cSCanNotConnectToServer = 'Ne peut se connecter au serveur SQL';
-  cSTableIsNotSpecified = 'La table n''est pas specifiée';
+  cSTableIsNotSpecified = 'La table n''est pas spécifiée';
   cSLiveResultSetsAreNotSupported = 'Une requête actualisable n''est pas supportée par cette classe';
   cSInvalidInputParameterCount = 'Le nombre de paramètres attendu est inférieur au prévu';
   cSIsolationIsNotSupported = 'Niveau d''isolation de transaction non supporté';
@@ -183,7 +183,7 @@ resourcestring
   cSInvalidOpInNonAutoCommit = 'Opération non valide si le mode n''est pas AutoCommit';
   cSInvalidOpPrepare = 'Préparer une transaction n''est possible qu''en en démarrant une (Starttransaction) d''abord (!)';
 
-  cSConnectionIsNotAssigned = 'Database connection component is not assigned';
+  cSConnectionIsNotAssigned = 'La connexion à la base données n''est pas indiqué';
   cSQueryIsEmpty = 'La requête SQL est vide';
   cSCanNotExecuteMoreQueries = 'Ne peut exécuter plus d''une requête';
   cSOperationIsNotAllowed1 = 'Cette opération n''est pas permise en mode FORWARD ONLY';
@@ -207,14 +207,14 @@ resourcestring
   cSDriverNotCapableOutParameters = 'Le Driver n''est pas capable d''utiliser des paramètres';
   cSStatementIsNotAllowed = 'Déclaration non permise';
   cSStoredProcIsNotAllowed = 'La procédure stockée n''est pas permise';
-  cSCannotPerformOperation = 'Ne peut effèctuer cette opération sur une ensemble de données fermé';
-  cSInvalidState = 'Etat non valide';
+  cSCannotPerformOperation = 'Ne peut effectuer cette opération sur une ensemble de données fermé';
+  cSInvalidState = 'État non valide';
   cSErrorConvertion = 'Erreur de conversion';
   cSDataTypeDoesNotSupported = 'Type de donnée non supporté';
   cSUnsupportedParameterType = 'Type de paramètre non supporté';
   cSUnsupportedDataType = 'Type de donnée non supporté';
   cSErrorConvertionField = 'Erreur de conversion pour le champ "%s" vers le type SQL "%s"';
-  cSBadOCI = 'Mauvaise version OCI %s]. Version 8.0.3 ou plus ancienne requise';
+  cSBadOCI = 'Mauvaise version OCI [%s] . Version 8.0.3 ou plus ancienne requise';
   cSConnect2AsUser = 'Connexion à "%s" en tant qu''utilisateur "%s"';
   cSUnknownError = 'Erreur inconnue';
   cSFieldNotFound1 = 'Champ "%s" non trouvé';
@@ -229,9 +229,9 @@ resourcestring
   cSPropertySequences = 'Vous devriez la limiter via Catalogue et/ou Schema.';
   cSPropertyExecute = 'La Requête doit-elle s''exécuter quand même?';
 
-  cSFormTest = 'Editeur SQL ZEOS Test';
+  cSFormTest = 'Éditeur SQL ZEOS Test';
   cSButtonClose = '&Fermer';
-  cSFormEditor = 'Editeur SQL ZEOS';
+  cSFormEditor = 'Éditeur SQL ZEOS';
   cSTabSheetSelect = 'Select SQL';
   cSMenuLoad = 'Charger';
   cSMenuSave = 'Sauver';
@@ -244,7 +244,7 @@ resourcestring
   cSReplaceSQL = '&Remplacer le SQL';
   cSDialogOpenTitle = 'Ouvrir fichier SQL';
   cSDialogSaveTitle = 'Sauver dans un fichier SQL';
-  cSSQLEditor = 'Editeur SQL';
+  cSSQLEditor = 'Éditeur SQL';
   cSDatabaseDialog = 'Ouvrir base existante';
 
   cSUpdateSQLNoResult = '"Update Refresh SQL" ne fourni aucun ensemble de résultat';
@@ -259,9 +259,9 @@ resourcestring
 
   cSFailedtoInitPrepStmt   = 'La déclaration a échouée à l''initialisation';
   cSFailedtoPrepareStmt    = 'La déclaration a échouée durant le processus de préparation';
-  cSFailedToBindAllValues  = 'L''application a échoué à failed to pré-relier toutes les valeurs';
+  cSFailedToBindAllValues  = 'L''application a échoué à pré-relier toutes les valeurs';
   cSAttemptExecOnBadPrep   = 'Tentative d''exécuter une déclaration avant une préparation réussie.';
-  cSBindingFailure         = 'Echec à relier l''ensemble des paramètres';
+  cSBindingFailure         = 'Échec à relier l''ensemble des paramètres';
   cSPreparedStmtExecFailure = 'La préparation de la déclaration a échoué';
   cSBoundVarStrIndexMissing = 'Nom de la variable de relation "%s" inexistant';
   cSBindVarOutOfRange      = 'Index de la variable de relation hors limite: %d';
