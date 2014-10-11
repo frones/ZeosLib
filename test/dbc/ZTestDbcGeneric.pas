@@ -1106,7 +1106,7 @@ begin
       CheckEquals('Vasia Pupkin', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Vasia Pupkin', ResultSet.GetPAnsiChar(p_name_Index, Len));
+      CheckEquals(RawByteString('Vasia Pupkin'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
       CheckEquals('Vasia Pupkin', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(p_name_Index));
       CheckEquals('Vasia Pupkin', ResultSet.GetPWideChar(p_name_Index, Len));
@@ -1117,7 +1117,7 @@ begin
       CheckEquals('Andy Karto', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Andy Karto', ResultSet.GetPAnsiChar(p_name_Index, Len));
+      CheckEquals(RawByteString('Andy Karto'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
       CheckEquals('Andy Karto', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetPWideChar(p_name_Index));
       CheckEquals('Andy Karto', ResultSet.GetPWideChar(p_name_Index, Len));
@@ -1128,7 +1128,7 @@ begin
       CheckEquals('Kristen Sato', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Kristen Sato', ResultSet.GetPAnsiChar(p_name_Index, Len));
+      CheckEquals(RawByteString('Kristen Sato'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
       CheckEquals('Kristen Sato', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetPWideChar(p_name_Index));
       CheckEquals('Kristen Sato', ResultSet.GetPWideChar(p_name_Index, Len));
@@ -1139,7 +1139,7 @@ begin
       CheckEquals('Aleksey Petrov', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Aleksey Petrov', ResultSet.GetPAnsiChar(p_name_Index, Len));
+      CheckEquals(RawByteString('Aleksey Petrov'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
       CheckEquals('Aleksey Petrov', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(p_name_Index));
       CheckEquals('Aleksey Petrov', ResultSet.GetPWideChar(p_name_Index, Len));
@@ -1150,7 +1150,7 @@ begin
       CheckEquals('Yan Pater', ResultSet.GetRawByteString(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetUnicodeString(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(p_name_Index));
-      CheckEquals('Yan Pater', ResultSet.GetPAnsiChar(p_name_Index, Len));
+      CheckEquals(RawByteString('Yan Pater'), ResultSet.GetPAnsiChar(p_name_Index, Len), @Len);
       CheckEquals('Yan Pater', ResultSet.GetPChar(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetPWideChar(p_name_Index));
       CheckEquals('Yan Pater', ResultSet.GetPWideChar(p_name_Index, Len));
@@ -1191,7 +1191,7 @@ var
 begin
   Use_S_BIT := Not(StartsWith(Protocol, 'sqlite') or StartsWith(Protocol, 'ado') or
     StartsWith(Protocol, 'mssql') or StartsWith(Protocol, 'sybase') or
-    StartsWith(Protocol, 'FreeTDS'));
+    StartsWith(Protocol, 'FreeTDS') or StartsWith(Protocol, 'ASA'));
   if Use_S_BIT then
     PStatement := Connection.PrepareStatement('insert into string_values(s_id,s_char,s_varchar,s_nchar,s_nvarchar,s_bit) values (?, ?, ?, ?, ?, ?)')
   else
