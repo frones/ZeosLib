@@ -97,13 +97,13 @@ type
     function Connect(const {%H-}Url: TZURL): IZConnection; overload; virtual;
     function AcceptsURL(const Url: string): Boolean; virtual;
 
-    function GetPropertyInfo(const Url: string; Info: TStrings): TStrings; virtual;
+    function GetPropertyInfo(const {%H-}Url: string; {%H-}Info: TStrings): TStrings; virtual;
     function GetMajorVersion: Integer; virtual;
     function GetMinorVersion: Integer; virtual;
     function GetSubVersion: Integer; virtual;
     function GetTokenizer: IZTokenizer; virtual;
     function GetStatementAnalyser: IZStatementAnalyser; virtual;
-    function GetClientVersion(const Url: string): Integer; virtual;
+    function GetClientVersion(const {%H-}Url: string): Integer; virtual;
   end;
   {$WARNINGS OFF}
 
@@ -155,11 +155,11 @@ type
     procedure OnPropertiesChange(Sender: TObject); virtual;
     procedure RaiseUnsupportedException;
 
-    function CreateRegularStatement(Info: TStrings): IZStatement;
+    function CreateRegularStatement({%H-}Info: TStrings): IZStatement;
       virtual;
-    function CreatePreparedStatement(const SQL: string; Info: TStrings):
+    function CreatePreparedStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
       IZPreparedStatement; virtual;
-    function CreateCallableStatement(const SQL: string; Info: TStrings):
+    function CreateCallableStatement(const {%H-}SQL: string; {%H-}Info: TStrings):
       IZCallableStatement; virtual;
 
     property Driver: IZDriver read FDriver write FDriver;
@@ -177,8 +177,8 @@ type
       read FTransactIsolationLevel write FTransactIsolationLevel;
     property Closed: Boolean read FClosed write FClosed;
   public
-    constructor Create(Driver: IZDriver; const Url: string;
-      PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
+    constructor Create({%H-}Driver: IZDriver; const Url: string;
+      {%H-}PlainDriver: IZPlainDriver; const HostName: string; Port: Integer;
       const Database: string; const User: string; const Password: string;
       Info: TStrings); overload; deprecated;
     constructor Create(const ZUrl: TZURL); overload;
@@ -194,8 +194,8 @@ type
     function PrepareCallWithParams(const SQL: string; Info: TStrings):
       IZCallableStatement;
 
-    function CreateNotification(const Event: string): IZNotification; virtual;
-    function CreateSequence(const Sequence: string; BlockSize: Integer):
+    function CreateNotification(const {%H-}Event: string): IZNotification; virtual;
+    function CreateSequence(const {%H-}Sequence: string; {%H-}BlockSize: Integer):
       IZSequence; virtual;
 
     function NativeSQL(const SQL: string): string; virtual;
@@ -207,9 +207,9 @@ type
     procedure Rollback; virtual;
 
     //2Phase Commit Support initially for PostgresSQL (firmos) 21022006
-    procedure PrepareTransaction(const transactionid: string);virtual;
-    procedure CommitPrepared(const transactionid: string);virtual;
-    procedure RollbackPrepared(const transactionid: string);virtual;
+    procedure PrepareTransaction(const {%H-}transactionid: string);virtual;
+    procedure CommitPrepared(const {%H-}transactionid: string);virtual;
+    procedure RollbackPrepared(const {%H-}transactionid: string);virtual;
 
     //Ping Support initially for MySQL 27032006 (firmos)
     function PingServer: Integer; virtual;
@@ -231,7 +231,7 @@ type
     procedure SetReadOnly(ReadOnly: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
 
-    procedure SetCatalog(const Catalog: string); virtual;
+    procedure SetCatalog(const {%H-}Catalog: string); virtual;
     function GetCatalog: string; virtual;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); virtual;
@@ -886,13 +886,8 @@ end;
   @return a new Statement object
 }
 function TZAbstractConnection.CreateStatement: IZStatement;
-var
-  Info: TStrings;
 begin
-  Info := nil;
-  Result := CreateStatementWithParams(Info);
-  If Info <> nil then
-    Info.Free;
+  Result := CreateStatementWithParams(nil);
 end;
 
 {**
@@ -911,14 +906,18 @@ end;
 }
 function TZAbstractConnection.CreateStatementWithParams(Info: TStrings):
   IZStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    begin
-      If Info = nil then
-        Info := TSTringList.Create;
-      Info.Append('preferprepared=TRUE');
+  begin
+    If UsedInfo = nil then
+        UsedInfo := TSTringList.Create;
+      UsedInfo.Append('preferprepared=TRUE');
     end;
   Result := CreateRegularStatement(Info);
+  if UsedInfo <> Info then
+    UsedInfo.Free;
 end;
 
 {**

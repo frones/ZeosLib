@@ -877,16 +877,15 @@ var
   SL: TStringList;
 begin
 //??  if SkipForReason(srClosedBug) then Exit;
-  SL := nil;
-  StrStream1 := nil;
   Query := CreateQuery;
+  SL := TStringList.Create;
+  StrStream1 := TMemoryStream.Create;
   try
     with Query do
     begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
       //bugreport of mrLion
-      SL := TStringList.Create;
 
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
@@ -896,7 +895,6 @@ begin
       ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
       SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
 
-      StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
@@ -920,10 +918,10 @@ begin
         on E:Exception do
             Fail('Param().LoadFromStream(StringStream, ftMemo): '+E.Message);
       end;
-      StrStream1.Free;
-      SL.free;
     end;
   finally
+    StrStream1.Free;
+    SL.free;
     Query.Free;
   end;
 end;

@@ -91,10 +91,9 @@ type
 
   TZPGTableInfoCache = class(TObject)
     protected
-      FConn: IZConnection;
       FTblInfo: Array of TZPGTableInfo;
       FConSettings: PZconSettings;
-      FPlainDriver: IZPostgreSQLPlainDriver;
+      FPlainDriver: Pointer;
       FHandle: PZPostgreSQLConnect;
       function LoadTblInfo(const TblOid: Oid; out Index: Integer; ZPGTableInfo: PZPGTableInfo): Boolean;
       function GetTblPos(const TblOid: Oid): Integer;
@@ -251,17 +250,17 @@ var
   I: Integer;
   function GetInt(const Row, Col: Integer): Integer;
   begin
-    Result := RawToInt(FPlainDriver.GetValue(QueryHandle, Row, Col));
+    Result := RawToInt(IZPostgreSQLPlainDriver(FPlainDriver).GetValue(QueryHandle, Row, Col));
   end;
 
   function GetString(const Row, Col: Integer): String;
   begin
     {$IFDEF UNICODE}
-    Result := PRawToUnicode(FPlainDriver.GetValue(QueryHandle, Row, Col),
-      FPlainDriver.GetLength(QueryHandle, Row, Col), FConSettings^.ClientCodePage^.CP);
+    Result := PRawToUnicode(IZPostgreSQLPlainDriver(FPlainDriver).GetValue(QueryHandle, Row, Col),
+      IZPostgreSQLPlainDriver(FPlainDriver).GetLength(QueryHandle, Row, Col), FConSettings^.ClientCodePage^.CP);
     {$ELSE}
-    SetString(Result, FPlainDriver.GetValue(QueryHandle, Row, Col),
-      FPlainDriver.GetLength(QueryHandle, Row, Col));
+    SetString(Result, IZPostgreSQLPlainDriver(FPlainDriver).GetValue(QueryHandle, Row, Col),
+      IZPostgreSQLPlainDriver(FPlainDriver).GetLength(QueryHandle, Row, Col));
     {$ENDIF}
   end;
 begin
@@ -273,11 +272,11 @@ begin
     'join pg_catalog.pg_attribute pa on pa.attrelid = pc.oid ' +
     'where pc.oid = ' + RawOID + ' and pa.attnum > 0';
 
-  QueryHandle := FPlainDriver.ExecuteQuery(FHandle, PAnsichar(SQL));
-  CheckPostgreSQLError(nil, FPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
+  QueryHandle := IZPostgreSQLPlainDriver(FPlainDriver).ExecuteQuery(FHandle, PAnsichar(SQL));
+  CheckPostgreSQLError(nil, IZPostgreSQLPlainDriver(FPlainDriver), FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FConSettings^.Protocol, SQL);
 
-  Result := FPlainDriver.GetRowCount(QueryHandle) > 0;
+  Result := IZPostgreSQLPlainDriver(FPlainDriver).GetRowCount(QueryHandle) > 0;
   if Result then
   begin
     if ZPGTableInfo <> nil then //just overwrite all values
@@ -291,12 +290,12 @@ begin
     TblInfo^.OID := TblOid;
     TblInfo^.Name := GetString(0, 0);
     TblInfo^.Schema := GetString(0, 1);
-    TblInfo^.ColCount := FPlainDriver.GetRowCount(QueryHandle);
+    TblInfo^.ColCount := IZPostgreSQLPlainDriver(FPlainDriver).GetRowCount(QueryHandle);
     SetLength(TblInfo^.ColNames, TblInfo^.ColCount);
 
     for I := 0 to TblInfo^.ColCount - 1 do
       TblInfo^.ColNames[GetInt(I, 2)-1] := GetString(i, 3);
-    FPlainDriver.Clear(QueryHandle);
+    IZPostgreSQLPlainDriver(FPlainDriver).Clear(QueryHandle);
   end
   else
     Index := -1;
@@ -320,7 +319,7 @@ constructor TZPGTableInfoCache.Create(const ConSettings: PZConSettings;
   const Handle: PZPostgreSQLConnect; const PlainDriver: IZPostgreSQLPlainDriver);
 begin
   FConSettings := ConSettings;
-  FPlainDriver := PlainDriver;
+  FPlainDriver := Pointer(PlainDriver);
   FHandle := Handle;
 
   Clear;
@@ -441,8 +440,8 @@ end;
 procedure TZPostgreSQLConnection.InternalCreate;
 begin
   FMetaData := TZPostgreSQLDatabaseMetadata.Create(Self, Url);
-
-  FPreparedStmts := TStringList.Create;
+  FPreparedStmts := nil;
+  FTableInfoCache := nil;
 
   { Sets a default PostgreSQL port }
   if Self.Port = 0 then
@@ -485,13 +484,10 @@ end;
 }
 destructor TZPostgreSQLConnection.Destroy;
 begin
-  if FTableInfoCache <> nil then
-    FreeAndNil(FTableInfoCache);
-  if FTypeList <> nil then
-    FreeAndNil(FTypeList);
+  if FTypeList <> nil then FreeAndNil(FTypeList);
   inherited Destroy;
-  if Assigned(FPreparedStmts) then
-    FreeAndNil(FPreparedStmts);
+  if FTableInfoCache <> nil then FreeAndNil(FTableInfoCache);
+  if FPreparedStmts <> nil then FreeAndNil(FPreparedStmts);
 end;
 
 {**
@@ -599,7 +595,7 @@ begin
     if FBeginRequired then
     begin
       SQL := 'BEGIN';
-      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       GetPlainDriver.Clear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -608,7 +604,7 @@ begin
     if TransactIsolationLevel = tiReadCommitted then
     begin
       SQL := 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED';
-      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       GetPlainDriver.Clear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -616,7 +612,7 @@ begin
     else if TransactIsolationLevel = tiSerializable then
     begin
       SQL := 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+      QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
       GetPlainDriver.Clear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -694,7 +690,6 @@ begin
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
 
     { Set the notice processor (default = nil)}
-
     GetPlainDriver.SetNoticeProcessor(FHandle,FNoticeProcessor,nil);
 
     { Gets the current codepage }
@@ -706,8 +701,6 @@ begin
 
     { Turn on transaction mode }
     StartTransactionSupport;
-    { Setup notification mechanism }
-    //  PQsetNoticeProcessor(FHandle, NoticeProc, Self);
     inherited Open;
 
     { Gets the current codepage if it wasn't set..}
@@ -719,7 +712,10 @@ begin
       FClientSettingsChanged := True;
     end;
 
-    FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
+    if FPreparedStmts = nil then
+      FPreparedStmts := TStringList.Create;
+    if FTableInfoCache = nil then
+      FTableInfoCache := TZPGTableInfoCache.Create(ConSettings, FHandle, GetPlainDriver);
 
     { sets standard_conforming_strings according to Properties if available }
     SCS := Info.Values[standard_conforming_strings];
@@ -728,8 +724,6 @@ begin
       SetServerSetting(standard_conforming_strings, {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(SCS));
       FClientSettingsChanged := True;
     end;
-    //if not FOidAsBlob then
-      //FOidAsBlob := UpperCase(GetServerSetting('default_with_oids')) = FON;
     FIs_bytea_output_hex := UpperCase(GetServerSetting('''bytea_output''')) = 'HEX';
   finally
     if self.IsClosed and (Self.FHandle <> nil) then
@@ -945,7 +939,7 @@ begin
   if (TransactIsolationLevel = tiNone) and not Closed then
   begin
     SQL := 'ROLLBACK PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -965,19 +959,18 @@ end;
 procedure TZPostgreSQLConnection.Close;
 var
   LogMessage: RawbyteString;
-  Stmt: IZStatement;
   I: Integer;
 begin
   if ( Closed ) or (not Assigned(PlainDriver)) then
     Exit;
 
-  if FPreparedStmts.Count > 0 then
+  for i := 0 to FPreparedStmts.Count -1 do
   begin
-    Stmt := Self.CreateRegularStatement(Info);
-    for i := 0 to FPreparedStmts.Count -1 do
-      Stmt.Execute('DEALLOCATE "'+FPreparedStmts[i]+'";');
-    Stmt := nil;
+    LogMessage := 'DEALLOCATE "'+{$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(FPreparedStmts[i])+'";';
+    GetPlainDriver.ExecuteQuery(FHandle, Pointer(LogMessage));
   end;
+  FPreparedStmts.Clear;
+  FTableInfoCache.Clear;
 
   GetPlainDriver.Finish(FHandle);
   FHandle := nil;
@@ -1064,7 +1057,7 @@ begin
       SQL := 'SELECT oid, typname, typbasetype,typtype FROM pg_type' +
              ' WHERE (typtype = ''b'' and oid < 10000) OR typtype = ''p'' OR typtype = ''e'' OR typbasetype<>0 ORDER BY oid';
 
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsichar(SQL));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
@@ -1164,7 +1157,7 @@ begin
   if Closed then
     Open;
   SQL := 'SELECT version()';
-  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
@@ -1350,7 +1343,7 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   SQL := 'SET '+AName+' = '+AValue;
-  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 

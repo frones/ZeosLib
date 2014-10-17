@@ -91,6 +91,7 @@ type
     {$IFDEF FPC}
     frefcount : longint;
     { implement methods of IUnknown }
+    procedure RunTest; override;
     {$IFDEF FPC2_5UP}
     function QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} iid : tguid; out obj) : HResult;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF}; virtual;
     function _AddRef : longint;{$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
@@ -140,6 +141,10 @@ type
       const Msg: string = ''); overload;
     procedure CheckNotEquals(Expected, Actual: WideString;
       const Msg: string = ''); overload;
+    procedure CheckEquals(Expected, Actual: UInt64;
+      const Msg: string = ''); overload;
+    procedure CheckNotEquals(Expected, Actual: UInt64;
+      const Msg: string = ''); overload;
     {$ELSE}
     procedure CheckEquals(Expected, Actual: Word;
       const Msg: string = ''); overload;
@@ -178,6 +183,9 @@ uses
 {$ELSE}
   Windows,
 {$ENDIF}
+{$IFDEF WITH_STRLEN_DEPRECATED}
+  AnsiStrings,
+{$ENDIF}
   ZSysUtils, ZTestConfig, Math, ZEncoding;
 
 {$IFDEF FPC}
@@ -187,7 +195,7 @@ begin
 end;
 function ByteAt(p: pointer; const Offset: integer): byte;
 begin
-  Result:=pByte(NativeUint(p)+Offset)^;
+  Result:={%H-}pByte(NativeUint(p){%H-}+Offset)^;
 end;
 
 function FirstByteDiff(p1, p2: pointer; size: longword; out b1, b2: byte): integer;
@@ -222,6 +230,12 @@ end;
 { TZAbstractTestCase }
 
 {$IFDEF FPC}
+procedure TZAbstractTestCase.RunTest;
+begin
+  //WriteLn(GetTestName);
+  inherited RunTest;
+end;
+
 
 function TZAbstractTestCase.QueryInterface({$IFDEF FPC_HAS_CONSTREF}constref{$ELSE}const{$ENDIF} IID: TGUID; out Obj): HResult;
 begin
@@ -262,7 +276,7 @@ end;
 
 procedure TZAbstractTestCase.CheckNotNull(obj: IUnknown; msg: string);
 begin
-    if obj = nil then
+     if obj = nil then
       Fail(msg, CallerAddr);
 end;
 
@@ -547,13 +561,17 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: PAnsiChar;
   const Msg: string = '');
 begin
-  Check(MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+  Check(MemLCompAnsi(Expected, Actual, Max(
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: PAnsiChar;
   const Msg: string = '');
 begin
-  Check(not MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+  Check(not MemLCompAnsi(Expected, Actual, Max(
+    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
+    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
 end;
 
 {$IFDEF FPC}
@@ -568,6 +586,19 @@ procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: WideString;
 begin
   Check(Expected <> Actual, Msg);
 end;
+
+procedure TZAbstractTestCase.CheckEquals(Expected, Actual: UInt64;
+  const Msg: string = ''); overload;
+begin
+  Check(Expected = Actual, Msg);
+end;
+
+procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: UInt64;
+  const Msg: string = ''); overload;
+begin
+  Check(Expected <> Actual, Msg);
+end;
+
 {$ELSE}
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: Word;
   const Msg: string = '');

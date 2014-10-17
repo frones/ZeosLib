@@ -267,7 +267,7 @@
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
   {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
-  {$DEFINE DELPHI21_UP} //currently not used just reserved
+  {$DEFINE DELPHI21_UP} //Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -385,6 +385,10 @@
 {$IFDEF DELPHI20_UP}
   {$DEFINE WITH_IPROVIDERSUPPORT_NG} //supports IProviderSupportNG / IProviderSupport is deprecated
   {$DEFINE TFIELD_HAS_ASLONGWORD} //TField has supports virtual AsLongWord Gettet & Setter 
+{$ENDIF}
+
+{$IFDEF DELPHI21_UP}
+  {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
 {$ENDIF}
 
 {$IFNDEF WIN32} //global undefines

@@ -345,6 +345,7 @@ begin
   FQuery.SQL.Text := 'SELECT * FROM string_values';
   FQuery.Open;
   FQuery.First;
+  Str := '';
   with FQuery do
   begin
     CheckEquals(1, Fields[0].AsInteger, 'The row index');

@@ -246,7 +246,7 @@ type
     procedure LoadApi; override;
     procedure BuildServerArguments(Options: TStrings);
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create;
     destructor Destroy; override;
 
     procedure Debug(Debug: PAnsiChar);
@@ -381,7 +381,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -394,7 +394,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -408,7 +408,7 @@ type
     procedure LoadApi; override;
     procedure LoadCodePages; override;
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -419,7 +419,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -430,7 +430,7 @@ type
   protected
     function Clone: IZPlainDriver; override;
   public
-    constructor Create(Tokenizer: IZTokenizer);
+    constructor Create;
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -637,12 +637,10 @@ begin
   end;
 end;
 
-constructor TZMySQLBaseDriver.Create(Tokenizer: IZTokenizer);
+constructor TZMySQLBaseDriver.Create;
 begin
   inherited create;
   FLoader := TZNativeLibraryLoader.Create([]);
-  FTokenizer := nil;
-  FTokenizer := Tokenizer;
 {$IFNDEF MYSQL_STRICT_DLL_LOADING}
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL_LOCATION);
@@ -1275,12 +1273,12 @@ end;
 
 function TZMySQL41PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQL41PlainDriver.Create(FTokenizer);
+  Result := TZMySQL41PlainDriver.Create;
 end;
 
-constructor TZMySQL41PlainDriver.Create(Tokenizer: IZTokenizer);
+constructor TZMySQL41PlainDriver.Create;
 begin
-  inherited Create(Tokenizer);
+  inherited Create;
   {$IFNDEF UNIX}
     FLoader.AddLocation(WINDOWS_DLL41_LOCATION);
   {$ELSE}
@@ -1302,12 +1300,12 @@ end;
 
 function TZMySQLD41PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQLD41PlainDriver.Create(FTokenizer);
+  Result := TZMySQLD41PlainDriver.Create;
 end;
 
-constructor TZMySQLD41PlainDriver.Create(Tokenizer: IZTokenizer);
+constructor TZMySQLD41PlainDriver.Create;
 begin
-  inherited Create(Tokenizer);
+  inherited Create;
   // only include embedded library
   FLoader.ClearLocations;
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
@@ -1339,7 +1337,7 @@ end;
 
 function TZMySQL5PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQL5PlainDriver.Create(FTokenizer);
+  Result := TZMySQL5PlainDriver.Create;
 end;
 
 procedure TZMySQL5PlainDriver.LoadApi;
@@ -1363,9 +1361,9 @@ begin
   AddCodePage('utf32', 39, ceUTF16, zCP_utf32, 'utf8', 4); {UTF-32 Unicode} //Egonhugeist improved
 end;
 
-constructor TZMySQL5PlainDriver.Create(Tokenizer: IZTokenizer);
+constructor TZMySQL5PlainDriver.Create;
 begin
-  inherited Create(Tokenizer);
+  inherited Create;
   {$IFNDEF UNIX}
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
     FLoader.AddLocation(MARIADB_LOCATION);
@@ -1397,12 +1395,12 @@ end;
 
 function TZMySQLD5PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMySQLD5PlainDriver.Create(FTokenizer);
+  Result := TZMySQLD5PlainDriver.Create
 end;
 
-constructor TZMySQLD5PlainDriver.Create(Tokenizer: IZTokenizer);
+constructor TZMySQLD5PlainDriver.Create;
 begin
-  inherited Create(Tokenizer);
+  inherited Create;
   // only include embedded library
   FLoader.ClearLocations;
   {$IFNDEF MYSQL_STRICT_DLL_LOADING}
@@ -1437,12 +1435,12 @@ end;
 { TZMariaDB5PlainDriver }
 function TZMariaDB5PlainDriver.Clone: IZPlainDriver;
 begin
-  Result := TZMariaDB5PlainDriver.Create(FTokenizer);
+  Result := TZMariaDB5PlainDriver.Create
 end;
 
-constructor TZMariaDB5PlainDriver.Create(Tokenizer: IZTokenizer);
+constructor TZMariaDB5PlainDriver.Create;
 begin
-  inherited Create(Tokenizer);
+  inherited Create;
   FLoader.ClearLocations;
   FLoader.AddLocation(MARIADB_LOCATION);
 end;

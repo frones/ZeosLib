@@ -497,10 +497,9 @@ destructor TZAbstractStatement.Destroy;
 begin
   Close;
   if Assigned(FBatchQueries) then
-    FBatchQueries.Free;
-  FBatchQueries := nil;
+    FreeAndNil(FBatchQueries);
   FConnection := nil;
-  FInfo.Free;
+  FreeAndNil(FInfo);
   FLastResultSet := nil;
   inherited Destroy;
 end;

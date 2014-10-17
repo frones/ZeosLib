@@ -393,7 +393,7 @@ end;
 }
 function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
 begin
-  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len);
+  Result := GetBuffer(ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}, Len{%H-});
 end;
 
 {**

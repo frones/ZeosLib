@@ -344,8 +344,7 @@ begin
     Result := FPlainDriver.Changes(FHandle);
     inherited ExecuteUpdatePrepared; //log values
   finally
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
-      nil, lcOther, 'Reset', ConSettings); //reset handle
+    FPlainDriver.reset(FStmtHandle); //reset handle allways without check else -> leaking mem
     LastUpdateCount := Result;
   end;
   { Autocommit statement. }

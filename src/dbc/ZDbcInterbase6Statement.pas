@@ -163,7 +163,7 @@ begin
   begin
     Result := ZDbcInterbase6Utils.PrepareStatement(GetPlainDriver,
       GetDBHandle, GetTrHandle, GetDialect, SQL, ConSettings, FStmtHandle); //allocate handle if required or reuse it
-    if PrepareParams then
+    if PrepareParams and (Result in [stInsert, stUpdate, stDelete]) then
       PrepareInParameters;
     if Result in [stSelect, stExecProc] then
     begin
@@ -199,7 +199,7 @@ end;
 
 procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
-  if (ArrayCount > 0) then
+  if (ArrayCount > 0) and (FStatementType in [stExecProc]) then //newly prepared execute block is a SP
     while True do
       if (FArrayOffSet+FPreparedRowsOfArray >= ArrayCount) then
       begin
