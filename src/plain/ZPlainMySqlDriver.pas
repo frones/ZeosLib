@@ -61,7 +61,7 @@ interface
 {$I ZPlain.inc}
 
 uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
-  ZPlainDriver, ZCompatibility, ZPlainMySqlConstants, ZTokenizer;
+  ZPlainDriver, ZCompatibility, ZPlainMySqlConstants;
 
 const
   MARIADB_LOCATION = 'libmariadb'+ SharedSuffix;
@@ -101,10 +101,8 @@ type
     function GetClientVersion: Integer;
     function GetServerVersion(Handle: PZMySQLConnect): Integer;
     {END ADDED by fduenas 15-06-2006}
-    procedure Despose(var Handle: PZMySQLConnect);
 
     function GetAffectedRows(Handle: PZMySQLConnect): Int64;
-    {ADDED by EgonHugeist}
     function GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
     procedure Close(Handle: PZMySQLConnect);
     function Connect(Handle: PZMySQLConnect; const Host, User, Password: PAnsiChar): PZMySQLConnect;
@@ -236,8 +234,124 @@ type
   { TZMySQLBaseDriver }
 
   TZMySQLBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZMySQLPlainDriver)
+  private
+    { ************** Plain API Function types definition ************* }
+    { Functions to get information from the MYSQL and MYSQL_RES structures
+      Should definitely be used if one uses shared libraries. }
+    mysql_get_character_set_info: procedure(Handle: PMYSQL; cs: PMY_CHARSET_INFO); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_affected_rows:          function( Handle: PMYSQL): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_character_set_name:     function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_close:                  procedure(Handle: PMYSQL); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_connect:                function(Handle: PMYSQL; const Host, User, Passwd: PAnsiChar): PMYSQL;   {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_create_db:              function(Handle: PMYSQL; const Db: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_data_seek:              procedure(Result: PMYSQL_RES; Offset: ULongLong); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_debug:                  procedure(Debug: PAnsiChar); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_drop_db:                function(Handle: PMYSQL; const Db: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_dump_debug_info:        function(Handle: PMYSQL): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_eof:                    function(Result: PMYSQL_RES): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_errno:                  function(Handle: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_error:                  function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_escape_string:          function(PTo, PFrom: PAnsiChar; Len: ULong): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_fetch_field:            function(Result: PMYSQL_RES): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_fetch_field_direct:     function(Result: PMYSQL_RES; FieldNo: UInt): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_fetch_fields:           function(Result: PMYSQL_RES): PMYSQL_FIELD; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_fetch_lengths:          function(Result: PMYSQL_RES): PMySQLLengthArray; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_fetch_row:              function(Result: PMYSQL_RES): PMYSQL_ROW; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_field_seek:             function(Result: PMYSQL_RES; Offset: MYSQL_FIELD_OFFSET): MYSQL_FIELD_OFFSET; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_field_tell:             function(Result: PMYSQL_RES): MYSQL_FIELD_OFFSET; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_free_result:            procedure(Result: PMYSQL_RES); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_get_client_info:        function: PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_get_host_info:          function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_get_proto_info:         function(Handle: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_get_server_info:        function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_info:                   function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_init:                   function(Handle: PMYSQL): PMYSQL; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_library_end:            procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_insert_id:              function(Handle: PMYSQL): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_kill:                   function(Handle: PMYSQL; Pid: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_list_dbs:               function(Handle: PMYSQL; Wild: PAnsiChar): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_list_fields:            function(Handle: PMYSQL; const Table, Wild: PAnsiChar): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_list_processes:         function(Handle: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_list_tables:            function(Handle: PMYSQL; const Wild: PAnsiChar): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_num_fields:             function(Result: PMYSQL_RES): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_num_rows:               function(Result: PMYSQL_RES): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_options:                function(Handle: PMYSQL; Option: TMySqlOption; const Arg: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_ping:                   function(Handle: PMYSQL): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_query:                  function(Handle: PMYSQL; const Query: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_real_connect:           function(Handle: PMYSQL; const Host, User, Passwd, Db: PAnsiChar; Port: UInt; const UnixSocket: PAnsiChar; ClientFlag: ULong): PMYSQL; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_real_escape_string:     function(Handle: PMYSQL; PTo: PAnsiChar; const PFrom: PAnsiChar; length: ULong): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_real_query:             function(Handle: PMYSQL; const Query: PAnsiChar; Length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_refresh:                function(Handle: PMYSQL; Options: UInt): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_row_seek:               function(Result: PMYSQL_RES; Offset: PMYSQL_ROWS): PMYSQL_ROWS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_row_tell:               function(Result: PMYSQL_RES): PMYSQL_ROWS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_select_db:              function(Handle: PMYSQL; const Db: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_ssl_set:                function(Handle: PMYSQL; const key, cert, CA, CApath, cipher: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stat:                   function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_store_result:           function(Handle: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_thread_id:              function(Handle: PMYSQL): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_use_result:             function(Handle: PMYSQL): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Set up and bring down a thread; these function should be called for each thread in an application which
+      opens at least one MySQL connection.  All uses of the connection(s) should be between these function calls. }
+    my_init:                      procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_thread_init:            function: Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_thread_end:             procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_thread_safe:            function: UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    { Set up and bring down the server; to ensure that applications will work when linked against either the
+      standard client library or the embedded server library, these functions should be called. }
+    mysql_server_init:            function(Argc: Integer; Argv, Groups: Pointer): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_server_end:             procedure; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    mysql_change_user:            function(mysql: PMYSQL; const user: PAnsiChar; const passwd: PAnsiChar; const db: PAnsiChar): Byte;
+    mysql_field_count:            function(Handle: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_get_client_version:     function: ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    mysql_send_query:             function(mysql: PMYSQL; const query: PAnsiChar; length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_read_query_result:      function(mysql: PMYSQL): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    mysql_autocommit:             function(Handle: PMYSQL; const mode: Byte): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_commit:                 function(Handle: PMYSQL): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_get_server_version:     function(Handle: PMYSQL): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_hex_string:             function(PTo, PFrom: PAnsiChar; Len: ULong): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_more_results:           function(Handle: PMYSQL): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_next_result:            function(Handle: PMYSQL): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_rollback:               function(Handle: PMYSQL): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_set_character_set:      function(Handle: PMYSQL; const csname: PAnsiChar): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_set_server_option:      function(Handle: PMYSQL; Option: TMysqlSetOption): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_shutdown:               function(Handle: PMYSQL; shutdown_level: TMysqlShutdownLevel): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_sqlstate:               function(Handle: PMYSQL): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_warning_count:          function(Handle: PMYSQL): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    {BELOW are new PREPARED STATEMENTS}
+    mysql_stmt_affected_rows:     function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_get:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; arg: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_set:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const arg: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_bind_param:        function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_bind_result:       function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_close:             function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_data_seek:         procedure(stmt: PMYSQL_STMT; offset: ULongLong); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_errno:             function(stmt: PMYSQL_STMT): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_error:             function(stmt: PMYSQL_STMT): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_execute:           function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_fetch:             function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_fetch_column:      function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: UInt; offset: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_field_count:       function(stmt: PMYSQL_STMT): UInt; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_free_result:       function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_init:              function(Handle: PMYSQL): PMYSQL_STMT; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_insert_id:         function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_next_result:       function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_num_rows:          function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_param_count:       function(stmt: PMYSQL_STMT): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_param_metadata:    function(stmt: PMYSQL_STMT): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_prepare:           function(stmt: PMYSQL_STMT; const query: PAnsiChar; length: ULong): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_reset:             function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_result_metadata:   function(stmt: PMYSQL_STMT): PMYSQL_RES; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_row_seek:          function(stmt: PMYSQL_STMT; offset: PMYSQL_ROWS): PMYSQL_ROWS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_row_tell:          function(stmt: PMYSQL_STMT): PMYSQL_ROWS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_send_long_data:    function(stmt: PMYSQL_STMT; parameter_number: UInt; const data: PAnsiChar; length: ULong): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_sqlstate:          function(stmt: PMYSQL_STMT): PAnsiChar; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_store_result:      function(stmt: PMYSQL_STMT): Integer; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
-    MYSQL_API : TZMYSQL_API;
     ServerArgs: array of PAnsiChar;
     ServerArgsLen: Integer;
     IsEmbeddedDriver: Boolean;
@@ -255,7 +369,6 @@ type
     function GetLastErrorCode(Handle: PZMySQLConnect): Integer;
     function Init(const Handle: PZMySQLConnect): PZMySQLConnect; virtual;
     function GetLastInsertID (Handle: PZMySQLConnect): Int64;
-    procedure Despose(var Handle: PZMySQLConnect);
 
     function Connect(Handle: PZMySQLConnect;
       const Host, User, Password: PAnsiChar): PZMySQLConnect;
@@ -494,114 +607,114 @@ begin
 { ************** Load adresses of API Functions ************* }
   with Loader do
   begin
-  @MYSQL_API.mysql_affected_rows          := GetAddress('mysql_affected_rows');
-  @MYSQL_API.mysql_character_set_name     := GetAddress('mysql_character_set_name');
-  @MYSQL_API.mysql_close                  := GetAddress('mysql_close');
-  @MYSQL_API.mysql_connect                := GetAddress('mysql_connect');
-  @MYSQL_API.mysql_create_db              := GetAddress('mysql_create_db');
-  @MYSQL_API.mysql_data_seek              := GetAddress('mysql_data_seek');
-  @MYSQL_API.mysql_debug                  := GetAddress('mysql_debug');
-  @MYSQL_API.mysql_drop_db                := GetAddress('mysql_drop_db');
-  @MYSQL_API.mysql_dump_debug_info        := GetAddress('mysql_dump_debug_info');
-  @MYSQL_API.mysql_eof                    := GetAddress('mysql_eof');
-  @MYSQL_API.mysql_errno                  := GetAddress('mysql_errno');
-  @MYSQL_API.mysql_error                  := GetAddress('mysql_error');
-  @MYSQL_API.mysql_escape_string          := GetAddress('mysql_escape_string');
-  @MYSQL_API.mysql_fetch_field            := GetAddress('mysql_fetch_field');
-  @MYSQL_API.mysql_fetch_field_direct     := GetAddress('mysql_fetch_field_direct');
-  @MYSQL_API.mysql_fetch_fields           := GetAddress('mysql_fetch_fields');
-  @MYSQL_API.mysql_fetch_lengths          := GetAddress('mysql_fetch_lengths');
-  @MYSQL_API.mysql_fetch_row              := GetAddress('mysql_fetch_row');
-  @MYSQL_API.mysql_field_seek             := GetAddress('mysql_field_seek');
-  @MYSQL_API.mysql_field_tell             := GetAddress('mysql_field_tell');
-  @MYSQL_API.mysql_free_result            := GetAddress('mysql_free_result');
-  @MYSQL_API.mysql_get_client_info        := GetAddress('mysql_get_client_info');
-  @MYSQL_API.mysql_get_host_info          := GetAddress('mysql_get_host_info');
-  @MYSQL_API.mysql_get_proto_info         := GetAddress('mysql_get_proto_info');
-  @MYSQL_API.mysql_get_server_info        := GetAddress('mysql_get_server_info');
-  @MYSQL_API.mysql_info                   := GetAddress('mysql_info');
-  @MYSQL_API.mysql_init                   := GetAddress('mysql_init');
-  @MYSQL_API.mysql_insert_id              := GetAddress('mysql_insert_id');
-  @MYSQL_API.mysql_kill                   := GetAddress('mysql_kill');
-  @MYSQL_API.mysql_list_dbs               := GetAddress('mysql_list_dbs');
-  @MYSQL_API.mysql_list_fields            := GetAddress('mysql_list_fields');
-  @MYSQL_API.mysql_list_processes         := GetAddress('mysql_list_processes');
-  @MYSQL_API.mysql_list_tables            := GetAddress('mysql_list_tables');
-  @MYSQL_API.mysql_num_fields             := GetAddress('mysql_num_fields');
-  @MYSQL_API.mysql_num_rows               := GetAddress('mysql_num_rows');
-  @MYSQL_API.mysql_options                := GetAddress('mysql_options');
-  @MYSQL_API.mysql_ping                   := GetAddress('mysql_ping');
-  @MYSQL_API.mysql_query                  := GetAddress('mysql_query');
-  @MYSQL_API.mysql_real_connect           := GetAddress('mysql_real_connect');
-  @MYSQL_API.mysql_real_escape_string     := GetAddress('mysql_real_escape_string');
-  @MYSQL_API.mysql_real_query             := GetAddress('mysql_real_query');
-  @MYSQL_API.mysql_refresh                := GetAddress('mysql_refresh');
-  @MYSQL_API.mysql_row_seek               := GetAddress('mysql_row_seek');
-  @MYSQL_API.mysql_row_tell               := GetAddress('mysql_row_tell');
-  @MYSQL_API.mysql_select_db              := GetAddress('mysql_select_db');
-  @MYSQL_API.mysql_shutdown               := GetAddress('mysql_shutdown');
-  @MYSQL_API.mysql_ssl_set                := GetAddress('mysql_ssl_set');
-  @MYSQL_API.mysql_stat                   := GetAddress('mysql_stat');
-  @MYSQL_API.mysql_store_result           := GetAddress('mysql_store_result');
-  @MYSQL_API.mysql_thread_id              := GetAddress('mysql_thread_id');
-  @MYSQL_API.mysql_use_result             := GetAddress('mysql_use_result');
+  @mysql_affected_rows          := GetAddress('mysql_affected_rows');
+  @mysql_character_set_name     := GetAddress('mysql_character_set_name');
+  @mysql_close                  := GetAddress('mysql_close');
+  @mysql_connect                := GetAddress('mysql_connect');
+  @mysql_create_db              := GetAddress('mysql_create_db');
+  @mysql_data_seek              := GetAddress('mysql_data_seek');
+  @mysql_debug                  := GetAddress('mysql_debug');
+  @mysql_drop_db                := GetAddress('mysql_drop_db');
+  @mysql_dump_debug_info        := GetAddress('mysql_dump_debug_info');
+  @mysql_eof                    := GetAddress('mysql_eof');
+  @mysql_errno                  := GetAddress('mysql_errno');
+  @mysql_error                  := GetAddress('mysql_error');
+  @mysql_escape_string          := GetAddress('mysql_escape_string');
+  @mysql_fetch_field            := GetAddress('mysql_fetch_field');
+  @mysql_fetch_field_direct     := GetAddress('mysql_fetch_field_direct');
+  @mysql_fetch_fields           := GetAddress('mysql_fetch_fields');
+  @mysql_fetch_lengths          := GetAddress('mysql_fetch_lengths');
+  @mysql_fetch_row              := GetAddress('mysql_fetch_row');
+  @mysql_field_seek             := GetAddress('mysql_field_seek');
+  @mysql_field_tell             := GetAddress('mysql_field_tell');
+  @mysql_free_result            := GetAddress('mysql_free_result');
+  @mysql_get_client_info        := GetAddress('mysql_get_client_info');
+  @mysql_get_host_info          := GetAddress('mysql_get_host_info');
+  @mysql_get_proto_info         := GetAddress('mysql_get_proto_info');
+  @mysql_get_server_info        := GetAddress('mysql_get_server_info');
+  @mysql_info                   := GetAddress('mysql_info');
+  @mysql_init                   := GetAddress('mysql_init');
+  @mysql_insert_id              := GetAddress('mysql_insert_id');
+  @mysql_kill                   := GetAddress('mysql_kill');
+  @mysql_list_dbs               := GetAddress('mysql_list_dbs');
+  @mysql_list_fields            := GetAddress('mysql_list_fields');
+  @mysql_list_processes         := GetAddress('mysql_list_processes');
+  @mysql_list_tables            := GetAddress('mysql_list_tables');
+  @mysql_num_fields             := GetAddress('mysql_num_fields');
+  @mysql_num_rows               := GetAddress('mysql_num_rows');
+  @mysql_options                := GetAddress('mysql_options');
+  @mysql_ping                   := GetAddress('mysql_ping');
+  @mysql_query                  := GetAddress('mysql_query');
+  @mysql_real_connect           := GetAddress('mysql_real_connect');
+  @mysql_real_escape_string     := GetAddress('mysql_real_escape_string');
+  @mysql_real_query             := GetAddress('mysql_real_query');
+  @mysql_refresh                := GetAddress('mysql_refresh');
+  @mysql_row_seek               := GetAddress('mysql_row_seek');
+  @mysql_row_tell               := GetAddress('mysql_row_tell');
+  @mysql_select_db              := GetAddress('mysql_select_db');
+  @mysql_shutdown               := GetAddress('mysql_shutdown');
+  @mysql_ssl_set                := GetAddress('mysql_ssl_set');
+  @mysql_stat                   := GetAddress('mysql_stat');
+  @mysql_store_result           := GetAddress('mysql_store_result');
+  @mysql_thread_id              := GetAddress('mysql_thread_id');
+  @mysql_use_result             := GetAddress('mysql_use_result');
 
-  @MYSQL_API.my_init                      := GetAddress('my_init');
-  @MYSQL_API.mysql_thread_init            := GetAddress('mysql_thread_init');
-  @MYSQL_API.mysql_thread_end             := GetAddress('mysql_thread_end');
-  @MYSQL_API.mysql_thread_safe            := GetAddress('mysql_thread_safe');
+  @my_init                      := GetAddress('my_init');
+  @mysql_thread_init            := GetAddress('mysql_thread_init');
+  @mysql_thread_end             := GetAddress('mysql_thread_end');
+  @mysql_thread_safe            := GetAddress('mysql_thread_safe');
 
-  @MYSQL_API.mysql_server_init            := GetAddress('mysql_server_init');
-  @MYSQL_API.mysql_server_end             := GetAddress('mysql_server_end');
-  @MYSQL_API.mysql_library_end            := GetAddress('mysql_library_end');
+  @mysql_server_init            := GetAddress('mysql_server_init');
+  @mysql_server_end             := GetAddress('mysql_server_end');
+  @mysql_library_end            := GetAddress('mysql_library_end');
 
-  @MYSQL_API.mysql_change_user            := GetAddress('mysql_change_user');
-  @MYSQL_API.mysql_field_count            := GetAddress('mysql_field_count');
+  @mysql_change_user            := GetAddress('mysql_change_user');
+  @mysql_field_count            := GetAddress('mysql_field_count');
 
-  @MYSQL_API.mysql_get_client_version     := GetAddress('mysql_get_client_version');
+  @mysql_get_client_version     := GetAddress('mysql_get_client_version');
 
-  @MYSQL_API.mysql_send_query             := GetAddress('mysql_send_query');
-  @MYSQL_API.mysql_read_query_result      := GetAddress('mysql_read_query_result');
+  @mysql_send_query             := GetAddress('mysql_send_query');
+  @mysql_read_query_result      := GetAddress('mysql_read_query_result');
 
-  @MYSQL_API.mysql_autocommit             := GetAddress('mysql_autocommit');
-  @MYSQL_API.mysql_commit                 := GetAddress('mysql_commit');
-  @MYSQL_API.mysql_get_server_version     := GetAddress('mysql_get_server_version');
-  @MYSQL_API.mysql_hex_string             := GetAddress('mysql_hex_string');
-  @MYSQL_API.mysql_more_results           := GetAddress('mysql_more_results');
-  @MYSQL_API.mysql_next_result            := GetAddress('mysql_next_result');
-  @MYSQL_API.mysql_rollback               := GetAddress('mysql_rollback');
-  @MYSQL_API.mysql_set_character_set      := GetAddress('mysql_set_character_set');
-  @MYSQL_API.mysql_set_server_option      := GetAddress('mysql_set_server_option');
-  @MYSQL_API.mysql_sqlstate               := GetAddress('mysql_sqlstate');
-  @MYSQL_API.mysql_warning_count          := GetAddress('mysql_warning_count');
+  @mysql_autocommit             := GetAddress('mysql_autocommit');
+  @mysql_commit                 := GetAddress('mysql_commit');
+  @mysql_get_server_version     := GetAddress('mysql_get_server_version');
+  @mysql_hex_string             := GetAddress('mysql_hex_string');
+  @mysql_more_results           := GetAddress('mysql_more_results');
+  @mysql_next_result            := GetAddress('mysql_next_result');
+  @mysql_rollback               := GetAddress('mysql_rollback');
+  @mysql_set_character_set      := GetAddress('mysql_set_character_set');
+  @mysql_set_server_option      := GetAddress('mysql_set_server_option');
+  @mysql_sqlstate               := GetAddress('mysql_sqlstate');
+  @mysql_warning_count          := GetAddress('mysql_warning_count');
   {API for PREPARED STATEMENTS}
-  @MYSQL_API.mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
-  @MYSQL_API.mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
-  @MYSQL_API.mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set');
-  @MYSQL_API.mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
-  @MYSQL_API.mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
-  @MYSQL_API.mysql_stmt_close             := GetAddress('mysql_stmt_close');
-  @MYSQL_API.mysql_stmt_data_seek         := GetAddress('mysql_stmt_data_seek');
-  @MYSQL_API.mysql_stmt_errno             := GetAddress('mysql_stmt_errno');
-  @MYSQL_API.mysql_stmt_error             := GetAddress('mysql_stmt_error');
-  @MYSQL_API.mysql_stmt_execute           := GetAddress('mysql_stmt_execute');
-  @MYSQL_API.mysql_stmt_fetch             := GetAddress('mysql_stmt_fetch');
-  @MYSQL_API.mysql_stmt_fetch_column      := GetAddress('mysql_stmt_fetch_column');
-  @MYSQL_API.mysql_stmt_field_count       := GetAddress('mysql_stmt_field_count');
-  @MYSQL_API.mysql_stmt_free_result       := GetAddress('mysql_stmt_free_result');
-  @MYSQL_API.mysql_stmt_init              := GetAddress('mysql_stmt_init');
-  @MYSQL_API.mysql_stmt_insert_id         := GetAddress('mysql_stmt_insert_id');
-  @MYSQL_API.mysql_stmt_num_rows          := GetAddress('mysql_stmt_num_rows');
-  @MYSQL_API.mysql_stmt_param_count       := GetAddress('mysql_stmt_param_count');
-  @MYSQL_API.mysql_stmt_param_metadata    := GetAddress('mysql_stmt_param_metadata');
-  @MYSQL_API.mysql_stmt_prepare           := GetAddress('mysql_stmt_prepare');
-  @MYSQL_API.mysql_stmt_reset             := GetAddress('mysql_stmt_reset');
-  @MYSQL_API.mysql_stmt_result_metadata   := GetAddress('mysql_stmt_result_metadata');
-  @MYSQL_API.mysql_stmt_row_seek          := GetAddress('mysql_stmt_row_seek');
-  @MYSQL_API.mysql_stmt_row_tell          := GetAddress('mysql_stmt_row_tell');
-  @MYSQL_API.mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
-  @MYSQL_API.mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
-  @MYSQL_API.mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
+  @mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
+  @mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
+  @mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set');
+  @mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
+  @mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
+  @mysql_stmt_close             := GetAddress('mysql_stmt_close');
+  @mysql_stmt_data_seek         := GetAddress('mysql_stmt_data_seek');
+  @mysql_stmt_errno             := GetAddress('mysql_stmt_errno');
+  @mysql_stmt_error             := GetAddress('mysql_stmt_error');
+  @mysql_stmt_execute           := GetAddress('mysql_stmt_execute');
+  @mysql_stmt_fetch             := GetAddress('mysql_stmt_fetch');
+  @mysql_stmt_fetch_column      := GetAddress('mysql_stmt_fetch_column');
+  @mysql_stmt_field_count       := GetAddress('mysql_stmt_field_count');
+  @mysql_stmt_free_result       := GetAddress('mysql_stmt_free_result');
+  @mysql_stmt_init              := GetAddress('mysql_stmt_init');
+  @mysql_stmt_insert_id         := GetAddress('mysql_stmt_insert_id');
+  @mysql_stmt_num_rows          := GetAddress('mysql_stmt_num_rows');
+  @mysql_stmt_param_count       := GetAddress('mysql_stmt_param_count');
+  @mysql_stmt_param_metadata    := GetAddress('mysql_stmt_param_metadata');
+  @mysql_stmt_prepare           := GetAddress('mysql_stmt_prepare');
+  @mysql_stmt_reset             := GetAddress('mysql_stmt_reset');
+  @mysql_stmt_result_metadata   := GetAddress('mysql_stmt_result_metadata');
+  @mysql_stmt_row_seek          := GetAddress('mysql_stmt_row_seek');
+  @mysql_stmt_row_tell          := GetAddress('mysql_stmt_row_tell');
+  @mysql_stmt_send_long_data    := GetAddress('mysql_stmt_send_long_data');
+  @mysql_stmt_sqlstate          := GetAddress('mysql_stmt_sqlstate');
+  @mysql_stmt_store_result      := GetAddress('mysql_stmt_store_result');
   end;
 end;
 
@@ -662,88 +775,88 @@ begin
     {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
 
   if (FLoader.Loaded) then
-    if (@MYSQL_API.mysql_library_end <> nil) then
-      MYSQL_API.mysql_library_end //since 5.0.3
+    if (@mysql_library_end <> nil) then
+      mysql_library_end //since 5.0.3
     else
-      if (@MYSQL_API.mysql_server_end <> nil) then
-        MYSQL_API.mysql_server_end; //deprected since 5.0.3
+      if (@mysql_server_end <> nil) then
+        mysql_server_end; //deprected since 5.0.3
   inherited Destroy;
 end;
 
 procedure TZMySQLBaseDriver.Close(Handle: PZMySQLConnect);
 begin
-  MYSQL_API.mysql_close(Handle);
+  mysql_close(Handle);
 end;
 
 function TZMySQLBaseDriver.Connect(Handle: PZMySQLConnect; const Host,
   User, Password: PAnsiChar): PZMySQLConnect;
 begin
-  Result := MYSQL_API.mysql_connect(Handle, Host, User, Password);
+  Result := mysql_connect(Handle, Host, User, Password);
 end;
 
 function TZMySQLBaseDriver.SslSet(Handle: PZMySQLConnect;
   const Key, Cert, Ca, Capath, Cipher: PAnsiChar): Integer;
 begin
-  Result := MYSQL_API.mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
+  Result := mysql_ssl_set(Handle, Key, Cert, Ca, Capath, Cipher);
 end;
 
 function TZMySQLBaseDriver.CreateDatabase(Handle: PZMySQLConnect;
   const Database: PAnsiChar): Integer;
 begin
-  Result := MYSQL_API.mysql_create_db(Handle, Database);
+  Result := mysql_create_db(Handle, Database);
 end;
 
 procedure TZMySQLBaseDriver.Debug(Debug: PAnsiChar);
 begin
-  MYSQL_API.mysql_debug(Debug);
+  mysql_debug(Debug);
 end;
 
 function TZMySQLBaseDriver.DropDatabase(Handle: PZMySQLConnect;
   const Database: PAnsiChar): Integer;
 begin
-  Result := MYSQL_API.mysql_drop_db(Handle, Database);
+  Result := mysql_drop_db(Handle, Database);
 end;
 
 function TZMySQLBaseDriver.DumpDebugInfo(Handle: PZMySQLConnect): Integer;
 begin
-  Result := MYSQL_API.mysql_dump_debug_info(Handle);
+  Result := mysql_dump_debug_info(Handle);
 end;
 
 function TZMySQLBaseDriver.ExecQuery(Handle: PZMySQLConnect;
   const Query: PAnsiChar): Integer;
 begin
-  Result := MYSQL_API.mysql_query(Handle, Query);
+  Result := mysql_query(Handle, Query);
 end;
 
 function TZMySQLBaseDriver.ExecRealQuery(Handle: PZMySQLConnect;
   const Query: PAnsiChar; Length: Integer): Integer;
 begin
-  Result := MYSQL_API.mysql_real_query(Handle, Query, Length);
+  Result := mysql_real_query(Handle, Query, Length);
 end;
 
 function TZMySQLBaseDriver.FetchField(Res: PZMySQLResult): PZMySQLField;
 begin
-  Result := MYSQL_API.mysql_fetch_field(Res);
+  Result := mysql_fetch_field(Res);
 end;
 
 function TZMySQLBaseDriver.FetchLengths(Res: PZMySQLResult): PMySQLLengthArray;
 begin
-  Result := MYSQL_API.mysql_fetch_lengths(Res);
+  Result := mysql_fetch_lengths(Res);
 end;
 
 function TZMySQLBaseDriver.FetchRow(Res: PZMySQLResult): PZMySQLRow;
 begin
-  Result := MYSQL_API.mysql_fetch_row(Res);
+  Result := mysql_fetch_row(Res);
 end;
 
 procedure TZMySQLBaseDriver.FreeResult(Res: PZMySQLResult);
 begin
-  MYSQL_API.mysql_free_result(Res);
+  mysql_free_result(Res);
 end;
 
 function TZMySQLBaseDriver.GetAffectedRows(Handle: PZMySQLConnect): Int64;
 begin
-  Result := MYSQL_API.mysql_affected_rows(Handle);
+  Result := mysql_affected_rows(Handle);
 end;
 
 {**
@@ -752,8 +865,8 @@ end;
 }
 function TZMySQLBaseDriver.GetConnectionCharacterSet(Handle: PMYSQL): PAnsiChar;// char_set_name
 begin
-  if Assigned(MYSQL_API.mysql_character_set_name) then
-    Result := MYSQL_API.mysql_character_set_name(Handle)
+  if Assigned(mysql_character_set_name) then
+    Result := mysql_character_set_name(Handle)
   else
     Result := '';
 end;
@@ -769,12 +882,12 @@ end;
 function TZMySQLBaseDriver.SetConnectionCharacterSet(Handle: PMYSQL;
   const csname: PAnsiChar): Integer; // set_character_set Returns 0 if valid
 begin
-  Result := MYSQL_API.mysql_set_character_set(Handle, csName);
+  Result := mysql_set_character_set(Handle, csName);
 end;
 
 function TZMySQLBaseDriver.GetClientInfo: PAnsiChar;
 begin
-  Result := MYSQL_API.mysql_get_client_info;
+  Result := mysql_get_client_info;
 end;
 
 function TZMySQLBaseDriver.EscapeString(Handle: Pointer; const Value: RawByteString;
@@ -795,40 +908,40 @@ begin
   Len := Length(TempValue);
   Setlength(Outbuffer,Len*2+1);
   if Handle = nil then
-    OutLength := MYSQL_API.mysql_escape_string(PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len)
+    OutLength := mysql_escape_string(PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len)
   else
-    OutLength := MYSQL_API.mysql_real_escape_string(Handle, PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len);
+    OutLength := mysql_real_escape_string(Handle, PAnsiChar(OutBuffer), PAnsiChar(TempValue), Len);
   Setlength(Outbuffer,OutLength);
   Result := #39+Outbuffer+#39;
 end;
 
 function TZMySQLBaseDriver.GetHostInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
-  Result := MYSQL_API.mysql_get_host_info(Handle);
+  Result := mysql_get_host_info(Handle);
 end;
 
 function TZMySQLBaseDriver.GetListDatabases(Handle: PZMySQLConnect;
   Wild: PAnsiChar): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_list_dbs(Handle, Wild);
+  Result := mysql_list_dbs(Handle, Wild);
 end;
 
 function TZMySQLBaseDriver.GetListFields(Handle: PZMySQLConnect;
   const Table, Wild: PAnsiChar): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_list_fields(Handle, Table, Wild);
+  Result := mysql_list_fields(Handle, Table, Wild);
 end;
 
 function TZMySQLBaseDriver.GetListProcesses(
   Handle: PZMySQLConnect): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_list_processes(Handle);
+  Result := mysql_list_processes(Handle);
 end;
 
 function TZMySQLBaseDriver.GetListTables(Handle: PZMySQLConnect;
   const Wild: PAnsiChar): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_list_tables(Handle, Wild);
+  Result := mysql_list_tables(Handle, Wild);
 end;
 
 function TZMySQLBaseDriver.GetNumRows(Res: PZMySQLResult): Int64;
@@ -836,165 +949,160 @@ begin
     if (Res = nil) then
         Result := 0
     else
-        Result :=  MYSQL_API.mysql_num_rows (Res);
+        Result :=  mysql_num_rows (Res);
 end;
 
 function TZMySQLBaseDriver.GetProtoInfo(Handle: PZMySQLConnect): Cardinal;
 begin
-  Result := MYSQL_API.mysql_get_proto_info(Handle);
+  Result := mysql_get_proto_info(Handle);
 end;
 
 function TZMySQLBaseDriver.GetServerInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
-  Result := MYSQL_API.mysql_get_server_info(Handle);
+  Result := mysql_get_server_info(Handle);
 end;
 
 function TZMySQLBaseDriver.GetStatInfo(Handle: PZMySQLConnect): PAnsiChar;
 begin
-  Result := MYSQL_API.mysql_stat(Handle);
+  Result := mysql_stat(Handle);
 end;
 
 function TZMySQLBaseDriver.GetThreadId(Handle: PZMySQLConnect): Cardinal;
 begin
-  Result := MYSQL_API.mysql_thread_id(Handle);
+  Result := mysql_thread_id(Handle);
 end;
 
 function TZMySQLBaseDriver.Init(const Handle: PZMySQLConnect): PZMySQLConnect;
 begin
-  if @MYSQL_API.mysql_server_init <> nil then
-    MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
-  Result := MYSQL_API.mysql_init(Handle);
+  if @mysql_server_init <> nil then
+    mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
+  Result := mysql_init(Handle);
 end;
 
 function TZMySQLBaseDriver.GetLastInsertID(Handle: PZMySQLConnect): Int64;
 begin
-  Result := MYSQL_API.mysql_insert_id(PMYSQL(Handle));
-end;
-
-procedure TZMySQLBaseDriver.Despose(var Handle: PZMySQLConnect);
-begin
-  Handle := nil;
+  Result := mysql_insert_id(PMYSQL(Handle));
 end;
 
 function TZMySQLBaseDriver.Kill(Handle: PZMySQLConnect; Pid: LongInt): Integer;
 begin
-  Result := MYSQL_API.mysql_kill(Handle, Pid);
+  Result := mysql_kill(Handle, Pid);
 end;
 
 function TZMySQLBaseDriver.Ping(Handle: PZMySQLConnect): Integer;
 begin
-  Result := MYSQL_API.mysql_ping(Handle);
+  Result := mysql_ping(Handle);
 end;
 
 function TZMySQLBaseDriver.RealConnect(Handle: PZMySQLConnect;
   const Host, User, Password, Db: PAnsiChar; Port: Cardinal; UnixSocket: PAnsiChar;
   ClientFlag: Cardinal): PZMySQLConnect;
 begin
-  Result := MYSQL_API.mysql_real_connect(Handle, Host, User, Password, Db,
+  Result := mysql_real_connect(Handle, Host, User, Password, Db,
     Port, UnixSocket, ClientFlag);
 end;
 
 {function TZMySQLBaseDriver.GetRealEscapeString(Handle: PZMySQLConnect; StrTo, StrFrom: PAnsiChar;
   Length: Cardinal): Cardinal;
 begin
-  Result := MYSQL_API.mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
+  Result := mysql_real_escape_string(Handle, StrTo, StrFrom, Length);
 end;}
 
 function TZMySQLBaseDriver.Refresh(Handle: PZMySQLConnect;
   Options: Cardinal): Integer;
 begin
-  Result := MYSQL_API.mysql_refresh(Handle, Options);
+  Result := mysql_refresh(Handle, Options);
 end;
 
 procedure TZMySQLBaseDriver.SeekData(Res: PZMySQLResult;
   Offset: Cardinal);
 begin
-  MYSQL_API.mysql_data_seek(Res, Offset);
+  mysql_data_seek(Res, Offset);
 end;
 
 function TZMySQLBaseDriver.SeekField(Res: PZMySQLResult;
   Offset: Cardinal): Cardinal;
 begin
-  Result := MYSQL_API.mysql_field_seek(Res, Offset);
+  Result := mysql_field_seek(Res, Offset);
 end;
 
 function TZMySQLBaseDriver.SeekRow(Res: PZMySQLResult;
   Row: PZMySQLRowOffset): PZMySQLRowOffset;
 begin
-  Result := MYSQL_API.mysql_row_seek(Res, Row);
+  Result := mysql_row_seek(Res, Row);
 end;
 
 function TZMySQLBaseDriver.SelectDatabase(Handle: PZMySQLConnect;
   const Database: PAnsiChar): Integer;
 begin
-  Result := MYSQL_API.mysql_select_db(Handle, Database);
+  Result := mysql_select_db(Handle, Database);
 end;
 
 function TZMySQLBaseDriver.SetOptions(Handle: PZMySQLConnect;
   Option: TMySQLOption; const Arg: Pointer): Integer;
 begin
-  Result := MYSQL_API.mysql_options(Handle,TMySqlOption(Option), Arg);
+  Result := mysql_options(Handle,TMySqlOption(Option), Arg);
 end;
 
 function TZMySQLBaseDriver.Shutdown(Handle: PZMySQLConnect; shutdown_level: TMysqlShutdownLevel = ZPlainMySqlConstants.SHUTDOWN_DEFAULT): Integer;
 begin
-  Result := MYSQL_API.mysql_shutdown(Handle,shutdown_level);
+  Result := mysql_shutdown(Handle,shutdown_level);
 end;
 
 function TZMySQLBaseDriver.SetAutocommit(Handle: PZMySQLConnect; mode: Boolean): Boolean;
 begin
-  Result := MYSQL_API.mysql_autocommit(PMYSQL(Handle), Byte(Ord(Mode))) = 0;
+  Result := mysql_autocommit(PMYSQL(Handle), Byte(Ord(Mode))) = 0;
 end;
 
 function TZMySQLBaseDriver.Commit(Handle: PZMySQLConnect): Boolean;
 begin
-  Result := MYSQL_API.mysql_commit(PMYSQL(Handle)) = 0;
+  Result := mysql_commit(PMYSQL(Handle)) = 0;
 end;
 
 function TZMySQLBaseDriver.CheckAnotherRowset(Handle: PZMySQLConnect): Boolean;
 begin
-  Result := MYSQL_API.mysql_more_results (PMYSQL(Handle)) <> 0;
+  Result := mysql_more_results (PMYSQL(Handle)) <> 0;
 end;
 
 function TZMySQLBaseDriver.RetrieveNextRowset(Handle: PZMySQLConnect): Integer;
 begin
-    Result := MYSQL_API.mysql_next_result (PMYSQL(Handle));
+    Result := mysql_next_result (PMYSQL(Handle));
 end;
 
 function TZMySQLBaseDriver.Rollback (Handle: PZMySQLConnect): Boolean;
 begin
-  Result := MYSQL_API.mysql_rollback(PMYSQL(Handle)) = 0;
+  Result := mysql_rollback(PMYSQL(Handle)) = 0;
 end;
 
 function TZMySQLBaseDriver.GetSQLState(Handle: PZMySQLConnect): AnsiString;
 begin
-  Result := MYSQL_API.mysql_sqlstate (PMYSQL(Handle));
+  Result := mysql_sqlstate (PMYSQL(Handle));
 end;
 
 function TZMySQLBaseDriver.StmtAttrSet(stmt: PZMySqlPrepStmt;
   option: TMysqlStmtAttrType; arg: PAnsiChar): Byte;
 begin
-  Result :=  MYSQL_API.mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
+  Result :=  mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
 end;
 
 function TZMySQLBaseDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
 begin
-  Result :=  MYSQL_API.mysql_stmt_affected_rows (PMYSQL_STMT(Handle));
+  Result :=  mysql_stmt_affected_rows (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.BindParameters(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
 begin
-    Result := MYSQL_API.mysql_stmt_bind_param (PMYSQL_STMT(Handle), pointer(bindArray));
+    Result := mysql_stmt_bind_param (PMYSQL_STMT(Handle), pointer(bindArray));
 end;
 
 function TZMySQLBaseDriver.BindResult(Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
 begin
-    Result := MYSQL_API.mysql_stmt_bind_result (PMYSQL_STMT(Handle), pointer(bindArray));
+    Result := mysql_stmt_bind_result (PMYSQL_STMT(Handle), pointer(bindArray));
 end;
 
 function TZMySQLBaseDriver.ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
 begin
-  if (MYSQL_API.mysql_stmt_close(PMYSQL_STMT(PrepStmtHandle)) = 0) then
+  if (mysql_stmt_close(PMYSQL_STMT(PrepStmtHandle)) = 0) then
     Result := nil
   else
     Result := PrepStmtHandle;
@@ -1002,55 +1110,55 @@ end;
 
 procedure TZMySQLBaseDriver.SeekPreparedData(PrepStmtHandle: PZMySqlPrepStmt; Offset: Cardinal);
 begin
-  MYSQL_API.mysql_stmt_data_seek(PMYSQL_STMT(PrepStmtHandle), Offset);
+  mysql_stmt_data_seek(PMYSQL_STMT(PrepStmtHandle), Offset);
 end;
 
 function TZMySQLBaseDriver.GetLastPreparedErrorCode(Handle: PZMySqlPrepStmt):Integer;
 begin
-    Result := MYSQL_API.mysql_stmt_errno(PMYSQL_STMT(Handle));
+    Result := mysql_stmt_errno(PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetLastPreparedError(Handle: PZMySqlPrepStmt):AnsiString;
 begin
-    Result := MYSQL_API.mysql_stmt_error(PMYSQL_STMT(Handle));
+    Result := mysql_stmt_error(PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.ExecuteStmt(Handle: PZMySqlPrepStmt): Integer;
 begin
-    Result := MYSQL_API.mysql_stmt_execute (PMYSQL_STMT(Handle));
+    Result := mysql_stmt_execute (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
 begin
-    Result := MYSQL_API.mysql_stmt_fetch (PMYSQL_STMT(Handle));
+    Result := mysql_stmt_fetch (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
 begin
-    Result := MYSQL_API.mysql_stmt_field_count(PMYSQL_STMT(Handle));
+    Result := mysql_stmt_field_count(PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.FreePreparedResult(Handle: PZMySqlPrepStmt): Byte;
 begin
-   Result := MYSQL_API.mysql_stmt_free_result(PMYSQL_STMT(Handle));
+   Result := mysql_stmt_free_result(PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
 begin
-    Result := MYSQL_API.mysql_stmt_init(PMYSQL(Handle));
+    Result := mysql_stmt_init(PMYSQL(Handle));
 end;
 
 function TZMySQLBaseDriver.GetPreparedInsertID(Handle: PZMySqlPrepStmt): Int64;
 begin
-    Result := MYSQL_API.mysql_stmt_insert_id (PMYSQL_STMT(Handle));
+    Result := mysql_stmt_insert_id (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetPreparedNextResult(Handle: PZMySqlPrepStmt): Integer;
 begin
-    if (@MYSQL_API.mysql_stmt_next_result = nil) then
+    if (@mysql_stmt_next_result = nil) then
         Result := -1  // Successful and there are no more results
     else
-        Result :=  MYSQL_API.mysql_stmt_next_result (PMYSQL_STMT(Handle));
+        Result :=  mysql_stmt_next_result (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetPreparedNumRows(Handle: PZMySqlPrepStmt): Int64;
@@ -1058,53 +1166,53 @@ begin
     if (Handle = nil) then
         Result := 0
     else
-        Result :=  MYSQL_API.mysql_stmt_num_rows (PMYSQL_STMT(Handle));
+        Result :=  mysql_stmt_num_rows (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal;
 begin
-    Result := MYSQL_API.mysql_stmt_param_count (PMYSQL_STMT(Handle));
+    Result := mysql_stmt_param_count (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_stmt_param_metadata(PMYSQL_STMT(PrepStmtHandle));
+  Result := mysql_stmt_param_metadata(PMYSQL_STMT(PrepStmtHandle));
 end;
 
 function TZMySQLBaseDriver.PrepareStmt(PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
 begin
-    Result := MYSQL_API.mysql_stmt_prepare(PMYSQL_STMT(PrepStmtHandle), Query, Length);
+    Result := mysql_stmt_prepare(PMYSQL_STMT(PrepStmtHandle), Query, Length);
 end;
 
 function TZMySQLBaseDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
 begin
-    Result := MYSQL_API.mysql_stmt_result_metadata (PMYSQL_STMT(Handle));
+    Result := mysql_stmt_result_metadata (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
 begin
-    Result := MYSQL_API.mysql_stmt_row_seek (PMYSQL_STMT(Handle), Row);
+    Result := mysql_stmt_row_seek (PMYSQL_STMT(Handle), Row);
 end;
 
 function TZMySQLBaseDriver.SendPreparedLongData(Handle: PZMySqlPrepStmt;
   parameter_number: Cardinal; const data: PAnsiChar; length: Cardinal): Byte;
 begin
-  Result := MYSQL_API.mysql_stmt_send_long_data(PMYSQL_STMT(Handle), parameter_number, data, length);
+  Result := mysql_stmt_send_long_data(PMYSQL_STMT(Handle), parameter_number, data, length);
 end;
 
 function TZMySQLBaseDriver.GetPreparedSQLState(Handle: PZMySqlPrepStmt): PAnsiChar;
 begin
-  Result := MYSQL_API.mysql_stmt_sqlstate (PMYSQL_STMT(Handle));
+  Result := mysql_stmt_sqlstate (PMYSQL_STMT(Handle));
 end;
 
 function TZMySQLBaseDriver.StorePreparedResult (Handle: PZMySqlPrepStmt): Integer;
 begin
-  Result := MYSQL_API.mysql_stmt_store_result (PMYSQL_STMT(Handle));
+  Result := mysql_stmt_store_result (PMYSQL_STMT(Handle));
 end;
 
 procedure TZMySQLBaseDriver.GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);
 begin
-    MYSQL_API.mysql_get_character_set_info(Handle, CharSetInfo);
+    mysql_get_character_set_info(Handle, CharSetInfo);
 end;
 
 function TZMySQLBaseDriver.GetBindOffsets: MYSQL_BINDOFFSETS;
@@ -1157,17 +1265,17 @@ end;
 function TZMySQLBaseDriver.StoreResult(
   Handle: PZMySQLConnect): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_store_result(Handle);
+  Result := mysql_store_result(Handle);
 end;
 
 function TZMySQLBaseDriver.UseResult(Handle: PZMySQLConnect): PZMySQLResult;
 begin
-  Result := MYSQL_API.mysql_use_result(Handle);
+  Result := mysql_use_result(Handle);
 end;
 
 function TZMySQLBaseDriver.GetLastError(Handle: PZMySQLConnect): PAnsiChar;
 begin
-  Result := MYSQL_API.mysql_error(Handle);
+  Result := mysql_error(Handle);
 end;
 
 function TZMySQLBaseDriver.GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
@@ -1182,18 +1290,18 @@ end;
 
 function TZMySQLBaseDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
-  Result := MYSQL_API.mysql_num_rows(Res);
+  Result := mysql_num_rows(Res);
 end;
 
 function TZMySQLBaseDriver.ResultSetExists(Handle: PZMySQLConnect): Boolean;
 begin
- result := MYSQL_API.mysql_field_count(Handle)<>0;
+ result := mysql_field_count(Handle)<>0;
  // True If statement should return a resultset
 end;
 
 function TZMySQLBaseDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
-  Result := MYSQL_API.mysql_num_fields(Res);
+  Result := mysql_num_fields(Res);
 end;
 
 function TZMySQLBaseDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
@@ -1244,18 +1352,18 @@ end;
 
 function TZMySQLBaseDriver.GetLastErrorCode(Handle: PZMySQLConnect): Integer;
 begin
-  Result := MYSQL_API.mysql_errno(PMYSQL(Handle));
+  Result := mysql_errno(PMYSQL(Handle));
 end;
 
 function TZMySQLBaseDriver.GetClientVersion: Integer;
 begin
- Result := MYSQL_API.mysql_get_client_version;
+ Result := mysql_get_client_version;
 end;
 
 function TZMySQLBaseDriver.GetServerVersion(
   Handle: PZMySQLConnect): Integer;
 begin
- Result := MYSQL_API.mysql_get_server_version(Handle);
+ Result := mysql_get_server_version(Handle);
 end;
 
 procedure TZMySQLBaseDriver.SetDriverOptions(Options: TStrings);
@@ -1346,8 +1454,8 @@ begin
 
   with Loader do
   begin
-    @MYSQL_API.mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
-    @MYSQL_API.mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
+    @mysql_get_character_set_info := GetAddress('mysql_get_character_set_info');
+    @mysql_stmt_next_result       := GetAddress('mysql_stmt_next_result');
   end;
 end;
 

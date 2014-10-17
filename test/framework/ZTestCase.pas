@@ -124,6 +124,8 @@ type
     procedure PrintLn(_Message: string = ''); virtual;
 
     { Additional checking methods. }
+    procedure CheckEquals(const Expected: RawByteString; ActualValue: PAnsiChar;
+      ActualLen: PNativeUInt; _Message: string = ''); overload;
     procedure CheckEquals(Array1, Array2: TBytes;
       _Message: string = ''); overload;
     procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
@@ -399,6 +401,20 @@ begin
   Result := TestConfig.ReadProperty(TestGroup, Key, UNKNOWN_VALUE);
   if Result = UNKNOWN_VALUE then
     Result := TestConfig.ReadProperty(COMMON_GROUP, Key, Default);
+end;
+
+{**
+  Function compare two string-values. If values not equals raise exception.
+  @param the first string for compare
+  @param the second pointer to a !possible! null terminated string
+  @param the pointer to Length of second value
+}
+procedure TZAbstractTestCase.CheckEquals(const Expected: RawByteString;
+  ActualValue: PAnsiChar; ActualLen: PNativeUInt; _Message: string = '');
+var Actual: RawByteString;
+begin
+  ZSetString(ActualValue, ActualLen^, Actual);
+  CheckEquals(Expected, Actual, _Message);
 end;
 
 {**

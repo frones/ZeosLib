@@ -99,7 +99,6 @@ type
   private
     FProvider: TDBLibProvider;
     FFreeTDS: Boolean;
-    FDisposeCodePage: Boolean;
     function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure ReStartTransactionSupport;
@@ -117,8 +116,6 @@ type
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawbyteString); virtual;
     procedure StartTransaction; virtual;
   public
-    destructor Destroy; override;
-
     function CreateRegularStatement(Info: TStrings): IZStatement; override;
     function CreatePreparedStatement(const SQL: string; Info: TStrings):
       IZPreparedStatement; override;
@@ -255,14 +252,6 @@ end;
 {**
   Destroys this object and cleanups the memory.
 }
-destructor TZDBLibConnection.Destroy;
-begin
-  Close;
-  if FDisposeCodePage then
-    Dispose(ConSettings^.ClientCodePage);
-  inherited Destroy;
-end;
-
 function TZDBLibConnection.FreeTDS: Boolean;
 begin
   Result := FFreeTDS;
@@ -288,9 +277,8 @@ begin
   else
     ASQL := SQL;
 
-    if GetPlainDriver.dbcmd(FHandle, Pointer(ASQL)) <> DBSUCCEED then
-      CheckDBLibError(lcExecute, ASQL);
-  if GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED then
+  if (GetPlainDriver.dbcmd(FHandle, Pointer(ASQL)) <> DBSUCCEED) or
+     (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) then
     CheckDBLibError(lcExecute, ASQL);
   repeat
     GetPlainDriver.dbresults(FHandle);
@@ -645,16 +633,19 @@ end;
 
 procedure TZDBLibConnection.DetermineMSDateFormat;
 var
-  Stmt: IZStatement;
-  Rs: IZResultSet;
+  Tmp: RawByteString;
 begin
-  Stmt := CreateRegularStatement(Self.Info);
-  RS := Stmt.ExecuteQuery('SELECT dateformat FROM master.dbo.syslanguages WHERE name = @@LANGUAGE');
-  if RS.Next then
-    ConSettings^.ReadFormatSettings.DateFormat := RS.GetRawByteString(FirstDbcIndex);
-  RS := nil;
-  Stmt.close;
-  Stmt := nil;
+  Tmp := 'SELECT dateformat FROM master.dbo.syslanguages WHERE name = @@LANGUAGE';
+  if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
+     (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbresults(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbcmdrow(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbnextrow(FHandle) <> REG_ROW) then
+    CheckDBLibError(lcOther, Tmp)
+  else
+    ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)),
+      GetPlainDriver.dbDatLen(FHandle, 1), ConSettings^.ReadFormatSettings.DateFormat);
+  GetPlainDriver.dbCancel(FHandle);
   if ConSettings^.ReadFormatSettings.DateFormat = 'dmy' then
     ConSettings^.ReadFormatSettings.DateFormat := 'DD/MM/YYYY'
   else if ConSettings^.ReadFormatSettings.DateFormat = 'mdy' then
@@ -666,43 +657,47 @@ end;
 
 function TZDBLibConnection.DetermineMSServerCollation: String;
 var
-  Stmt: IZStatement;
-  Rs: IZResultSet;
+  Tmp: RawByteString;
 begin
-  Stmt := CreateRegularStatement(Self.Info);
-  try
-    RS := Stmt.ExecuteQuery('SELECT DATABASEPROPERTYEX('+
-      AnsiQuotedStr(DataBase, #39)+', ''Collation'') as DatabaseCollation');
-    if RS.Next then
-      Result := RS.GetString(FirstDbcIndex)
-    else
-      Result := '';
-    RS := nil;
-  except
-    Result := '';
-  end;
-  Stmt.close;
-  Stmt := nil;
+  Tmp := 'SELECT DATABASEPROPERTYEX('+
+    {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(ConSettings^.Database, #39)+
+    ', ''Collation'') as DatabaseCollation';
+  if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
+     (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbresults(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbcmdrow(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbnextrow(FHandle) <> REG_ROW) then
+    CheckDBLibError(lcOther, Tmp)
+  else
+    {$IFDEF UNICODE}
+    Result := USASCII7ToUnicodeString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1));
+    {$ELSE}
+    ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Result);
+    {$ENDIF}
+  GetPlainDriver.dbCancel(FHandle);
 end;
 
 function TZDBLibConnection.DetermineMSServerCodePage(const Collation: String): Word;
 var
-  Stmt: IZStatement;
-  Rs: IZResultSet;
+  Tmp: RawByteString;
 begin
-  Stmt := CreateRegularStatement(Self.Info);
-  try
-    RS := Stmt.ExecuteQuery('SELECT COLLATIONPROPERTY('+AnsiQuotedStr(Collation, #39)+', ''Codepage'') AS CodePage');
-    if RS.Next then
-      Result := RS.GetInt(FirstDbcIndex)
-    else
-      Result := High(Word);
-    RS := nil;
-  except
-    Result := High(Word);
+  Result := High(Word);
+  Tmp := 'SELECT COLLATIONPROPERTY('+
+    {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiQuotedStr(
+      {$IFDEF UNICODE}UnicodeStringToASCII7{$ENDIF}(Collation), #39)+
+    ', ''Codepage'') as Codepage';
+  if (GetPlainDriver.dbcmd(FHandle, Pointer(Tmp)) <> DBSUCCEED) or
+     (GetPlainDriver.dbsqlexec(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbresults(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbcmdrow(FHandle) <> DBSUCCEED) or
+     (GetPlainDriver.dbnextrow(FHandle) <> REG_ROW) then
+    CheckDBLibError(lcOther, Tmp)
+  else
+  begin
+    ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Tmp);
+    Result := RawToInt(Tmp);
   end;
-  Stmt.close;
-  Stmt := nil;
+  GetPlainDriver.dbCancel(FHandle);
 end;
 
 {**
@@ -785,17 +780,19 @@ procedure TZDBLibConnection.Close;
 var
   LogMessage: RawByteString;
 begin
-  if Closed or (Not Assigned(PlainDriver) )then
+  if Closed then
     Exit;
+  if  Assigned(PlainDriver) then
+  begin
+    if not GetPlainDriver.dbDead(FHandle) then
+      InternalExecuteStatement('if @@trancount > 0 rollback');
 
-  if not GetPlainDriver.dbDead(FHandle) then
-    InternalExecuteStatement('if @@trancount > 0 rollback');
+    LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
 
-  LogMessage := 'CLOSE CONNECTION TO "'+ConSettings^.ConvFuncs.ZStringToRaw(HostName, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP)+'" DATABASE "'+ConSettings^.Database+'"';
-  if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
-    CheckDBLibError(lcDisConnect, LogMessage);
-  DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
-
+    if GetPlainDriver.dbclose(FHandle) <> DBSUCCEED then
+      CheckDBLibError(lcDisConnect, LogMessage);
+    DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol, LogMessage);
+  end;
   FHandle := nil;
   inherited;
 end;

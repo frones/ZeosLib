@@ -29,60 +29,59 @@ type
   TMyResultsWriter = class(TPlainResultsWriter)
   protected
   // override the protected methods of TCustomResultsWriter to customize its behavior
-    procedure WriteTestFooter(ATest: TTest; ALevel: integer; ATiming: TDateTime); override;
-    procedure WriteSuiteHeader(ATestSuite: TTestSuite; ALevel: integer); override;
-    procedure WriteSuiteFooter(ATestSuite: TTestSuite; ALevel: integer;
-      ATiming: TDateTime; ANumRuns: integer; ANumErrors: integer;
-      ANumFailures: integer; ANumIgnores: integer); override;
+    procedure WriteTestFooter({%H-}ATest: TTest; {%H-}ALevel:{%H-} integer; {%H-}ATiming: TDateTime); override;
+    procedure WriteSuiteHeader({%H-}ATestSuite: TTestSuite; {%H-}ALevel: integer); override;
+    procedure WriteSuiteFooter({%H-}ATestSuite: TTestSuite; {%H-}ALevel: integer;
+      {%H-}ATiming: TDateTime; {%H-}ANumRuns:{%H-} integer; {%H-}ANumErrors: integer;
+      {%H-}ANumFailures: integer; {%H-}ANumIgnores: integer); override;
   public
   end;
 
   { TMyTestRunner }
 
   TMyTestRunner = class(TTestRunner)
+  private
+    FullRegistryItems: TFPList;
+    CurrentRegistryItems: TFPList;
   protected
   // override the protected methods of TTestRunner to customize its behavior
     procedure WriteCustomHelp; override;
     function GetShortOpts: string; override;
     function GetResultsWriter: TCustomResultsWriter; override;
-    procedure DoRun; override;
+    //procedure DoRun; override;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
   end;
 
   { TMyGUITestRunner }
 
   TMyGUITestRunner = class(TGUITestRunner)
+  private
+    FullRegistryItems: TFPList;
+    CurrentRegistryItems: TFPList;
   protected
   // override the protected methods of TGUITestRunner to customize its behavior
-    FullRegistryItems: TFPList;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
   end;
 
 constructor TMyGUITestRunner.Create(TheOwner: TComponent);
-var
-  tempTestSuite :TTestSuite;
 begin
-  // Dirty Workaround to make sure all tests can be destroyed in the destructor
-  If CommandLineSwitches.Suite then
-    begin
-      FullRegistryItems := TFPList.Create;
-      FullRegistryItems.Assign(GetTestRegistry.Tests);
-      tempTestSuite := CreateTestSuite;
-      GetTestRegistry.Tests.Assign(tempTestSuite.Tests);
-    end;
+  // Dirty Workaround to make sure ALL tests can be destroyed in the destructor
+  FullRegistryItems := TFPList.Create;
+  CurrentRegistryItems := GetExecutedTests;
+  FullRegistryItems.Assign(GetTestRegistry.Tests); //save old list
+  GetTestRegistry.Tests.Assign(CurrentRegistryItems); //assign new or same list
   inherited Create(TheOwner);
 end;
 
 destructor TMyGUITestRunner.Destroy;
 begin
-  If CommandLineSwitches.Suite then
-    begin
-      GetTestRegistry.Tests.Assign(FullRegistryItems);
-      FullRegistryItems.Free;
-    end;
+  GetTestRegistry.Tests.Assign(FullRegistryItems); //assign old list again -> destroy the tests
+  FreeAndNil(FullRegistryItems); //free old list
+  FreeAndNil(CurrentRegistryItems); //free possible changed list
   inherited Destroy;
 end;
 
@@ -119,6 +118,8 @@ begin
   writeln('  -v or --verbose                      show full output (otherwise compact report is used)');
   writeln('  -n or --norebuild                    don''t rebuild the databases');
   writeln('  -m <filename> or -monitor <filename> sqlmonitor file name');
+  writeln(' --suite="<layer>.<optional testname>.<optional MethodeName>"');
+  writeln(' --memcheck <filename>')
 end;
 
 function TMyTestRunner.GetShortOpts: string;
@@ -134,7 +135,7 @@ begin
     Result:=inherited GetResultsWriter;
 end;
 
-procedure TMyTestRunner.DoRun;
+{procedure TMyTestRunner.DoRun;
   var
     tempTestSuite : TTestSuite;
     S: string;
@@ -158,18 +159,40 @@ procedure TMyTestRunner.DoRun;
       end;
 
     //run the tests
-    if CommandLineSwitches.runall or (DefaultRunAllTests and Not CommandLineSwitches.list) then
-      DoTestRun(tempTestSuite) ;
+    if CommandLineSwitches.runall or CommandLineSwitches.Suite or (DefaultRunAllTests and Not CommandLineSwitches.list) then
+       DoTestRun(tempTestSuite)
+    else
+      if CommandLineSwitches.Suite then
+      begin
+        //FullRegistryItems := TFPList.Create;
+        //FullRegistryItems.Assign(GetTestRegistry.Tests);
+        tempTestSuite := CreateTestSuite;
+        GetTestRegistry.Tests.Assign(tempTestSuite.Tests);
+      end;
     Terminate;
   end;
-
+ }
 constructor TMyTestRunner.Create(AOwner: TComponent);
 begin
+  // Dirty Workaround to make sure ALL tests can be destroyed in the destructor
+  FullRegistryItems := TFPList.Create;
+  CurrentRegistryItems := GetExecutedTests;
+  FullRegistryItems.Assign(GetTestRegistry.Tests); //save old list
+  GetTestRegistry.Tests.Assign(CurrentRegistryItems); //assign new or same list
   inherited Create(AOwner);
   longopts.Add('batch');
   longopts.Add('verbose');
   longopts.Add('norebuild');
   longopts.Add('monitor:');
+  longopts.Add('suite:');
+end;
+
+destructor TMyTestRunner.Destroy;
+begin
+  GetTestRegistry.Tests.Assign(FullRegistryItems); //assign old list again -> destroy the tests
+  FreeAndNil(FullRegistryItems); //free old list
+  FreeAndNil(CurrentRegistryItems); //free possible changed list
+  inherited Destroy;
 end;
 
 var
@@ -179,7 +202,12 @@ var
 
 begin
   {$I ztestall.lrs}
-  SetHeapTraceOutput('heaptrc.log');
+  if CommandLineSwitches.memcheck and (CommandLineSwitches.memcheck_file <> '') then
+  begin
+    if FileExists(CommandLineSwitches.memcheck_file) then
+      DeleteFile(CommandLineSwitches.memcheck_file);
+    SetHeapTraceOutput(CommandLineSwitches.memcheck_file);
+  end;
   TestGroup := COMMON_GROUP;
 
   If Not CommandLineSwitches.help and

@@ -64,6 +64,9 @@ uses ZCompatibility;
 procedure loadmessages();
 
 const
+{$IFDEF FRENCH}
+  cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
+{$ELSE !FRENCH}
 {$IFDEF PORTUGUESE}
   cCodePage = 1252; {Microsoft Windows Codepage 1252 (ANSI), USASCCI}
 {$ELSE !PORTUGUESE}
@@ -101,6 +104,7 @@ cCodePage = 20127; {US-ASCII (7-bit)}
 {$ENDIF GERMAN}
 {$ENDIF DUTCH}
 {$ENDIF PORTUGUESE}
+{$ENDIF FRENCH}
 
 resourcestring
 
@@ -108,6 +112,172 @@ resourcestring
     SInvalidGuidArray = 'Byte-Array or Buffer for GUID must have exact %s Bytes';
   {$ENDIF}
   cSLibraryNotCompatible = 'Client-Library %s found but could not be loaded. Check compile-target and library compatibility!';
+//--- added by Serge Girard --------------------------------------------------------
+{$IFDEF FRENCH}
+  cSSQLError1 = 'Erreur SQL: %s';
+  cSSQLError2 = 'Erreur SQL: %s Code: %d';
+  cSSQLError3 = 'Erreur SQL: %s Code: %d SQL: %s';
+  cSSQLError4 = 'Erreur SQL: %s Code: %d Message: %s';
+
+  cSListCapacityError = 'Capacité de liste hors limite (%d)';
+  cSListCountError = 'Compteur de liste (count) hors limite (%d)';
+  cSListIndexError = 'Index de liste hors limite (%d)';
+
+  cSClonningIsNotSupported = 'Le clonage n''est pas supporté pour cette classe';
+  cSImmutableOpIsNotAllowed = 'L''opération n''est pas permise sur des collections non modifiables';
+  cSStackIsEmpty = 'La pile est vide';
+  cSVariableWasNotFound = 'Variable "%s" non trouvée';
+  cSFunctionWasNotFound = 'Fonction "%s" non trouvée';
+  cSInternalError = 'Erreur interne';
+  cSSyntaxErrorNear = 'Erreur de syntaxe proche de "%s"';
+  cSSyntaxError = 'Erreur de syntaxe';
+  cSUnknownSymbol = 'Symbole inconnu "%s"';
+  cSUnexpectedExprEnd = 'Fin d''expression imprévue';
+  cSRightBraceExpected = ') attendue';
+  cSParametersError = '%d paramètres attendus mais %d ont été trouvés';
+  cSExpectedMoreParams = 'Plus de deux paramètres sont attendus';
+  cSInvalidVarByteArray = 'Tableau de VarByte non valide';
+  cSVariableAlreadyExists = 'La variable "%s" existe déjà';
+  cSTypesMismatch = 'Types non concordants';
+  cSUnsupportedVariantType = 'Type variant non supporté';
+  cSUnsupportedOperation = 'Opération non supportée';
+
+  cSTokenizerIsNotDefined = 'l''objet Tokenizer n''est pas défini';
+  cSLibraryNotFound = 'Acune des bibliothèques dynamiques ne peut être trouvée ou chargée: %s !'#10#13'Utilisez TZConnection.LibraryLocation si l''emplacement est incorrect.';
+  cSEncodeDateIsNotSupported = 'Cette version ne supporte pas isc_encode_sql_date';
+  cSEncodeTimeIsNotSupported = 'Cette version ne supporte pas isc_encode_sql_time';
+  cSEncodeTimestampIsNotSupported = 'Cette version ne supporte pas isc_encode_sql_timestamp';
+  cSDecodeDateIsNotSupported = 'Cette version ne supporte pas isc_decode_sql_date';
+  cSDecodeTimeIsNotSupported = 'Cette version ne supporte pas isc_decode_sql_time';
+  cSDecodeTimestampIsNotSupported = 'Cette version ne supporte pas isc_decode_sql_timestamp';
+
+  cSCanNotRetrieveResultSetData = 'Ne peut récupérer l''ensemble de données résultant';
+  cSRowBufferIsNotAssigned = 'Le buffer de ligne n''est pas assigné';
+  cSColumnIsNotAccessable = 'Colonne d''index %d inaccessible';
+  cSConvertionIsNotPossible = 'Conversion impossible de la colonne %d de %s vers %s';
+  cSCanNotAccessBlobRecord = 'Ne peut accéder au blob de la colonne %d avec le type %s';
+  cSRowDataIsNotAvailable = 'Ligne de données non disponible';
+  cSResolverIsNotSpecified = 'L''objet Resolver n''est pas indiqué';
+  cSResultsetIsAlreadyOpened = 'L''ensemble résultat est déjà ouvert';
+  cSCanNotUpdateEmptyRow = 'Ne peut mettre à jour une ligne vide';
+  cSCanNotUpdateDeletedRow = 'Ne peut mettre à jour une ligne supprimée';
+  cSCanNotDeleteEmptyRow = 'Ne peut supprimer un ligne vide';
+  cSCannotUseCommit = 'Vous ne pouvez pas utiliser COMMIT en mode AUTOCOMMIT';
+  cSCannotUseRollBack = 'Vous ne pouvez pas utiliser ROLLBACK en mode AUTOCOMMIT';
+  cSCanNotUpdateComplexQuery = 'Ne peut mettre à jour une requête complexe impliquant plus d''une table';
+  cSCanNotUpdateThisQueryType = 'Ne peut mettre à jour ce type de requête';
+  cSDriverWasNotFound = 'Le driver de base de données demandé n''a pas été trouvé';
+  cSCanNotConnectToServer = 'Ne peut se connecter au serveur SQL';
+  cSTableIsNotSpecified = 'La table n''est pas spécifiée';
+  cSLiveResultSetsAreNotSupported = 'Une requête actualisable n''est pas supportée par cette classe';
+  cSInvalidInputParameterCount = 'Le nombre de paramètres attendu est inférieur au prévu';
+  cSIsolationIsNotSupported = 'Niveau d''isolation de transaction non supporté';
+  cSColumnWasNotFound = 'Colonne de nom "%s" non trouvée';
+  cSWrongTypeForBlobParameter = 'Type incorrect pour le paramètre Blob';
+  cSIncorrectConnectionURL = 'Connexion URL: %s incorrect';
+  cSUnsupportedProtocol = 'Protocole: %s non supporté';
+  cSUnsupportedByDriver    = 'Le driver d''origine ne supporte pas cette fonctionnalité: [%s]';
+
+  cSConnectionIsNotOpened = 'Connexion non encore ouverte';
+  cSInvalidOpInAutoCommit = 'Opération non valide en mode AutoCommit';
+  cSInvalidOpInNonAutoCommit = 'Opération non valide si le mode n''est pas AutoCommit';
+  cSInvalidOpPrepare = 'Préparer une transaction n''est possible qu''en en démarrant une (Starttransaction) d''abord (!)';
+
+  cSConnectionIsNotAssigned = 'La connexion à la base données n''est pas indiqué';
+  cSQueryIsEmpty = 'La requête SQL est vide';
+  cSCanNotExecuteMoreQueries = 'Ne peut exécuter plus d''une requête';
+  cSOperationIsNotAllowed1 = 'Cette opération n''est pas permise en mode FORWARD ONLY';
+  cSOperationIsNotAllowed2 = 'Cette opération n''est pas permise en mode READ ONLY';
+  cSOperationIsNotAllowed3 = 'Cette opération n''est pas permise en mode %s';
+  cSOperationIsNotAllowed4 = 'Cette opération n''est pas permise en mode sur un ensemble de données fermé';
+  cSNoMoreRecords = 'Plus d''enregistrements dans l''ensemble de données';
+  cSCanNotOpenResultSet = 'Ne peut ouvrir un ensemble de données';
+  cSCanNotOpenDataSetWhenDestroying ='Ne peut ouvrir un ensemble de données alors que l''état du composant est dsDestroying';
+  cSCircularLink = 'Lien circulaire créé par le Datasource';
+  cSBookmarkWasNotFound = 'Le marque page (Bookmark) n''a pas été trouvé';
+  cSIncorrectSearchFieldsNumber = 'Nombre incorrect de valeurs de recherche';
+  cSInvalidOperationInTrans = 'Opération invalide dans un mode de transaction explicite';
+  cSIncorrectSymbol = 'Symbole incorrect dans la liste des champs "%s".';
+  cSIncorrectToken = 'Token incorrect suivi par ":"';
+  cSIncorrectParamChar = 'Valeur non valide pour ParamChar';
+
+  cSSelectedTransactionIsolation = 'Le niveau d''isolation de transaction sélectionné n''est pas supporté';
+  cSDriverNotSupported = 'Driver non supporté %s';
+  cSPattern2Long = 'Le Pattern est trop long';
+  cSDriverNotCapableOutParameters = 'Le Driver n''est pas capable d''utiliser des paramètres';
+  cSStatementIsNotAllowed = 'Déclaration non permise';
+  cSStoredProcIsNotAllowed = 'La procédure stockée n''est pas permise';
+  cSCannotPerformOperation = 'Ne peut effectuer cette opération sur une ensemble de données fermé';
+  cSInvalidState = 'État non valide';
+  cSErrorConvertion = 'Erreur de conversion';
+  cSDataTypeDoesNotSupported = 'Type de donnée non supporté';
+  cSUnsupportedParameterType = 'Type de paramètre non supporté';
+  cSUnsupportedDataType = 'Type de donnée non supporté';
+  cSErrorConvertionField = 'Erreur de conversion pour le champ "%s" vers le type SQL "%s"';
+  cSBadOCI = 'Mauvaise version OCI [%s] . Version 8.0.3 ou plus ancienne requise';
+  cSConnect2AsUser = 'Connexion à "%s" en tant qu''utilisateur "%s"';
+  cSUnknownError = 'Erreur inconnue';
+  cSFieldNotFound1 = 'Champ "%s" non trouvé';
+  cSFieldNotFound2 = 'Champ %d non trouvé';
+
+  cSLoginPromptFailure = 'Ne peut trouver le dialogue d''identification par défaut. Ajoutez ,S.V.P. DBLogDlg dans la section uses section de votre fichier principal.';
+
+  cSPropertyQuery = 'La requête peut prendre un certain temps sur des bases de données importantes!';
+  cSPropertyTables = 'Vous devriez la limiter via Catalogue et/ou Schéma.';
+  cSPropertyColumns = 'Vous devriez la limiter via Catalogue, Schéma et/ou Nom de Table.';
+  cSPropertyProcedures = 'Vous devriez la limiter via Catalogue et/ou Schema.';
+  cSPropertySequences = 'Vous devriez la limiter via Catalogue et/ou Schema.';
+  cSPropertyExecute = 'La Requête doit-elle s''exécuter quand même?';
+
+  cSFormTest = 'Éditeur SQL ZEOS Test';
+  cSButtonClose = '&Fermer';
+  cSFormEditor = 'Éditeur SQL ZEOS';
+  cSTabSheetSelect = 'Select SQL';
+  cSMenuLoad = 'Charger';
+  cSMenuSave = 'Sauver';
+  cSButtonGenerate = '&Générer';
+  cSButtonCheck = '&Vérifier';
+  cSButtonTest = '&Tester';
+  cSButtonOk = '&OK';
+  cSButtonCancel = 'A&nnuler';
+  cSTableAlias = 'T&able alias';
+  cSReplaceSQL = '&Remplacer le SQL';
+  cSDialogOpenTitle = 'Ouvrir fichier SQL';
+  cSDialogSaveTitle = 'Sauver dans un fichier SQL';
+  cSSQLEditor = 'Éditeur SQL';
+  cSDatabaseDialog = 'Ouvrir base existante';
+
+  cSUpdateSQLNoResult = '"Update Refresh SQL" ne fourni aucun ensemble de résultat';
+  cSUpdateSQLRefreshStatementcount ='La déclaration de l''"Update Refresh SQL" ne peut être qu''unique';
+
+  {$IFDEF FPC}
+  cSNotEditing = 'L''ensemble de données n''est ni en modification ni en insertion';
+  cSFieldTypeMismatch = 'Différence de type pour le champ ''%s'', attendu: %s trouvé: %s';
+  cSFieldSizeMismatch = 'Différence de taille pour le champ ''%s'', attendue: %d trouvée: %d';
+  {$ENDIF}
+  cSNeedField               = 'Le champ %s est requis, mais non renseigné.';
+
+  cSFailedtoInitPrepStmt   = 'La déclaration a échouée à l''initialisation';
+  cSFailedtoPrepareStmt    = 'La déclaration a échouée durant le processus de préparation';
+  cSFailedToBindAllValues  = 'L''application a échoué à pré-relier toutes les valeurs';
+  cSAttemptExecOnBadPrep   = 'Tentative d''exécuter une déclaration avant une préparation réussie.';
+  cSBindingFailure         = 'Échec à relier l''ensemble des paramètres';
+  cSPreparedStmtExecFailure = 'La préparation de la déclaration a échoué';
+  cSBoundVarStrIndexMissing = 'Nom de la variable de relation "%s" inexistant';
+  cSBindVarOutOfRange      = 'Index de la variable de relation hors limite: %d';
+  cSFailedToBindResults    = 'L''application a échoué à lier l''ensemble résultat';
+
+//FOS+ 07112006
+  cSRefreshRowOnlySupportedWithUpdateObject = 'La méthode "refreshrow" n''est permise qu''avec un objet de mise à jour(Update)';
+  cSMustBeInBrowseMode = 'Opération uniquement permise dans l''état dsBROWSE';
+
+  cSUnKnownParamDataType = 'Param.DataType inconnu';
+  cSFieldReadOnly        = ' A un champ en lecture seule on ne peut assigner une valeur : %s';
+  cSInvalidUpdateCount     = '%d enregistrement(s) mis à jour. Un seul urait du l''être.';
+
+  cSRowBufferWidthExceeded ='La taille du buffer de lignes a été dépassée. Essayez d''utiliser moins ou de plus longues colonnes dans la requête SQL.';
+//--- end added by Serge Girard ------------------------------------
+{$ELSE !FRENCH}
 // -> ms, 09/05/2005
 {$IFDEF PORTUGUESE}
   cSSQLError1 = 'Erro SQL: %s';
@@ -1785,6 +1955,7 @@ resourcestring
 {$ENDIF} // DUTCH
 
 {$ENDIF} // PORTUGUESE
+{$ENDIF FRENCH}
 type
   TMessageToRaw = function(const AMessage: String; Const RawCP: Word): RawByteString;
 
