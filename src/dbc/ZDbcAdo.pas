@@ -311,7 +311,7 @@ end;
 function TZAdoConnection.CreateRegularStatement(Info: TStrings): IZStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoStatement.Create(PlainDriver, Self, '', Info);
+  Result := TZAdoStatement.Create(Self, '', Info);
 end;
 
 {**
@@ -346,7 +346,7 @@ function TZAdoConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoPreparedStatement.Create(PlainDriver, Self, SQL, Info);
+  Result := TZAdoPreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -379,7 +379,7 @@ function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrin
   IZCallableStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoCallableStatement.Create(PlainDriver, Self, SQL, Info);
+  Result := TZAdoCallableStatement.Create(Self, SQL, Info);
 end;
 
 {**

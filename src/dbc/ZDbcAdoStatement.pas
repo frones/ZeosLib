@@ -65,11 +65,10 @@ type
   TZAdoStatement = class(TZAbstractStatement)
   protected
     AdoRecordSet: ZPlainAdo.RecordSet;
-    FPlainDriver: IZPlainDriver;
     FAdoConnection: IZAdoConnection;
     function IsSelect(const SQL: string): Boolean;
   public
-    constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
     destructor Destroy; override;
     procedure Close; override;
 
@@ -87,7 +86,6 @@ type
   {** Implements Prepared ADO Statement. }
   TZAdoPreparedStatement = class(TZAbstractPreparedStatement)
   private
-    FPlainDriver: IZPlainDriver;
     AdoRecordSet: ZPlainAdo.RecordSet;
     FAdoCommand: ZPlainAdo.Command;
     FAdoConnection: IZAdoConnection;
@@ -95,7 +93,8 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string;
+      const Info: TStrings);
     destructor Destroy; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
@@ -109,7 +108,6 @@ type
   {** Implements Callable ADO Statement. }
   TZAdoCallableStatement = class(TZAbstractCallableStatement)
   private
-    FPlainDriver: IZPlainDriver;
     AdoRecordSet: ZPlainAdo.RecordSet;
     FAdoCommand: ZPlainAdo.Command;
     FAdoConnection: IZAdoConnection;
@@ -119,8 +117,8 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
   public
-    constructor Create(PlainDriver: IZPlainDriver; Connection: IZConnection;
-      SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string;
+      const Info: TStrings);
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
@@ -141,23 +139,22 @@ uses
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
-constructor TZAdoStatement.Create(PlainDriver: IZPlainDriver; Connection: IZConnection; SQL: string;
+constructor TZAdoStatement.Create(Connection: IZConnection; SQL: string;
   Info: TStrings);
 begin
   inherited Create(Connection, Info);
-  FPlainDriver := PlainDriver;
   FAdoConnection := Connection as IZAdoConnection;
 end;
 
 destructor TZAdoStatement.Destroy;
 begin
   FAdoConnection := nil;
-  inherited;
+  inherited Destroy;
 end;
 
 procedure TZAdoStatement.Close;
 begin
-  inherited;
+  inherited Close;
   AdoRecordSet := nil;
 end;
 
@@ -176,7 +173,7 @@ begin
   LastUpdateCount := -1;
   if not Execute(WSQL) then
     while (not GetMoreResults) and (LastUpdateCount > -1) do ;
-  Result := LastResultSet
+  Result := LastResultSet;
 end;
 
 function TZAdoStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
@@ -286,14 +283,13 @@ begin
   end;
 end;
 
-constructor TZAdoPreparedStatement.Create(PlainDriver: IZPlainDriver;
-  Connection: IZConnection; SQL: string; Info: TStrings);
+constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+  const SQL: string; const Info: TStrings);
 begin
   FAdoCommand := CoCommand.Create;
   inherited Create(Connection, SQL, Info);
   FAdoCommand.CommandText := WSQL;
   FAdoConnection := Connection as IZAdoConnection;
-  FPlainDriver := PlainDriver;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
 end;
 
@@ -301,7 +297,7 @@ destructor TZAdoPreparedStatement.Destroy;
 begin
   AdoRecordSet := nil;
   FAdoConnection := nil;
-  inherited;
+  inherited Destroy;
   FAdoCommand := nil;
 end;
 
@@ -357,9 +353,26 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZAdoPreparedStatement.ExecuteUpdatePrepared: Integer;
+var
+  RC: OleVariant;
 begin
-  ExecutePrepared;
-  Result := LastUpdateCount;
+  LastResultSet := nil;
+  LastUpdateCount := -1;
+
+  Prepare;
+  BindInParameters;
+  try
+    AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
+    LastUpdateCount := RC;
+    Result := LastUpdateCount;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
 end;
 
 {**
@@ -424,19 +437,18 @@ procedure TZAdoPreparedStatement.Unprepare;
 begin
   if FAdoCommand.Prepared then
     FAdoCommand.Prepared := False;
-  inherited;
+  inherited Unprepare;
 end;
 
 { TZAdoCallableStatement }
 
-constructor TZAdoCallableStatement.Create(PlainDriver: IZPlainDriver;
-  Connection: IZConnection; SQL: string; Info: TStrings);
+constructor TZAdoCallableStatement.Create(Connection: IZConnection;
+  const SQL: string; const Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   FAdoCommand := CoCommand.Create;
   FAdoCommand.CommandText := WSQL;
   FAdoConnection := Connection as IZAdoConnection;
-  FPlainDriver := PlainDriver;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
   FAdoCommand.CommandType := adCmdStoredProc;
 end;

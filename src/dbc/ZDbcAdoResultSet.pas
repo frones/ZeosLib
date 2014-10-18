@@ -81,7 +81,6 @@ type
   public
     constructor Create(Statement: IZStatement; SQL: string;
       AdoRecordSet: ZPlainAdo.RecordSet);
-    destructor Destroy; override;
 
     procedure Close; override;
     function Next: Boolean; override;
@@ -140,15 +139,6 @@ begin
   inherited Create(Statement, SQL, nil, Statement.GetConnection.GetConSettings);
   FAdoRecordSet := AdoRecordSet;
   Open;
-end;
-
-{**
-  Destroys this object and cleanups the memory.
-}
-destructor TZAdoResultSet.Destroy;
-begin
-  Close;
-  inherited;
 end;
 
 {**
@@ -263,7 +253,7 @@ end;
 procedure TZAdoResultSet.Close;
 begin
   FAdoRecordSet := nil;
-  inherited;
+  inherited Close;
 end;
 
 {**
