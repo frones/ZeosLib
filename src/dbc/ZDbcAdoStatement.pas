@@ -65,13 +65,7 @@ type
   TZAdoStatement = class(TZAbstractStatement)
   protected
     AdoRecordSet: ZPlainAdo.RecordSet;
-    FAdoConnection: IZAdoConnection;
-    function IsSelect(const SQL: string): Boolean;
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
-    destructor Destroy; override;
-    procedure Close; override;
-
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZWideString): Integer; override;
     function Execute(const SQL: ZWideString): Boolean; override;
@@ -139,67 +133,53 @@ uses
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
-constructor TZAdoStatement.Create(Connection: IZConnection; SQL: string;
-  Info: TStrings);
-begin
-  inherited Create(Connection, Info);
-  FAdoConnection := Connection as IZAdoConnection;
-end;
-
-destructor TZAdoStatement.Destroy;
-begin
-  FAdoConnection := nil;
-  inherited Destroy;
-end;
-
-procedure TZAdoStatement.Close;
-begin
-  inherited Close;
-  AdoRecordSet := nil;
-end;
-
-function TZAdoStatement.IsSelect(const SQL: string): Boolean;
-begin
-  Result := Uppercase(Copy(TrimLeft(Sql), 1, 6)) = 'SELECT';
-end;
-
 function TZAdoStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
+var
+  RC: OleVariant;
+  function GetMoreResults(var RS: IZResultSet): Boolean;
+  begin
+    if Assigned(AdoRecordSet) then
+    begin
+      AdoRecordSet := AdoRecordSet.NextRecordset(RC);
+      RS := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
+        SQL, ConSettings, ResultSetConcurrency);
+      Result := Assigned(RS);
+      LastUpdateCount := RC;
+    end
+    else Result := False;
+  end;
 begin
   {$IFDEF UNICODE}
   WSQL := SQL;
   {$ENDIF}
   Result := nil;
-  LastResultSet := nil;
   LastUpdateCount := -1;
-  if not Execute(WSQL) then
-    while (not GetMoreResults) and (LastUpdateCount > -1) do ;
-  Result := LastResultSet;
+  if IsSelect(Self.SQL) then
+  begin
+    AdoRecordSet := CoRecordSet.Create;
+    AdoRecordSet.MaxRecords := MaxRows;
+    AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
+      adOpenStatic, adLockOptimistic, adAsyncFetch);
+  end
+  else
+    AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
+  Result := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
+    Self.SQL, ConSettings, ResultSetConcurrency);
+  if not Assigned(Result) then
+    while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
 end;
 
 function TZAdoStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
 var
   RC: OleVariant;
 begin
+  LastResultSet := nil;
+  LastUpdateCount := -1;
+  {$IFDEF UNICODE}
+  WSQL := SQL;
+  {$ENDIF}
   try
-    LastResultSet := nil;
-    LastUpdateCount := -1;
-    {$IFDEF UNICODE}
-    WSQL := SQL;
-    {$ENDIF}
-    if IsSelect(Self.SQL) then
-    begin
-      AdoRecordSet := CoRecordSet.Create;
-      AdoRecordSet.MaxRecords := MaxRows;
-      AdoRecordSet.Open(SQL, FAdoConnection.GetAdoConnection,
-        adOpenStatic, adLockOptimistic, adAsyncFetch);
-      LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
-        Self.SQL, ConSettings, ResultSetConcurrency);
-      LastUpdateCount := RC;
-      AdoRecordSet.Close;
-      AdoRecordSet := nil;
-    end
-    else
-      AdoRecordSet := FAdoConnection.GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
+    (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
     Result := RC;
     LastUpdateCount := Result;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
@@ -216,22 +196,22 @@ function TZAdoStatement.Execute(const SQL: ZWideString): Boolean;
 var
   RC: OleVariant;
 begin
+  {$IFDEF UNICODE}
+  WSQL := SQL;
+  {$ENDIF}
+  LastResultSet := nil;
+  LastUpdateCount := -1;
   try
-    {$IFDEF UNICODE}
-    WSQL := SQL;
-    {$ENDIF}
-    LastResultSet := nil;
-    LastUpdateCount := -1;
     if IsSelect(Self.SQL) then
     begin
       AdoRecordSet := CoRecordSet.Create;
       AdoRecordSet.MaxRecords := MaxRows;
-      AdoRecordSet.Open(SQL, FAdoConnection.GetAdoConnection,
+      AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
         adOpenStatic, adLockOptimistic, adAsyncFetch);
     end
     else
-      AdoRecordSet := FAdoConnection.GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-    LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+      AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
+    LastResultSet := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
       Self.SQL, ConSettings, ResultSetConcurrency);
     Result := Assigned(LastResultSet);
     LastUpdateCount := RC;
@@ -276,12 +256,14 @@ begin
   if Assigned(AdoRecordSet) then
   begin
     AdoRecordSet := AdoRecordSet.NextRecordset(RC);
-    LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+    LastResultSet := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
       SQL, ConSettings, ResultSetConcurrency);
     Result := Assigned(LastResultSet);
     LastUpdateCount := RC;
   end;
 end;
+
+{ TZAdoPreparedStatement }
 
 constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
   const SQL: string; const Info: TStrings);
@@ -769,4 +751,6 @@ begin
 end;
 
 end.
+
+
 

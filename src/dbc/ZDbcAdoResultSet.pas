@@ -75,8 +75,8 @@ type
     AdoColTypeCache: TIntegerDynArray;
     AdoColumnCount: Integer;
     FFirstFetch: Boolean;
-  protected
     FAdoRecordSet: ZPlainAdo.RecordSet;
+  protected
     procedure Open; override;
   public
     constructor Create(Statement: IZStatement; SQL: string;

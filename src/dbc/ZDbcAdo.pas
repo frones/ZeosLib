@@ -311,7 +311,7 @@ end;
 function TZAdoConnection.CreateRegularStatement(Info: TStrings): IZStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoStatement.Create(Self, '', Info);
+  Result := TZAdoStatement.Create(Self, Info);
 end;
 
 {**
