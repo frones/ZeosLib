@@ -61,22 +61,6 @@ uses
   ZVariant, ZDbcAdoUtils;
 
 type
-  {** Implements Generic ADO Statement. }
-  TZAdoStatement = class(TZAbstractStatement)
-  protected
-    AdoRecordSet: ZPlainAdo.RecordSet;
-  public
-    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
-    function Execute(const SQL: ZWideString): Boolean; override;
-
-    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
-    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
-    function Execute(const SQL: RawByteString): Boolean; override;
-
-    function GetMoreResults: Boolean; override;
-  end;
-
   {** Implements Prepared ADO Statement. }
   TZAdoPreparedStatement = class(TZAbstractPreparedStatement)
   private
@@ -88,16 +72,27 @@ type
     procedure BindInParameters; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string;
-      const Info: TStrings);
+      const Info: TStrings); overload;
+    constructor Create(Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
+
+    function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: ZWideString): Integer; override;
+    function Execute(const SQL: ZWideString): Boolean; override;
+
+    function ExecuteQuery(const SQL: RawByteString): IZResultSet; override;
+    function ExecuteUpdate(const SQL: RawByteString): Integer; override;
+    function Execute(const SQL: RawByteString): Boolean; override;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
     function ExecutePrepared: Boolean; override;
 
-    function GetMoreResults: Boolean; override;
+    function GetMoreResults: Boolean; overload; override;
+    function GetMoreResults(var RS: IZResultSet): Boolean; reintroduce; overload;
     procedure Unprepare; override;
   end;
+  TZAdoStatement = class(TZAdoPreparedStatement);
 
   {** Implements Callable ADO Statement. }
   TZAdoCallableStatement = class(TZAbstractCallableStatement)
@@ -133,136 +128,6 @@ uses
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
-function TZAdoStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
-var
-  RC: OleVariant;
-  function GetMoreResults(var RS: IZResultSet): Boolean;
-  begin
-    if Assigned(AdoRecordSet) then
-    begin
-      AdoRecordSet := AdoRecordSet.NextRecordset(RC);
-      RS := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
-        SQL, ConSettings, ResultSetConcurrency);
-      Result := Assigned(RS);
-      LastUpdateCount := RC;
-    end
-    else Result := False;
-  end;
-begin
-  {$IFDEF UNICODE}
-  WSQL := SQL;
-  {$ENDIF}
-  Result := nil;
-  LastUpdateCount := -1;
-  if IsSelect(Self.SQL) then
-  begin
-    AdoRecordSet := CoRecordSet.Create;
-    AdoRecordSet.MaxRecords := MaxRows;
-    AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
-      adOpenStatic, adLockOptimistic, adAsyncFetch);
-  end
-  else
-    AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-  Result := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
-    Self.SQL, ConSettings, ResultSetConcurrency);
-  if not Assigned(Result) then
-    while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
-end;
-
-function TZAdoStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
-var
-  RC: OleVariant;
-begin
-  LastResultSet := nil;
-  LastUpdateCount := -1;
-  {$IFDEF UNICODE}
-  WSQL := SQL;
-  {$ENDIF}
-  try
-    (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-    Result := RC;
-    LastUpdateCount := Result;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
-  end
-end;
-
-function TZAdoStatement.Execute(const SQL: ZWideString): Boolean;
-var
-  RC: OleVariant;
-begin
-  {$IFDEF UNICODE}
-  WSQL := SQL;
-  {$ENDIF}
-  LastResultSet := nil;
-  LastUpdateCount := -1;
-  try
-    if IsSelect(Self.SQL) then
-    begin
-      AdoRecordSet := CoRecordSet.Create;
-      AdoRecordSet.MaxRecords := MaxRows;
-      AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
-        adOpenStatic, adLockOptimistic, adAsyncFetch);
-    end
-    else
-      AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
-    LastResultSet := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
-      Self.SQL, ConSettings, ResultSetConcurrency);
-    Result := Assigned(LastResultSet);
-    LastUpdateCount := RC;
-    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
-    on E: Exception do
-    begin
-      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
-      raise;
-    end;
-  end
-end;
-
-function TZAdoStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  Result := ExecuteQuery(WSQL);
-end;
-
-function TZAdoStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  Result := ExecuteUpdate(WSQL);
-end;
-
-function TZAdoStatement.Execute(const SQL: RawByteString): Boolean;
-begin
-  if ASQL <> SQL then
-    ASQL := SQL;
-  Result := Execute(WSQL);
-end;
-
-function TZAdoStatement.GetMoreResults: Boolean;
-var
-  RC: OleVariant;
-begin
-  Result := False;
-  LastResultSet := nil;
-  LastUpdateCount := -1;
-  if Assigned(AdoRecordSet) then
-  begin
-    AdoRecordSet := AdoRecordSet.NextRecordset(RC);
-    LastResultSet := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
-      SQL, ConSettings, ResultSetConcurrency);
-    Result := Assigned(LastResultSet);
-    LastUpdateCount := RC;
-  end;
-end;
-
 { TZAdoPreparedStatement }
 
 constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
@@ -273,6 +138,12 @@ begin
   FAdoCommand.CommandText := WSQL;
   FAdoConnection := Connection as IZAdoConnection;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
+end;
+
+constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
+  const Info: TStrings);
+begin
+  Create(Connection, '', Info);
 end;
 
 destructor TZAdoPreparedStatement.Destroy;
@@ -310,6 +181,107 @@ begin
         ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], InParamValues[i], adParamInput);
 end;
 
+function TZAdoPreparedStatement.ExecuteQuery(const SQL: ZWideString): IZResultSet;
+var
+  RC: OleVariant;
+begin
+  {$IFDEF UNICODE}
+  WSQL := SQL;
+  {$ENDIF}
+  Result := nil;
+  LastUpdateCount := -1;
+  if IsSelect(Self.SQL) then
+  begin
+    AdoRecordSet := CoRecordSet.Create;
+    AdoRecordSet.MaxRecords := MaxRows;
+    AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
+      adOpenStatic, adLockOptimistic, adAsyncFetch);
+  end
+  else
+    AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
+  Result := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
+    Self.SQL, ConSettings, ResultSetConcurrency);
+  if not Assigned(Result) then
+    while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+end;
+
+function TZAdoPreparedStatement.ExecuteUpdate(const SQL: ZWideString): Integer;
+var
+  RC: OleVariant;
+begin
+  LastResultSet := nil;
+  LastUpdateCount := -1;
+  {$IFDEF UNICODE}
+  WSQL := SQL;
+  {$ENDIF}
+  try
+    (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
+    Result := RC;
+    LastUpdateCount := Result;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
+end;
+
+function TZAdoPreparedStatement.Execute(const SQL: ZWideString): Boolean;
+var
+  RC: OleVariant;
+begin
+  {$IFDEF UNICODE}
+  WSQL := SQL;
+  {$ENDIF}
+  LastResultSet := nil;
+  LastUpdateCount := -1;
+  try
+    if IsSelect(Self.SQL) then
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet.Open(SQL, (Connection as IZAdoConnection).GetAdoConnection,
+        adOpenStatic, adLockOptimistic, adAsyncFetch);
+    end
+    else
+      AdoRecordSet := (Connection as IZAdoConnection).GetAdoConnection.Execute(WSQL, RC, adExecuteNoRecords);
+    LastResultSet := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
+      Self.SQL, ConSettings, ResultSetConcurrency);
+    Result := Assigned(LastResultSet);
+    LastUpdateCount := RC;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
+end;
+
+function TZAdoPreparedStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
+begin
+  if ASQL <> SQL then
+    ASQL := SQL;
+  Result := ExecuteQuery(WSQL);
+end;
+
+function TZAdoPreparedStatement.ExecuteUpdate(const SQL: RawByteString): Integer;
+begin
+  if ASQL <> SQL then
+    ASQL := SQL;
+  Result := ExecuteUpdate(WSQL);
+end;
+
+function TZAdoPreparedStatement.Execute(const SQL: RawByteString): Boolean;
+begin
+  if ASQL <> SQL then
+    ASQL := SQL;
+  Result := Execute(WSQL);
+end;
+
 {**
   Executes the SQL query in this <code>PreparedStatement</code> object
   and returns the result set generated by the query.
@@ -318,10 +290,35 @@ end;
     query; never <code>null</code>
 }
 function TZAdoPreparedStatement.ExecuteQueryPrepared: IZResultSet;
+var
+  RC: OleVariant;
 begin
-  if not ExecutePrepared then
-    while (not GetMoreResults) and (LastUpdateCount > -1) do ;
-  Result := LastResultSet;
+  LastUpdateCount := -1;
+  Prepare;
+  BindInParameters;
+  try
+    if IsSelect(SQL) then
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+      AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+    end
+    else
+      AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
+    Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
+      SQL, ConSettings, ResultSetConcurrency);
+    LastUpdateCount := RC;
+    if not Assigned(Result) then
+      while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
+  except
+    on E: Exception do
+    begin
+      DriverManager.LogError(lcExecute, ConSettings^.Protocol, ASQL, 0, ConvertEMsgToRaw(E.Message, ConSettings^.ClientCodePage^.CP));
+      raise;
+    end;
+  end
 end;
 
 {**
@@ -338,7 +335,6 @@ function TZAdoPreparedStatement.ExecuteUpdatePrepared: Integer;
 var
   RC: OleVariant;
 begin
-  LastResultSet := nil;
   LastUpdateCount := -1;
 
   Prepare;
@@ -413,6 +409,20 @@ begin
     Result := Assigned(LastResultSet);
     LastUpdateCount := RC;
   end;
+end;
+
+function TZAdoPreparedStatement.GetMoreResults(var RS: IZResultSet): Boolean;
+var RC: OleVariant;
+begin
+  if Assigned(AdoRecordSet) then
+  begin
+    AdoRecordSet := AdoRecordSet.NextRecordset(RC);
+    RS := GetCurrentResultSet(AdoRecordSet, (Connection as IZAdoConnection), Self,
+      SQL, ConSettings, ResultSetConcurrency);
+    Result := Assigned(RS);
+    LastUpdateCount := RC;
+  end
+  else Result := False;
 end;
 
 procedure TZAdoPreparedStatement.Unprepare;

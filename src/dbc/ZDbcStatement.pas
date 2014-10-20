@@ -2313,14 +2313,14 @@ end;
 
 procedure TZAbstractPreparedStatement.SetASQL(const Value: RawByteString);
 begin
-  if ( ASQL <> Value ) and Prepared then
+  if Prepared and ( ASQL <> Value ) then
     Unprepare;
   inherited SetASQL(Value);
 end;
 
 procedure TZAbstractPreparedStatement.SetWSQL(const Value: ZWideString);
 begin
-  if ( WSQL <> Value ) and Prepared then
+  if Prepared and ( WSQL <> Value ) then
     Unprepare;
   inherited SetWSQL(Value);
 end;
