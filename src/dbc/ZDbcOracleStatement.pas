@@ -121,7 +121,7 @@ type
     FCanBindInt64: Boolean;
     procedure SortZeosOrderToOCIParamsOrder;
     procedure FetchOutParamsFromOracleVars;
-    function GetProcedureSql(SelectProc: boolean): RawByteString;
+    function GetProcedureSql: RawByteString;
   protected
     procedure SetInParam(ParameterIndex: Integer; SQLType: TZSQLType;
       const Value: TZVariant); override;
@@ -468,7 +468,7 @@ procedure TZOracleCallableStatement.Prepare;
 begin
   if not Prepared then
   begin
-    ASQL := GetProcedureSql(False);
+    ASQL := GetProcedureSql;
     { Allocates statement handles. }
     if (FHandle = nil) or (FErrorHandle = nil) then
       AllocateOracleStatementHandles(FPlainDriver, Connection,
@@ -482,6 +482,7 @@ begin
 end;
 
 
+{$WARNINGS OFF} //unreachable code as long FServerStmtCache isn't really used
 procedure TZOracleCallableStatement.UnPrepare;
 const {%H-}RELEASE_MODE: array[boolean] of integer = (OCI_DEFAULT,OCI_STMTCACHE_DELETE);
 begin
@@ -496,6 +497,7 @@ begin
     inherited Unprepare;
   end;
 end;
+{$WARNINGS OFF}
 
 procedure TZOracleCallableStatement.RegisterOutParameter(ParameterIndex,
   SQLType: Integer);
@@ -766,7 +768,7 @@ begin
       SetOutParam(@FParams^.Variables[I], FOracleParams[i].pParamIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
 end;
 
-function TZOracleCallableStatement.GetProcedureSql(SelectProc: boolean): RawByteString;
+function TZOracleCallableStatement.GetProcedureSql: RawByteString;
 var
   sFunc: string;
   I, IncludeCount, LastIndex: Integer;
