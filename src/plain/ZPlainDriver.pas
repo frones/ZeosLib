@@ -55,7 +55,7 @@ interface
 
 {$I ZPlain.inc}
 
-uses ZClasses, ZPlainLoader, ZCompatibility, Types, ZTokenizer;
+uses ZClasses, ZPlainLoader, ZCompatibility, Types;
 
 type
 
