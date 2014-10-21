@@ -918,9 +918,9 @@ type
   PISC_ARRAY_BOUND = ^TISC_ARRAY_BOUND;
 
   TISC_ARRAY_DESC = record
-    array_desc_dtype:   UChar;
-    array_desc_scale:   AnsiChar;
-    array_desc_length:  Short;
+    array_desc_dtype:   Byte;
+    array_desc_scale:   ShortInt;
+    array_desc_length:  Word;
     array_desc_field_name: array[0..31] of AnsiChar;
     array_desc_relation_name: array[0..31] of AnsiChar;
     array_desc_dimensions: Short;
@@ -1009,161 +1009,161 @@ type
   Tisc_attach_database = function(status_vector: PISC_STATUS;
     db_name_length: Short; db_name: PAnsiChar; db_handle: PISC_DB_HANDLE;
     parm_buffer_length: Short; parm_buffer: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_detach_database = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_drop_database = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_database_info = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
     item_list_buffer: PAnsiChar; result_buffer_length: Short;
     result_buffer: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Array processing routines }
   Tisc_array_gen_sdl = function(status_vector: PISC_STATUS;
     isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
     isc_arg4: PAnsiChar; isc_arg5: PShort): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_array_get_slice = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
     array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
     dest_array: PVoid; slice_length: ISC_LONG): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_array_lookup_bounds = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
     table_name, column_name: PAnsiChar;
     descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_array_lookup_desc = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
     table_name, column_name: PAnsiChar;
     descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_array_set_desc = function(status_vector: PISC_STATUS;
     table_name: PAnsiChar; column_name: PAnsiChar;
     sql_dtype, sql_length, sql_dimensions: PShort;
     descriptor: PISC_ARRAY_DESC): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_array_put_slice = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; trans_handle: PISC_TR_HANDLE;
     array_id: PISC_QUAD; descriptor: PISC_ARRAY_DESC;
     source_array: PVoid; slice_length: PISC_LONG): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_free = function(isc_arg1: PAnsiChar): ISC_LONG;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_sqlcode = function(status_vector: PISC_STATUS): ISC_LONG;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_sql_interprete = procedure(sqlcode: Short; buffer: PAnsiChar;
-    buffer_length: Short); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    buffer_length: Short); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_interprete = function(buffer: PAnsiChar; status_vector: PPISC_STATUS):
-    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tfb_interpret = function(buffer: PAnsiChar;  bufsize: integer; status_vector: PPISC_STATUS):
-    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Transaction support routines }
 
   Tisc_start_transaction = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
     db_handle: PISC_DB_HANDLE; tpb_length: Word; tpb_address: PAnsiChar):
-    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_start_multiple = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE; db_handle_count: Short;
     teb_vector_address: PISC_TEB): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_rollback_transaction = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_rollback_retaining = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_commit_retaining = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_commit_transaction = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_transaction_info = function(status_vector: PISC_STATUS;
     tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
     item_list_buffer: PAnsiChar; result_buffer_length: Short;
     result_buffer: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Dynamic SQL routines }
 
   Tisc_dsql_allocate_statement = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_alloc_statement2 = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; stmt_handle: PISC_STMT_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_describe = function(status_vector: PISC_STATUS;
     stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_describe_bind = function(status_vector: PISC_STATUS;
     stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_execute = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
     xsqlda: PXSQLDA): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_execute2 = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE; dialect: Word;
     in_xsqlda, out_xsqlda: PXSQLDA): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_execute_immediate = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE; length: Word;
     statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_fetch = function(status_vector: PISC_STATUS;
     stmt_handle: PISC_STMT_HANDLE; dialect: Word; xsqlda: PXSQLDA): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_free_statement = function(status_vector: PISC_STATUS;
     stmt_handle: PISC_STMT_HANDLE; options: Word): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_prepare = function(status_vector: PISC_STATUS;
     tran_handle: PISC_TR_HANDLE; stmt_handle: PISC_STMT_HANDLE;
     length: Word; statement: PAnsiChar; dialect: Word; xsqlda: PXSQLDA):
-    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_set_cursor_name = function(status_vector: PISC_STATUS;
     stmt_handle: PISC_STMT_HANDLE; cursor_name: PAnsiChar; _type: Word): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_dsql_sql_info = function(status_vector: PISC_STATUS;
     stmt_handle: PISC_STMT_HANDLE; item_length: Short; items: PAnsiChar;
     buffer_length: Short; buffer: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Blob processing routines }
 
@@ -1171,86 +1171,86 @@ type
     db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
     blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
     bpb_buffer: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_create_blob2 = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; tran_handle: PISC_TR_HANDLE;
     blob_handle: PISC_BLOB_HANDLE; blob_id: PISC_QUAD; bpb_length: Short;
     bpb_address: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_blob_info = function(status_vector: PISC_STATUS;
     blob_handle: PISC_BLOB_HANDLE; item_list_buffer_length: Short;
     item_list_buffer: PAnsiChar; result_buffer_length: Short; result_buffer: PAnsiChar):
-    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_close_blob = function(status_vector: PISC_STATUS;
     blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_cancel_blob = function(status_vector: PISC_STATUS;
     blob_handle: PISC_BLOB_HANDLE): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_get_segment = function(status_vector: PISC_STATUS;
     blob_handle: PISC_BLOB_HANDLE; actual_seg_length: PWord;
     seg_buffer_length: Word; seg_buffer: PAnsiChar): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_put_segment = function(status_vector: PISC_STATUS;
     blob_handle: PISC_BLOB_HANDLE; seg_buffer_len: Word; seg_buffer: PAnsiChar):
-    ISC_STATUS; {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ISC_STATUS; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Event processing routines }
 
   Tisc_event_block = function(event_buffer: PPAnsiChar; result_buffer: PPAnsiChar;
     id_count: Word; event_list: array of PAnsiChar): ISC_LONG;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_event_counts = procedure(status_vector: PISC_STATUS;
     buffer_length: Short; event_buffer: PAnsiChar; result_buffer: PAnsiChar);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_cancel_events = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; event_id: PISC_LONG): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_que_events = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; event_id: PISC_LONG; length: Short;
     event_buffer: PAnsiChar; event_function: TISC_CALLBACK;
     event_function_arg: PVoid): ISC_STATUS;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Types convertion routines }
 
   Tisc_decode_date = procedure(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_encode_date = procedure(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   { Interbase Version 6 routines }
   Tisc_decode_sql_date = procedure(ib_date: PISC_DATE;
-    tm_date: PCTimeStructure); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_decode_sql_time = procedure(ib_time: PISC_TIME;
-    tm_date: PCTimeStructure); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_decode_timestamp = procedure(ib_timestamp: PISC_TIMESTAMP;
-    tm_date: PCTimeStructure); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    tm_date: PCTimeStructure); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_encode_sql_date = procedure(tm_date: PCTimeStructure;
-    ib_date: PISC_DATE); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ib_date: PISC_DATE); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_encode_sql_time = procedure(tm_date: PCTimeStructure;
-    ib_time: PISC_TIME); {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    ib_time: PISC_TIME); {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_encode_timestamp = procedure(tm_date: PCTimeStructure;
     ib_timestamp: PISC_TIMESTAMP);
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
   Tisc_vax_integer = function(buffer: PAnsiChar; length: Short): ISC_LONG;
-    {$IFNDEF UNIX} stdcall {$ELSE} cdecl {$ENDIF};
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
 { ************** Collection of Plain API Function types definition ************* }
 TZFirebird_API = record

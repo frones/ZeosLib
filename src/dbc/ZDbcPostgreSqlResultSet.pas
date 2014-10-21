@@ -212,7 +212,7 @@ end;
 }
 procedure TZPostgreSQLResultSet.Open;
 var
-  I: Integer;
+  I, FieldCount: Integer;
   ColumnInfo: TZColumnInfo;
   FieldMode, FieldSize, FieldType: Integer;
   TableInfo: PZPGTableInfo;
@@ -230,13 +230,14 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
-  for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
+  FieldCount := FPlainDriver.GetFieldCount(FQueryHandle);
+  for I := 0 to FieldCount - 1 do
   begin
     ColumnInfo := TZColumnInfo.Create;
     with ColumnInfo do
     begin
       if Statement.GetResultSetConcurrency = rcUpdatable then //exclude system-tables and if no updates happen -> useless
-        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I))
+        TableInfo := Connection.GetTableInfo(FPlainDriver.GetFieldTableOID(FQueryHandle, I),FieldCount)
       else
         TableInfo := nil;
       if TableInfo = nil then

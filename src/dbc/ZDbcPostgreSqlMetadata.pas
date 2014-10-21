@@ -1996,9 +1996,8 @@ var
   SQLType: TZSQLType;
   CheckVisibility: Boolean;
   ColumnNameCondition, TableNameCondition, SchemaCondition: string;
-label CheckColumnsAgain;
 begin
-  CheckVisibility := False;
+  CheckVisibility := (GetConnection as IZPostgreSQLConnection).CheckFieldVisibility; //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
   SchemaCondition := ConstructNameCondition(SchemaPattern,'n.nspname');
   TableNameCondition := ConstructNameCondition(TableNamePattern,'c.relname');
   ColumnNameCondition := ConstructNameCondition(ColumnNamePattern,'a.attname');
@@ -2006,7 +2005,6 @@ begin
 
   if (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
   begin
-    CheckColumnsAgain: //http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
     SQL := 'SELECT n.nspname,' {nspname_index}
       + 'c.relname,' {relname_index}
       + 'a.attname,' {attname_index}
@@ -2058,8 +2056,8 @@ begin
 
   with GetConnection.CreateStatement.ExecuteQuery(SQL) do
   begin
-    if Next then
-    repeat
+    while Next do
+    begin
       AttTypMod := GetInt(6 {atttypmod});
 
       TypeOid := GetInt(4 {atttypid});
@@ -2137,14 +2135,6 @@ begin
       Result.UpdateBooleanByName('READONLY', False);
 
       Result.InsertRow;
-    until not Next
-    else //nothing found let's repeat with checking temporary session depended table too.
-      // notes http://zeoslib.sourceforge.net/viewtopic.php?f=40&t=11174
-      if (not CheckVisibility) and (SchemaPattern = '') and (GetDatabaseInfo as IZPostgreDBInfo).HasMinimumServerVersion(7, 3) then
-      begin
-        CheckVisibility := True;
-        Close; //clean up
-        goto CheckColumnsAgain; //Lest's start the second approach
     end;
     Close;
   end;

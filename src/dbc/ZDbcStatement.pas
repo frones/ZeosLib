@@ -444,10 +444,9 @@ destructor TZAbstractStatement.Destroy;
 begin
   Close;
   if Assigned(FBatchQueries) then
-    FBatchQueries.Free;
-  FBatchQueries := nil;
+    FreeAndNil(FBatchQueries);
   FConnection := nil;
-  FInfo.Free;
+  FreeAndNil(FInfo);
   FLastResultSet := nil;
   inherited Destroy;
 end;
@@ -1888,9 +1887,11 @@ end;
 procedure TZAbstractCallableStatement.ClearResultSets;
 var
   I: Integer;
+  RS: IZResultSet;
 begin
   for i := 0 to FResultSets.Count -1 do
-    IZResultSet(FResultSets[i]).Close;
+    if Supports(FResultSets[i], IZResultSet, RS) then //possible IZUpdateCount e.g. DBLib, ASA
+      RS.Close;
   FResultSets.Clear;
   LastResultSet := nil;
 end;

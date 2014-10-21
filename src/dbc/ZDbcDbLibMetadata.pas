@@ -2779,10 +2779,11 @@ begin
       TableTypes := TableTypes + AnsiQuotedStr(Types[I], '''');
     end;
 
-    with GetStatement.ExecuteQuery(
-      Format('exec sp_jdbc_tables %s, %s, %s, %s',
-      [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes, '"')])) do
-    begin
+  with GetStatement.ExecuteQuery(
+    Format('exec sp_jdbc_tables %s, %s, %s, %s',
+    [ComposeObjectString(TableNamePattern), ComposeObjectString(SchemaPattern), ComposeObjectString(Catalog), ComposeObjectString(TableTypes)])) do
+  begin
+    while Next do
       while Next do
       begin
         Result.MoveToInsertRow;
@@ -3873,11 +3874,12 @@ begin
       UDTypes := UDTypes + AnsiQuotedStr(IntToStr(Types[I]), '''');
     end;
 
-    with GetStatement.ExecuteQuery(
-      Format('exec sp_jdbc_getudts %s, %s, %s, %s',
-      [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern, '''%'''),
-       ComposeObjectString(TypeNamePattern, '''%'''), ComposeObjectString(UDTypes, '"')])) do
-    begin
+  with GetStatement.ExecuteQuery(
+    Format('exec sp_jdbc_getudts %s, %s, %s, %s',
+    [ComposeObjectString(Catalog), ComposeObjectString(SchemaPattern, '''%'''),
+     ComposeObjectString(TypeNamePattern, '''%'''), ComposeObjectString(UDTypes)])) do
+  begin
+    while Next do
       while Next do
       begin
         Result.MoveToInsertRow;

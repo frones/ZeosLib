@@ -135,7 +135,7 @@ begin
     'INSERT INTO department(dep_id,dep_name,dep_shname,dep_address)'
     + ' VALUES(?,?,?,?)');
   CheckNotNull(Statement);
-
+  try
   Statement.SetInt(1, TEST_ROW_ID);
   Statement.SetString(2, 'xyz');
   Statement.SetNull(3, stString);
@@ -155,6 +155,9 @@ begin
   CheckEquals(1, Statement.ExecuteUpdatePrepared);
   Statement.ExecutePrepared;
   CheckEquals(0, Statement.GetUpdateCount);
+  finally
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -166,12 +169,15 @@ var
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
-
+  try
   Statement.ExecuteUpdate('UPDATE equipment SET eq_name=eq_name');
   Statement.ExecuteUpdate('SELECT * FROM equipment');
 
   Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
   Check(Statement.Execute('SELECT * FROM equipment'));
+  finally
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -186,14 +192,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
+  try
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, True);
   ResultSet.Close;
-
+  finally
   Statement.Close;
   Connection.Close;
+  end;
 end;
 
 {**
@@ -208,14 +215,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
+  try
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, False);
   ResultSet.Close;
-
+  finally
   Statement.Close;
   Connection.Close;
+  end;
 end;
 
 {**
@@ -230,7 +238,7 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
-
+  try
   Statement.ExecuteUpdate('delete from default_values');
 
   ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3,d_fld4,d_fld5,d_fld6 FROM default_values');
@@ -250,9 +258,10 @@ begin
     EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
 
   ResultSet.DeleteRow;
-
+  finally
   ResultSet.Close;
   Statement.Close;
+  end;
 end;
 
 {**
@@ -265,6 +274,7 @@ var
 begin
   CallableStatement := Connection.PrepareCallWithParams(
     'procedure1', nil);
+  try
   with CallableStatement do
   begin
     RegisterOutParameter(1, Ord(stInteger)); //stupid RETURN_VALUE
@@ -273,10 +283,13 @@ begin
     ExecutePrepared;
     CheckEquals(12346, GetInt(2));
   end;
+  finally
   CallableStatement.Close;
+  end;
 
   CallableStatement := Connection.PrepareCallWithParams(
     'procedure2', nil);
+  try
   ResultSet := CallableStatement.ExecuteQueryPrepared;
   with ResultSet do
   begin
@@ -290,7 +303,9 @@ begin
     CheckEquals('Volvo', GetString(1));
     Close;
   end;
+  finally
   CallableStatement.Close;
+  end;
 end;
 
 initialization

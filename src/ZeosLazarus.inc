@@ -72,6 +72,7 @@
        {$DEFINE WITH_FORMATSETTINGS}
        {$DEFINE WITH_WIDEFIELDS}	// Wide-fields are supported (common define for ftWideString/ftWideMemo)
        {$DEFINE PWIDECHAR_IS_PUNICODECHAR}
+       {$DEFINE WITH_FTGUID} //TStringField descendant TGuidField is supported 
        {$DEFINE FPC2_6UP}
     {$IFEND}
 

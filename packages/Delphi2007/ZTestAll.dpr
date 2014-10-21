@@ -70,6 +70,7 @@ uses
 
 begin
   TestGroup := COMMON_GROUP;
+  ReportMemoryLeaksOnShutDown := CommandLineSwitches.memcheck;
   If Not CommandLineSwitches.norebuild then
     RebuildTestDatabases;
 
@@ -77,7 +78,7 @@ begin
     EnableZSQLMonitor;
 
   If CommandLineSwitches.batch then
-    TextTestRunner.RunTest(CreateTestSuite)
+    TextTestRunner.RunTest(CreateTestSuite).Free
   else
     GUITestRunner.RunTest(CreateTestSuite);
 end.

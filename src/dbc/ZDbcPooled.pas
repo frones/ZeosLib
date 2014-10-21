@@ -55,9 +55,6 @@ interface
 implementation
 
 uses
-{$IFNDEF UNIX}
-  Windows,
-{$ENDIF}
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} Contnrs, DateUtils, SysUtils, Types,
   SyncObjs,
   ZCompatibility, ZClasses, ZURL, ZDbcConnection, ZDbcIntfs, ZPlainDriver,

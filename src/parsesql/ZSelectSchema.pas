@@ -386,7 +386,8 @@ begin
   begin
     Current := TZFieldRef(FFields[ColumnIndex - 1]);
     if not Current.Linked
-      and ((Current.Alias = Field) or (Current.Field = Field)) then
+      //note http://sourceforge.net/p/zeoslib/tickets/101/
+      and ((Current.Alias = Field) or (Current.Field = Field) or (Current.Field = Convertor.Quote(Field))) then
     begin
       Result := Current;
       Result.Linked := True;

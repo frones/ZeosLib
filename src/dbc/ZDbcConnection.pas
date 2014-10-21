@@ -133,6 +133,7 @@ type
     procedure SetPassword(const Value: String);
     function GetInfo: TStrings;
   protected
+    FDisposeCodePage: Boolean;
     FUndefinedVarcharAsStringLength: Integer; //used for PostgreSQL and SQLite
     FClientCodePage: String;
     FMetadata: TContainedObject;
@@ -764,21 +765,8 @@ end;
   @return a new Statement object
 }
 function TZAbstractConnection.CreateStatement: IZStatement;
-var
-  Info: TStrings;
 begin
-  If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    begin
-     Info := TSTringList.Create;
-     Info.Append('preferprepared=TRUE');
-    end
-  Else
-    Info := nil;
-
-  Result := CreateRegularStatement(Info);
-
-  If Info <> nil then
-    Info.Free;
+  Result := CreateStatementWithParams(nil);
 end;
 
 {**
@@ -797,10 +785,17 @@ end;
 }
 function TZAbstractConnection.CreateStatementWithParams(Info: TStrings):
   IZStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    Info.Append('preferprepared=TRUE');
-  Result := CreateRegularStatement(Info);
+  begin
+    If UsedInfo = nil then
+        UsedInfo := TSTringList.Create;
+      UsedInfo.Append('preferprepared=TRUE');
+  end;
+  Result := CreateRegularStatement(UsedInfo);
+  if UsedInfo <> Info then UsedInfo.Free;
 end;
 
 {**
@@ -844,21 +839,8 @@ end;
     pre-compiled statement
 }
 function TZAbstractConnection.PrepareStatement(const SQL: string): IZPreparedStatement;
-var
-  Info: TStrings;
 begin
-  If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    begin
-     Info := TSTringList.Create;
-     Info.Append('preferprepared=TRUE');
-    end
-  Else
-    Info := nil;
-
-  Result := CreatePreparedStatement(SQL, Info);
-
-  If Info <> nil then
-    Info.Free;
+  Result := CreatePreparedStatement(SQL, nil);
 end;
 
 {**
@@ -873,11 +855,17 @@ end;
 }
 function TZAbstractConnection.PrepareStatementWithParams(const SQL: string;
   Info: TStrings): IZPreparedStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    Info.Append('preferprepared=TRUE');
-
-  Result := CreatePreparedStatement(SQL, Info);
+  begin
+    If UsedInfo = nil then
+      UsedInfo := TSTringList.Create;
+    UsedInfo.Append('preferprepared=TRUE');
+  end;
+  Result := CreatePreparedStatement(SQL, UsedInfo);
+  if UsedInfo <> Info then UsedInfo.Free;
 end;
 
 procedure TZAbstractConnection.PrepareTransaction(const transactionid: string);
@@ -926,21 +914,8 @@ end;
 
 function TZAbstractConnection.PrepareCall(
   const SQL: string): IZCallableStatement;
-var
-  Info: TStrings;
 begin
-  If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    begin
-     Info := TSTringList.Create;
-     Info.Append('preferprepared=TRUE');
-    end
-  Else
-    Info := nil;
-
-  Result := CreateCallableStatement(SQL, Info);
-
-  If Info <> nil then
-    Info.Free;
+  Result := CreateCallableStatement(SQL, nil);
 end;
 
 {**
@@ -959,10 +934,17 @@ end;
 }
 function TZAbstractConnection.PrepareCallWithParams(const SQL: string;
   Info: TStrings): IZCallableStatement;
+var UsedInfo: TStrings;
 begin
+  UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
-    Info.Append('preferprepared=TRUE');
-  Result := CreateCallableStatement(SQL, Info);
+  begin
+    If UsedInfo = nil then
+      UsedInfo := TSTringList.Create;
+    UsedInfo.Append('preferprepared=TRUE');
+  end;
+  Result := CreateCallableStatement(SQL, UsedInfo);
+  if UsedInfo <> Info then UsedInfo.Free;
 end;
 
 {**
@@ -1119,6 +1101,12 @@ end;
 
 procedure TZAbstractConnection.Close;
 begin
+  if FDisposeCodePage then
+  begin
+    Dispose(ConSettings^.ClientCodePage);
+    ConSettings^.ClientCodePage := nil;
+    FDisposeCodePage := False;
+  end;
   FClosed := True;
 end;
 

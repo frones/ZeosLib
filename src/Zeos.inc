@@ -121,7 +121,7 @@
 {$IFDEF VER210}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -130,7 +130,7 @@
 {$IFDEF VER220}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
@@ -143,7 +143,7 @@
 {$IFDEF VER230}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE BDS4_UP} // Used in code
@@ -154,7 +154,7 @@
 {$IFDEF VER240}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in code
@@ -166,7 +166,7 @@
 {$IFDEF VER250}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
@@ -179,7 +179,7 @@
 {$IFDEF VER260}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
@@ -193,13 +193,29 @@
 {$IFDEF VER270}
   {$DEFINE VER200BELOW} // Used in code
   {$DEFINE DELPHI12_UP} // Used in code
-  {$DEFINE DELPHI14_UP} //Egonhugeist used in my code
+  {$DEFINE DELPHI14_UP} // used in tests only
   {$DEFINE DELPHI15_UP} // Used in zeos.inc only
   {$DEFINE DELPHI16_UP} // Used in code
   {$DEFINE DELPHI17_UP} // Used in zeos.inc only
   {$DEFINE DELPHI18_UP} // Used in zeos.inc only
   {$DEFINE DELPHI19_UP} // Used in zeos.inc only
   {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
+// Compilation directives for Delphi XE7 by miab3
+{$IFDEF VER280}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} // used in tests only
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in code
+  {$DEFINE DELPHI17_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI18_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI19_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
+  {$DEFINE DELPHI21_UP} //Used in zeos.inc only
   {$DEFINE BDS4_UP} // Used in code
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
@@ -292,7 +308,18 @@
   {$DEFINE WITH_GETCALCFIELDS_TRECBUF} //GetCalcFields expected no TRecordBuffer use TRecBuf type NativeInt instead
 {$ENDIF}
 
+{$IFDEF DELPHI20_UP}
+  {$DEFINE WITH_IPROVIDERSUPPORT_NG} //supports IProviderSupportNG / IProviderSupport is deprecated
+  {$DEFINE TFIELD_HAS_ASLONGWORD} //TField has supports virtual AsLongWord Gettet & Setter 
+{$ENDIF}
 
+{$IFDEF DELPHI21_UP}
+  {$UNDEF WITH_DBTABLES} //M.A. In Delphi XE7 no BDE
+{$ENDIF}
+
+{$IFNDEF WIN32} //global undefines
+  {$UNDEF USE_FAST_TRUNC}
+{$ENDIF}
 // Debug/release compiler options
 {$D+}
 
@@ -336,6 +363,15 @@
 {$DEFINE DISABLE_CHECKING}
 {$ENDIF}
 
+// Uncomment these defines to disable some DB drivers (reduce binary size)
+{.$DEFINE ZEOS_DISABLE_MYSQL}
+{.$DEFINE ZEOS_DISABLE_POSTGRESQL}
+{.$DEFINE ZEOS_DISABLE_DBLIB}
+{.$DEFINE ZEOS_DISABLE_ADO}
+{.$DEFINE ZEOS_DISABLE_INTERBASE}
+{.$DEFINE ZEOS_DISABLE_SQLITE}
+{.$DEFINE ZEOS_DISABLE_ORACLE}
+{.$DEFINE ZEOS_DISABLE_ASA}
 
 // Enables MySQL support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_MYSQL}

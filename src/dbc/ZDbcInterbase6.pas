@@ -459,6 +459,8 @@ begin
 
   if TransactIsolationLevel = tiReadUncommitted then
     raise EZSQLException.Create('Isolation level do not capable');
+  if ConSettings^.ClientCodePage = nil then
+    CheckCharEncoding(FClientCodePage, True);
 
   DPB := GenerateDPB(Info, FDPBLength, FDialect);
 

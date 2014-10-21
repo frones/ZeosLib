@@ -704,6 +704,7 @@ var
   I: Integer;
   FieldSqlType: TZSQLType;
   ColumnInfo: TZColumnInfo;
+  ZCodePageInfo: PZCodePage;
 begin
   if FStmtHandle=0 then
     raise EZSQLException.Create(SCanNotRetrieveResultSetData);
@@ -720,28 +721,17 @@ begin
       FieldSqlType := GetFieldSqlType(I);
       ColumnType := FieldSqlType;
 
-      if FieldSqlType in [stBytes, stString, stUnicodeString] then
-      begin
-        MaxLenghtBytes := GetFieldLength(I);
-        if (FSqlData.GetIbSqlType(I) = SQL_TEXT) or ( FieldSQLType = stBytes ) then
+        if FieldSqlType in [stString, stUnicodeString] then
         begin
-          if not ( FieldSQLType = stBytes ) then
-            if ConSettings.ClientCodePage^.ID = CS_NONE then
-          else
-            ColumnDisplaySize := MaxLenghtBytes div ConSettings.ClientCodePage^.CharWidth;
-          Precision := MaxLenghtBytes;
-        end
-        else
-          if ConSettings.ClientCodePage^.ID = CS_NONE then
-            Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
-              FIBConnection.GetPlainDriver.ValidateCharEncoding(GetIbSqlSubType(I)).CharWidth, @ColumnDisplaySize, True)
-          else
-            Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
-              ConSettings.ClientCodePage^.CharWidth, @ColumnDisplaySize, True);
-      end;
+          ZCodePageInfo := FIBConnection.GetPlainDriver.ValidateCharEncoding(GetIbSqlSubType(I)); //get column CodePage info
+          Precision := GetFieldSize(ColumnType, ConSettings, GetIbSqlLen(I),
+            ZCodePageInfo^.CharWidth, @ColumnDisplaySize, True);
+        end;
+        if FieldSQLType = stBytes then
+          Precision := GetIbSqlLen(I);
 
-      ReadOnly := (GetFieldRelationName(I) = '') or (GetFieldSqlName(I) = '')
-        or (GetFieldSqlName(I) = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
+        ReadOnly := (TableName = '') or (ColumnName = '') or
+          (ColumnName = 'RDB$DB_KEY') or (FieldSqlType = ZDbcIntfs.stUnknown);
 
       if IsNullable(I) then
         Nullable := ntNullable
@@ -749,9 +739,7 @@ begin
         Nullable := ntNoNulls;
 
       Scale := GetFieldScale(I);
-      AutoIncrement := False;
-      //Signed := False;
-      //CaseSensitive := True;
+        CaseSensitive := UpperCase(ColumnName) <> ColumnName; //non quoted fields are uppercased by default
     end;
     ColumnsInfo.Add(ColumnInfo);
   end;

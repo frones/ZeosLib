@@ -703,12 +703,14 @@ begin
   begin
     ConnectionLost := (PlainDriver.GetStatus(Handle) = CONNECTION_BAD);
 
-    if Assigned(Connection) and Connection.GetAutoCommit
-                            and not ConnectionLost then
-      Connection.Rollback;
-
+    if Assigned(Connection) then begin
+      if Connection.GetAutoCommit and not ConnectionLost then Connection.Rollback;
     DriverManager.LogError(LogCategory, PlainDriver.GetProtocol, LogMessage,
       0, ErrorMessage);
+    end else begin
+      DriverManager.LogError(LogCategory, 'some PostgreSQL protocol', LogMessage,
+        0, ErrorMessage);
+    end;
 
     if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
 

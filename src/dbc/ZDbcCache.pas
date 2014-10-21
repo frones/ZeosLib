@@ -659,39 +659,6 @@ var
   Blob1, Blob2: IZBlob;
   BlobEmpty1, BlobEmpty2: Boolean;
   Bts1, Bts2: TByteDynArray;
-
-  function CompareFloat(Value1, Value2: Extended): Integer;
-  begin
-    Value1 := Value1 - Value2;
-    if Value1 > 0 then
-      Result := 1
-    else if Value1 < 0 then
-      Result := -1
-    else
-      Result := 0;
-  end;
-
-  function CompareBool(Value1, Value2: Boolean): Integer;
-  begin
-    if Value1 = Value2 then
-      Result := 0
-    else if Value1 then
-      Result := 1
-    else
-      Result := -1;
-  end;
-
-  function CompareInt64(Value1, Value2: Int64): Integer;
-  begin
-    Value1 := Value1 - Value2;
-    if Value1 > 0 then
-      Result := 1
-    else if Value1 < 0 then
-      Result := -1
-    else
-      Result := 0;
-  end;
-
 begin
   Result := 0;
   for I := Low(ColumnIndices) to High(ColumnIndices) do
@@ -720,23 +687,23 @@ begin
     ValuePtr2 := @Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1];
     case FColumnTypes[ColumnIndex] of
       stByte:
-        Result := PShortInt(ValuePtr1)^ - PShortInt(ValuePtr2)^;
+        Result := Ord((PByte(ValuePtr1)^ > PByte(ValuePtr2)^))-Ord((PByte(ValuePtr1)^ < PByte(ValuePtr2)^));
       stShort:
-        Result := PSmallInt(ValuePtr1)^ - PSmallInt(ValuePtr2)^;
+        Result := Ord((PShortInt(ValuePtr1)^ > PShortInt(ValuePtr2)^))-Ord((PShortInt(ValuePtr1)^ < PShortInt(ValuePtr2)^));
       stInteger:
-        Result := PInteger(ValuePtr1)^ - PInteger(ValuePtr2)^;
+        Result := Ord((PLongInt(ValuePtr1)^ > PLongInt(ValuePtr2)^))-Ord((PLongInt(ValuePtr1)^ < PLongInt(ValuePtr2)^));
       stLong:
-        Result := CompareInt64(PInt64(ValuePtr1)^, PInt64(ValuePtr2)^);
+        Result := Ord((PInt64(ValuePtr1)^ > PInt64(ValuePtr2)^))-Ord((PInt64(ValuePtr1)^ < PInt64(ValuePtr2)^));
       stFloat:
-        Result := CompareFloat(PSingle(ValuePtr1)^, PSingle(ValuePtr2)^);
+        Result := Ord((PSingle(ValuePtr1)^ > PSingle(ValuePtr2)^))-Ord((PSingle(ValuePtr1)^ < PSingle(ValuePtr2)^));
       stDouble:
-        Result := CompareFloat(PDouble(ValuePtr1)^, PDouble(ValuePtr2)^);
+        Result := Ord((PDouble(ValuePtr1)^ > PDouble(ValuePtr2)^))-Ord((PDouble(ValuePtr1)^ < PDouble(ValuePtr2)^));
       stBigDecimal:
-        Result := CompareFloat(PExtended(ValuePtr1)^, PExtended(ValuePtr2)^);
+        Result := Ord((PExtended(ValuePtr1)^ > PExtended(ValuePtr2)^))-Ord((PExtended(ValuePtr1)^ < PExtended(ValuePtr2)^));
       stBoolean:
-        Result := CompareBool(PWordBool(ValuePtr1)^, PWordBool(ValuePtr2)^);
+        Result := Ord((PWordBool(ValuePtr1)^ > PWordBool(ValuePtr2)^))-Ord((PWordBool(ValuePtr1)^ < PWordBool(ValuePtr2)^));
       stDate, stTime, stTimestamp:
-        Result := CompareFloat(PDateTime(ValuePtr1)^, PDateTime(ValuePtr2)^);
+        Result := Ord((PDateTime(ValuePtr1)^ > PDateTime(ValuePtr2)^))-Ord((PDateTime(ValuePtr1)^ < PDateTime(ValuePtr2)^));
       {$IFDEF UNICODE}
       stUnicodeString,stString:
         Result := WideCompareStr(PWideChar(ValuePtr1^), PWideChar(ValuePtr2^));
@@ -758,10 +725,8 @@ begin
       {$ENDIF}
       stBytes,stGUID:
         begin
-          Length1 := PSmallInt(@Buffer1.Columns[FColumnOffsets[ColumnIndex]
-            + 1 + SizeOf(Pointer)])^;
-          Length2 := PSmallInt(@Buffer2.Columns[FColumnOffsets[ColumnIndex]
-            + 1 + SizeOf(Pointer)])^;
+          Length1 := PSmallInt(@Buffer1.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
+          Length2 := PSmallInt(@Buffer2.Columns[FColumnOffsets[ColumnIndex] + 1 + SizeOf(Pointer)])^;
           Result := Length1 - Length2;
           if Result = 0 then
           begin

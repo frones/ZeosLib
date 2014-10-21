@@ -320,7 +320,7 @@ var
   I: Integer;
   CurrentVar: PZSQLVar;
 
-  procedure DisposeObject(Obj: POCIObject);
+  procedure DisposeObject(var Obj: POCIObject);
   var
     I: Integer;
   begin
@@ -337,7 +337,13 @@ var
       //CheckOracleError(PlainDriver, ErrorHandle, //debug
         PlainDriver.ObjectUnpin(Handle,ErrorHandle, CurrentVar^._Obj.tdo)
         ;//debug, lcOther, 'OCIObjectUnpin', ConSettings);
+    if (Obj.Level = 0) and assigned(Obj.tdo) then
+      {Free Object}
+      //debugCheckOracleError(PlainDriver, ErrorHandle,
+      PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar^._Obj.tdo, 0)
+      ;//debug, lcOther, 'OCIObjectFree', ConSettings);
     Dispose(Obj);
+    Obj := nil;
   end;
 
 begin
@@ -348,14 +354,7 @@ begin
     begin
       CurrentVar := @Variables.Variables[I];
       if Assigned(CurrentVar._Obj) then
-      begin
         DisposeObject(CurrentVar^._Obj);
-        {Free Object}
-        //debugCheckOracleError(PlainDriver, ErrorHandle,
-        PlainDriver.ObjectFree(Handle,ErrorHandle, CurrentVar^._Obj.tdo, 0)
-        ;//debug, lcOther, 'OCIObjectFree', ConSettings);
-        CurrentVar^._Obj := nil;
-      end;
       if CurrentVar.Data <> nil then
       begin
         if CurrentVar.TypeCode in [SQLT_BLOB, SQLT_CLOB, SQLT_BFILEE, SQLT_CFILEE] then
@@ -832,7 +831,7 @@ begin
   PlainDriver.AttrSet(Handle, OCI_HTYPE_STMT, @PrefetchCount, SizeOf(ub4),
     OCI_ATTR_PREFETCH_ROWS, ErrorHandle);
   Status := PlainDriver.StmtPrepare(Handle, ErrorHandle, PAnsiChar(SQL),
-    Length(SQL), OCI_NTV_SYNTAX, OCI_DEFAULT);
+    Length(SQL)+1, OCI_NTV_SYNTAX, OCI_DEFAULT);
   CheckOracleError(PlainDriver, ErrorHandle, Status, lcExecute, LogSQL);
 end;
 

@@ -229,12 +229,10 @@ begin
   inherited Create(Connection, Info);
   FPlainDriver := PlainDriver;
   ResultSetType := rtScrollInsensitive;
-
   { Processes connection properties. }
   FOidAsBlob := StrToBoolEx(Self.Info.Values['oidasblob'])
     or (Connection as IZPostgreSQLConnection).IsOidAsBlob;
 end;
-
 {**
   Destroys this object and cleanups the memory.
 }
@@ -1056,6 +1054,7 @@ begin
     else
       Result := Result + ZPlainString(Tokens[I]);
   end;
+  Tokens.Free;
 end;
 
 procedure TZPostgreSQLCAPIPreparedStatement.Prepare;
@@ -1102,10 +1101,10 @@ procedure TZPostgreSQLCAPIPreparedStatement.Unprepare;
 var
   TempSQL: String;
 begin
-  if Prepared and Assigned(FPostgreSQLConnection.GetConnectionHandle) then
+  if Prepared then
   begin
     inherited Unprepare;
-    if (not Findeterminate_datatype)  then
+    if Assigned(FPostgreSQLConnection.GetConnectionHandle) and (not Findeterminate_datatype)  then
     begin
       TempSQL := 'DEALLOCATE "'+FPlanName+'";';
       QueryHandle := ExectuteInternal(RawByteString(TempSQL), TempSQL, lcUnprepStmt);

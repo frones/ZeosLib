@@ -256,18 +256,17 @@ begin
   if SkipForReason(srClosedBug) then Exit;
 
   Query := CreateQuery;
-
   TextStream := TMemoryStream.Create();
-  TextStream.LoadFromFile('../../../database/text/gnu.txt');
-  TextStream.Position := 0;
-  TextStream.Size := 1024;
-
   BinaryStream := TMemoryStream.Create();
-  BinaryStream.LoadFromFile('../../../database/images/coffee.bmp');
-  BinaryStream.Position := 0;
-  BinaryStream.Size := 1024;
-
   try
+    TextStream.LoadFromFile('../../../database/text/gnu.txt');
+    TextStream.Position := 0;
+    TextStream.Size := 1024;
+
+    BinaryStream.LoadFromFile('../../../database/images/coffee.bmp');
+    BinaryStream.Position := 0;
+    BinaryStream.Size := 1024;
+
     { Remove previously created record }
     Query.SQL.Text := 'DELETE FROM people WHERE p_id=:id';
     Query.ParamByName('id').AsInteger := TEST_ROW_ID;
@@ -1782,7 +1781,8 @@ var
   StrStream1: TMemoryStream;
   SL: TStringList;
 begin
-  StrStream1 := nil;
+  StrStream1 := TMemoryStream.Create;
+  SL := TStringList.Create;
   Query := CreateQuery;
   try
     with Query do
@@ -1790,7 +1790,6 @@ begin
       SQL.Text := 'DELETE FROM people where p_id = ' + IntToStr(TEST_ROW_ID);
       ExecSQL;
       //bugreport of mrLion
-      SL := TStringList.Create;
 
       SQL.Text := 'INSERT INTO people(P_ID, P_NAME, P_RESUME)'+
         ' VALUES (:P_ID, :P_NAME, :P_RESUME)';
@@ -1798,10 +1797,7 @@ begin
       ParamByName('P_NAME').AsString := GetDBTestString(Str3, Connection.DbcConnection.GetConSettings);
       CheckEquals(3, Query.Params.Count, 'Param.Count');
       SL.Text := GetDBTestString(Str2, Connection.DbcConnection.GetConSettings);
-
-      StrStream1 := TMemoryStream.Create;
       SL.SaveToStream(StrStream1);
-      SL.Free;
       ParamByName('P_RESUME').LoadFromStream(StrStream1, ftMemo);
 
       try
@@ -1830,6 +1826,7 @@ begin
     end;
   finally
     Query.Free;
+    SL.Free;
     if Assigned(StrStream1) then
       StrStream1.Free;
   end;

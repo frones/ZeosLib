@@ -157,11 +157,6 @@ begin
   { load data to the stream }
   BinStream := TMemoryStream.Create;
   StrStream := TMemoryStream.Create;
-  BinStream.LoadFromFile('../../../database/images/dogs.jpg');
-  BinStream.Size := 512;
-  StrStream.LoadFromFile('../../../database/text/lgpl.txt');
-  StrStream.Size := 512;
-
   BinStream1 := nil;
   StrStream1 := nil;
 
@@ -169,6 +164,11 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
   try
+    BinStream.LoadFromFile('../../../database/images/dogs.jpg');
+    BinStream.Size := 512;
+    StrStream.LoadFromFile('../../../database/text/lgpl.txt');
+    StrStream.Size := 512;
+
     Statement.Execute('DELETE FROM BLOB_VALUES');
 
     ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES');

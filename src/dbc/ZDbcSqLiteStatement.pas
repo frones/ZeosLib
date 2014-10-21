@@ -680,8 +680,7 @@ begin
     CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcExecPrepStmt, SSQL);
     Result := FPlainDriver.Changes(FHandle);
   finally
-    FErrorCode := FPlainDriver.reset(FStmtHandle);
-    CheckSQLiteError(FPlainDriver, FStmtHandle, FErrorCode, nil, lcOther, 'Reset');
+    FErrorCode := FPlainDriver.reset(FStmtHandle); //no errorcheck!
     LastUpdateCount := Result;
   end;
   { Autocommit statement. }

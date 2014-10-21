@@ -122,6 +122,8 @@ type
     procedure PrintLn(_Message: string = ''); virtual;
 
     { Additional checking methods. }
+    procedure CheckEquals(const Expected: RawByteString; ActualValue: PAnsiChar;
+      ActualLen: PNativeUInt; _Message: string = ''); overload;
     procedure CheckEquals(Array1, Array2: TByteDynArray;
       _Message: string = ''); overload;
     procedure CheckEquals(Expected, Actual: String; ConSettings: PZConSettings;
@@ -176,6 +178,9 @@ uses
   LCLIntf,
 {$ELSE}
   Windows,
+{$ENDIF}
+{$IFDEF WITH_STRLEN_DEPRECATED}
+  AnsiStrings,
 {$ENDIF}
   SysUtils, ZSysUtils, ZTestConfig, Math, ZEncoding;
 
@@ -387,6 +392,20 @@ begin
 end;
 
 {**
+  Function compare two string-values. If values not equals raise exception.
+  @param the first string for compare
+  @param the second pointer to a !possible! null terminated string
+  @param the pointer to Length of second value
+}
+procedure TZAbstractTestCase.CheckEquals(const Expected: RawByteString;
+  ActualValue: PAnsiChar; ActualLen: PNativeUInt; _Message: string = '');
+var Actual: RawByteString;
+begin
+  ZSetString(ActualValue, ActualLen^, Actual);
+  CheckEquals(Expected, Actual, _Message);
+end;
+
+{**
   Function compare two arrays. If arrays not equals raise exception.
   @param the first array for compare
   @param the secon array for compare
@@ -546,13 +565,17 @@ end;
 procedure TZAbstractTestCase.CheckEquals(Expected, Actual: PAnsiChar;
   const Msg: string = '');
 begin
-  Check(MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+  Check(MemLCompAnsi(Expected, Actual, Max(
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
+  {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
 end;
 
 procedure TZAbstractTestCase.CheckNotEquals(Expected, Actual: PAnsiChar;
   const Msg: string = '');
 begin
-  Check(not MemLCompAnsi(Expected, Actual, Max(StrLen(Expected), StrLen(Actual))), Msg);
+  Check(not MemLCompAnsi(Expected, Actual, Max(
+    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Expected),
+    {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(Actual))), Msg);
 end;
 
 {$IFDEF FPC}
