@@ -487,17 +487,11 @@ type
     function clear_bindings(pStmt: Psqlite3_stmt): Integer;
     function column_count(pStmt: Psqlite3_stmt): Integer;
     function column_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
 
     function column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_database_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
     function column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_table_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
     function column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_origin_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-
     function column_decltype(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_decltype16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
 
     function Step(Stmt: Psqlite3_stmt): Integer;
     function data_count(pStmt: Psqlite3_stmt): Integer;
@@ -616,17 +610,11 @@ type
     function clear_bindings(pStmt: Psqlite3_stmt): Integer;
     function column_count(pStmt: Psqlite3_stmt): Integer;
     function column_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
 
     function column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_database_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
     function column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_table_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
     function column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_origin_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-
     function column_decltype(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
-    function column_decltype16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
 
     function Step(Stmt: Psqlite3_stmt): Integer;
     function data_count(pStmt: Psqlite3_stmt): Integer;
@@ -1032,49 +1020,33 @@ begin
   Result := SQLite_API.sqlite_column_name(pStmt, iCol);
 end;
 
-function TZSQLiteBaseDriver.column_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-begin
-  Result := SQLite_API.sqlite_column_name16(pStmt, iCol);
-end;
-
 function TZSQLiteBaseDriver.column_database_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
 begin
-  Result := SQLite_API.sqlite_column_database_name(pStmt, iCol);
-end;
-
-function TZSQLiteBaseDriver.column_database_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-begin
-  Result := SQLite_API.sqlite_column_database_name16(pStmt, iCol);
+  if Assigned(SQLite_API.sqlite_column_database_name) then
+    Result := SQLite_API.sqlite_column_database_name(pStmt, iCol)
+  else
+    Result := nil;
 end;
 
 function TZSQLiteBaseDriver.column_table_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
 begin
-  Result := SQLite_API.sqlite_column_table_name(pStmt, iCol);
-end;
-
-function TZSQLiteBaseDriver.column_table_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-begin
-  Result := SQLite_API.sqlite_column_table_name16(pStmt, iCol);
+  if Assigned(SQLite_API.sqlite_column_table_name) then
+    Result := SQLite_API.sqlite_column_table_name(pStmt, iCol)
+  else
+    Result := nil;
 end;
 
 function TZSQLiteBaseDriver.column_origin_name(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
 begin
-  Result := SQLite_API.sqlite_column_origin_name(pStmt, iCol);
-end;
-
-function TZSQLiteBaseDriver.column_origin_name16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-begin
-  Result := SQLite_API.sqlite_column_origin_name16(pStmt, iCol);
+  if Assigned(SQLite_API.sqlite_column_origin_name) then
+    Result := SQLite_API.sqlite_column_origin_name(pStmt, iCol)
+  else
+    Result := nil;
 end;
 
 function TZSQLiteBaseDriver.column_decltype(pStmt: Psqlite3_stmt; iCol: Integer): PAnsiChar;
 begin
   Result := SQLite_API.sqlite_column_decltype(pStmt, iCol);
-end;
-
-function TZSQLiteBaseDriver.column_decltype16(pStmt: Psqlite3_stmt; iCol: Integer): PWideChar;
-begin
-  Result := SQLite_API.sqlite_column_decltype16(pStmt, iCol);
 end;
 
 function TZSQLiteBaseDriver.Step(Stmt: Psqlite3_stmt): Integer;
