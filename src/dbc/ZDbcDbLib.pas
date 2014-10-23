@@ -450,6 +450,7 @@ begin
       ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
       ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
       ConSettings^.ClientCodePage^.CP := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
+      ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
       SetConvertFunctions(ConSettings);
     end;
     DetermineMSDateFormat;

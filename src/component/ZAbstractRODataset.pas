@@ -2194,7 +2194,7 @@ begin
   //not Unicode-Save since the AnsiString(AUnicodeString) cast.
   //Known issues: Simplified chinese or Persian f.e. have some equal UTF8
   //two/four byte sequense wich lead to data loss. So success is randomly!!
-  if Connection.AutoEncodeStrings then
+  if Connection.DbcConnection.AutoEncodeStrings then
   begin
     FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
     if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then

@@ -121,20 +121,42 @@ begin
     Query.ExecSQL;
     Query.SQL.Text := 'select n_id, s_nchar, s_nvarchar, s_char, s_varchar from national_char_values';
     Query.Open;
-    CheckEquals(Str3, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
-    CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
-    CheckEquals(Str3, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
-    CheckEquals(Str3, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
-    Query.Next;
-    CheckEquals(Str4, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
-    CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
-    CheckEquals(Str4, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
-    CheckEquals(Str4, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
-    Query.Next;
-    CheckEquals(Str5, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
-    CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
-    CheckEquals(Str5, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
-    CheckEquals(Str5, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+    {$IFNDEF UNICODE}
+    if Connection.ControlsCodePage = cCP_UTF8 then
+    begin
+      CheckEquals(UTF8Encode(Str3), Query.FieldByName('s_nchar').AsString, 's_nchar value');
+      CheckEquals(UTF8Encode(Str3), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar value');
+      CheckEquals(UTF8Encode(Str3), Query.FieldByName('s_char').AsString, 's_char value');
+      CheckEquals(UTF8Encode(Str3), Query.FieldByName('s_varchar').AsString, 's_varchar value');
+      Query.Next;
+      CheckEquals(UTF8Encode(Str4), Query.FieldByName('s_nchar').AsString, 's_nchar value');
+      CheckEquals(UTF8Encode(Str4), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar value');
+      CheckEquals(UTF8Encode(Str4), Query.FieldByName('s_char').AsString, 's_char value');
+      CheckEquals(UTF8Encode(Str4), Query.FieldByName('s_varchar').AsString, 's_varchar value');
+      Query.Next;
+      CheckEquals(UTF8Encode(Str5), Query.FieldByName('s_nchar').AsString, 's_nchar value');
+      CheckEquals(UTF8Encode(Str5), Query.FieldByName('s_nvarchar').AsString, 's_nvarchar value');
+      CheckEquals(UTF8Encode(Str5), Query.FieldByName('s_char').AsString, 's_char value');
+      CheckEquals(UTF8Encode(Str5), Query.FieldByName('s_varchar').AsString, 's_varchar value');
+    end
+    else
+    {$ENDIF}
+    begin
+      CheckEquals(Str3, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
+      CheckEquals(Str3, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
+      CheckEquals(Str3, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
+      CheckEquals(Str3, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+      Query.Next;
+      CheckEquals(Str4, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
+      CheckEquals(Str4, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
+      CheckEquals(Str4, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
+      CheckEquals(Str4, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+      Query.Next;
+      CheckEquals(Str5, Query.FieldByName('s_nchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nchar value');
+      CheckEquals(Str5, Query.FieldByName('s_nvarchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_nvarchar value');
+      CheckEquals(Str5, Query.FieldByName('s_char').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_char value');
+      CheckEquals(Str5, Query.FieldByName('s_varchar').{$IFDEF WITH_FTWIDESTRING}AsWideString{$ELSE}AsString{$ENDIF}, 's_varchar value');
+    end;
   finally
     Query.Properties.Values['ValidateUpdateCount'] := '-1';
     Query.SQL.Text := 'delete from national_char_values';
