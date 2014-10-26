@@ -62,7 +62,6 @@ type
   {** Represents a generic interface to plain driver. }
   IZPlainDriver = interface (IZInterface)
     ['{2A0CC600-B3C4-43AF-92F5-C22A3BB1BB7D}']
-    function IsAnsiDriver: Boolean;
     function GetProtocol: string;
     function GetDescription: string;
     {EgonHugeist:
@@ -88,7 +87,6 @@ type
     FCodePages: array of TZCodePage;
     FLoader: TZNativeLibraryLoader;
     procedure LoadApi; virtual;
-    function IsAnsiDriver: Boolean; virtual;
     function Clone: IZPlainDriver; reintroduce; virtual; abstract;
     procedure LoadCodePages; virtual; abstract;
     function GetUnicodeCodePageName: String; virtual;
@@ -127,11 +125,6 @@ uses SysUtils, ZEncoding{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 
 {TZAbstractPlainDriver}
-
-function TZAbstractPlainDriver.IsAnsiDriver: Boolean;
-begin
-  Result := True;
-end;
 
 function TZAbstractPlainDriver.GetUnicodeCodePageName: String;
 begin

@@ -673,7 +673,7 @@ begin
     {$IFDEF UNICODE}
     Result := USASCII7ToUnicodeString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1));
     {$ELSE}
-    ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Result);
+    ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Result{%H-});
     {$ENDIF}
   GetPlainDriver.dbCancel(FHandle);
 end;

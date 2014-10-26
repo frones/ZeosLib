@@ -298,7 +298,7 @@ type
 
     property ResultSet: IZResultSet read FResultSet write FResultSet;
   public
-    constructor Create(ResultSet: IZResultSet; SQL: string;
+    constructor Create(ResultSet: IZResultSet; const SQL: string;
       Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
     procedure Close; override;
@@ -2251,7 +2251,7 @@ end;
   @param ResultSet a wrapped resultset object.
   @param Resolver a cached updates resolver object.
 }
-constructor TZCachedResultSet.Create(ResultSet: IZResultSet; SQL: string;
+constructor TZCachedResultSet.Create(ResultSet: IZResultSet; const SQL: string;
   Resolver: IZCachedResolver; ConSettings: PZConSettings);
 begin
   inherited Create(ResultSet.GetStatement, SQL, nil, ConSettings);
@@ -2260,7 +2260,7 @@ begin
   {BEGIN PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
   FNativeResolver := Resolver;
   {END PATCH [1214009] CalcDefaults in TZUpdateSQL and Added Methods to GET the DB NativeResolver}
-  if Statement.GetConnection.GetIZPlainDriver.IsAnsiDriver and
+  if (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) and
     ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
       FStringFieldAssignFromResultSet := ZStringFieldAssignFromResultSet_AnsiRec
     else

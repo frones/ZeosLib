@@ -89,7 +89,6 @@ type
     FClosed: Boolean;
     FWSQL: ZWideString;
     FaSQL: RawByteString;
-    FIsAnsiDriver: Boolean;
     FCachedLob: Boolean;
     procedure SetLastResultSet(ResultSet: IZResultSet); virtual;
   protected
@@ -127,7 +126,6 @@ type
     property WSQL: ZWideString read FWSQL write SetWSQL;
     property ASQL: RawByteString read FaSQL write SetASQL;
     property ChunkSize: Integer read FChunkSize;
-    property IsAnsiDriver: Boolean read FIsAnsiDriver;
     property CachedLob: Boolean read FCachedLob;
     function CreateStmtLogEvent(Category: TZLoggingCategory;
       const Msg: RawByteString=''): TZLoggingEvent;
@@ -485,7 +483,6 @@ begin
   if Info <> nil then
     FInfo.AddStrings(Info);
   FChunkSize := StrToIntDef(DefineStatementParameter(Self, 'chunk_size', '4096'), 4096);
-  FIsAnsiDriver := Connection.GetIZPlainDriver.IsAnsiDriver;
   FCachedLob := StrToBoolEx(DefineStatementParameter(Self, 'cachedlob', 'false'));
   FStatementId := Self.GetNextStatementId;
 end;
@@ -512,7 +509,7 @@ procedure TZAbstractStatement.SetWSQL(const Value: ZWideString);
 begin
   if FWSQL <> Value then
     {$IFDEF UNICODE}
-    if FConnection.GetIZPlainDriver.IsAnsiDriver then
+    if not (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
       FASQL := GetRawEncodedSQL(Value)
     else
       if ConSettings^.AutoEncode then
@@ -536,7 +533,7 @@ begin
     FWSQL := ConSettings^.ConvFuncs.ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP); //required for the resultsets
     {$ELSE !UNICODE}
     FASQL := GetRawEncodedSQL(Value);
-    if not FConnection.GetIZPlainDriver.IsAnsiDriver then
+    if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
       FWSQL := ZRawToUnicode(FASQL, ConSettings^.ClientCodePage^.CP);
     {$ENDIF UNICODE}
   end;
@@ -3384,10 +3381,10 @@ end;
 }
 function TZEmulatedPreparedStatement.ExecutePrepared: Boolean;
 begin
-  if IsAnsiDriver then
-    Result := Execute(PrepareAnsiSQLQuery)
+  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
+    Result := Execute(PrepareWideSQLQuery)
   else
-    Result := Execute(PrepareWideSQLQuery);
+    Result := Execute(PrepareAnsiSQLQuery);
 end;
 
 function TZEmulatedPreparedStatement.CreateLogEvent(
@@ -3405,10 +3402,10 @@ end;
 }
 function TZEmulatedPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
-  if IsAnsiDriver then
-    Result := ExecuteQuery(PrepareAnsiSQLQuery)
+  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
+    Result := ExecuteQuery(PrepareWideSQLQuery)
   else
-    Result := ExecuteQuery(PrepareWideSQLQuery);
+    Result := ExecuteQuery(PrepareAnsiSQLQuery)
 end;
 
 {**
@@ -3423,10 +3420,10 @@ end;
 }
 function TZEmulatedPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
-  if IsAnsiDriver then
-    Result := ExecuteUpdate(PrepareAnsiSQLQuery)
+  if ConSettings^.ClientCodePage^.Encoding = ceUTF16 then
+    Result := ExecuteUpdate(PrepareWideSQLQuery)
   else
-    Result := ExecuteUpdate(PrepareWideSQLQuery);
+    Result := ExecuteUpdate(PrepareAnsiSQLQuery);
 end;
 
 end.

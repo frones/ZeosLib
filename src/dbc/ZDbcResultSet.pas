@@ -117,7 +117,7 @@ type
     property Metadata: TContainedObject read FMetadata write FMetadata;
 
   public
-    constructor Create(Statement: IZStatement; SQL: string;
+    constructor Create(Statement: IZStatement; const SQL: string;
       Metadata: TContainedObject; ConSettings: PZConSettings);
     destructor Destroy; override;
 
@@ -640,7 +640,7 @@ end;
   @param Metadata a resultset metadata object.
   @param ConSettings the pointer to Connection Settings record
 }
-constructor TZAbstractResultSet.Create(Statement: IZStatement; SQL: string;
+constructor TZAbstractResultSet.Create(Statement: IZStatement; const SQL: string;
   Metadata: TContainedObject; ConSettings: PZConSettings);
 var
   DatabaseMetadata: IZDatabaseMetadata;

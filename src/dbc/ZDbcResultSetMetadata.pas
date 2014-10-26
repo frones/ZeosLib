@@ -682,7 +682,7 @@ begin
     if FConSettings^.ClientCodePage^.IsStringFieldCPConsistent then //all except ADO and DBLib (currently)
       ColumnInfo.ColumnCodePage := FConSettings^.ClientCodePage^.CP
     else
-      if ResultSet.GetStatement.GetConnection.GetIZPlainDriver.IsAnsiDriver then //this excludes ADO which is allways 2Byte-String based
+      if FConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTf8] then //this excludes ADO which is allways 2Byte-String based
         if (UpperCase(TableColumns.GetString(SQLTypeNameIndex)) = 'NVARCHAR') or
            (UpperCase(TableColumns.GetString(SQLTypeNameIndex)) = 'NCHAR') then
           ColumnInfo.ColumnCodePage := zCP_UTF8
