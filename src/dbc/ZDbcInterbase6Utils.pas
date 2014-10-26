@@ -225,8 +225,10 @@ function CheckInterbase6Error(const PlainDriver: IZInterbasePlainDriver;
   SQL: RawByteString = '') : Integer;
 
 { Interbase information functions}
-function GetVersion(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): String;
+function GetISC_StringInfo(const PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): String;
+function GetFB_ISC_IntegerInfo(const PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): LongInt;
 function GetDBImplementationNo(const PlainDriver: IZInterbasePlainDriver;
   const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): LongInt;
 function GetDBImplementationClass(const PlainDriver: IZInterbasePlainDriver;
@@ -1423,21 +1425,48 @@ end;
    Return interbase server version string
    @param PlainDriver a interbase plain driver
    @param Handle the database connection handle
-   @return interbase version string
+   @param isc_info a ISC_INFO_XXX number
+   @param ConSettings then PZConSettings of active connection
+   @return ISC_INFO string
 }
-function GetVersion(const PlainDriver: IZInterbasePlainDriver;
-  const Handle: PISC_DB_HANDLE; const ConSettings: PZConSettings): String;
+function GetISC_StringInfo(const PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): String;
 var
-  DatabaseInfoCommand: AnsiChar;
   StatusVector: TARRAY_ISC_STATUS;
   Buffer: array[0..IBBigLocalBufferLength - 1] of AnsiChar;
 begin
-  DatabaseInfoCommand := AnsiChar(isc_info_version);
-  PlainDriver.isc_database_info(@StatusVector, Handle, 1, @DatabaseInfoCommand,
+  PlainDriver.isc_database_info(@StatusVector, Handle, 1, @isc_info,
     IBBigLocalBufferLength, Buffer);
   CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
-  Buffer[5 + Integer(Buffer[4])] := #0;
-  result := ConSettings^.ConvFuncs.ZRawToString(PAnsiChar(@Buffer[5]), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+  {$IFDEF UNICODE}
+  Result := PRawToUnicode(PAnsiChar(@Buffer[5]),Integer(Buffer[4]), ConSettings^.ClientCodePage^.CP);
+  {$ELSE}
+  SetString(Result, PAnsiChar(@Buffer[5]),Integer(Buffer[4]));
+  {$ENDIF}
+  //Buffer[5 + Integer(Buffer[4])] := #0;
+  //result := ConSettings^.ConvFuncs.ZRawToString(PAnsiChar(@Buffer[5]), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
+end;
+
+{**
+   Return interbase server version string
+   @param PlainDriver a interbase plain driver
+   @param Handle the database connection handle
+   @param isc_info a ISC_INFO_XXX number
+   @param ConSettings then PZConSettings of active connection
+   @return ISC_INFO Integer
+}
+function GetFB_ISC_IntegerInfo(const PlainDriver: IZInterbasePlainDriver;
+  Handle: PISC_DB_HANDLE; isc_info: Byte; ConSettings: PZConSettings): LongInt;
+var
+  StatusVector: TARRAY_ISC_STATUS;
+  Buffer: array[0..63] of AnsiChar;
+  Len: Integer;
+begin
+  PlainDriver.isc_database_info(@StatusVector, Handle, 1, @isc_info,
+    IBLocalBufferLength, Buffer);
+  CheckInterbase6Error(PlainDriver, StatusVector, ConSettings);
+  Len := Integer(PlainDriver.isc_portable_integer(@Buffer[1], 2));
+  Result := Integer(PlainDriver.isc_portable_integer(@Buffer[3], Smallint(Len)));
 end;
 
 {**
