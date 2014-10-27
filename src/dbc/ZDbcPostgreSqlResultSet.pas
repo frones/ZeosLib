@@ -89,6 +89,7 @@ type
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -408,6 +409,41 @@ end;
 function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
   Result := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>''</code>, the
+    value returned is <code>null</code>
+}
+function TZPostgreSQLResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+var
+  P: PAnsiChar;
+  L: NativeUInt;
+  WS: ZWideString;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  P := GetBuffer(ColumnIndex, L);
+  if LastWasNull then
+    Result := ''
+  else
+    if (ConSettings^.ClientCodePage.CP = zCP_UTF8) or FBinaryFields[ColumnIndex] then
+      ZSetString(P, L, Result)
+    else
+    begin
+      WS := PRawToUnicode(P, L, ConSettings^.ClientCodePage.CP);
+      {$IFDEF WITH_RAWBYTESTRING}
+      Result := UTF8String(WS);
+      {$ELSE}
+      Result := ZUnicodeToRaw(WS, zCP_UTF8);
+      {$ENDIF}
+    end;
 end;
 
 {**
