@@ -392,6 +392,7 @@ type
   {** Implements a real Prepared Callable SQL Statement. }
   TZAbstractPreparedCallableStatement = CLass(TZAbstractCallableStatement)
   protected
+    FProcSQL: RawByteString;
     procedure SetProcSQL(const Value: RawByteString); override;
   public
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
