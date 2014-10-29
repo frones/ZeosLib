@@ -99,11 +99,13 @@ type
     FTrHandle: TISC_TR_HANDLE;
     FStatusVector: TARRAY_ISC_STATUS;
     FHardCommit: boolean;
+    FHostVersion: Integer;
   private
     procedure StartTransaction; virtual;
   protected
     procedure InternalCreate; override;
   public
+    function GetHostVersion: Integer; override;
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
@@ -390,6 +392,19 @@ begin
 end;
 
 {**
+  Gets the host's full version number. Initially this should be 0.
+  The format of the version returned must be XYYYZZZ where
+   X   = Major version
+   YYY = Minor version
+   ZZZ = Sub version
+  @return this server's full version number
+}
+function TZInterbase6Connection.GetHostVersion: Integer;
+begin
+  Result := FHostVersion;
+end;
+
+{**
    Get database connection handle.
    @return database handle
 }
@@ -438,6 +453,8 @@ var
   FDPBLength: Word;
   DBName: array[0..512] of AnsiChar;
   NewDB: RawByteString;
+  tmp: String;
+  i: Integer;
 begin
   if not Closed then
      Exit;
@@ -483,7 +500,11 @@ begin
       { Check connection error }
       CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
     end;
-
+    (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
+    tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
+    I := ZFastCode.Pos('.', tmp);
+    FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000+
+      StrToInt(Copy(tmp, i+1, Length(tmp)))*100000;
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
@@ -654,7 +675,7 @@ end;
   We check if the error returned is one of the net_* errors described in the
   firebird client documentation (335544721 .. 335544727).
   Returns 0 if the connection is OK
-  Returns non zeor if the connection is not OK
+  Returns non zero if the connection is not OK
 }
 function TZInterbase6Connection.PingServer: integer;
 var

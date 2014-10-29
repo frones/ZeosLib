@@ -97,6 +97,7 @@ type
   {** Represents a generic interface to MySQL native API. }
   IZMySQLPlainDriver = interface (IZPlainDriver)
     ['{D1CB3F6C-72A1-4125-873F-791202ACC5F0}']
+    function IsMariaDBDriver: Boolean;
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer;
     function GetServerVersion(Handle: PZMySQLConnect): Integer;
@@ -235,6 +236,7 @@ type
 
   TZMySQLBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZMySQLPlainDriver)
   private
+    FIsMariaDBDriver: Boolean;
     { ************** Plain API Function types definition ************* }
     { Functions to get information from the MYSQL and MYSQL_RES structures
       Should definitely be used if one uses shared libraries. }
@@ -363,6 +365,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
+    function IsMariaDBDriver: Boolean;
     procedure Debug(Debug: PAnsiChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
     function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
@@ -550,7 +553,7 @@ type
 
 implementation
 
-uses SysUtils, ZPlainLoader, ZEncoding
+uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 { TZMySQLPlainBaseDriver }
@@ -783,6 +786,11 @@ begin
   inherited Destroy;
 end;
 
+function TZMySQLBaseDriver.IsMariaDBDriver: Boolean;
+begin
+  Result := FIsMariaDBDriver;
+end;
+
 procedure TZMySQLBaseDriver.Close(Handle: PZMySQLConnect);
 begin
   mysql_close(Handle);
@@ -973,10 +981,16 @@ begin
 end;
 
 function TZMySQLBaseDriver.Init(const Handle: PZMySQLConnect): PZMySQLConnect;
+var
+  ClientInfo: PAnsiChar;
+  L: LengthInt;
 begin
   if @mysql_server_init <> nil then
     mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
   Result := mysql_init(Handle);
+  ClientInfo := GetClientInfo;
+  L := ZFastCode.StrLen(ClientInfo);
+  FIsMariaDBDriver := CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
 end;
 
 function TZMySQLBaseDriver.GetLastInsertID(Handle: PZMySQLConnect): Int64;
@@ -1258,7 +1272,18 @@ begin
                      result.size          := Sizeof(MYSQL_BIND60);
                    end;
   else
-    result.buffer_type:=0;
+    if FIsMariaDBDriver and (DriverVersion >= 100000) then //MariaDB 10
+    begin
+      result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer_type));
+      result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer_length));
+      result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND60(nil).is_unsigned));
+      result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer));
+      result.length        := {%H-}NativeUint(@(PMYSQL_BIND60(nil).length));
+      result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND60(nil).is_null));
+      result.size          := Sizeof(MYSQL_BIND60);
+    end
+    else
+      result.buffer_type:=0;
   end;
 end;
 

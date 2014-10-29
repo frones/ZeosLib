@@ -186,7 +186,7 @@ type
     FNewRowBuffer: PZRowBuffer;
     FCurrentRows: TZSortedList;
     FFetchCount: Integer;
-    FFieldsLookupTable: TIntegerDynArray;
+    FFieldsLookupTable: TPointerDynArray;
     FRowsAffected: Integer;
 
     FFilterEnabled: Boolean;
@@ -335,7 +335,7 @@ type
     property NewRowBuffer: PZRowBuffer read FNewRowBuffer write FNewRowBuffer;
     property CurrentRows: TZSortedList read FCurrentRows write FCurrentRows;
     property FetchCount: Integer read FFetchCount write FFetchCount;
-    property FieldsLookupTable: TIntegerDynArray read FFieldsLookupTable
+    property FieldsLookupTable: TPointerDynArray read FFieldsLookupTable
       write FFieldsLookupTable;
 
     property FilterEnabled: Boolean read FFilterEnabled write FFilterEnabled;
@@ -2194,7 +2194,7 @@ begin
   //not Unicode-Save since the AnsiString(AUnicodeString) cast.
   //Known issues: Simplified chinese or Persian f.e. have some equal UTF8
   //two/four byte sequense wich lead to data loss. So success is randomly!!
-  if Connection.AutoEncodeStrings then
+  if Connection.DbcConnection.AutoEncodeStrings then
   begin
     FStringFieldSetter := StringFieldSetterFromRawAutoEncode;
     if Connection.DbcConnection.GetConSettings.CPType = cCP_UTF8 then
@@ -3373,8 +3373,11 @@ begin
     finally
       ColumnList.Free;
     end;
-    FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
-    FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+    if not IsUnidirectional then
+    begin
+      FOldRowBuffer := PZRowBuffer(AllocRecordBuffer);
+      FNewRowBuffer := PZRowBuffer(AllocRecordBuffer);
+    end;
 
     SetStringFieldSetterAndSetter;
 

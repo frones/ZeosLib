@@ -103,7 +103,7 @@ type
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
     function GetDriverMinorVersion: Integer; override;
-    function GetServerVersion: string;
+    function GetServerVersion: string; override;
     function HasMinimumServerVersion(MajorVersion: Integer;
       MinorVersion: Integer): Boolean; // was TZPostgreSQLDatabaseMetadata.HaveMinimumServerVersion
 

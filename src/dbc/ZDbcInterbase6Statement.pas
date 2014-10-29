@@ -100,10 +100,9 @@ type
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
   TZInterbase6Statement = class(TZInterbase6PreparedStatement);
-type
+
   TZInterbase6CallableStatement = class(TZAbstractPreparedCallableStatement)
   private
-    FProcSQL: RawByteString;
     FParamSQLData: IZParamsSQLDA;
     FResultXSQLDA: IZSQLDA;
     FIBConnection: IZInterbase6Connection;
@@ -630,7 +629,6 @@ end;
     query; never <code>null</code>
 }
 function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
-label JmpExit;
 begin
   Result := nil;
   Prepare(True);
@@ -644,7 +642,6 @@ begin
       Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
         FResultXSQLDA, CachedLob, FStatementType);
   end;
-  JmpExit:
 end;
 
 {**
