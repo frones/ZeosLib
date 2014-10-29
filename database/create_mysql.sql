@@ -408,6 +408,12 @@ BEGIN
   RETURN 10;
 END;//
 
+CREATE PROCEDURE TwoResultSets()
+BEGIN
+  SELECT * FROM PEOPLE;
+  SELECT * FROM string_values;
+END;//
+
 DELIMITER ;
 
 /*==============================================================*/

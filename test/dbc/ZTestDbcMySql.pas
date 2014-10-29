@@ -74,6 +74,7 @@ type
     procedure TestStatement;
     procedure TestAutoIncFields;
     procedure TestDefaultValues;
+    procedure TestSelectMultipleQueries;
   end;
 
 
@@ -309,6 +310,29 @@ begin
 
   ResultSet.Close;
   Statement.Close;
+end;
+
+procedure TZTestDbcMySQLCase.TestSelectMultipleQueries;
+const
+  c_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  c_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
 end;
 
 initialization
