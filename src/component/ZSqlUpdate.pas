@@ -261,7 +261,11 @@ begin
   FInsertSQL.Free;
   FModifySQL.Free;
   FRefreshSQL.Free;
-  
+  {keep track we notify a possible opened DataSet.CachedResultSet about destruction
+   else IntfAssign of FPC fails to clear the cached resolver of the CachedResultSet}
+  if Assigned(FDataSet) and (FDataSet is TZAbstractDataset) then
+    TZAbstractDataset(DataSet).UpdateObject := nil;
+
   inherited Destroy;
 end;
 
