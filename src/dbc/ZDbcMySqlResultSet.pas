@@ -936,7 +936,7 @@ begin
       Break;
 
     ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
-     FieldHandle, GetStatement.GetConnection.GetConSettings, FUseResult);
+     FieldHandle, ConSettings, FUseResult);
 
     ColumnsInfo.Add(ColumnInfo);
 
