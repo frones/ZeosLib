@@ -57,13 +57,47 @@ interface
 {$I ZDbc.inc}
 uses
   Classes, {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, ZDbcIntfs, ZDbcInterbase6, ZSqlTestCase,
-  ZCompatibility, DateUtils, Math;
+  ZCompatibility, DateUtils, Math, Types;
 
 type
 
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcInterbaseCase = class(TZAbstractDbcSQLTestCase)
   private
+    hl_idArray: TIntegerDynArray;
+    stBooleanArray: TBooleanDynArray;
+    stByteArray: TByteDynArray;
+    stShortArray: TShortIntDynArray;
+    stLongArray: TInt64DynArray;
+    stIntegerArray: TIntegerDynArray;
+    stFloatArray: TSingleDynArray;
+    stDoubleArray: TDoubleDynArray;
+    stBigDecimalArray: TExtendedDynArray;
+    stStringArray: TRawByteStringDynArray;
+    stUnicodeStringArray: TUnicodeStringDynArray;
+    stBytesArray: TBytesDynArray;
+    stDateArray: TDateTimeDynArray;
+    stTimeArray: TDateTimeDynArray;
+    stTimeStampArray: TDateTimeDynArray;
+    stGUIDArray: TGUIDDynArray;
+    stAsciiStreamArray: TZCharRecDynArray;
+    stUnicodeStreamArray: TUTF8StringDynArray;
+    stBinaryStreamArray: TInterfaceDynArray;
+    stBooleanNullArray: array of TBooleanDynArray;
+    stByteNullArray: array of TByteDynArray;
+    stShortNullArray: array of TShortIntDynArray;
+    stWordNullArray: array of TWordDynArray;
+    stSmallNullArray: array of TSmallIntDynArray;
+    stLongWordNullArray: array of TLongWordDynArray;
+    stIntegerNullArray: array of TIntegerDynArray;
+    stULongNullArray: array of TUInt64DynArray;
+    stLongNullArray: array of TInt64DynArray;
+    stFloatNullArray: array of TSingleDynArray;
+    stDoubleNullArray: array of TDoubleDynArray;
+    stCurrencyNullArray: array of TCurrencyDynArray;
+    stBigDecimalNullArray: array of TExtendedDynArray;
+    stStringNullArray: array of TRawByteStringDynArray;
+    stUnicodeStringNullArray: array of TUnicodeStringDynArray;
   protected
     function GetSupportedProtocols: string; override;
     procedure InternalTestArrayBinding(PStatement: IZPreparedStatement;
@@ -85,7 +119,7 @@ type
 
 implementation
 
-uses SysUtils, Types, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant;
+uses SysUtils, ZTestConsts, ZTestCase, ZDbcResultSet, ZVariant;
 
 { TZTestDbcInterbaseCase }
 
@@ -98,9 +132,6 @@ begin
   Result := pl_all_interbase;
 end;
 
-{$WARNINGS OFF}
-procedure TZTestDbcInterbaseCase.InternalTestArrayBinding(
-  PStatement: IZPreparedStatement; FirstID, ArrayLen: Integer);
 const
   hl_id_Index           = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   stBooleanArray_Index  = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
@@ -121,41 +152,10 @@ const
   stAsciiStream_Index   = {$IFDEF GENERIC_INDEX}16{$ELSE}17{$ENDIF};
   stUnicodeStream_Index = {$IFDEF GENERIC_INDEX}17{$ELSE}18{$ENDIF};
   stBinaryStream_Index  = {$IFDEF GENERIC_INDEX}18{$ELSE}19{$ENDIF};
+{$WARNINGS OFF}
+procedure TZTestDbcInterbaseCase.InternalTestArrayBinding(
+  PStatement: IZPreparedStatement; FirstID, ArrayLen: Integer);
 var
-  hl_idArray: TIntegerDynArray;
-  stBooleanArray: TBooleanDynArray;
-  stByteArray: TByteDynArray;
-  stShortArray: TShortIntDynArray;
-  stLongArray: TInt64DynArray;
-  stIntegerArray: TIntegerDynArray;
-  stFloatArray: TSingleDynArray;
-  stDoubleArray: TDoubleDynArray;
-  stBigDecimalArray: TExtendedDynArray;
-  stStringArray: TRawByteStringDynArray;
-  stUnicodeStringArray: TUnicodeStringDynArray;
-  stBytesArray: TBytesDynArray;
-  stDateArray: TDateTimeDynArray;
-  stTimeArray: TDateTimeDynArray;
-  stTimeStampArray: TDateTimeDynArray;
-  stGUIDArray: TGUIDDynArray;
-  stAsciiStreamArray: TZCharRecDynArray;
-  stUnicodeStreamArray: TUTF8StringDynArray;
-  stBinaryStreamArray: TInterfaceDynArray;
-  stBooleanNullArray: array of TBooleanDynArray;
-  stByteNullArray: array of TByteDynArray;
-  stShortNullArray: array of TShortIntDynArray;
-  stWordNullArray: array of TWordDynArray;
-  stSmallNullArray: array of TSmallIntDynArray;
-  stLongWordNullArray: array of TLongWordDynArray;
-  stIntegerNullArray: array of TIntegerDynArray;
-  stULongNullArray: array of TUInt64DynArray;
-  stLongNullArray: array of TInt64DynArray;
-  stFloatNullArray: array of TSingleDynArray;
-  stDoubleNullArray: array of TDoubleDynArray;
-  stCurrencyNullArray: array of TCurrencyDynArray;
-  stBigDecimalNullArray: array of TExtendedDynArray;
-  stStringNullArray: array of TRawByteStringDynArray;
-  stUnicodeStringNullArray: array of TUnicodeStringDynArray;
   I, J: Integer;
 
   procedure PrepareSomeData;
@@ -938,10 +938,31 @@ begin
   InternalTestArrayBinding(PStatement, 50, 20);
   InternalTestArrayBinding(PStatement, 70, 10);
   PStatement.ClearParameters;
+  PStatement.SetInt(hl_id_Index, 81);
+  PStatement.SetBoolean(stBooleanArray_Index, stBooleanArray[Random(9)]);
+  PStatement.SetByte(stByte_Index, stByteArray[Random(9)]);
+  PStatement.SetShort(stShort_Index, stShortArray[Random(9)]);
+  PStatement.SetInt(stInteger_Index, stIntegerArray[Random(9)]);
+  PStatement.SetLong(stLong_Index, stLongArray[Random(9)]);
+  PStatement.SetFloat(stFloat_Index, stFloatArray[Random(9)]);
+  PStatement.SetDouble(stDouble_Index, stDoubleArray[Random(9)]);
+  PStatement.SetBigDecimal(stBigDecimal_Index, stBigDecimalArray[Random(9)]);
+  PStatement.SetRawByteString(stString_Index, stStringArray[Random(9)]);
+  PStatement.SetUnicodeString(stUnicode_Index, stUnicodeStringArray[Random(9)]);
+  PStatement.SetBytes(stBytes_Index, stBytesArray[Random(9)]);
+  PStatement.SetDate(stDate_Index, stDateArray[Random(9)]);
+  PStatement.SetTime(stTime_Index, stTimeArray[Random(9)]);
+  PStatement.SetTimestamp(stTimeStamp_Index, stTimeStampArray[Random(9)]);
+  PStatement.SetNull(stGUID_Index, stString);
+  PStatement.SetCharRec(stAsciiStream_Index, stAsciiStreamArray[Random(9)]);
+  PStatement.SetUTF8String(stUnicodeStream_Index, stUnicodeStreamArray[Random(9)]);
+  PStatement.SetBlob(stBinaryStream_Index, stBinaryStream, stBinaryStreamArray[Random(9)] as IZBlob);
+  PStatement.ExecuteUpdatePrepared;
+  PStatement.ClearParameters;
   with PStatement.ExecuteQuery('select Count(*) from high_load') do
   begin
     Next;
-    CheckEquals(80, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
+    CheckEquals(81, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
   end;
 end;
 {$WARNINGS ON} //implizit string conversion of...

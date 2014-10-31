@@ -74,7 +74,7 @@ type
     FCodePageArray: TWordDynArray;
     FStatusVector: TARRAY_ISC_STATUS;
     FStmtHandle: TISC_STMT_HANDLE;
-    FStatementType: TZIbSqlStatementType;
+    FInitialStatementType, FStatementType: TZIbSqlStatementType;
     FMemPerRow, FArrayOffSet: Integer;
     FPreparedRowsOfArray: Integer;
     FTypeTokens: TRawByteStringDynArray;
@@ -291,6 +291,7 @@ begin
   if (not Prepared)  then
   begin
     FStatementType := InternalPrepare(ASQL, ArrayCount > 0);
+    FInitialStatementType := FStatementType;
     if (FStatementType in [stInsert, stUpdate, stDelete]) and (ArrayCount > 0) and (FStmtHandle <> 0) then
       PrepareArray(ArrayCount);
     CheckInterbase6Error(ASQL);
@@ -302,7 +303,15 @@ begin
       PrepareArray(ArrayCount-FArrayOffSet);
       CheckInterbase6Error(ASQL);
       inherited Prepare;
-    end;
+    end
+    else
+      if FInitialStatementType <> FStatementType then
+      begin
+        FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE);
+        FPreparedRowsOfArray := 0;
+        FStatementType := InternalPrepare(ASQL, False);
+        inherited Prepare; //log action and prepare params
+      end;
 end;
 
 procedure TZInterbase6PreparedStatement.Unprepare;
