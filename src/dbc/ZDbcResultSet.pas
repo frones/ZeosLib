@@ -1589,7 +1589,7 @@ begin
       Result := EncodeBytes(GetBytes(ColumnIndex));
     stString, stAsciiStream, stUnicodeString, stUnicodeStream:
       if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-          (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+         (ConSettings^.ClientCodePage^.Encoding in [ceUTf8, ceUTF16]) then
         Result := EncodeUnicodeString(GetUnicodeString(ColumnIndex))
       else
         Result := EncodeRawByteString(GetRawByteString(ColumnIndex));
@@ -3888,7 +3888,7 @@ begin
             Result[i] := CompareBytes_Asc;
           stString, stAsciiStream, stUnicodeString, stUnicodeStream:
             if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-                (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+                (ConSettings^.ClientCodePage^.Encoding in [ceUTf8, ceUTF16]) then
               Result[i] := CompareUnicodeString_Asc
             else
               Result[I] := CompareRawByteString_Asc
@@ -3911,7 +3911,7 @@ begin
             Result[i] := CompareBytes_Desc;
           stString, stAsciiStream, stUnicodeString, stUnicodeStream:
             if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
-                (ConSettings^.ClientCodePage^.CP = zCP_UTF8) then
+                (ConSettings^.ClientCodePage^.Encoding in [ceUTf8, ceUTF16]) then
               Result[i] := CompareUnicodeString_Desc
             else
               Result[I] := CompareRawByteString_Desc

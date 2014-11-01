@@ -724,7 +724,7 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  if not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent or
+  if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
     (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
   begin
     FRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);

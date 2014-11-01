@@ -1383,8 +1383,7 @@ begin
       if CompareKind = ckEquals then
         Result := CompareBLob_Equals;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         case CompareKind of
           ckAscending:
             if ConSettings^.ClientCodePage^.CP = zCP_UTF8 then
@@ -2134,8 +2133,7 @@ begin
       stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ <> 0;
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := StrToBoolEx(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, False)
         else
           Result := StrToBoolEx(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, False);
@@ -2180,8 +2178,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2225,8 +2222,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2270,8 +2266,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2314,8 +2309,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2359,8 +2353,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToUInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2404,8 +2397,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToIntDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToIntDef(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2449,8 +2441,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToUInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToUInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2495,8 +2486,7 @@ begin
       stCurrency: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stBigDecimal: Result := {$IFDEF USE_FAST_TRUNC}ZFastCode.{$ENDIF}Trunc(PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := RawToInt64Def(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0)
         else
           Result := UnicodeToInt64Def(ZPPWideChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PWideInc, 0);
@@ -2541,8 +2531,7 @@ begin
       stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
@@ -2589,8 +2578,7 @@ begin
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stTime, stDate, stTimeStamp: Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
@@ -2636,8 +2624,7 @@ begin
       stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
            PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
@@ -2684,8 +2671,7 @@ begin
       stCurrency: Result := PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stBigDecimal: Result := PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := SQLStrToFloatDef(PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc, 0,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^)
         else
@@ -2763,8 +2749,7 @@ begin
       stDate, stTime, stTimestamp:
         Result := Int(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
         begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
           BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
@@ -2832,8 +2817,7 @@ begin
       stDate, stTime, stTimestamp:
         Result := Frac(PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^);
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
         begin
           AnsiBuffer := PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc;
           BufLen := PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^;
@@ -2898,8 +2882,7 @@ begin
       stDate, stTime, stTimestamp:
         Result := PDateTime(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^;
       stString, stUnicodeString:
-        if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-           and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+        if Self is TZRawRowAccessor then
           Result := ZSysUtils.RawSQLTimeStampToDateTime(
             PPAnsiChar(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^+PAnsiInc,
             PPLongWord(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^^,
@@ -3363,8 +3346,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3404,8 +3386,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3445,8 +3426,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3484,8 +3464,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3524,8 +3503,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3563,8 +3541,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3602,8 +3579,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3641,8 +3617,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, IntToRaw(Value))
       else
         SetUnicodeString(ColumnIndex, IntToUnicode(Value));
@@ -3680,8 +3655,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else
         SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
@@ -3719,8 +3693,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else
         SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
@@ -3758,8 +3731,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else
         SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
@@ -3798,8 +3770,7 @@ begin
     stCurrency: PCurrency(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stBigDecimal: PExtended(@FBuffer.Columns[FColumnOffsets[ColumnIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}] + 1])^ := Value;
     stString, stUnicodeString:
-      if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-         and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+      if Self is TZRawRowAccessor then
         SetRawByteString(ColumnIndex, FloatToSQLRaw(Value))
       else
         SetUnicodeString(ColumnIndex, FloatToSQLUnicode(Value));
@@ -4087,8 +4058,7 @@ end;
 }
 procedure TZRowAccessor.SetAnsiString(Const ColumnIndex: Integer; const Value: AnsiString);
 begin
-  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-     and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+  if Self is TZRawRowAccessor then
     SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZAnsiToRaw(Value, ConSettings^.ClientCodePage^.CP))
   else
     SetUnicodeString(ColumnIndex, ZWideString(Value));
@@ -4106,8 +4076,7 @@ end;
 }
 procedure TZRowAccessor.SetUTF8String(Const ColumnIndex: Integer; const Value: UTF8String);
 begin
-  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent
-     and (ConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
+  if Self is TZRawRowAccessor then
     SetRawByteString(ColumnIndex, ConSettings^.ConvFuncs.ZUTF8ToRaw(Value, ConSettings^.ClientCodePage^.CP))
   else
     SetUnicodeString(ColumnIndex, {$IFDEF WITH_RAWBYTESTRING}ZWideString{$ELSE}UTF8Decode{$ENDIF}(Value))

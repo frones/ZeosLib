@@ -533,7 +533,7 @@ begin
       ftCurrency:
         RowAccessor.SetCurrency(FieldIndex, ResultSet.GetCurrency(ColumnIndex));
       ftString, ftWideString:
-        if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        if RowAccessor is TZRawRowAccessor then
           RowAccessor.SetPAnsiChar(FieldIndex, ResultSet.GetPAnsiChar(ColumnIndex, Len), @Len)
         else
           RowAccessor.SetPWideChar(FieldIndex, ResultSet.GetPWideChar(ColumnIndex, Len), @Len);
@@ -630,7 +630,7 @@ begin
         ResultSet.UpdateCurrency(ColumnIndex,
           RowAccessor.GetCurrency(FieldIndex, WasNull));
       ftString, ftWidestring:
-        if ResultSet.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+        if RowAccessor is TZRawRowAccessor then
           ResultSet.UpdatePAnsiChar(ColumnIndex,
             RowAccessor.GetPAnsiChar(FieldIndex, WasNull, Len), @Len)
         else
