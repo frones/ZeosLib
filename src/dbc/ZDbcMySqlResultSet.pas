@@ -303,8 +303,7 @@ begin
     if FieldHandle = nil then
       Break;
 
-    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
-     FieldHandle, ConSettings, FUseResult));
+    ColumnsInfo.Add(GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings, FUseResult));
   end;
 
   inherited Open;
@@ -935,8 +934,7 @@ begin
     if FieldHandle = nil then
       Break;
 
-    ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FPlainDriver,
-     FieldHandle, ConSettings, FUseResult);
+    ColumnInfo := GetMySQLColumnInfoFromFieldHandle(FieldHandle, ConSettings, FUseResult);
 
     ColumnsInfo.Add(ColumnInfo);
 
