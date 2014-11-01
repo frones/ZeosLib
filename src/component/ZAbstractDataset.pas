@@ -219,6 +219,11 @@ end;
 destructor TZAbstractDataset.Destroy;
 begin
   FreeAndNil(FDetailDataSets);
+  if Assigned(FUpdateObject) then
+  begin
+    FUpdateObject.DataSet := nil;
+    SetUpdateObject(nil);
+  end;
   inherited Destroy;
 end;
 
