@@ -213,19 +213,9 @@ type
     procedure GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);// get_character_set_info since 5.0.10
 
     {non API functions}
-    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
-    function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldLength(Field: PZMySQLField): ULong;
-    function GetFieldMaxLength(Field: PZMySQLField): Integer;
-    function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldCharsetNr(Field: PZMySQLField): UInt;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure SetDriverOptions(Options: TStrings); // changed by tohenk, 2009-10-11
   end;
@@ -473,20 +463,10 @@ type
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset):
       PZMySQLRowOffset;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
+    function GetFieldCount(Res: PZMySQLResult): Integer;
 
-    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
-    function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
-    function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldLength(Field: PZMySQLField): ULong;
-    function GetFieldMaxLength(Field: PZMySQLField): Integer;
-    function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldCharsetNr(Field: PZMySQLField): UInt;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure SetDriverOptions(Options: TStrings); virtual; // changed by tohenk, 2009-10-11
   end;
@@ -1316,16 +1296,6 @@ begin
   Result := mysql_error(Handle);
 end;
 
-function TZMySQLBaseDriver.GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
-begin
-  Result := PMYSQL_FIELD(Field)^._type;
-end;
-
-function TZMySQLBaseDriver.GetFieldFlags(Field: PZMySQLField): Integer;
-begin
-  Result := PMYSQL_FIELD(Field)^.flags;
-end;
-
 function TZMySQLBaseDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
   Result := mysql_num_rows(Res);
@@ -1340,46 +1310,6 @@ end;
 function TZMySQLBaseDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
   Result := mysql_num_fields(Res);
-end;
-
-function TZMySQLBaseDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
-begin
-  Result := PMYSQL_FIELD(Field)^.decimals;
-end;
-
-function TZMySQLBaseDriver.GetFieldCharsetNr(Field: PZMySQLField): UInt;
-begin
-  Result := PMYSQL_FIELD(Field)^.charsetnr;
-end;
-
-function TZMySQLBaseDriver.GetFieldLength(Field: PZMySQLField): ULong;
-begin
-  Result := PMYSQL_FIELD(Field)^.length;
-end;
-
-function TZMySQLBaseDriver.GetFieldMaxLength(Field: PZMySQLField): Integer;
-begin
-  Result := PMYSQL_FIELD(Field)^.max_length;
-end;
-
-function TZMySQLBaseDriver.GetFieldName(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.name;
-end;
-
-function TZMySQLBaseDriver.GetFieldTable(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.table;
-end;
-
-function TZMySQLBaseDriver.GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.org_table;
-end;
-
-function TZMySQLBaseDriver.GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.org_name;
 end;
 
 function TZMySQLBaseDriver.GetFieldData(Row: PZMySQLRow;
