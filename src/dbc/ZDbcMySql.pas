@@ -158,6 +158,7 @@ begin
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD41PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD5PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZMariaDB5PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMariaDB10PlainDriver.Create));
 end;
 
 {**

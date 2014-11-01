@@ -58,7 +58,8 @@ interface
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  {%H-}ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility;
+  {%H-}ZClasses, ZSysUtils, ZDbcIntfs, ZDbcMetadata, ZCompatibility,
+  ZURL, ZDbcConnection;
 
 type
 
@@ -206,6 +207,8 @@ type
 
   {** Implements MySQL Database Metadata. }
   TZMySQLDatabaseMetadata = class(TZAbstractDatabaseMetadata)
+  private
+    FInfo: TStrings;
   protected
     function CreateDatabaseInfo: IZDatabaseInfo; override; // technobot 2008-06-26
 
@@ -249,6 +252,7 @@ type
       TableNamePattern, ColumnNamePattern: string): IZResultSet; override; //EgonHugeist
     function UncachedGetCharacterSets: IZResultSet; override; //EgonHugeist
   public
+    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
     destructor Destroy; override;
   end;
 
@@ -884,11 +888,19 @@ end;
 
 { TZMySQLDatabaseMetadata }
 
+constructor TZMySQLDatabaseMetadata.Create(Connection: TZAbstractConnection;
+  const Url: TZURL);
+begin
+  inherited Create(Connection, Url);
+  FInfo := TStringList.Create;
+  FInfo.Add('UseResult=True');
+end;
 {**
   Destroys this object and cleanups the memory.
 }
 destructor TZMySQLDatabaseMetadata.Destroy;
 begin
+  FreeAndNil(FInfo);
   inherited Destroy;
 end;
 
@@ -965,7 +977,7 @@ begin
     GetCatalogAndNamePattern(Catalog, SchemaPattern, TableNamePattern,
       LCatalog, LTableNamePattern);
 
-    with GetConnection.CreateStatement.ExecuteQuery(
+    with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW TABLES FROM %s LIKE ''%s''',
       [IC.Quote(LCatalog), LTableNamePattern])) do
     begin
@@ -986,7 +998,7 @@ begin
       try
         EnterSilentMySQLError;
         try
-          if GetConnection.CreateStatement.ExecuteQuery(
+          if GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
             Format('SHOW COLUMNS FROM %s.%s',
             [IC.Quote(LCatalog),
              IC.Quote(LTableNamePattern)])).Next then
@@ -1025,7 +1037,7 @@ var
 begin
     Result:=inherited UncachedGetCatalogs;
 
-    with GetConnection.CreateStatement.ExecuteQuery('SHOW DATABASES') do
+    with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery('SHOW DATABASES') do
     begin
       while Next do
       begin
@@ -1154,7 +1166,7 @@ begin
         OrdPosition := 1;
         TempTableNamePattern := TableNameList.Strings[I];
 
-        with GetConnection.CreateStatement.ExecuteQuery(
+        with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
           Format('SHOW FULL COLUMNS FROM %s.%s LIKE ''%s''',
           [IC.Quote(TempCatalog),
           IC.Quote(TempTableNamePattern),
@@ -1358,7 +1370,7 @@ begin
 
     PrivilegesList := TStringList.Create;
     try
-      with GetConnection.CreateStatement.ExecuteQuery(
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         'SELECT c.host, c.db, t.grantor, c.user, c.table_name,'
         + ' c.column_name, c.column_priv FROM mysql.columns_priv c,'
         + ' mysql.tables_priv t WHERE c.host=t.host AND c.db=t.db'
@@ -1466,7 +1478,7 @@ begin
 
     PrivilegesList := TStringList.Create;
     try
-      with GetConnection.CreateStatement.ExecuteQuery(
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         'SELECT host,db,table_name,grantor,user,table_priv'
         + ' from mysql.tables_priv WHERE 1=1'
         + SchemaCondition + TableNameCondition
@@ -1543,7 +1555,7 @@ begin
     GetCatalogAndNamePattern(Catalog, Schema, Table,
       LCatalog, LTable);
 
-    with GetConnection.CreateStatement.ExecuteQuery(
+    with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW KEYS FROM %s.%s',
       [IC.Quote(LCatalog),
       IC.Quote(LTable)])) do
@@ -1659,7 +1671,7 @@ begin
     KeyList := TStringList.Create;
     CommentList := TStringList.Create;
     try
-      with GetConnection.CreateStatement.ExecuteQuery(
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s LIKE ''%s''',
         [IC.Quote(LCatalog), LTable])) do
       begin
@@ -1801,7 +1813,7 @@ begin
     KeyList := TStringList.Create;
     CommentList := TStringList.Create;
     try
-      with GetConnection.CreateStatement.ExecuteQuery(
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s',
         [IC.Quote(LCatalog)])) do
       begin
@@ -1950,7 +1962,7 @@ begin
     KeyList := TStringList.Create;
     CommentList := TStringList.Create;
     try
-      with GetConnection.CreateStatement.ExecuteQuery(
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
         Format('SHOW TABLE STATUS FROM %s',
         [IC.Quote(LForeignCatalog)])) do
       begin
@@ -2194,7 +2206,7 @@ begin
     GetCatalogAndNamePattern(Catalog, Schema, Table,
       LCatalog, LTable);
 
-    with GetConnection.CreateStatement.ExecuteQuery(
+    with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
       Format('SHOW INDEX FROM %s.%s',
       [IC.Quote(LCatalog),
       IC.Quote(LTable)])) do
@@ -2461,7 +2473,7 @@ begin
     ' ORDER BY p.db, p.name';
 
     try
-      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
       begin
         ParamList := TStringList.Create;
         Params := TStringList.Create;
@@ -2660,7 +2672,7 @@ begin
           'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
           'ON CS.DEFAULT_COLLATE_NAME = CLMS.COLLATION_NAME '+
           'WHERE 1=1'+ SchemaCondition + TableNameCondition + ColumnNameCondition;
-        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+        with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
         begin
           if Next then
           begin
@@ -2684,7 +2696,7 @@ begin
           'INFORMATION_SCHEMA.CHARACTER_SETS CS ON '+
           'TBLS.TABLE_COLLATION = CS.DEFAULT_COLLATE_NAME '+
           'WHERE 1=1'+ SchemaCondition + TableNameCondition;
-        with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+        with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
         begin
           if Next then
           begin
@@ -2709,7 +2721,7 @@ begin
         'LEFT JOIN INFORMATION_SCHEMA.CHARACTER_SETS CS '+
         'ON CS.DEFAULT_COLLATE_NAME = S.DEFAULT_COLLATION_NAME '+
         'WHERE 1=1 '+ SchemaCondition;
-      with GetConnection.CreateStatement.ExecuteQuery(SQL) do
+      with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(SQL) do
       begin
         if Next then
         begin
@@ -2737,7 +2749,7 @@ var Len: NativeUInt;
 begin
   Result:=inherited UncachedGetCharacterSets;
 
-  with GetConnection.CreateStatement.ExecuteQuery(
+  with GetConnection.CreateStatementWithParams(FInfo).ExecuteQuery(
     'SELECT CHARACTER_SET_NAME '+
     'FROM INFORMATION_SCHEMA.CHARACTER_SETS') do
   begin

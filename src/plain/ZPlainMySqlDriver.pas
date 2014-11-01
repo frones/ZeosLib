@@ -533,6 +533,15 @@ type
     function GetDescription: string; override;
   end;
 
+  { TZMariaDB10PlainDriver }
+  TZMariaDB10PlainDriver = class (TZMySQL5PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
+
 implementation
 
 uses SysUtils, ZPlainLoader, ZEncoding, ZFastCode
@@ -1529,6 +1538,22 @@ end;
 function TZMariaDB5PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for MariaDB-5.x';
+end;
+
+{ TZMariaDB5PlainDriver }
+function TZMariaDB10PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMariaDB10PlainDriver.Create
+end;
+
+function TZMariaDB10PlainDriver.GetProtocol: string;
+begin
+  Result := 'MariaDB-10';
+end;
+
+function TZMariaDB10PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for MariaDB-10';
 end;
 
 end.
