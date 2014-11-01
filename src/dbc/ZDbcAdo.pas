@@ -189,7 +189,6 @@ procedure TZAdoConnection.InternalCreate;
 begin
   FAdoConnection := CoConnection.Create;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
-  CheckCharEncoding('CP_ADO');
   Open;
 end;
 
@@ -264,7 +263,8 @@ begin
     FAdoConnection.Open(Database, User, Password, -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
-    if FClientCodePage <> 'CP_ADO' then CheckCharEncoding('CP_ADO', True)
+    ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
+    CheckCharEncoding('CP_ADO');
   except
     on E: Exception do
     begin
