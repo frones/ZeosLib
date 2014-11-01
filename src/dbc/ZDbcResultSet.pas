@@ -832,7 +832,7 @@ end;
 }
 procedure TZAbstractResultSet.ResetCursor;
 begin
-  if not FClosed then
+  if not FClosed and Assigned(Statement){virtual RS ! } then
   begin
     FFetchSize := Statement.GetFetchSize;
     FPostUpdates := Statement.GetPostUpdates;
