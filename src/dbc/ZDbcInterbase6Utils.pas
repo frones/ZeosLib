@@ -288,7 +288,8 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const CurrentSQLTokens: TRawByteStringDynArray;
   const PlainDriver: IZInterbasePlainDriver;
   var MemPerRow, PreparedRowsOfArray: Integer;
-  var TypeTokens: TRawByteStringDynArray): RawByteString;
+  var TypeTokens: TRawByteStringDynArray;
+  InitialStatementType: TZIbSqlStatementType): RawByteString;
 
 const
   { Default Interbase blob size for reading }
@@ -2813,7 +2814,8 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const CurrentSQLTokens: TRawByteStringDynArray;
   const PlainDriver: IZInterbasePlainDriver;
   var MemPerRow, PreparedRowsOfArray: Integer;
-  var TypeTokens: TRawByteStringDynArray): RawByteString;
+  var TypeTokens: TRawByteStringDynArray;
+  InitialStatementType: TZIbSqlStatementType): RawByteString;
 const
   EBStart = AnsiString('EXECUTE BLOCK(');
   EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
@@ -2970,9 +2972,10 @@ begin
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
     Inc(NewParamCount, InParamCount);
-    //we run into XSQLDA count limit of 255 see:
+    //we run into XSQLDA !update! count limit of 255 see:
     //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
-    if (StmtLength+LBlockLen > 32*1024) or (StmtMem + MemPerRow > 64 *1024) or (NewParamCount > 255) then
+    if (StmtLength+LBlockLen > 32*1024) or (StmtMem + MemPerRow > 64 *1024) or
+      ((InitialStatementType <> stInsert) and (NewParamCount > 255)) then
     begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);

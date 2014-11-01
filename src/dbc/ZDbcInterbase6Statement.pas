@@ -285,7 +285,7 @@ procedure TZInterbase6PreparedStatement.Prepare;
     FStatementType := InternalPrepare(GetExecuteBlockString(FParamSQLData,
       IsParamIndex, InParamCount, Iteration, CachedQueryRaw,
       FIBConnection.GetPlainDriver, FMemPerRow, FPreparedRowsOfArray,
-        FTypeTokens), False);
+        FTypeTokens, FInitialStatementType), False);
   end;
 begin
   if (not Prepared)  then
