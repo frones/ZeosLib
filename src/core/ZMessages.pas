@@ -276,6 +276,7 @@ resourcestring
   cSInvalidUpdateCount     = '%d enregistrement(s) mis à jour. Un seul urait du l''être.';
 
   cSRowBufferWidthExceeded ='La taille du buffer de lignes a été dépassée. Essayez d''utiliser moins ou de plus longues colonnes dans la requête SQL.';
+  cSPreviousResultStillOpen = 'L''ensemble de données résultat précédent de cette instruction est encore ouvert';
 //--- end added by Serge Girard ------------------------------------
 {$ELSE !FRENCH}
 // -> ms, 09/05/2005
