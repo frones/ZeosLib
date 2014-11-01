@@ -185,9 +185,9 @@ var
   ResultSet: IZResultSet;
   Metadata: IZDatabaseMetadata;
 begin
-  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'FreeTDS') or
-    ( Protocol = 'mssql') or ( Protocol = 'ado') or ( Protocol = 'sybase') or
-     StartsWith(Protocol, 'ASA') then
+  if StartsWith(Protocol, 'mysql') or StartsWith(Protocol, 'mysql') or
+    StartsWith(Protocol, 'FreeTDS') or ( Protocol = 'mssql') or
+    ( Protocol = 'ado') or ( Protocol = 'sybase') or StartsWith(Protocol, 'ASA') then
     Exit;
 
   Metadata := Connection.GetMetadata;
@@ -839,94 +839,100 @@ begin
   BinStream := TMemoryStream.Create;
   BinStream.LoadFromFile('../../../database/images/dogs.jpg');
   BinStream.Size := 1024;
+  StrStream1 := nil;
+  BinStream1 := nil;
+  try
+    { Inserts test record to people table }
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '1. ' + Sql);
+    with ResultSet do
+    begin
+      MoveToInsertRow;
+      UpdateIntByName('p_id', TEST_ROW_ID);
+      UpdateNullByName('p_dep_id');
+      UpdateNullByName('p_name');
+      UpdateNullByName('p_begin_work');
+      UpdateNullByName('p_end_work');
+      UpdateNullByName('p_resume');
+      UpdateNullByName('p_picture');
+      UpdateNullByName('p_redundant');
+      InsertRow;
+      Close;
+    end;
 
-  { Inserts test record to people table }
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '1. ' + Sql);
-  with ResultSet do
-  begin
-    MoveToInsertRow;
-    UpdateIntByName('p_id', TEST_ROW_ID);
-    UpdateNullByName('p_dep_id');
-    UpdateNullByName('p_name');
-    UpdateNullByName('p_begin_work');
-    UpdateNullByName('p_end_work');
-    UpdateNullByName('p_resume');
-    UpdateNullByName('p_picture');
-    UpdateNullByName('p_redundant');
-    InsertRow;
-    Close;
+     { Checks the previous inserted record }
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '2. ' + Sql);
+    with ResultSet do
+    begin
+      Check(Next);
+      CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
+      CheckEquals(True, IsNullByName('p_dep_id'));
+      CheckEquals(True, IsNullByName('p_name'));
+      CheckEquals(True, IsNullByName('p_begin_work'));
+      CheckEquals(True, IsNullByName('p_end_work'));
+      CheckEquals(True, IsNullByName('p_resume'));
+      CheckEquals(True, IsNullByName('p_picture'));
+      CheckEquals(True, IsNullByName('p_redundant'));
+
+      CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
+      CheckEquals(True, IsNullByName('p_dep_id'));
+      CheckEquals(True, IsNullByName('p_name'));
+      CheckEquals(True, IsNullByName('p_begin_work'));
+      CheckEquals(True, IsNullByName('p_end_work'));
+      CheckEquals(True, IsNullByName('p_resume'));
+      CheckEquals(True, IsNullByName('p_picture'));
+      CheckEquals(True, IsNullByName('p_redundant'));
+      Close;
+    end;
+
+    { Creates and update resultset for people table for p_id = TEST_ROW_ID }
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '3. ' + Sql);
+    with ResultSet do
+    begin
+      Check(Next);
+      UpdateIntByName('p_dep_id', 1);
+      UpdateStringByName('p_name', 'Somebody');
+      UpdateTimeByName('p_begin_work', EncodeTime(12, 11, 20, 0));
+      UpdateTimeByName('p_end_work', EncodeTime(22, 36, 55, 0));
+      UpdateAsciiStreamByName('p_resume', StrStream);
+      UpdateBinaryStreamByName('p_picture', BinStream);
+      UpdateIntByName('p_redundant', 1);
+      UpdateRow;
+      Close;
+    end;
+
+    { Creates and updates resultset for people table for p_id = TEST_ROW_ID }
+    ResultSet := Statement.ExecuteQuery(Sql);
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True, '4. ' + Sql);
+    with ResultSet do
+    begin
+      Check(Next);
+      CheckEquals(1, GetIntByName('p_dep_id'));
+      CheckEquals('Somebody', GetStringByName('p_name'));
+      CheckEquals(EncodeTime(12, 11, 20, 0), GetTimeByName('p_begin_work'), 0.0001);
+      CheckEquals(EncodeTime(22, 36, 55, 0), GetTimeByName('p_end_work'), 0.0001);
+      BinStream1 := GetBinaryStreamByName('p_picture');
+      StrStream1 := GetAsciiStreamByName('p_resume');
+      CheckEquals(BinStream, BinStream1);
+      CheckEquals(StrStream, StrStream1);
+      CheckEquals(1, GetIntByName('p_redundant'));
+      DeleteRow;
+    end;
+  finally
+    BinStream.Free;
+    if Assigned(BinStream1) then
+      BinStream1.Free;
+    StrStream.Free;
+    if Assigned(StrStream1) then
+      StrStream1.Free;
   end;
 
-   { Checks the previous inserted record }
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '2. ' + Sql);
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
-    CheckEquals(True, IsNullByName('p_dep_id'));
-    CheckEquals(True, IsNullByName('p_name'));
-    CheckEquals(True, IsNullByName('p_begin_work'));
-    CheckEquals(True, IsNullByName('p_end_work'));
-    CheckEquals(True, IsNullByName('p_resume'));
-    CheckEquals(True, IsNullByName('p_picture'));
-    CheckEquals(True, IsNullByName('p_redundant'));
-
-    CheckEquals(TEST_ROW_ID, GetIntByName('p_id'));
-    CheckEquals(True, IsNullByName('p_dep_id'));
-    CheckEquals(True, IsNullByName('p_name'));
-    CheckEquals(True, IsNullByName('p_begin_work'));
-    CheckEquals(True, IsNullByName('p_end_work'));
-    CheckEquals(True, IsNullByName('p_resume'));
-    CheckEquals(True, IsNullByName('p_picture'));
-    CheckEquals(True, IsNullByName('p_redundant'));
-    Close;
-  end;
-
-  { Creates and update resultset for people table for p_id = TEST_ROW_ID }
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '3. ' + Sql);
-  with ResultSet do
-  begin
-    Check(Next);
-    UpdateIntByName('p_dep_id', 1);
-    UpdateStringByName('p_name', 'Somebody');
-    UpdateTimeByName('p_begin_work', EncodeTime(12, 11, 20, 0));
-    UpdateTimeByName('p_end_work', EncodeTime(22, 36, 55, 0));
-    UpdateAsciiStreamByName('p_resume', StrStream);
-    UpdateBinaryStreamByName('p_picture', BinStream);
-    UpdateIntByName('p_redundant', 1);
-    UpdateRow;
-    Close;
-  end;
-
-  { Creates and updates resultset for people table for p_id = TEST_ROW_ID }
-  ResultSet := Statement.ExecuteQuery(Sql);
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True, '4. ' + Sql);
-  with ResultSet do
-  begin
-    Check(Next);
-    CheckEquals(1, GetIntByName('p_dep_id'));
-    CheckEquals('Somebody', GetStringByName('p_name'));
-    CheckEquals(EncodeTime(12, 11, 20, 0), GetTimeByName('p_begin_work'), 0.0001);
-    CheckEquals(EncodeTime(22, 36, 55, 0), GetTimeByName('p_end_work'), 0.0001);
-    BinStream1 := GetBinaryStreamByName('p_picture');
-    StrStream1 := GetAsciiStreamByName('p_resume');
-    CheckEquals(BinStream, BinStream1);
-    CheckEquals(StrStream, StrStream1);
-    CheckEquals(1, GetIntByName('p_redundant'));
-    DeleteRow;
-  end;
-
-  BinStream.Free;
-  BinStream1.Free;
-  StrStream.Free;
-  StrStream1.Free;
 
   { Creates and updates resultset for equipment table for eq_id = TEST_ROW_ID }
   ResultSet := Statement.ExecuteQuery(Sql);
