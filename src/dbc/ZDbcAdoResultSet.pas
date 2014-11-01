@@ -60,9 +60,7 @@ uses
   DateUtils,
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  {$IF defined(MSWINDOWS) and not defined(WITH_UNICODEFROMLOCALECHARS)}
   Windows,
-  {$IFEND}
   Classes, SysUtils,
   ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
   ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet,
@@ -81,8 +79,8 @@ type
   public
     constructor Create(Statement: IZStatement; SQL: string;
       AdoRecordSet: ZPlainAdo.RecordSet);
-
     procedure Close; override;
+    procedure ResetCursor; override;
     function Next: Boolean; override;
     function MoveAbsolute(Row: Integer): Boolean; override;
     function GetRow: NativeInt; override;
@@ -254,6 +252,10 @@ procedure TZAdoResultSet.Close;
 begin
   FAdoRecordSet := nil;
   inherited Close;
+end;
+
+procedure TZAdoResultSet.ResetCursor;
+begin
 end;
 
 {**
@@ -651,17 +653,17 @@ begin
 ProcessFixedChar:
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
-          Result := PUnicodeToRaw(P, Len, ConSettings^.ClientCodePage^.CP);
+          Result := PUnicodeToRaw(P, Len, GetACP);
         end;
       adVarChar,
       adLongVarChar: {varying char fields}
         Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
-          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, ConSettings^.ClientCodePage^.CP);
+          FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize, GetACP);
       adVarWChar,
       adLongVarWChar: {varying char fields}
           Result := PUnicodeToRaw(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr,
             FAdoRecordSet.Fields.Item[ColumnIndex].ActualSize shr 1, //shr 1 = div 2 but faster, OleDb returns size in Bytes!
-            ConSettings^.ClientCodePage^.CP);
+              GetACP);
       else
         try
           Result := RawByteString(FAdoRecordSet.Fields.Item[ColumnIndex].Value);
