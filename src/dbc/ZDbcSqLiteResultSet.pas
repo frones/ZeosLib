@@ -81,14 +81,13 @@ type
     FUndefinedVarcharAsStringLength: Integer;
   protected
     procedure Open; override;
-    procedure FreeHandle;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
   public
     constructor Create(PlainDriver: IZSQLitePlainDriver; Statement: IZStatement;
       SQL: string; const Handle: Psqlite; const StmtHandle: Psqlite_vm;
-      const ErrorCode: Integer; const UndefinedVarcharAsStringLength: Integer); overload;
+      const UndefinedVarcharAsStringLength: Integer);
 
-    procedure Close; override;
+    procedure ResetCursor; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
@@ -133,7 +132,7 @@ implementation
 
 uses
   ZMessages, ZDbcSqLite, ZDbcSQLiteUtils, ZEncoding, ZDbcLogging, ZFastCode,
-  ZVariant
+  ZVariant, ZDbcSqLiteStatement
   {$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
 
 {**
@@ -164,8 +163,7 @@ end;
 }
 constructor TZSQLiteResultSet.Create(PlainDriver: IZSQLitePlainDriver;
   Statement: IZStatement; SQL: string; const Handle: Psqlite;
-  const StmtHandle: Psqlite_vm; const ErrorCode: Integer;
-  const UndefinedVarcharAsStringLength: Integer);
+  const StmtHandle: Psqlite_vm; const UndefinedVarcharAsStringLength: Integer);
 begin
   inherited Create(Statement, SQL, TZSQLiteResultSetMetadata.Create(
     Statement.GetConnection.GetMetadata, SQL, Self),
@@ -175,7 +173,6 @@ begin
   FStmtHandle := StmtHandle;
   FPlainDriver := PlainDriver;
   ResultSetConcurrency := rcReadOnly;
-  FErrorCode := ErrorCode;
   FUndefinedVarcharAsStringLength := UndefinedVarcharAsStringLength;
   FFirstRow := True;
 
@@ -257,36 +254,19 @@ begin
 end;
 
 {**
-  Frees statement handle.
+  Resets cursor position of this recordset and
+  reset the prepared handles.
 }
-procedure TZSQLiteResultSet.FreeHandle;
+procedure TZSQLiteResultSet.ResetCursor;
 begin
-  if FStmtHandle <> nil then
+  FFirstRow := True;
+  if Assigned(FStmtHandle) then
   begin
     CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
       nil, lcOther, 'Reset Prepared Stmt', ConSettings);
     FStmtHandle := nil;
   end;
-  FErrorCode := SQLITE_DONE;
-end;
-
-{**
-  Releases this <code>ResultSet</code> object's database and
-  JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-
-  <P><B>Note:</B> A <code>ResultSet</code> object
-  is automatically closed by the
-  <code>Statement</code> object that generated it when
-  that <code>Statement</code> object is closed,
-  re-executed, or is used to retrieve the next result from a
-  sequence of multiple results. A <code>ResultSet</code> object
-  is also automatically closed when it is garbage collected.
-}
-procedure TZSQLiteResultSet.Close;
-begin
-  FreeHandle;
-  inherited Close;
+  inherited ResetCursor;
 end;
 
 {**
@@ -838,13 +818,20 @@ end;
     <code>false</code> if there are no more rows
 }
 function TZSQLiteResultSet.Next: Boolean;
+label ResetHndl;
 begin
   { Checks for maximum row. }
   Result := False;
+  if Closed then exit;
+  if FFirstRow then
+    FErrorCode := (Statement as IZSQLitePreparedStatement).GetLastErrorCodeAndHandle(FStmtHandle);
   if ((MaxRows > 0) and (RowNo >= MaxRows)) or (FErrorCode = SQLITE_DONE) then //previously set by stmt or Next
   begin
     { Free handle when EOF. }
-    FreeHandle;
+ResetHndl:
+    CheckSQLiteError(FPlainDriver, FStmtHandle, FPlainDriver.reset(FStmtHandle),
+      nil, lcOther, 'sqlite3_reset', ConSettings);
+    FErrorCode := SQLITE_DONE;
     Exit;
   end;
 
@@ -877,7 +864,7 @@ begin
 
   { Free handle when EOF. }
   if not Result then
-    FreeHandle;
+    goto ResetHndl;
 end;
 
 { TZSQLiteCachedResolver }

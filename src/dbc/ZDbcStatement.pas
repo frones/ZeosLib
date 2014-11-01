@@ -94,7 +94,9 @@ type
   protected
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
-    Procedure FreeOpenResultSetReference;
+    procedure PrepareOpenResultSetForReUse;
+    procedure PrepareLastResultSetForReUse;
+    procedure FreeOpenResultSetReference;
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;
     class function GetNextStatementId : integer;
@@ -341,7 +343,7 @@ type
     property ProcSql: RawByteString read FProcSQL write SetProcSQL;
     property SQL: String read FSQL;
   public
-    constructor Create(Connection: IZConnection; SQL: string; Info: TStrings);
+    constructor Create(Connection: IZConnection; const SQL: string; Info: TStrings);
     procedure ClearParameters; override;
     procedure Close; override;
 
@@ -558,6 +560,38 @@ begin
     FLastResultSet.Close;
 
   FLastResultSet := ResultSet;
+end;
+
+procedure TZAbstractStatement.PrepareOpenResultSetForReUse;
+begin
+  if Assigned(FOpenResultSet) then
+    if not Assigned(IZResultSet(FOpenResultSet).GetMetaData) then //is there another way to test if open?
+      FOpenResultSet := nil
+    else
+      if (IZResultSet(FOpenResultSet).GetConcurrency = GetResultSetConcurrency) and
+         (IZResultSet(FOpenResultSet).GetFetchDirection = GetFetchDirection) then
+        IZResultSet(FOpenResultSet).ResetCursor
+      else
+      begin
+        IZResultSet(FOpenResultSet).Close;
+        FOpenResultSet := nil;
+      end;
+end;
+
+procedure TZAbstractStatement.PrepareLastResultSetForReUse;
+begin
+  if Assigned(FLastResultSet) then
+    if not Assigned(FLastResultSet.GetMetaData) then //is there another way to test if open?
+      FLastResultSet := nil
+    else
+      if (FLastResultSet.GetConcurrency = GetResultSetConcurrency) and
+         (FLastResultSet.GetFetchDirection = GetFetchDirection) then
+        FLastResultSet.ResetCursor
+      else
+      begin
+        FLastResultSet.Close;
+        FLastResultSet := nil;
+      end;
 end;
 
 procedure TZAbstractStatement.FreeOpenResultSetReference;
@@ -2107,7 +2141,7 @@ var
   procedure AssertLength;
   var Len: ArrayLenInt;
   begin
-    Len := {%H-}PArrayLenInt(NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
+    Len := {%H-}PArrayLenInt({%H-}NativeUInt(ZArray) - ArrayLenOffSet)^{$IFDEF FPC}+1{$ENDIF}; //FPC returns High() for this pointer location
     if (ParameterIndex = FirstDbcIndex) or ((ParameterIndex > FirstDbcIndex) and
        (InParamValues[ParameterIndex{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}].VArray.VArray = nil))  then
       FInitialArrayCount := Len
@@ -2198,7 +2232,6 @@ begin
     Unprepare;
   inherited Close;
 end;
-
 
 function TZAbstractPreparedStatement.GetSQL: String;
 begin
@@ -2342,7 +2375,7 @@ end;
   @param Info a statement parameters.
 }
 constructor TZAbstractCallableStatement.Create(Connection: IZConnection;
-  SQL: string; Info: TStrings);
+  const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
   FSQL := SQL;

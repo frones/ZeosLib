@@ -337,6 +337,7 @@ begin
   Prepare;
   with FIBConnection do
   begin
+    PrepareLastResultSetForReUse;
     BindInParameters;
     ExecuteInternal;
     LastUpdateCount := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
@@ -350,11 +351,10 @@ begin
 
     { Create ResultSet if possible else free Statement Handle }
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
-    begin
-      LastResultSet := CreateIBResultSet(SQL, Self,
-      TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-      FResultXSQLDA, CachedLob, FStatementType));
-    end
+      if not Assigned(LastResultSet) then
+        LastResultSet := CreateIBResultSet(SQL, Self,
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+            FResultXSQLDA, CachedLob, FStatementType))
     else
       LastResultSet := nil;
 
@@ -380,21 +380,21 @@ begin
   Prepare;
   with FIBConnection do
   begin
-    if Assigned(FOpenResultSet) then
-      IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-
+    PrepareOpenResultSetForReUse;
     BindInParameters;
     iError := ExecuteInternal;
 
     if (FStatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
-    begin
-      if (iError <> DISCONNECT_ERROR) then
-        Result := CreateIBResultSet(SQL, Self,
-          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-          FResultXSQLDA, CachedLob, FStatementType));
-      FOpenResultSet := Pointer(Result);
-    end
+      if Assigned(FOpenResultSet) then
+        Result := IZResultSet(FOpenResultSet)
+      else
+      begin
+        if (iError <> DISCONNECT_ERROR) then
+          Result := CreateIBResultSet(SQL, Self,
+            TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+            FResultXSQLDA, CachedLob, FStatementType));
+        FOpenResultSet := Pointer(Result);
+      end
     else
       if (iError <> DISCONNECT_ERROR) then    //AVZ
         raise EZSQLException.Create(SCanNotRetrieveResultSetData);

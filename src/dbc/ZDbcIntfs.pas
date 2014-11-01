@@ -694,6 +694,7 @@ type
 
     function Next: Boolean;
     procedure Close;
+    procedure ResetCursor;
     function WasNull: Boolean;
 
     //======================================================================

@@ -74,7 +74,6 @@ type
     FXSQLDA: PXSQLDA;
     FIZSQLDA: IZSQLDA;
     FIBConnection: IZInterbase6Connection;
-    FRawTemp: RawByteString;
     FBlobTemp: IZBlob;
     FPlainDriver: IZInterbasePlainDriver;
     FDialect: Word;
@@ -91,6 +90,7 @@ type
     constructor Create(const Statement: IZStatement; const SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
       const CachedBlob: boolean; const StmtType: TZIbSqlStatementType);
+    procedure ResetCursor; override;
 
     procedure Close; override;
 
@@ -1718,11 +1718,11 @@ begin
       FFetchStat := FPlainDriver.isc_dsql_fetch(@StatusVector,
         @FStmtHandle, FDialect, FXSQLDA);
       if FFetchStat = 0 then
-        begin
-          RowNo := RowNo + 1;
-          LastRowNo := RowNo;
-          Result := True;
-        end
+      begin
+        RowNo := RowNo + 1;
+        LastRowNo := RowNo;
+        Result := True;
+      end
       else
         CheckInterbase6Error(FPlainDriver, StatusVector, ConSettings);
     end
@@ -1873,6 +1873,13 @@ begin
       ColumnsInfo.Add(ColumnInfo);
     end;
   inherited Open;
+end;
+
+procedure TZInterbase6XSQLDAResultSet.ResetCursor;
+begin
+  FFetchStat := 0;
+  FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
+  inherited ResetCursor;
 end;
 
 { TZInterbase6UnCachedBlob }

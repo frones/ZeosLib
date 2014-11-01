@@ -81,6 +81,7 @@ type
     procedure TestEmptyTypes;
     procedure TestReuseResultsetNative;
     procedure TestReuseResultsetCached;
+    procedure TestUpdateOpenedTable;
   end;
 
 
@@ -430,14 +431,16 @@ const
 var
   PreparedStatement: IZPreparedStatement;
   ResultSet: IZResultSet;
-  Info: TStrings;
+  RSPointer: Pointer;
 begin
-  Info := TStringList.Create;
   PreparedStatement := Connection.PrepareStatement(
     'SELECT * FROM PEOPLE WHERE p_id > ?');
+  PreparedStatement.SetResultSetConcurrency(rcUpdatable);
+  PreparedStatement.SetResultSetType(rtScrollSensitive);
   try
     PreparedStatement.SetInt(p_id_index, 0); //expecting 5 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    RSPointer := Pointer(ResultSet);
     CheckEquals(True, ResultSet.Next); //fetch first row.
     CheckEquals(1, ResultSet.GetInt(p_id_index));
     CheckEquals(True, ResultSet.Next); //fetch second row.
@@ -446,6 +449,7 @@ begin
     {ignore last row}
     PreparedStatement.SetInt(p_id_index, 1); //expecting 4 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(NativeUInt(RSPointer), NativeUInt(Pointer(ResultSet)), 'First ResultSet is opened again');
     CheckEquals(True, ResultSet.Next); //fetch first row.
     CheckEquals(2, ResultSet.GetInt(p_id_index));
     CheckEquals(True, ResultSet.Next); //fetch second row.
@@ -454,17 +458,63 @@ begin
 
     PreparedStatement.SetInt(p_id_index, 2); //expecting 3 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(NativeUInt(RSPointer), NativeUInt(Pointer(ResultSet)), 'First ResultSet is opened again');
     CheckEquals(True, ResultSet.Next); //fetch first row.
     CheckEquals(3, ResultSet.GetInt(p_id_index));
     while ResultSet.Next do; //full fetch automatically resets handle
 
     PreparedStatement.SetInt(p_id_index, 3); //expecting 2 rows
     ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(NativeUInt(RSPointer), NativeUInt(Pointer(ResultSet)), 'First ResultSet is opened again');
     CheckEquals(True, ResultSet.Next); //fetch first row.
     CheckEquals(4, ResultSet.GetInt(p_id_index));
     while ResultSet.Next do; //full fetch automatically resets handle
   finally
-    Info.Free;
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    PreparedStatement.Close;
+  end;
+end;
+
+{test if table, we are working on, is blocked}
+procedure TZTestDbcSQLiteCase.TestUpdateOpenedTable;
+const
+  p_id_index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+var
+  PreparedStatement, InsertPreparedStatement: IZPreparedStatement;
+  ResultSet: IZResultSet;
+  RSPointer: Pointer;
+begin
+  PreparedStatement := Connection.PrepareStatement(
+    'SELECT * FROM PEOPLE WHERE p_id > ?');
+  InsertPreparedStatement := Connection.PrepareStatement(
+    'insert into PEOPLE(p_id) values (?)');
+  try
+    PreparedStatement.SetInt(p_id_index, 0); //expecting 5 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    RSPointer := Pointer(ResultSet);
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(1, ResultSet.GetInt(p_id_index));
+    CheckEquals(True, ResultSet.Next); //fetch second row.
+    //CheckEquals(True, ResultSet.Next); //fetch third row.
+    //CheckEquals(True, ResultSet.Next); //fetch fourth row.
+    InsertPreparedStatement.SetInt(p_id_index, 10);
+    CheckEquals(1, InsertPreparedStatement.ExecuteUpdatePrepared, 'updatecount');
+
+    {ignore last row}
+    PreparedStatement.SetInt(p_id_index, 1); //expecting 4 rows
+    ResultSet := PreparedStatement.ExecuteQueryPrepared;
+    CheckEquals(NativeUInt(RSPointer), NativeUInt(Pointer(ResultSet)), 'First ResultSet is opened again');
+    CheckEquals(True, ResultSet.Next); //fetch first row.
+    CheckEquals(2, ResultSet.GetInt(p_id_index));
+    CheckEquals(True, ResultSet.Next); //fetch second row.
+    CheckEquals(True, ResultSet.Next); //fetch third row.
+    {ignore last row}
+    connection.Commit;
+  finally
+    InsertPreparedStatement.ClearParameters;
+    InsertPreparedStatement.ExecuteUpdate('delete from people where p_id=10');
+    InsertPreparedStatement.Close;
     if Assigned(ResultSet) then
       ResultSet.Close;
     PreparedStatement.Close;

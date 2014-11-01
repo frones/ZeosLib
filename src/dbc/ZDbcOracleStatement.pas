@@ -216,13 +216,13 @@ end;
 
 function TZOraclePreparedStatement.CreateResultSet: IZResultSet;
 begin
-  if FOpenResultSet <> nil then
+  if FOpenResultSet = nil then
   begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-  end;
-  Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle, FZBufferSize);
-  FOpenResultSet := Pointer(Result);
+    Result := CreateOracleResultSet(FPlainDriver, Self, SQL, FHandle, FErrorHandle, FZBufferSize);
+    FOpenResultSet := Pointer(Result);
+  end
+  else
+    Result := IZResultSet(FOpenResultSet);
 end;
 
 {**
@@ -355,22 +355,16 @@ end;
 function TZOraclePreparedStatement.ExecutePrepared: Boolean;
 begin
   Result := False;
-
   { Prepares a statement. }
   Prepare;
-
-  if FOpenResultSet <> nil then
-  begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-  end;
-
+  PrepareLastResultSetForReUse;
   BindInParameters;
 
   if FStatementType = OCI_STMT_SELECT then
   begin
     { Executes the statement and gets a resultset. }
-    LastResultSet := CreateResultSet;
+    if not Assigned(LastResultSet) then
+      LastResultSet := CreateResultSet;
     Result := LastResultSet <> nil;
   end
   else
@@ -399,6 +393,7 @@ function TZOraclePreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   { Prepares a statement. }
   Prepare;
+  PrepareOpenResultSetForReUse;
   BindInParameters;
 
   { Executes the statement and gets a resultset. }
