@@ -724,17 +724,18 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-  begin
-    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-  end
-  else
+  if not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent or
+    (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
   begin
     FRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
     FOldRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
     FNewRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
+  end
+  else
+  begin
+    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
   end;
 
   FRowAccessor.AllocBuffer(FUpdatedRow);

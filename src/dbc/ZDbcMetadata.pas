@@ -2269,10 +2269,11 @@ begin
         stBigDecimal:
           DestResultSet.UpdateBigDecimal(I, SrcResultSet.GetBigDecimal(I));
         stString, stUnicodeString, stAsciiStream, stUnicodeStream:
-          if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-            DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), @Len)
+          if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+             (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
+            DestResultSet.UpdatePWideChar(I, SrcResultSet.GetPWideChar(I, Len), @Len)
           else
-            DestResultSet.UpdateUnicodeString(I, SrcResultSet.GetUnicodeString(I));
+            DestResultSet.UpdatePAnsiChar(I, SrcResultSet.GetPAnsiChar(I, Len), @Len);
         stBytes, stBinaryStream:
           DestResultSet.UpdateBytes(I, SrcResultSet.GetBytes(I));
         stDate:
