@@ -1797,8 +1797,8 @@ begin
       FIELD_TYPE_STRING:
         begin
           SpaceForTrailingNull := (MYSQL_FIELD^.flags and BINARY_FLAG) = 0;
-          Length := Min(MaxLobSize, Max(MYSQL_FIELD^.length,
-            MYSQL_FIELD^.max_length))+ULong(Ord(SpaceForTrailingNull));
+          Length := Min(LongWord(MaxLobSize), Max(LongWord(MYSQL_FIELD^.length),
+            LongWord(MYSQL_FIELD^.max_length)))+LongWord(Ord(SpaceForTrailingNull));
         end
     else
       Length := MYSQL_FIELD^.length;
