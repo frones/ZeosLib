@@ -93,7 +93,7 @@ type
   private
     FHandle: PZMySQLConnect;
     FPlainDriver: IZMySQLPlainDriver;
-    FUseDefaults: Boolean;
+    FUseDefaults, FUseResult: Boolean;
   protected
     function CreateExecStatement: IZStatement; override;
     function PrepareAnsiSQLParam(ParamIndex: Integer): RawByteString; override;
@@ -468,8 +468,10 @@ begin
   inherited Create(Connection, SQL, Info);
   FHandle := Handle;
   FPlainDriver := PlainDriver;
-  ResultSetType := rtScrollInsensitive;
+  FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'UseResult', 'false'));
   FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
+  if not FUseResult then
+    ResultSetType := rtScrollInsensitive;
 end;
 
 {**
@@ -1796,7 +1798,7 @@ begin
         begin
           SpaceForTrailingNull := (MYSQL_FIELD^.flags and BINARY_FLAG) = 0;
           Length := Min(MaxLobSize, Max(MYSQL_FIELD^.length,
-            MYSQL_FIELD^.max_length))+Ord(SpaceForTrailingNull);
+            MYSQL_FIELD^.max_length))+ULong(Ord(SpaceForTrailingNull));
         end
     else
       Length := MYSQL_FIELD^.length;

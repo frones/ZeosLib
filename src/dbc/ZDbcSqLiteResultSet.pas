@@ -293,18 +293,29 @@ end;
     value returned is <code>null</code>
 }
 function TZSQLiteResultSet.GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar;
+var ColType: Integer;
 begin
-  LastWasNull := FPlainDriver.column_type(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF}) = SQLITE_NULL;
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  ColType := FPlainDriver.column_type(FStmtHandle, ColumnIndex);
+  LastWasNull := ColType = SQLITE_NULL;
   if LastWasNull then
   begin
     Result := nil;
     Len := 0;
   end
   else
-  begin
-    Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex{$IFNDEF GENERIC_INDEX} -1{$ENDIF});
-    Len := ZFastCode.StrLen(Result);
-  end;
+    if ColType <> SQLITE_BLOB then
+    begin
+      Result := FPlainDriver.column_text(FStmtHandle, ColumnIndex);
+      Len := ZFastCode.StrLen(Result);
+    end
+    else
+    begin
+      Result := FPlainDriver.column_blob(FStmtHandle, ColumnIndex);
+      Len := FPlainDriver.column_bytes(FStmtHandle, ColumnIndex);
+    end;
 end;
 
 {**
