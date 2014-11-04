@@ -503,8 +503,12 @@ begin
     (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
     tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
     I := ZFastCode.Pos('.', tmp);
-    FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000+
-      StrToInt(Copy(tmp, i+1, Length(tmp)))*100000;
+    FHostVersion := StrToInt(Copy(tmp, 1, i-1))*1000000;
+    if ZFastCode.Pos(' ', tmp) > 0 then //possible beta or alfa release
+      tmp := Copy(tmp, i+1, ZFastCode.Pos(' ', tmp)-i-1)
+    else
+      tmp := Copy(tmp, i+1, Length(tmp)-i);
+    FHostVersion := FHostVersion + StrToInt(tmp)*100000;
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
