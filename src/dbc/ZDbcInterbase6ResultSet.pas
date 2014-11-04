@@ -276,6 +276,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := PSingle(sqldata)^;
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToFloat(DecodeString(True, ColumnIndex), '.');
@@ -393,6 +394,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^) <> 0;
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^ <> 0;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^<>0;
           SQL_SHORT     : Result := PSmallint(sqldata)^ <> 0;
           SQL_INT64     : Result := PInt64(sqldata)^ <> 0;
           SQL_TEXT      : Result := StrToBoolEx(PAnsiChar(sqldata));
@@ -572,6 +574,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := PSingle(sqldata)^;
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToFloat(DecodeString(True, ColumnIndex), '.');
@@ -639,6 +642,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := PSingle(sqldata)^;
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToFloat(DecodeString(True, ColumnIndex), '.');
@@ -706,6 +710,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := PSingle(sqldata)^;
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToFloat(DecodeString(True, ColumnIndex), '.');
@@ -770,6 +775,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToIntDef(DecodeString(True, ColumnIndex), 0);
@@ -842,6 +848,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToInt64Def(DecodeString(True, ColumnIndex), 0);
@@ -919,6 +926,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToUInt64Def(DecodeString(True, ColumnIndex), 0);
@@ -989,6 +997,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToIntDef(DecodeString(True, ColumnIndex), 0); //we actually don't have a trailing space ignoring routine
@@ -1059,6 +1068,7 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := Trunc(PSingle(sqldata)^);
           SQL_BOOLEAN   : Result := PSmallint(sqldata)^;
+          SQL_BOOLEAN_FB: Result := PByte(sqldata)^;
           SQL_SHORT     : Result := PSmallint(sqldata)^;
           SQL_INT64     : Result := PInt64(sqldata)^;
           SQL_TEXT      : Result := RawToIntDef(DecodeString(True, ColumnIndex), 0);
@@ -1128,7 +1138,12 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
           SQL_BOOLEAN   :
-            if Boolean(PSmallint(sqldata)^) = True then
+            if PSmallint(sqldata)^ <> 0 then
+              Result := 'YES'
+            else
+              Result := 'NO';
+          SQL_BOOLEAN_FB:
+            if PByte(sqldata)^ <> 0 then
               Result := 'YES'
             else
               Result := 'NO';
@@ -1349,7 +1364,12 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : FRawTemp := FloatToRaw(PSingle(sqldata)^);
           SQL_BOOLEAN   :
-            if Boolean(PSmallint(sqldata)^) = True then
+            if PSmallint(sqldata)^ <> 0 then
+              FRawTemp := 'YES'
+            else
+              FRawTemp := 'NO';
+          SQL_BOOLEAN_FB:
+            if PByte(sqldata)^ <> 0 then
               FRawTemp := 'YES'
             else
               FRawTemp := 'NO';
@@ -1464,7 +1484,12 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToRaw(PSingle(sqldata)^);
           SQL_BOOLEAN   :
-            if Boolean(PSmallint(sqldata)^) = True then
+            if PSmallint(sqldata)^ <> 0 then
+              Result := 'YES'
+            else
+              Result := 'NO';
+          SQL_BOOLEAN_FB:
+            if PByte(sqldata)^ <> 0 then
               Result := 'YES'
             else
               Result := 'NO';
@@ -1564,7 +1589,12 @@ begin
           SQL_D_FLOAT,
           SQL_FLOAT     : Result := FloatToStr(PSingle(sqldata)^);
           SQL_BOOLEAN   :
-            if Boolean(PSmallint(sqldata)^) = True then
+            if PSmallint(sqldata)^ <> 0 then
+              Result := 'YES'
+            else
+              Result := 'NO';
+          SQL_BOOLEAN_FB:
+            if PByte(sqldata)^ <> 0 then
               Result := 'YES'
             else
               Result := 'NO';
