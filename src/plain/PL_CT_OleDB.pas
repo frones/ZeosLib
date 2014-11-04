@@ -16,9 +16,6 @@ unit PL_CT_OleDB;
 {$ALIGN 2}
 {$ENDIF}
 {$MINENUMSIZE 4}
-{$IFDEF FPC}
-{$MODE DELPHI}
-{$ENDIF}
 interface
 {$I ZPlain.inc}
 {$IFDEF ENABLE_ADO}
