@@ -785,7 +785,7 @@ begin
 
     Table.TableName := 'PLUSA';
     Table.Open;
-    CheckEquals(2, Table.Fields.Count);
+    CheckEquals(3, Table.Fields.Count);
     Table.Insert;
     Table.FieldByName('ID').AsInteger := TEST_ROW_ID;
     Table.Fields[1].AsString := 'PLUS__';
