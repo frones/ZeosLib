@@ -598,9 +598,12 @@ end;
 }
 {$HINTS OFF}
 function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
+var RS: IZResultSet;
 begin
   Result := False;
   Prepare(False);
+  PrepareLastResultSetForReUse;
+  PrepareOpenResultSetForReUse;
   with FIBConnection do
   begin
     BindInParameters;
@@ -612,15 +615,21 @@ begin
 
     if (FStatementType in [stSelect, stExecProc])
       and (FResultXSQLDA.GetFieldCount <> 0) then
-      LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
-        FStmtHandle, FResultXSQLDA, CachedLob, FStatementType)
+      if not Assigned(LastResultSet) then
+        LastResultSet := TZInterbase6XSQLDAResultSet.Create(Self, SQL,
+          FStmtHandle, FResultXSQLDA, CachedLob, FStatementType)
     else
     begin
       { Fetch data and fill Output params }
-        AssignOutParamValuesFromResultSet(TZInterbase6XSQLDAResultSet.Create(
-          Self, SQL, FStmtHandle, FResultXSQLDA, CachedLob, FStatementType),
-            OutParamValues, OutParamCount , FDBParamTypes);
       LastResultSet := nil;
+      if not Assigned(FOpenResultSet) then
+      begin
+        RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultXSQLDA, CachedLob, FStatementType);
+        FOpenResultSet := Pointer(RS);
+      end;
+      AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet),
+          OutParamValues, OutParamCount , FDBParamTypes);
     end;
 
     { Autocommit statement. }
@@ -641,6 +650,7 @@ function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil;
   Prepare(True);
+  PrepareOpenResultSetForReUse;
   with FIBConnection do
   begin
     BindInParameters;
@@ -648,8 +658,14 @@ begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, FProcSql);
     ExecuteInternal;
     if (FStatementType in [stSelect, stExecProc]) and (FResultXSQLDA.GetFieldCount <> 0) then
-      Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
-        FResultXSQLDA, CachedLob, FStatementType);
+      if Assigned(FOpenResultSet) then
+        Result := IZResultSet(FOpenResultSet)
+      else
+      begin
+        Result := TZInterbase6XSQLDAResultSet.Create(Self, Self.SQL, FStmtHandle,
+          FResultXSQLDA, CachedLob, FStatementType);
+        FOpenResultSet := Pointer(Result);
+      end;
   end;
 end;
 
@@ -664,8 +680,10 @@ end;
   or 0 for SQL statements that return nothing
 }
 function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
+var RS: IZResultSet;
 begin
   Prepare(False);
+  PrepareOpenResultSetForReUse;
   with FIBConnection do
   begin
     BindInParameters;
@@ -676,8 +694,13 @@ begin
     Result := GetAffectedRows(GetPlainDriver, FStmtHandle, FStatementType, ConSettings);
     LastUpdateCount := Result;
     { Fetch data and fill Output params }
-    AssignOutParamValuesFromResultSet(TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-      FResultXSQLDA, CachedLob, FStatementType), OutParamValues, OutParamCount , FDBParamTypes);
+    if not Assigned(FOpenResultSet) then
+    begin
+      RS := TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+        FResultXSQLDA, CachedLob, FStatementType);
+      FOpenResultSet := Pointer(RS);
+    end;
+    AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet), OutParamValues, OutParamCount , FDBParamTypes);
     { Autocommit statement. }
     if GetAutoCommit then
       Commit;
