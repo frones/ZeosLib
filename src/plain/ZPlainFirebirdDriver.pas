@@ -517,8 +517,16 @@ type
     function isc_interprete(buffer: PAnsiChar; status_vector: PPISC_STATUS): ISC_STATUS; override;
   end;
 
-  { TZFirebirdD25PlainDriver }
+  { TZFirebird3PlainDriver }
+  TZFirebird30PlainDriver = class (TZFirebird25PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
 
+  { TZFirebirdD25PlainDriver }
   TZFirebirdD25PlainDriver = class (TZFirebird25PlainDriver)
   protected
     function Clone: IZPlainDriver; override;
@@ -529,6 +537,14 @@ type
     function GetDescription: string; override;
   end;
 
+  { TZFirebirdD30PlainDriver }
+  TZFirebirdD30PlainDriver = class (TZFirebirdD25PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
 
   function XSQLDA_LENGTH(Value: LongInt): LongInt;
 
@@ -1530,6 +1546,22 @@ begin
   Result:=inherited isc_interprete(buffer, status_vector);
 end;
 
+{ TZFirebird30PlainDriver }
+function TZFirebird30PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebird30PlainDriver.Create;
+end;
+
+function TZFirebird30PlainDriver.GetProtocol: string;
+begin
+  Result := 'firebird-3.0';
+end;
+
+function TZFirebird30PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for Firebird 3.0';
+end;
+
 { TZFirebirdD25PlainDriver }
 function TZFirebirdD25PlainDriver.Clone: IZPlainDriver;
 begin
@@ -1560,6 +1592,22 @@ end;
 function TZFirebirdD25PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for Firebird Embedded 2.5';
+end;
+
+{ TZFirebirdD30PlainDriver }
+function TZFirebirdD30PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZFirebirdD30PlainDriver.Create;
+end;
+
+function TZFirebirdD30PlainDriver.GetProtocol: string;
+begin
+  Result := 'firebirdd-3.0';
+end;
+
+function TZFirebirdD30PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for Firebird Embedded 3.0';
 end;
 
 end.
