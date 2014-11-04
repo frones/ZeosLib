@@ -54,6 +54,7 @@ unit ZDbcAdoMetadata;
 interface
 
 {$I ZDbc.inc}
+{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, SysUtils, ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
@@ -256,8 +257,9 @@ type
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
+{$ENDIF ENABLE_ADO}
 implementation
-
+{$IFDEF ENABLE_ADO}
 uses
 {$IFNDEF FPC}
   Variants,
@@ -2619,6 +2621,7 @@ begin
   end;
 end;
 
+{$ENDIF ENABLE_ADO}
 end.
 
 

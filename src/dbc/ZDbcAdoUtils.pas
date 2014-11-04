@@ -54,6 +54,7 @@ unit ZDbcAdoUtils;
 interface
 
 {$I ZDbc.inc}
+{$IFDEF ENABLE_ADO}
 
 uses Windows, Classes, SysUtils, ActiveX,
   ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZDbcStatement;
@@ -89,11 +90,7 @@ function ConvertSqlTypeToAdo(FieldType: TZSQLType): Integer;
   @param VT Variant datatype.
   @return a ADO datatype.
 }
-{$IFDEF FPC}
-function ConvertVariantToAdo(VT: Integer): Integer;
-{$ELSE}
 function ConvertVariantToAdo(VT: TVarType): Integer;
-{$ENDIF}
 
 {**
   Converts a TZResultSetType type into ADO cursor type.
@@ -149,7 +146,9 @@ var
 }
   ZAdoMalloc: IMalloc;
 
+{$ENDIF ENABLE_ADO}
 implementation
+{$IFDEF ENABLE_ADO}
 
 uses
   ComObj, {$IFDEF FPC}PL_CT_OleDB{$ELSE}OleDB{$ENDIF}, Variants,
@@ -291,11 +290,7 @@ end;
   @param VT Variant datatype.
   @return a ADO datatype.
 }
-{$IFDEF FPC}
-function ConvertVariantToAdo(VT: Integer): Integer;
-{$ELSE}
 function ConvertVariantToAdo(VT: TVarType): Integer;
-{$ENDIF}
 begin
   case VT and varTypeMask of
     varEmpty: Result := adEmpty;
@@ -311,7 +306,7 @@ begin
     varError: Result := adError;
     varBoolean: Result := adBoolean;
     varVariant: Result := adVariant;
-    varUnknown: Result := adIUnknown;
+    varUnknown: Result := adIUnknown ;
 {$IFNDEF FPC}
     varShortInt: Result := adTinyInt;
 {$ENDIF}
@@ -674,6 +669,8 @@ initialization
   OleCheck(CoGetMalloc(1, ZAdoMalloc));
 finalization
   ZAdoMalloc := nil;
+
+{$ENDIF ENABLE_ADO}
 end.
 
 

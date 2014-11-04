@@ -54,6 +54,7 @@ unit ZDbcAdoStatement;
 interface
 
 {$I ZDbc.inc}
+{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
@@ -117,7 +118,9 @@ type
     procedure Unprepare; override;
   end;
 
+{$ENDIF ENABLE_ADO}
 implementation
+{$IFDEF ENABLE_ADO}
 
 uses
 {$IFNDEF FPC}
@@ -767,6 +770,7 @@ begin
         ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, FDirectionTypes[i]);
 end;
 
+{$ENDIF ENABLE_ADO}
 end.
 
 
