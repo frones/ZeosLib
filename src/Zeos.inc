@@ -463,13 +463,9 @@
 {$ENDIF}
 
 // Enables ADO support in TZConnection/TZDataset
-{$IFNDEF ZEOS_DISABLE_ADO}
-{$IFNDEF FPC}
- {$IFNDEF UNIX}
+{$IF not defined(ZEOS_DISABLE_ADO) and defined(MSWINDOWS)}
   {$DEFINE ENABLE_ADO}
- {$ENDIF}
-{$ENDIF}
-{$ENDIF}
+{$IFEND}
 
 // Enables Interbase/Firebird support in TZConnection/TZDataset
 {$IFNDEF ZEOS_DISABLE_INTERBASE}

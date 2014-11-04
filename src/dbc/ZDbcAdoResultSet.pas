@@ -123,7 +123,7 @@ type
 implementation
 
 uses
-  Variants, Math, OleDB,
+  Variants, Math, {$IFDEF FPC}PL_CT_OleDB{$ELSE}OleDB{$ENDIF},
   ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding, ZFastCode;
 
 {**
@@ -592,7 +592,11 @@ ProcessFixedChar:
         end;
       else
         try
+          {$IFDEF FPC}
+          Result := UTF8String(WideString(FAdoRecordSet.Fields.Item[ColumnIndex].Value));
+          {$ELSE}
           Result := UTF8String(FAdoRecordSet.Fields.Item[ColumnIndex].Value);
+          {$ENDIF}
         except
           Result := '';
         end;
@@ -666,7 +670,11 @@ ProcessFixedChar:
               GetACP);
       else
         try
+          {$IFDEF FPC}
+          Result := RawByteString(WideString(FAdoRecordSet.Fields.Item[ColumnIndex].Value));
+          {$ELSE}
           Result := RawByteString(FAdoRecordSet.Fields.Item[ColumnIndex].Value);
+          {$ENDIF}
         except
           Result := '';
         end;

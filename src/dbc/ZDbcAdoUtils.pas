@@ -152,7 +152,7 @@ var
 implementation
 
 uses
-  ComObj, OleDB, Variants,
+  ComObj, {$IFDEF FPC}PL_CT_OleDB{$ELSE}OleDB{$ENDIF}, Variants,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils;
 
 {**

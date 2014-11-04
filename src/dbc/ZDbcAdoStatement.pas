@@ -123,7 +123,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  OleDB, ComObj,
+  {$IFDEF FPC}PL_CT_OleDB, Variants{$ELSE}OleDB{$ENDIF}, ComObj,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
@@ -314,7 +314,7 @@ begin
       AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
     Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
       SQL, ConSettings, ResultSetConcurrency);
-    LastUpdateCount := RC;
+    LastUpdateCount := {%H-}RC;
     if not Assigned(Result) then
       while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
     FOpenResultSet := Pointer(Result);
@@ -348,7 +348,7 @@ begin
   BindInParameters;
   try
     AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, adExecuteNoRecords);
-    LastUpdateCount := RC;
+    LastUpdateCount := {%H-}RC;
     Result := LastUpdateCount;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
@@ -389,7 +389,7 @@ begin
       AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
     LastResultSet := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
       SQL, ConSettings, ResultSetConcurrency);
-    LastUpdateCount := RC;
+    LastUpdateCount := {%H-}RC;
     Result := Assigned(LastResultSet);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
