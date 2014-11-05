@@ -1312,14 +1312,14 @@ begin
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
           System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToFloatDef(FUniTemp, '.', 0);
+          Result := UnicodeToFloatDef(FUniTemp, WideChar('.'), 0);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}
       adBSTR,
       adVarWChar,
       adLongVarWChar: {varying char fields}
-        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, '.', 0);
+        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, WideChar('.'), 0);
       else
         try
           Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
@@ -1384,14 +1384,14 @@ begin
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
           System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToFloatDef(FUniTemp, '.', 0);
+          Result := UnicodeToFloatDef(FUniTemp, WideChar('.'), 0);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}
       adBSTR,
       adVarWChar,
       adLongVarWChar: {varying char fields}
-        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, '.', 0);
+        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, WideChar('.'), 0);
       else
         try
           Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
@@ -1457,14 +1457,14 @@ begin
           P := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr;
           while (P+Len-1)^ = ' ' do dec(Len);
           System.SetString(FUniTemp, P, Len);
-          Result := UnicodeToFloatDef(FUniTemp, '.', 0);
+          Result := UnicodeToFloatDef(FUniTemp, WideChar('.'), 0);
         end;
       adVarChar,
       adLongVarChar, {varying char fields}
       adBSTR,
       adVarWChar,
       adLongVarWChar: {varying char fields}
-        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, '.', 0);
+        Result := UnicodeToFloatDef(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, WideChar('.'), 0);
       else
         try
           Result := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
