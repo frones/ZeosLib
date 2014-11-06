@@ -61,7 +61,6 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcLogging, ZVariant;
 
 type
-
   {** Implements Prepared SQL Statement. }
   TZASAPreparedStatement = class(TZAbstractPreparedStatement)
   private
@@ -238,7 +237,8 @@ end;
 procedure TZASAPreparedStatement.Unprepare;
 begin
   FSQLData := nil;
-  FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, Pointer(CursorName));
+  if not Assigned(FOpenResultSet) then //on closing the RS we exec db_close
+    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, Pointer(CursorName));
   inherited Unprepare;
 end;
 
@@ -338,6 +338,7 @@ function TZASAPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil; //satisfy compiler
   Prepare;
+  PrepareOpenResultSetForReUse;
   BindInParameters;
   if Assigned(FOpenResultSet) then
     IZResultSet(FOpenResultSet).Close;
@@ -347,7 +348,10 @@ begin
   begin
     GetPlainDriver.db_open(GetDBHandle, Pointer(CursorName), nil, @FStmtNum,
       FParamSQLData.GetData, FetchSize, 0, FCursorOptions);
-    Result := OpenResultSet;
+    if Assigned(FOpenResultSet) then
+      Result := IZResultSet(FOpenResultSet)
+    else
+      Result := OpenResultSet;
   end;
   { Logging SQL Command and values}
   inherited ExecuteQueryPrepared;

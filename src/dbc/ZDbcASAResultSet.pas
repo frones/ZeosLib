@@ -84,8 +84,8 @@ type
       var StmtNum: SmallInt; const CursorName: AnsiString;
       SqlData: IZASASQLDA; CachedBlob: boolean);
 
-    function GetCursorName: AnsiString; override;
     procedure Close; override;
+    procedure ResetCursor; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
@@ -1288,20 +1288,35 @@ begin
   inherited Open;
 end;
 
+{**
+  Releases this <code>ResultSet</code> object's database and
+  JDBC resources immediately instead of waiting for
+  this to happen when it is automatically closed.
+
+  <P><B>Note:</B> A <code>ResultSet</code> object
+  is automatically closed by the
+  <code>Statement</code> object that generated it when
+  that <code>Statement</code> object is closed,
+  re-executed, or is used to retrieve the next result from a
+  sequence of multiple results. A <code>ResultSet</code> object
+  is also automatically closed when it is garbage collected.
+}
 procedure TZASAAbstractResultSet.Close;
 begin
   FSqlData := nil;
-  if FCursorName <> '' then
-  begin
-    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
-    FCursorName := '';
-  end;
-  inherited Close;
+  inherited Close; //Calls ResetCursor so db_close is called!
+  FCursorName := '';
 end;
 
-function TZASAAbstractResultSet.GetCursorName: AnsiString;
+{**
+  Resets cursor position of this recordset to beginning and
+  the overrides should reset the prepared handles.
+}
+procedure TZASAAbstractResultSet.ResetCursor;
 begin
-  Result := FCursorName;
+  if FCursorName <> '' then
+    FASAConnection.GetPlainDriver.db_close(FASAConnection.GetDBHandle, PAnsiChar(FCursorName));
+  inherited ResetCursor;
 end;
 
 { TZASAParamererResultSet }
@@ -1314,14 +1329,36 @@ begin
   SetType(rtForwardOnly);
 end;
 
+{**
+  Moves the cursor down one row from its current position.
+  A <code>ResultSet</code> cursor is initially positioned
+  before the first row; the first call to the method
+  <code>next</code> makes the first row the current row; the
+  second call makes the second row the current row, and so on.
+
+  <P>If an input stream is open for the current row, a call
+  to the method <code>next</code> will
+  implicitly close it. A <code>ResultSet</code> object's
+  warning chain is cleared when a new row is read.
+
+  @return <code>true</code> if the new current row is valid;
+    <code>false</code> if there are no more rows
+}
 function TZASAParamererResultSet.Next: Boolean;
 begin
-  Result := RowNo = 0;
+  Result := (not Closed) and (RowNo = 0);
   if Result then RowNo := 1;
 end;
 
 { TZASANativeResultSet }
 
+{**
+  Moves the cursor to the last row in
+  this <code>ResultSet</code> object.
+
+  @return <code>true</code> if the cursor is on a valid row;
+    <code>false</code> if there are no rows in the result set
+}
 function TZASANativeResultSet.Last: Boolean;
 begin
   if LastRowNo <> MaxInt then
@@ -1382,6 +1419,23 @@ begin
   end;
 end;
 
+{**
+  Moves the cursor a relative number of rows, either positive or negative.
+  Attempting to move beyond the first/last row in the
+  result set positions the cursor before/after the
+  the first/last row. Calling <code>relative(0)</code> is valid, but does
+  not change the cursor position.
+
+  <p>Note: Calling the method <code>relative(1)</code>
+  is different from calling the method <code>next()</code>
+  because is makes sense to call <code>next()</code> when there
+  is no current row,
+  for example, when the cursor is positioned before the first row
+  or after the last row of the result set.
+
+  @return <code>true</code> if the cursor is on a row;
+    <code>false</code> otherwise
+}
 function TZASANativeResultSet.MoveRelative(Rows: Integer): Boolean;
 begin
   Result := False;
@@ -1407,6 +1461,17 @@ begin
   end;
 end;
 
+{**
+  Moves the cursor to the previous row in this
+  <code>ResultSet</code> object.
+
+  <p><B>Note:</B> Calling the method <code>previous()</code> is not the same as
+  calling the method <code>relative(-1)</code> because it
+  makes sense to call</code>previous()</code> when there is no current row.
+
+  @return <code>true</code> if the cursor is on a valid row;
+    <code>false</code> if it is off the result set
+}
 function TZASANativeResultSet.Previous: Boolean;
 begin
   Result := MoveRelative( -1);
