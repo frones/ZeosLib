@@ -378,27 +378,25 @@ var
 begin
   Result := nil;
   Prepare;
-  with FIBConnection do
-  begin
-    PrepareOpenResultSetForReUse;
-    BindInParameters;
-    iError := ExecuteInternal;
+  PrepareOpenResultSetForReUse;
+  BindInParameters;
+  iError := ExecuteInternal;
 
-    if (FStatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
-      if Assigned(FOpenResultSet) then
-        Result := IZResultSet(FOpenResultSet)
-      else
-      begin
-        if (iError <> DISCONNECT_ERROR) then
-          Result := CreateIBResultSet(SQL, Self,
-            TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
-            FResultXSQLDA, CachedLob, FStatementType));
-        FOpenResultSet := Pointer(Result);
-      end
+  if (FStatementType in [stSelect, stExecProc]) and ( FResultXSQLDA.GetFieldCount <> 0) then
+    if Assigned(FOpenResultSet) then
+      Result := IZResultSet(FOpenResultSet)
     else
-      if (iError <> DISCONNECT_ERROR) then    //AVZ
-        raise EZSQLException.Create(SCanNotRetrieveResultSetData);
-  end;
+    begin
+      if (iError <> DISCONNECT_ERROR) then
+        Result := CreateIBResultSet(SQL, Self,
+          TZInterbase6XSQLDAResultSet.Create(Self, SQL, FStmtHandle,
+          FResultXSQLDA, CachedLob, FStatementType));
+      FOpenResultSet := Pointer(Result);
+    end
+  else
+    if (iError <> DISCONNECT_ERROR) then    //AVZ
+      raise EZSQLException.Create(SCanNotRetrieveResultSetData);
+
   inherited ExecuteQueryPrepared;
 end;
 
