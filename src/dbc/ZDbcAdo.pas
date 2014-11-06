@@ -181,9 +181,7 @@ end;
 
 function TZAdoDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZAdoSQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZAdoSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 { TZAdoConnection }

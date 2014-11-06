@@ -238,9 +238,7 @@ end;
 }
 function TZInterbase6Driver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZInterbaseTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZInterbaseTokenizer.Create;
 end;
 
 {**
@@ -249,9 +247,7 @@ end;
 }
 function TZInterbase6Driver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZInterbaseStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZInterbaseStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZInterbase6Connection }

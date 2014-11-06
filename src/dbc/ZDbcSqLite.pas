@@ -199,9 +199,7 @@ end;
 }
 function TZSQLiteDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZSQLiteTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZSQLiteTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -210,9 +208,7 @@ end;
 }
 function TZSQLiteDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZSQLiteStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZSQLiteStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZSQLiteConnection }
