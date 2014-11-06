@@ -934,7 +934,7 @@ begin
   begin
     Current := TZConnectionConfig.Create(ActiveConnections[I]);
     Current.ConfigUses:=[cuMainConnection];
-    Writeln('Master Connection : '+Current.Name);
+    //Writeln('Master Connection : '+Current.Name);
 
     {$IFNDEF ENABLE_ADO}
     if Current.Protocol = 'ado' then
