@@ -340,9 +340,6 @@ begin
   Prepare;
   PrepareOpenResultSetForReUse;
   BindInParameters;
-  if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close;
-  FOpenResultSet := nil;
 
   with FASAConnection do
   begin
