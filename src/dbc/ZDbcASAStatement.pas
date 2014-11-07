@@ -577,13 +577,13 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+      GetPlainDriver.db_open(GetDBHandle, Pointer(Cursor), nil, @FStmtNum,
         FParamSQLData.GetData, FetchSize, 0, CursorOptions);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
       Closed := false;
       try
         if FMoreResults then
-          DescribeCursor( FASAConnection, TZASASQLDA( Pointer(FSQLData)), Cursor, ASQL);
+          DescribeCursor( FASAConnection, FSQLData, Cursor, ASQL);
 
         LastUpdateCount := -1;
         Result := GetCachedResultSet( Self.SQL, Self,
