@@ -78,6 +78,7 @@ type
     FMemPerRow, FArrayOffSet: Integer;
     FPreparedRowsOfArray: Integer;
     FTypeTokens: TRawByteStringDynArray;
+    FZBufferSize: LongWord;
     function ExecuteInternal: Integer;
     function InternalPrepare(const SQL: RawByteString; PrepareParams: Boolean): TZIbSqlStatementType;
   protected
@@ -132,7 +133,8 @@ type
 
 implementation
 
-uses ZSysUtils, ZDbcUtils, ZPlainFirebirdDriver, ZDbcInterbase6ResultSet;
+uses Math, ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
+  ZDbcInterbase6ResultSet;
 
 { TZInterbase6PreparedStatement }
 function TZInterbase6PreparedStatement.ExecuteInternal: Integer;
@@ -259,6 +261,8 @@ begin
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
   ResultSetType := rtForwardOnly;
   FStmtHandle := 0;
+  FZBufferSize := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //128KB by default
+  FZBufferSize := Min(FZBufferSize, FIBConnection.GetXSQLDAMaxSize);
 end;
 
 constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
@@ -285,7 +289,7 @@ procedure TZInterbase6PreparedStatement.Prepare;
     FStatementType := InternalPrepare(GetExecuteBlockString(FParamSQLData,
       IsParamIndex, InParamCount, Iteration, CachedQueryRaw,
       FIBConnection.GetPlainDriver, FMemPerRow, FPreparedRowsOfArray,
-        FTypeTokens, FInitialStatementType), False);
+        FTypeTokens, FInitialStatementType, FZBufferSize), False);
   end;
 begin
   if (not Prepared)  then
