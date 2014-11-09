@@ -404,7 +404,7 @@ begin
   end
   else if TypeName = 'SET' then
     Result := stString
-  else if TypeName = 'BIT' then
+  else if TypeName = 'BIT' then  //is this correct? see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
     Result := stSmall
   else
       for i := 0 to Length(GeoTypes) - 1 do

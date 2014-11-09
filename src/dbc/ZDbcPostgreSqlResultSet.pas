@@ -116,7 +116,7 @@ type
   end;
 
   {** Implements external blob wrapper object for PostgreSQL. }
-  TZPostgreSQLOidBlob = class(TZAbstractUnCachedBlob, IZPostgreSQLOidBlob)
+  TZPostgreSQLOidBlob = class(TZAbstractUnCachedBlob, IZPostgreSQLOidBlob, IZUnCachedLob)
   private
     FHandle: PZPostgreSQLConnect;
     FBlobOid: Oid;

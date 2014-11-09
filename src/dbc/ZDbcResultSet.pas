@@ -435,13 +435,14 @@ type
     function GetBytes: TBytes; override;
     function GetStream: TStream; override;
     function GetBuffer: Pointer; override;
+    function Clone(Empty: Boolean = False): IZBlob; override;
+    procedure FlushBuffer; virtual;
   end;
 
   {** Implements external or internal clob wrapper object. }
   TZAbstractCLob = class(TZAbstractBlob)
-  private
-    FCurrentCodePage: Word;
   protected
+    FCurrentCodePage: Word;
     FConSettings: PZConSettings;
     procedure InternalSetRawByteString(Const Value: RawByteString; const CodePage: Word);
     procedure InternalSetAnsiString(Const Value: AnsiString);
@@ -511,6 +512,7 @@ type
     function GetPWideChar: PWideChar; override;
     function GetBuffer: Pointer; override;
     function Clone(Empty: Boolean = False): IZBLob; override;
+    procedure FlushBuffer; virtual;
   End;
 
 implementation
@@ -4350,6 +4352,27 @@ begin
   Result := inherited Getbuffer;
 end;
 
+function TZAbstractUnCachedBlob.Clone(Empty: Boolean = False): IZBlob;
+begin
+  if not Empty and not Floaded then
+  begin
+    ReadLob;
+    Result := inherited Clone(Empty);
+    FlushBuffer;
+  end
+  else
+    Result := inherited Clone(Empty);
+end;
+
+procedure TZAbstractUnCachedBlob.FlushBuffer;
+begin
+  if not FUpdated then
+  begin
+    InternalClear;
+    Floaded := False;
+  end;
+end;
+
 { TZAbstractCLob }
 
 procedure TZAbstractCLob.InternalSetRawByteString(Const Value: RawByteString;
@@ -4953,8 +4976,22 @@ end;
 }
 function TZAbstractUnCachedCLob.Clone(Empty: Boolean = False): IZBLob;
 begin
-  if not Empty and not Loaded then ReadLob;
+  if not Empty and not Loaded then
+  begin
+    ReadLob;
+    inherited Clone(Empty);
+    FlushBuffer;
+  end;
   Result := inherited Clone(Empty);
+end;
+
+procedure TZAbstractUnCachedCLob.FlushBuffer;
+begin
+  if not FUpdated then
+  begin
+    InternalClear;
+    FLoaded := False;
+  end;
 end;
 
 end.

@@ -146,7 +146,7 @@ type
   end;
 
   {** Implements external blob wrapper object for Oracle. }
-  TZOracleBlob = class(TZAbstractUnCachedBlob, IZOracleBlob)
+  TZOracleBlob = class(TZAbstractBlob, IZOracleBlob)
   private
     FContextHandle: POCISvcCtx;
     FErrorHandle: POCIError;
@@ -165,15 +165,15 @@ type
     destructor Destroy; override;
 
     procedure CreateBlob;
-    procedure ReadLob; override;
-    procedure WriteLob; override;
+    procedure ReadLob; //override;
+    procedure WriteLob; //override;
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
-
-    function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
+  {EH: my current uncached implementation doesn't work here since we've no
+   scrollable RS}
   {** Implements external blob wrapper object for Oracle. }
-  TZOracleClob = class(TZAbstractUnCachedCLob, IZOracleBlob)
+  TZOracleClob = class(TZAbstractCLob, IZOracleBlob)
   private
     FContextHandle: POCISvcCtx;
     FErrorHandle: POCIError;
@@ -191,11 +191,9 @@ type
     destructor Destroy; override;
 
     procedure CreateBlob;
-    procedure ReadLob; override;
-    procedure WriteLob; override;
+    procedure ReadLob; //override;
+    procedure WriteLob; //override;
     procedure WriteLobFromBuffer(const Buffer: Pointer; const Len: Cardinal);
-
-    function Clone(Empty: Boolean = False): IZBlob; override;
   end;
 
 implementation
@@ -1858,7 +1856,7 @@ begin
     { Assigns data }
     InternalSetData(Buf, Offset);
   end;
-  inherited ReadLob;
+  //inherited ReadLob;
 end;
 
 {**
@@ -1884,20 +1882,6 @@ begin
   InternalClear;
   BlobData := AData;
   BlobSize := ASize;
-end;
-
-{**
-  Clones this blob object.
-  @return a clonned blob object.
-}
-function TZOracleBlob.Clone(Empty: Boolean = False): IZBlob;
-begin
-  if Empty then
-    Result := TZOracleBlob.Create(FPlainDriver, nil, 0, FContextHandle,
-      FErrorHandle, FLobLocator, FChunkSize, FConSettings)
-  else
-    Result := TZOracleBlob.Create(FPlainDriver, BlobData, Length, FContextHandle,
-      FErrorHandle, FLobLocator, FChunkSize, FConSettings);
 end;
 
 { TZOracleClob }
@@ -1961,6 +1945,7 @@ var
     end;
   end;
 begin
+  FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   if not Updated and (FLobLocator <> nil) and (BlobData = nil) and (not FTemporary) then
   begin
     { Opens a large object or file for read. }
@@ -1998,7 +1983,7 @@ begin
         FreeMem(Buf);
     end;
   end;
-  inherited ReadLob;
+  //inherited ReadLob;
 end;
 
 procedure TZOracleClob.WriteLob;
@@ -2016,18 +2001,6 @@ begin
   else
     OraWriteLob(FPlainDriver, Buffer, FContextHandle, FErrorHandle, FLobLocator,
       FChunkSize, Len+1, False, FConSettings);
-end;
-
-function TZOracleClob.Clone(Empty: Boolean = False): IZBlob;
-begin
-  if Empty then
-    Result := TZOracleClob.Create(FPlainDriver, nil, 0,
-      FConnectionHandle, FContextHandle, FErrorHandle, FLobLocator, FChunkSize,
-      FConSettings, CurrentCodePage)
-  else
-    Result := TZOracleClob.Create(FPlainDriver, BlobData, Length,
-      FConnectionHandle, FContextHandle, FErrorHandle, FLobLocator, FChunkSize,
-      FConSettings, CurrentCodePage);
 end;
 
 end.
