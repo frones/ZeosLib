@@ -126,7 +126,7 @@ uses
 {$IFNDEF FPC}
   Variants,
 {$ENDIF}
-  {$IFDEF FPC}PL_CT_OleDB, Variants{$ELSE}OleDB{$ENDIF}, ComObj,
+  {$IFDEF FPC}Variants,ZOleDB{$ELSE}OleDB{$ENDIF}, ComObj,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
   ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
