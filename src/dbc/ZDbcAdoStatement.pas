@@ -185,6 +185,9 @@ function TZAdoPreparedStatement.ExecuteQuery(const SQL: ZWideString): IZResultSe
 var
   RC: OleVariant;
 begin
+  if Assigned(FOpenResultSet) then
+    IZResultSet(FOpenResultSet).Close;
+  FOpenResultSet := nil;
   {$IFDEF UNICODE}
   WSQL := SQL;
   {$ENDIF}
@@ -294,6 +297,9 @@ var
   RC: OleVariant;
 begin
   LastUpdateCount := -1;
+  if Assigned(FOpenResultSet) then
+    IZResultSet(FOpenResultSet).Close;
+  FOpenResultSet := nil;
   Prepare;
   BindInParameters;
   try
@@ -311,6 +317,7 @@ begin
     LastUpdateCount := RC;
     if not Assigned(Result) then
       while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
+    FOpenResultSet := Pointer(Result);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do

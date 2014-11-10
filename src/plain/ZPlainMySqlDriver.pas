@@ -182,7 +182,7 @@ type
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     // stmt_attr_get
     function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
-                                  arg: PAnsiChar): Byte;
+                                  arg: Pointer): Byte;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
     function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
     function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
@@ -202,7 +202,7 @@ type
 
     function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult; // stmt_param_metadata
     function PrepareStmt(PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
-    // stmt_reset
+    function stmt_reset(PrepStmtHandle: PZMySqlPrepStmt): Byte;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     // stmt_row_tell
@@ -213,19 +213,9 @@ type
     procedure GetCharacterSetInfo(Handle: PZMySQLConnect; CharSetInfo: PMY_CHARSET_INFO);// get_character_set_info since 5.0.10
 
     {non API functions}
-    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
-    function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
     function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldLength(Field: PZMySQLField): ULong;
-    function GetFieldMaxLength(Field: PZMySQLField): Integer;
-    function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldCharsetNr(Field: PZMySQLField): UInt;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure SetDriverOptions(Options: TStrings); // changed by tohenk, 2009-10-11
   end;
@@ -327,7 +317,8 @@ type
     {BELOW are new PREPARED STATEMENTS}
     mysql_stmt_affected_rows:     function(stmt: PMYSQL_STMT): ULongLong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_attr_get:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; arg: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-    mysql_stmt_attr_set:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const arg: PAnsiChar): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_set517UP:     function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const arg: Pointer): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    mysql_stmt_attr_set:          function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType; const arg: Pointer): ULong; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_bind_param:        function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_bind_result:       function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
     mysql_stmt_close:             function(stmt: PMYSQL_STMT): Byte; {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -401,7 +392,7 @@ type
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
     function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
-                                  arg: PAnsiChar): Byte;
+                                  arg: Pointer): Byte;
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
     function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
@@ -420,6 +411,7 @@ type
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
     function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult;
     function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
+    function stmt_reset(PrepStmtHandle: PZMySqlPrepStmt): Byte;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     function SendPreparedLongData(Handle: PZMySqlPrepStmt; parameter_number: Cardinal; const data: PAnsiChar; length: Cardinal): Byte;
@@ -471,20 +463,10 @@ type
     function SeekRow(Res: PZMySQLResult; Row: PZMySQLRowOffset):
       PZMySQLRowOffset;
     function SeekField(Res: PZMySQLResult; Offset: Cardinal): Cardinal;
+    function GetFieldCount(Res: PZMySQLResult): Integer;
 
-    function GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
-    function GetFieldFlags(Field: PZMySQLField): Integer;
     function ResultSetExists(Handle: PZMySQLConnect):Boolean;
     function GetRowCount(Res: PZMySQLResult): Int64;
-    function GetFieldCount(Res: PZMySQLResult): Integer;
-    function GetFieldName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
-    function GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-    function GetFieldLength(Field: PZMySQLField): ULong;
-    function GetFieldMaxLength(Field: PZMySQLField): Integer;
-    function GetFieldDecimals(Field: PZMySQLField): Integer;
-    function GetFieldCharsetNr(Field: PZMySQLField): UInt;
     function GetFieldData(Row: PZMySQLRow; Offset: Cardinal): PAnsiChar;
     procedure SetDriverOptions(Options: TStrings); virtual; // changed by tohenk, 2009-10-11
   end;
@@ -547,6 +529,15 @@ type
     function Clone: IZPlainDriver; override;
   public
     constructor Create;
+    function GetProtocol: string; override;
+    function GetDescription: string; override;
+  end;
+
+  { TZMariaDB10PlainDriver }
+  TZMariaDB10PlainDriver = class (TZMySQL5PlainDriver)
+  protected
+    function Clone: IZPlainDriver; override;
+  public
     function GetProtocol: string; override;
     function GetDescription: string; override;
   end;
@@ -693,7 +684,8 @@ begin
   {API for PREPARED STATEMENTS}
   @mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
   @mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
-  @mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set');
+  @mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set'); //uses ulong
+  @mysql_stmt_attr_set517UP     := GetAddress('mysql_stmt_attr_set'); //uses mybool
   @mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
   @mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
   @mysql_stmt_close             := GetAddress('mysql_stmt_close');
@@ -1094,9 +1086,14 @@ begin
 end;
 
 function TZMySQLBaseDriver.StmtAttrSet(stmt: PZMySqlPrepStmt;
-  option: TMysqlStmtAttrType; arg: PAnsiChar): Byte;
+  option: TMysqlStmtAttrType; arg: Pointer): Byte;
 begin
-  Result :=  mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
+  //http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-attr-set.html
+  //http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-attr-set.html
+  if mysql_get_client_version >= 50107 then
+    Result :=  mysql_stmt_attr_set517up(PMYSQL_STMT(stmt),option,arg)
+  else //avoid stack crashs !
+    Result := mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
 end;
 
 function TZMySQLBaseDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
@@ -1196,6 +1193,11 @@ end;
 function TZMySQLBaseDriver.PrepareStmt(PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
 begin
     Result := mysql_stmt_prepare(PMYSQL_STMT(PrepStmtHandle), Query, Length);
+end;
+
+function TZMySQLBaseDriver.stmt_reset(PrepStmtHandle: PZMySqlPrepStmt): Byte;
+begin
+  Result := mysql_stmt_reset(PrepStmtHandle);
 end;
 
 function TZMySQLBaseDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
@@ -1303,16 +1305,6 @@ begin
   Result := mysql_error(Handle);
 end;
 
-function TZMySQLBaseDriver.GetFieldType(Field: PZMySQLField): TMysqlFieldTypes;
-begin
-  Result := PMYSQL_FIELD(Field)^._type;
-end;
-
-function TZMySQLBaseDriver.GetFieldFlags(Field: PZMySQLField): Integer;
-begin
-  Result := PMYSQL_FIELD(Field)^.flags;
-end;
-
 function TZMySQLBaseDriver.GetRowCount(Res: PZMySQLResult): Int64;
 begin
   Result := mysql_num_rows(Res);
@@ -1327,46 +1319,6 @@ end;
 function TZMySQLBaseDriver.GetFieldCount(Res: PZMySQLResult): Integer;
 begin
   Result := mysql_num_fields(Res);
-end;
-
-function TZMySQLBaseDriver.GetFieldDecimals(Field: PZMySQLField): Integer;
-begin
-  Result := PMYSQL_FIELD(Field)^.decimals;
-end;
-
-function TZMySQLBaseDriver.GetFieldCharsetNr(Field: PZMySQLField): UInt;
-begin
-  Result := PMYSQL_FIELD(Field)^.charsetnr;
-end;
-
-function TZMySQLBaseDriver.GetFieldLength(Field: PZMySQLField): ULong;
-begin
-  Result := PMYSQL_FIELD(Field)^.length;
-end;
-
-function TZMySQLBaseDriver.GetFieldMaxLength(Field: PZMySQLField): Integer;
-begin
-  Result := PMYSQL_FIELD(Field)^.max_length;
-end;
-
-function TZMySQLBaseDriver.GetFieldName(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.name;
-end;
-
-function TZMySQLBaseDriver.GetFieldTable(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.table;
-end;
-
-function TZMySQLBaseDriver.GetFieldOrigTable(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.org_table;
-end;
-
-function TZMySQLBaseDriver.GetFieldOrigName(Field: PZMySQLField): PAnsiChar;
-begin
-  Result := PMYSQL_FIELD(Field)^.org_name;
 end;
 
 function TZMySQLBaseDriver.GetFieldData(Row: PZMySQLRow;
@@ -1586,6 +1538,22 @@ end;
 function TZMariaDB5PlainDriver.GetDescription: string;
 begin
   Result := 'Native Plain Driver for MariaDB-5.x';
+end;
+
+{ TZMariaDB5PlainDriver }
+function TZMariaDB10PlainDriver.Clone: IZPlainDriver;
+begin
+  Result := TZMariaDB10PlainDriver.Create
+end;
+
+function TZMariaDB10PlainDriver.GetProtocol: string;
+begin
+  Result := 'MariaDB-10';
+end;
+
+function TZMariaDB10PlainDriver.GetDescription: string;
+begin
+  Result := 'Native Plain Driver for MariaDB-10';
 end;
 
 end.

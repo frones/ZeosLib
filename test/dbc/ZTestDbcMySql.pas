@@ -74,6 +74,7 @@ type
     procedure TestStatement;
     procedure TestAutoIncFields;
     procedure TestDefaultValues;
+    procedure TestSelectMultipleQueries;
   end;
 
 
@@ -200,14 +201,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True);
-  ResultSet.Close;
-
-  Statement.Close;
-  Connection.Close;
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True);
+  finally
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -222,14 +224,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, False);
-  ResultSet.Close;
-
-  Statement.Close;
-  Connection.Close;
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, False);
+  finally
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -248,23 +251,25 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
 
-  ResultSet := Statement.ExecuteQuery('SELECT c_id, c_name FROM cargo');
-  CheckNotNull(ResultSet);
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT c_id, c_name FROM cargo');
+    CheckNotNull(ResultSet);
 
-  ResultSet.MoveToInsertRow;
-  ResultSet.UpdateString(c_name_Index, 'xxx');
-  CheckEquals(0, ResultSet.GetInt(c_id_Index));
-  CheckEquals('xxx', ResultSet.GetString(c_name_Index));
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateString(c_name_Index, 'xxx');
+    CheckEquals(0, ResultSet.GetInt(c_id_Index));
+    CheckEquals('xxx', ResultSet.GetString(c_name_Index));
 
-  ResultSet.InsertRow;
-  Check(ResultSet.GetInt(c_id_Index) <> 0);
-  CheckEquals('xxx', ResultSet.GetString(c_name_Index));
+    ResultSet.InsertRow;
+    Check(ResultSet.GetInt(c_id_Index) <> 0);
+    CheckEquals('xxx', ResultSet.GetString(c_name_Index));
 
-  ResultSet.DeleteRow;
-
-  ResultSet.Close;
-
-  Statement.Close;
+    ResultSet.DeleteRow;
+  finally
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -287,28 +292,53 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
+  try
+    Statement.ExecuteUpdate('delete from default_values');
 
-  Statement.ExecuteUpdate('delete from default_values');
+    ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3,d_fld4,d_fld5,d_fld6 FROM default_values');
+    CheckNotNull(ResultSet);
 
-  ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3,d_fld4,d_fld5,d_fld6 FROM default_values');
-  CheckNotNull(ResultSet);
+    ResultSet.MoveToInsertRow;
+    ResultSet.InsertRow;
 
-  ResultSet.MoveToInsertRow;
-  ResultSet.InsertRow;
+    Check(ResultSet.GetInt(D_ID) <> 0);
+    CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+    CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+    CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+    CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+    CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
+    CheckEquals(EncodeDate(2003, 12, 11) +
+      EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
-  Check(ResultSet.GetInt(D_ID) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
-  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
-  CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
+    ResultSet.DeleteRow;
+  finally
+    if Assigned(ResultSet) then
+      ResultSet.Close;
+    Statement.Close;
+  end;
+end;
 
-  ResultSet.DeleteRow;
-
-  ResultSet.Close;
-  Statement.Close;
+procedure TZTestDbcMySQLCase.TestSelectMultipleQueries;
+const
+  c_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  c_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
 end;
 
 initialization

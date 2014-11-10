@@ -163,6 +163,7 @@ type
     destructor Destroy; override;
 
     procedure Close; override;
+    procedure ResetCursor; override;
 
     //======================================================================
     // Methods for accessing results by column index
@@ -302,6 +303,7 @@ type
       Resolver: IZCachedResolver; ConSettings: PZConSettings);
 
     procedure Close; override;
+    procedure ResetCursor; override;
     function GetMetaData: IZResultSetMetaData; override;
 
     function IsAfterLast: Boolean; override;
@@ -722,17 +724,18 @@ begin
   FInitialRowsList := TList.Create;
   FCurrentRowsList := TList.Create;
 
-  if ConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
-  begin
-    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
-  end
-  else
+  if (not ConSettings^.ClientCodePage^.IsStringFieldCPConsistent) or
+    (ConSettings^.ClientCodePage^.Encoding = ceUTF16) then
   begin
     FRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
     FOldRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
     FNewRowAccessor := TZUnicodeRowAccessor.Create(ColumnsInfo, ConSettings);
+  end
+  else
+  begin
+    FRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+    FOldRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
+    FNewRowAccessor := TZRawRowAccessor.Create(ColumnsInfo, ConSettings);
   end;
 
   FRowAccessor.AllocBuffer(FUpdatedRow);
@@ -787,6 +790,23 @@ begin
     FreeAndNil(FOldRowAccessor);
     FreeAndNil(FNewRowAccessor);
   end;
+end;
+
+procedure TZAbstractCachedResultSet.ResetCursor;
+var
+  I: Integer;
+begin
+  if Assigned(FRowAccessor) then
+  begin
+    for I := 0 to FRowsList.Count - 1 do
+      FRowAccessor.DisposeBuffer(PZRowBuffer(FRowsList[I]));
+    for I := 0 to FInitialRowsList.Count - 1 do
+      FRowAccessor.DisposeBuffer(PZRowBuffer(FInitialRowsList[I]));
+    FRowsList.Clear;
+    FInitialRowsList.Clear;
+    FCurrentRowsList.Clear;
+  end;
+  inherited ResetCursor;
 end;
 
 //======================================================================
@@ -2401,6 +2421,12 @@ begin
   FResultSet := nil;
 end;
 
+procedure TZCachedResultSet.ResetCursor;
+begin
+  If Assigned(FResultset) then
+    FResultset.ResetCursor;
+  inherited ResetCursor;
+end;
 {**
   Retrieves the  number, types and properties of
   this <code>ResultSet</code> object's columns.
@@ -2408,7 +2434,10 @@ end;
 }
 function TZCachedResultSet.GetMetadata: IZResultSetMetadata;
 begin
-  Result := ResultSet.GetMetadata;
+  If Assigned(FResultset) then
+    Result := ResultSet.GetMetadata
+  else
+    Result := nil;
 end;
 
 {**

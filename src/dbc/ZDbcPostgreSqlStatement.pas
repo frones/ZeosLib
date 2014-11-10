@@ -66,7 +66,14 @@ type
 
   { TZPostgreSQLPreparedStatement }
 
-  TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement)
+  {** PostgreSQL Prepared SQL statement interface. }
+  IZPGSQLPreparedStatement = interface(IZPreparedStatement)
+    ['{EED35CAA-8F36-4639-8B67-32DF237E8F6F}']
+    function GetLastQueryHandle: PZPostgreSQLResult;
+  end;
+
+  TZPostgreSQLPreparedStatement = class(TZAbstractPreparedStatement,
+    IZPGSQLPreparedStatement)
   private
     FRawPlanName: RawByteString;
     FPostgreSQLConnection: IZPostgreSQLConnection;
@@ -90,6 +97,7 @@ type
       Connection: IZPostgreSQLConnection; const SQL: string; Info: TStrings); overload;
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
       Connection: IZPostgreSQLConnection; Info: TStrings); overload;
+    function GetLastQueryHandle: PZPostgreSQLResult;
 
     function ExecuteQueryPrepared: IZResultSet; override;
     function ExecuteUpdatePrepared: Integer; override;
@@ -163,7 +171,7 @@ type
   end;
 
   {** Implements a specialized cached resolver for PostgreSQL. }
-  TZPostgreSQLCachedResolver = class(TZGenericCachedResolver, IZCachedResolver)
+  TZPostgreSQLCachedResolver = class(TZGenericCachedResolver)
   protected
     function CheckKeyColumn(ColumnIndex: Integer): Boolean; override;
   end;
@@ -205,6 +213,11 @@ constructor TZPostgreSQLPreparedStatement.Create(PlainDriver: IZPostgreSQLPlainD
   Connection: IZPostgreSQLConnection; Info: TStrings);
 begin
   Create(PlainDriver, Connection, SQL, Info);
+end;
+
+function TZPostgreSQLPreparedStatement.GetLastQueryHandle: PZPostgreSQLResult;
+begin
+  Result := QueryHandle;
 end;
 
 function TZPostgreSQLPreparedStatement.CreateResultSet(
@@ -267,13 +280,8 @@ end;
 function TZPostgreSQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil;
-
   Prepare;
-  if FOpenResultSet <> nil then
-  begin
-    IZResultSet(FOpenResultSet).Close;
-    FOpenResultSet := nil;
-  end;
+  PrepareOpenResultSetForReUse;
   if Prepared  then
     if Findeterminate_datatype then
       QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
@@ -285,7 +293,10 @@ begin
   else
     QueryHandle := ExecuteInternal(ASQL, eicExecute);
   if QueryHandle <> nil then
-    Result := CreateResultSet(QueryHandle)
+    if Assigned(FOpenResultSet) then
+      Result := IZResultSet(FOpenResultSet)
+    else
+      Result := CreateResultSet(QueryHandle)
   else
     Result := nil;
   inherited ExecuteQueryPrepared;
@@ -343,7 +354,7 @@ var
   ResultStatus: TZPostgreSQLExecStatusType;
 begin
   Prepare;
-
+  PrepareLastResultSetForReUse;
   if Prepared  then
     if Findeterminate_datatype then
       QueryHandle := ExecuteInternal(PrepareAnsiSQLQuery, eicExecute)
@@ -361,7 +372,8 @@ begin
     PGRES_TUPLES_OK:
       begin
         Result := True;
-        LastResultSet := CreateResultSet(QueryHandle);
+        if not Assigned(LastResultSet) then
+          LastResultSet := CreateResultSet(QueryHandle);
       end;
     PGRES_COMMAND_OK:
       begin

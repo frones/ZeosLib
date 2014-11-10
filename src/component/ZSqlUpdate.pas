@@ -261,7 +261,11 @@ begin
   FInsertSQL.Free;
   FModifySQL.Free;
   FRefreshSQL.Free;
-  
+  {keep track we notify a possible opened DataSet.CachedResultSet about destruction
+   else IntfAssign of FPC fails to clear the cached resolver of the CachedResultSet}
+  if Assigned(FDataSet) and (FDataSet is TZAbstractDataset) then
+    TZAbstractDataset(DataSet).UpdateObject := nil;
+
   inherited Destroy;
 end;
 
@@ -692,7 +696,7 @@ begin
           stCurrency: RefreshRowAccessor.SetCurrency(RefreshColumnIndex, RefreshResultSet.GetCurrency(I));
           stBigDecimal: RefreshRowAccessor.SetBigDecimal(RefreshColumnIndex, RefreshResultSet.GetBigDecimal(I));
           stString, stUnicodeString:
-            if Sender.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+            if RefreshRowAccessor is TZRawRowAccessor then
               RefreshRowAccessor.SetPAnsiChar(RefreshColumnIndex, RefreshResultSet.GetPAnsiChar(I, Len), @Len)
             else
               RefreshRowAccessor.SetPWideChar(RefreshColumnIndex, RefreshResultSet.GetPWideChar(I, Len), @Len);

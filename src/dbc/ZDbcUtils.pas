@@ -940,7 +940,7 @@ begin
     case TestEncoding(Bytes, Size, ConSettings) of
       ceDefault: ZSetString(Buffer, Size, Result);
       ceAnsi:
-        if ConSettings.ClientCodePage.Encoding = ceAnsi then
+        if ConSettings.ClientCodePage.Encoding in [ceAnsi, ceUTF16] then
           if ( ConSettings.CTRL_CP = zCP_UTF8) or (ConSettings.CTRL_CP = ConSettings.ClientCodePage.CP) then //second test avoids encode the string twice
             ZSetString(Buffer, Size, Result)  //should be exact
           else

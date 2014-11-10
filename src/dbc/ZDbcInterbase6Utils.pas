@@ -288,7 +288,8 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const CurrentSQLTokens: TRawByteStringDynArray;
   const PlainDriver: IZInterbasePlainDriver;
   var MemPerRow, PreparedRowsOfArray: Integer;
-  var TypeTokens: TRawByteStringDynArray): RawByteString;
+  var TypeTokens: TRawByteStringDynArray;
+  InitialStatementType: TZIbSqlStatementType): RawByteString;
 
 const
   { Default Interbase blob size for reading }
@@ -2155,7 +2156,7 @@ begin
         SQL_LONG      : PInteger(sqldata)^ := ord(Value);
         SQL_FLOAT     : PSingle(sqldata)^ := ord(Value);
         SQL_BOOLEAN   : PWordBool(sqldata)^ := Value;
-        SQL_BOOLEAN_FB: PBoolean(sqldata)^ := Value;
+        SQL_BOOLEAN_FB: PByte(sqldata)^ := Ord(Value);
         SQL_SHORT     : PSmallint(sqldata)^ := ord(Value);
         SQL_INT64     : PInt64(sqldata)^ := ord(Value);
         SQL_TEXT      : EncodeString(SQL_TEXT, Index, IntToRaw(ord(Value)));
@@ -2813,7 +2814,8 @@ function GetExecuteBlockString(const ParamsSQLDA: IZParamsSQLDA;
   const CurrentSQLTokens: TRawByteStringDynArray;
   const PlainDriver: IZInterbasePlainDriver;
   var MemPerRow, PreparedRowsOfArray: Integer;
-  var TypeTokens: TRawByteStringDynArray): RawByteString;
+  var TypeTokens: TRawByteStringDynArray;
+  InitialStatementType: TZIbSqlStatementType): RawByteString;
 const
   EBStart = AnsiString('EXECUTE BLOCK(');
   EBBegin =  AnsiString(')AS BEGIN'+LineEnding);
@@ -2823,7 +2825,7 @@ const
 var
   IndexName, ArrayName: RawByteString;
   I, j, BindCount, ParamIndex, ParamNameLen, SingleStmtLength, LastStmLen,
-  HeaderLen, FullHeaderLen, StmtLength, StmtMem:  Integer;
+  HeaderLen, FullHeaderLen, StmtLength, StmtMem, NewParamCount:  Integer;
   CodePageInfo: PZCodePage;
   PStmts, PResult: PAnsiChar;
   ReturningFound: Boolean;
@@ -2938,6 +2940,7 @@ begin
   FullHeaderLen := 0;
   StmtMem := 0;
   ReturningFound := False;
+  NewParamCount := 0;
   for J := 0 to RemainingArrayRows -1 do
   begin
     ParamIndex := 0;
@@ -2968,7 +2971,11 @@ begin
     Inc(SingleStmtLength, 1{;}+Length(LineEnding));
     Inc(StmtLength, HeaderLen+SingleStmtLength);
     Inc(FullHeaderLen, HeaderLen);
-    if (StmtLength+LBlockLen > 32*1024) or (StmtMem + MemPerRow > 64 *1024) then
+    Inc(NewParamCount, InParamCount);
+    //we run into XSQLDA !update! count limit of 255 see:
+    //http://tracker.firebirdsql.org/browse/CORE-3027?page=com.atlassian.jira.plugin.system.issuetabpanels%3Aall-tabpanel
+    if (StmtLength+LBlockLen > 32*1024) or (StmtMem + MemPerRow > 64 *1024) or
+      ((InitialStatementType <> stInsert) and (NewParamCount > 255)) then
     begin
       StmtLength := LastStmLen;
       Dec(FullHeaderLen, HeaderLen);

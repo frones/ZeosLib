@@ -71,11 +71,11 @@ type
 
 implementation
 
-uses ZCompatibility, ZEncoding;
+uses ZCompatibility, ZEncoding, Windows;
 
 procedure TZAdoPlainDriver.LoadCodePages;
 begin
-  AddCodePage('CP_ADO', 0, ceUTF16, zCP_UTF16,'',2, True);
+  AddCodePage('CP_ADO', 0, ceUTF16, GetACP,'', 1, False);
 end;
 
 constructor TZAdoPlainDriver.Create;

@@ -81,14 +81,15 @@ type
     procedure DefinePostgreSQLToSQLType(ColumnInfo: TZColumnInfo; const TypeOid: Oid);
   public
     constructor Create(PlainDriver: IZPostgreSQLPlainDriver;
-      Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
+      Statement: IZStatement; const SQL: string; Handle: PZPostgreSQLConnect;
       QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
       const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 
-    procedure Close; override;
+    procedure ResetCursor; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
+    function GetUTF8String(ColumnIndex: Integer): UTF8String; override;
     function GetPAnsiChar(ColumnIndex: Integer): PAnsiChar; override;
     function GetBoolean(ColumnIndex: Integer): Boolean; override;
     function GetInt(ColumnIndex: Integer): Integer; override;
@@ -137,8 +138,9 @@ type
 implementation
 
 uses
-  Math, ZMessages, ZDbcUtils, ZEncoding, ZDbcPostgreSql, ZFastCode,
-  ZDbcPostgreSqlUtils{$IFDEF WITH_UNITANSISTRINGS}, AnsiStrings{$ENDIF};
+  {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings,{$ENDIF} Math,
+  ZMessages, ZDbcUtils, ZEncoding, ZFastCode,
+  ZDbcPostgreSql, ZDbcPostgreSqlUtils, ZDbcPostgreSqlStatement;
 
 { TZPostgreSQLResultSet }
 
@@ -151,7 +153,7 @@ uses
   @param Handle a PostgreSQL specific query handle.
 }
 constructor TZPostgreSQLResultSet.Create(PlainDriver: IZPostgreSQLPlainDriver;
-  Statement: IZStatement; SQL: string; Handle: PZPostgreSQLConnect;
+  Statement: IZStatement; const SQL: string; Handle: PZPostgreSQLConnect;
   QueryHandle: PZPostgreSQLResult; const CachedLob: Boolean;
   const Chunk_Size, UndefinedVarcharAsStringLength: Integer);
 begin
@@ -309,27 +311,18 @@ begin
 end;
 
 {**
-  Releases this <code>ResultSet</code> object's database and
-  JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-
-  <P><B>Note:</B> A <code>ResultSet</code> object
-  is automatically closed by the
-  <code>Statement</code> object that generated it when
-  that <code>Statement</code> object is closed,
-  re-executed, or is used to retrieve the next result from a
-  sequence of multiple results. A <code>ResultSet</code> object
-  is also automatically closed when it is garbage collected.
+  Resets cursor position of this recordset and
+  reset the prepared handles.
 }
-procedure TZPostgreSQLResultSet.Close;
+procedure TZPostgreSQLResultSet.ResetCursor;
 begin
   if FQueryHandle <> nil then
+  begin
     FPlainDriver.Clear(FQueryHandle);
-  FHandle := nil;
-  FQueryHandle := nil;
-  inherited Close;
+    FQueryHandle := nil;
+  end;
+  inherited ResetCursor;
 end;
-
 {**
   Indicates if the value of the designated column in the current row
   of this <code>ResultSet</code> object is Null.
@@ -408,6 +401,41 @@ end;
 function TZPostgreSQLResultSet.GetPAnsiChar(ColumnIndex: Integer): PAnsiChar;
 begin
   Result := FPlainDriver.GetValue(FQueryHandle, RowNo - 1, ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF});
+end;
+
+{**
+  Gets the value of the designated column in the current row
+  of this <code>ResultSet</code> object as
+  a <code>UTF8String</code> in the Delphi programming language.
+
+  @param columnIndex the first column is 1, the second is 2, ...
+  @return the column value; if the value is SQL <code>''</code>, the
+    value returned is <code>null</code>
+}
+function TZPostgreSQLResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
+var
+  P: PAnsiChar;
+  L: NativeUInt;
+  WS: ZWideString;
+begin
+  {$IFNDEF GENERIC_INDEX}
+  ColumnIndex := ColumnIndex -1;
+  {$ENDIF}
+  P := GetBuffer(ColumnIndex, L);
+  if LastWasNull then
+    Result := ''
+  else
+    if (ConSettings^.ClientCodePage.CP = zCP_UTF8) or FBinaryFields[ColumnIndex] then
+      ZSetString(P, L, Result)
+    else
+    begin
+      WS := PRawToUnicode(P, L, ConSettings^.ClientCodePage.CP);
+      {$IFDEF WITH_RAWBYTESTRING}
+      Result := UTF8String(WS);
+      {$ELSE}
+      Result := ZUnicodeToRaw(WS, zCP_UTF8);
+      {$ENDIF}
+    end;
 end;
 
 {**
@@ -830,7 +858,11 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-
+  if (FQueryHandle = nil) and (not Closed) then
+  begin
+    FQueryHandle := (Statement as IZPGSQLPreparedStatement).GetLastQueryHandle;
+    LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
+  end;
   { Checks for maximum row. }
   Result := False;
   if (MaxRows > 0) and (Row > MaxRows) then

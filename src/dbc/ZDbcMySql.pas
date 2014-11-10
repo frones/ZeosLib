@@ -87,6 +87,7 @@ type
 
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
+    function GetMaxLobSize: ULong;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -94,6 +95,7 @@ type
   private
     FCatalog: string;
     FHandle: PZMySQLConnect;
+    FMaxLobSize: ULong;
   protected
     procedure InternalCreate; override;
   public
@@ -123,6 +125,7 @@ type
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
+    function GetMaxLobSize: ULong;
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
@@ -155,6 +158,7 @@ begin
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD41PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZMySQLD5PlainDriver.Create));
   AddSupportedProtocol(AddPlainDriverToCache(TZMariaDB5PlainDriver.Create));
+  AddSupportedProtocol(AddPlainDriverToCache(TZMariaDB10PlainDriver.Create));
 end;
 
 {**
@@ -278,7 +282,6 @@ begin
   AutoCommit := True;
   TransactIsolationLevel := tiNone;
   FHandle := nil;
-
   { Processes connection properties. }
   Open;
 end;
@@ -472,6 +475,16 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     end;
     Self.CheckCharEncoding(FClientCodePage);
 
+    FMaxLobSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Info.Values['FMaxLobSize'], 0);
+    if FMaxLobSize <> 0 then
+    begin
+      SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(FMaxLobSize);
+      GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+      CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
+      DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
+    end
+    else FMaxLobSize := MaxBlobSize;
+
     { Sets transaction isolation level. }
     OldLevel := TransactIsolationLevel;
     TransactIsolationLevel := tiNone;
@@ -494,12 +507,12 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     with CreateStatement.ExecuteQuery('show variables like "character_set_database"') do
     begin
       if Next then
-        FClientCodePage := GetString(2);
+        FClientCodePage := GetString(FirstDbcIndex+1);
       Close;
     end;
     ConSettings^.ClientCodePage := GetPlainDriver.ValidateCharEncoding(FClientCodePage);
     ZEncoding.SetConvertFunctions(ConSettings);
-  end
+  end;
 end;
 
 {**
@@ -822,6 +835,10 @@ begin
   Result := FHandle;
 end;
 
+function TZMySQLConnection.GetMaxLobSize: ULong;
+begin
+  Result := FMaxLobSize;
+end;
 {**
   Gets a MySQL plain driver interface.
   @return a MySQL plain driver interface.

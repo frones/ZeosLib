@@ -3366,7 +3366,8 @@ begin
     { Initializes accessors and buffers. }
     ColumnList := ConvertFieldsToColumnInfo(Fields);
     try
-      if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent then
+      if Connection.DbcConnection.GetConSettings^.ClientCodePage^.IsStringFieldCPConsistent
+        and (Connection.DbcConnection.GetConSettings^.ClientCodePage^.Encoding in [ceAnsi, ceUTF8]) then
         RowAccessor := TZRawRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings)
       else
         RowAccessor := TZUnicodeRowAccessor.Create(ColumnList, Connection.DbcConnection.GetConSettings);
@@ -3401,7 +3402,7 @@ end;
 procedure TZAbstractRODataset.InternalClose;
 begin
   if ResultSet <> nil then
-    if not FDoNotCloseResultSet then ResultSet.Close;
+    if not FDoNotCloseResultSet then ResultSet.ResetCursor;
   ResultSet := nil;
 
   if FOldRowBuffer <> nil then

@@ -1384,6 +1384,10 @@ begin
     Check(Query.Active);
     Check(Query.Prepared);
     Query.Close;
+    Query.Open;
+    Check(Query.Active);
+    Check(Query.Prepared);
+    Query.Close;
     Check(Not Query.Active);
     Check(Query.Prepared);
     Query.UnPrepare;

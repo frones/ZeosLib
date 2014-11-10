@@ -96,7 +96,6 @@ CREATE TABLE TABLE920450 (
 /*==============================================================*/
 /* Tables for Bug#1021705                                       */
 /*==============================================================*/
-
 CREATE TABLE TABLE1021705 (
    ID INTEGER NOT NULL,
    FLD1 NUMERIC (10, 6),
@@ -121,6 +120,24 @@ CREATE TABLE Ticket54 (
 );
 
 CREATE GENERATOR Ticket54_GEN;
+
+/*==============================================================*/
+/* Tables for Ticket#63                                         */
+/*==============================================================*/
+
+CREATE TABLE PLUS__ (
+   ID INTEGER NOT NULL,
+   FLD1 VARCHAR(10),
+   FLD2 VARCHAR(10),
+   PRIMARY KEY(ID)
+);
+
+CREATE TABLE PLUSA (
+   FLD1 VARCHAR(10),
+   FLD2 VARCHAR(10),
+   ID INTEGER NOT NULL,
+   PRIMARY KEY(ID)
+);
 
 SET TERM !! ;
 CREATE TRIGGER Ticket54_BI FOR Ticket54
