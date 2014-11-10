@@ -11,7 +11,7 @@ uses
   ZPlainMySqlDriver, ZPlainOracleConstants, ZPlainOracleDriver, 
   ZPlainPostgreSqlDriver, ZPlainSqLiteDriver, ZPlainASADriver, 
   ZPlainASAConstants, ZPlainFirebirdDriver, ZPlainFirebirdInterbaseConstants, 
-  ZPlainDbLibConstants, ZPlainAdoDriver, ZPlainAdo, PL_CT_OleDB;
+  ZPlainDbLibConstants, ZPlainAdoDriver, ZPlainAdo, ZOleDB;
 
 implementation
 

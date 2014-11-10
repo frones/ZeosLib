@@ -15,12 +15,6 @@
           <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <Other>
-        <CompilerMessages>
-          <UseMsgFile Value="True"/>
-        </CompilerMessages>
-        <CompilerPath Value="$(CompPath)"/>
-      </Other>
     </CompilerOptions>
     <Description Value="Zeos Plain Database API"/>
     <Version Major="7" Minor="2"/>
@@ -90,8 +84,8 @@
         <UnitName Value="ZPlainAdo"/>
       </Item20>
       <Item21>
-        <Filename Value="../../src/plain/PL_CT_OleDB.pas"/>
-        <UnitName Value="PL_CT_OleDB"/>
+        <Filename Value="../../src/plain/ZOleDB.pas"/>
+        <UnitName Value="ZOleDB"/>
       </Item21>
     </Files>
     <RequiredPkgs Count="3">

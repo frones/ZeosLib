@@ -126,7 +126,7 @@ implementation
 {$IFDEF ENABLE_ADO}
 
 uses
-  Variants, Math, {$IFDEF FPC}PL_CT_OleDB{$ELSE}OleDB{$ENDIF},
+  Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
   ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding, ZFastCode;
 
 {**

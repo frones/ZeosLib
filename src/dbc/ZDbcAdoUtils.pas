@@ -151,7 +151,7 @@ implementation
 {$IFDEF ENABLE_ADO}
 
 uses
-  ComObj, {$IFDEF FPC}PL_CT_OleDB{$ELSE}OleDB{$ENDIF}, Variants,
+  ComObj, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils;
 
 {**

@@ -263,7 +263,7 @@ implementation
 uses
   Variants,
   Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo,
-  {$IFDEF FPC}PL_CT_OleDB{$ELSE}OleDB{$ENDIF}, ZDbcAdoResultSet;
+  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ZDbcAdoResultSet;
 
 type
   TSuppSchemaRec = record
