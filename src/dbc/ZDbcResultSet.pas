@@ -4979,10 +4979,11 @@ begin
   if not Empty and not Loaded then
   begin
     ReadLob;
-    inherited Clone(Empty);
+    Result := inherited Clone(Empty);
     FlushBuffer;
-  end;
-  Result := inherited Clone(Empty);
+  end
+  else
+    Result := inherited Clone(Empty);
 end;
 
 procedure TZAbstractUnCachedCLob.FlushBuffer;
