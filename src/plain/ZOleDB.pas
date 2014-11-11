@@ -2326,6 +2326,4 @@ type
 {$ENDIF ENABLE_ADO}
 implementation
 
-uses comobj;
-
 end.
