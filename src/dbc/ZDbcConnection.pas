@@ -894,9 +894,9 @@ var UsedInfo: TStrings;
 begin
   UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
-  begin
     If UsedInfo = nil then
-        UsedInfo := TSTringList.Create;
+    begin
+      UsedInfo := TSTringList.Create;
       UsedInfo.Append('preferprepared=TRUE');
     end;
   Result := CreateRegularStatement(Info);
@@ -964,9 +964,9 @@ var UsedInfo: TStrings;
 begin
   UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    If UsedInfo = nil then
     begin
-      If UsedInfo = nil then
-        UsedInfo := TSTringList.Create;
+      UsedInfo := TSTringList.Create;
       UsedInfo.Append('preferprepared=TRUE');
     end;
   Result := CreatePreparedStatement(SQL, UsedInfo);
@@ -1043,9 +1043,9 @@ var UsedInfo: TStrings;
 begin
   UsedInfo := Info;
   If StrToBoolEx(GetInfo.Values['preferprepared']) then
+    If UsedInfo = nil then
     begin
-      If UsedInfo = nil then
-        UsedInfo := TSTringList.Create;
+      UsedInfo := TSTringList.Create;
       UsedInfo.Append('preferprepared=TRUE');
     end;
   Result := CreateCallableStatement(SQL, UsedInfo);
