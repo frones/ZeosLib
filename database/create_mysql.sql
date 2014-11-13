@@ -295,6 +295,25 @@ PRIMARY KEY (ID)
 );
 
 /*==============================================================*/
+/* Tables for TEST_MYSQL_BOOLEANS                               */
+/*==============================================================*/
+
+CREATE TABLE TEST_MYSQL_BOOLEANS
+(
+  id INT NOT NULL,
+  fld1 ENUM('Y','N'),
+  fld2 enum('n','y'),
+  fld3 BIT(1),
+  fld4 ENUM('Y','N') default 'Y',
+  fld5 enum('n','y') default 'n',
+  fld6 BIT(1) default 0,
+  fld7 ENUM('Y','N') default 'N',
+  fld8 enum('n','y') default 'Y',
+  fld9 BIT(1) default b'1',
+  PRIMARY KEY (id)
+);
+
+/*==============================================================*/
 /* Index: cargo_FK                                              */
 /*==============================================================*/
 create index cargo_FK on cargo (c_dep_id);
