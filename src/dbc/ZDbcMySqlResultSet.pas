@@ -217,7 +217,7 @@ uses
   @return SQL type from java.sql.Types
 }
 function TZMySQLResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
-begin
+begin {EH: does anyone know why the LoadColumns was made? Note the column-types are perfect determinable on MySQL}
   //if not Loaded then
     // LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
@@ -443,7 +443,16 @@ begin
   if LastWasNull then
     Result := False
   else
-    Result := StrToBoolEx(Buffer, True, False);
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
+      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+        1: Result := PByte(Buffer)^ <> 0;
+        2: Result := ReverseWordBytes(Buffer) <> 0;
+        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) <> 0;
+        else //5..8: makes compiler happy
+          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) <> 0;
+      end
+    else
+      Result := StrToBoolEx(Buffer, True, False);
 end;
 
 {**
@@ -1351,7 +1360,15 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := StrToBoolEx(PAnsiChar(FColumnArray[ColumnIndex].buffer), True, False);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT://http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^ <> 0;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer)  <> 0;
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length) <> 0;
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length) <> 0;
+          end;
+          //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
