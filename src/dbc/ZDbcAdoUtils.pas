@@ -472,7 +472,7 @@ procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
 var
   S: Integer;
   B: IZBlob;
-  V: Variant;
+  V: OleVariant;
   T: Integer;
   P: ZPlainAdo.Parameter;
   RetValue: TZVariant;
@@ -525,7 +525,22 @@ begin
     vtNull: V := Null;
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
-    vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
+    vtInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      begin //Hacking the IDE variant: Not all IDE's support
+        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
+        P.Value := SoftVarManager.GetAsInteger(RetValue);
+        P.Type_ :=  adBigInt;
+        P.Direction := ParamDirection;
+        Exit;
+      end;
+    vtUInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      begin //Hacking the IDE variant: Not all IDE's support
+        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
+        P.Value := SoftVarManager.GetAsUInteger(RetValue);
+        P.Type_ :=  adUnsignedBigInt;
+        P.Direction := ParamDirection;
+        Exit;
+      end;
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
     vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
     begin
