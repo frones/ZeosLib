@@ -76,6 +76,7 @@ type
       const Info: TStrings); overload;
     constructor Create(Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
+    procedure Prepare; override;
 
     function ExecuteQuery(const SQL: ZWideString): IZResultSet; override;
     function ExecuteUpdate(const SQL: ZWideString): Integer; override;
@@ -155,6 +156,15 @@ begin
   FAdoConnection := nil;
   inherited Destroy;
   FAdoCommand := nil;
+end;
+
+procedure TZAdoPreparedStatement.Prepare;
+begin
+  if Not Prepared then //prevent PrepareInParameters
+  begin
+    FAdoCommand.Prepared := True;
+    inherited Prepare;
+  end;
 end;
 
 procedure TZAdoPreparedStatement.PrepareInParameters;
