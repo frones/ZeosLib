@@ -90,6 +90,7 @@ type
     function GetProvider: TDBLibProvider;
     function GetPlainDriver: IZDBLibPlainDriver;
     function GetConnectionHandle: PDBPROCESS;
+    function GetServerAnsiCodePage: Word;
     procedure InternalExecuteStatement(const SQL: RawByteString);
     procedure CheckDBLibError(LogCategory: TZLoggingCategory; const LogMessage: RawByteString);
   end;
@@ -99,6 +100,7 @@ type
   private
     FProvider: TDBLibProvider;
     FFreeTDS: Boolean;
+    FServerAnsiCodePage: Word;
     function FreeTDS: Boolean;
     function GetProvider: TDBLibProvider;
     procedure ReStartTransactionSupport;
@@ -122,8 +124,6 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    function NativeSQL(const SQL: string): string; override;
-
     procedure SetAutoCommit(AutoCommit: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -142,6 +142,7 @@ type
     procedure ClearWarnings; override;
     function GetBinaryEscapeString(const Value: TBytes): String; overload; override;
     function GetBinaryEscapeString(const Value: RawByteString): String; overload; override;
+    function GetServerAnsiCodePage: Word;
   end;
 
 var
@@ -437,22 +438,37 @@ begin
 
   if FProvider = dpMsSQL then
   begin
-    if FClientCodePage = '' then
+  {note: this is a hack from a user-request of synopse project!
+    Purpose is to notify Zeos all Character columns are
+    UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
+    valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char(UTF8) encoding
+    So this is stopping all encoding detections and increases the performance in
+    a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
+    Else all results are invalid!!!!! Just to invoke later questions, reports!}
+    FDisposeCodePage := True;
+    ConSettings^.ClientCodePage := New(PZCodePage);
+    ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage; //need a tempory CP for the SQL preparation
+    ConSettings^.ClientCodePage^.Encoding := ceAnsi;
+    ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
+    FServerAnsiCodePage := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
+    if UpperCase(Info.Values['ResetCodePage']) = 'UTF8' then
     begin
-      FDisposeCodePage := True;
-      ConSettings^.ClientCodePage := New(PZCodePage);
-      ConSettings^.ClientCodePage^.CP := ZDefaultSystemCodePage; //need a tempory CP for the SQL preparation
-      ConSettings^.ClientCodePage^.Encoding := ceAnsi;
-      ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
+      ConSettings^.ClientCodePage^.CP := zCP_UTF8;
+      ConSettings^.ClientCodePage^.Encoding := ceUTF8;
+      ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
+    end
+    else
+    begin
+      ConSettings^.ClientCodePage^.CP := FServerAnsiCodePage;
       ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := False;
-      ConSettings^.ClientCodePage^.CP := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
-      ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
-      SetConvertFunctions(ConSettings);
     end;
+    ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
+    SetConvertFunctions(ConSettings);
     DetermineMSDateFormat;
   end
   else
   begin
+    FServerAnsiCodePage := ConSettings^.ClientCodePage^.CP;
     ConSettings^.ReadFormatSettings.DateFormat := 'yyyy/mm/dd';
     ConSettings^.ReadFormatSettings.DateTimeFormat := ConSettings^.ReadFormatSettings.DateFormat+' '+ConSettings^.ReadFormatSettings.TimeFormat;
   end;
@@ -568,21 +584,6 @@ begin
   if IsClosed then
      Open;
   Result := TZDBLibCallableStatement.Create(Self, SQL, Info);
-end;
-
-{**
-  Converts the given SQL statement into the system's native SQL grammar.
-  A driver may convert the JDBC sql grammar into its system's
-  native SQL grammar prior to sending it; this method returns the
-  native form of the statement that the driver would have sent.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders
-  @return the native form of this statement
-}
-function TZDBLibConnection.NativeSQL(const SQL: string): string;
-begin
-  Result := SQL;
 end;
 
 {**
@@ -895,6 +896,10 @@ begin
     Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
+function TZDBLibConnection.GetServerAnsiCodePage: Word;
+begin
+  Result := FServerAnsiCodePage;
+end;
 
 initialization
   DBLibDriver := TZDBLibDriver.Create;
