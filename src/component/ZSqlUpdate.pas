@@ -564,7 +564,7 @@ begin
     end;
 
     ColumnIndex := ResultSet.FindColumn(ParamName);
-    if ColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0 then
+    if ColumnIndex >= FirstDbcIndex then
     begin
       if OldParam then
         RowAccessor := OldRowAccessor
