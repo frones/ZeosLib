@@ -690,7 +690,7 @@ begin
           stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
           stShort: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetShort(I));
           stWord: RefreshRowAccessor.SetWord(RefreshColumnIndex, RefreshResultSet.GetWord(I));
-          stSmall: RefreshRowAccessor.SetShort(RefreshColumnIndex, RefreshResultSet.GetSmall(I));
+          stSmall: RefreshRowAccessor.SetSmall(RefreshColumnIndex, RefreshResultSet.GetSmall(I));
           stLongWord: RefreshRowAccessor.SetUInt(RefreshColumnIndex, RefreshResultSet.GetUInt(I));
           stInteger: RefreshRowAccessor.SetInt(RefreshColumnIndex, RefreshResultSet.GetInt(I));
           stULong: RefreshRowAccessor.SetULong(RefreshColumnIndex, RefreshResultSet.GetULong(I));
@@ -792,25 +792,26 @@ begin
       ExecuteStatement := true;
       UpdateAutoIncFields := false;
       case UpdateType of
-        utDeleted:
-          DoBeforeDeleteSQLStatement(Self, I, ExecuteStatement);
-        utInserted:
-          DoBeforeInsertSQLStatement(Self, I, ExecuteStatement);
-        utModified:
-          DoBeforeModifySQLStatement(Self, I, ExecuteStatement);
+        utDeleted: DoBeforeDeleteSQLStatement(Self, I, ExecuteStatement);
+        utInserted: DoBeforeInsertSQLStatement(Self, I, ExecuteStatement);
+        utModified: DoBeforeModifySQLStatement(Self, I, ExecuteStatement);
       end;
       if ExecuteStatement then
       begin
+        // if Property ValidateUpdateCount isn't set : assume it's true
+        lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
+                              or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
         lValidateUpdateCount := StrToBoolEx(
           Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
         lUpdateCount := Statement.ExecuteUpdatePrepared;
-        if  (lValidateUpdateCount) and (lUpdateCount <> 1) then
+        {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
+        if  (lValidateUpdateCount) and (lUpdateCount <> 1   ) then
           raise EZSQLException.Create(Format(SInvalidUpdateCount, [lUpdateCount]));
+        {$ENDIF}
 
         case UpdateType of
-          utDeleted:
-            DoAfterDeleteSQLStatement(Self, I);
+          utDeleted: DoAfterDeleteSQLStatement(Self, I);
           utInserted:
             begin
              DoAfterInsertSQLStatement(Self, I, UpdateAutoIncFields);
@@ -818,8 +819,7 @@ begin
                 UpdateAutoIncrementFields(Sender, UpdateType,
                                           OldRowAccessor, NewRowAccessor, Self);
             end;
-          utModified:
-            DoAfterModifySQLStatement(Self,I);
+          utModified: DoAfterModifySQLStatement(Self,I);
         end;
       end;
       {END of PATCH [1185969]: Do tasks after posting updates. ie: Updating AutoInc fields in MySQL }
@@ -860,12 +860,9 @@ begin
   end;
 
   case UpdateType of
-    utInserted:
-      DoAfterInsertSQL;
-    utDeleted:
-      DoAfterDeleteSQL;
-    utModified:
-      DoAfterModifySQL;
+    utInserted: DoAfterInsertSQL;
+    utDeleted: DoAfterDeleteSQL;
+    utModified: DoAfterModifySQL;
   end;
 end;
 
