@@ -801,8 +801,6 @@ begin
         // if Property ValidateUpdateCount isn't set : assume it's true
         lValidateUpdateCount := (Sender.GetStatement.GetParameters.IndexOfName('ValidateUpdateCount') = -1)
                               or StrToBoolEx(Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
-        lValidateUpdateCount := StrToBoolEx(
-          Sender.GetStatement.GetParameters.Values['ValidateUpdateCount']);
 
         lUpdateCount := Statement.ExecuteUpdatePrepared;
         {$IFDEF WITH_VALIDATE_UPDATE_COUNT}
