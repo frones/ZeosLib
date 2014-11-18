@@ -7,6 +7,9 @@ interface
 uses
   ZTestDbcResultSet, ZTestDbcUtils, ZTestDbcCache,
   ZTestDbcCachedResultSet, ZTestDbcMetadata,ZTestDbcResultSetMetadata, ZTestDbcResolver,
+  {$IFDEF ENABLE_ADO}
+  ZTestDbcADO,
+  {$ENDIF}
   {$IFDEF ENABLE_SQLITE}
   ZTestDbcSqLite,
   {$ENDIF}
