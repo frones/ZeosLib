@@ -140,7 +140,173 @@ type
   TZASABasePlainDriver = class (TZAbstractPlainDriver, IZPlainDriver,
     IZASAPlainDriver)
   private
-    ASA_API: TASA_API;
+    Fdb_init: function( sqlca: PZASASQLCA): Integer;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Fdb_fini: function( sqlca: PZASASQLCA): Integer;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdb_string_connect: function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Fdb_string_disconnect: function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Fdb_start_engine: function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Fdb_stop_engine: function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Fdb_start_database: function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Fdb_stop_database: function(sqlca: PZASASQLCA; Params: PAnsiChar): LongWord;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdb_find_engine: function(sqlca: PZASASQLCA; Params: PAnsiChar): Word;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    FAlloc_sqlda: function( NumVar: LongWord): PASASQLDA;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Ffill_sqlda: function( Parameter: PASASQLDA): PASASQLDA;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Ffree_filled_sqlda: procedure( Parameter: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Ffill_s_sqlda: function( Parameter: PASASQLDA; MaxLength: Integer): PASASQLDA;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Ffree_sqlda: procedure( Parameter: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+    Ffree_sqlda_noind: procedure( Parameter: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_setConnect: procedure(sqlca: PZASASQLCA; ConnName: PAnsiChar);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_disconnect: procedure(sqlca: PZASASQLCA; ConnName: PAnsiChar);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_describe_cursor: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      Descriptor: PASASQLDA; SomeNumber: LongWord);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_prepare_into: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+      Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; SomeNumber: LongWord);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_prepare_describe: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+      Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
+      LongNames: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    {ASA12 dbpp_prepare_describe_12, (SQLCA *,char *,char *,short int *,char *,struct sqlda *,struct sqlda *,unsigned int, unsigned short int, a_sql_uint32 ))}
+    Fdbpp_prepare_describe_12: procedure (SQLCA: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; SqlStatement: PAnsiChar;
+      Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord;
+      LongNames: Word; UnknownUint2: Longword)
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_select: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1,
+      Descriptor2: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_open: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      UnKnown: PAnsiChar; ProgName: PAnsiChar; RecordStatementNum: PSmallInt;
+      Descriptor1: PASASQLDA; BlockSize: SmallInt; IsolationLvl: SmallInt;
+      Options : Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_close: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_fetch: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      Offset: Word; RelPositon: LongInt; Descriptor1: PASASQLDA;
+      BlockSize: SmallInt; Options: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_declare: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      UnKnown: PAnsiChar; ProgName: PAnsiChar; RecordStatementNum: PSmallInt;
+      Options: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_dropstmt: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_describe: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor: PASASQLDA;
+      WhatToDesc: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_delete: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      UnKnown1: PAnsiChar; UnKnown2: PAnsiChar);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_update: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      Descriptor: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_execute_imm: procedure(sqlca: PZASASQLCA; SqlRecordStatement:
+      PAnsiChar;
+      UnKnown1: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_put_into: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      Descriptor: PASASQLDA; UnKnown1: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_put_array: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      Descriptor: PASASQLDA; Into_sqlda: PASASQLDA; Rows: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_commit: procedure( sqlca: PZASASQLCA; SomeNumber: LongWord);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_rollback: procedure( sqlca: PZASASQLCA; SomeNumber: LongWord);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_execute_into: procedure(sqlca: PZASASQLCA; UnKnown: PAnsiChar;
+      ProgName: PAnsiChar; RecordStatementNum: PSmallInt; Descriptor1: PASASQLDA;
+      Descriptor2: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_get_data: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      ColumnNumber: Word; Offset: LongInt; Descriptor1: PASASQLDA;
+      Unknown: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_explain: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      SomeNumber1: Word; Descriptor1: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdb_register_a_callback: procedure( sqlca: PZASASQLCA;
+      CBIdx: integer; Proc: TZASASQLCallback);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_setoption: procedure( sqlca: PZASASQLCA; Temporary: LongInt;
+      User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_fetch_array: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar;
+      Offset: Word; RelPositon: LongInt; Descriptor1: PASASQLDA;
+      BlockSize: SmallInt; Options: Word; ArrayWidth: Word);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fsqlerror_message: function(sqlca: PZASASQLCA; Buffer: PAnsiChar;
+      MaxSize: Integer): PAnsiChar;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdbpp_resume: procedure(sqlca: PZASASQLCA; CursorName: PAnsiChar);
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdb_cancel_request: function( sqlca: PZASASQLCA): Integer;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdb_change_char_charset: function( sqlca: PZASASQLCA; const CharSet: PAnsiChar): Word;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+
+    Fdb_change_nchar_charset: function( sqlca: PZASASQLCA; const CharSet: PAnsiChar): Word;
+      {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   protected
     procedure LoadApi; override;
     function GetUnicodeCodePageName: String; override;
@@ -274,52 +440,52 @@ procedure TZASABasePlainDriver.LoadApi;
 begin
   with FLoader do
   begin
-    @ASA_API.sqlerror_message       := GetAddress('sqlerror_message');
-    @ASA_API.db_init                := GetAddress('db_init');
-    @ASA_API.db_fini                := GetAddress('db_fini');
-    @ASA_API.db_string_connect      := GetAddress('db_string_connect');
-    @ASA_API.db_string_disconnect   := GetAddress('db_string_disconnect');
-    @ASA_API.db_find_engine         := GetAddress('db_find_engine');
-    @ASA_API.db_start_engine        := GetAddress('db_start_engine');
-    @ASA_API.db_stop_engine         := GetAddress('db_stop_engine');
-    @ASA_API.db_start_database      := GetAddress('db_start_database');
-    @ASA_API.db_stop_database       := GetAddress('db_stop_database');
-    @ASA_API.alloc_sqlda            := GetAddress('alloc_sqlda');
-    @ASA_API.fill_sqlda             := GetAddress('fill_sqlda');
-    @ASA_API.fill_s_sqlda           := GetAddress('fill_s_sqlda');
-    @ASA_API.free_filled_sqlda      := GetAddress('free_filled_sqlda');
-    @ASA_API.free_sqlda             := GetAddress('free_sqlda');
-    @ASA_API.free_sqlda_noind       := GetAddress('free_sqlda_noind');
-    @ASA_API.dbpp_setConnect        := GetAddress('dbpp_setconnect');
-    @ASA_API.dbpp_disconnect        := GetAddress('dbpp_disconnect');
-    @ASA_API.dbpp_prepare_into      := GetAddress('dbpp_prepare_into');
-    @ASA_API.dbpp_describe_cursor   := GetAddress('dbpp_describe_cursor');
-    @ASA_API.dbpp_prepare_describe  := GetAddress('dbpp_prepare_describe');
-    @ASA_API.dbpp_prepare_describe_12  := GetAddress('dbpp_prepare_describe_12');
-    @ASA_API.dbpp_select            := GetAddress('dbpp_select');
-    @ASA_API.dbpp_open              := GetAddress('dbpp_open');
-    @ASA_API.dbpp_close             := GetAddress('dbpp_close');
-    @ASA_API.dbpp_fetch             := GetAddress('dbpp_fetch');
-    @ASA_API.dbpp_declare           := GetAddress('dbpp_declare');
-    @ASA_API.dbpp_dropstmt          := GetAddress('dbpp_dropstmt');
-    @ASA_API.dbpp_describe          := GetAddress('dbpp_describe');
-    @ASA_API.dbpp_delete            := GetAddress('dbpp_delete');
-    @ASA_API.dbpp_update            := GetAddress('dbpp_update');
-    @ASA_API.dbpp_put_into          := GetAddress('dbpp_put_into');
-    @ASA_API.dbpp_put_array         := GetAddress('dbpp_put_array');
-    @ASA_API.dbpp_execute_imm       := GetAddress('dbpp_execute_imm');
-    @ASA_API.dbpp_commit            := GetAddress('dbpp_commit');
-    @ASA_API.dbpp_rollback          := GetAddress('dbpp_rollback');
-    @ASA_API.dbpp_execute_into      := GetAddress('dbpp_execute_into');
-    @ASA_API.dbpp_get_data          := GetAddress('dbpp_get_data');
-    @ASA_API.dbpp_explain           := GetAddress('dbpp_explain');
-    @ASA_API.dbpp_setoption         := GetAddress('dbpp_setoption');
-    @ASA_API.dbpp_fetch_array       := GetAddress('dbpp_fetch_array');
-    @ASA_API.db_register_a_callback := GetAddress('db_register_a_callback');
-    @ASA_API.dbpp_resume            := GetAddress('dbpp_resume');
-    @ASA_API.db_cancel_request      := GetAddress('db_cancel_request');
-    @ASA_API.db_change_char_charset := GetAddress('db_change_char_charset');
-    @ASA_API.db_change_nchar_charset:= GetAddress('db_change_nchar_charset');
+    @Fsqlerror_message       := GetAddress('sqlerror_message');
+    @Fdb_init                := GetAddress('db_init');
+    @Fdb_fini                := GetAddress('db_fini');
+    @Fdb_string_connect      := GetAddress('db_string_connect');
+    @Fdb_string_disconnect   := GetAddress('db_string_disconnect');
+    @Fdb_find_engine         := GetAddress('db_find_engine');
+    @Fdb_start_engine        := GetAddress('db_start_engine');
+    @Fdb_stop_engine         := GetAddress('db_stop_engine');
+    @Fdb_start_database      := GetAddress('db_start_database');
+    @Fdb_stop_database       := GetAddress('db_stop_database');
+    @Falloc_sqlda            := GetAddress('alloc_sqlda');
+    @Ffill_sqlda             := GetAddress('fill_sqlda');
+    @Ffill_s_sqlda           := GetAddress('fill_s_sqlda');
+    @Ffree_filled_sqlda      := GetAddress('free_filled_sqlda');
+    @Ffree_sqlda             := GetAddress('free_sqlda');
+    @Ffree_sqlda_noind       := GetAddress('free_sqlda_noind');
+    @Fdbpp_setConnect        := GetAddress('dbpp_setconnect');
+    @Fdbpp_disconnect        := GetAddress('dbpp_disconnect');
+    @Fdbpp_prepare_into      := GetAddress('dbpp_prepare_into');
+    @Fdbpp_describe_cursor   := GetAddress('dbpp_describe_cursor');
+    @Fdbpp_prepare_describe  := GetAddress('dbpp_prepare_describe');
+    @Fdbpp_prepare_describe_12  := GetAddress('dbpp_prepare_describe_12');
+    @Fdbpp_select            := GetAddress('dbpp_select');
+    @Fdbpp_open              := GetAddress('dbpp_open');
+    @Fdbpp_close             := GetAddress('dbpp_close');
+    @Fdbpp_fetch             := GetAddress('dbpp_fetch');
+    @Fdbpp_declare           := GetAddress('dbpp_declare');
+    @Fdbpp_dropstmt          := GetAddress('dbpp_dropstmt');
+    @Fdbpp_describe          := GetAddress('dbpp_describe');
+    @Fdbpp_delete            := GetAddress('dbpp_delete');
+    @Fdbpp_update            := GetAddress('dbpp_update');
+    @Fdbpp_put_into          := GetAddress('dbpp_put_into');
+    @Fdbpp_put_array         := GetAddress('dbpp_put_array');
+    @Fdbpp_execute_imm       := GetAddress('dbpp_execute_imm');
+    @Fdbpp_commit            := GetAddress('dbpp_commit');
+    @Fdbpp_rollback          := GetAddress('dbpp_rollback');
+    @Fdbpp_execute_into      := GetAddress('dbpp_execute_into');
+    @Fdbpp_get_data          := GetAddress('dbpp_get_data');
+    @Fdbpp_explain           := GetAddress('dbpp_explain');
+    @Fdbpp_setoption         := GetAddress('dbpp_setoption');
+    @Fdbpp_fetch_array       := GetAddress('dbpp_fetch_array');
+    @Fdb_register_a_callback := GetAddress('db_register_a_callback');
+    @Fdbpp_resume            := GetAddress('dbpp_resume');
+    @Fdb_cancel_request      := GetAddress('db_cancel_request');
+    @Fdb_change_char_charset := GetAddress('db_change_char_charset');
+    @Fdb_change_nchar_charset:= GetAddress('db_change_nchar_charset');
   end;
 end;
 
@@ -376,119 +542,119 @@ end;
 function TZASABasePlainDriver.sqlerror_message(sqlca: PZASASQLCA; Buffer: PAnsiChar;
   MaxSize: Integer): PAnsiChar;
 begin
-  Result := ASA_API.sqlerror_message( sqlca, Buffer, MaxSize);
+  Result := Fsqlerror_message( sqlca, Buffer, MaxSize);
 end;
 
 function TZASABasePlainDriver.db_init( sqlca: PZASASQLCA): Integer;
 begin
-  Result := ASA_API.db_init( sqlca);
+  Result := Fdb_init( sqlca);
 end;
 
 function TZASABasePlainDriver.db_fini( sqlca: PZASASQLCA): Integer;
 begin
-  Result := ASA_API.db_fini( sqlca);
+  Result := Fdb_fini( sqlca);
 end;
 
 function TZASABasePlainDriver.db_string_connect(sqlca: PZASASQLCA; Params: PAnsiChar):
   Integer;
 begin
-  Result := ASA_API.db_string_connect( sqlca, Params);
+  Result := Fdb_string_connect( sqlca, Params);
 end;
 
 function TZASABasePlainDriver.db_string_disconnect( sqlca: PZASASQLCA;
   Params: PAnsiChar): LongWord;
 begin
-  Result := ASA_API.db_string_disconnect( sqlca, Params)
+  Result := Fdb_string_disconnect( sqlca, Params)
 end;
 
 function TZASABasePlainDriver.db_find_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
   Word;
 begin
-  Result := ASA_API.db_find_engine( sqlca, Params);
+  Result := Fdb_find_engine( sqlca, Params);
 end;
 
 function TZASABasePlainDriver.db_start_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
   LongWord;
 begin
-  Result := ASA_API.db_start_engine( sqlca, Params);
+  Result := Fdb_start_engine( sqlca, Params);
 end;
 
 function TZASABasePlainDriver.db_stop_engine(sqlca: PZASASQLCA; Params: PAnsiChar):
   LongWord;
 begin
-  Result := ASA_API.db_stop_engine( sqlca, Params);
+  Result := Fdb_stop_engine( sqlca, Params);
 end;
 
 function TZASABasePlainDriver.db_start_database(sqlca: PZASASQLCA; Params: PAnsiChar):
   LongWord;
 begin
-  Result := ASA_API.db_start_database( sqlca, Params);
+  Result := Fdb_start_database( sqlca, Params);
 end;
 
 function TZASABasePlainDriver.db_stop_database(sqlca: PZASASQLCA; Params: PAnsiChar):
   LongWord;
 begin
-  Result := ASA_API.db_stop_database( sqlca, Params);
+  Result := Fdb_stop_database( sqlca, Params);
 end;
 
 function TZASABasePlainDriver.db_alloc_sqlda( NumVar: LongWord): PASASQLDA;
 begin
-  Result := ASA_API.alloc_sqlda( NumVar);
+  Result := Falloc_sqlda( NumVar);
 end;
 
 function TZASABasePlainDriver.db_fill_sqlda( Parameter: PASASQLDA): PASASQLDA;
 begin
-  Result := ASA_API.fill_sqlda( Parameter);
+  Result := Ffill_sqlda( Parameter);
 end;
 
 function TZASABasePlainDriver.db_fill_s_sqlda( Parameter: PASASQLDA;
   MaxLength: Integer): PASASQLDA;
 begin
-  Result := ASA_API.fill_s_sqlda( Parameter, MaxLength);
+  Result := Ffill_s_sqlda( Parameter, MaxLength);
 end;
 
 procedure TZASABasePlainDriver.db_free_sqlda( Parameter: PASASQLDA);
 begin
-  ASA_API.free_sqlda( Parameter);
+  Ffree_sqlda( Parameter);
 end;
 
 procedure TZASABasePlainDriver.db_free_sqlda_noind( Parameter: PASASQLDA);
 begin
-  ASA_API.free_sqlda_noind( Parameter);
+  Ffree_sqlda_noind( Parameter);
 end;
 
 procedure TZASABasePlainDriver.db_free_filled_sqlda( Parameter: PASASQLDA);
 begin
-  ASA_API.free_filled_sqlda( Parameter);
+  Ffree_filled_sqlda( Parameter);
 end;
 
 procedure TZASABasePlainDriver.db_setconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
 begin
-  ASA_API.dbpp_setconnect( sqlca, ConnStr);
+  Fdbpp_setconnect( sqlca, ConnStr);
 end;
 
 procedure TZASABasePlainDriver.db_disconnect(sqlca: PZASASQLCA; ConnStr: PAnsiChar);
 begin
-  ASA_API.dbpp_disconnect( sqlca, ConnStr);
+  Fdbpp_disconnect( sqlca, ConnStr);
 end;
 
 procedure TZASABasePlainDriver.db_setoption( sqlca: PZASASQLCA; Temporary: Integer;
    User: PAnsiChar; Option: PAnsiChar; Descriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_setoption( sqlca, Temporary, User, Option, Descriptor);
+  Fdbpp_setoption( sqlca, Temporary, User, Option, Descriptor);
 end;
 
 procedure TZASABasePlainDriver.db_describe_cursor( sqlca: PZASASQLCA;
   CursorName: PAnsiChar; Descriptor: PASASQLDA; WhatToDesc: LongWord);
 begin
-  ASA_API.dbpp_describe_cursor( sqlca, CursorName, Descriptor, WhatToDesc);
+  Fdbpp_describe_cursor( sqlca, CursorName, Descriptor, WhatToDesc);
 end;
 
 procedure TZASABasePlainDriver.db_prepare_into( sqlca: PZASASQLCA;
   ProgName: PAnsiChar; StatementNum: PSmallInt; SqlStatement: PAnsiChar;
   Descriptor1: PASASQLDA; Descriptor2: PASASQLDA; WhatToDesc: LongWord);
 begin
-  ASA_API.dbpp_prepare_into( sqlca, nil, ProgName, StatementNum, SqlStatement,
+  Fdbpp_prepare_into( sqlca, nil, ProgName, StatementNum, SqlStatement,
     Descriptor1, Descriptor2, WhatToDesc);
 end;
 
@@ -499,12 +665,12 @@ var
   U1: LongWord;
 begin
   U1 := 0;
-  if Assigned(ASA_API.dbpp_prepare_describe) then
-    ASA_API.dbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
+  if Assigned(Fdbpp_prepare_describe) then
+    Fdbpp_prepare_describe( sqlca, nil, ProgName, StatementNum,
       SqlStatement, nil, Descriptor, WhatToDesc, LongNames)
   else
-    if Assigned(ASA_API.dbpp_prepare_describe_12) then
-    ASA_API.dbpp_prepare_describe_12(sqlca, nil, ProgName, StatementNum,
+    if Assigned(Fdbpp_prepare_describe_12) then
+    Fdbpp_prepare_describe_12(sqlca, nil, ProgName, StatementNum,
         SqlStatement, nil, Descriptor, WhatToDesc, LongNames, U1);
 end;
 
@@ -512,41 +678,41 @@ procedure TZASABasePlainDriver.db_declare(sqlca: PZASASQLCA; CursorName: PAnsiCh
   StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
   Options: Word);
 begin
-  ASA_API.dbpp_declare( sqlca, CursorName, StatementName, ProgName,
+  Fdbpp_declare( sqlca, CursorName, StatementName, ProgName,
     StatementNum, Options);
 end;
 
 procedure TZASABasePlainDriver.db_describe(sqlca: PZASASQLCA; ProgName: PAnsiChar;
       StatementNum: PSmallInt; Descriptor: PASASQLDA; WhatToDesc: Word);
 begin
-  ASA_API.dbpp_describe( sqlca, nil, ProgName, StatementNum, Descriptor,
+  Fdbpp_describe( sqlca, nil, ProgName, StatementNum, Descriptor,
     WhatToDesc);
 end;
 
 procedure TZASABasePlainDriver.db_dropstmt( sqlca: PZASASQLCA;
   StatementName: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt);
 begin
-  ASA_API.dbpp_dropstmt( sqlca, StatementName, ProgName, StatementNum);
+  Fdbpp_dropstmt( sqlca, StatementName, ProgName, StatementNum);
 end;
 
 procedure TZASABasePlainDriver.db_open(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   ProgName: PAnsiChar; StatementNum: PSmallInt; Descriptor: PASASQLDA;
   BlockSize, IsolationLvl: SmallInt; CursorOptions: Word);
 begin
-  ASA_API.dbpp_open( sqlca, CursorName, nil, ProgName, StatementNum,
+  Fdbpp_open( sqlca, CursorName, nil, ProgName, StatementNum,
     Descriptor, BlockSize, IsolationLvl, CursorOptions);
 end;
 
 procedure TZASABasePlainDriver.db_close(sqlca: PZASASQLCA; CursorName: PAnsiChar);
 begin
-  ASA_API.dbpp_close( sqlca, CursorName);
+  Fdbpp_close( sqlca, CursorName);
 end;
 
 procedure TZASABasePlainDriver.db_fetch(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   Offset: Word; RelPositon: Integer; Descriptor: PASASQLDA;
   BlockSize: SmallInt; Options: Word);
 begin
-  ASA_API.dbpp_fetch( sqlca, CursorName, Offset, RelPositon, Descriptor,
+  Fdbpp_fetch( sqlca, CursorName, Offset, RelPositon, Descriptor,
     BlockSize, Options);
 end;
 
@@ -554,103 +720,100 @@ procedure TZASABasePlainDriver.db_fetch_array( sqlca: PZASASQLCA;
   CursorName: PAnsiChar; Offset: Word; RelPositon: Integer;
   Descriptor: PASASQLDA; BlockSize: SmallInt; Options, ArrayWidth: Word);
 begin
-  ASA_API.dbpp_fetch_array( sqlca, CursorName, Offset, RelPositon, Descriptor,
+  Fdbpp_fetch_array( sqlca, CursorName, Offset, RelPositon, Descriptor,
     BlockSize, Options, ArrayWidth);
 end;
 
 procedure TZASABasePlainDriver.db_get_data(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   ColumnNumber: Word; Offset: Integer; Descriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_get_data( sqlca, CursorName, ColumnNumber, Offset, Descriptor,
-    0);
+  Fdbpp_get_data( sqlca, CursorName, ColumnNumber, Offset, Descriptor, 0);
 end;
 
 procedure TZASABasePlainDriver.db_delete(sqlca: PZASASQLCA; CursorName: PAnsiChar);
 begin
-  ASA_API.dbpp_delete( sqlca, CursorName, nil, nil);
+  Fdbpp_delete( sqlca, CursorName, nil, nil);
 end;
 
 procedure TZASABasePlainDriver.db_update(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   Descriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_update( sqlca, CursorName, Descriptor);
+  Fdbpp_update( sqlca, CursorName, Descriptor);
 end;
 
 procedure TZASABasePlainDriver.db_put_into(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_put_into( sqlca, CursorName, Descriptor, ResultDescriptor);
+  Fdbpp_put_into( sqlca, CursorName, Descriptor, ResultDescriptor);
 end;
 
 procedure TZASABasePlainDriver.db_put_array(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA; Rows: Word);
 begin
-  ASA_API.dbpp_put_array( sqlca, CursorName, Descriptor, ResultDescriptor,
+  Fdbpp_put_array( sqlca, CursorName, Descriptor, ResultDescriptor,
     Rows);
 end;
 
 procedure TZASABasePlainDriver.db_select(sqlca: PZASASQLCA; ProgName: PAnsiChar;
   StatementNum: PSmallInt; Descriptor, ResultDescriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_select( sqlca, nil, ProgName, StatementNum, Descriptor,
-    ResultDescriptor);
+  Fdbpp_select( sqlca, nil, ProgName, StatementNum, Descriptor, ResultDescriptor);
 end;
 
 procedure TZASABasePlainDriver.db_execute_into( sqlca: PZASASQLCA;
   Statement: PAnsiChar; ProgName: PAnsiChar; StatementNum: PSmallInt;
   Descriptor: PASASQLDA; ResultDescriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_execute_into( sqlca, Statement, ProgName, StatementNum,
-    Descriptor, ResultDescriptor);
+  Fdbpp_execute_into(sqlca, Statement, ProgName, StatementNum, Descriptor, ResultDescriptor);
 end;
 
 procedure TZASABasePlainDriver.db_execute_imm( sqlca: PZASASQLCA;
   Statement: PAnsiChar);
 begin
-  ASA_API.dbpp_execute_imm( sqlca, Statement, 2);
+  Fdbpp_execute_imm( sqlca, Statement, 2);
 end;
 
 procedure TZASABasePlainDriver.db_commit( sqlca: PZASASQLCA; TransLevel: LongWord);
 begin
-  ASA_API.dbpp_commit( sqlca, TransLevel);
+  Fdbpp_commit( sqlca, TransLevel);
 end;
 
 procedure TZASABasePlainDriver.db_rollback( sqlca: PZASASQLCA;
   TransLevel: LongWord);
 begin
-  ASA_API.dbpp_rollback( sqlca, TransLevel);
+  Fdbpp_rollback( sqlca, TransLevel);
 end;
 
 procedure TZASABasePlainDriver.db_explain(sqlca: PZASASQLCA; CursorName: PAnsiChar;
   Descriptor: PASASQLDA);
 begin
-  ASA_API.dbpp_explain( sqlca, CursorName, 0, Descriptor);
+  Fdbpp_explain( sqlca, CursorName, 0, Descriptor);
 end;
 
 procedure TZASABasePlainDriver.db_register_callback( sqlca: PZASASQLCA;
   CBIdx: ZASA_db_callback_index; Proc: TZASASQLCallback);
 begin
-  ASA_API.db_register_a_callback( sqlca, Integer( CBIdx), Proc);
+  Fdb_register_a_callback( sqlca, Integer( CBIdx), Proc);
 end;
 
 procedure TZASABasePlainDriver.db_resume(sqlca: PZASASQLCA; CursorName: PAnsiChar);
 begin
-  ASA_API.dbpp_resume( sqlca, CursorName);
+  Fdbpp_resume( sqlca, CursorName);
 end;
 
 function TZASABasePlainDriver.db_cancel_request( sqlca: PZASASQLCA): Integer;
 begin
-  Result := ASA_API.db_cancel_request( sqlca);
+  Result := Fdb_cancel_request( sqlca);
 end;
 
 function TZASABasePlainDriver.db_change_char_charset( sqlca: PZASASQLCA; const CharSet: PAnsiChar): Word;
 begin
-  Result := ASA_API.db_change_char_charset(sqlca, CharSet);
+  Result := Fdb_change_char_charset(sqlca, CharSet);
 end;
 
 function TZASABasePlainDriver.db_change_nchar_charset( sqlca: PZASASQLCA; const CharSet: PAnsiChar): Word;
 begin
-  Result := ASA_API.db_change_nchar_charset(sqlca, CharSet);
+  Result := Fdb_change_nchar_charset(sqlca, CharSet);
 end;
 
 {TZASA7PlainDriver}

@@ -1,7 +1,7 @@
 {*********************************************************}
 {                                                         }
 {                 Zeos Database Objects                   }
-{         Interbase Database Connectivity Classes         }
+{         Sybase SQL Anywhere Connectivity Classes        }
 {                                                         }
 {        Originally written by Sergey Merkuriev           }
 {                                                         }

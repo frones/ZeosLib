@@ -811,7 +811,7 @@ begin
     {$ENDIF}
 end;
 
-{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE)}
+{$IF defined(ENABLE_MYSQL) or defined(ENABLE_POSTGRESQL) or defined(ENABLE_INTERBASE) or defined(EANABLE_ASA)}
 procedure AssignOutParamValuesFromResultSet(const ResultSet: IZResultSet;
   OutParamValues: TZVariantDynArray; const OutParamCount: Integer;
   const ParamTypes: array of ShortInt);

@@ -123,12 +123,15 @@ var
 begin
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
+  try
+    Statement.ExecuteUpdate('UPDATE equipment SET eq_name=eq_name');
+    Statement.ExecuteUpdate('SELECT * FROM equipment');
 
-  Statement.ExecuteUpdate('UPDATE equipment SET eq_name=eq_name');
-//  Statement.ExecuteUpdate('SELECT * FROM equipment'); 
-
-  Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
-  Check(Statement.Execute('SELECT * FROM equipment'));
+    Check(not Statement.Execute('UPDATE equipment SET eq_name=eq_name'));
+    Check(Statement.Execute('SELECT * FROM equipment'));
+  finally
+    Statement.Close;
+  end;
 end;
 
 procedure TZTestDbcASACase.TestRegularResultSet;
@@ -140,18 +143,19 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcReadOnly);
+  try
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM DEPARTMENT');
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True);
+    ResultSet.Close;
 
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM DEPARTMENT');
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True);
-  ResultSet.Close;
-
-  ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES');
-  CheckNotNull(ResultSet);
-  PrintResultSet(ResultSet, True);
-  ResultSet.Close;
-
-  Statement.Close;
+    ResultSet := Statement.ExecuteQuery('SELECT * FROM BLOB_VALUES');
+    CheckNotNull(ResultSet);
+    PrintResultSet(ResultSet, True);
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
 end;
 
 procedure TZTestDbcASACase.TestBlobs;
@@ -160,7 +164,6 @@ const
   B_TEXT_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   B_IMAGE_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var
-  Connection: IZConnection;
   PreparedStatement: IZPreparedStatement;
   Statement: IZStatement;
   ResultSet: IZResultSet;
@@ -168,7 +171,6 @@ var
   ImageStream: TMemoryStream;
   TempStream: TStream;
 begin
-  Connection := CreateDbcConnection;
   Statement := Connection.CreateStatement;
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
@@ -265,29 +267,30 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
+  try
+    Statement.ExecuteUpdate('delete from DEFAULT_VALUES');
 
-  Statement.ExecuteUpdate('delete from DEFAULT_VALUES');
+    ResultSet := Statement.ExecuteQuery('SELECT D_ID,D_FLD1,D_FLD2,D_FLD3,D_FLD4,D_FLD5,D_FLD6 FROM DEFAULT_VALUES');
+    CheckNotNull(ResultSet);
 
-  ResultSet := Statement.ExecuteQuery('SELECT D_ID,D_FLD1,D_FLD2,D_FLD3,D_FLD4,D_FLD5,D_FLD6 FROM DEFAULT_VALUES');
-  CheckNotNull(ResultSet);
+    ResultSet.MoveToInsertRow;
+    ResultSet.UpdateInt(D_ID, 1);
+    ResultSet.InsertRow;
 
-  ResultSet.MoveToInsertRow;
-  ResultSet.UpdateInt(D_ID, 1);
-  ResultSet.InsertRow;
+    Check(ResultSet.GetInt(D_ID) <> 0);
+    CheckEquals(123456, ResultSet.GetInt(D_FLD1));
+    CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
+    CheckEquals('xyz', ResultSet.GetString(D_FLD3));
+    CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
+    CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
+    CheckEquals(EncodeDate(2003, 12, 11) +
+      EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
 
-  Check(ResultSet.GetInt(D_ID) <> 0);
-  CheckEquals(123456, ResultSet.GetInt(D_FLD1));
-  CheckEquals(123.456, ResultSet.GetFloat(D_FLD2), 0.001);
-  CheckEquals('xyz', ResultSet.GetString(D_FLD3));
-  CheckEquals(EncodeDate(2003, 12, 11), ResultSet.GetDate(D_FLD4), 0);
-  CheckEquals(EncodeTime(23, 12, 11, 0), ResultSet.GetTime(D_FLD5), 3);
-  CheckEquals(EncodeDate(2003, 12, 11) +
-    EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(D_FLD6), 3);
-
-  ResultSet.DeleteRow;
-
-  ResultSet.Close;
-  Statement.Close;
+    ResultSet.DeleteRow;
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
 end;
 
 {**
@@ -346,7 +349,7 @@ end;
 }
 procedure TZTestDbcASACase.TestStoredprocedures;
 const
-  ParamIndex = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  OutParamIndex = FirstDbcIndex + 1;
 var
   ResultSet: IZResultSet;
   CallableStatement: IZCallableStatement;
@@ -355,10 +358,11 @@ begin
     'PROCEDURE1', nil);
   with CallableStatement do
   begin
-    RegisterOutParameter(1, Ord(stInteger));
-    SetInt(ParamIndex, 12345);
+    RegisterOutParameter(OutParamIndex, Ord(stInteger));
+    RegisterParamType(OutParamIndex, {ptOutput} 2);
+    SetInt(FirstDbcIndex, 12345);
     ExecutePrepared;
-    CheckEquals(12346, GetInt(ParamIndex));
+    CheckEquals(12346, GetInt(OutParamIndex));
   end;
   CallableStatement.Close;
 
@@ -368,13 +372,13 @@ begin
   with ResultSet do
   begin
     CheckEquals(True, Next);
-    CheckEquals('Computer', GetString(ParamIndex));
+    CheckEquals('Computer', GetString(FirstDbcIndex));
     CheckEquals(True, Next);
-    CheckEquals('Laboratoy', GetString(ParamIndex));
+    CheckEquals('Laboratoy', GetString(FirstDbcIndex));
     CheckEquals(True, Next);
-    CheckEquals('Radiostation', GetString(ParamIndex));
+    CheckEquals('Radiostation', GetString(FirstDbcIndex));
     CheckEquals(True, Next);
-    CheckEquals('Volvo', GetString(ParamIndex));
+    CheckEquals('Volvo', GetString(FirstDbcIndex));
     Close;
   end;
   CallableStatement.Close;
