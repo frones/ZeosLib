@@ -3069,15 +3069,17 @@ end;
 }
 
 {$IFDEF WITH_TRECORDBUFFER}
-
 function TZAbstractRODataset.AllocRecordBuffer: TRecordBuffer;
 begin
    Result := TRecordBuffer(RowAccessor.Alloc);
 end;
 {$ELSE}
-
 function TZAbstractRODataset.AllocRecordBuffer: PChar;
 begin
+  {Dev notes:
+   This will be called for OldRowBuffer, NewRowBuffer and for count of visible rows
+   so NO memory wasting happens here!
+  }
   Result := PChar(RowAccessor.Alloc);
 end;
 {$ENDIF}

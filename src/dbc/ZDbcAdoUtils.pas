@@ -54,6 +54,7 @@ unit ZDbcAdoUtils;
 interface
 
 {$I ZDbc.inc}
+{$IFDEF ENABLE_ADO}
 
 uses Windows, Classes, SysUtils, ActiveX,
   ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZDbcStatement;
@@ -89,11 +90,7 @@ function ConvertSqlTypeToAdo(FieldType: TZSQLType): Integer;
   @param VT Variant datatype.
   @return a ADO datatype.
 }
-{$IFDEF FPC}
-function ConvertVariantToAdo(VT: Integer): Integer;
-{$ELSE}
 function ConvertVariantToAdo(VT: TVarType): Integer;
-{$ENDIF}
 
 {**
   Converts a TZResultSetType type into ADO cursor type.
@@ -149,10 +146,12 @@ var
 }
   ZAdoMalloc: IMalloc;
 
+{$ENDIF ENABLE_ADO}
 implementation
+{$IFDEF ENABLE_ADO}
 
 uses
-  ComObj, OleDB, Variants,
+  ComObj, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants,
   ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils;
 
 {**
@@ -291,11 +290,7 @@ end;
   @param VT Variant datatype.
   @return a ADO datatype.
 }
-{$IFDEF FPC}
-function ConvertVariantToAdo(VT: Integer): Integer;
-{$ELSE}
 function ConvertVariantToAdo(VT: TVarType): Integer;
-{$ENDIF}
 begin
   case VT and varTypeMask of
     varEmpty: Result := adEmpty;
@@ -311,7 +306,7 @@ begin
     varError: Result := adError;
     varBoolean: Result := adBoolean;
     varVariant: Result := adVariant;
-    varUnknown: Result := adIUnknown;
+    varUnknown: Result := adIUnknown ;
 {$IFNDEF FPC}
     varShortInt: Result := adTinyInt;
 {$ENDIF}
@@ -477,7 +472,7 @@ procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
 var
   S: Integer;
   B: IZBlob;
-  V: Variant;
+  V: OleVariant;
   T: Integer;
   P: ZPlainAdo.Parameter;
   RetValue: TZVariant;
@@ -530,7 +525,22 @@ begin
     vtNull: V := Null;
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
-    vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
+    vtInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      begin //Hacking the IDE variant: Not all IDE's support
+        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
+        P.Value := SoftVarManager.GetAsInteger(RetValue);
+        P.Type_ :=  adBigInt;
+        P.Direction := ParamDirection;
+        Exit;
+      end;
+    vtUInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      begin //Hacking the IDE variant: Not all IDE's support
+        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
+        P.Value := SoftVarManager.GetAsUInteger(RetValue);
+        P.Type_ :=  adUnsignedBigInt;
+        P.Direction := ParamDirection;
+        Exit;
+      end;
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
     vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
     begin
@@ -674,6 +684,8 @@ initialization
   OleCheck(CoGetMalloc(1, ZAdoMalloc));
 finalization
   ZAdoMalloc := nil;
+
+{$ENDIF ENABLE_ADO}
 end.
 
 

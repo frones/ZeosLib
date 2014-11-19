@@ -1011,6 +1011,10 @@ type
     procedure SetBlobData(const Buffer: Pointer; const Len: Cardinal; const CodePage: Word); overload;
     {$ENDIF}
   end;
+  IZUnCachedLob = interface(IZBlob)
+    ['{194F1179-9FFC-4032-B983-5EB3DD2E8B16}']
+    procedure FlushBuffer;
+  end;
 
   {** Database notification interface. }
   IZNotification = interface(IZInterface)

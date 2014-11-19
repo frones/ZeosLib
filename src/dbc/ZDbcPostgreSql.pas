@@ -417,9 +417,7 @@ end;
 }
 function TZPostgreSQLDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZPostgreSQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZPostgreSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -428,9 +426,7 @@ end;
 }
 function TZPostgreSQLDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZPostgreSQLStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZPostgreSQLStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZPostgreSQLConnection }

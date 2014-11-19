@@ -90,9 +90,9 @@ type
     constructor Create(const Statement: IZStatement; const SQL: string;
       var StatementHandle: TISC_STMT_HANDLE; const XSQLDA: IZSQLDA;
       const CachedBlob: boolean; const StmtType: TZIbSqlStatementType);
-    procedure ResetCursor; override;
 
     procedure Close; override;
+    procedure ResetCursor; override;
 
     function IsNull(ColumnIndex: Integer): Boolean; override;
     function GetPAnsiChar(ColumnIndex: Integer; out Len: NativeUInt): PAnsiChar; override;
@@ -120,7 +120,7 @@ type
   end;
 
   {** Implements external blob wrapper object for Intebase/Firbird. }
-  TZInterbase6UnCachedBlob = Class(TZAbstractUnCachedBlob)
+  TZInterbase6UnCachedBlob = Class(TZAbstractUnCachedBlob, IZUnCachedLob)
   private
     FBlobId: TISC_QUAD;
     FDBHandle: PISC_DB_HANDLE;
@@ -135,7 +135,7 @@ type
       var BlobId: TISC_QUAD; Const ConSettings: PZConSettings);
   end;
 
-  TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob)
+  TZInterbase6UnCachedClob = Class(TZAbstractUnCachedClob, IZUnCachedLob)
   private
     FBlobId: TISC_QUAD;
     FDBHandle: PISC_DB_HANDLE;
@@ -158,33 +158,6 @@ uses
   ZDbcUtils, ZEncoding, ZFastCode, ZSysUtils;
 
 { TZInterbase6XSQLDAResultSet }
-
-{**
-  Releases this <code>ResultSet</code> object's database and
-  JDBC resources immediately instead of waiting for
-  this to happen when it is automatically closed.
-
-  <P><B>Note:</B> A <code>ResultSet</code> object
-  is automatically closed by the
-  <code>Statement</code> object that generated it when
-  that <code>Statement</code> object is closed,
-  re-executed, or is used to retrieve the next result from a
-  sequence of multiple results. A <code>ResultSet</code> object
-  is also automatically closed when it is garbage collected.
-}
-procedure TZInterbase6XSQLDAResultSet.Close;
-begin
-  if FStmtHandle <> 0 then
-  begin
-    { Free output allocated memory }
-    FXSQLDA := nil;
-    FIZSQLDA := nil;
-    { Free allocate sql statement }
-    FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); //close handle but not free it
-    FStmtHandle := 0;
-  end;
-  inherited Close;
-end;
 
 {**
   Constructs this object, assignes main properties and
@@ -221,6 +194,29 @@ begin
   FCodePageArray[ConSettings^.ClientCodePage^.ID] := ConSettings^.ClientCodePage^.CP; //reset the cp if user wants to wite another encoding e.g. 'NONE' or DOS852 vc WIN1250
 
   Open;
+end;
+
+{**
+  Releases this <code>ResultSet</code> object's database and
+  JDBC resources immediately instead of waiting for
+  this to happen when it is automatically closed.
+
+  <P><B>Note:</B> A <code>ResultSet</code> object
+  is automatically closed by the
+  <code>Statement</code> object that generated it when
+  that <code>Statement</code> object is closed,
+  re-executed, or is used to retrieve the next result from a
+  sequence of multiple results. A <code>ResultSet</code> object
+  is also automatically closed when it is garbage collected.
+}
+procedure TZInterbase6XSQLDAResultSet.Close;
+begin
+  { Free output allocated memory }
+  FXSQLDA := nil;
+  FIZSQLDA := nil;
+  inherited Close; //Calls ResetCursor so FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_CLOSE); is called
+  { Free allocate sql statement }
+  FStmtHandle := 0; //don't forget!
 end;
 
 {**
@@ -1929,9 +1925,6 @@ begin
   FConSettings := ConSettings;
 end;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZInterbase6UnCachedBlob.ReadLob;
 var
   Size: Integer;
@@ -1943,9 +1936,6 @@ begin
   BlobData := Buffer;
   inherited ReadLob;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 { TZInterbase6UnCachedClob }
 
@@ -1965,9 +1955,6 @@ begin
   FPlainDriver := PlainDriver;
 end;
 
-{$IFDEF FPC}
-  {$HINTS OFF}
-{$ENDIF}
 procedure TZInterbase6UnCachedClob.ReadLob;
 var
   Size: Integer;
@@ -1976,12 +1963,10 @@ begin
   InternalClear;
   ReadBlobBufer(FPlainDriver, FDBHandle, FTrHandle, FBlobId, Size, Buffer, False, FConSettings);
   (PAnsiChar(Buffer)+NativeUInt(Size))^ := #0; //add #0 terminator
+  FCurrentCodePage := FConSettings^.ClientCodePage^.CP;
   FBlobSize := Size+1;
   BlobData := Buffer;
   inherited ReadLob;
 end;
-{$IFDEF FPC}
-  {$HINTS ON}
-{$ENDIF}
 
 end.

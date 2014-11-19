@@ -1153,8 +1153,8 @@ begin
   StoredProc.Open;
 
   CheckEquals(3, ord(StoredProc.Fields.Count));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType));
+  CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[0].DataType));
+  CheckEquals(ord(ftLargeint), ord(StoredProc.Fields[1].DataType));
   CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
 end;
 

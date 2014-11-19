@@ -564,7 +564,7 @@ begin
     end;
 
     ColumnIndex := ResultSet.FindColumn(ParamName);
-    if ColumnIndex {$IFDEF GENERIC_INDEX}>={$ELSE}>{$ENDIF} 0 then
+    if ColumnIndex >= FirstDbcIndex then
     begin
       if OldParam then
         RowAccessor := OldRowAccessor
@@ -668,9 +668,13 @@ var
   Len: NativeUInt;
 begin
   if Assigned(RefreshResultSet) then begin
-    if not RefreshResultSet.First then begin
+    if (RefreshResultSet.GetType = rtForwardOnly) then
+    begin
+      if not RefreshResultSet.Next then
+         raise EZDatabaseError.Create(SUpdateSQLNoResult);
+    end
+    else if not (RefreshResultSet.GetType = rtForwardOnly) and  not RefreshResultSet.First then
       raise EZDatabaseError.Create(SUpdateSQLNoResult);
-    end;
     for I := FirstDbcIndex to RefreshResultSet.GetMetadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       RefreshColumnName := RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated

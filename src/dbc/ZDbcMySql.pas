@@ -215,9 +215,7 @@ end;
 }
 function TZMySQLDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZMySQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZMySQLTokenizer.Create;
 end;
 
 {**
@@ -226,9 +224,7 @@ end;
 }
 function TZMySQLDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZMySQLStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZMySQLStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 {**

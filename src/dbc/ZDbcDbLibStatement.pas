@@ -69,6 +69,7 @@ type
     FResults: IZCollection;
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
+    FUserEncoding: TZCharEncoding;
 
     procedure InternalExecuteStatement(SQL: RawByteString);
     procedure FetchResults; virtual;
@@ -112,6 +113,7 @@ type
     FLastRowsAffected: Integer;//Workaround for sybase
     FRetrievedResultSet: IZResultSet;
     FRetrievedUpdateCount: Integer;
+    FUserEncoding: TZCharEncoding;
 
     procedure FetchResults; virtual;
     procedure FetchRowCount; virtual;
@@ -189,6 +191,16 @@ begin
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
   FResults := TZCollection.Create;
+  {note: this is a hack! Purpose is to notify Zeos all Charakter columns are
+    UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
+    valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char encoding
+    So this is stopping all encoding detections and increases the performance in
+    a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
+    Else all results are invalid!!!!! Just to invoke later questions!}
+  if DefineStatementParameter(Self, 'ResetCodePage', '') = 'UTF8' then
+    FUserEncoding := ceUTF8
+  else
+    Self.FUserEncoding := ceDefault;
 end;
 
 procedure TZDBLibStatement.Close;
@@ -300,7 +312,10 @@ begin
   begin
     if FPlainDriver.dbcmdrow(FHandle) = DBSUCCEED then
     begin
-      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL);
+      {EH: Developer notes:
+       the TDS protocol does NOT support any stmt handles. All actions are
+       executed sequentially so in ALL cases we need cached Results NO WAY araound!!!}
+      NativeResultSet := TZDBLibResultSet.Create(Self, Self.SQL, FUserEncoding);
       NativeResultSet.SetConcurrency(rcReadOnly);
       CachedResultSet := TZCachedResultSet.Create(NativeResultSet,
         Self.SQL, TZDBLibCachedResolver.Create(Self, NativeResultSet.GetMetaData), ConSettings);
@@ -556,6 +571,16 @@ begin
     FPLainDriver := FDBLibConnection.GetPlainDriver;
   FHandle := FDBLibConnection.GetConnectionHandle;
   ResultSetType := rtScrollInsensitive;
+  {note: this is a hack! Purpose is to notify Zeos all Charakter columns are
+    UTF8-encoded. e.g. N(VAR)CHAR. Initial idea is made for MSSQL where we've NO
+    valid tdsType to determine (Var)Char(Ansi-Encoding) or N(Var)Char encoding
+    So this is stopping all encoding detections and increases the performance in
+    a high rate. If Varchar fields are fetched you Should use a cast to N-Fields!
+    Else all results are invalid!!!!! Just to invoke later questions!}
+  if DefineStatementParameter(Self, 'ResetCodePage', '') = 'UTF8' then
+    FUserEncoding := ceUTF8
+  else
+    Self.FUserEncoding := ceDefault;
 end;
 
 procedure TZDBLibCallableStatement.Close;

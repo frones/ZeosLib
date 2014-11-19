@@ -61,7 +61,6 @@ uses Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   ZCompatibility, ZDbcLogging, ZVariant;
 
 type
-
   {** Implements Prepared SQL Statement. }
   TZASAPreparedStatement = class(TZAbstractPreparedStatement)
   private
@@ -238,7 +237,8 @@ end;
 procedure TZASAPreparedStatement.Unprepare;
 begin
   FSQLData := nil;
-  FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, Pointer(CursorName));
+  if not Assigned(FOpenResultSet) then //on closing the RS we exec db_close
+    FASAConnection.GetPlainDriver.db_close( FASAConnection.GetDBHandle, Pointer(CursorName));
   inherited Unprepare;
 end;
 
@@ -338,16 +338,17 @@ function TZASAPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil; //satisfy compiler
   Prepare;
+  PrepareOpenResultSetForReUse;
   BindInParameters;
-  if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close;
-  FOpenResultSet := nil;
 
   with FASAConnection do
   begin
     GetPlainDriver.db_open(GetDBHandle, Pointer(CursorName), nil, @FStmtNum,
       FParamSQLData.GetData, FetchSize, 0, FCursorOptions);
-    Result := OpenResultSet;
+    if Assigned(FOpenResultSet) then
+      Result := IZResultSet(FOpenResultSet)
+    else
+      Result := OpenResultSet;
   end;
   { Logging SQL Command and values}
   inherited ExecuteQueryPrepared;
@@ -576,13 +577,13 @@ begin
       if ResultSetType = rtScrollInsensitive then
         CursorOptions := CursorOptions + CUR_INSENSITIVE;
       Cursor := CursorName;
-      GetPlainDriver.db_open(GetDBHandle, PAnsiChar(Cursor), nil, @FStmtNum,
+      GetPlainDriver.db_open(GetDBHandle, Pointer(Cursor), nil, @FStmtNum,
         FParamSQLData.GetData, FetchSize, 0, CursorOptions);
       ZDbcASAUtils.CheckASAError( GetPlainDriver, GetDBHandle, lcExecute, ConSettings, ASQL);
       Closed := false;
       try
         if FMoreResults then
-          DescribeCursor( FASAConnection, TZASASQLDA( Pointer(FSQLData)), Cursor, ASQL);
+          DescribeCursor( FASAConnection, FSQLData, Cursor, ASQL);
 
         LastUpdateCount := -1;
         Result := GetCachedResultSet( Self.SQL, Self,

@@ -232,30 +232,28 @@ end;
 
 function TZSQLStrings.GetTokenizer: IZTokenizer;
 var
-  Tokenizer: IZTokenizer;
   Driver: IZDriver;
 begin
   { Defines a SQL specific tokenizer object. }
-  Tokenizer := CommonTokenizer;
+  Result := nil;
   if FDataset is TZAbstractRODataset then
   begin
     if Assigned(TZAbstractRODataset(FDataset).Connection) then
     begin
       Driver := TZAbstractRODataset(FDataset).Connection.DbcDriver;
       if Assigned(Driver) then
-        Tokenizer := Driver.GetTokenizer;
+        Result := Driver.GetTokenizer;
     end;
   end
   else if FDataset is TZSQLProcessor then
-  begin
     if Assigned(TZSQLProcessor(FDataset).Connection) then
     begin
       Driver := TZSQLProcessor(FDataset).Connection.DbcDriver;
       if Assigned(Driver) then
-        Tokenizer := Driver.GetTokenizer;
+        Result := Driver.GetTokenizer;
     end;
-  end;
-  Result:=Tokenizer;
+  if Result = nil then
+    Result := TZGenericSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**

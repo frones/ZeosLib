@@ -76,6 +76,7 @@ type
     FRowHandle: PZMySQLRow;
     FPlainDriver: IZMySQLPlainDriver;
     FLengthArray: PMySQLLengthArray;
+    FMySQLTypes: array of TMysqlFieldTypes;
     function GetBufferAndLength(ColumnIndex: Integer; var Len: ULong): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
     function GetBuffer(ColumnIndex: Integer): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
   protected
@@ -216,7 +217,7 @@ uses
   @return SQL type from java.sql.Types
 }
 function TZMySQLResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
-begin
+begin {EH: does anyone know why the LoadColumns was made? Note the column-types are perfect determinable on MySQL}
   //if not Loaded then
     // LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[Column{$IFNDEF GENERIC_INDEX} - 1{$ENDIF}]).ColumnType;
@@ -302,10 +303,12 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
+  SetLength(FMySQLTypes, FPlainDriver.GetFieldCount(FQueryHandle));
   for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
   begin
     FPlainDriver.SeekField(FQueryHandle, I);
     FieldHandle := FPlainDriver.FetchField(FQueryHandle);
+    FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
     if FieldHandle = nil then
       Break;
 
@@ -440,7 +443,16 @@ begin
   if LastWasNull then
     Result := False
   else
-    Result := StrToBoolEx(Buffer, True, False);
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
+      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+        1: Result := PByte(Buffer)^ <> 0;
+        2: Result := ReverseWordBytes(Buffer) <> 0;
+        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) <> 0;
+        else //5..8: makes compiler happy
+          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]) <> 0;
+      end
+    else
+      Result := StrToBoolEx(Buffer, True, False);
 end;
 
 {**
@@ -464,7 +476,16 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := RawToIntDef(Buffer, 0);
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
+      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+        1: Result := PByte(Buffer)^;
+        2: Result := ReverseWordBytes(Buffer);
+        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+        else //5..8: makes compiler happy
+          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+      end
+    else
+      Result := RawToIntDef(Buffer, 0);
 end;
 
 {**
@@ -477,6 +498,7 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractMySQLResultSet.GetLong(ColumnIndex: Integer): Int64;
+const BM = LongWord($FFFFFFFF);
 var
   Buffer: PAnsiChar;
 begin
@@ -488,7 +510,16 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := RawToInt64Def(Buffer, 0);
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
+      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+        1: Result := PByte(Buffer)^;
+        2: Result := ReverseWordBytes(Buffer);
+        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+        else //5..8: makes compiler happy
+          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+      end
+    else
+      Result := RawToInt64Def(Buffer, 0);
 end;
 
 {**
@@ -512,7 +543,16 @@ begin
   if LastWasNull then
     Result := 0
   else
-    Result := RawToUInt64Def(Buffer, 0);
+    if FMySQLTypes[ColumnIndex {$IFNDEF GENERIC_INDEX}-1{$ENDIF}] = FIELD_TYPE_BIT then
+      case FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}] of
+        1: Result := PByte(Buffer)^;
+        2: Result := ReverseWordBytes(Buffer);
+        3, 4: Result := ReverseLongWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+        else //5..8: makes compiler happy
+          Result := ReverseQuadWordBytes(Buffer, FLengthArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}]);
+      end
+    else
+      Result := RawToUInt64Def(Buffer, 0);
 end;
 
 {**
@@ -1320,7 +1360,15 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := StrToBoolEx(PAnsiChar(FColumnArray[ColumnIndex].buffer), True, False);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT://http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^ <> 0;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer)  <> 0;
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length) <> 0;
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length) <> 0;
+          end;
+          //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1399,7 +1447,15 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToIntDef(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT:
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
+          //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1478,7 +1534,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToIntDef(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1557,7 +1620,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToIntDef(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1636,7 +1706,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToIntDef(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1715,7 +1792,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToUInt64Def(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1794,7 +1878,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToIntDef(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1873,7 +1964,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToUInt64Def(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and
@@ -1952,7 +2050,14 @@ begin
       FIELD_TYPE_VARCHAR, FIELD_TYPE_VAR_STRING, FIELD_TYPE_STRING,
       FIELD_TYPE_ENUM, FIELD_TYPE_SET:
         Result := RawToInt64Def(PAnsiChar(FColumnArray[ColumnIndex].buffer), 0);
-      FIELD_TYPE_BIT,//http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+      FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
+        case FColumnArray[ColumnIndex].length of
+          1: Result := PByte(FColumnArray[ColumnIndex].buffer)^;
+          2: Result := ReverseWordBytes(FColumnArray[ColumnIndex].buffer);
+          3, 4: Result := ReverseLongWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          else //5..8: makes compiler happy
+            Result := ReverseQuadWordBytes(FColumnArray[ColumnIndex].buffer, FColumnArray[ColumnIndex].length);
+          end;
       FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB,
       FIELD_TYPE_BLOB, FIELD_TYPE_GEOMETRY:
         if ( FColumnArray[ColumnIndex].length > 0 ) and

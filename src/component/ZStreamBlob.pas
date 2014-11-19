@@ -140,6 +140,7 @@ destructor TZBlobStream.Destroy;
 var
   ATmp: AnsiString;
   UTmp: ZWideString;
+  UnCachedLob: IZUnCachedLob;
 begin
   if Mode in [bmWrite, bmReadWrite] then
   begin
@@ -268,7 +269,11 @@ begin
     end;
   end
   else
+  begin
     SetPointer(nil, 0); //don't forget! Keep Lob mem alive!
+    if Supports(Blob, IZUnCachedLob, UnCachedLob) then
+      UnCachedLob.FlushBuffer;
+  end;
 
   inherited Destroy;
 end;

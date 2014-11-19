@@ -936,7 +936,7 @@ begin
     Current.ConfigUses:=[cuMainConnection];
     //Writeln('Master Connection : '+Current.Name);
 
-    {$IFDEF FPC}
+    {$IFNDEF ENABLE_ADO}
     if Current.Protocol = 'ado' then
     begin
       Current.Free;

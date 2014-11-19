@@ -158,6 +158,10 @@ function MySQLPrepareAnsiSQLParam(Handle: PZMySQLConnect; Value: TZVariant;
   PlainDriver: IZMySQLPlainDriver; const InParamType: TZSQLType;
   const UseDefaults: Boolean; ConSettings: PZConSettings): RawByteString;
 
+function ReverseWordBytes(Src: Pointer): Word;
+function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
+function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
+
 implementation
 
 uses {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings, {$ENDIF} Math,
@@ -242,8 +246,13 @@ begin
           Result := stAsciiStream
       else
         Result := stBinaryStream;
-    FIELD_TYPE_BIT:
-      Result := stByte;
+    FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
+      case PMYSQL_FIELD(FieldHandle)^.length of
+        1..8: Result := stByte;
+        9..16: Result := stWord;
+        17..32: Result := stLongWord;
+        else Result := stULong;
+      end;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
@@ -404,12 +413,25 @@ begin
   end
   else if TypeName = 'SET' then
     Result := stString
-  else if TypeName = 'BIT' then
-    Result := stSmall
-  else
-      for i := 0 to Length(GeoTypes) - 1 do
-         if GeoTypes[i] = TypeName then
-            Result := stBinaryStream;
+  else if TypeName = 'BIT' then  //see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
+  begin
+    Posi := ZFastCode.Pos('(', TypeNameFull);
+    if (Posi > 0) and EndsWith(TypeNameFull, ')') then
+    begin
+      Len := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(Copy(TypeNameFull, Posi+1, Length(TypeNameFull)-Posi-1), 1);
+      case Len of
+        1..8: Result := stByte;
+        9..16: Result := stWord;
+        17..32: Result := stLongWord;
+        else Result := stULong;
+      end;
+    end
+    else
+      Result := stByte
+  end else
+    for i := 0 to Length(GeoTypes) - 1 do
+       if GeoTypes[i] = TypeName then
+          Result := stBinaryStream;
 
   if ( CtrlsCPType = cCP_UTF16) then
   case result of
@@ -831,7 +853,7 @@ begin
                     GetValidatedAnsiStringFromBuffer(TempBlob.GetBuffer,
                       TempBlob.Length, ConSettings), ConSettings, True);
             end;
-          end
+         end
           else
             Result := 'NULL';
         end;
@@ -839,5 +861,32 @@ begin
   end;
 end;
 
+procedure ReverseBytes(const Src, Dest: Pointer; Len: Byte);
+var b: Byte;
+  P: PAnsiChar;
+begin
+  Len := Len -1;
+  P := PAnsiChar(Src)+Len;
+  for b := Len downto 0 do
+    (PAnsiChar(Dest)+B)^ := (P-B)^;
+end;
+
+function ReverseWordBytes(Src: Pointer): Word;
+begin
+  (PAnsiChar(@Result)+1)^ := PAnsiChar(Src)^;
+  PAnsiChar(@Result)^ := (PAnsiChar(Src)+1)^;
+end;
+
+function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
+begin
+  Result := 0;
+  ReverseBytes(Src, @Result, Len);
+end;
+
+function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
+begin
+  Result := 0;
+  ReverseBytes(Src, @Result, Len);
+end;
 
 end.

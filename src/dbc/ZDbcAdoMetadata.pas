@@ -54,10 +54,11 @@ unit ZDbcAdoMetadata;
 interface
 
 {$I ZDbc.inc}
+{$IFDEF ENABLE_ADO}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, ZClasses, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZDbcCachedResultSet, ZDbcResultsetMetadata, ZURL,
+  Types, Classes, SysUtils, ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
+  ZDbcResultSet, ZURL,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection;
 
 type
@@ -135,13 +136,13 @@ type
     function SupportsOpenStatementsAcrossCommit: Boolean; override;
     function SupportsOpenStatementsAcrossRollback: Boolean; override;
     function SupportsTransactions: Boolean; override;
-    function SupportsTransactionIsolationLevel(const Level: TZTransactIsolationLevel):
+    function SupportsTransactionIsolationLevel(const {%H-}Level: TZTransactIsolationLevel):
       Boolean; override;
     function SupportsDataDefinitionAndDataManipulationTransactions: Boolean; override;
     function SupportsDataManipulationTransactionsOnly: Boolean; override;
-    function SupportsResultSetType(const _Type: TZResultSetType): Boolean; override;
-    function SupportsResultSetConcurrency(const _Type: TZResultSetType;
-      const Concurrency: TZResultSetConcurrency): Boolean; override;
+    function SupportsResultSetType(const {%H-}_Type: TZResultSetType): Boolean; override;
+    function SupportsResultSetConcurrency(const {%H-}_Type: TZResultSetType;
+      const {%H-}Concurrency: TZResultSetConcurrency): Boolean; override;
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
     function SupportsNonEscapedSearchStrings: Boolean; override;
     function SupportsUpdateAutoIncrementFields: Boolean; override;
@@ -256,14 +257,13 @@ type
 //    function GetTokenizer: IZTokenizer; override;
   end;
 
+{$ENDIF ENABLE_ADO}
 implementation
-
+{$IFDEF ENABLE_ADO}
 uses
-{$IFNDEF FPC}
   Variants,
-{$ENDIF}
-  Math, ZDbcUtils, ZCollections, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo,
-  OleDB, ZDbcAdoResultSet;
+  Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo,
+  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ZDbcAdoResultSet;
 
 type
   TSuppSchemaRec = record
@@ -322,7 +322,7 @@ end;
 }
 function TZAdoDatabaseInfo.GetDatabaseProductVersion: string;
 begin
-  Result := (Metadata.GetConnection as IZAdoConnection).GetAdoConnection.Version;
+  Result := String((Metadata.GetConnection as IZAdoConnection).GetAdoConnection.Version);
 end;
 
 {**
@@ -1458,6 +1458,7 @@ var
 begin
   Result:=inherited UncachedGetTables(Catalog, SchemaPattern, TableNamePattern, Types);
 
+  TableTypes := '';
   for I := Low(Types) to High(Types) do
   begin
     if Length(TableTypes) > 0 then
@@ -2529,7 +2530,7 @@ begin
       OleDBSession.QueryInterface(IDBSchemaRowset, SchemaRS);
       if Assigned(SchemaRS) then
       begin
-        SchemaRS.GetSchemas(Nr, PG, PInteger(IA));
+        SchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, PInteger({%H-}IA));
         OriginalPG := PG;
         SetLength(SupportedSchemas, Nr);
         for I := 0 to Nr - 1 do
@@ -2537,7 +2538,7 @@ begin
           SupportedSchemas[I].SchemaGuid := PG^;
           SupportedSchemas[I].SupportedRestrictions := IA^[I];
           SupportedSchemas[I].AdoSchemaId := ConvertOleDBToAdoSchema(PG^);
-          Inc(NativeInt(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
+          Inc({%H-}NativeInt(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
         end;
         FSupportedSchemasInitialized := True;
         if Assigned(OriginalPG) then ZAdoMalloc.Free(OriginalPG);
@@ -2618,6 +2619,7 @@ begin
   end;
 end;
 
+{$ENDIF ENABLE_ADO}
 end.
 
 

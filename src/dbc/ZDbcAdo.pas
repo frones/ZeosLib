@@ -54,6 +54,7 @@ unit ZDbcAdo;
 interface
 
 {$I ZDbc.inc}
+{$IFDEF ENABLE_ADO}
 
 uses
   Types, Classes, SysUtils,
@@ -126,9 +127,11 @@ type
 var
   {** The common driver manager object. }
   AdoDriver: IZDriver;
+{$ENDIF ENABLE_ADO}
 
 implementation
 
+{$IFDEF ENABLE_ADO}
 uses
   Variants, ActiveX,
   ZDbcUtils, ZDbcLogging, ZAdoToken, ZSysUtils, ZMessages,
@@ -178,9 +181,7 @@ end;
 
 function TZAdoDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZAdoSQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZAdoSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 { TZAdoConnection }
@@ -260,7 +261,7 @@ begin
       FAdoConnection.Set_Mode(adModeRead)
     else
       FAdoConnection.Set_Mode(adModeUnknown);
-    FAdoConnection.Open(Database, User, Password, -1{adConnectUnspecified});
+    FAdoConnection.Open(WideString(Database), WideString(User), WideString(Password), -1{adConnectUnspecified});
     FAdoConnection.Set_CursorLocation(adUseClient);
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol, LogMessage);
     ConSettings^.AutoEncode := {$IFDEF UNICODE}False{$ELSE}True{$ENDIF};
@@ -651,4 +652,5 @@ finalization
   if Assigned(DriverManager) then
     DriverManager.DeregisterDriver(AdoDriver);
   AdoDriver := nil;
+{$ENDIF ENABLE_ADO}
 end.

@@ -85,7 +85,7 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
-    procedure CreateNewDatabase(const SQL: RawByteString);
+    function GetXSQLDAMaxSize: LongWord;
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -100,6 +100,7 @@ type
     FStatusVector: TARRAY_ISC_STATUS;
     FHardCommit: boolean;
     FHostVersion: Integer;
+    FXSQLDAMaxSize: LongWord;
   private
     procedure StartTransaction; virtual;
   protected
@@ -109,6 +110,7 @@ type
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
+    function GetXSQLDAMaxSize: LongWord;
     function GetPlainDriver: IZInterbasePlainDriver;
     procedure CreateNewDatabase(const SQL: RawByteString);
 
@@ -238,9 +240,7 @@ end;
 }
 function TZInterbase6Driver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZInterbaseTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZInterbaseTokenizer.Create;
 end;
 
 {**
@@ -249,9 +249,7 @@ end;
 }
 function TZInterbase6Driver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZInterbaseStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZInterbaseStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZInterbase6Connection }
@@ -368,7 +366,7 @@ begin
   ConnectTimeout := StrToIntDef(URL.Properties.Values['timeout'], -1);
   if ConnectTimeout >= 0 then
     URL.Properties.Values['isc_dpb_connect_timeout'] := ZFastCode.IntToStr(ConnectTimeout);
-
+  FXSQLDAMaxSize := 64*1024; //64KB by default
 end;
 
 {**
@@ -423,6 +421,11 @@ end;
 function TZInterbase6Connection.GetDialect: Word;
 begin
   Result := FDialect;
+end;
+
+function TZInterbase6Connection.GetXSQLDAMaxSize: LongWord;
+begin
+  Result := FXSQLDAMaxSize;
 end;
 
 {**
@@ -511,6 +514,9 @@ begin
     else
       tmp := Copy(tmp, i+1, Length(tmp)-i);
     FHostVersion := FHostVersion + StrToInt(tmp)*100000;
+    if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+       (FHostVersion >= 3000000) then
+      FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');

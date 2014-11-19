@@ -1,14 +1,14 @@
-{ Dit bestand is automatisch aangemaakt door Lazarus. Niet wijzigen!
-  Deze broncode is alleen gebruikt voor compilatie en installatie.
+{ This file was automatically created by Lazarus. Do not edit!
+  This source is only used to compile and install the package.
  }
 
-unit zdbc; 
+unit zdbc;
 
 interface
 
 uses
-    ZDbcDbLib, ZDbcInterbase6, ZDbcIntfs, ZDbcMetadata, ZDbcMySql, ZDbcOracle, 
-  ZDbcPostgreSql, ZDbcSqLite, ZDbcASA, ZDbcPooled;
+  ZDbcDbLib, ZDbcInterbase6, ZDbcIntfs, ZDbcMetadata, ZDbcMySql, ZDbcOracle, 
+  ZDbcPostgreSql, ZDbcSqLite, ZDbcASA, ZDbcPooled, ZDbcAdo;
 
 implementation
 
