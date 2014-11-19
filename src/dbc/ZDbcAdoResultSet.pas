@@ -61,11 +61,9 @@ uses
   DateUtils,
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Windows,
-  Classes, SysUtils,
-  ZClasses, ZSysUtils, ZCollections, ZDbcIntfs,
-  ZDbcGenericResolver, ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet,
-  ZDbcResultsetMetadata, ZCompatibility, ZDbcAdo, ZPlainAdoDriver, ZPlainAdo;
+  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
+  ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility, ZPlainAdo;
 
 type
   {** Implements Ado ResultSet. }
@@ -127,7 +125,7 @@ implementation
 
 uses
   Variants, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF},
-  ZMessages, ZDbcUtils, ZDbcAdoUtils, ZEncoding, ZFastCode;
+  ZMessages, ZDbcAdoUtils, ZEncoding, ZFastCode;
 
 {**
   Creates this object and assignes the main properties.
@@ -169,7 +167,7 @@ begin
   (FAdoRecordSet as ADORecordsetConstruction).Get_Rowset(OleDBRowset);
   OleDBRowset.QueryInterface(IColumnsInfo, OleDBColumnsInfo);
 
-  OleDBColumnsInfo.GetColumnInfo(pcColumns, prgInfo, ppStringsBuffer);
+  OleDBColumnsInfo.GetColumnInfo(pcColumns{%H-}, prgInfo, ppStringsBuffer);
   OriginalprgInfo := prgInfo;
 
   { Fills the column info }
@@ -188,14 +186,14 @@ begin
 
   if Assigned(prgInfo) then
     if prgInfo.iOrdinal = 0 then
-      Inc(NativeInt(prgInfo), SizeOf(TDBColumnInfo));
+      Inc({%H-}NativeInt(prgInfo), SizeOf(TDBColumnInfo));
 
   for I := 0 to AdoColumnCount - 1 do
   begin
     ColumnInfo := TZColumnInfo.Create;
 
     F := FAdoRecordSet.Fields.Item[I];
-    ColName := F.Name;
+    ColName := String(F.Name);
     ColType := F.Type_;
     ColumnInfo.ColumnLabel := ColName;
     ColumnInfo.ColumnName := ColName;
@@ -230,7 +228,7 @@ begin
     ColumnsInfo.Add(ColumnInfo);
 
     AdoColTypeCache[I] := ColType;
-    Inc(NativeInt(prgInfo), SizeOf(TDBColumnInfo));  //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
+    Inc({%H-}NativeInt(prgInfo), SizeOf(TDBColumnInfo));  //M.A. Inc(Integer(prgInfo), SizeOf(TDBColumnInfo));
   end;
   if Assigned(ppStringsBuffer) then ZAdoMalloc.Free(ppStringsBuffer);
   if Assigned(OriginalprgInfo) then ZAdoMalloc.Free(OriginalprgInfo);
@@ -805,7 +803,7 @@ begin
       {$ENDIF}
       adSingle:           Result := FloatToSQLUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VSingle);
       adDouble:           Result := FloatToSQLUnicode(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VDouble);
-      adCurrency:         Result := CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency);
+      adCurrency:         Result := ZWideString(CurrToStr(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VCurrency));
       adBoolean: Result := BoolToUnicodeEx(TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VBoolean);
       adGUID: System.SetString(Result, TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VOleStr, 38);
       adChar:
@@ -1347,6 +1345,7 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
+  LastWasNull := FAdoRecordSet.Fields.Item[ColumnIndex].Value = null;
   LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
     Result := 0
@@ -1596,7 +1595,7 @@ begin
       V := FAdoRecordSet.Fields.Item[ColumnIndex].Value;
       if VarIsStr(V) then
         Result := UnicodeSQLTimeStampToDateTime(PWideChar(ZWideString(V)),
-          Length(V), ConSettings^.ReadFormatSettings, Failed)
+          Length(V), ConSettings^.ReadFormatSettings, Failed{%H-})
       else
         Result := V;
     except

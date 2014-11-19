@@ -57,8 +57,8 @@ interface
 {$IFDEF ENABLE_ADO}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZURL,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection;
 
 type

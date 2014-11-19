@@ -50,17 +50,38 @@ interface
 {$I ZPlain.inc}
 {$IFDEF ENABLE_ADO}
 
+{$IFDEF WIN64}
+{$ALIGN 8}
+{$ELSE}
+{$ALIGN 2}
+{$ENDIF}
+{$MINENUMSIZE 4}
+
 // Dependency: stdole v2 (stdole2.pas)
 //  Warning: renamed method 'Reset' in IDBBinderProperties to 'Reset_'
 Uses
-  Windows,ActiveX,Classes,Variants;//,stdole2;
+  Windows,ActiveX,Classes,Variants, ZCompatibility;//,stdole2;
 Const
+  IID_IColumnsInfo : TGUID = '{0C733A11-2A1C-11CE-ADE5-00AA0044773D}';
+
+//add start from msdac.h
+  CLSID_DATALINKS: TGUID = '{2206CDB2-19C1-11D1-89E0-00C04FD7A829}'; {DataLinks}
+  IID_IDataInitialize: TGUID = '{2206CCB1-19C1-11D1-89E0-00C04FD7A829}';
+//end add from msdac.h
+  IID_ICommand : TGUID = '{0C733A63-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IMultipleResults : TGUID = '{0C733A90-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IConvertType : TGUID = '{0C733A88-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_ICommandPrepare : TGUID = '{0C733A26-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_ICommandProperties : TGUID = '{0C733A79-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_ICommandText : TGUID = '{0C733A27-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_ICommandWithParameters : TGUID = '{0C733A64-2A1C-11CE-ADE5-00AA0044773D}';
+
   oledbMajorVersion = 0;
   oledbMinorVersion = 0;
   oledbLCID = 0;
   LIBID_oledb : TGUID = '{5D8DF8EB-BD36-4DB4-A604-E09991233FFC}';
 
-  IID_DBStructureDefinitions : TGUID = '{0C733A80-2A1C-11CE-ADE5-00AA0044773D}';
+(*  IID_DBStructureDefinitions : TGUID = '{0C733A80-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IAccessor : TGUID = '{0C733A8C-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITypeInfo : TGUID = '{00020401-0000-0000-C000-000000000046}';
   IID_ITypeComp : TGUID = '{00020403-0000-0000-C000-000000000046}';
@@ -85,15 +106,7 @@ Const
   IID_IRowsetIdentity : TGUID = '{0C733A09-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetNotify : TGUID = '{0C733A83-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetIndex : TGUID = '{0C733A82-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ICommand : TGUID = '{0C733A63-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IMultipleResults : TGUID = '{0C733A90-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IConvertType : TGUID = '{0C733A88-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ICommandPrepare : TGUID = '{0C733A26-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ICommandProperties : TGUID = '{0C733A79-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ICommandText : TGUID = '{0C733A27-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ICommandWithParameters : TGUID = '{0C733A64-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IColumnsRowset : TGUID = '{0C733A10-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IColumnsInfo : TGUID = '{0C733A11-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBCreateCommand : TGUID = '{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBCreateSession : TGUID = '{0C733A5D-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ISourcesRowset : TGUID = '{0C733A1E-2A1C-11CE-ADE5-00AA0044773D}';
@@ -149,11 +162,7 @@ Const
   IID_IRowsetCurrentIndex : TGUID = '{0C733ABD-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ICommandStream : TGUID = '{0C733ABF-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetBookmark : TGUID = '{0C733AC2-2A1C-11CE-ADE5-00AA0044773D}';
-//add start from msdac.h
-  CLSID_DATALINKS: TGUID = '{2206CDB2-19C1-11D1-89E0-00C04FD7A829}'; {DataLinks}
-  IID_IDataInitialize: TGUID = '{2206CCB1-19C1-11D1-89E0-00C04FD7A829}';
-//end add from msdac.h
-
+  *)
 
 //start from oledb.h
   DBSCHEMA_TABLES_INFO: TGUID = '{C8B522E0-5CF3-11CE-ADE5-00AA0044773D}';
@@ -267,8 +276,8 @@ Const
   DBGUID_SQL: TGUID = '{C8B522D7-5CF3-11CE-ADE5-00AA0044773D}';
 //end from oledb.h
 
- MAXCOLS = 4096;
- MAXBOUND = 65535; { High bound for arrays }
+  MAXCOLS = 4096;
+  MAXBOUND = 65535; { High bound for arrays }
 //Enums
 
 Type
@@ -476,14 +485,44 @@ const
 	DBTYPE_PROPVARIANT	= 138;
 	DBTYPE_VARNUMERIC	= 139;
 
+type
+  DBACCESSORFLAGSENUM = TOleEnum;
+const
+  DBACCESSOR_INVALID = 0;
+  DBACCESSOR_PASSBYREF	= $1;
+	DBACCESSOR_ROWDATA = $2;
+	DBACCESSOR_PARAMETERDATA = $4;
+	DBACCESSOR_OPTIMIZED	= $8;
+	DBACCESSOR_INHERITED	= $10;
+
+type
+  DBBINDSTATUSENUM = TOleEnum;
+const
+  DBBINDSTATUS_OK	= 0;
+	DBBINDSTATUS_BADORDINAL	= $1;
+	DBBINDSTATUS_UNSUPPORTEDCONVERSION	= $2;
+	DBBINDSTATUS_BADBINDINFO	= $3;
+	DBBINDSTATUS_BADSTORAGEFLAGS	= $4;
+	DBBINDSTATUS_NOINTERFACE	= $5;
+	DBBINDSTATUS_MULTIPLESTORAGE	= $6;
+
 //Forward declarations
 type
- DBStructureDefinitions = interface;
+ IColumnsInfo = interface;
+
+ ICommand = interface;
+ //IMultipleResults = interface;
+ //IConvertType = interface;
+ ICommandPrepare = interface;
+ //ICommandProperties = interface;
+ ICommandText = interface;
+ ICommandWithParameters = interface;
+ //DBStructureDefinitions = interface;
  IAccessor = interface;
  //ITypeInfo = interface;
  //ITypeComp = interface;
  //ITypeLib = interface;
- IRowset = interface;
+ (*IRowset = interface;
  IRowsetInfo = interface;
  IRowsetLocate = interface;
  IRowsetResynch = interface;
@@ -503,15 +542,7 @@ type
  IRowsetIdentity = interface;
  IRowsetNotify = interface;
  IRowsetIndex = interface;
- ICommand = interface;
- IMultipleResults = interface;
- IConvertType = interface;
- ICommandPrepare = interface;
- ICommandProperties = interface;
- ICommandText = interface;
- ICommandWithParameters = interface;
  IColumnsRowset = interface;
- IColumnsInfo = interface;
  IDBCreateCommand = interface;
  IDBCreateSession = interface;
  ISourcesRowset = interface;
@@ -567,28 +598,201 @@ type
  IRowsetCurrentIndex = interface;
  ICommandStream = interface;
  IRowsetBookmark = interface;
- {$IFDEF DELPHI}
- GUID = TIID;
- {$if not declared(PULONG_PTR)}
- PULONG_PTR = ^ULONG_PTR;
- {$IFEND}
- {$ENDIF}
+*)
 //Map CoClass to its default interface
 
+//from oledb.h
+  // Length of a non-character object, size
+  DBLENGTH = NativeUInt; //ULONGLONG
+  // Offset within a rowset
+  DBROWOFFSET = NativeInt;
+  // Number of rows
+  DBROWCOUNT = NativeInt;
+  DBCOUNTITEM = NativeUInt;
+  // Ordinal (column number, etc.)
+  DBORDINAL = NativeUInt;
+  DB_LORDINAL = NativeInt;
+  // Bookmarks
+  DBBKMARK = NativeUInt;
+  // Offset in the buffer
+  DBBYTEOFFSET = NativeUInt;
+  // Reference count of each row/accessor  handle
+  DBREFCOUNT = NativeInt;
+  // Parameters
+  DB_UPARAMS = NativeUInt;
+  DB_LPARAMS = NativeInt;
+  // hash values corresponding to the elements (bookmarks)
+  DBHASHVALUE = LongWord;
+  // For reserve
+  DB_DWRESERVE = LongWord;
+  DB_LRESERVE = NativeInt;
+  DB_URESERVE = NativeUInt;
+
+  DBPART = LongWord;
+  DBMEMOWNER = LongWord;
+  DBPARAMIO = LongWord;
+  DBTYPE = Word;
+  DBBINDSTATUS = DWORD;
+
+//end from oledb.h
 
 //records, unions, aliases
 
- DBSOURCETYPE = DWORD; //oledb.h
- PDBSOURCETYPE = ^DBSOURCETYPE;
+{start:---------------------used by zeos---------------------------------------}
+  PDBORDINAL_Array = ^TDBORDINAL_Array;
+  TDBORDINAL_Array = array[0..MAXBOUND] of DBORDINAL;
 
+  PDB_LPARAMS_Array = ^TDB_LPARAMS_Array;
+  TDB_LPARAMS_Array = array[0..MAXBOUND] of DB_LPARAMS;
+
+  PDB_UPARAMS_Array = ^TDB_UPARAMS_Array;
+  TDB_UPARAMS_Array = array[0..MAXBOUND] of DB_UPARAMS;
+
+  PDBBINDSTATUS_Array = ^TDBBINDSTATUS_Array;
+  TDBBINDSTATUS_Array = array[0..MAXBOUND] of DBBINDSTATUS;
+
+  PDBOBJECT = ^DBOBJECT;
+  DBOBJECT = record
+    dwFlags : LongWord;
+    iid : TIID;
+  end;
+
+  PDBBINDEXT = ^DBBINDEXT;
+
+  PDBBINDING = ^TDBBINDING;
+  TDBBINDING = record
+    iOrdinal : DBORDINAL;
+    obValue : DBBYTEOFFSET;
+    obLength : DBBYTEOFFSET;
+    obStatus : DBBYTEOFFSET;
+    pTypeInfo : ITypeInfo;
+    pObject : PDBOBJECT;
+    pBindExt : PDBBINDEXT;
+    dwPart : DBPART;
+    dwMemOwner : DBMEMOWNER;
+    eParamIO : DBPARAMIO;
+    cbMaxLen : DBLENGTH;
+    dwFlags : LongWord;
+    wType : DBTYPE;
+    bPrecision : Byte;
+    bScale : Byte;
+  end;
+
+  PDBBindingArray = ^TDBBindingArray;
+  TDBBindingArray = array[0..MAXBOUND] of TDBBINDING;
+
+  DBBINDEXT = record
+    pExtension : PByte;
+    ulExtension : DBCOUNTITEM;
+  end;
+
+  DBCOLUMNFLAGS = LongWord;
+
+  TDBIDGUID = record
+    case Integer of
+      0: (guid: TGUID);
+      1: (pguid: ^TGUID);
+  end;
+  TDBIDNAME = record
+    case Integer of
+      0: (pwszName: PWideChar);
+      1: (ulPropid: UINT);
+  end;
+
+  DBKIND = LongWord;
+  TDBID = record
+    uGuid: TDBIDGUID;
+    eKind: DBKIND;
+    uName: TDBIDNAME;
+  end;
+  PDBCOLUMNINFO = ^TDBCOLUMNINFO;
+  TDBCOLUMNINFO = record
+    pwszName : PWideChar;
+    pTypeInfo : ITypeInfo;
+    iOrdinal : DBORDINAL;
+    dwFlags : DBCOLUMNFLAGS;
+    ulColumnSize : DBLENGTH;
+    wType : DBTYPE;
+    bPrecision : Byte;
+    bScale : Byte;
+    columnid : TDBID;
+  end;
+  PDBIDArray = ^TDBIDArray;
+  TDBIDArray = array[0..MAXBOUND] of TDBID;
+
+  DBPARAMFLAGS = DWORD;
+
+  PDBPARAMINFO = ^TDBPARAMINFO;
+  TDBPARAMINFO = record
+    dwFlags : DBPARAMFLAGS;
+    iOrdinal : DBORDINAL;
+    pwszName : PWideChar;
+    pTypeInfo : ITypeInfo;
+    ulParamSize : DBLENGTH;
+    wType : DBTYPE;
+    bPrecision : Byte;
+    bScale : Byte;
+  end;
+  PDBParamInfoArray = ^TDBParamInfoArray;
+  TDBParamInfoArray = array[0..MAXBOUND] of TDBPARAMINFO;
+
+  HACCESSOR = ULONG_PTR;
+
+  PDBPARAMS = ^DBPARAMS;
+  DBPARAMS = record
+    pData : Pointer;
+    cParamSets : DB_UPARAMS;
+    hAccessor : HACCESSOR;
+  end;
+
+  PDBPARAMBINDINFO = ^TDBPARAMBINDINFO;
+  TDBPARAMBINDINFO = record
+    pwszDataSourceType : PWideChar;
+    pwszName : PWideChar;
+    ulParamSize : DBLENGTH;
+    dwFlags : DBPARAMFLAGS;
+    bPrecision : Byte;
+    bScale : Byte;
+  end;
+
+  PDBParamBindInfoArray = ^TDBParamBindInfoArray;
+  TDBParamBindInfoArray = array[0..MAXBOUND] of TDBParamBindInfo;
+
+  DBPROPID = DWORD;
+  DBPROPOPTIONS = DWORD;
+  DBPROPSTATUS = DWORD;
+
+  PDBPROP = ^TDBPROP;
+  TDBPROP = record
+    dwPropertyID : DBPROPID;
+    dwOptions : DBPROPOPTIONS;
+    dwStatus : DBPROPSTATUS;
+    colid : TDBID;
+    vValue : OleVariant;
+  end;
+
+  PDBPropArray = ^TDBPropArray;
+  TDBPropArray = array[0..MAXBOUND] of TDBProp;
+
+  TDBPROPSET = record
+    rgProperties : PDBPropArray;
+    cProperties : ULONG;
+    guidPropertySet : TGUID;
+  end;
+
+  PDBPropSetArray = ^TDBPropSetArray;
+  TDBPropSetArray = array[0..MAXBOUND] of TDBPropSet;
+
+  DBACCESSORFLAGS = DWORD;
+
+{end:-----------------------used by zeos---------------------------------------}
+(*
  //ULONG_PTR = LongWord;
  PDBBINDING = ^DBBINDING;
 
  PTYPEATTR = ^TYPEATTR;
 
  PTYPEDESC = ^TYPEDESC;
- PULONG_PTRArray = ^TULONG_PTRArray;
- TULONG_PTRArray = array[0..MAXBOUND] of ULONG_PTR;
 
  P__MIDL_IOleAutomationTypes_0004 = ^__MIDL_IOleAutomationTypes_0004;
 
@@ -700,7 +904,7 @@ type
      wVarFlags : Word;
      varkind : tagVARKIND;
  end;
- PTLIBATTR = ^TLIBATTR;  *)
+ PTLIBATTR = ^TLIBATTR;
 
  TLIBATTR = packed record
      guid : TGUID;
@@ -709,35 +913,6 @@ type
      wMajorVerNum : Word;
      wMinorVerNum : Word;
      wLibFlags : Word;
- end;
- PDBOBJECT = ^DBOBJECT;
-
- DBOBJECT = packed record
-     dwFlags : LongWord;
-     iid : TGUID;
- end;
- PDBBINDEXT = ^DBBINDEXT;
-
- DBBINDING = packed record
-     iOrdinal : LongWord;
-     obValue : LongWord;
-     obLength : LongWord;
-     obStatus : LongWord;
-     pTypeInfo : ITypeInfo;
-     pObject : PDBOBJECT;
-     pBindExt : PDBBINDEXT;
-     dwPart : LongWord;
-     dwMemOwner : LongWord;
-     eParamIO : LongWord;
-     cbMaxLen : LongWord;
-     dwFlags : LongWord;
-     wType : Word;
-     bPrecision : Byte;
-     bScale : Byte;
- end;
- DBBINDEXT = packed record
-     pExtension : PByte;
-     ulExtension : LongWord;
  end;
  PDBPROPIDSET = ^TDBPROPIDSET;
 
@@ -769,27 +944,6 @@ type
      eKind : LongWord;
      uName : __MIDL_DBStructureDefinitions_0002;
  end;
- PDBIDArray = ^TDBIDArray;
- TDBIDArray = array[0..MAXBOUND] of TDBID;
- TDBPROP = packed record
-     dwPropertyID : LongWord;
-     dwOptions : LongWord;
-     dwStatus : LongWord;
-     colid : TDBID;
-     vValue : OleVariant;
- end;
-
- PDBPROP = ^TDBPROP;
- PDBPropArray = ^TDBPropArray;
- TDBPropArray = array[0..MAXBOUND] of TDBProp;
-
- TDBPROPSET = packed record
-     rgProperties : PDBPropArray;
-     cProperties : LongWord;
-     guidPropertySet : TGUID;
- end;
- PDBPropSetArray = ^TDBPropSetArray;
- TDBPropSetArray = array[0..MAXBOUND] of TDBPropSet;
 
  PDBID = ^TDBID;
 
@@ -799,53 +953,7 @@ type
      pColumnID : PDBID;
      eIndexColOrder : LongWord;
  end;
- PDBPARAMS = ^DBPARAMS;
 
- DBPARAMS = packed record
-     pData : Ppointer;
-     cParamSets : LongWord;
-     hAccessor : ULONG_PTR;
- end;
-
- PDBPARAMINFO = ^TDBPARAMINFO;
- TDBPARAMINFO = packed record
-     dwFlags : LongWord;
-     iOrdinal : LongWord;
-     pwszName : PWideChar;
-     pTypeInfo : ITypeInfo;
-     ulParamSize : LongWord;
-     wType : Word;
-     bPrecision : Byte;
-     bScale : Byte;
- end;
- PDBParamInfoArray = ^TDBParamInfoArray;
- TDBParamInfoArray = array[0..MAXBOUND] of TDBPARAMINFO;
-
- PDBPARAMBINDINFO = ^TDBPARAMBINDINFO;
- TDBPARAMBINDINFO = packed record
-     pwszDataSourceType : PWideChar;
-     pwszName : PWideChar;
-     ulParamSize : UINT;
-     dwFlags : LongWord;
-     bPrecision : Byte;
-     bScale : Byte;
- end;
-
- PDBParamBindInfoArray = ^TDBParamBindInfoArray;
- TDBParamBindInfoArray = array[0..MAXBOUND] of TDBParamBindInfo;
-
- PDBCOLUMNINFO = ^TDBCOLUMNINFO;
- TDBCOLUMNINFO = packed record
-     pwszName : PWideChar;
-     pTypeInfo : ITypeInfo;
-     iOrdinal : LongWord;
-     dwFlags : LongWord;
-     ulColumnSize : LongWord;
-     wType : Word;
-     bPrecision : Byte;
-     bScale : Byte;
-     columnid : TDBID;
- end;
  PDBPROPINFOSET = ^DBPROPINFOSET;
 
  PDBPROPINFO = ^DBPROPINFO;
@@ -1221,21 +1329,24 @@ type
    ['{0C733A80-2A1C-11CE-ADE5-00AA0044773D}']
   end;
 
-
-// IAccessor : 
+*)
+// IAccessor :
 
  IAccessor = interface(IUnknown)
    ['{0C733A8C-2A1C-11CE-ADE5-00AA0044773D}']
-    // AddRefAccessor :  
-   function AddRefAccessor(hAccessor:ULONG_PTR;var pcRefCount:LongWord):HRESULT;stdcall;
-    // CreateAccessor :  
-   function CreateAccessor(dwAccessorFlags:LongWord;cBindings:LongWord;var rgBindings:DBBINDING;cbRowSize:LongWord;out phAccessor:ULONG_PTR;out rgStatus:LongWord):HRESULT;stdcall;
-    // GetBindings :  
-   function GetBindings(hAccessor:ULONG_PTR;out pdwAccessorFlags:LongWord;var pcBindings:LongWord;out prgBindings:PDBBINDING):HRESULT;stdcall;
-    // ReleaseAccessor :  
-   function ReleaseAccessor(hAccessor:ULONG_PTR;var pcRefCount:LongWord):HRESULT;stdcall;
+    // AddRefAccessor :
+   function AddRefAccessor(hAccessor: HACCESSOR;var pcRefCount: DBREFCOUNT):HRESULT;stdcall;
+    // CreateAccessor :
+   function CreateAccessor(dwAccessorFlags: DBACCESSORFLAGS; cBindings: DBCOUNTITEM;
+     rgBindings: PDBBindingArray; cbRowSize:DBLENGTH; out phAccessor: HACCESSOR;
+     rgStatus: PDBBINDSTATUS_Array):HRESULT;stdcall;
+    // GetBindings :
+   function GetBindings(hAccessor:HACCESSOR; out pdwAccessorFlags:DBACCESSORFLAGS;
+    var pcBindings:DBCOUNTITEM;out prgBindings: PDBBINDING):HRESULT;stdcall;
+    // ReleaseAccessor :
+   function ReleaseAccessor(hAccessor:HACCESSOR; var pcRefCount:DBREFCOUNT):HRESULT;stdcall;
   end;
-
+(*
 
 // ITypeInfo : 
 (*
@@ -1318,7 +1429,6 @@ type
     // ReleaseTLibAttr :
    function ReleaseTLibAttr(var pTLibAttr:TLIBATTR):HRESULT;stdcall;
   end;
-*)
 
 // IRowset :
 
@@ -1332,40 +1442,40 @@ type
    function GetNextRows(hReserved:ULONG_PTR;lRowsOffset:Integer;cRows:Integer;out pcRowsObtained:LongWord;out prghRows:PULONG_PTR):HRESULT;stdcall;
     // ReleaseRows :
    function ReleaseRows(cRows:LongWord;var rghRows:ULONG_PTR;var rgRowOptions:LongWord;out rgRefCounts:LongWord;out rgRowStatus:LongWord):HRESULT;stdcall;
-    // RestartPosition :  
+    // RestartPosition :
    function RestartPosition(hReserved:ULONG_PTR):HRESULT;stdcall;
   end;
 
 
-// IRowsetInfo : 
+// IRowsetInfo :
 
  IRowsetInfo = interface(IUnknown)
    ['{0C733A55-2A1C-11CE-ADE5-00AA0044773D}']
     // GetProperties :
    function GetProperties(cPropertyIDSets:LongWord;rgPropertyIDSets:PDBPropIDSetArray;var pcPropertySets:LongWord;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
-    // GetReferencedRowset :  
+    // GetReferencedRowset :
    function GetReferencedRowset(iOrdinal:LongWord;var riid:GUID;out ppReferencedRowset:IUnknown):HRESULT;stdcall;
-    // GetSpecification :  
+    // GetSpecification :
    function GetSpecification(var riid:GUID;out ppSpecification:IUnknown):HRESULT;stdcall;
   end;
 
 
-// IRowsetLocate : 
+// IRowsetLocate :
 
  IRowsetLocate = interface(IRowset)
    ['{0C733A7D-2A1C-11CE-ADE5-00AA0044773D}']
-    // Compare :  
+    // Compare :
    procedure Compare(hReserved:ULONG_PTR;cbBookmark1:LongWord;var pBookmark1:Byte;cbBookmark2:LongWord;var pBookmark2:Byte;out pComparison:LongWord);safecall;
-    // GetRowsAt :  
+    // GetRowsAt :
    procedure GetRowsAt(hReserved1:ULONG_PTR;hReserved2:ULONG_PTR;cbBookmark:LongWord;var pBookmark:Byte;lRowsOffset:Integer;cRows:Integer;out pcRowsObtained:LongWord;out prghRows:PULONG_PTR);safecall;
-    // GetRowsByBookmark :  
+    // GetRowsByBookmark :
    procedure GetRowsByBookmark(hReserved:ULONG_PTR;cRows:LongWord;var rgcbBookmarks:LongWord;var rgpBookmarks:PByte;out rghRows:ULONG_PTR;out rgRowStatus:LongWord);safecall;
-    // Hash :  
+    // Hash :
    procedure Hash(hReserved:ULONG_PTR;cBookmarks:LongWord;var rgcbBookmarks:LongWord;var rgpBookmarks:PByte;out rgHashedValues:LongWord;out rgBookmarkStatus:LongWord);safecall;
   end;
 
 
-// IRowsetResynch : 
+// IRowsetResynch :
 
  IRowsetResynch = interface(IUnknown)
    ['{0C733A84-2A1C-11CE-ADE5-00AA0044773D}']
@@ -1551,7 +1661,7 @@ type
   end;
 
 
-// IRowsetIndex : 
+// IRowsetIndex :
 
  IRowsetIndex = interface(IUnknown)
    ['{0C733A82-2A1C-11CE-ADE5-00AA0044773D}']
@@ -1563,111 +1673,117 @@ type
    function SetRange(hAccessor:ULONG_PTR;cStartKeyColumns:LongWord;var pStartData:pointer;cEndKeyColumns:LongWord;var pEndData:pointer;dwRangeOptions:LongWord):HRESULT;stdcall;
   end;
 
+*)
+// ICommand :
 
-// ICommand : 
-
- ICommand = interface(IUnknown)
-   ['{0C733A63-2A1C-11CE-ADE5-00AA0044773D}']
-    // Cancel :  
-   function Cancel:HRESULT;stdcall;
-    // Execute :  
-   function Execute(pUnkOuter:IUnknown;var riid:GUID;var pParams:DBPARAMS;out pcRowsAffected:Integer;out ppRowset:IUnknown):HRESULT;stdcall;
+  ICommand = interface(IUnknown)
+    ['{0C733A63-2A1C-11CE-ADE5-00AA0044773D}']
+     // Cancel :
+    function Cancel: HRESULT; stdcall;
+     // Execute :
+    function Execute(const pUnkOuter: IUnknown; const riid: TGUID;
+      var pParams: {P}DBPARAMS; out pcRowsAffected: DBROWCOUNT; out ppRowset: IUnknown):HRESULT;stdcall;
     // GetDBSession :  
-   function GetDBSession(var riid:GUID;out ppSession:IUnknown):HRESULT;stdcall;
+   function GetDBSession(var riid: TGUID; out ppSession:IUnknown):HRESULT;stdcall;
   end;
 
-
-// IMultipleResults : 
+(*
+// IMultipleResults :
 
  IMultipleResults = interface(IUnknown)
    ['{0C733A90-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetResult :  
+    // GetResult :
    function GetResult(pUnkOuter:IUnknown;lResultFlag:Integer;var riid:GUID;out pcRowsAffected:Integer;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
 
 
-// IConvertType : 
+// IConvertType :
 
  IConvertType = interface(IUnknown)
    ['{0C733A88-2A1C-11CE-ADE5-00AA0044773D}']
-    // CanConvert :  
+    // CanConvert :
    function CanConvert(wFromType:Word;wToType:Word;dwConvertFlags:LongWord):HRESULT;stdcall;
   end;
+*)
 
-
-// ICommandPrepare : 
+// ICommandPrepare :
 
  ICommandPrepare = interface(IUnknown)
    ['{0C733A26-2A1C-11CE-ADE5-00AA0044773D}']
-    // Prepare :  
-   function Prepare(cExpectedRuns:LongWord):HRESULT;stdcall;
-    // Unprepare :  
-   function Unprepare:HRESULT;stdcall;
+    // Prepare :
+   function Prepare(cExpectedRuns: ULONG): HRESULT; stdcall;
+    // Unprepare :
+   function Unprepare: HRESULT; stdcall;
   end;
 
-
-// ICommandProperties : 
+(*
+// ICommandProperties :
 
  ICommandProperties = interface(IUnknown)
    ['{0C733A79-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetProperties :  
+    // GetProperties :
    function GetProperties(cPropertyIDSets:LongWord;rgPropertyIDSets:PDBPropIDSetArray;var pcPropertySets:LongWord;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
-    // SetProperties :  
+    // SetProperties :
    function SetProperties(cPropertySets:LongWord;var rgPropertySets:TDBPROPSET):HRESULT;stdcall;
   end;
+*)
 
-
-// ICommandText : 
+// ICommandText :
 
  ICommandText = interface(ICommand)
    ['{0C733A27-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetCommandText :  
-   procedure GetCommandText(var pguidDialect:GUID;out ppwszCommand:PWideChar);safecall;
-    // SetCommandText :  
-   procedure SetCommandText(var rguidDialect:GUID;pwszCommand:PWideChar);safecall;
+    // GetCommandText :
+   function GetCommandText(var pguidDialect: TGUID;out ppwszCommand: PWideChar): HRESULT;safecall;
+    // SetCommandText :
+   function SetCommandText(const rguidDialect: TGUID; pwszCommand: PWideChar): HRESULT;safecall;
   end;
 
 
-// ICommandWithParameters : 
+// ICommandWithParameters :
 
- ICommandWithParameters = interface(IUnknown)
-   ['{0C733A64-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetParameterInfo :  
-   function GetParameterInfo(var pcParams:ULONG_PTR;out prgParamInfo:PDBPARAMINFO;ppNamesBuffer:PPOleStr):HRESULT;stdcall;
-    // MapParameterNames :  
-   function MapParameterNames(cParamNames:ULONG_PTR;rgParamNames:POleStrList;rgParamOrdinals:PULONG_PTRArray):HRESULT;stdcall;
-    // SetParameterInfo :  
-   function SetParameterInfo(cParams:ULONG_PTR;rgParamOrdinals:PULONG_PTRArray;rgParamBindInfo:PDBParamBindInfoArray):HRESULT;stdcall;
+  ICommandWithParameters = interface(IUnknown)
+    ['{0C733A64-2A1C-11CE-ADE5-00AA0044773D}']
+    // GetParameterInfo :
+    function GetParameterInfo(var pcParams: DB_UPARAMS; out prgParamInfo: PDBPARAMINFO;
+      ppNamesBuffer: PPOleStr):HRESULT;stdcall;
+    // MapParameterNames :
+    function MapParameterNames(cParamNames: DB_UPARAMS; rgParamNames: POleStrList;
+      out rgParamOrdinals: PDB_LPARAMS_Array):HRESULT;stdcall;
+     // SetParameterInfo :
+    function SetParameterInfo(cParams: DB_UPARAMS; rgParamOrdinals: PDB_UPARAMS_Array;
+      rgParamBindInfo: PDBParamBindInfoArray):HRESULT;stdcall;
   end;
 
-
-// IColumnsRowset : 
+(*
+// IColumnsRowset :
 
  IColumnsRowset = interface(IUnknown)
    ['{0C733A10-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetAvailableColumns :  
+    // GetAvailableColumns :
    function GetAvailableColumns(var pcOptColumns:LongWord;out prgOptColumns:PDBID):HRESULT;stdcall;
-    // GetColumnsRowset :  
+    // GetColumnsRowset :
    function GetColumnsRowset(pUnkOuter:IUnknown;cOptColumns:LongWord;var rgOptColumns:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppColRowset:IUnknown):HRESULT;stdcall;
   end;
 
-
-// IColumnsInfo : 
+*)
+// IColumnsInfo :
 
  IColumnsInfo = interface(IUnknown)
    ['{0C733A11-2A1C-11CE-ADE5-00AA0044773D}']
     // GetColumnInfo :
-   function GetColumnInfo(var pcColumns:ULONG_PTR;out prgInfo:PDBCOLUMNINFO;out ppStringsBuffer:PWideChar):HRESULT;stdcall;
-    // MapColumnIDs :  
-   function MapColumnIDs(cColumnIDs:ULONG_PTR;rgColumnIDs:PDBIDArray;rgColumns:PULONG_PTRArray):HRESULT;stdcall;
+   function GetColumnInfo(var pcColumns:  DBORDINAL; out prgInfo: PDBCOLUMNINFO;
+    out ppStringsBuffer: PWideChar): HRESULT; stdcall;
+    // MapColumnIDs :
+   function MapColumnIDs(const cColumnIDs: DBORDINAL; const rgColumnIDs: PDBIDArray;
+    {out} rgColumns: PDBORDINAL_Array): HRESULT; stdcall;
   end;
-
+(*
 
 // IDBCreateCommand : 
 
  IDBCreateCommand = interface(IUnknown)
    ['{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}']
-    // CreateCommand :  
+    // CreateCommand :
    function CreateCommand(pUnkOuter:IUnknown;var riid:GUID;out ppCommand:IUnknown):HRESULT;stdcall;
   end;
 
@@ -1725,7 +1841,7 @@ type
   end;
 
 
-// IDBDataSourceAdmin : 
+// IDBDataSourceAdmin :
 
  IDBDataSourceAdmin = interface(IUnknown)
    ['{0C733A7A-2A1C-11CE-ADE5-00AA0044773D}']
@@ -2073,7 +2189,7 @@ type
    function IsMember(var pMembershipTrustee:_TRUSTEE_W;var pMemberTrustee:_TRUSTEE_W;out pfStatus:Integer):HRESULT;stdcall;
     // GetMembers :  
    function GetMembers(var pMembershipTrustee:_TRUSTEE_W;out pcMembers:LongWord;out prgMembers:P_TRUSTEE_W):HRESULT;stdcall;
-    // GetMemberships :  
+    // GetMemberships :
    function GetMemberships(var pTrustee:_TRUSTEE_W;out pcMemberships:LongWord;out prgMemberships:P_TRUSTEE_W):HRESULT;stdcall;
   end;
 
@@ -2247,7 +2363,7 @@ type
   end;
 
 
-// IGetSession : 
+// IGetSession :
 
  IGetSession = interface(IUnknown)
    ['{0C733ABA-2A1C-11CE-ADE5-00AA0044773D}']
@@ -2294,20 +2410,29 @@ type
     // PositionOnBookmark :  
    function PositionOnBookmark(hChapter:ULONG_PTR;cbBookmark:LongWord;var pBookmark:Byte):HRESULT;stdcall;
   end;
-
+*)
 //start add from msdasc.h
   IDataInitialize = interface(IUnknown)
     ['{2206CCB1-19C1-11D1-89E0-00C04FD7A829}']
-    function GetDataSource(const pUnkOuter:IUnknown;dwClsCtx:DWORD;pwszInitializationString:POleStr; const riid:GUID;var DataSource:IUnknown):HResult; stdcall;
-    function GetInitializationString(const DataSource: IUnknown;fIncludePassword: Boolean; out pwszInitString: POleStr): HResult; stdcall;
-    function CreateDBInstance(const clsidProvider: TGUID;const pUnkOuter: IUnknown;dwClsCtx: DWORD;pwszReserved: POleStr;const riid: GUID; var DataSource: IUnknown): HResult; stdcall;
-    function CreateDBInstanceEx(const clsidProvider: TGUID;const pUnkOuter: IUnknown;dwClsCtx:DWORD; pwszReserved: POleStr;
-      pServerInfo:PCoServerInfo;cmq:ULONG;rgmqResults:PMultiQI): HResult; stdcall;
-    function LoadStringFromStorage(pwszFileName:POleStr;
-      out pwszInitializationString:POleStr):HResult; stdcall;
+    function GetDataSource(const pUnkOuter:IUnknown; dwClsCtx:DWORD;
+      pwszInitializationString:POleStr; const riid: TIID;
+      var DataSource: IUnknown): HResult; stdcall;
+    function GetInitializationString(const DataSource: IUnknown;
+      fIncludePassword: Boolean; out pwszInitString: POleStr): HResult; stdcall;
+    function CreateDBInstance(const clsidProvider: TGUID;
+      const pUnkOuter: IUnknown; dwClsCtx: DWORD; pwszReserved: POleStr;
+        const riid: TIID; out DataSource: IUnknown): HResult; stdcall;
+    function CreateDBInstanceEx(const clsidProvider: TGUID;
+      const pUnkOuter: IUnknown; dwClsCtx:DWORD; pwszReserved: POleStr;
+      pServerInfo: PCoServerInfo; cmq: ULONG; rgmqResults: PMultiQI): HResult; stdcall;
+    function LoadStringFromStorage(pwszFileName: POleStr;
+      out pwszInitializationString: POleStr):HResult; stdcall;
     function WriteStringToStorage(pwszFileName,pwszInitializationString:POleStr;
-      dwCreationDisposition:DWORD):HResult; stdcall;
+      dwCreationDisposition: DWORD):HResult; stdcall;
   end;
+
+  DBSOURCETYPE = DWORD; //oledb.h
+  PDBSOURCETYPE = ^DBSOURCETYPE;
 
   IDBPromptInitialize = interface(IUnknown)
     ['{2206CCB0-19C1-11D1-89E0-00C04FD7A829}']

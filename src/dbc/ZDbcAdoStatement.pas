@@ -57,9 +57,9 @@ interface
 {$IFDEF ENABLE_ADO}
 
 uses
-  Types, Classes, SysUtils, ZCompatibility, ZClasses, ZSysUtils, ZCollections,
-  ZDbcIntfs, ZPlainDriver, ZDbcStatement, ZDbcAdo, ZPlainAdoDriver, ZPlainAdo,
-  ZVariant, ZDbcAdoUtils;
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils,
+  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils;
 
 type
   {** Implements Prepared ADO Statement. }
@@ -128,12 +128,9 @@ implementation
 {$IFDEF ENABLE_ADO}
 
 uses
-{$IFNDEF FPC}
-  Variants,
-{$ENDIF}
-  {$IFDEF FPC}Variants,ZOleDB{$ELSE}OleDB{$ENDIF}, ComObj,
+  Variants, ComObj,
   {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet, ZDbcAdoResultSet,
+  ZEncoding, ZDbcLogging, ZDbcCachedResultSet, ZDbcResultSet,
   ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
 
 { TZAdoPreparedStatement }
@@ -330,13 +327,13 @@ begin
   BindInParameters;
   try
     if FIsSelectSQL then
-    begin
-      AdoRecordSet := CoRecordSet.Create;
-      AdoRecordSet.MaxRecords := MaxRows;
-      AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
-      AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
-    end
-    else
+      begin
+        AdoRecordSet := CoRecordSet.Create;
+        AdoRecordSet.MaxRecords := MaxRows;
+        AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+        AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+      end
+      else
       AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
     Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,
       SQL, ConSettings, ResultSetConcurrency);

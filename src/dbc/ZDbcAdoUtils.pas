@@ -56,8 +56,8 @@ interface
 {$I ZDbc.inc}
 {$IFDEF ENABLE_ADO}
 
-uses Windows, Classes, SysUtils, ActiveX,
-  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZDbcStatement;
+uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant;
 
 type
   PDirectionTypes = ^TDirectionTypes;
@@ -427,7 +427,7 @@ begin
   DataInit := CreateComObject(CLSID_DataLinks) as IDataInitialize;
   if InitialString <> '' then
     DataInit.GetDataSource(nil, CLSCTX_INPROC_SERVER,
-      PWideChar(InitialString), IUnknown, DataSource);
+      PWideChar(InitialString), IUnknown, DataSource{%H-});
   DBPrompt := CreateComObject(CLSID_DataLinks) as IDBPromptInitialize;
   if Succeeded(DBPrompt.PromptDataSource(nil, Handle,
     DBPROMPTOPTIONS_PROPERTYSHEET, 0, nil, nil, IUnknown, DataSource)) then
@@ -591,7 +591,7 @@ begin
   end
   else
     AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
-      'P' + ZFastCode.IntToStr(ParameterIndex), T, ParamDirection, S, V));
+      'P' + ZFastCode.IntToUnicode(ParameterIndex), T, ParamDirection, S, V));
 end;
 
 function ADOBindArrayParams(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
@@ -644,7 +644,7 @@ begin
       P.Direction := ParamDirection;
       ZData := InParamValues[I].VArray.VIsNullArray;
       if (ZData = nil) then
-        P.Value := null
+        IsNull := True
       else
         case TZSQLType(InParamValues[I].VArray.VIsNullArrayType) of
           stBoolean: IsNull := ZBooleanArray[J];
@@ -818,13 +818,13 @@ procedure RefreshParameters(AdoCommand: ZPlainAdo.Command;
       try
         OLEDBCommand.QueryInterface(ICommandPrepare, CommandPrepare);
         if Assigned(CommandPrepare) then CommandPrepare.Prepare(0);
-        if OLEDBParameters.GetParameterInfo(ParamCount, PDBPARAMINFO(ParamInfo), @NamesBuffer) = S_OK then
+        if OLEDBParameters.GetParameterInfo(ParamCount{%H-}, PDBPARAMINFO(ParamInfo), @NamesBuffer) = S_OK then
           for I := 0 to ParamCount - 1 do
             with ParamInfo[I] do
             begin
               { When no default name, fabricate one like ADO does }
               if pwszName = nil then
-                Name := 'Param' + ZFastCode.IntToStr(I+1) else { Do not localize }
+                Name := 'Param' + ZFastCode.IntToUnicode(I+1) else { Do not localize }
                 Name := pwszName;
               { ADO maps DBTYPE_BYTES to adVarBinary }
               if wType = DBTYPE_BYTES then wType := adVarBinary;
