@@ -532,21 +532,31 @@ begin
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
     vtInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      if ParameterIndex <= ParamCount then
       begin //Hacking the IDE variant: Not all IDE's support
         P := AdoCommand.Parameters.Item[ParameterIndex - 1];
         P.Direction := ParamDirection;
         P.Type_ :=  adBigInt;
         P.Value := SoftVarManager.GetAsInteger(RetValue);
         Exit;
-      end;
+      end
+      else
+        AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
+          'P' + ZFastCode.IntToUnicode(ParameterIndex), adBigInt, ParamDirection,
+            0, SoftVarManager.GetAsInteger(RetValue)));
     vtUInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      if ParameterIndex <= ParamCount then
       begin //Hacking the IDE variant: Not all IDE's support
         P.Direction := ParamDirection;
         P.Type_ :=  adUnsignedBigInt;
         P := AdoCommand.Parameters.Item[ParameterIndex - 1];
         P.Value := SoftVarManager.GetAsUInteger(RetValue);
         Exit;
-      end;
+      end
+      else
+        AdoCommand.Parameters.Append(AdoCommand.CreateParameter(
+          'P' + ZFastCode.IntToUnicode(ParameterIndex), adUnsignedBigInt,
+            ParamDirection, 0, SoftVarManager.GetAsUInteger(RetValue)));
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
     vtUnicodeString, vtString, vtAnsiString, vtUTF8String, vtRawByteString, vtCharRec:
     begin
@@ -586,7 +596,7 @@ begin
       P.Type_ := T;
       P.Size := S;
     end;
-    if VarIsClear(P.Value) or (P.Value <> V) or (TmpSQLType = stBytes) then //Check if Param is cleared, unasigned or different
+    //if VarIsClear(P.Value) or (P.Value <> V) or (TmpSQLType = stBytes) then //Check if Param is cleared, unasigned or different
       P.Value := V;
   end
   else
@@ -892,5 +902,6 @@ finalization
 
 {$ENDIF ENABLE_ADO}
 end.
+
 
 
