@@ -1345,7 +1345,6 @@ begin
   {$IFNDEF GENERIC_INDEX}
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
-  LastWasNull := FAdoRecordSet.Fields.Item[ColumnIndex].Value = null;
   LastWasNull := TVarData(FAdoRecordSet.Fields.Item[ColumnIndex].Value).VType in [varNull, varEmpty];
   if LastWasNull then
     Result := 0
