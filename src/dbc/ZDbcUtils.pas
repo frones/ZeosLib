@@ -385,13 +385,9 @@ end;
 procedure RaiseSQLException(E: Exception);
 begin
   if E is EZSQLException then
-  begin
-    raise EZSQLException.CreateClone(EZSQLException(E));
-  end
+    raise EZSQLException.CreateClone(EZSQLException(E))
   else
-  begin
     raise EZSQLException.Create(E.Message);
-  end;
 end;
 
 {**

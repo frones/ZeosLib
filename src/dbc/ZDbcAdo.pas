@@ -57,8 +57,8 @@ interface
 {$IFDEF ENABLE_ADO}
 
 uses
-  Types, Classes, SysUtils,
-  ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainDriver, ZPlainAdoDriver,
+  Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZDbcConnection, ZDbcIntfs, ZCompatibility, ZPlainAdoDriver,
   ZPlainAdo, ZURL, ZTokenizer;
 
 type
@@ -604,7 +604,7 @@ begin
 
   LogMessage := 'SET CATALOG '+ConSettings^.ConvFuncs.ZStringToRaw(Catalog, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   try
-    FAdoConnection.DefaultDatabase := Catalog;
+    FAdoConnection.DefaultDatabase := WideString(Catalog);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
@@ -622,7 +622,7 @@ end;
 }
 function TZAdoConnection.GetCatalog: string;
 begin
-  Result := FAdoConnection.DefaultDatabase;
+  Result := String(FAdoConnection.DefaultDatabase);
 end;
 
 {**

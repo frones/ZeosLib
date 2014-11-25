@@ -57,8 +57,8 @@ interface
 {$IFDEF ENABLE_ADO}
 
 uses
-  Types, Classes, SysUtils, ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata,
-  ZDbcResultSet, ZURL,
+  Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
   ZCompatibility, ZGenericSqlAnalyser, ZPlainAdo, ZDbcConnection;
 
 type
@@ -146,6 +146,7 @@ type
 //    function SupportsBatchUpdates: Boolean; override; -> Not implemented
     function SupportsNonEscapedSearchStrings: Boolean; override;
     function SupportsUpdateAutoIncrementFields: Boolean; override;
+    function SupportsArrayBindings: Boolean; override;
 
     // maxima:
     function GetMaxBinaryLiteralLength: Integer; override;
@@ -1212,6 +1213,16 @@ function TZAdoDatabaseInfo.SupportsUpdateAutoIncrementFields: Boolean;
 begin
   Result := False;
 end;
+
+{**
+  Does the Database support binding arrays? Is the ZDbc ready for this?
+  @return <code>true</code> if the DataBase allows it.
+}
+function TZAdoDatabaseInfo.SupportsArrayBindings: Boolean;
+begin
+  Result := True;
+end;
+
 
 { TZAdoDatabaseMetadata }
 
