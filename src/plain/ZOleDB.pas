@@ -75,6 +75,7 @@ Const
   IID_ICommandProperties : TGUID = '{0C733A79-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ICommandText : TGUID = '{0C733A27-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ICommandWithParameters : TGUID = '{0C733A64-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IAccessor : TGUID = '{0C733A8C-2A1C-11CE-ADE5-00AA0044773D}';
 
   oledbMajorVersion = 0;
   oledbMinorVersion = 0;
@@ -82,7 +83,6 @@ Const
   LIBID_oledb : TGUID = '{5D8DF8EB-BD36-4DB4-A604-E09991233FFC}';
 
 (*  IID_DBStructureDefinitions : TGUID = '{0C733A80-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IAccessor : TGUID = '{0C733A8C-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITypeInfo : TGUID = '{00020401-0000-0000-C000-000000000046}';
   IID_ITypeComp : TGUID = '{00020403-0000-0000-C000-000000000046}';
   IID_ITypeLib : TGUID = '{00020402-0000-0000-C000-000000000046}';
@@ -165,6 +165,8 @@ Const
   *)
 
 //start from oledb.h
+  DB_NULLGUID: TGuid = '{00000000-0000-0000-0000-000000000000}';
+
   DBSCHEMA_TABLES_INFO: TGUID = '{C8B522E0-5CF3-11CE-ADE5-00AA0044773D}';
   MDGUID_MDX: TGUID = '{A07CCCD0-8148-11D0-87BB-00C04FC33942}';
   DBGUID_MDX: TGUID = '{A07CCCD0-8148-11D0-87BB-00C04FC33942}';
@@ -506,6 +508,59 @@ const
 	DBBINDSTATUS_NOINTERFACE	= $5;
 	DBBINDSTATUS_MULTIPLESTORAGE	= $6;
 
+type
+  DBPARTENUM = TOleEnum;
+const
+  DBPART_INVALID = $0;
+  DBPART_VALUE = $1;
+  DBPART_LENGTH = $2;
+  DBPART_STATUS = $4;
+
+type
+  DBMEMOWNERENUM = TOleEnum;
+const
+  DBMEMOWNER_CLIENTOWNED = $0;
+  DBMEMOWNER_PROVIDEROWNED = $1;
+
+type
+  DBPARAMIOENUM = TOleEnum;
+const
+  DBPARAMIO_NOTPARAM = $0;
+  DBPARAMIO_INPUT = $1;
+  DBPARAMIO_OUTPUT = $02;
+  DBPARAMIO_INPUTOUTPUT = DBPARAMIO_INPUT or DBPARAMIO_OUTPUT;
+
+type
+  DBSTATUSENUM = TOleEnum;
+const
+  DBSTATUS_S_OK = $0;
+  DBSTATUS_E_BADACCESSOR = $1;
+  DBSTATUS_E_CANTCONVERTVALUE = $2;
+  DBSTATUS_S_ISNULL = $3;
+  DBSTATUS_S_TRUNCATED = $4;
+  DBSTATUS_E_SIGNMISMATCH = $5;
+  DBSTATUS_E_DATAOVERFLOW = $6;
+  DBSTATUS_E_CANTCREATE = $7;
+  DBSTATUS_E_UNAVAILABLE = $8;
+  DBSTATUS_E_PERMISSIONDENIED = $9;
+  DBSTATUS_E_INTEGRITYVIOLATION = $A;
+  DBSTATUS_E_SCHEMAVIOLATION = $B;
+  DBSTATUS_E_BADSTATUS = $C;
+  DBSTATUS_S_DEFAULT = $D;
+
+type
+  DBPARAMFLAGSENUM = TOleEnum;
+const
+  DBPARAMFLAGS_ISINPUT = $00000001;
+  DBPARAMFLAGS_ISOUTPUT = $00000002;
+  DBPARAMFLAGS_ISSIGNED = $00000010;
+  DBPARAMFLAGS_ISNULLABLE = $00000040;
+  DBPARAMFLAGS_ISLONG = $00000080;
+type
+  DBPARAMFLAGSENUM20 = TOleEnum;
+const
+  DBPARAMFLAGS_SCALEISNEGATIVE = $00000100;
+
 //Forward declarations
 type
  IColumnsInfo = interface;
@@ -603,11 +658,15 @@ type
 
 //from oledb.h
   // Length of a non-character object, size
+  PDBLENGTH = ^DBLENGTH;
   DBLENGTH = NativeUInt; //ULONGLONG
   // Offset within a rowset
   DBROWOFFSET = NativeInt;
   // Number of rows
+  PDBROWCOUNT = ^DBROWCOUNT;
   DBROWCOUNT = NativeInt;
+
+  PDBCOUNTITEM = ^DBCOUNTITEM;
   DBCOUNTITEM = NativeUInt;
   // Ordinal (column number, etc.)
   DBORDINAL = NativeUInt;
@@ -617,6 +676,7 @@ type
   // Offset in the buffer
   DBBYTEOFFSET = NativeUInt;
   // Reference count of each row/accessor  handle
+  PDBREFCOUNT = ^DBREFCOUNT;
   DBREFCOUNT = NativeInt;
   // Parameters
   DB_UPARAMS = NativeUInt;
@@ -634,6 +694,11 @@ type
   DBTYPE = Word;
   DBBINDSTATUS = DWORD;
 
+  PDBSTATUS = ^DBSTATUS;
+  DBSTATUS = DWORD;
+
+  PIUnknown = ^IUnknown;
+
 //end from oledb.h
 
 //records, unions, aliases
@@ -650,6 +715,7 @@ type
 
   PDBBINDSTATUS_Array = ^TDBBINDSTATUS_Array;
   TDBBINDSTATUS_Array = array[0..MAXBOUND] of DBBINDSTATUS;
+  TDBBINDSTATUSDynArray = array of DBBINDSTATUS;
 
   PDBOBJECT = ^DBOBJECT;
   DBOBJECT = record
@@ -664,7 +730,7 @@ type
     iOrdinal : DBORDINAL;
     obValue : DBBYTEOFFSET;
     obLength : DBBYTEOFFSET;
-    obStatus : DBBYTEOFFSET;
+    obStatus : DBBYTEOFFSET; //DWORD ??? http://msdn.microsoft.com/en-us/library/windows/desktop/ms716845%28v=vs.85%29.aspx
     pTypeInfo : ITypeInfo;
     pObject : PDBOBJECT;
     pBindExt : PDBBINDEXT;
@@ -680,6 +746,7 @@ type
 
   PDBBindingArray = ^TDBBindingArray;
   TDBBindingArray = array[0..MAXBOUND] of TDBBINDING;
+  TDBBindingDynArray = array of TDBBinding;
 
   DBBINDEXT = record
     pExtension : PByte;
@@ -736,10 +803,11 @@ type
   PDBParamInfoArray = ^TDBParamInfoArray;
   TDBParamInfoArray = array[0..MAXBOUND] of TDBPARAMINFO;
 
-  HACCESSOR = ULONG_PTR;
+  PHACCESSOR = ^HACCESSOR;
+  HACCESSOR = NativeUInt;
 
-  PDBPARAMS = ^DBPARAMS;
-  DBPARAMS = record
+  PDBPARAMS = ^TDBPARAMS;
+  TDBPARAMS = record
     pData : Pointer;
     cParamSets : DB_UPARAMS;
     hAccessor : HACCESSOR;
@@ -783,6 +851,7 @@ type
   PDBPropSetArray = ^TDBPropSetArray;
   TDBPropSetArray = array[0..MAXBOUND] of TDBPropSet;
 
+  PDBACCESSORFLAGS = ^DBACCESSORFLAGS;
   DBACCESSORFLAGS = DWORD;
 
 {end:-----------------------used by zeos---------------------------------------}
@@ -1338,13 +1407,13 @@ type
    function AddRefAccessor(hAccessor: HACCESSOR;var pcRefCount: DBREFCOUNT):HRESULT;stdcall;
     // CreateAccessor :
    function CreateAccessor(dwAccessorFlags: DBACCESSORFLAGS; cBindings: DBCOUNTITEM;
-     rgBindings: PDBBindingArray; cbRowSize:DBLENGTH; out phAccessor: HACCESSOR;
+     rgBindings: PDBBindingArray; cbRowSize:DBLENGTH; phAccessor: PHACCESSOR;
      rgStatus: PDBBINDSTATUS_Array):HRESULT;stdcall;
     // GetBindings :
-   function GetBindings(hAccessor:HACCESSOR; out pdwAccessorFlags:DBACCESSORFLAGS;
-    var pcBindings:DBCOUNTITEM;out prgBindings: PDBBINDING):HRESULT;stdcall;
+   function GetBindings(hAccessor:HACCESSOR; pdwAccessorFlags: PDBACCESSORFLAGS;
+    pcBindings: PDBCOUNTITEM;out prgBindings: PDBBINDING):HRESULT;stdcall;
     // ReleaseAccessor :
-   function ReleaseAccessor(hAccessor:HACCESSOR; var pcRefCount:DBREFCOUNT):HRESULT;stdcall;
+   function ReleaseAccessor(hAccessor:HACCESSOR; pcRefCount: PDBREFCOUNT):HRESULT;stdcall;
   end;
 (*
 
@@ -1547,7 +1616,7 @@ type
 
  IViewRowset = interface(IUnknown)
    ['{0C733A97-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetSpecification :  
+    // GetSpecification :
    function GetSpecification(var riid:GUID;out ppObject:IUnknown):HRESULT;stdcall;
     // OpenViewRowset :  
    function OpenViewRowset(pUnkOuter:IUnknown;var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
@@ -1682,7 +1751,7 @@ type
     function Cancel: HRESULT; stdcall;
      // Execute :
     function Execute(const pUnkOuter: IUnknown; const riid: TGUID;
-      var pParams: {P}DBPARAMS; out pcRowsAffected: DBROWCOUNT; out ppRowset: IUnknown):HRESULT;stdcall;
+      var pParams: TDBPARAMS; pcRowsAffected: PDBROWCOUNT; ppRowset: PIUnknown):HRESULT;stdcall;
     // GetDBSession :  
    function GetDBSession(var riid: TGUID; out ppSession:IUnknown):HRESULT;stdcall;
   end;
@@ -1745,7 +1814,7 @@ type
     ['{0C733A64-2A1C-11CE-ADE5-00AA0044773D}']
     // GetParameterInfo :
     function GetParameterInfo(var pcParams: DB_UPARAMS; out prgParamInfo: PDBPARAMINFO;
-      ppNamesBuffer: PPOleStr):HRESULT;stdcall;
+      out ppNamesBuffer: PPOleStr):HRESULT;stdcall;
     // MapParameterNames :
     function MapParameterNames(cParamNames: DB_UPARAMS; rgParamNames: POleStrList;
       out rgParamOrdinals: PDB_LPARAMS_Array):HRESULT;stdcall;
@@ -2183,7 +2252,7 @@ type
    ['{0C733AA2-2A1C-11CE-ADE5-00AA0044773D}']
     // AddMember :  
    function AddMember(var pMembershipTrustee:_TRUSTEE_W;var pMemberTrustee:_TRUSTEE_W):HRESULT;stdcall;
-    // DeleteMember :  
+    // DeleteMember :
    function DeleteMember(var pMembershipTrustee:_TRUSTEE_W;var pMemberTrustee:_TRUSTEE_W):HRESULT;stdcall;
     // IsMember :  
    function IsMember(var pMembershipTrustee:_TRUSTEE_W;var pMemberTrustee:_TRUSTEE_W;out pfStatus:Integer):HRESULT;stdcall;
