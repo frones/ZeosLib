@@ -255,11 +255,11 @@ procedure PrepareParameters(const PlainDriver: IZInterbasePlainDriver;
   const SQL: RawByteString; const Dialect: Word; var StmtHandle: TISC_STMT_HANDLE;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings);
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  InParamValues: TZVariantDynArray;  const InParamCount: Integer;
+  const InParamValues: TZVariantDynArray;  const InParamCount: Integer;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
   const CodePageArray: TWordDynArray; ArrayOffSet, ArrayItersCount: Integer); overload;
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
+  const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
   const ConSettings: PZConSettings; const CodePageArray: TWordDynArray); overload;
 procedure FreeStatement(PlainDriver: IZInterbasePlainDriver;
@@ -1005,7 +1005,7 @@ begin
 end;
 
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
+  const InParamValues: TZVariantDynArray; const InParamTypes: TZSQLTypeArray;
   const InParamCount: Integer; const ParamSqlData: IZParamsSQLDA;
   const ConSettings: PZConSettings; const CodePageArray: TWordDynArray);
 var
@@ -1115,7 +1115,7 @@ begin
 end;
 
 procedure BindSQLDAInParameters(const ClientVarManager: IZClientVariantManager;
-  InParamValues: TZVariantDynArray;  const InParamCount: Integer;
+  const InParamValues: TZVariantDynArray;  const InParamCount: Integer;
   const ParamSqlData: IZParamsSQLDA; const ConSettings: PZConSettings;
   const CodePageArray: TWordDynArray; ArrayOffSet, ArrayItersCount: Integer);
 var
