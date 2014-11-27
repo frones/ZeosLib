@@ -67,7 +67,7 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_DcuOutput>.\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ImageBase>00400000</DCC_ImageBase>
-        <DllSuffix>170</DllSuffix>
+        <DllSuffix>190</DllSuffix>
         <DCC_Description>Zeos SQL Parsing Classes and Interfaces</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_DependencyCheckOutputName>build\ZParseSql170.bpl</DCC_DependencyCheckOutputName>
@@ -134,19 +134,6 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="ZCore.dcp"/>
-        <DCCReference Include="..\..\src\parsesql\ZAdoToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZInterbaseAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZInterbaseToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZMySqlAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZMySqlToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZPostgreSqlAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZPostgreSqlToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSybaseAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSybaseToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZOracleToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZOracleAnalyser.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSqLiteToken.pas"/>
-        <DCCReference Include="..\..\src\parsesql\ZSqLiteAnalyser.pas"/>
         <DCCReference Include="..\..\src\parsesql\ZGenericSqlToken.pas"/>
         <DCCReference Include="..\..\src\parsesql\ZGenericSqlAnalyser.pas"/>
         <DCCReference Include="..\..\src\parsesql\ZScriptParser.pas"/>
