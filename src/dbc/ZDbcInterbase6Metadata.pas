@@ -1218,7 +1218,7 @@ begin
   if (GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
       (GetConnection.GetHostVersion < 2000000) then
     //Old FireBird do NOT support 'trim'
-    Result := Inherited ConstructnameCondition(Pattern,'rtrim('+Column+')')
+    Result := Inherited ConstructnameCondition(Pattern,Column)
   else
     Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')')
 end;
