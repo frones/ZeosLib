@@ -1813,8 +1813,8 @@ type
   ICommandWithParameters = interface(IUnknown)
     ['{0C733A64-2A1C-11CE-ADE5-00AA0044773D}']
     // GetParameterInfo :
-    function GetParameterInfo(var pcParams: DB_UPARAMS; out prgParamInfo: PDBPARAMINFO;
-      out ppNamesBuffer: PPOleStr):HRESULT;stdcall;
+    function GetParameterInfo(var pcParams: DB_UPARAMS; prgParamInfo: PDBPARAMINFO;
+      ppNamesBuffer: PPOleStr):HRESULT;stdcall;
     // MapParameterNames :
     function MapParameterNames(cParamNames: DB_UPARAMS; rgParamNames: POleStrList;
       out rgParamOrdinals: PDB_LPARAMS_Array):HRESULT;stdcall;
