@@ -113,9 +113,6 @@
             <Form>ZUpdateSQLEditForm</Form>
         </DCCReference>
         <DCCReference Include="..\..\src\component\ZComponentReg.pas">
-            <Form>,
-  ZIBEventAlerter in &apos;..\..\src\component\ZIBEventAlerter.pas&apos;,
-  ZPgEventAlerter in &apos;..\..\src\component\ZPgEventAlerter.pas&apos;</Form>
         </DCCReference>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
