@@ -67,7 +67,7 @@
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Winapi;$(DCC_Namespace)</DCC_Namespace>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_ImageBase>00400000</DCC_ImageBase>
-        <DllSuffix>170</DllSuffix>
+        <DllSuffix>180</DllSuffix>
         <DCC_Description>Zeos Core Classes and Interfaces</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_DependencyCheckOutputName>build\ZCore170.bpl</DCC_DependencyCheckOutputName>
