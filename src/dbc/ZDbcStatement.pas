@@ -94,8 +94,8 @@ type
   protected
     FStatementId : Integer;
     FOpenResultSet: Pointer; //weak reference to avoid memory-leaks and cursor issues
-    procedure PrepareOpenResultSetForReUse;
-    procedure PrepareLastResultSetForReUse;
+    procedure PrepareOpenResultSetForReUse; virtual;
+    procedure PrepareLastResultSetForReUse; virtual;
     procedure FreeOpenResultSetReference;
     procedure SetASQL(const Value: RawByteString); virtual;
     procedure SetWSQL(const Value: ZWideString); virtual;

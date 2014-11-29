@@ -810,7 +810,7 @@ procedure RefreshParameters(AdoCommand: ZPlainAdo.Command;
     I: Integer;
     ParamCount: NativeUInt;
     ParamInfo: PDBParamInfoArray;
-    NamesBuffer: POleStr;
+    NamesBuffer: PPOleStr;
     Name: WideString;
     Parameter: _Parameter;
     Direction: ParameterDirectionEnum;
@@ -828,7 +828,7 @@ procedure RefreshParameters(AdoCommand: ZPlainAdo.Command;
       try
         OLEDBCommand.QueryInterface(ICommandPrepare, CommandPrepare);
         if Assigned(CommandPrepare) then CommandPrepare.Prepare(0);
-        if OLEDBParameters.GetParameterInfo(ParamCount{%H-}, PDBPARAMINFO(ParamInfo), @NamesBuffer) = S_OK then
+        if OLEDBParameters.GetParameterInfo(ParamCount{%H-}, PDBPARAMINFO(ParamInfo), NamesBuffer) = S_OK then
           for I := 0 to ParamCount - 1 do
             with ParamInfo[I] do
             begin
