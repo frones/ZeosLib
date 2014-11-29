@@ -163,7 +163,7 @@ begin
   FAdoConnection := Connection as IZAdoConnection;
   FAdoCommand._Set_ActiveConnection(FAdoConnection.GetAdoConnection);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
-  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', '')); //not set by default on 7.2
+  FUseOle := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'use_ole_update_params', 'true')); //not set by default on 7.2
 end;
 
 constructor TZAdoPreparedStatement.Create(Connection: IZConnection;
@@ -226,7 +226,12 @@ procedure TZAdoPreparedStatement.Prepare;
 begin
   if Not Prepared then //prevent PrepareInParameters
   begin
-    FIsSelectSQL := IsSelect(SQL);
+    if FUseOle then //note: ADO or MSSQL allow execute multiple stmts
+      //so a "insert into foo values('bar'); select scope_identity()"
+      //would return a rowset -> fall back to ADO behavior
+      FIsSelectSQL := (ZFastCode.Pos('SELECT', UpperCase(SQL)) > -1)
+    else
+      FIsSelectSQL := IsSelect(SQL);
     if not Assigned(FAdoCommand) then
     begin
       FAdoCommand := CoCommand.Create;
