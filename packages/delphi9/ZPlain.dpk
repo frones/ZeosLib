@@ -54,6 +54,7 @@ contains
 {$ENDIF}
 
 {$IFDEF ENABLE_ADO}
+  ZOleDB in '..\..\src\plain\ZOleDB.pas',
   ZPlainAdoDriver in '..\..\src\plain\ZPlainAdoDriver.pas',
   ZPlainAdo in '..\..\src\plain\ZPlainAdo.pas',
 {$ENDIF}

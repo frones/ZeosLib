@@ -263,8 +263,7 @@ implementation
 {$IFDEF ENABLE_ADO}
 uses
   Variants,
-  Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo,
-  {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, ZDbcAdoResultSet;
+  Math, ZGenericSqlToken, ZDbcAdoUtils, ZDbcAdo, ZOleDB, ZDbcAdoResultSet;
 
 type
   TSuppSchemaRec = record

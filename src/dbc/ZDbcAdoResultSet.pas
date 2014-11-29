@@ -257,6 +257,9 @@ end;
 
 procedure TZAdoResultSet.ResetCursor;
 begin
+  if Assigned(FAdoRecordSet) then
+    FAdoRecordSet.Requery(adAsyncFetch);
+  inherited ResetCursor;
 end;
 
 {**
