@@ -43,8 +43,6 @@ requires
 contains
   ZPropertyEditor in '..\..\src\component\ZPropertyEditor.pas',
   ZUpdateSqlEditor in '..\..\src\component\ZUpdateSqlEditor.pas' {ZUpdateSQLEditForm},
-  ZComponentReg in '..\..\src\component\ZComponentReg.pas' {,
-  ZIBEventAlerter in '..\..\src\component\ZIBEventAlerter.pas',
-  ZPgEventAlerter in '..\..\src\component\ZPgEventAlerter.pas'};
+  ZComponentReg in '..\..\src\component\ZComponentReg.pas';
 
 end.

@@ -67,7 +67,7 @@
         <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_ImageBase>00400000</DCC_ImageBase>
-        <DllSuffix>170</DllSuffix>
+        <DllSuffix>190</DllSuffix>
         <DCC_Description>Zeos Low Level Database API</DCC_Description>
         <RuntimeOnlyPackage>true</RuntimeOnlyPackage>
         <DCC_DependencyCheckOutputName>build\ZDbc170.bpl</DCC_DependencyCheckOutputName>

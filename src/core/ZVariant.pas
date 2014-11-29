@@ -628,6 +628,16 @@ begin
           Result.VInteger := Value.VInteger;
         vtUInteger:
           Result.VInteger := Value.VUInteger;
+        vtString:
+          Result.VInteger := {$IFDEF UNICODE}UnicodeToInt64Def{$ELSE}RawToInt64Def{$ENDIF}(Value.VString, 0);
+        vtAnsiString:
+          Result.VInteger := RawToInt64Def(Value.VAnsiString, 0);
+        vtRawByteString:
+          Result.VInteger := RawToInt64Def(Value.VRawByteString, 0);
+        vtUTF8String:
+          Result.VInteger := RawToInt64Def(Value.VUTF8String, 0);
+        vtUnicodeString:
+          Result.VInteger := UnicodeToInt64Def(Value.VUnicodeString, 0);
         else
           RaiseTypeMismatchError;
       end;
@@ -644,6 +654,16 @@ begin
           Result.VUInteger := Value.VInteger;
         vtUInteger:
           Result.VUInteger := Value.VUInteger;
+        vtString:
+          Result.VUInteger := {$IFDEF UNICODE}UnicodeToUInt64Def{$ELSE}RawToUInt64Def{$ENDIF}(Value.VString, 0);
+        vtAnsiString:
+          Result.VUInteger := RawToUInt64Def(Value.VAnsiString, 0);
+        vtRawByteString:
+          Result.VUInteger := RawToUInt64Def(Value.VRawByteString, 0);
+        vtUTF8String:
+          Result.VUInteger := RawToUInt64Def(Value.VUTF8String, 0);
+        vtUnicodeString:
+          Result.VUInteger := UnicodeToUInt64Def(Value.VUnicodeString, 0);
         else
           RaiseTypeMismatchError;
       end;
@@ -2687,7 +2707,70 @@ begin
         end;
       end
       else
+        if CodePage = zCP_UTF16 then
+        begin
+          Value.VUnicodeString := PRawToUnicode(Pointer(Value.VUTF8String), Length(Value.VUTF8String), zCP_UTF8);
+          Result.Len := Length(Value.VUnicodeString);
+          if Result.Len = 0 then
+            Result.P := PEmptyUnicodeString //Pointer Result would be nil
+          else
+            Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
+        end
+        else
         goto AsRBS;
+    vtAnsiString:
+      if CodePage = zCP_UTF16 then
+      begin
+        Value.VUnicodeString := ZWideString(Value.VAnsiString);
+        Result.Len := Length(Value.VUnicodeString);
+        if Result.Len = 0 then
+          Result.P := PEmptyUnicodeString //Pointer Result would be nil
+        else
+          Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
+      end
+      else goto AsRBS;
+    vtRawByteString:
+      if CodePage = zCP_UTF16 then
+      begin
+        Value.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
+        Result.Len := Length(Value.VUnicodeString);
+        if Result.Len = 0 then
+          Result.P := PEmptyUnicodeString //Pointer Result would be nil
+        else
+          Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
+      end
+      else goto AsRBS;
+    vtString:
+    {$IFDEF UNICODE}
+      if CodePage = zCP_UTF16 then
+      begin
+        Result.Len := Length(Value.VString);
+        if Result.Len = 0 then
+          Result.P := PEmptyUnicodeString //Pointer Result would be nil
+        else
+          Result.P := Pointer(Value.VString); //avoid RTL conversion to PWideChar
+    {$ELSE}
+      if CodePage = zCP_UTF16 then
+      begin
+        Value.VUnicodeString := Convert(Value, vtUnicodeString).VUnicodeString;
+        Result.Len := Length(Value.VUnicodeString);
+        if Result.Len = 0 then
+          Result.P := PEmptyUnicodeString //Pointer Result would be nil
+        else
+          Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
+    {$ENDIF}
+      end
+      else goto AsRBS;
+    vtUnicodeString:
+      if CodePage = zCP_UTF16 then
+      begin
+        Result.Len := Length(Value.VUnicodeString);
+        if Result.Len = 0 then
+          Result.P := PEmptyUnicodeString //Pointer Result would be nil
+        else
+          Result.P := Pointer(Value.VUnicodeString); //avoid RTL conversion to PWideChar
+      end
+      else goto AsRBS;
     else
 AsRBS:
       begin
