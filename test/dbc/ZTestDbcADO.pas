@@ -104,6 +104,7 @@ type
       FirstID, ArrayLen: Integer);
   published
     procedure TestArrayBindings;
+    procedure TestFetchSequenceValue;
   end;
 
 implementation
@@ -450,7 +451,7 @@ begin
   PStatement.SetDate(stDate_Index, stDateArray[Random(9)]);
   PStatement.SetTime(stTime_Index, stTimeArray[Random(9)]);
   PStatement.SetTimestamp(stTimeStamp_Index, stTimeStampArray[Random(9)]);
-  PStatement.SetNull(stGUID_Index, stString);
+  PStatement.SetNull(stGUID_Index, stGuid);
   PStatement.SetCharRec(stAsciiStream_Index, stAsciiStreamArray[Random(9)]);
   PStatement.SetUTF8String(stUnicodeStream_Index, stUnicodeStreamArray[Random(9)]);
   PStatement.SetBlob(stBinaryStream_Index, stBinaryStream, stBinaryStreamArray[Random(9)] as IZBlob);
@@ -460,9 +461,28 @@ begin
   begin
     Next;
     CheckEquals(81, GetInt(FirstDbcIndex), 'Blokinsertiation Count');
+    Close;
   end;
+  PStatement.Close;
+  Connection.Commit;
 end;
 {$WARNINGS ON} //implizit string conversion of...
+
+procedure TZTestDbcADOCase.TestFetchSequenceValue;
+var PStatement: IZPreparedStatement;
+begin
+  PStatement := Connection.PrepareStatement('SELECT current_value FROM sys.sequences WHERE name = ''generate_id''');
+  try
+    with PStatement.ExecuteQueryPrepared do
+    begin
+      Next;
+      CheckEquals(90000250, GetLong(FirstDbcIndex), 'current_value');
+      Close;
+    end;
+  finally
+    PStatement.Close;
+  end;
+end;
 
 initialization
   RegisterTest('dbc',TZTestDbcADOCase.Suite);
