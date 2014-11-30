@@ -41,6 +41,7 @@
 {********************************************************@}
 //common compilation directives
 {$DEFINE ZEOS72UP}
+{$DEFINE ZEOS73UP}
 {$DEFINE SUPPORTS_UINT64_CONSTS}      // compiler supports integer constants with 20 digits
 
  // Compilation directives for Lazarus
