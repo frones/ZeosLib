@@ -209,7 +209,7 @@ begin
     if FUseOle then //note: ADO or MSSQL allow execute multiple stmts
       //so a "insert into foo values('bar'); select scope_identity()"
       //would return a rowset -> fall back to ADO behavior
-      FIsSelectSQL := (ZFastCode.Pos('SELECT', UpperCase(SQL)) > -1)
+      FIsSelectSQL := (ZFastCode.Pos('SELECT', UpperCase(SQL)) > 0)
     else
       FIsSelectSQL := IsSelect(SQL);
     if not Assigned(FAdoCommand) then
