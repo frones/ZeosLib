@@ -103,8 +103,8 @@ type
     FXSQLDAMaxSize: LongWord;
   protected
     procedure InternalCreate; override;
-    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
   public
+    procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function GetHostVersion: Integer; override;
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
