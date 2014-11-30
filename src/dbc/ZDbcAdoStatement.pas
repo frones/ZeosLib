@@ -87,7 +87,6 @@ type
     procedure PrepareInParameters; override;
     procedure BindInParameters; override;
     procedure UnPrepareInParameters; override;
-    procedure PrepareOpenResultSetForReUse; override;
   public
     constructor Create(Connection: IZConnection; const SQL: string;
       const Info: TStrings); overload;
@@ -201,25 +200,6 @@ begin
       Pointer(FDBBINDSTATUSArray));
   for i := 0 to Length(FTempLobs)-1 do
     SetLength(FTempLobs[i], Max(1, ArrayCount));
-end;
-
-procedure TZAdoPreparedStatement.PrepareOpenResultSetForReUse;
-var
-  RecordsAffected: OleVariant;
-begin
-  if Assigned(FOpenResultSet) then
-    if not Assigned(IZResultSet(FOpenResultSet).GetMetaData) then //is there another way to test if open?
-      FOpenResultSet := nil
-    else
-      if Assigned(AdoRecordSet) and (AdoRecordSet.NextRecordset(RecordsAffected) = nil) and
-         (IZResultSet(FOpenResultSet).GetConcurrency = GetResultSetConcurrency) and
-         (IZResultSet(FOpenResultSet).GetFetchDirection = GetFetchDirection) then
-        IZResultSet(FOpenResultSet).ResetCursor
-      else
-      begin
-        IZResultSet(FOpenResultSet).Close;
-        FOpenResultSet := nil;
-      end;
 end;
 
 procedure TZAdoPreparedStatement.Prepare;
@@ -468,27 +448,20 @@ var
   RC: OleVariant;
   Label LogEvent;
 begin
-  {if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close;
-  FOpenResultSet := nil;}
+  if Assigned(FOpenResultSet) then
+    IZResultSet(FOpenResultSet).Close; //Note keep track we close the RS and DO NOT Try to resync them!
+  FOpenResultSet := nil;
   Prepare;
   LastUpdateCount := -1;
   BindInParameters;
-  PrepareOpenResultSetForReUse;
   try
     if FIsSelectSQL then
-      if not Assigned(FOpenResultSet) then
-      begin
-        AdoRecordSet := CoRecordSet.Create;
-        AdoRecordSet.MaxRecords := MaxRows;
-        AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
-        AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
-      end
-      else
-      begin
-        Result := IZResultSet(FOpenResultSet);
-        goto LogEvent;
-      end
+    begin
+      AdoRecordSet := CoRecordSet.Create;
+      AdoRecordSet.MaxRecords := MaxRows;
+      AdoRecordSet._Set_ActiveConnection(FAdoCommand.Get_ActiveConnection);
+      AdoRecordSet.Open(FAdoCommand, EmptyParam, adOpenForwardOnly, adLockOptimistic, adAsyncFetch);
+    end
     else
       AdoRecordSet := FAdoCommand.Execute(RC, EmptyParam, -1{, adExecuteNoRecords});
     Result := GetCurrentResultSet(AdoRecordSet, FAdoConnection, Self,

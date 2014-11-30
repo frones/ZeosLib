@@ -257,9 +257,7 @@ end;
 
 procedure TZAdoResultSet.ResetCursor;
 begin
-  if Assigned(FAdoRecordSet) then
-    FAdoRecordSet.Requery(adAsyncFetch);
-  inherited ResetCursor;
+  { Resync the Adorecordsets leads to pain with huge collection of Data !!}
 end;
 
 {**
