@@ -44,7 +44,8 @@
 
 Unit ZOleDB;
 
-//  Imported oledb on 08.11.2014 00:47:46 from oledb.tlb of http://py-com-tools.googlecode.com/svn/trunk/sdk-tlbs/
+//  Imported oledb on 08.11.2014 00:47:46 from oledb.tlb of:
+//  http://py-com-tools.googlecode.com/svn/trunk/sdk-tlbs/
 
 interface
 {$I ZPlain.inc}
@@ -60,7 +61,7 @@ interface
 // Dependency: stdole v2 (stdole2.pas)
 //  Warning: renamed method 'Reset' in IDBBinderProperties to 'Reset_'
 Uses
-  Windows,ActiveX,Classes,Variants, ZCompatibility;//,stdole2;
+  Windows,ActiveX,Classes,Variants, ZCompatibility;
 Const
   IID_IColumnsInfo : TGUID = '{0C733A11-2A1C-11CE-ADE5-00AA0044773D}';
 
@@ -85,10 +86,10 @@ Const
 (*  IID_DBStructureDefinitions : TGUID = '{0C733A80-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITypeInfo : TGUID = '{00020401-0000-0000-C000-000000000046}';
   IID_ITypeComp : TGUID = '{00020403-0000-0000-C000-000000000046}';
-  IID_ITypeLib : TGUID = '{00020402-0000-0000-C000-000000000046}';
+  IID_ITypeLib : TGUID = '{00020402-0000-0000-C000-000000000046}';*)
   IID_IRowset : TGUID = '{0C733A7C-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetInfo : TGUID = '{0C733A55-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IRowsetLocate : TGUID = '{0C733A7D-2A1C-11CE-ADE5-00AA0044773D}';
+  (*IID_IRowsetLocate : TGUID = '{0C733A7D-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetResynch : TGUID = '{0C733A84-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetScroll : TGUID = '{0C733A7E-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IChapteredRowset : TGUID = '{0C733A93-2A1C-11CE-ADE5-00AA0044773D}';
@@ -106,13 +107,13 @@ Const
   IID_IRowsetIdentity : TGUID = '{0C733A09-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetNotify : TGUID = '{0C733A83-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetIndex : TGUID = '{0C733A82-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IColumnsRowset : TGUID = '{0C733A10-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IColumnsRowset : TGUID = '{0C733A10-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_IDBCreateCommand : TGUID = '{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBCreateSession : TGUID = '{0C733A5D-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ISourcesRowset : TGUID = '{0C733A1E-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IDBProperties : TGUID = '{0C733A8A-2A1C-11CE-ADE5-00AA0044773D}';
+  (*IID_ISourcesRowset : TGUID = '{0C733A1E-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IDBProperties : TGUID = '{0C733A8A-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_IDBInitialize : TGUID = '{0C733A8B-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IDBInfo : TGUID = '{0C733A89-2A1C-11CE-ADE5-00AA0044773D}';
+  (*IID_IDBInfo : TGUID = '{0C733A89-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBDataSourceAdmin : TGUID = '{0C733A7A-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBAsynchNotify : TGUID = '{0C733A96-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBAsynchStatus : TGUID = '{0C733A95-2A1C-11CE-ADE5-00AA0044773D}';
@@ -129,16 +130,16 @@ Const
   IID_IRowsetChapterMember : TGUID = '{0C733AA8-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ICommandPersist : TGUID = '{0C733AA7-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetRefresh : TGUID = '{0C733AA9-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IParentRowset : TGUID = '{0C733AAA-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IParentRowset : TGUID = '{0C733AAA-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_IErrorRecords : TGUID = '{0C733A67-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IErrorInfo : TGUID = '{1CF2B120-547D-101B-8E65-08002B2BD119}';
+  (*IID_IErrorInfo : TGUID = '{1CF2B120-547D-101B-8E65-08002B2BD119}';
   IID_IErrorLookup : TGUID = '{0C733A66-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ISQLErrorInfo : TGUID = '{0C733A74-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IGetDataSource : TGUID = '{0C733A75-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IGetDataSource : TGUID = '{0C733A75-2A1C-11CE-ADE5-00AA0044773D}'; *)
   IID_ITransactionLocal : TGUID = '{0C733A5F-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITransaction : TGUID = '{0FB15084-AF41-11CE-BD2B-204C4F4F5020}';
   IID_ITransactionOptions : TGUID = '{3A6AD9E0-23B9-11CF-AD60-00AA00A74CCD}';
-  IID_ITransactionJoin : TGUID = '{0C733A5E-2A1C-11CE-ADE5-00AA0044773D}';
+  (*IID_ITransactionJoin : TGUID = '{0C733A5E-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITransactionObject : TGUID = '{0C733A60-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITrusteeAdmin : TGUID = '{0C733AA1-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITrusteeGroupAdmin : TGUID = '{0C733AA2-2A1C-11CE-ADE5-00AA0044773D}';
@@ -569,7 +570,7 @@ type
  //IMultipleResults = interface;
  //IConvertType = interface;
  ICommandPrepare = interface;
- //ICommandProperties = interface;
+ ICommandProperties = interface;
  ICommandText = interface;
  ICommandWithParameters = interface;
  //DBStructureDefinitions = interface;
@@ -597,13 +598,13 @@ type
  IRowsetIdentity = interface;
  IRowsetNotify = interface;
  IRowsetIndex = interface;
- IColumnsRowset = interface;
+ IColumnsRowset = interface;*)
  IDBCreateCommand = interface;
  IDBCreateSession = interface;
- ISourcesRowset = interface;
- IDBProperties = interface;
+ (*ISourcesRowset = interface;
+ IDBProperties = interface;*)
  IDBInitialize = interface;
- IDBInfo = interface;
+ (*IDBInfo = interface;
  IDBDataSourceAdmin = interface;
  IDBAsynchNotify = interface;
  IDBAsynchStatus = interface;
@@ -620,16 +621,16 @@ type
  IRowsetChapterMember = interface;
  ICommandPersist = interface;
  IRowsetRefresh = interface;
- IParentRowset = interface;
+ IParentRowset = interface;*)
  IErrorRecords = interface;
- IErrorInfo = interface;
+ (*IErrorInfo = interface;
  IErrorLookup = interface;
  ISQLErrorInfo = interface;
- IGetDataSource = interface;
+ IGetDataSource = interface;*)
  ITransactionLocal = interface;
  ITransaction = interface;
  ITransactionOptions = interface;
- ITransactionJoin = interface;
+ (*ITransactionJoin = interface;
  ITransactionObject = interface;
  ITrusteeAdmin = interface;
  ITrusteeGroupAdmin = interface;
@@ -699,6 +700,15 @@ type
 
   PIUnknown = ^IUnknown;
 
+  PHROW = ^HROW;
+  HROW = NativeUInt;
+
+  DBROWSTATUS = DWORD;
+
+  HCHAPTER = NativeUInt;
+
+  DBROWOPTIONS = DWORD;
+
 //end from oledb.h
 
 //records, unions, aliases
@@ -716,6 +726,21 @@ type
   PDBBINDSTATUS_Array = ^TDBBINDSTATUS_Array;
   TDBBINDSTATUS_Array = array[0..MAXBOUND] of DBBINDSTATUS;
   TDBBINDSTATUSDynArray = array of DBBINDSTATUS;
+
+  PHROWS_Array = ^THROWS_Array;
+  THROWS_Array = array[0..MAXBOUND] of HROW;
+
+  PDBREFCOUNT_Array = ^TDBREFCOUNT_Array;
+  TDBREFCOUNT_Array = array[0..MAXBOUND] of DBREFCOUNT;
+
+  PDBROWSTATUS_Array = ^TDBROWSTATUS_Array;
+  TDBROWSTATUS_Array = array[0..MAXBOUND] of DBROWSTATUS;
+
+  PDBROWOPTIONS_Array = ^TDBROWOPTIONS_Array;
+  TDBROWOPTIONS_Array = array[0..MAXBOUND] of DBROWOPTIONS;
+
+  POleVarinat_Array = ^TOleVarinat_Array;
+  TOleVarinat_Array = array[0..MAXBOUND] of OleVariant;
 
   PDBOBJECT = ^DBOBJECT;
   DBOBJECT = record
@@ -854,11 +879,51 @@ type
   PDBACCESSORFLAGS = ^DBACCESSORFLAGS;
   DBACCESSORFLAGS = DWORD;
 
+  TDBPROPIDSET = record
+    rgPropertyIDs : TDBPROP;
+    cPropertyIDs : ULONG;
+    guidPropertySet : TGUID;
+  end;
+  PDBPROPSET = ^TDBPROPSET;
+  PDBPropIDSetArray = ^TDBPropIDSetArray;
+  TDBPropIDSetArray = array[0..MAXBOUND] of TDBPropIDSet;
+
+  //transact.h
+  PBOID = ^TBOID;
+  TBOID = record
+    rgb : array[0..15] of Byte;
+  end;
+  XACTUOW = TBOID;
+
+  ISOLEVEL = Integer;
+
+  PXACTTRANSINFO = ^TXACTTRANSINFO;
+  TXACTTRANSINFO = record
+    uow : TBOID;
+    isoLevel : ISOLEVEL;
+    isoFlags : ULONG;
+    grfTCSupported : DWORD;
+    grfRMSupported : DWORD;
+    grfTCSupportedRetaining : DWORD;
+    grfRMSupportedRetaining : DWORD;
+  end;
+
+  PXACTOPT = ^TXACTOPT;
+  TXACTOPT = record
+    ulTimeout : ULONG;
+    szDescription : array[0..39] of ShortInt;
+  end;
+
+  PERRORINFO = ^TERRORINFO;
+  TERRORINFO = record
+    hrError : HResult;
+    dwMinor : DWORD;
+    clsid : TGUID;
+    iid : TGUID;
+    dispid : Integer;
+ end;
 {end:-----------------------used by zeos---------------------------------------}
 (*
- //ULONG_PTR = LongWord;
- PDBBINDING = ^DBBINDING;
-
  PTYPEATTR = ^TYPEATTR;
 
  PTYPEDESC = ^TYPEDESC;
@@ -985,15 +1050,6 @@ type
  end;
  PDBPROPIDSET = ^TDBPROPIDSET;
 
- TDBPROPIDSET = packed record
-     rgPropertyIDs : PLongWord;
-     cPropertyIDs : LongWord;
-     guidPropertySet : TGUID;
- end;
- PDBPROPSET = ^TDBPROPSET;
- PDBPropIDSetArray = ^TDBPropIDSetArray;
- TDBPropIDSetArray = array[0..MAXBOUND] of TDBPropIDSet;
-
  P__MIDL_DBStructureDefinitions_0001 = ^__MIDL_DBStructureDefinitions_0001;
 
  __MIDL_DBStructureDefinitions_0001 =  record
@@ -1074,37 +1130,7 @@ type
      rgcColumns : PLongWord;
      rgpwszDimensionNames : PPWideChar;
  end;
- PERRORINFO = ^ERRORINFO;
 
- ERRORINFO = packed record
-     hrError : HResult;
-     dwMinor : LongWord;
-     clsid : TGUID;
-     iid : TGUID;
-     dispid : Integer;
- end;
- PBOID = ^BOID;
-
- BOID = packed record
-     rgb : array[0..15] of Byte;
- end;
- PXACTTRANSINFO = ^XACTTRANSINFO;
-
- XACTTRANSINFO = packed record
-     uow : BOID;
-     isoLevel : Integer;
-     isoFlags : LongWord;
-     grfTCSupported : LongWord;
-     grfRMSupported : LongWord;
-     grfTCSupportedRetaining : LongWord;
-     grfRMSupportedRetaining : LongWord;
- end;
- PXACTOPT = ^XACTOPT;
-
- XACTOPT = packed record
-     ulTimeout : LongWord;
-     szDescription : array[0..39] of ShortInt;
- end;
  P_OBJECTS_AND_SID = ^_OBJECTS_AND_SID;
 
  P_SID = ^_SID;
@@ -1498,21 +1524,25 @@ type
     // ReleaseTLibAttr :
    function ReleaseTLibAttr(var pTLibAttr:TLIBATTR):HRESULT;stdcall;
   end;
-
+*)
 // IRowset :
 
- IRowset = interface(IUnknown)
+  IRowset = interface(IUnknown)
    ['{0C733A7C-2A1C-11CE-ADE5-00AA0044773D}']
     // AddRefRows :
-   function AddRefRows(cRows:LongWord;var rghRows:ULONG_PTR;out rgRefCounts:LongWord;out rgRowStatus:LongWord):HRESULT;stdcall;
+    function AddRefRows(cRows: DBCOUNTITEM; const rghRows: PHROWS_Array;
+      out rgRefCounts: PDBREFCOUNT_Array; out rgRowStatus: PDBROWSTATUS_Array):HRESULT;stdcall;
     // GetData :
-   function GetData(hRow:ULONG_PTR;hAccessor:ULONG_PTR;out pData:pointer):HRESULT;stdcall;
+    function GetData(hRow: HROW; hAccessor:HACCESSOR; out pData:pointer):HRESULT;stdcall;
     // GetNextRows :
-   function GetNextRows(hReserved:ULONG_PTR;lRowsOffset:Integer;cRows:Integer;out pcRowsObtained:LongWord;out prghRows:PULONG_PTR):HRESULT;stdcall;
+    function GetNextRows(hReserved: HCHAPTER; lRowsOffset: DBROWOFFSET;
+      cRows:DBROWCOUNT;out pcRowsObtained:DBCOUNTITEM;out prghRows: PHROW):HRESULT;stdcall;
     // ReleaseRows :
-   function ReleaseRows(cRows:LongWord;var rghRows:ULONG_PTR;var rgRowOptions:LongWord;out rgRefCounts:LongWord;out rgRowStatus:LongWord):HRESULT;stdcall;
+    function ReleaseRows(cRows:DBCOUNTITEM; rghRows:PHROWS_Array;
+      rgRowOptions:PDBROWOPTIONS_Array; out rgRefCounts: PDBREFCOUNT_Array;
+      out rgRowStatus:PDBROWSTATUS_Array):HRESULT;stdcall;
     // RestartPosition :
-   function RestartPosition(hReserved:ULONG_PTR):HRESULT;stdcall;
+    function RestartPosition(hReserved:HCHAPTER):HRESULT;stdcall;
   end;
 
 
@@ -1521,13 +1551,15 @@ type
  IRowsetInfo = interface(IUnknown)
    ['{0C733A55-2A1C-11CE-ADE5-00AA0044773D}']
     // GetProperties :
-   function GetProperties(cPropertyIDSets:LongWord;rgPropertyIDSets:PDBPropIDSetArray;var pcPropertySets:LongWord;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
+   function GetProperties(cPropertyIDSets:ULONG; rgPropertyIDSets:PDBPropIDSetArray;
+    out pcPropertySets:ULONG; out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
     // GetReferencedRowset :
-   function GetReferencedRowset(iOrdinal:LongWord;var riid:GUID;out ppReferencedRowset:IUnknown):HRESULT;stdcall;
+   function GetReferencedRowset(iOrdinal:DBORDINAL; const riid:TGUID;
+    out ppReferencedRowset:IUnknown):HRESULT;stdcall;
     // GetSpecification :
-   function GetSpecification(var riid:GUID;out ppSpecification:IUnknown):HRESULT;stdcall;
+   function GetSpecification(const riid:TGUID;out ppSpecification:IUnknown):HRESULT;stdcall;
   end;
-
+(*
 
 // IRowsetLocate :
 
@@ -1785,26 +1817,26 @@ type
    function Unprepare: HRESULT; stdcall;
   end;
 
-(*
+
 // ICommandProperties :
 
- ICommandProperties = interface(IUnknown)
-   ['{0C733A79-2A1C-11CE-ADE5-00AA0044773D}']
+  ICommandProperties = interface(IUnknown)
+    ['{0C733A79-2A1C-11CE-ADE5-00AA0044773D}']
     // GetProperties :
-   function GetProperties(cPropertyIDSets:LongWord;rgPropertyIDSets:PDBPropIDSetArray;var pcPropertySets:LongWord;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
+    function GetProperties(cPropertyIDSets: ULONG; const rgPropertyIDSets: PDBPropIDSetArray;
+      var pcPropertySets:ULONG;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
     // SetProperties :
-   function SetProperties(cPropertySets:LongWord;var rgPropertySets:TDBPROPSET):HRESULT;stdcall;
+    function SetProperties(cPropertySets:ULONG;var rgPropertySets:TDBPROPSET):HRESULT;stdcall;
   end;
-*)
 
 // ICommandText :
 
- ICommandText = interface(ICommand)
-   ['{0C733A27-2A1C-11CE-ADE5-00AA0044773D}']
+  ICommandText = interface(ICommand)
+    ['{0C733A27-2A1C-11CE-ADE5-00AA0044773D}']
     // GetCommandText :
-   function GetCommandText(var pguidDialect: TGUID;out ppwszCommand: PWideChar): HRESULT;safecall;
+    function GetCommandText(var pguidDialect: TGUID;out ppwszCommand: PWideChar): HRESULT;safecall;
     // SetCommandText :
-   function SetCommandText(const rguidDialect: TGUID; pwszCommand: PWideChar): HRESULT;safecall;
+    function SetCommandText(const rguidDialect: TGUID; pwszCommand: PWideChar): HRESULT;safecall;
   end;
 
 
@@ -1846,25 +1878,26 @@ type
    function MapColumnIDs(const cColumnIDs: DBORDINAL; const rgColumnIDs: PDBIDArray;
     {out} rgColumns: PDBORDINAL_Array): HRESULT; stdcall;
   end;
-(*
 
-// IDBCreateCommand : 
+
+// IDBCreateCommand :
 
  IDBCreateCommand = interface(IUnknown)
    ['{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}']
     // CreateCommand :
-   function CreateCommand(pUnkOuter:IUnknown;var riid:GUID;out ppCommand:IUnknown):HRESULT;stdcall;
+   function CreateCommand(pUnkOuter:IUnknown;const riid:TGUID;out ppCommand:IUnknown):HRESULT;stdcall;
   end;
 
 
-// IDBCreateSession : 
+// IDBCreateSession :
 
  IDBCreateSession = interface(IUnknown)
    ['{0C733A5D-2A1C-11CE-ADE5-00AA0044773D}']
-    // CreateSession :  
-   function CreateSession(pUnkOuter:IUnknown;var riid:GUID;out ppDBSession:IUnknown):HRESULT;stdcall;
+    // CreateSession :
+   function CreateSession(const pUnkOuter:IUnknown;const riid:TGUID;
+    out ppDBSession:IUnknown):HRESULT;stdcall;
   end;
-
+(*
 
 // ISourcesRowset : 
 
@@ -1887,17 +1920,18 @@ type
    function SetProperties(cPropertySets:LongWord;rgPropertySets:PDBPropSetArray):HRESULT;stdcall;
   end;
 
+*)
+// IDBInitialize :
 
-// IDBInitialize : 
-
- IDBInitialize = interface(IUnknown)
-   ['{0C733A8B-2A1C-11CE-ADE5-00AA0044773D}']
-    // Initialize :  
-   function Initialize:HRESULT;stdcall;
-    // Uninitialize :  
-   function Uninitialize:HRESULT;stdcall;
+  // initialize and uninitialize OleDB data source objects and enumerators
+  IDBInitialize = interface(IUnknown)
+    ['{0C733A8B-2A1C-11CE-ADE5-00AA0044773D}']
+    // Initialize :
+    function Initialize:HRESULT;stdcall;
+    // Uninitialize :
+    function Uninitialize:HRESULT;stdcall;
   end;
-
+(*
 
 // IDBInfo : 
 
@@ -1993,18 +2027,22 @@ type
     // OpenRowset :  
    function OpenRowset(pUnkOuter:IUnknown;var pTableID:TDBID;var pIndexID:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
+*)
 
+// IDBSchemaRowset :
 
-// IDBSchemaRowset : 
-
- IDBSchemaRowset = interface(IUnknown)
-   ['{0C733A7B-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetRowset :  
-   function GetRowset(pUnkOuter:IUnknown;var rguidSchema:GUID;cRestrictions:LongWord;var rgRestrictions:OleVariant;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppRowset:IUnknown):HRESULT;stdcall;
-    // GetSchemas :  
-   function GetSchemas(var pcSchemas:LongWord;out prgSchemas:PGUID;out prgRestrictionSupport:PLongWord):HRESULT;stdcall;
+  IDBSchemaRowset = interface(IUnknown)
+    ['{0C733A7B-2A1C-11CE-ADE5-00AA0044773D}']
+    // GetRowset :
+    function GetRowset(pUnkOuter:IUnknown; const rguidSchema:TGUID;
+     cRestrictions:ULONG; const rgRestrictions: POleVarinat_Array;
+     const riid:TGUID;cPropertySets:ULONG; var rgPropertySets:PDBPropSetArray;
+     out ppRowset:IUnknown):HRESULT;stdcall;
+    // GetSchemas :
+    function GetSchemas(var pcSchemas:ULONG;out prgSchemas:PGUID;
+      out prgRestrictionSupport:PULONG):HRESULT;stdcall;
   end;
-
+(*
 
 // IMDDataset : 
 
@@ -2106,26 +2144,29 @@ type
    function GetChildRowset(pUnkOuter:IUnknown;iOrdinal:LongWord;var riid:GUID;out ppRowset:IUnknown):HRESULT;stdcall;
   end;
 
+*)
+// IErrorRecords :
 
-// IErrorRecords : 
-
- IErrorRecords = interface(IUnknown)
-   ['{0C733A67-2A1C-11CE-ADE5-00AA0044773D}']
-    // AddErrorRecord :  
-   function AddErrorRecord(var pErrorInfo:ERRORINFO;dwLookupID:LongWord;var pDispParams:DISPPARAMS;punkCustomError:IUnknown;dwDynamicErrorID:LongWord):HRESULT;stdcall;
-    // GetBasicErrorInfo :  
-   function GetBasicErrorInfo(ulRecordNum:LongWord;out pErrorInfo:ERRORINFO):HRESULT;stdcall;
-    // GetCustomErrorObject :  
-   function GetCustomErrorObject(ulRecordNum:LongWord;var riid:GUID;out ppObject:IUnknown):HRESULT;stdcall;
-    // GetErrorInfo :  
-   function GetErrorInfo(ulRecordNum:LongWord;lcid:LongWord;out ppErrorInfo:IErrorInfo):HRESULT;stdcall;
-    // GetErrorParameters :  
-   function GetErrorParameters(ulRecordNum:LongWord;out pDispParams:DISPPARAMS):HRESULT;stdcall;
-    // GetRecordCount :  
-   function GetRecordCount(out pcRecords:LongWord):HRESULT;stdcall;
+  IErrorRecords = interface(IUnknown)
+    ['{0C733A67-2A1C-11CE-ADE5-00AA0044773D}']
+    // AddErrorRecord :
+    function AddErrorRecord(pErrorInfo:PERRORINFO;dwLookupID:DWORD;
+      const pDispParams:DISPPARAMS; punkCustomError:IUnknown;
+      dwDynamicErrorID:DWORD):HRESULT;stdcall;
+    // GetBasicErrorInfo :
+    function GetBasicErrorInfo(ulRecordNum:ULONG;out pErrorInfo:PERRORINFO):HRESULT;stdcall;
+    // GetCustomErrorObject :
+    function GetCustomErrorObject(ulRecordNum:ULONG;var riid:TGUID;
+      out ppObject:IUnknown):HRESULT;stdcall;
+    // GetErrorInfo :
+    function GetErrorInfo(ulRecordNum:ULONG;lcid:LCID;out ppErrorInfo:IErrorInfo):HRESULT;stdcall;
+    // GetErrorParameters :
+    function GetErrorParameters(ulRecordNum:ULONG;out pDispParams:DISPPARAMS):HRESULT;stdcall;
+    // GetRecordCount :
+    function GetRecordCount(out pcRecords:ULONG):HRESULT;stdcall;
   end;
 
-
+(*
 // IErrorInfo : 
 
  IErrorInfo = interface(IUnknown)
@@ -2165,51 +2206,51 @@ type
   end;
 
 
-// IGetDataSource : 
+// IGetDataSource :
 
  IGetDataSource = interface(IUnknown)
    ['{0C733A75-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetDataSource :  
+    // GetDataSource :
    function GetDataSource(var riid:GUID;out ppDataSource:IUnknown):HRESULT;stdcall;
   end;
 
-
-// ITransaction : 
-
- ITransaction = interface(IUnknown)
-   ['{0FB15084-AF41-11CE-BD2B-204C4F4F5020}']
-    // Commit :  
-   function Commit(fRetaining:Integer;grfTC:LongWord;grfRM:LongWord):HRESULT;stdcall;
-    // Abort :  
-   function Abort(var pboidReason:BOID;fRetaining:Integer;fAsync:Integer):HRESULT;stdcall;
-    // GetTransactionInfo :  
-   function GetTransactionInfo(out pinfo:XACTTRANSINFO):HRESULT;stdcall;
+*)
+// ITransaction :
+  {MSSDK transact.h}
+  ITransaction = interface(IUnknown)
+    ['{0FB15084-AF41-11CE-BD2B-204C4F4F5020}']
+    // Commit :
+    function Commit(fRetaining:BOOL;grfTC:DWORD;grfRM:DWORD):HRESULT;stdcall;
+    // Abort :
+    function Abort(const pboidReason:PBOID;fRetaining:BOOL;fAsync:BOOL):HRESULT;stdcall;
+    // GetTransactionInfo :
+    function GetTransactionInfo(out pinfo: TXACTTRANSINFO):HRESULT;stdcall;
   end;
 
-
-// ITransactionLocal : 
-
- ITransactionLocal = interface(ITransaction)
-   ['{0C733A5F-2A1C-11CE-ADE5-00AA0044773D}']
-    // GetOptionsObject :  
-   procedure GetOptionsObject(out ppOptions:ITransactionOptions);safecall;
-    // StartTransaction :  
-   procedure StartTransaction(isoLevel:Integer;isoFlags:LongWord;pOtherOptions:ITransactionOptions;out pulTransactionLevel:LongWord);safecall;
+// ITransactionLocal :
+  // optional interface on OleDB sessions, used to start, commit, and abort
+  // transactions on the session
+  ITransactionLocal = interface(ITransaction)
+    ['{0C733A5F-2A1C-11CE-ADE5-00AA0044773D}']
+    // GetOptionsObject :
+    procedure GetOptionsObject(out ppOptions: ITransactionOptions);safecall;
+    // StartTransaction :
+    procedure StartTransaction(isoLevel:ISOLEVEL;isoFlags:ULONG;
+      pOtherOptions:ITransactionOptions;out pulTransactionLevel:ULONG);safecall;
   end;
 
-
-// ITransactionOptions : 
+// ITransactionOptions :
 
  ITransactionOptions = interface(IUnknown)
    ['{3A6AD9E0-23B9-11CF-AD60-00AA00A74CCD}']
-    // SetOptions :  
-   function SetOptions(var pOptions:XACTOPT):HRESULT;stdcall;
-    // GetOptions :  
-   function GetOptions(var pOptions:XACTOPT):HRESULT;stdcall;
+    // SetOptions :
+   function SetOptions(var pOptions:TXACTOPT):HRESULT;stdcall;
+    // GetOptions :
+   function GetOptions(var pOptions:TXACTOPT):HRESULT;stdcall;
   end;
 
-
-// ITransactionJoin : 
+(*
+// ITransactionJoin :
 
  ITransactionJoin = interface(IUnknown)
    ['{0C733A5E-2A1C-11CE-ADE5-00AA0044773D}']
@@ -2481,6 +2522,7 @@ type
   end;
 *)
 //start add from msdasc.h
+  // create an OleDB data source object using a connection string
   IDataInitialize = interface(IUnknown)
     ['{2206CCB1-19C1-11D1-89E0-00C04FD7A829}']
     function GetDataSource(const pUnkOuter:IUnknown; dwClsCtx:DWORD;
@@ -2513,8 +2555,8 @@ type
       pwszInitialDirectory,pwszInitialFile:POleStr;
       var ppwszSelectedFile:POleStr): HResult; stdcall;
   end;
-
 //end add from msdasc.h
+
 //CoClasses
 
 {$ENDIF ENABLE_ADO}
