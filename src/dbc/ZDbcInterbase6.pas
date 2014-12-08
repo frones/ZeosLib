@@ -742,7 +742,7 @@ begin
     case TransactIsolationLevel of
       tiReadCommitted:
         begin
-          Params.Add(tpb_Access[ReadOnly]);
+          //Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_read_committed');
           Params.Add('isc_tpb_rec_version');
           Params.Add('isc_tpb_nowait');
@@ -750,24 +750,24 @@ begin
         end;
       tiRepeatableRead:
         begin
-          Params.Add(tpb_Access[ReadOnly]);
+          //Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_concurrency');
           Params.Add('isc_tpb_nowait');
           //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
         end;
       tiSerializable:
         begin
-          Params.Add(tpb_Access[ReadOnly]);
+          //Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_consistency');
           //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
         end;
       else
       begin
         { Add user defined parameters for transaction }
-        Params.Clear;
-        Params.AddStrings(Info);
+          Params.Clear;
+          Params.AddStrings(Info);
+        end;
       end;
-    end;
 
     try
       { GenerateTPB return PTEB with null pointer tpb_address from default
