@@ -86,6 +86,7 @@ type
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
     function GetXSQLDAMaxSize: LongWord;
+    function Supports_tpb_AutoCommit: Boolean;
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -101,15 +102,18 @@ type
     FHardCommit: boolean;
     FHostVersion: Integer;
     FXSQLDAMaxSize: LongWord;
+    FSupports_tpb_AutoCommit: Boolean;
   protected
     procedure InternalCreate; override;
   public
+    procedure StartTransaction;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
     function GetHostVersion: Integer; override;
     function GetDBHandle: PISC_DB_HANDLE;
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
+    function Supports_tpb_AutoCommit: Boolean;
     function GetPlainDriver: IZInterbasePlainDriver;
     procedure CreateNewDatabase(const SQL: RawByteString);
 
@@ -425,6 +429,11 @@ begin
   Result := FXSQLDAMaxSize;
 end;
 
+function TZInterbase6Connection.Supports_tpb_AutoCommit: Boolean;
+begin
+  Result := FSupports_tpb_AutoCommit;
+end;
+
 {**
    Return native interbase plain driver
    @return plain driver
@@ -511,9 +520,13 @@ begin
     else
       tmp := Copy(tmp, i+1, Length(tmp)-i);
     FHostVersion := FHostVersion + StrToInt(tmp)*100000;
-    if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
-       (FHostVersion >= 3000000) then
-      FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
+    if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
+    begin
+      if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
+      FSupports_tpb_AutoCommit := (FHostVersion >= 2000000);
+    end
+    else FSupports_tpb_AutoCommit := False;
+
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.DataBase+'" AS USER "'+ConSettings^.User+'"');
@@ -706,64 +719,78 @@ end;
 {**
    Start Interbase transaction
 }
-procedure TZInterbase6Connection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
+procedure TZInterbase6Connection.StartTransaction;
+const tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
+const tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
 var
   Params: TStrings;
   PTEB: PISC_TEB;
 begin
   if FHandle <> 0 then
-    if Closed or (Level <> GetTransactionIsolation) then
-    begin
-      if FTrHandle <> 0 then
-      begin {CLOSE Last Transaction first!}
-        GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-        CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-        FTrHandle := 0;
-      end;
-      Inherited SetTransactionIsolation(Level);
-      PTEB := nil;
-      Params := TStringList.Create;
-
-      { Set transaction parameters by TransactIsolationLevel }
-      Params.Add('isc_tpb_version3');
-      case TransactIsolationLevel of
-        tiReadCommitted:
-          begin
-            Params.Add('isc_tpb_read_committed');
-            Params.Add('isc_tpb_rec_version');
-            Params.Add('isc_tpb_nowait');
-          end;
-        tiRepeatableRead:
-          begin
-            Params.Add('isc_tpb_concurrency');
-            Params.Add('isc_tpb_nowait');
-          end;
-        tiSerializable:
-          begin
-            Params.Add('isc_tpb_consistency');
-          end;
-        else
-        begin
-          { Add user defined parameters for transaction }
-          Params.Clear;
-          Params.AddStrings(Info);
-        end;
-      end;
-
-      try
-        { GenerateTPB return PTEB with null pointer tpb_address from default
-          transaction }
-        PTEB := GenerateTPB(Params, FHandle);
-        GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
-        CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
-        DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
-          'TRANSACTION STARTED.');
-      finally
-        FreeAndNil(Params);
-        {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(PTEB.tpb_address);
-        FreeMem(PTEB);
-      end
+  begin
+    if FTrHandle <> 0 then
+    begin {CLOSE Last Transaction first!}
+      GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      FTrHandle := 0;
     end;
+    PTEB := nil;
+    Params := TStringList.Create;
+
+    { Set transaction parameters by TransactIsolationLevel }
+    Params.Add('isc_tpb_version3');
+    case TransactIsolationLevel of
+      tiReadCommitted:
+        begin
+          Params.Add(tpb_Access[ReadOnly]);
+          Params.Add('isc_tpb_read_committed');
+          Params.Add('isc_tpb_rec_version');
+          Params.Add('isc_tpb_nowait');
+          //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
+        end;
+      tiRepeatableRead:
+        begin
+          Params.Add(tpb_Access[ReadOnly]);
+          Params.Add('isc_tpb_concurrency');
+          Params.Add('isc_tpb_nowait');
+          //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
+        end;
+      tiSerializable:
+        begin
+          Params.Add(tpb_Access[ReadOnly]);
+          Params.Add('isc_tpb_consistency');
+          //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
+        end;
+      else
+      begin
+        { Add user defined parameters for transaction }
+        Params.Clear;
+        Params.AddStrings(Info);
+      end;
+    end;
+
+    try
+      { GenerateTPB return PTEB with null pointer tpb_address from default
+        transaction }
+      PTEB := GenerateTPB(Params, FHandle);
+      GetPlainDriver.isc_start_multiple(@FStatusVector, @FTrHandle, 1, PTEB);
+      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcTransaction);
+      DriverManager.LogMessage(lcTransaction, ConSettings^.Protocol,
+        'TRANSACTION STARTED.');
+    finally
+      FreeAndNil(Params);
+      {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(PTEB.tpb_address);
+      FreeMem(PTEB);
+    end
+  end;
+end;
+
+procedure TZInterbase6Connection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
+begin
+  Inherited SetTransactionIsolation(Level);
+  if FHandle <> 0 then
+    if Closed or (Level <> GetTransactionIsolation) then
+      StartTransaction;
 end;
 
 {**
