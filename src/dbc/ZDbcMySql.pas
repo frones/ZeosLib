@@ -120,7 +120,7 @@ type
     function GetCatalog: string; override;
 
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
-    procedure SetAutoCommit(AutoCommit: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
@@ -780,15 +780,15 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZMySQLConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZMySQLConnection.SetAutoCommit(Value: Boolean);
 begin
-  if AutoCommit <> Self.AutoCommit then
+  if AutoCommit <> Value then
   begin
     inherited SetAutoCommit(AutoCommit);
 
     if not Closed then
     begin
-      if not GetPlaindriver.SetAutocommit(FHandle, AutoCommit) then
+      if not GetPlaindriver.SetAutocommit(FHandle, Value) then
         CheckMySQLError(GetPlainDriver, FHandle, lcExecute, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call', ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Native SetAutoCommit '+BoolToRawEx(AutoCommit)+'call');
     end;

@@ -98,7 +98,7 @@ procedure TZTestDbcMSSqlCase.TestConnection;
 begin
 (*  if Protocol <> 'mssql' then Exit;
 
-  CheckEquals(True, Connection.IsReadOnly);
+  CheckEquals(False, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   Connection.SetAutoCommit(False);

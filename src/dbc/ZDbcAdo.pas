@@ -106,7 +106,7 @@ type
 
     function NativeSQL(const SQL: string): string; override;
 
-    procedure SetAutoCommit(AutoCommit: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Commit; override;
@@ -418,10 +418,10 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZAdoConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZAdoConnection.SetAutoCommit(Value: Boolean);
 begin
-  if GetAutoCommit = AutoCommit then  Exit;
-  if not Closed and AutoCommit then
+  if AutoCommit = Value then  Exit;
+  if not Closed and Value then
   begin
     if (FAdoConnection.State = adStateOpen) and
        (GetTransactionIsolation <> tiNone) then

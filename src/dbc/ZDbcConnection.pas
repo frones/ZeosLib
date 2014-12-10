@@ -195,7 +195,7 @@ type
 
     function NativeSQL(const SQL: string): string; virtual;
 
-    procedure SetAutoCommit(AutoCommit: Boolean); virtual;
+    procedure SetAutoCommit(Value: Boolean); virtual;
     function GetAutoCommit: Boolean; virtual;
 
     procedure Commit; virtual;
@@ -806,7 +806,7 @@ begin
   SetConSettingsFromInfo(Info);
   CheckCharEncoding(FClientCodePage, True);
   FAutoCommit := True;
-  FReadOnly := True;
+  FReadOnly := False; //EH: Changed! We definitelly did newer ever open a ReadOnly connection by default!
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   // should be set BEFORE InternalCreate
@@ -1124,9 +1124,9 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZAbstractConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZAbstractConnection.SetAutoCommit(Value: Boolean);
 begin
-  FAutoCommit := AutoCommit;
+  FAutoCommit := Value;
 end;
 
 {**
