@@ -86,7 +86,6 @@ type
     function GetDialect: Word;
     function GetPlainDriver: IZInterbasePlainDriver;
     function GetXSQLDAMaxSize: LongWord;
-    function Supports_tpb_AutoCommit: Boolean;
   end;
 
   {** Implements Interbase6 Database Connection. }
@@ -103,8 +102,10 @@ type
     FHostVersion: Integer;
     FXSQLDAMaxSize: LongWord;
     FSupports_tpb_AutoCommit: Boolean;
+    procedure CloseTransaction;
   protected
     procedure InternalCreate; override;
+    procedure OnPropertiesChange(Sender: TObject); override;
   public
     procedure StartTransaction;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
@@ -113,7 +114,6 @@ type
     function GetTrHandle: PISC_TR_HANDLE;
     function GetDialect: Word;
     function GetXSQLDAMaxSize: LongWord;
-    function Supports_tpb_AutoCommit: Boolean;
     function GetPlainDriver: IZInterbasePlainDriver;
     procedure CreateNewDatabase(const SQL: RawByteString);
 
@@ -125,6 +125,9 @@ type
 
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
+
+    procedure SetAutoCommit(Value: Boolean); override;
+    procedure SetReadOnly(Value: Boolean); override;
 
     procedure Commit; override;
     procedure Rollback; override;
@@ -257,20 +260,8 @@ end;
 
 { TZInterbase6Connection }
 
-{**
-  Releases a Connection's database and JDBC resources
-  immediately instead of waiting for
-  them to be automatically released.
-
-  <P><B>Note:</B> A Connection is automatically closed when it is
-  garbage collected. Certain fatal errors also result in a closed
-  Connection.
-}
-procedure TZInterbase6Connection.Close;
+procedure TZInterbase6Connection.CloseTransaction;
 begin
-  if Closed or (not Assigned(PlainDriver)) then
-     Exit;
-
   if FTrHandle <> 0 then
   begin
     if AutoCommit then
@@ -288,6 +279,23 @@ begin
     FTrHandle := 0;
     CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcDisconnect);
   end;
+end;
+
+{**
+  Releases a Connection's database and JDBC resources
+  immediately instead of waiting for
+  them to be automatically released.
+
+  <P><B>Note:</B> A Connection is automatically closed when it is
+  garbage collected. Certain fatal errors also result in a closed
+  Connection.
+}
+procedure TZInterbase6Connection.Close;
+begin
+  if Closed or (not Assigned(PlainDriver)) then
+     Exit;
+
+  CloseTransaction;
 
   if FHandle <> 0 then
   begin
@@ -315,7 +323,7 @@ begin
     if FHardCommit then
     begin
       GetPlainDriver.isc_commit_transaction(@FStatusVector, @FTrHandle);
-      FTrHandle := 0;
+      FTrHandle := 0; //normaly not required! Old server code?
     end
     else
       GetPlainDriver.isc_commit_retaining(@FStatusVector, @FTrHandle);
@@ -370,6 +378,15 @@ begin
   FHandle := 0;
 end;
 
+procedure TZInterbase6Connection.OnPropertiesChange(Sender: TObject);
+begin
+  if StrToBoolEx(Info.Values['hard_commit']) <> FHardCommit then
+  begin
+    if FTrHandle <> 0 then CloseTransaction;
+    FHardCommit := StrToBoolEx(Info.Values['hard_commit']);
+  end;
+end;
+
 {**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
@@ -389,7 +406,10 @@ function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  Result := TZInterbase6PreparedStatement.Create(Self, Info);
+  if FSupports_tpb_AutoCommit then
+    Result := TZFireBird2Statement.Create(Self, Info)
+  else
+    Result := TZInterbase6Statement.Create(Self, Info);
 end;
 
 {**
@@ -429,11 +449,6 @@ begin
   Result := FXSQLDAMaxSize;
 end;
 
-function TZInterbase6Connection.Supports_tpb_AutoCommit: Boolean;
-begin
-  Result := FSupports_tpb_AutoCommit;
-end;
-
 {**
    Return native interbase plain driver
    @return plain driver
@@ -449,8 +464,8 @@ end;
 }
 function TZInterbase6Connection.GetTrHandle: PISC_TR_HANDLE;
 begin
-  if (FHardCommit and (FTrHandle = 0)) then
-    SetTransactionIsolation(TransactIsolationLevel);
+  if (FTrHandle = 0) and not Closed then
+    StartTransaction;
   Result := @FTrHandle;
 end;
 
@@ -533,7 +548,7 @@ begin
 
     { Start transaction }
     if not FHardCommit then
-      SetTransactionIsolation(TransactIsolationLevel);
+      StartTransaction;
 
     inherited Open;
 
@@ -630,7 +645,10 @@ function TZInterbase6Connection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
-  Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
+  if FSupports_tpb_AutoCommit then
+    Result := TZFireBird2PreparedStatement.Create(Self, SQL, Info)
+  else
+    Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -664,7 +682,10 @@ function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
+  if FSupports_tpb_AutoCommit then
+    Result := TZFireBird2CallableStatement.Create(Self, SQL, Info)
+  else
+    Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -725,6 +746,7 @@ const tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
 var
   Params: TStrings;
   PTEB: PISC_TEB;
+  Set_tpb_AutoCommit: Boolean;
 begin
   if FHandle <> 0 then
   begin
@@ -737,37 +759,49 @@ begin
     PTEB := nil;
     Params := TStringList.Create;
 
+    Set_tpb_AutoCommit := AutoCommit and FSupports_tpb_AutoCommit;
     { Set transaction parameters by TransactIsolationLevel }
     Params.Add('isc_tpb_version3');
     case TransactIsolationLevel of
       tiReadCommitted:
         begin
-          //Params.Add(tpb_Access[ReadOnly]);
+          Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_read_committed');
           Params.Add('isc_tpb_rec_version');
           Params.Add('isc_tpb_nowait');
-          //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
+          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       tiRepeatableRead:
         begin
-          //Params.Add(tpb_Access[ReadOnly]);
+          Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_concurrency');
           Params.Add('isc_tpb_nowait');
-          //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
+          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       tiSerializable:
         begin
-          //Params.Add(tpb_Access[ReadOnly]);
+          Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_consistency');
-          //Params.Add(tpb_AutoCommit[AutoCommit and FSupports_tpb_AutoCommit]);
+          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       else
       begin
         { Add user defined parameters for transaction }
+        if ZFastCode.Pos('isc_tpb_', Info.Text) > 0 then
+        begin
           Params.Clear;
           Params.AddStrings(Info);
+        end
+        else
+        begin
+          {extend the firebird defaults by ReadOnly and AutoCommit}
+          Params.Add(tpb_Access[ReadOnly]);
+          Params.Add('isc_tpb_concurrency');
+          Params.Add('isc_tpb_wait');
+          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       end;
+    end;
 
     try
       { GenerateTPB return PTEB with null pointer tpb_address from default
@@ -787,10 +821,9 @@ end;
 
 procedure TZInterbase6Connection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
+  if (Level <> TransactIsolationLevel) and (FHandle <> 0) then
+    CloseTransaction;
   Inherited SetTransactionIsolation(Level);
-  if FHandle <> 0 then
-    if Closed or (Level <> GetTransactionIsolation) then
-      StartTransaction;
 end;
 
 {**
@@ -890,6 +923,20 @@ function TZInterbase6Connection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := TZInterbase6Sequence.Create(Self, Sequence, BlockSize);
+end;
+
+procedure TZInterbase6Connection.SetAutoCommit(Value: Boolean);
+begin
+  if (AutoCommit <> Value) and (FTrHandle <> 0) and FSupports_tpb_AutoCommit then
+    CloseTransaction;
+  AutoCommit := Value;
+end;
+
+procedure TZInterbase6Connection.SetReadOnly(Value: Boolean);
+begin
+  if (ReadOnly <> Value) and (FTrHandle <> 0) then
+    CloseTransaction;
+  ReadOnly := Value;
 end;
 
 { TZInterbase6CachedResolver }
