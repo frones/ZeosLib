@@ -184,10 +184,28 @@ begin
   Result := TZAdoSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
+threadvar
+  AdoCoInitialized: integer;
+
+procedure CoInit;
+begin
+  inc(AdoCoInitialized);
+  if AdoCoInitialized=1 then
+    CoInitialize(nil);
+end;
+
+procedure CoUninit;
+begin
+  assert(AdoCoInitialized>0);
+  dec(AdoCoInitialized);
+  if AdoCoInitialized=0 then
+    CoUninitialize;
+end;
 { TZAdoConnection }
 
 procedure TZAdoConnection.InternalCreate;
 begin
+  CoInit;
   FAdoConnection := CoConnection.Create;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
   Open;
@@ -201,6 +219,7 @@ begin
   Close;
   FAdoConnection := nil;
   inherited Destroy;
+  CoUninit;
 end;
 
 {**
@@ -646,6 +665,7 @@ begin
 end;
 
 initialization
+  AdoCoInitialized := 0;
   AdoDriver := TZAdoDriver.Create;
   DriverManager.RegisterDriver(AdoDriver);
 finalization
