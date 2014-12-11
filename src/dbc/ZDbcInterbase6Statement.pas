@@ -64,8 +64,9 @@ type
 
   {** Implements Prepared SQL Statement. }
 
-  { TZFireBird2PreparedStatement }
-  TZFireBird2PreparedStatement = class(TZAbstractPreparedStatement)
+  { TZInterbase6PreparedStatement }
+
+  TZInterbase6PreparedStatement = class(TZAbstractPreparedStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FResultXSQLDA: IZSQLDA;
@@ -99,17 +100,9 @@ type
 
     procedure SetDataArray(ParameterIndex: Integer; const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull); override;
   end;
-
-  { TZInterbase6PreparedStatement }
-  TZInterbase6PreparedStatement = class(TZFireBird2PreparedStatement)
-  public
-    function ExecuteUpdatePrepared: Integer; override;
-    function ExecutePrepared: Boolean; override;
-  end;
   TZInterbase6Statement = class(TZInterbase6PreparedStatement);
-  TZFireBird2Statement = class(TZFireBird2PreparedStatement);
 
-  TZFireBird2CallableStatement = class(TZAbstractPreparedCallableStatement)
+  TZInterbase6CallableStatement = class(TZAbstractPreparedCallableStatement)
   private
     FParamSQLData: IZParamsSQLDA;
     FResultXSQLDA: IZSQLDA;
@@ -138,19 +131,13 @@ type
     function ExecutePrepared: Boolean; override;
   end;
 
-  TZInterBase6CallableStatement = Class(TZFireBird2CallableStatement)
-  public
-    function ExecuteUpdatePrepared: Integer; override;
-    function ExecutePrepared: Boolean; override;
-  End;
-
 implementation
 
 uses Math, ZSysUtils, ZDbcUtils, ZFastCode, ZPlainFirebirdDriver,
   ZDbcInterbase6ResultSet;
 
-{ TZFireBird2PreparedStatement }
-function TZFireBird2PreparedStatement.ExecuteInternal: Integer;
+{ TZInterbase6PreparedStatement }
+function TZInterbase6PreparedStatement.ExecuteInternal: Integer;
 begin
   With FIBConnection do
   begin
@@ -170,7 +157,7 @@ begin
   end;
 end;
 
-function TZFireBird2PreparedStatement.InternalPrepare(const SQL: RawByteString;
+function TZInterbase6PreparedStatement.InternalPrepare(const SQL: RawByteString;
   PrepareParams: Boolean): TZIbSqlStatementType;
 begin
   with Self.FIBConnection do
@@ -188,7 +175,7 @@ begin
   end;
 end;
 
-procedure TZFireBird2PreparedStatement.PrepareInParameters;
+procedure TZInterbase6PreparedStatement.PrepareInParameters;
 var
   StatusVector: TARRAY_ISC_STATUS;
 begin
@@ -211,7 +198,7 @@ begin
   end;
 end;
 
-procedure TZFireBird2PreparedStatement.BindInParameters;
+procedure TZInterbase6PreparedStatement.BindInParameters;
 begin
   if (ArrayCount > 0) and (FStatementType in [stExecProc]) then //newly prepared execute block is a SP
     while True do
@@ -239,7 +226,7 @@ begin
   inherited BindInParameters;
 end;
 
-procedure TZFireBird2PreparedStatement.UnPrepareInParameters;
+procedure TZInterbase6PreparedStatement.UnPrepareInParameters;
 begin
   if assigned(FParamSQLData) then
     FParamSQLData.FreeParamtersValues;
@@ -251,7 +238,7 @@ end;
 
    @return Integer - Error Code to test for graceful database disconnection
 }
-function TZFireBird2PreparedStatement.CheckInterbase6Error(const SQL: RawByteString) : Integer;
+function TZInterbase6PreparedStatement.CheckInterbase6Error(const SQL: RawByteString) : Integer;
 begin
   Result := ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, ConSettings, lcExecute, SQL);
@@ -264,7 +251,7 @@ end;
   @param Dialect a dialect Interbase SQL must be 1 or 2 or 3.
   @param Info a statement parameters.
 }
-constructor TZFireBird2PreparedStatement.Create(Connection: IZConnection;
+constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -278,13 +265,13 @@ begin
   FZBufferSize := Min(FZBufferSize, FIBConnection.GetXSQLDAMaxSize);
 end;
 
-constructor TZFireBird2PreparedStatement.Create(Connection: IZConnection;
+constructor TZInterbase6PreparedStatement.Create(Connection: IZConnection;
   Info: TStrings);
 begin
   Create(Connection,'', Info);
 end;
 
-procedure TZFireBird2PreparedStatement.Close;
+procedure TZInterbase6PreparedStatement.Close;
 begin
   inherited Close;
   if FStmtHandle <> 0 then // Free statement-handle! On the other hand: Exception!
@@ -295,7 +282,7 @@ begin
   FParamSQLData := nil;
 end;
 
-procedure TZFireBird2PreparedStatement.Prepare;
+procedure TZInterbase6PreparedStatement.Prepare;
   procedure PrepareArray(Iteration: Integer);
   begin
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE);
@@ -331,7 +318,7 @@ begin
       end;
 end;
 
-procedure TZFireBird2PreparedStatement.Unprepare;
+procedure TZInterbase6PreparedStatement.Unprepare;
 begin
   if FStmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE); //unprepare avoids new allocation for the stmt handle
@@ -349,7 +336,7 @@ end;
   and <code>executeUpdate</code>.
   @see Statement#execute
 }
-function TZFireBird2PreparedStatement.ExecutePrepared: Boolean;
+function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
 begin
   Prepare;
   with FIBConnection do
@@ -374,6 +361,10 @@ begin
             FResultXSQLDA, CachedLob, FStatementType))
     else
       LastResultSet := nil;
+
+    { Autocommit statement. }
+    if Connection.GetAutoCommit then
+      Connection.Commit;
   end;
   inherited ExecutePrepared;
 end;
@@ -385,7 +376,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZFireBird2PreparedStatement.ExecuteQueryPrepared: IZResultSet;
+function TZInterbase6PreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   iError : Integer; //Check for database disconnect AVZ
 begin
@@ -423,7 +414,7 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-function TZFireBird2PreparedStatement.ExecuteUpdatePrepared: Integer;
+function TZInterbase6PreparedStatement.ExecuteUpdatePrepared: Integer;
 var
   iError : Integer; //Implementation for graceful disconnect AVZ
 begin
@@ -440,15 +431,22 @@ begin
       stCommit, stRollback, stUnknown: Result := -1;
       stSelect: FreeStatement(GetPlainDriver, FStmtHandle, DSQL_CLOSE);  //AVZ
     end;
+
+    { Autocommit statement. }
+    if Connection.GetAutoCommit and ( FStatementType <> stSelect ) then
+      Connection.Commit;
   end;
   inherited ExecuteUpdatePrepared;
 
   //Trail for the disconnection of the database gracefully - AVZ
   if (iError = DISCONNECT_ERROR) then
+  begin
     Result := DISCONNECT_ERROR;
+  end;
+
 end;
 
-procedure TZFireBird2PreparedStatement.SetDataArray(ParameterIndex: Integer;
+procedure TZInterbase6PreparedStatement.SetDataArray(ParameterIndex: Integer;
   const Value; const SQLType: TZSQLType; const VariantType: TZVariantType = vtNull);
 begin
   if ParameterIndex = FirstDbcIndex then
@@ -459,26 +457,10 @@ begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
 end;
 
-{ TZInterbase6PreparedStatement }
-function TZInterbase6PreparedStatement.ExecuteUpdatePrepared: Integer;
-begin
-  Result := inherited ExecuteUpdatePrepared;
-  {interbase doesn't support a autocommit mode -> let's improve it!}
-  if Connection.GetAutoCommit and ( FStatementType <> stSelect ) then
-    Connection.Commit;
-end;
 
-function TZInterbase6PreparedStatement.ExecutePrepared: Boolean;
-begin
-  Result := inherited ExecutePrepared;
-  {interbase doesn't support a autocommit mode -> let's improve it!}
-  if Connection.GetAutoCommit and ( FStatementType <> stSelect ) then
-    Connection.Commit;
-end;
+{ TZInterbase6CallableStatement }
 
-{ TZFireBird2CallableStatement }
-
-function TZFireBird2CallableStatement.ExecuteInternal: Integer;
+function TZInterbase6CallableStatement.ExecuteInternal: Integer;
 begin
   With FIBConnection do
   begin
@@ -502,7 +484,7 @@ end;
    Check interbase error status
    @param Sql the used sql tring
 }
-procedure TZFireBird2CallableStatement.CheckInterbase6Error(const Sql: RawByteString);
+procedure TZInterbase6CallableStatement.CheckInterbase6Error(const Sql: RawByteString);
 begin
   ZDbcInterbase6Utils.CheckInterbase6Error(FIBConnection.GetPlainDriver,
     FStatusVector, ConSettings, lcExecute, Sql);
@@ -515,7 +497,7 @@ end;
   @param Dialect a dialect Interbase SQL must be 1 or 2 or 3.
   @param Info a statement parameters.
 }
-constructor TZFireBird2CallableStatement.Create(Connection: IZConnection;
+constructor TZInterbase6CallableStatement.Create(Connection: IZConnection;
   const SQL: string; Info: TStrings);
 begin
   inherited Create(Connection, SQL, Info);
@@ -527,7 +509,7 @@ begin
   FStatementType := stUnknown;
 end;
 
-procedure TZFireBird2CallableStatement.PrepareInParameters;
+procedure TZInterbase6CallableStatement.PrepareInParameters;
 begin
   With FIBConnection do
   begin
@@ -550,7 +532,7 @@ begin
   end;
 end;
 
-procedure TZFireBird2CallableStatement.BindInParameters;
+procedure TZInterbase6CallableStatement.BindInParameters;
 begin
   TrimInParameters;
   BindSQLDAInParameters(ClientVarManager,
@@ -558,13 +540,13 @@ begin
   inherited BindInParameters;
 end;
 
-procedure TZFireBird2CallableStatement.UnPrepareInParameters;
+procedure TZInterbase6CallableStatement.UnPrepareInParameters;
 begin
   if assigned(FParamSQLData) then
     FParamSQLData.FreeParamtersValues;
 end;
 
-procedure TZFireBird2CallableStatement.Prepare(SelectProc: Boolean);
+procedure TZInterbase6CallableStatement.Prepare(SelectProc: Boolean);
 const
   CallableStmtType: array[Boolean] of TZIbSqlStatementType = (stExecProc, stSelect);
 begin
@@ -589,14 +571,14 @@ begin
   end;
 end;
 
-procedure TZFireBird2CallableStatement.Unprepare;
+procedure TZInterbase6CallableStatement.Unprepare;
 begin
   inherited Unprepare;
   if FStmtHandle <> 0 then //check if prepare did fail. otherwise we unprepare the handle
     FreeStatement(FIBConnection.GetPlainDriver, FStmtHandle, DSQL_UNPREPARE);
 end;
 
-procedure TZFireBird2CallableStatement.Close;
+procedure TZInterbase6CallableStatement.Close;
 begin
   inherited Close;
   if FStmtHandle <> 0 then // Free statement-handle! On the other hand: Exception!
@@ -617,7 +599,7 @@ end;
   @see Statement#execute
 }
 {$HINTS OFF}
-function TZFireBird2CallableStatement.ExecutePrepared: Boolean;
+function TZInterbase6CallableStatement.ExecutePrepared: Boolean;
 var RS: IZResultSet;
 begin
   Result := False;
@@ -651,6 +633,10 @@ begin
       AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet),
           OutParamValues, OutParamCount , FDBParamTypes);
     end;
+
+    { Autocommit statement. }
+    if GetAutoCommit then
+      Commit;
   end;
 end;
 {$HINTS ON}
@@ -662,7 +648,7 @@ end;
   @return a <code>ResultSet</code> object that contains the data produced by the
     query; never <code>null</code>
 }
-function TZFireBird2CallableStatement.ExecuteQueryPrepared: IZResultSet;
+function TZInterbase6CallableStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil;
   Prepare(True);
@@ -695,7 +681,7 @@ end;
   @return either the row count for INSERT, UPDATE or DELETE statements;
   or 0 for SQL statements that return nothing
 }
-function TZFireBird2CallableStatement.ExecuteUpdatePrepared: Integer;
+function TZInterbase6CallableStatement.ExecuteUpdatePrepared: Integer;
 var RS: IZResultSet;
 begin
   Prepare(False);
@@ -717,6 +703,9 @@ begin
       FOpenResultSet := Pointer(RS);
     end;
     AssignOutParamValuesFromResultSet(IZResultSet(FOpenResultSet), OutParamValues, OutParamCount , FDBParamTypes);
+    { Autocommit statement. }
+    if GetAutoCommit then
+      Commit;
   end;
 end;
 
@@ -726,7 +715,7 @@ end;
     <b>SELECT</b> staement
    @return a Stored Procedure SQL string
 }
-function TZFireBird2CallableStatement.GetProcedureSql(SelectProc: boolean): RawByteString;
+function TZInterbase6CallableStatement.GetProcedureSql(SelectProc: boolean): RawByteString;
 
   function GenerateParamsStr(Count: integer): RawByteString;
   var
@@ -754,23 +743,6 @@ begin
   else
     Result := 'EXECUTE PROCEDURE ' + ASQL + InParams;
 end;
-
-{ TZInterBase6CallableStatement }
-function TZInterBase6CallableStatement.ExecuteUpdatePrepared: Integer;
-begin
-  Result := inherited ExecuteUpdatePrepared;
-  {interbase doesn't support a autocommit mode -> let's improve it!}
-  if Connection.GetAutoCommit then
-    Connection.Commit;
-end;
-
-function TZInterBase6CallableStatement.ExecutePrepared: Boolean;
-begin
-  Result := inherited ExecutePrepared;
-  {interbase doesn't support a autocommit mode -> let's improve it!}
-  if Connection.GetAutoCommit then
-    Connection.Commit;
-End;
 
 end.
 

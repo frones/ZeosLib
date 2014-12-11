@@ -101,7 +101,6 @@ type
     FHardCommit: boolean;
     FHostVersion: Integer;
     FXSQLDAMaxSize: LongWord;
-    FSupports_tpb_AutoCommit: Boolean;
     procedure CloseTransaction;
   protected
     procedure InternalCreate; override;
@@ -126,7 +125,6 @@ type
     function CreateSequence(const Sequence: string; BlockSize: Integer):
       IZSequence; override;
 
-    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetReadOnly(Value: Boolean); override;
 
     procedure Commit; override;
@@ -406,10 +404,7 @@ function TZInterbase6Connection.CreateRegularStatement(Info: TStrings):
 begin
   if IsClosed then
      Open;
-  if FSupports_tpb_AutoCommit then
-    Result := TZFireBird2Statement.Create(Self, Info)
-  else
-    Result := TZInterbase6Statement.Create(Self, Info);
+  Result := TZInterbase6Statement.Create(Self, Info);
 end;
 
 {**
@@ -536,11 +531,7 @@ begin
       tmp := Copy(tmp, i+1, Length(tmp)-i);
     FHostVersion := FHostVersion + StrToInt(tmp)*100000;
     if (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird then
-    begin
       if (FHostVersion >= 3000000) then FXSQLDAMaxSize := 10*1024*1024; //might be much more! 4GB? 10MB sounds enough / roundtrip
-      FSupports_tpb_AutoCommit := (FHostVersion >= 2000000);
-    end
-    else FSupports_tpb_AutoCommit := False;
 
     { Logging connection action }
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -645,10 +636,7 @@ function TZInterbase6Connection.CreatePreparedStatement(
 begin
   if IsClosed then
      Open;
-  if FSupports_tpb_AutoCommit then
-    Result := TZFireBird2PreparedStatement.Create(Self, SQL, Info)
-  else
-    Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
+  Result := TZInterbase6PreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -682,10 +670,7 @@ function TZInterbase6Connection.CreateCallableStatement(const SQL: string;
 begin
   if IsClosed then
      Open;
-  if FSupports_tpb_AutoCommit then
-    Result := TZFireBird2CallableStatement.Create(Self, SQL, Info)
-  else
-    Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
+  Result := TZInterbase6CallableStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -742,11 +727,16 @@ end;
 }
 procedure TZInterbase6Connection.StartTransaction;
 const tpb_Access: array[boolean] of String = ('isc_tpb_write','isc_tpb_read');
-const tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
+
+{EH: We do NOT handle the isc_tpb_autocommit of FB because we noticed a huge
+ performance drop especially for Batch executions. Note Zeos handles one Batch
+ Execution as one Update and loops until all batch array are send. FB with this
+ param commits after each "execute block" which definitally kills the idea and
+ the expected performance!}
+//const tpb_AutoCommit: array[boolean] of String = ('','isc_tpb_autocommit');
 var
   Params: TStrings;
   PTEB: PISC_TEB;
-  Set_tpb_AutoCommit: Boolean;
 begin
   if FHandle <> 0 then
   begin
@@ -759,7 +749,6 @@ begin
     PTEB := nil;
     Params := TStringList.Create;
 
-    Set_tpb_AutoCommit := AutoCommit and FSupports_tpb_AutoCommit;
     { Set transaction parameters by TransactIsolationLevel }
     Params.Add('isc_tpb_version3');
     case TransactIsolationLevel of
@@ -769,20 +758,17 @@ begin
           Params.Add('isc_tpb_read_committed');
           Params.Add('isc_tpb_rec_version');
           Params.Add('isc_tpb_nowait');
-          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       tiRepeatableRead:
         begin
           Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_concurrency');
           Params.Add('isc_tpb_nowait');
-          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       tiSerializable:
         begin
           Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_consistency');
-          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       else
       begin
@@ -794,11 +780,10 @@ begin
         end
         else
         begin
-          {extend the firebird defaults by ReadOnly and AutoCommit}
+          {extend the firebird defaults by ReadOnly}
           Params.Add(tpb_Access[ReadOnly]);
           Params.Add('isc_tpb_concurrency');
           Params.Add('isc_tpb_wait');
-          Params.Add(tpb_AutoCommit[Set_tpb_AutoCommit]);
         end;
       end;
     end;
@@ -923,13 +908,6 @@ function TZInterbase6Connection.CreateSequence(const Sequence: string;
   BlockSize: Integer): IZSequence;
 begin
   Result := TZInterbase6Sequence.Create(Self, Sequence, BlockSize);
-end;
-
-procedure TZInterbase6Connection.SetAutoCommit(Value: Boolean);
-begin
-  if (AutoCommit <> Value) and (FTrHandle <> 0) and FSupports_tpb_AutoCommit then
-    CloseTransaction;
-  AutoCommit := Value;
 end;
 
 procedure TZInterbase6Connection.SetReadOnly(Value: Boolean);
