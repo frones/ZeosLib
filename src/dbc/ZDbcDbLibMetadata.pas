@@ -216,6 +216,7 @@ type
   {** Implements DbLib Database Metadata. }
   TZDbLibBaseDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   protected
+    function GetSP_Prefix(const Catalog, Schema: String): String;
     function ComposeObjectString(const S: String; Const NullText: String = 'null';
       QuoteChar: Char = #39): String;
     function DecomposeObjectString(const S: String): String; override;
@@ -1190,6 +1191,15 @@ end;
 
 { TZDbLibBaseDatabaseMetadata }
 
+function TZDbLibBaseDatabaseMetadata.GetSP_Prefix(const Catalog, Schema: String): String;
+begin
+  if (UpperCase(Catalog) = 'INFORMATION_SCHEMA') or
+     (UpperCase(Schema)  = 'INFORMATION_SCHEMA') then
+    Result := ''
+  else
+    Result := Catalog+'.'+Schema+'.';
+end;
+
 {**
   Composes a object name, AnsiQuotedStr or NullText
   @param S the object string
@@ -1828,7 +1838,7 @@ var
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  with GetStatement.ExecuteQuery('exec '+Catalog+'.'+SchemaPattern+'.sp_columns '+
+  with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+'sp_columns '+
       ComposeObjectString(TableNamePattern)+', '+
        ComposeObjectString(SchemaPattern)+', '+
        ComposeObjectString(Catalog)+', '+
@@ -1954,7 +1964,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumnPrivileges(const Catalog: stri
 begin
     Result:=inherited UncachedGetColumnPrivileges(Catalog, Schema, Table, ColumnNamePattern);
 
-    with GetStatement.ExecuteQuery('exec '+Catalog+'.'+Schema+'.sp_column_privileges '+
+    with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, Schema)+'sp_column_privileges '+
       ComposeObjectString(Table)+', '+ComposeObjectString(Schema)+', '+
       ComposeObjectString(Catalog)+', '+ComposeObjectString(ColumnNamePattern)) do
     begin
@@ -2847,10 +2857,10 @@ function TZSybaseDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 begin
   Result := inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
-  with GetStatement.ExecuteQuery('exec '+Catalog+'.'+SchemaPattern+'.'+
+  with GetStatement.ExecuteQuery('exec '+GetSP_Prefix(Catalog, SchemaPattern)+
     'sp_jdbc_columns '+ComposeObjectString(TableNamePattern)+', '+
-      ComposeObjectString(SchemaPattern)+', '+ComposeObjectString(Catalog)+', '+
-        ComposeObjectString(ColumnNamePattern)) do
+    ComposeObjectString(SchemaPattern)+', '+ComposeObjectString(Catalog)+', '+
+    ComposeObjectString(ColumnNamePattern)) do
   begin
     while Next do
     begin
