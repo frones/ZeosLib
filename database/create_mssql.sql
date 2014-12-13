@@ -314,6 +314,14 @@ go
 SET ANSI_NULLS ON 
 go
 
+/*==============================================================*/
+/* sequence: abtest                                     	*/
+/*==============================================================*/
+CREATE SEQUENCE generate_id
+START WITH 90000250
+INCREMENT BY 1
+go
+
 CREATE PROCEDURE [ABTEST]
 	@p1 int,
 	@p2 int,

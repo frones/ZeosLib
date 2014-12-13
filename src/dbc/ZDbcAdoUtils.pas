@@ -266,8 +266,9 @@ begin
     adGUID: Result := stGUID;
     adEmpty, AdArray, adChapter,
     adPropVariant, adUserDefined: Result := stString;
+    adVariant: Result := stString;
   else
-    {adIDispatch, adIUnknown, adVariant: reserved, nut used tpyes}Result := stUnknown
+    {adIDispatch, adIUnknown: reserved, nut used tpyes}Result := stUnknown
   end;
   if CtrlsCPType = cCP_UTF16 then
     case Result of

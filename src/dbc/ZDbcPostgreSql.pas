@@ -273,7 +273,7 @@ begin
     'join pg_catalog.pg_attribute pa on pa.attrelid = pc.oid ' +
     'where pc.oid = ' + RawOID + ' and pa.attnum > 0';
 
-  QueryHandle := IZPostgreSQLPlainDriver(FPlainDriver).ExecuteQuery(FHandle, PAnsichar(SQL));
+  QueryHandle := IZPostgreSQLPlainDriver(FPlainDriver).ExecuteQuery(FHandle, Pointer(SQL));
   CheckPostgreSQLError(nil, IZPostgreSQLPlainDriver(FPlainDriver), FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, FConSettings^.Protocol, SQL);
 
@@ -882,7 +882,7 @@ begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     SQL := 'COMMIT';
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -899,7 +899,7 @@ begin
   if (TransactIsolationLevel = tiNone) and not Closed then
   begin
     SQL := 'COMMIT PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(AnsiString(SQL)));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -922,7 +922,7 @@ begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     SQL := 'ROLLBACK';
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -995,7 +995,7 @@ begin
   if (TransactIsolationLevel <> tiNone) and not Closed then
   begin
     SQL := 'END';
-    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+    QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
     GetPlainDriver.Clear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
@@ -1308,7 +1308,7 @@ var
   QueryHandle: PZPostgreSQLResult;
 begin
   SQL := 'select setting from pg_settings where name = '+AName;
-  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
+  QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
@@ -1375,8 +1375,7 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery(
-    Format('SELECT CURRVAL(''%s'')', [Name]));
+  ResultSet := Statement.ExecuteQuery('SELECT CURRVAL('''+Name+''')');
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -1391,7 +1390,7 @@ end;
 }
 function TZPostgreSQLSequence.GetCurrentValueSQL: String;
 begin
-  result:=Format(' CURRVAL(''%s'') ', [Name]);
+  result:= ' CURRVAL('''+Name+''')';
 end;
 
 function TZPostgreSQLSequence.GetNextValue: Int64;
@@ -1400,8 +1399,7 @@ var
   ResultSet: IZResultSet;
 begin
   Statement := Connection.CreateStatement;
-  ResultSet := Statement.ExecuteQuery(
-    Format('SELECT NEXTVAL(''%s'')', [Name]));
+  ResultSet := Statement.ExecuteQuery('SELECT NEXTVAL('''+Name+''')');
   if ResultSet.Next then
     Result := ResultSet.GetLong(1)
   else
@@ -1412,7 +1410,7 @@ end;
 
 function TZPostgreSQLSequence.GetNextValueSQL: String;
 begin
- result:=Format(' NEXTVAL(''%s'') ', [Name]);
+  result := ' NEXTVAL('''+Name+''') ';
 end;
 
 initialization
@@ -1423,4 +1421,3 @@ finalization
     DriverManager.DeregisterDriver(PostgreSQLDriver);
   PostgreSQLDriver := nil;
 end.
-

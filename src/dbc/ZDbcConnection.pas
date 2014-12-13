@@ -1412,11 +1412,9 @@ end;
 {$ENDIF}
 
 {**
-  EgonHugeist:
   Returns the BinaryString in a Tokenizer-detectable kind
-  If the Tokenizer don't need to predetect it Result = BinaryString
+  If the Tokenizer don't need to pre-detect it Result = BinaryString
   @param Value represents the Binary-String
-  @param EscapeMarkSequence represents a Tokenizer detectable EscapeSequence (Len >= 3)
   @result the detectable Binary String
 }
 function TZAbstractConnection.GetBinaryEscapeString(const Value: RawByteString): String;
@@ -1427,6 +1425,12 @@ begin
     Result := {$IFDEF UNICODE}GetSQLHexWideString{$ELSE}GetSQLHexAnsiString{$ENDIF}(PAnsiChar(Value), Length(Value));
 end;
 
+{**
+  Returns the BinaryString in a Tokenizer-detectable kind
+  If the Tokenizer don't need to pre-detect it Result = BinaryString
+  @param Value represents the Byte-Array
+  @result the detectable Binary String
+}
 function TZAbstractConnection.GetBinaryEscapeString(const Value: TBytes): String;
 begin
   if ConSettings^.AutoEncode then
