@@ -732,22 +732,22 @@ begin
         tiNone, tiReadUncommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED';
-            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
+            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
           end;
         tiReadCommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED';
-            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
+            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
           end;
         tiRepeatableRead:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ';
-            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
+            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
           end;
         tiSerializable:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-            testResult := GetPlainDriver.ExecQuery(FHandle, PAnsiChar(SQL));
+            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
           end;
         else
           SQL := '';

@@ -60,3 +60,6 @@ go
 
 drop procedure abtest
 go
+
+drop SEQUENCE generate_id
+go

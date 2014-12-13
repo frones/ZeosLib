@@ -257,6 +257,7 @@ end;
 
 procedure TZAdoResultSet.ResetCursor;
 begin
+  { Resync the Adorecordsets leads to pain with huge collection of Data !!}
 end;
 
 {**

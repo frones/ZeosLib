@@ -622,7 +622,10 @@ begin
       Variable^.oIndicatorArray^[0] := 0;
       case Variable^.TypeCode of
         SQLT_INT:
-          PLongInt(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value);
+          if Variable^.Length = 8 then
+            PInt64(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value)
+          else
+            PLongInt(Variable^.Data)^ := ClientVarManager.GetAsInteger(Value);
         SQLT_FLT:
           PDouble(Variable^.Data)^ := ClientVarManager.GetAsFloat(Value);
         SQLT_STR:

@@ -655,7 +655,7 @@ begin
         CachedResultSet.PostUpdates
       else
         CachedResultSet.PostUpdatesCached;
-
+    UpdateCursorPos;
     if not (State in [dsInactive]) then
       Resync([]);
 

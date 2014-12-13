@@ -666,15 +666,16 @@ var
   RefreshColumnName: String;
   RefreshColumnType: TZSQLType;
   Len: NativeUInt;
+Label CheckColumnType;
 begin
   if Assigned(RefreshResultSet) then begin
     if (RefreshResultSet.GetType = rtForwardOnly) then
     begin
       if not RefreshResultSet.Next then
-         raise EZDatabaseError.Create(SUpdateSQLNoResult);
+        raise EZDatabaseError.Create(SUpdateSQLNoResult);
     end
     else if not (RefreshResultSet.GetType = rtForwardOnly) and  not RefreshResultSet.First then
-      raise EZDatabaseError.Create(SUpdateSQLNoResult);
+        raise EZDatabaseError.Create(SUpdateSQLNoResult);
     for I := FirstDbcIndex to RefreshResultSet.GetMetadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       RefreshColumnName := RefreshResultSet.GetMetadata.GetColumnLabel(I); // What Column from Resultset should be updated
@@ -685,6 +686,7 @@ begin
       else
       begin
         RefreshColumnType  := RefreshResultSet.GetMetadata.GetColumnType(I); // Type of Column ?
+CheckColumnType:
         case RefreshColumnType of
           stBoolean: RefreshRowAccessor.SetBoolean(RefreshColumnIndex, RefreshResultSet.GetBoolean(I));
           stByte: RefreshRowAccessor.SetByte(RefreshColumnIndex, RefreshResultSet.GetByte(I));
@@ -709,7 +711,17 @@ begin
           stTime: RefreshRowAccessor.SetTime(RefreshColumnIndex, RefreshResultSet.GetTime(I));
           stTimestamp: RefreshRowAccessor.SetTimestamp(RefreshColumnIndex, RefreshResultSet.GetTimestamp(I));
           stAsciiStream, stUnicodeStream, stBinaryStream:
-            RefreshRowAccessor.SetBlob(RefreshColumnIndex, RefreshResultSet.GetBlob(I));
+            {handle possible different column_type using a native RS
+             e.g. SQLite with joins we get stream types for string/bytes etc. coulmns
+             because SQLite sadly doesn't retrieve ColunmType infos
+             All conversion can be made by RowAccessor but not the lob-columns!}
+            if RefreshRowAccessor.GetColumnType(RefreshColumnIndex) in [stAsciiStream, stUnicodeStream, stBinaryStream] then
+              RefreshRowAccessor.SetBlob(RefreshColumnIndex, RefreshResultSet.GetBlob(I))
+            else
+            begin
+              RefreshColumnType := RefreshRowAccessor.GetColumnType(RefreshColumnIndex);
+              goto CheckColumnType;
+            end;
         end;
       end;
     end;
