@@ -248,6 +248,7 @@ begin
     begin
       FOlePrepareCommand.Prepare(0); //0 indicates a non known count of execution
       {check out the Parameter informations -> sadly the Delphi OleDB unit seems to be buggy ): }
+      FNamesBuffer := nil;
       FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer);
       Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
       SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
@@ -446,7 +447,6 @@ end;
 function TZAdoPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 var
   RC: OleVariant;
-  Label LogEvent;
 begin
   if Assigned(FOpenResultSet) then
     IZResultSet(FOpenResultSet).Close; //Note keep track we close the RS and DO NOT Try to resync them!
@@ -470,7 +470,6 @@ begin
     if not Assigned(Result) then
       while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
     FOpenResultSet := Pointer(Result);
-LogEvent:
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
     on E: Exception do
@@ -554,7 +553,7 @@ begin
       begin
         LastUpdateCount := FRowCount; //store tempory possible array bound update-counts
         Succeeded(((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
-          nil, DB_NULLGUID,FDBParams,@FRowCount,nil));
+          nil, DB_NULLGUID,FDBParams,@FRowCount, nil));
         LastUpdateCount := LastUpdateCount + FrowCount;
       end
       else
