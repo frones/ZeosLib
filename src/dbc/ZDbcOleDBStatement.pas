@@ -338,7 +338,6 @@ function TZOleDBPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   BindInParameters;
-  Result := DB_COUNTUNAVAILABLE; //store tempory possible array bound update-counts
   try
     FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDBCheck(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil));

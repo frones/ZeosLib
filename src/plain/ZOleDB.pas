@@ -165,6 +165,11 @@ Const
   IID_ICommandStream : TGUID = '{0C733ABF-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetBookmark : TGUID = '{0C733AC2-2A1C-11CE-ADE5-00AA0044773D}';
   *)
+//from objidl.h for fast LOB strorage/access. The interfaces are defined in ActiveX
+  IID_ISequentialStream:TGUID = '{0C733A30-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IStream:          TGUID = '{0000000C-0000-0000-C000-000000000046}';
+  IID_IStorage:         TGUID = '{0000000B-0000-0000-C000-000000000046}';
+  IID_ILockBytes:       TGUID = '{0000000A-0000-0000-C000-000000000046}';
 
 //start from oledb.h
   DB_NULLGUID: TGuid = '{00000000-0000-0000-0000-000000000000}';
@@ -2912,7 +2917,9 @@ type
 //end add from msdasc.h
 
 //CoClasses
-
+{$IFDEF MISS_VARIANTCLEAR}
+function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
+{$ENDIF}
 {$ENDIF ENABLE_ADO}
 implementation
 

@@ -217,7 +217,6 @@ end;
 { TZOleDBConnection }
 procedure TZOleDBConnection.InternalCreate;
 begin
-  inherited;
   CoInit;
   OleCheck(CoGetMalloc(1,fMalloc));
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);

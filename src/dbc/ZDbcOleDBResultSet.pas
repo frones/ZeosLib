@@ -123,8 +123,9 @@ type
   private
     FAutoColumnIndex: Integer;
     FDBParams: TDBParams;
-    FRowCount: DBROWCOUNT;
+    FAffectedRows: DBROWCOUNT;
     FResultSet: IZOleDBResultSet;
+    FCommandText: ICommandText;
   public
     constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
 
@@ -632,7 +633,7 @@ begin
       DBTYPE_IDISPATCH: Result := '';
       DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
       DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := UTF8String(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_VARIANT:   Result := UTF8String(ZWideString(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
@@ -644,11 +645,11 @@ begin
       DBTYPE_GUID:      Result := GUIDToRaw(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
+          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result);
       DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        ZSetString(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
+          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result);
       DBTYPE_WSTR:
         Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
           PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, zCP_UTF8);
@@ -716,7 +717,7 @@ begin
       DBTYPE_IDISPATCH: Result := '';
       DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
       DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := RawByteString(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_VARIANT:   Result := RawByteString(ZWideString(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
       DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
@@ -728,11 +729,11 @@ begin
       DBTYPE_GUID:      Result := GUIDToRaw(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
+          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result);
       DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        ZSetString(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
+          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^,Result);
       DBTYPE_WSTR:
         Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
           PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
@@ -1698,7 +1699,6 @@ const GetScope = ZWideString('SELECT SCOPE_IDENTITY()');
 var
   I: Integer;
   FOlePrepareCommand: ICommandPrepare;
-  FCommandText: ICommandText;
   RowSet: IRowSet;
 begin
   inherited Create(Statement, Metadata);
@@ -1714,16 +1714,17 @@ begin
     end;
 
   OleDBCheck((Statement.GetConnection as IZOleDBConnection).GetIDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(FCommandText)));
-  if Supports(FCommandText, IID_ICommandPrepare, FOlePrepareCommand) then
-  begin
+  OleDBCheck(FCommandText.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
+  try
     OleDBCheck(FCommandText.SetCommandText(DBGUID_DEFAULT, PWideChar(GetScope)));
-    FOlePrepareCommand.Prepare(0); //unknown count of executions
-    (FCommandText as ICommand).Execute(nil, IID_IRowset, FDBParams, @FRowCount, @RowSet);
+    OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
+    FDBParams.cParamSets := 0;
+    OleDBCheck((FCommandText as ICommand).Execute(nil, IID_IRowset, FDBParams, @FAffectedRows, @RowSet));
     if Assigned(RowSet) then
       FResultSet := TZOleDBResultSet.Create(Statement, 'SELECT SCOPE_IDENTITY()', RowSet, 0, False);
-  end
-  else
-    raise EZSQLException.Create('OleCommand does not support Prepared mode!');
+  except
+    raise;
+  end;
 end;
 
 {**
