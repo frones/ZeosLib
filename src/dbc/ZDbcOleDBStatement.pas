@@ -133,7 +133,7 @@ uses
 constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
-  OleCheck((Connection as IZOleDBConnection).GetIDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(FCommand)));
+  //OleCheck((Connection as IZOleDBConnection).GetIDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(FCommand)));
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
@@ -184,6 +184,7 @@ begin
   if Not Prepared then //prevent PrepareInParameters
   begin
     try
+      FCommand := (Connection as IZOleDBConnection).CreateCommand;
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
       OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
@@ -305,7 +306,7 @@ begin
   Result := nil;
   Prepare;
   BindInParameters;
-  //try
+  try
     FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDBCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
       FDBParams,@FRowsAffected,@FMultipleResults));
@@ -323,11 +324,9 @@ begin
       while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
       FOpenResultSet := Pointer(Result);
     end;
+  finally
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  (*except
-    on E:Exception do
-      raise;
-  end;//*)
+  end;
 end;
 
 {**
@@ -344,14 +343,14 @@ function TZOleDBPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   BindInParameters;
+
+  FRowsAffected := DB_COUNTUNAVAILABLE; //init
   try
-    FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDBCheck(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil));
     LastUpdateCount := FRowsAffected;
     Result := LastUpdateCount;
+  finally
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
-    raise
   end;
 end;
 
@@ -372,9 +371,9 @@ begin
 
   Prepare;
   BindInParameters;
+  LastUpdateCount := FRowsAffected; //store tempory possible array bound update-counts
+  FRowsAffected := DB_COUNTUNAVAILABLE;
   try
-    LastUpdateCount := FRowsAffected; //store tempory possible array bound update-counts
-    FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
       FDBParams,@FRowsAffected,@FMultipleResults));
     if Assigned(FMultipleResults) then
@@ -387,9 +386,8 @@ begin
     LastUpdateCount := LastUpdateCount + FRowsAffected;
 
     Result := Assigned(LastResultSet);
+  finally
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
-    raise
   end;
 end;
 
@@ -445,8 +443,9 @@ begin
       FMultipleResults := nil;
       inherited Unprepare;
       (FCommand as ICommandPrepare).UnPrepare;
-    except
-      raise;
+    finally
+      FMultipleResults := nil;
+      FCommand := nil;
     end;
   end;
 end;

@@ -1656,7 +1656,7 @@ begin
 
         Flags := GetIntByName('COLUMN_FLAGS');
         SQLType := ConvertOleDBTypeToSQLType(GetSmallByName('DATA_TYPE'),
-          ConSettings.CPType, (FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0);
+          ((FLAGS and DBCOLUMNFLAGS_ISLONG) <> 0), ConSettings.CPType);
         Result.UpdateSmall(TableColColumnTypeIndex, Ord(SQLType));
         Result.UpdateInt(TableColColumnSizeIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
         Result.UpdateInt(TableColColumnBufLengthIndex, GetIntByName('CHARACTER_MAXIMUM_LENGTH'));
@@ -1850,6 +1850,7 @@ const
 var
   RS: IZResultSet;
   Len: NativeUInt;
+  Flags: DWORD;
 begin
   Result:=inherited UncachedGetVersionColumns(Catalog, Schema, Table);
 
@@ -1859,14 +1860,14 @@ begin
     begin
       while Next do
       begin
-        if (GetIntByName('COLUMN_FLAGS')
-          and DBCOLUMNFLAGS_ISROWVER) = 0 then
+        Flags := GetWordByName('COLUMN_FLAGS');
+        if (Flags and DBCOLUMNFLAGS_ISROWVER) = 0 then
           Continue;
         Result.MoveToInsertRow;
         Result.UpdateSmall(TableColVerScopeIndex, 0);
         Result.UpdatePWideChar(TableColVerColNameIndex, GetPWideCharByName('COLUMN_NAME', Len), @Len);
         Result.UpdateSmall(TableColVerDataTypeIndex, Ord(ConvertOleDBTypeToSQLType(
-          GetSmallByName('DATA_TYPE'), ConSettings.CPType, (GetIntByName('COLUMN_FLAGS') and DBCOLUMNFLAGS_ISLONG) <> 0)));
+          GetSmallByName('DATA_TYPE'), Flags and DBCOLUMNFLAGS_ISLONG <> 0, ConSettings.CPType)));
         Result.UpdatePWideChar(TableColVerTypeNameIndex, GetPWideCharByName('TYPE_NAME', Len), @Len);
         Result.UpdateInt(TableColVerColSizeIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
         Result.UpdateInt(TableColVerBufLengthIndex, GetIntByName('CHARACTER_OCTET_LENGTH'));
@@ -2490,7 +2491,7 @@ var
 begin
   if not FSupportedSchemasInitialized then
   begin
-    (GetConnection as IZOleDBConnection).GetIDBCreateSession.QueryInterface(IDBSchemaRowset, FSchemaRS);
+    (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IDBSchemaRowset, FSchemaRS);
     if Assigned(FSchemaRS) then
     begin
       FSchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, IA);

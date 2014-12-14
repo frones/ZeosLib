@@ -71,8 +71,8 @@ type
     DBBINDSTATUS_BADSTORAGEFLAGS, DBBINDSTATUS_NOINTERFACE,
     DBBINDSTATUS_MULTIPLESTORAGE);
 
-function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
-  CtrlsCPType: TZControlsCodePage; IsLong: Boolean): TZSQLType; overload;
+function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
+  CtrlsCPType: TZControlsCodePage): TZSQLType; overload;
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
   CtrlsCPType: TZControlsCodePage; SrcRS: IZResultSet): TZSQLType; overload;
@@ -103,41 +103,38 @@ uses
   ActiveX, Windows, Math, TypInfo,
   ZEncoding, ZDbcLogging, ZDbcUtils, ZDbcResultSet, ZFastCode, ZSysUtils, ZMessages;
 
-function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
-  CtrlsCPType: TZControlsCodePage; IsLong: Boolean): TZSQLType;
+function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
   case OleDBType of
-    DBTYPE_EMPTY:     Result := stUnknown;
-    DBTYPE_NULL:      Result := stUnknown;
-    DBTYPE_I2:        Result := stSmall;
-    DBTYPE_I4:        Result := stInteger;
-    DBTYPE_R4:        Result := stFloat;
-    DBTYPE_R8:        Result := stDouble;
-    DBTYPE_CY:        Result := stCurrency;
-    DBTYPE_DATE:      Result := stTimeStamp;
-    DBTYPE_BSTR:
-      if IsLong then
-        Result := stAsciiStream
-      else
-        Result := stString;
-    DBTYPE_ERROR:     Result := stInteger;
-    DBTYPE_BOOL:      Result := stBoolean;
-    DBTYPE_VARIANT:   Result := stString;
-    DBTYPE_IUNKNOWN:  Result := stUnknown; //note this could be used to bind IStream for reading/writing data
-    DBTYPE_DECIMAL:   Result := stBigDecimal;
-    DBTYPE_UI1:       Result := stByte;
-    DBTYPE_I1:        Result := stShort;
-    DBTYPE_UI2:       Result := stWord;
-    DBTYPE_UI4:       Result := stLongWord;
-    DBTYPE_I8:        Result := stLong;
-    DBTYPE_UI8:       Result := stULong;
-    DBTYPE_GUID:      Result := stGUID;
-    DBTYPE_BYTES:     if IsLong then Result := stBinaryStream
-                      else Result := stBytes;
-    DBTYPE_STR:       if IsLong then Result := stAsciiStream
-                      else Result := stString;
-    DBTYPE_WSTR:      if IsLong then Result := stAsciiStream
-                      else Result := stString;
+    DBTYPE_EMPTY:       Result := stUnknown;
+    DBTYPE_NULL:        Result := stUnknown;
+    DBTYPE_I2:          Result := stSmall;
+    DBTYPE_I4:          Result := stInteger;
+    DBTYPE_R4:          Result := stFloat;
+    DBTYPE_R8:          Result := stDouble;
+    DBTYPE_CY:          Result := stCurrency;
+    DBTYPE_DATE:        Result := stTimeStamp;
+    DBTYPE_BSTR:        if IsLong then Result := stAsciiStream
+                        else Result := stString;
+    DBTYPE_ERROR:       Result := stInteger;
+    DBTYPE_BOOL:        Result := stBoolean;
+    DBTYPE_VARIANT:     Result := stString;
+    DBTYPE_IUNKNOWN:    Result := stUnknown; //note this could be used to bind IStream for reading/writing data
+    DBTYPE_DECIMAL:     Result := stBigDecimal;
+    DBTYPE_UI1:         Result := stByte;
+    DBTYPE_I1:          Result := stShort;
+    DBTYPE_UI2:         Result := stWord;
+    DBTYPE_UI4:         Result := stLongWord;
+    DBTYPE_I8:          Result := stLong;
+    DBTYPE_UI8:         Result := stULong;
+    DBTYPE_GUID:        Result := stGUID;
+    DBTYPE_BYTES:       if IsLong then Result := stBinaryStream
+                        else Result := stBytes;
+    DBTYPE_STR:         if IsLong then Result := stAsciiStream
+                        else Result := stString;
+    DBTYPE_WSTR:        if IsLong then Result := stAsciiStream
+                        else Result := stString;
     DBTYPE_NUMERIC:     Result := stDouble;
     DBTYPE_UDT:         Result := stUnknown;
     DBTYPE_DBDATE:      Result := stDate;

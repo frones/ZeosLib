@@ -1051,7 +1051,6 @@ type
 
   DBROWSTATUS = DWORD;
 
-
   DBROWOPTIONS = DWORD;
 
   DBRESULTFLAG = DB_LRESERVE;
@@ -1063,6 +1062,8 @@ type
   DBPROPOPTIONS = DWORD;
   DBPROPSTATUS = DWORD;
 
+  DBCOLUMNFLAGS = DWORD;
+  DBPARAMFLAGS = DWORD;
 //end from oledb.h
 
 //records, unions, aliases
@@ -1135,8 +1136,6 @@ type
     ulExtension : DBCOUNTITEM;
   end;
 
-  DBCOLUMNFLAGS = LongWord;
-
   TDBIDGUID = record
     case Integer of
       0: (guid: TGUID);
@@ -1169,8 +1168,6 @@ type
 
   PDBIDArray = ^TDBIDArray;
   TDBIDArray = array[0..MAXBOUND] of TDBID;
-
-  DBPARAMFLAGS = DWORD;
 
   PDBPARAMINFO = ^TDBPARAMINFO;
   TDBPARAMINFO = record

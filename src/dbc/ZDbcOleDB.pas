@@ -77,8 +77,8 @@ type
   {** Defines a PostgreSQL specific connection. }
   IZOleDBConnection = interface(IZConnection)
     ['{35A72582-F758-48B8-BBF7-3267EEBC9750}']
-    function GetIDBCreateSession: IDBCreateSession;
-    function GetIDBCreateCommand: IDBCreateCommand;
+    function GetSession: IUnknown;
+    function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
   end;
 
@@ -88,7 +88,7 @@ type
   private
     FMalloc: IMalloc;
     FDBInitialize: IDBInitialize;
-    FDBCreateSession: IDBCreateSession;
+    FSession: IUnknown;
     FDBCreateCommand: IDBCreateCommand;
     FTransaction: ITransactionLocal;
     FRetaining: Boolean;
@@ -130,8 +130,8 @@ type
     procedure ClearWarnings; override;}
   public
     { OleDB speziffic }
-    function GetIDBCreateSession: IDBCreateSession;
-    function GetIDBCreateCommand: IDBCreateCommand;
+    function GetSession: IUnknown;
+    function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
   end;
 
@@ -379,17 +379,18 @@ end;
 {**
   Returs the OleSession interface of current connection
 }
-function TZOleDBConnection.GetIDBCreateSession: IDBCreateSession;
+function TZOleDBConnection.GetSession: IUnknown;
 begin
-  Result := FDBCreateSession;
+  Result := FSession;
 end;
 
 {**
   Returs the OleSession interface of current connection
 }
-function TZOleDBConnection.GetIDBCreateCommand: IDBCreateCommand;
+function TZOleDBConnection.CreateCommand: ICommandText;
 begin
-  Result := FDBCreateCommand;
+  Result := nil;
+  OleDbCheck(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)));
 end;
 
 function TZOleDBConnection.GetMalloc: IMalloc;
@@ -488,6 +489,7 @@ var
   ConnectStrings: TStrings;
   ConnectString: ZWideString;
   Tmp: String;
+  FDBCreateSession: IDBCreateSession;
 begin
   if not Closed then
     Exit;
@@ -511,6 +513,10 @@ begin
     // open the connection to the DB
     OleDBCheck(fDBInitialize.Initialize);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
+    OleDBCheck(FDBCreateSession.CreateSession(nil, IID_IOpenRowset, FSession));
+    FDBCreateSession := nil; //no longer required!
+    //some Providers do NOT support commands, so let's check if we can use it
+    OleDBCheck(FSession.QueryInterface(IID_IDBCreateCommand, FDBCreateCommand));
     // Now let's find out what current server supports:
     // Is IMultipleResults supported??
     FSupportsMultipleResultSets := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLERESULTS]), 0 ) <> 0;
@@ -521,11 +527,9 @@ begin
       FServerKind := skOracle
     else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
       FServerKind := skMSSQL;
-    //some Providers do NOT support commands, so let's check if we can use it
-    OleDBCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)) );
 
     // check if DB handle transactions
-    if not (FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)=S_OK) then
+    if Failed(FSession.QueryInterface(IID_ITransactionLocal,fTransaction)) then
       fTransaction := nil;
     inherited Open;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -535,6 +539,7 @@ begin
     begin
       FDBCreateSession := nil; // mark not connected
       FDBCreateCommand := nil; // mark not connected
+      FSession := nil;
       fDBInitialize := nil;
       DataInitialize := nil;
       raise;
@@ -557,7 +562,7 @@ begin
   if not Closed then
   begin
     fTransaction := nil;
-    FDBCreateSession := nil;
+    FSession := nil;
     FDBCreateCommand := nil;
     (FMetadata as TOleDBDatabaseMetadata).ReleaseDBSchemaRowSet; //flush IDBSchemaRowSet
     OleDBCheck(fDBInitialize.Uninitialize);
