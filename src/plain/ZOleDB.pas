@@ -49,7 +49,7 @@ Unit ZOleDB;
 
 interface
 {$I ZPlain.inc}
-{$IFDEF ENABLE_ADO}
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
 
 {$IFDEF WIN64}
 {$ALIGN 8}
@@ -2920,7 +2920,7 @@ type
 {$IFDEF MISS_VARIANTCLEAR}
 function VariantClear(var varg: OleVariant): HResult; stdcall; external 'oleaut32.dll' name 'VariantClear';
 {$ENDIF}
-{$ENDIF ENABLE_ADO}
+{$IFEND}
 implementation
 
 end.
