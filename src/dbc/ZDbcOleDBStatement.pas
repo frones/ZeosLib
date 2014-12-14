@@ -215,6 +215,7 @@ begin
       Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
       if FDBUPARAMS > 0 then
       begin
+        OleCheck(FCommand.QueryInterface(IID_IAccessor, FParameterAccessor));
         SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
         FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
           InParamTypes, FParamInfoArray, FTempLobs);
@@ -297,9 +298,9 @@ begin
     IZResultSet(FOpenResultSet).Close; //Note keep track we close the RS and DO NOT Try to resync them!
   FOpenResultSet := nil;
   Result := nil;
+  Prepare;
+  BindInParameters;
   try
-    Prepare;
-    BindInParameters;
     FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDBCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
       FDBParams,@FRowsAffected,@FMultipleResults));
@@ -337,11 +338,11 @@ function TZOleDBPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
   Prepare;
   BindInParameters;
+  Result := DB_COUNTUNAVAILABLE; //store tempory possible array bound update-counts
   try
-    LastUpdateCount := FRowsAffected; //store tempory possible array bound update-counts
     FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDBCheck(FCommand.Execute(nil, DB_NULLGUID,FDBParams,@FRowsAffected,nil));
-    LastUpdateCount := LastUpdateCount + FRowsAffected;
+    LastUpdateCount := FRowsAffected;
     Result := LastUpdateCount;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   except
