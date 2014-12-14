@@ -223,7 +223,12 @@ begin
         Assert(FDBParams.hAccessor = 1, 'Accessor handle should be unique!');
       end
       else
+      begin
+        { init ! }
+        FDBParams.pData := nil;
         FDBParams.cParamSets := 0;
+        FDBParams.hAccessor := 0;
+      end;
     finally
       if Assigned(FParamInfoArray) then (GetConnection as IZOleDBConnection).GetMalloc.Free(FParamInfoArray);
       if Assigned(FNamesBuffer) then (GetConnection as IZOleDBConnection).GetMalloc.Free(FNamesBuffer);
@@ -300,7 +305,7 @@ begin
   Result := nil;
   Prepare;
   BindInParameters;
-  try
+  //try
     FRowsAffected := DB_COUNTUNAVAILABLE;
     OleDBCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
       FDBParams,@FRowsAffected,@FMultipleResults));
@@ -310,6 +315,7 @@ begin
         IID_IRowset, @FRowsAffected, @FRowSet);
       Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
         FEnhancedColInfo, FOpenResultSet);
+      FRowSet := nil;
     end;
     LastUpdateCount := FRowsAffected;
     if not Assigned(Result) then
@@ -318,10 +324,10 @@ begin
       FOpenResultSet := Pointer(Result);
     end;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
-  except
+  (*except
     on E:Exception do
       raise;
-  end;
+  end;//*)
 end;
 
 {**

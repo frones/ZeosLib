@@ -59,7 +59,8 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils, ZOleDB,
-  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils;
+  ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant, ZDbcAdoUtils,
+  ZDbcOleDBUtils;
 
 type
   {** Implements Prepared ADO Statement. }
@@ -252,7 +253,7 @@ begin
       FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer);
       Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
       SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
-      FRowSize := PrepareOleDBBindings(FDBUPARAMS, FDBBindingArray,
+      FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
         InParamTypes, FParamInfoArray, FTempLobs);
       CalcParamSetsAndBufferSize;
       Assert(FDBParams.hAccessor = 1, 'Accessor handle should be unique!');

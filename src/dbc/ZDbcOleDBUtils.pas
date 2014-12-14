@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{.$IFDEF ENABLE_OLEDB}
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
 uses
   Types, SysUtils, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF}
   ZCompatibility, ZDbcIntfs, ZOleDB, ZVariant, ZDbcStatement;
@@ -95,9 +95,9 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   const DBBindingArray: TDBBindingDynArray; ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const TempLobs: TInterfacesDynArray);
 
-{.$ENDIF ENABLE_OLEDB}
+{$IFEND}
 implementation
-{.$IFDEF ENABLE_OLEDB}
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
 uses
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
   ActiveX, Windows, Math, TypInfo,
@@ -1782,5 +1782,5 @@ begin
 end;
 {$HINTS ON}
 
-{.$ENDIF ENABLE_OLEDB}
+{$IFEND}
 end.
