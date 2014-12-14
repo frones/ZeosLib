@@ -15,15 +15,9 @@
           <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <Other>
-        <CompilerMessages>
-          <UseMsgFile Value="True"/>
-        </CompilerMessages>
-        <CompilerPath Value="$(CompPath)"/>
-      </Other>
     </CompilerOptions>
     <Description Value="Zeos SQL Parsing Classes and Interfaces"/>
-    <Version Major="7" Minor="2"/>
+    <Version Major="7" Minor="3"/>
     <Files Count="17">
       <Item1>
         <Filename Value="../../src/parsesql/ZSybaseToken.pas"/>

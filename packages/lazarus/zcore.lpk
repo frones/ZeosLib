@@ -15,15 +15,9 @@
           <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <Other>
-        <CompilerMessages>
-          <UseMsgFile Value="True"/>
-        </CompilerMessages>
-        <CompilerPath Value="$(CompPath)"/>
-      </Other>
     </CompilerOptions>
     <Description Value="Zeos Core Classes and Interfaces"/>
-    <Version Major="7" Minor="2"/>
+    <Version Major="7" Minor="3"/>
     <Files Count="16">
       <Item1>
         <Filename Value="../../src/core/ZClasses.pas"/>

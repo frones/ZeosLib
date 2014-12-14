@@ -3,6 +3,7 @@
   <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="zcomponent"/>
+    <Type Value="RunAndDesignTime"/>
     <AddToProjectUsesSection Value="True"/>
     <CompilerOptions>
       <Version Value="11"/>
@@ -19,16 +20,12 @@
         </SyntaxOptions>
       </Parsing>
       <Other>
-        <CompilerMessages>
-          <UseMsgFile Value="True"/>
-        </CompilerMessages>
         <CustomOptions Value="-dZEOSDEBUG"/>
-        <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="Zeos Database Components
 "/>
-    <Version Major="7" Minor="2"/>
+    <Version Major="7" Minor="3"/>
     <Files Count="6">
       <Item1>
         <Filename Value="..\..\src\component\ZComponentReg.pas"/>
@@ -56,23 +53,26 @@
         <UnitName Value="ZGroupedConnection"/>
       </Item6>
     </Files>
-    <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="7">
       <Item1>
         <PackageName Value="zplain"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
+        <MaxVersion Major="7" Minor="2"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item1>
       <Item2>
         <PackageName Value="zparsesql"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
+        <MaxVersion Major="7" Minor="3"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item2>
       <Item3>
         <PackageName Value="zdbc"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
+        <MaxVersion Major="7" Minor="2"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item3>
       <Item4>
         <PackageName Value="zcore"/>
-        <MinVersion Major="7" Minor="2" Valid="True"/>
+        <MaxVersion Major="7" Minor="3"/>
+        <MinVersion Major="7" Minor="3" Valid="True"/>
       </Item4>
       <Item5>
         <PackageName Value="LCL"/>

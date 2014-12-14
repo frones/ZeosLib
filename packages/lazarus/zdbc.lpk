@@ -17,15 +17,9 @@
           <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
-      <Other>
-        <CompilerMessages>
-          <UseMsgFile Value="True"/>
-        </CompilerMessages>
-        <CompilerPath Value="$(CompPath)"/>
-      </Other>
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
-    <Version Major="7" Minor="2"/>
+    <Version Major="7" Minor="3"/>
     <Files Count="11">
       <Item1>
         <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>

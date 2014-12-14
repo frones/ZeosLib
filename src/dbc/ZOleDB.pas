@@ -48,7 +48,7 @@ Unit ZOleDB;
 //  http://py-com-tools.googlecode.com/svn/trunk/sdk-tlbs/
 
 interface
-{$I ZPlain.inc}
+{$I ZDbc.inc}
 {.$IFDEF ENABLE_ADO}
 
 {$IFDEF WIN64}
