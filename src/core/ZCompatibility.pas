@@ -101,7 +101,7 @@ type
 {$ENDIF}
   // EgonHugeist: Use always a 4Byte unsigned Integer for Windows otherwise MySQL64 has problems on Win64!
   // don't know anything about reported issues on other OS's
-  ULong                 = {$IFDEF WIN64}LongWord{$ELSE}NativeUInt{$ENDIF};
+  ULong                 = {$IFDEF MSWINDOWS}LongWord{$ELSE}NativeUInt{$ENDIF};
   ULongLong             = UInt64;
   PULong                = ^ULong;
   PULongLong            = ^ULongLong;
