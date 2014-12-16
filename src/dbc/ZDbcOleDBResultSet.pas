@@ -325,13 +325,13 @@ begin
     OleDBCheck(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
     if FRowsObtained > 0 then
     begin
-      if DBROWCOUNT(FRowsObtained) <= FRowCount then
+      if DBROWCOUNT(FRowsObtained) < FRowCount then
       begin //reserve required mem only
         SetLength(FColBuffer, NativeInt(FRowsObtained) * FRowSize);
         MaxRows := FRowsObtained;
       end
       else //reserve full allowed mem
-        SetLength(FColBuffer, FRowCount * FRowSize);
+        SetLength(FColBuffer, (FRowCount * FRowSize));
       {fetch data into the buffer}
       for i := 0 to FRowsObtained -1 do
         OleDBCheck(fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize]));
@@ -341,7 +341,7 @@ begin
       goto NoSuccess;
   end
   else
-    if FCurrentBufRowNo < DBROWCOUNT(FRowsObtained) then
+    if FCurrentBufRowNo < DBROWCOUNT(FRowsObtained)-1 then
     begin
       Inc(FCurrentBufRowNo);
       goto Success;
