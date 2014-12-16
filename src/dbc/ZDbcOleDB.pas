@@ -95,8 +95,8 @@ type
     FpulTransactionLevel: PULONG;
     FSupportsMultipleResultSets: Boolean;
     FServerKind: TServerKint;
+    procedure StopStransaction;
   protected
-    //procedure InternalExecuteStatement(const SQL: ZWideString);
     procedure StartTransaction;
     procedure InternalCreate; override;
     function OleDbGetDBPropValue(APropIDs: array of DBPROPID): string;
@@ -112,7 +112,6 @@ type
     {function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;}
 
-    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Commit; override;
@@ -237,6 +236,32 @@ begin
   end;
 end;
 
+procedure TZOleDBConnection.StopStransaction;
+begin
+  if (FTransaction <> nil) and (TransactIsolationLevel <> tiNone) then
+    if AutoCommit then
+      OleDbCheck(fTransaction.Commit(False,XACTTC_SYNC,0))
+    else
+      OleDbCheck(fTransaction.Abort(nil, False, False));
+end;
+
+const
+  TIL: array[TZTransactIsolationLevel] of ISOLATIONLEVEL =
+   ( ISOLATIONLEVEL_CHAOS,
+     ISOLATIONLEVEL_READUNCOMMITTED,
+     ISOLATIONLEVEL_READCOMMITTED,
+     ISOLATIONLEVEL_REPEATABLEREAD,
+     ISOLATIONLEVEL_SERIALIZABLE);
+
+procedure TZOleDBConnection.StartTransaction;
+begin
+  if (FTransaction <> nil) and (TransactIsolationLevel <> tiNone) then
+  begin
+    fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,FpulTransactionLevel);
+    DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
+  end;
+end;
+
 // returns property value(-s) from Data Source Information group as string,
 //where values are delimited using space
 function TZOleDBConnection.OleDbGetDBPropValue(APropIDs: array of DBPROPID): string;
@@ -308,20 +333,6 @@ begin
     Result := GetDriver.GetTokenizer.GetEscapeString(Result)
 end;
 
-const
-  TIL: array[TZTransactIsolationLevel] of ISOLATIONLEVEL =
-   ( ISOLATIONLEVEL_CHAOS,
-     ISOLATIONLEVEL_READUNCOMMITTED,
-     ISOLATIONLEVEL_READCOMMITTED,
-     ISOLATIONLEVEL_REPEATABLEREAD,
-     ISOLATIONLEVEL_SERIALIZABLE);
-
-procedure TZOleDBConnection.StartTransaction;
-begin
-  if not Closed and (not (AutoCommit or (TransactIsolationLevel = tiNone))) then
-    fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,FpulTransactionLevel);
-end;
-
 {**
   Creates a <code>Statement</code> object for sending
   SQL statements to the database.
@@ -339,6 +350,7 @@ end;
 function TZOleDBConnection.CreateRegularStatement(Info: TStrings):
   IZStatement;
 begin
+  if Closed then Open;
   Result := TZOleDBPreparedStatement.Create(Self, Info);
 end;
 
@@ -373,6 +385,7 @@ end;
 function TZOleDBConnection.CreatePreparedStatement(const SQL: string; Info: TStrings):
   IZPreparedStatement;
 begin
+  if Closed then Open;
   Result := TZOleDBPreparedStatement.Create(Self, SQL, Info);
 end;
 
@@ -399,55 +412,14 @@ begin
 end;
 
 {**
-  Sets this connection's auto-commit mode.
-  If a connection is in auto-commit mode, then all its SQL
-  statements will be executed and committed as individual
-  transactions.  Otherwise, its SQL statements are grouped into
-  transactions that are terminated by a call to either
-  the method <code>commit</code> or the method <code>rollback</code>.
-  By default, new connections are in auto-commit mode.
-
-  The commit occurs when the statement completes or the next
-  execute occurs, whichever comes first. In the case of
-  statements returning a ResultSet, the statement completes when
-  the last row of the ResultSet has been retrieved or the
-  ResultSet has been closed. In advanced cases, a single
-  statement may return multiple results as well as output
-  parameter values. In these cases the commit occurs when all results and
-  output parameter values have been retrieved.
-
-  @param autoCommit true enables auto-commit; false disables auto-commit.
-}
-procedure TZOleDBConnection.SetAutoCommit(Value: Boolean);
-begin
-  if AutoCommit = Value then  Exit;
-  if not Closed and Value then
-  begin
-    if Assigned(fTransaction) and (GetTransactionIsolation <> tiNone) then
-      begin
-        OleDbCheck(fTransaction.Commit(False,XACTTC_SYNC,0));
-        DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
-      end;
-  end;
-  inherited;
-  StartTransaction;
-end;
-
-{**
   Sets a new transact isolation level.
   @param Level a new transact isolation level.
 }
 procedure TZOleDBConnection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
-  if (TransactIsolationLevel <> Level) then
-    if assigned(fTransaction) and (TransactIsolationLevel <> tiNone) and not Closed then
-    begin
-      OleDbCheck(fTransaction.Abort(nil, FRetaining, False));
-      inherited SetTransactionIsolation(Level);
-      StartTransaction;
-    end
-    else
-      inherited SetTransactionIsolation(Level);
+  if not Closed and (TransactIsolationLevel <> Level) then
+    StopStransaction;
+  TransactIsolationLevel := Level;
   StartTransaction;
 end;
 
@@ -460,9 +432,11 @@ end;
 }
 procedure TZOleDBConnection.Commit;
 begin
-  if assigned(fTransaction) then
+  if assigned(fTransaction) and (TransactIsolationLevel <> tiNone) then
+  begin
     OleDbCheck(fTransaction.Commit(FRetaining,XACTTC_SYNC,0));
-  if not FRetaining then StartTransaction;
+    if not FRetaining then StartTransaction;
+  end;
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
 end;
 
@@ -475,8 +449,11 @@ end;
 }
 procedure TZOleDBConnection.Rollback;
 begin
-  if assigned(fTransaction) then
+  if assigned(fTransaction) and (TransactIsolationLevel <> tiNone) then
+  begin
     OleDbCheck(fTransaction.Abort(nil, FRetaining, False));
+    if not FRetaining then StartTransaction;
+  end;
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'ROLLBACK');
 end;
 
@@ -522,7 +499,7 @@ begin
     FSupportsMultipleResultSets := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLERESULTS]), 0 ) <> 0;
     // Now let's find which Server is used for optimal stms/parameters etc.
     Tmp := OleDbGetDBPropValue([DBPROP_PROVIDERFRIENDLYNAME]);
-    { exact name leding to pain -> scan KeyWords instead! }
+    { exact name leading to pain -> scan KeyWords instead! }
     if ZFastCode.Pos('Oracle', Tmp) > 0 then
       FServerKind := skOracle
     else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
@@ -534,6 +511,7 @@ begin
     inherited Open;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
+    StartTransaction;
   except
     on E: Exception do
     begin
