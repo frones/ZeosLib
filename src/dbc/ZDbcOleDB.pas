@@ -95,7 +95,7 @@ type
     FpulTransactionLevel: PULONG;
     FSupportsMultipleResultSets: Boolean;
     FServerKind: TServerKint;
-    procedure StopStransaction;
+    procedure StopTransaction;
   protected
     procedure StartTransaction;
     procedure InternalCreate; override;
@@ -236,7 +236,7 @@ begin
   end;
 end;
 
-procedure TZOleDBConnection.StopStransaction;
+procedure TZOleDBConnection.StopTransaction;
 begin
   if (FTransaction <> nil) and (TransactIsolationLevel <> tiNone) then
     if AutoCommit then
@@ -418,7 +418,7 @@ end;
 procedure TZOleDBConnection.SetTransactionIsolation(Level: TZTransactIsolationLevel);
 begin
   if not Closed and (TransactIsolationLevel <> Level) then
-    StopStransaction;
+    StopTransaction;
   TransactIsolationLevel := Level;
   StartTransaction;
 end;
@@ -539,6 +539,7 @@ procedure TZOleDBConnection.Close;
 begin
   if not Closed then
   begin
+    StopTransaction;
     fTransaction := nil;
     FSession := nil;
     FDBCreateCommand := nil;

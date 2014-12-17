@@ -242,6 +242,7 @@ begin
     begin
       ErrorRecords := ErrorInfo as IErrorRecords;
       ErrorRecords.GetRecordCount(ErrorCount);
+      OleDBErrorMessage := '';
       for i := 0 to ErrorCount-1 do
       begin
         // retrieve generic error info
@@ -253,7 +254,7 @@ begin
         OleDBErrorMessage := OleDBErrorMessage+String(Desc);
         Desc := '';
         ErrorInfoDetails := nil;
-        OleDBErrorMessage := 'ERROR';
+        OleDBErrorMessage := 'ERROR: '+OleDBErrorMessage;
       end;
     end;
     ErrorRecords := nil;
