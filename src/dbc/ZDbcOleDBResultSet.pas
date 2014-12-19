@@ -61,7 +61,7 @@ uses
   DateUtils,
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZOleDB, ZDbcOleDBUtils,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
@@ -86,6 +86,8 @@ type
     FRowsObtained: DBCOUNTITEM;
     FHROWS: PHROWS_Array;
     FColBuffer: TByteDynArray;
+    FRowStates: TDBROWSTATUSDynArray;
+    procedure ReleaseFetchedRows;
   protected
     procedure Open; override;
     procedure RestartPosition;
@@ -134,6 +136,16 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
+  {TZOleDBBLob = class(TZAbstractClob, ISequentialStream)
+    function Read(pv: Pointer; cb: Longint; pcbRead: PLongint): HResult;
+    function Write(pv: Pointer; cb: Longint; pcbWritten: PLongint): HResult;
+  end;
+
+  TZOleDBCLob = class(TZAbstractClob, ISequentialStream)
+    function Read(pv: Pointer; cb: Longint; pcbRead: PLongint): HResult;
+    function Write(pv: Pointer; cb: Longint; pcbWritten: PLongint): HResult;
+  end;}
+
 function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize: Integer;
   EnhancedColInfo: Boolean; var PCurrRS: Pointer): IZResultSet;
@@ -143,7 +155,7 @@ implementation
 {.$IFDEF ENABLE_OLEDB}
 
 uses
-  Variants, Math,
+  Variants, Math, ComObj,
   ZDbcOleDB, ZMessages, ZEncoding, ZFastCode;
 
 {**
@@ -162,9 +174,19 @@ begin
   FAccessor := 0;
   FCurrentBufRowNo := 0;
   FRowsObtained := 0;
+  FHROWS := nil;
   Open;
 end;
 
+procedure TZOleDBResultSet.ReleaseFetchedRows;
+begin
+  if FRowsObtained > 0 then
+  begin
+    OleDBCheck(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,Pointer(FRowStates)), FRowStates);
+    (Statement.GetConnection as IZOleDBConnection).GetMalloc.Free(FHROWS);
+    FHROWS := nil;
+  end;
+end;
 {**
   Opens this recordset and initializes the Column information.
 }
@@ -193,6 +215,7 @@ begin
     FRowCount := Max(1, FZBufferSize div NativeInt(FRowSize));
     if (MaxRows > 0) and (FRowCount > MaxRows) then
       FRowCount := MaxRows; //fetch only wanted count of rows
+
     OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA or DBACCESSOR_OPTIMIZED,
       pcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
       Pointer(FDBBINDSTATUSArray)), FDBBINDSTATUSArray);
@@ -258,7 +281,7 @@ begin
   if RowNo > 0 then
   begin
     {release old rows}
-    OleDBCheck(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,nil));
+    ReleaseFetchedRows;
     FRowSet.RestartPosition(DB_NULL_HCHAPTER)
   end;
 end;
@@ -280,8 +303,7 @@ var
   FAccessorRefCount: DBREFCOUNT;
 begin
   try
-    if Assigned(fRowSet) then
-      OleDBCheck(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,nil));
+    ReleaseFetchedRows;
     if FAccessor > 0 then
       OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
   finally
@@ -293,7 +315,6 @@ end;
 
 procedure TZOleDBResultSet.ResetCursor;
 begin
-  { Resync the Adorecordsets leads to pain with huge collection of Data !!}
 end;
 
 {**
@@ -332,6 +353,7 @@ begin
       end
       else //reserve full allowed mem
         SetLength(FColBuffer, (FRowCount * FRowSize));
+      SetLength(FRowStates, FRowsObtained);
       {fetch data into the buffer}
       for i := 0 to FRowsObtained -1 do
         OleDBCheck(fRowSet.GetData(FHROWS[i], FAccessor, @FColBuffer[I*FRowSize]));
@@ -349,7 +371,7 @@ begin
     else
     begin
       {release old rows}
-      OleDBCheck(fRowSet.ReleaseRows(FRowsObtained,FHROWS,nil,nil,nil));
+      ReleaseFetchedRows;
       OleDBCheck(fRowSet.GetNextRows(DB_NULL_HCHAPTER,0,FRowCount, FRowsObtained, FHROWS));
       if DBROWCOUNT(FRowsObtained) < FCurrentBufRowNo then
         MaxRows := RowNo+Integer(FRowsObtained);  //this makes Exit out in first check on next fetch

@@ -107,8 +107,8 @@ Const
   IID_IRowsetUpdate : TGUID = '{0C733A6D-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetIdentity : TGUID = '{0C733A09-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IRowsetNotify : TGUID = '{0C733A83-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IRowsetIndex : TGUID = '{0C733A82-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IColumnsRowset : TGUID = '{0C733A10-2A1C-11CE-ADE5-00AA0044773D}';*)
+  IID_IRowsetIndex : TGUID = '{0C733A82-2A1C-11CE-ADE5-00AA0044773D}';*)
+  IID_IColumnsRowset : TGUID = '{0C733A10-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBCreateCommand : TGUID = '{0C733A1D-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IDBCreateSession : TGUID = '{0C733A5D-2A1C-11CE-ADE5-00AA0044773D}';
   //IID_ISourcesRowset : TGUID = '{0C733A1E-2A1C-11CE-ADE5-00AA0044773D}';
@@ -902,6 +902,16 @@ type
     DBPROPSTATUS_NOTSET	= 7,
     DBPROPSTATUS_CONFLICTING	= 8);
 
+  DBKIND = TOleEnum;
+  DBKINDENUM = (
+    DBKIND_GUID_NAME	= 0,
+	  DBKIND_GUID_PROPID	= ( DBKIND_GUID_NAME + 1 ) ,
+	  DBKIND_NAME	= ( DBKIND_GUID_PROPID + 1 ) ,
+	  DBKIND_PGUID_NAME	= ( DBKIND_NAME + 1 ) ,
+	  DBKIND_PGUID_PROPID	= ( DBKIND_PGUID_NAME + 1 ) ,
+	  DBKIND_PROPID	= ( DBKIND_PGUID_PROPID + 1 ) ,
+	  DBKIND_GUID	= ( DBKIND_PROPID + 1 ))
+    ;
   PCHAPTER = ^HCHAPTER;
   HCHAPTER = NativeUInt;
 const
@@ -943,8 +953,8 @@ type
  IRowsetUpdate = interface;
  IRowsetIdentity = interface;
  IRowsetNotify = interface;
- IRowsetIndex = interface;
- IColumnsRowset = interface;*)
+ IRowsetIndex = interface;*)
+ IColumnsRowset = interface;
  IDBCreateCommand = interface;
  IDBCreateSession = interface;
  //ISourcesRowset = interface;
@@ -1039,17 +1049,17 @@ type
   DBMEMOWNER = LongWord;
   DBPARAMIO = LongWord;
   DBTYPE = Word;
-  DBBINDSTATUS = DWORD;
 
   PDBSTATUS = ^DBSTATUS;
   DBSTATUS = DWORD;
+  DBBINDSTATUS = DBSTATUS;
 
   PIUnknown = ^IUnknown;
 
   PHROW = ^HROW;
   HROW = NativeUInt;
 
-  DBROWSTATUS = DWORD;
+  DBROWSTATUS = DBSTATUS;
 
   DBROWOPTIONS = DWORD;
 
@@ -1064,6 +1074,7 @@ type
 
   DBCOLUMNFLAGS = DWORD;
   DBPARAMFLAGS = DWORD;
+
 //end from oledb.h
 
 //records, unions, aliases
@@ -1078,18 +1089,22 @@ type
   PDB_UPARAMS_Array = ^TDB_UPARAMS_Array;
   TDB_UPARAMS_Array = array[0..MAXBOUND] of DB_UPARAMS;
 
+  TDBSTATUSDynArray = array of DBSTATUS;
+
   PDBBINDSTATUS_Array = ^TDBBINDSTATUS_Array;
-  TDBBINDSTATUS_Array = array[0..MAXBOUND] of DBBINDSTATUS;
-  TDBBINDSTATUSDynArray = array of DBBINDSTATUS;
+  TDBBINDSTATUS_Array = array[0..MAXBOUND] of DBSTATUS;
+  TDBBINDSTATUSDynArray = TDBSTATUSDynArray;
 
   PHROWS_Array = ^THROWS_Array;
   THROWS_Array = array[0..MAXBOUND] of HROW;
+  THROWSDynArray = array of HROW;
 
   PDBREFCOUNT_Array = ^TDBREFCOUNT_Array;
   TDBREFCOUNT_Array = array[0..MAXBOUND] of DBREFCOUNT;
 
   PDBROWSTATUS_Array = ^TDBROWSTATUS_Array;
-  TDBROWSTATUS_Array = array[0..MAXBOUND] of DBROWSTATUS;
+  TDBROWSTATUS_Array = array[0..MAXBOUND] of DBSTATUS;
+  TDBROWSTATUSDynArray = TDBSTATUSDynArray;
 
   PDBROWOPTIONS_Array = ^TDBROWOPTIONS_Array;
   TDBROWOPTIONS_Array = array[0..MAXBOUND] of DBROWOPTIONS;
@@ -1100,8 +1115,8 @@ type
   PDBPROPIDArray = ^TDBPROPIDArray;
   TDBPROPIDArray = array[0..MAXBOUND] of DBPROPID;
 
-  PDBOBJECT = ^DBOBJECT;
-  DBOBJECT = record
+  PDBOBJECT = ^TDBOBJECT;
+  TDBOBJECT = record
     dwFlags : LongWord;
     iid : TIID;
   end;
@@ -1139,20 +1154,24 @@ type
   TDBIDGUID = record
     case Integer of
       0: (guid: TGUID);
-      1: (pguid: ^TGUID);
+      1: (pguid: PGUID);
   end;
   TDBIDNAME = record
     case Integer of
       0: (pwszName: PWideChar);
-      1: (ulPropid: UINT);
+      1: (ulPropid: ULONG);
   end;
 
-  DBKIND = LongWord;
+  PDBID = ^TDBID;
   TDBID = record
     uGuid: TDBIDGUID;
     eKind: DBKIND;
     uName: TDBIDNAME;
   end;
+  PDBID_Array = ^TDBID_Array;
+  TDBID_Array = array[0..MAXBOUND] of TDBID;
+  TDBIDDynArray = array of TDBID;
+
   PDBCOLUMNINFO = ^TDBCOLUMNINFO;
   TDBCOLUMNINFO = record
     pwszName : PWideChar;
@@ -1889,7 +1908,7 @@ type
     function GetData(hRow: HROW; hAccessor:HACCESSOR; {out don't work!} pData:pointer):HRESULT;stdcall;
     // GetNextRows :
     function GetNextRows(hReserved: HCHAPTER; lRowsOffset: DBROWOFFSET;
-      cRows:DBROWCOUNT;out pcRowsObtained:DBCOUNTITEM;out prghRows: PHROWS_Array):HRESULT;stdcall;
+      cRows:DBROWCOUNT;out pcRowsObtained:DBCOUNTITEM; out prghRows: PHROWS_Array):HRESULT;stdcall;
     // ReleaseRows :
     function ReleaseRows(cRows:DBCOUNTITEM; rghRows:PHROWS_Array;
       rgRowOptions:PDBROWOPTIONS_Array; rgRefCounts: PDBREFCOUNT_Array;
@@ -2209,18 +2228,19 @@ type
       rgParamBindInfo: PDBParamBindInfoArray):HRESULT;stdcall;
   end;
 
-(*
+
 // IColumnsRowset :
 
- IColumnsRowset = interface(IUnknown)
-   ['{0C733A10-2A1C-11CE-ADE5-00AA0044773D}']
+  IColumnsRowset = interface(IUnknown)
+    ['{0C733A10-2A1C-11CE-ADE5-00AA0044773D}']
     // GetAvailableColumns :
-   function GetAvailableColumns(var pcOptColumns:LongWord;out prgOptColumns:PDBID):HRESULT;stdcall;
+    function GetAvailableColumns(var pcOptColumns:DBORDINAL;var prgOptColumns:PDBID):HRESULT;stdcall;
     // GetColumnsRowset :
-   function GetColumnsRowset(pUnkOuter:IUnknown;cOptColumns:LongWord;var rgOptColumns:TDBID;var riid:GUID;cPropertySets:LongWord;var rgPropertySets:TDBPROPSET;out ppColRowset:IUnknown):HRESULT;stdcall;
+    function GetColumnsRowset(pUnkOuter:IUnknown;cOptColumns:DBORDINAL;
+      rgOptColumns: PDBIDArray;const riid:TGUID;cPropertySets:ULONG;
+      rgPropertySets:PDBPropSetArray;out ppColRowset:IUnknown):HRESULT;stdcall;
   end;
 
-*)
 // IColumnsInfo :
 
  IColumnsInfo = interface(IUnknown)

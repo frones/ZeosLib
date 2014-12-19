@@ -286,7 +286,7 @@ begin
     OleDBCheck( DBProperties.GetProperties( 1, @PropIDSet, nPropertySets, prgPropertySets ) );
     Assert( nPropertySets = 1 );
     PropSet := prgPropertySets^;
-    for i:=0 to PropSet.cProperties-1 do begin
+    for i := 0 to PropSet.cProperties-1 do begin
       if PropSet.rgProperties^[i].dwStatus <> DBPROPSTATUS(DBPROPSTATUS_OK) then
         Continue;
       if Result <> '' then
@@ -300,8 +300,8 @@ begin
     // free and clear elements of PropIDSet
     for i := 0 to PropSet.cProperties-1 do
       VariantClear(PropSet.rgProperties^[i].vValue);
-    CoTaskMemFree(PropSet.rgProperties);
-    CoTaskMemFree(prgPropertySets); //free prgPropertySets
+    FMAlloc.Free(PropSet.rgProperties);
+    FMAlloc.Free(prgPropertySets); //free prgPropertySets
   finally
     DBProperties := nil;
   end;
