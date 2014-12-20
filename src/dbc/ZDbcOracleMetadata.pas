@@ -1302,10 +1302,10 @@ var
 
   procedure InsertProcedureColumnValues(Source: IZResultSet; IsResultParam: Boolean = False);
   var
-    TypeName, SubTypeName: string;
+    TypeName{, SubTypeName}: string;
   begin
     TypeName := Source.GetString(ColumnIndexes[4]);
-    SubTypeName := Source.GetString(ColumnIndexes[5]);
+    //SubTypeName := Source.GetString(ColumnIndexes[5]);
     PackageName := Source.GetString(ColumnIndexes[8]);
     ProcName := Source.GetString(ColumnIndexes[9]);
 
@@ -1748,7 +1748,7 @@ begin
       end;
 
       Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), @Len);
-      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index){$IFDEF GENERIC_INDEX}-1{$ENDIF});
+      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index));
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
         IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));

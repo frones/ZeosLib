@@ -45,7 +45,6 @@
       <Unit0>
         <Filename Value="ztestall.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ztestall"/>
       </Unit0>
       <Unit1>
         <Filename Value="../../test/component/ZTestComponents.pas"/>
@@ -55,27 +54,22 @@
       <Unit2>
         <Filename Value="../../test/dbc/ZTestDbc.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestDbc"/>
       </Unit2>
       <Unit3>
         <Filename Value="../../test/parsesql/ZTestParseSql.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestParseSql"/>
       </Unit3>
       <Unit4>
         <Filename Value="../../test/bugreport/ZTestBugReports.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestBugReports"/>
       </Unit4>
       <Unit5>
         <Filename Value="../../test/core/ZTestCore.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestCore"/>
       </Unit5>
       <Unit6>
         <Filename Value="../../test/performance/ZTestPerformance.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestPerformance"/>
       </Unit6>
     </Units>
   </ProjectOptions>
@@ -92,12 +86,6 @@
         <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
-    <Other>
-      <CompilerMessages>
-        <UseMsgFile Value="True"/>
-      </CompilerMessages>
-      <CompilerPath Value="$(CompPath)"/>
-    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="12">

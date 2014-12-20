@@ -98,7 +98,7 @@ EgonHugeist:
 procedure ZTestDbcDbLibBugReport.Mantis54Dbc;
 const
   Key1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
-  BI_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+  //BI_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   F_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
 var stmnt: IZPreparedStatement;
 begin

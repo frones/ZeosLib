@@ -1177,7 +1177,6 @@ const
   s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
   s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   PStatement: IZPreparedStatement;
   Statement: IZStatement;
@@ -1309,7 +1308,6 @@ const
   s_nchar_Index  = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
   s_nvarchar_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
   s_bit_Index = {$IFDEF GENERIC_INDEX}5{$ELSE}6{$ENDIF};
-  s_varbit_Index  = {$IFDEF GENERIC_INDEX}6{$ELSE}7{$ENDIF};
 var
   PStatement: IZPreparedStatement;
   Statement: IZStatement;

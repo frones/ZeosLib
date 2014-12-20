@@ -219,7 +219,7 @@ const
   department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
   department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
-  people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  //people_count_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   people_p_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   people_p_begin_work_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   people_p_resume_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};

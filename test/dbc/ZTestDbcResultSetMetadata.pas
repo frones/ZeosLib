@@ -101,7 +101,7 @@ const
   department_dep_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
   department_dep_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
   department_dep_shname_Index = {$IFDEF GENERIC_INDEX}2{$ELSE}3{$ENDIF};
-  department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
+  //department_dep_address_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
   department_computed_col1_Index = {$IFDEF GENERIC_INDEX}3{$ELSE}4{$ENDIF};
   department_computed_col2_Index = {$IFDEF GENERIC_INDEX}4{$ELSE}5{$ENDIF};
 var

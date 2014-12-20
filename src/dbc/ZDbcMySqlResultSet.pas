@@ -498,7 +498,6 @@ end;
     value returned is <code>0</code>
 }
 function TZAbstractMySQLResultSet.GetLong(ColumnIndex: Integer): Int64;
-const BM = LongWord($FFFFFFFF);
 var
   Buffer: PAnsiChar;
 begin
