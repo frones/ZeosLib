@@ -301,23 +301,30 @@ var
   FRowSet: IRowSet;
 begin
   if Assigned(FOpenResultSet) then
-    IZResultSet(FOpenResultSet).Close; //Note keep track we close the RS and DO NOT Try to resync them!
-  FOpenResultSet := nil;
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
   Result := nil;
   Prepare;
   BindInParameters;
   try
     FRowsAffected := DB_COUNTUNAVAILABLE;
-    OleDBCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
-      FDBParams,@FRowsAffected,@FMultipleResults));
-    if Assigned(FMultipleResults) then
+    FRowSet := nil;
+    if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
     begin
-      FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-        IID_IRowset, @FRowsAffected, @FRowSet);
-      Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-        FEnhancedColInfo, FOpenResultSet);
-      FRowSet := nil;
-    end;
+      OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
+        FDBParams,@FRowsAffected,@FMultipleResults));
+      if Assigned(FMultipleResults) then
+        FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+          IID_IRowset, @FRowsAffected, @FRowSet);
+    end
+    else
+      OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
+        FDBParams,@FRowsAffected,@FRowSet));
+    Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
+      FEnhancedColInfo, FOpenResultSet);
+    FRowSet := nil;
     LastUpdateCount := FRowsAffected;
     if not Assigned(Result) then
     begin
@@ -374,17 +381,22 @@ begin
   LastUpdateCount := FRowsAffected; //store tempory possible array bound update-counts
   FRowsAffected := DB_COUNTUNAVAILABLE;
   try
-    OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
-      FDBParams,@FRowsAffected,@FMultipleResults));
-    if Assigned(FMultipleResults) then
+    FRowSet := nil;
+    if (Connection as IZOleDBConnection).SupportsMultipleResultSets then
     begin
-      FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-        IID_IRowset, @FRowsAffected, @FRowSet);
-      LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-        FEnhancedColInfo, FOpenResultSet);
-    end;
-    LastUpdateCount := LastUpdateCount + FRowsAffected;
+      OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
+        FDBParams,@FRowsAffected,@FMultipleResults));
+      if Assigned(FMultipleResults) then
+        FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+          IID_IRowset, @FRowsAffected, @FRowSet);
+    end
+    else
+      OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
+        FDBParams,@FRowsAffected,@FRowSet));
 
+    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
+      FEnhancedColInfo, FOpenResultSet);
+    LastUpdateCount := LastUpdateCount + FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);

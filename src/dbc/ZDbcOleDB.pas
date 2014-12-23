@@ -80,6 +80,7 @@ type
     function GetSession: IUnknown;
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
+    function SupportsMultipleResultSets: Boolean;
   end;
 
   TServerKint = (skUnkown, skMSSQL, skOracle);
@@ -132,6 +133,7 @@ type
     function GetSession: IUnknown;
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
+    function SupportsMultipleResultSets: Boolean;
   end;
 
 var
@@ -409,6 +411,11 @@ end;
 function TZOleDBConnection.GetMalloc: IMalloc;
 begin
   Result := FMalloc;
+end;
+
+function TZOleDBConnection.SupportsMultipleResultSets: Boolean;
+begin
+  Result := FSupportsMultipleResultSets;
 end;
 
 {**

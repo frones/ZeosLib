@@ -84,7 +84,8 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
-  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO): DBROWOFFSET;
+  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
+  var DBBYREFColIndexArray: TIntegerDynArray): DBROWOFFSET;
 
 procedure OleBindParams(const DBParams: TDBParams; ConSettings: PZConSettings;
   const DBBindingArray: TDBBindingDynArray; const InParamValues: TZVariantDynArray;
@@ -235,7 +236,7 @@ var
   s: string;
 begin
   OleDBErrorMessage := '';
-  if not Succeeded(aResult) then
+  if aResult <> 0 {not Succeeded(aResult)} then
   begin // get OleDB specific error information
     GetErrorInfo(0,ErrorInfo);
     if Assigned(ErrorInfo) then
@@ -398,7 +399,8 @@ begin
 end;
 
 function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
-  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO): DBROWOFFSET;
+  var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
+  var DBBYREFColIndexArray: TIntegerDynArray): DBROWOFFSET;
 var
   I: Integer;
   Procedure SetDBBindingProps(Index: Integer);
@@ -421,32 +423,29 @@ var
       DBBindingArray[Index].wType := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
       DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
       DBBindingArray[Index].dwMemOwner := DBMEMOWNER_PROVIDEROWNED;
+      SetLength(DBBYREFColIndexArray, Length(DBBYREFColIndexArray)+1);
+      DBBYREFColIndexArray[High(DBBYREFColIndexArray)] := Index;
+     // DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISLONG; //indicate long values!
     end
     else
     begin
       { all other types propably fit into one RowSize-Buffer }
-      if DBBindingArray[Index].wType in [DBTYPE_GUID, DBTYPE_BYTES, DBTYPE_STR, DBTYPE_WSTR, DBTYPE_BSTR] then
-        {for all these types we reserve a pointer and the buffer-memory, if we need it or not!
-         this catches possible conversion later on. So we can either directly address or
-         point to the buffer after the pointer where a converted value was moved in (:
-         This may waste mem but makes everything flexible like a charm!}
+      if DBBindingArray[Index].wType in [DBTYPE_BYTES, DBTYPE_STR, DBTYPE_WSTR, DBTYPE_BSTR] then
       begin
-         //all these types including GUID need a reference pointer except we do not play with multiple row binding
         DBBindingArray[Index].obValue := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
         DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
-        {if DBBindingArray[Index].wType = DBCOLUMNINFO^.wType then
-        begin //only types with NO conversion can be referenced!
-          DBBindingArray[Index].cbMaxLen := SizeOf(Pointer);
-          DBBindingArray[Index].wType := DBBindingArray[Index].wType or DBTYPE_BYREF;
-        end does sadly not work! got a exception on first IRowSet.GetData call: conversion not supported!
-        else}
-          if DBBindingArray[Index].wType = DBTYPE_STR then
-            DBBindingArray[Index].cbMaxLen := {SizeOf(Pointer)+}DBCOLUMNINFO^.ulColumnSize +1
-          else if DBBindingArray[Index].wType in [DBTYPE_WSTR, DBTYPE_BSTR] then
-            DBBindingArray[Index].cbMaxLen := {SizeOf(Pointer)+}((DBCOLUMNINFO^.ulColumnSize +1) shl 1)
-          else
-            DBBindingArray[Index].cbMaxLen := {SizeOf(Pointer)+}DBCOLUMNINFO^.ulColumnSize;
-        //DBBindingArray[Index].wType := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
+        if DBBindingArray[Index].wType = DBTYPE_STR then
+          DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize +1
+        else if DBBindingArray[Index].wType in [DBTYPE_WSTR, DBTYPE_BSTR] then
+          DBBindingArray[Index].cbMaxLen := (DBCOLUMNINFO^.ulColumnSize+1) shl 1
+        else
+          DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
+        //8Byte Alignment
+        //DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3;
+        if (DBCOLUMNINFO^.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0) then //vary
+          DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3
+        else
+          DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISFIXEDLENGTH;//keep this flag alive!
       end
       else
       begin { fixed types do not need a length indicator }
@@ -457,11 +456,10 @@ var
     end;
     DBBindingArray[Index].dwMemOwner := DBMEMOWNER_CLIENTOWNED;
     DBBindingArray[Index].eParamIO := DBPARAMIO_NOTPARAM;
-    DBBindingArray[Index].dwFlags :=  DBCOLUMNINFO^.dwFlags; //set found flags to indicate long types too
-    DBBindingArray[Index].bPrecision := DBCOLUMNINFO^.bPrecision; //looks nice ... but do we need it?
-    DBBindingArray[Index].bScale := DBCOLUMNINFO^.bScale; //looks nice ... but do we need it?
+    //makes trouble !!DBBindingArray[Index].dwFlags :=  DBCOLUMNINFO^.dwFlags; //set found flags to indicate long types too
   end;
 begin
+  SetLength(DBBYREFColIndexArray, 0);
   SetLength(DBBindingArray, DBUPARAMS);
 
   DBBindingArray[0].obStatus := 0;
