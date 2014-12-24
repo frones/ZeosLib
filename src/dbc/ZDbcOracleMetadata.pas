@@ -1748,7 +1748,7 @@ begin
       end;
 
       Result.UpdatePAnsiChar(TableColColumnColDefIndex, GetPAnsiChar(DATA_DEFAULT_Index, Len), @Len);
-      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index){$IFDEF GENERIC_INDEX}-1{$ENDIF});
+      Result.UpdateInt(TableColColumnOrdPosIndex, GetInt(COLUMN_ID_Index));
 
       Result.UpdateBoolean(TableColColumnCaseSensitiveIndex,
         IC.IsCaseSensitive(GetString(COLUMN_NAME_Index)));

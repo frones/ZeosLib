@@ -124,7 +124,7 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    procedure SetAutoCommit(AutoCommit: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Commit; override;
@@ -606,10 +606,10 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZDBLibConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZDBLibConnection.SetAutoCommit(Value: Boolean);
 begin
-  if GetAutoCommit = AutoCommit then  Exit;
-  if not Closed and AutoCommit then InternalExecuteStatement('commit');
+  if AutoCommit = Value then  Exit;
+  if not Closed and Value then InternalExecuteStatement('commit');
   inherited;
   ReStartTransactionSupport;
 end;
