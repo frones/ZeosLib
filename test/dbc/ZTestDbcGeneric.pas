@@ -360,7 +360,7 @@ end;
 }
 procedure TZGenericTestDbcResultSet.TestConnection;
 begin
-  CheckEquals(True, Connection.IsReadOnly);
+  CheckEquals(False, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   Connection.SetAutoCommit(False);

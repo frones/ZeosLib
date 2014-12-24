@@ -105,7 +105,7 @@ end;
 }
 procedure TZTestDbcSQLiteCase.TestConnection;
 begin
-  CheckEquals(True, Connection.IsReadOnly);
+  CheckEquals(False, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));

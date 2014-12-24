@@ -687,12 +687,17 @@ const
   isc_tpb_commit_time            = 13;
   isc_tpb_ignore_limbo           = 14;
   isc_tpb_read_committed         = 15;
-  isc_tpb_autocommit             = 16;
+  isc_tpb_autocommit             = 16; //EH: Please do not use this JDBC option!
+                                       //It kills the performance. Let Zeos do the Job by settting AutoCommit = True
+                                       //see ZDbcInterbase.pas e.g. StartTransaction
   isc_tpb_rec_version            = 17;
   isc_tpb_no_rec_version         = 18;
   isc_tpb_restart_requests       = 19;
   isc_tpb_no_auto_undo           = 20;
-  isc_tpb_last_tpb_constant      = isc_tpb_no_auto_undo;
+  // Since IB75+
+  isc_tpb_no_savepoint            = 21;
+  // Since FB20
+  isc_tpb_lock_timeout            = 21;
 
   { Blob Parameter Block }
   isc_bpb_version1               = 1;

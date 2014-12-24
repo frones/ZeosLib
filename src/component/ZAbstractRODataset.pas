@@ -2131,9 +2131,7 @@ begin
   begin
     if Active then
        Close;
-    if Assigned(Statement) then
-      Statement.Close;
-    Statement := nil;
+    Unprepare;
     if FConnection <> nil then
       FConnection.UnregisterDataSet(Self);
     FConnection := Value;

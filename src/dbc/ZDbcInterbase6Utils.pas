@@ -71,7 +71,7 @@ type
 
   { Paparameter string name and it value}
   TZIbParam = record
-    Name: RawByteString;
+    Name: String;
     Number: word;
   end;
   PZIbParam = ^TZIbParam;
@@ -214,8 +214,8 @@ function CreateIBResultSet(const SQL: string; const Statement: IZStatement;
 {Interbase6 Connection Functions}
 function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
 function GenerateTPB(Params: TStrings; var Handle: TISC_DB_HANDLE): PISC_TEB;
-function GetInterbase6DatabaseParamNumber(const Value: RawByteString): word;
-function GetInterbase6TransactionParamNumber(const Value: RawByteString): word;
+function GetInterbase6DatabaseParamNumber(const Value: String): word;
+function GetInterbase6TransactionParamNumber(const Value: String): word;
 
 { Interbase6 errors functions }
 function GetNameSqlType(Value: Word): RawByteString;
@@ -389,28 +389,35 @@ const
   );
 
   { count transaction parameters }
-  MAX_TPB_PARAMS = 16;
+  MAX_TPB_PARAMS = 24;
   { prefix transaction parameters names it used in paramters scann procedure }
-  TPBPrefix = RawByteString('isc_tpb_');
+  TPBPrefix = 'isc_tpb_';
   { list transaction parameters and their apropriate numbers }
-  TransactionParams: array [0..MAX_TPB_PARAMS]of TZIbParam = (
+  TransactionParams: array [0..MAX_TPB_PARAMS-1]of TZIbParam = (
     (Name:'isc_tpb_version1';         Number: isc_tpb_version1),
     (Name:'isc_tpb_version3';         Number: isc_tpb_version3),
     (Name:'isc_tpb_consistency';      Number: isc_tpb_consistency),
     (Name:'isc_tpb_concurrency';      Number: isc_tpb_concurrency),
-    (Name:'isc_tpb_exclusive';        Number: isc_tpb_exclusive),
     (Name:'isc_tpb_shared';           Number: isc_tpb_shared),
     (Name:'isc_tpb_protected';        Number: isc_tpb_protected),
+    (Name:'isc_tpb_exclusive';        Number: isc_tpb_exclusive),
     (Name:'isc_tpb_wait';             Number: isc_tpb_wait),
     (Name:'isc_tpb_nowait';           Number: isc_tpb_nowait),
     (Name:'isc_tpb_read';             Number: isc_tpb_read),
     (Name:'isc_tpb_write';            Number: isc_tpb_write),
+    (Name:'isc_tpb_lock_read';        Number: isc_tpb_lock_read),
+    (Name:'isc_tpb_lock_write';       Number: isc_tpb_lock_write),
+    (Name:'isc_tpb_verb_time';        Number: isc_tpb_verb_time),
+    (Name:'isc_tpb_commit_time';      Number: isc_tpb_commit_time),
     (Name:'isc_tpb_ignore_limbo';     Number: isc_tpb_ignore_limbo),
     (Name:'isc_tpb_read_committed';   Number: isc_tpb_read_committed),
+    (Name:'isc_tpb_autocommit';       Number: isc_tpb_autocommit),
     (Name:'isc_tpb_rec_version';      Number: isc_tpb_rec_version),
     (Name:'isc_tpb_no_rec_version';   Number: isc_tpb_no_rec_version),
-    (Name:'isc_tpb_lock_read';        Number: isc_tpb_lock_read),
-    (Name:'isc_tpb_lock_write';       Number: isc_tpb_lock_write)
+    (Name:'isc_tpb_restart_requests'; Number: isc_tpb_restart_requests),
+    (Name:'isc_tpb_no_auto_undo';     Number: isc_tpb_no_auto_undo),
+    (Name:'isc_tpb_no_savepoint';     Number: isc_tpb_no_savepoint),// Since IB75+
+    (Name:'isc_tpb_lock_timeout';     Number: isc_tpb_lock_timeout) // Since FB20+
     );
 
 implementation
@@ -470,8 +477,8 @@ function GenerateDPB(Info: TStrings; var FDPBLength, Dialect: Word): PAnsiChar;
 var
   I, Pos, PValue: Integer;
   ParamNo: Word;
-  Buffer: String;
-  DPB, ParamName, ParamValue: RawByteString;
+  ParamName, Buffer: String;
+  DPB, ParamValue: RawByteString;
 begin
   FDPBLength := 1;
   DPB := AnsiChar(isc_dpb_version1);
@@ -480,7 +487,7 @@ begin
   begin
     Buffer := Info.Strings[I];
     Pos := FirstDelimiter(' ='#9#10#13, Buffer);
-    ParamName := AnsiString(Copy(Buffer, 1, Pos - 1));
+    ParamName := Copy(Buffer, 1, Pos - 1);
     Delete(Buffer, 1, Pos);
     ParamValue := RawByteString(Buffer);
     ParamNo := GetInterbase6DatabaseParamNumber(ParamName);
@@ -555,13 +562,13 @@ begin
   { Prepare transaction parameters string }
   for I := 0 to Params.Count - 1 do
   begin
-    ParamValue := RawbyteString(Params.Strings[I]);
-    ParamNo := GetInterbase6TransactionParamNumber(ParamValue);
+    ParamNo := GetInterbase6TransactionParamNumber(Params.Strings[I]);
 
     case ParamNo of
       0: Continue;
       isc_tpb_lock_read, isc_tpb_lock_write:
         begin
+          ParamValue := {$IFDEF UNICODE}RawbyteString{$ENDIF}(Params.Strings[I]);
           TempStr := TempStr + AnsiChar(ParamNo) + AnsiChar(Length(ParamValue)) + ParamValue;
           Inc(TPBLength, Length(ParamValue) + 2);
         end;
@@ -615,14 +622,14 @@ end;
   @param Value - a connection parameter name
   @return - connection parameter number
 }
-function GetInterbase6DatabaseParamNumber(const Value: RawByteString): Word;
+function GetInterbase6DatabaseParamNumber(const Value: String): Word;
 var
  I: Integer;
- ParamName: AnsiString;
+ ParamName: String;
 begin
-  ParamName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
+  ParamName := AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(BPBPrefix, ParamName) = 1 then
+  if ZFastCode.Pos(BPBPrefix, ParamName) = 1 then
     for I := 1 to MAX_DPB_PARAMS do
     begin
       if ParamName = DatabaseParams[I].Name then
@@ -638,14 +645,14 @@ end;
   @param Value - a transaction parameter name
   @return - transaction parameter number
 }
-function GetInterbase6TransactionParamNumber(const Value: RawByteString): Word;
+function GetInterbase6TransactionParamNumber(const Value: String): Word;
 var
  I: Integer;
- ParamName: RawByteString;
+ ParamName: String;
 begin
-  ParamName := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}AnsiLowerCase(Value);
+  ParamName := AnsiLowerCase(Value);
   Result := 0;
-  if System.Pos(TPBPrefix, ParamName) = 1 then
+  if ZFastCode.Pos(TPBPrefix, ParamName) = 1 then
     for I := 1 to MAX_TPB_PARAMS do
     begin
       if ParamName = TransactionParams[I].Name then
