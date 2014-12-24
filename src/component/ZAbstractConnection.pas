@@ -992,8 +992,8 @@ begin
     ShowSQLHourGlass;
     try
  { TODO -oEgonHugeist : Change this code sequence on 7.3! My automation idea simply is wrong! A commit vs. commitupdate(clear the cache) shouldn't be same! }
-      if not THack_ZAbstractDataset(FDatasets[i]).UpdatesPending then
-        for i := 0 to FDatasets.Count -1 do
+      for i := 0 to FDatasets.Count -1 do
+        if not THack_ZAbstractDataset(FDatasets[i]).UpdatesPending then
           if Assigned(FDatasets[i]) then
             if TObject(FDatasets[i]) is TZAbstractDataset then
               THack_ZAbstractDataset(FDatasets[i]).DisposeCachedUpdates;
