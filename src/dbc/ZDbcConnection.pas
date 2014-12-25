@@ -73,9 +73,6 @@ type
   {** Implements Abstract Database Driver. }
   {$WARNINGS OFF} //to supress the deprecated Warning of connect
   TZAbstractDriver = class(TInterfacedObject, IZDriver)
-  private
-    FTokenizer: IZTokenizer;
-    FAnalyser: IZStatementAnalyser;
   protected
     FCachedPlainDrivers: IZHashMap;
     FSupportedProtocols: TStringDynArray;
@@ -83,8 +80,6 @@ type
     function AddPlainDriverToCache(PlainDriver: IZPlainDriver; const Protocol: string = ''; LibLocation: string = ''): String;
     function GetPlainDriverFromCache(const Protocol, LibLocation: string): IZPlainDriver;
     function GetPlainDriver(const Url: TZURL; const InitDriver: Boolean = True): IZPlainDriver; virtual;
-    property Tokenizer: IZTokenizer read FTokenizer write FTokenizer;
-    property Analyser: IZStatementAnalyser read FAnalyser write FAnalyser;
   public
     constructor Create; virtual;
     destructor Destroy; override;
@@ -195,7 +190,7 @@ type
 
     function NativeSQL(const SQL: string): string; virtual;
 
-    procedure SetAutoCommit(AutoCommit: Boolean); virtual;
+    procedure SetAutoCommit(Value: Boolean); virtual;
     function GetAutoCommit: Boolean; virtual;
 
     procedure Commit; virtual;
@@ -313,8 +308,6 @@ end;
 }
 destructor TZAbstractDriver.Destroy;
 begin
-  FTokenizer := nil;
-  FAnalyser := nil;
   FCachedPlainDrivers.Clear;
   FCachedPlainDrivers := nil;
   inherited Destroy;
@@ -514,9 +507,7 @@ end;
 }
 function TZAbstractDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZGenericStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZGenericStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 {**
@@ -525,9 +516,7 @@ end;
 }
 function TZAbstractDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZGenericSQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZGenericSQLTokenizer.Create;
 end;
 
 {**
@@ -710,7 +699,7 @@ begin
   CheckCharEncoding(FClientCodePage, True);
 
   FAutoCommit := True;
-  FReadOnly := True;
+  FReadOnly := False; //EH: Changed! We definitelly did newer ever open a ReadOnly connection by default!
   FTransactIsolationLevel := tiNone;
   FUseMetadata := True;
   InternalCreate;
@@ -1019,9 +1008,9 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZAbstractConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZAbstractConnection.SetAutoCommit(Value: Boolean);
 begin
-  FAutoCommit := AutoCommit;
+  FAutoCommit := Value;
 end;
 
 {**

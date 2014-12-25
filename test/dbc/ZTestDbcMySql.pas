@@ -64,6 +64,7 @@ type
   {** Implements a test case for class TZAbstractDriver and Utilities. }
   TZTestDbcMySQLCase = class(TZAbstractDbcSQLTestCase)
   private
+    procedure CheckBitFields(ResultSet: IZResultSet);
   protected
     function GetSupportedProtocols: string; override;
   published
@@ -74,6 +75,8 @@ type
     procedure TestStatement;
     procedure TestAutoIncFields;
     procedure TestDefaultValues;
+    procedure TestSelectMultipleQueries;
+    procedure TestBitFields;
   end;
 
 
@@ -82,6 +85,110 @@ implementation
 uses ZTestConsts;
 
 { TZTestDbcMySqlCase }
+procedure TZTestDbcMySQLCase.CheckBitFields(ResultSet: IZResultSet);
+const
+  FirstDbcIndex = 1;
+  Bit_id_Index = FirstDbcIndex;
+  Bit1_Index = FirstDbcIndex+1;
+  Bit2_Index = FirstDbcIndex+2;
+  Bit3_Index = FirstDbcIndex+3;
+  Bit4_Index = FirstDbcIndex+4;
+  Bit5_Index = FirstDbcIndex+5;
+  Bit6_Index = FirstDbcIndex+6;
+  Bit7_Index = FirstDbcIndex+7;
+  Bit8_Index = FirstDbcIndex+8;
+  {Bit9_Index = FirstDbcIndex+9;
+  Bit10_Index = FirstDbcIndex+10;
+  Bit11_Index = FirstDbcIndex+11;
+  Bit12_Index = FirstDbcIndex+12;
+  Bit13_Index = FirstDbcIndex+13;
+  Bit14_Index = FirstDbcIndex+14;
+  Bit15_Index = FirstDbcIndex+15;
+  Bit16_Index = FirstDbcIndex+16;
+  Bit17_Index = FirstDbcIndex+17;
+  Bit18_Index = FirstDbcIndex+18;
+  Bit19_Index = FirstDbcIndex+19;
+  Bit20_Index = FirstDbcIndex+20;
+  Bit21_Index = FirstDbcIndex+21;
+  Bit22_Index = FirstDbcIndex+22;
+  Bit23_Index = FirstDbcIndex+23;
+  Bit24_Index = FirstDbcIndex+24;
+  Bit25_Index = FirstDbcIndex+25;
+  Bit26_Index = FirstDbcIndex+26;
+  Bit27_Index = FirstDbcIndex+27;
+  Bit28_Index = FirstDbcIndex+28;
+  Bit29_Index = FirstDbcIndex+29;
+  Bit30_Index = FirstDbcIndex+30;
+  Bit31_Index = FirstDbcIndex+31;
+  Bit32_Index = FirstDbcIndex+32;
+  Bit33_Index = FirstDbcIndex+33;
+  Bit34_Index = FirstDbcIndex+34;
+  Bit35_Index = FirstDbcIndex+35;
+  Bit36_Index = FirstDbcIndex+36;
+  Bit37_Index = FirstDbcIndex+37;
+  Bit38_Index = FirstDbcIndex+38;
+  Bit39_Index = FirstDbcIndex+39;
+  Bit40_Index = FirstDbcIndex+40;
+  Bit41_Index = FirstDbcIndex+41;
+  Bit42_Index = FirstDbcIndex+42;
+  Bit43_Index = FirstDbcIndex+43;
+  Bit44_Index = FirstDbcIndex+44;
+  Bit45_Index = FirstDbcIndex+45;
+  Bit46_Index = FirstDbcIndex+46;
+  Bit47_Index = FirstDbcIndex+47;
+  Bit48_Index = FirstDbcIndex+48;
+  Bit49_Index = FirstDbcIndex+49;
+  Bit50_Index = FirstDbcIndex+50;
+  Bit51_Index = FirstDbcIndex+51;
+  Bit52_Index = FirstDbcIndex+52;
+  Bit53_Index = FirstDbcIndex+53;
+  Bit54_Index = FirstDbcIndex+54;
+  Bit55_Index = FirstDbcIndex+55;
+  Bit56_Index = FirstDbcIndex+56;
+  Bit57_Index = FirstDbcIndex+57;
+  Bit58_Index = FirstDbcIndex+58;
+  Bit59_Index = FirstDbcIndex+59;
+  Bit60_Index = FirstDbcIndex+60;
+  Bit61_Index = FirstDbcIndex+61;
+  Bit62_Index = FirstDbcIndex+62;
+  Bit63_Index = FirstDbcIndex+63;
+  Bit64_Index = FirstDbcIndex+64;}
+begin
+  CheckNotNull(ResultSet);
+  try
+    CheckEquals(65, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of TEST_BIT_FIELDS');
+    Check(ResultSet.Next, 'There is one row available');
+    CheckEquals(1, ResultSet.GetByte(Bit1_Index), 'Bit1_Index');
+    CheckEquals(3, ResultSet.GetByte(Bit2_Index), 'Bit2_Index');
+    CheckEquals(7, ResultSet.GetByte(Bit3_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(15, ResultSet.GetByte(Bit4_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(31, ResultSet.GetByte(Bit5_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(63, ResultSet.GetByte(Bit6_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(127, ResultSet.GetByte(Bit7_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(255, ResultSet.GetByte(Bit8_Index), 'TEST_BIT_FIELDS');
+    {CheckEquals(511, ResultSet.GetInt(Bit9_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(1023, ResultSet.GetInt(Bit10_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(2047, ResultSet.GetInt(Bit11_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(4095, ResultSet.GetInt(Bit12_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(8191, ResultSet.GetInt(Bit13_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(16383, ResultSet.GetInt(Bit14_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(32767, ResultSet.GetInt(Bit15_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(65535, ResultSet.GetInt(Bit16_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(131071, ResultSet.GetLong(Bit17_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(262143, ResultSet.GetLong(Bit18_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(524287, ResultSet.GetLong(Bit19_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(1048575, ResultSet.GetLong(Bit20_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(2097151, ResultSet.GetLong(Bit21_Index), 'Bit21_Index');
+    CheckEquals(4194303, ResultSet.GetLong(Bit22_Index), 'Bit22_Index');
+    CheckEquals(8388607, ResultSet.GetLong(Bit23_Index), 'Bit23_Index');
+    CheckEquals(16777215, ResultSet.GetLong(Bit24_Index), 'Bit24_Index');
+    CheckEquals(33554431, ResultSet.GetLong(Bit25_Index), 'Bit25_Index');
+    CheckEquals($FFFFFFFFFF, ResultSet.GetLong(Bit40_Index), 'TEST_BIT_FIELDS');
+    CheckEquals(Int64($FFFFFFFFFFFFFFFF), ResultSet.GetLong(Bit64_Index), 'TEST_BIT_FIELDS');}
+  finally
+    ResultSet.Close;
+  end;
+end;
 
 {**
   Gets an array of protocols valid for this test.
@@ -97,7 +204,7 @@ end;
 }
 procedure TZTestDbcMySQLCase.TestConnection;
 begin
-  CheckEquals(True, Connection.IsReadOnly);
+  CheckEquals(False, Connection.IsReadOnly);
 //  CheckEquals(True, Connection.IsClosed);
   CheckEquals(True, Connection.GetAutoCommit);
   CheckEquals(Ord(tiNone), Ord(Connection.GetTransactionIsolation));
@@ -195,14 +302,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
+  try
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, True);
+  finally
+    if Assigned(ResultSet) then
   ResultSet.Close;
-
   Statement.Close;
-  Connection.Close;
+  end;
 end;
 
 {**
@@ -217,14 +325,15 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtForwardOnly);
   Statement.SetResultSetConcurrency(rcReadOnly);
-
+  try
   ResultSet := Statement.ExecuteQuery('SELECT * FROM department');
   CheckNotNull(ResultSet);
   PrintResultSet(ResultSet, False);
+  finally
+    if Assigned(ResultSet) then
   ResultSet.Close;
-
   Statement.Close;
-  Connection.Close;
+  end;
 end;
 
 {**
@@ -240,6 +349,7 @@ begin
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
 
+  try
   ResultSet := Statement.ExecuteQuery('SELECT c_id, c_name FROM cargo');
   CheckNotNull(ResultSet);
 
@@ -253,10 +363,11 @@ begin
   CheckEquals('xxx', ResultSet.GetString(2));
 
   ResultSet.DeleteRow;
-
+  finally
+    if Assigned(ResultSet) then
   ResultSet.Close;
-
   Statement.Close;
+  end;
 end;
 
 {**
@@ -271,7 +382,7 @@ begin
   CheckNotNull(Statement);
   Statement.SetResultSetType(rtScrollInsensitive);
   Statement.SetResultSetConcurrency(rcUpdatable);
-
+  try
   Statement.ExecuteUpdate('delete from default_values');
 
   ResultSet := Statement.ExecuteQuery('SELECT d_id,d_fld1,d_fld2,d_fld3,d_fld4,d_fld5,d_fld6 FROM default_values');
@@ -290,9 +401,81 @@ begin
     EncodeTime(23, 12, 11, 0), ResultSet.GetTimestamp(7), 3);
 
   ResultSet.DeleteRow;
-
+  finally
+    if Assigned(ResultSet) then
   ResultSet.Close;
   Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestSelectMultipleQueries;
+const
+  c_id_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  c_name_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
+var
+  Statement: IZStatement;
+  ResultSet: IZResultSet;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    ResultSet := Statement.ExecuteQuery('call TwoResultSets()');
+    CheckNotNull(ResultSet);
+    CheckEquals(8, ResultSet.GetMetadata.GetColumnCount, 'ColumnCount of people table');
+    Check(Statement.GetMoreResults, 'There is a second resultset available!');
+    CheckEquals(7, Statement.GetResultSet.GetMetadata.GetColumnCount, 'ColumnCount of string_values table');
+    ResultSet.Close;
+  finally
+    Statement.Close;
+  end;
+end;
+
+procedure TZTestDbcMySQLCase.TestBitFields;
+var
+  Statement: IZStatement;
+  Info: TStrings;
+begin
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  try
+    CheckBitFields(Statement.ExecuteQuery('select * from TEST_BIT_FIELDS'));
+  finally
+    Statement.Close;
+  end;
+
+  Statement := Connection.CreateStatement;
+  CheckNotNull(Statement);
+  Statement.SetResultSetType(rtScrollInsensitive);
+  Statement.SetResultSetConcurrency(rcUpdatable);
+  try
+    CheckBitFields(Statement.ExecuteQuery('select * from TEST_BIT_FIELDS'));
+  finally
+    Statement.Close;
+  end;
+
+  Info := TStringList.Create;
+  Info.Add('preferprepared=true');
+  try
+    Statement := Connection.PrepareStatementWithParams('', Info);
+    CheckNotNull(Statement);
+    try
+      CheckBitFields(Statement.ExecuteQuery('select * from TEST_BIT_FIELDS'));
+    finally
+      Statement.Close;
+    end;
+
+    Statement := Connection.PrepareStatementWithParams('', Info);
+    CheckNotNull(Statement);
+    Statement.SetResultSetType(rtScrollInsensitive);
+    Statement.SetResultSetConcurrency(rcUpdatable);
+    try
+      CheckBitFields(Statement.ExecuteQuery('select * from TEST_BIT_FIELDS'));
+    finally
+      Statement.Close;
+    end;
+  finally
+    FreeAndNil(Info);
+  end;
 end;
 
 initialization

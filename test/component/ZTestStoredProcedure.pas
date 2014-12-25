@@ -58,7 +58,7 @@ interface
 
 uses
   {$IFDEF FPC}testregistry{$ELSE}TestFramework{$ENDIF}, Db, SysUtils,
-  ZGenericSqlToken, ZConnection, ZSqlTestCase, ZStoredProcedure;
+  ZGenericSqlToken, ZSqlTestCase, ZStoredProcedure;
 
 type
   {** Implements a generic test case for class TZStoredProc. }
@@ -150,8 +150,8 @@ type
 
 implementation
 
-uses Classes, ZSysUtils, ZDbcIntfs, ZAbstractDataset,
-  ZTestCase, ZCompatibility, ZVariant, Types;
+uses Classes, Types, ZSysUtils, ZDbcIntfs,
+  ZCompatibility, ZVariant;
 
 
 { TZTestStoredProcedure }
@@ -308,8 +308,8 @@ begin
 
   StoredProc.Params[1].AsInteger := 12345;
   StoredProc.ExecProc;
-  CheckEquals(12346, StoredProc.Params[1].AsInteger);
-  CheckEquals(2, StoredProc.Params.Count);
+  CheckEquals(12346, StoredProc.Params[2].AsInteger);
+  CheckEquals(3, StoredProc.Params.Count);
 end;
 
 { TZTestPosgreSQLStoredProcedure }
@@ -1149,7 +1149,7 @@ begin
 
   CheckEquals(3, ord(StoredProc.Fields.Count));
   CheckEquals(ord(ftInteger), ord(StoredProc.Fields[0].DataType));
-  CheckEquals(ord(ftInteger), ord(StoredProc.Fields[1].DataType));
+  CheckEquals(ord(ftLargeInt), ord(StoredProc.Fields[1].DataType));
   CheckStringFieldType(StoredProc.Fields[2].DataType, Connection.DbcConnection.GetConSettings);
 end;
 

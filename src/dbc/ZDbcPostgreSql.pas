@@ -145,6 +145,7 @@ type
     FTableInfoCache: TZPGTableInfoCache;
     FIs_bytea_output_hex: Boolean;
     FCheckFieldVisibility: Boolean;
+    FNoTableInfoCache: Boolean;
   protected
     procedure InternalCreate; override;
     function GetUndefinedVarcharAsStringLength: Integer;
@@ -420,9 +421,7 @@ end;
 }
 function TZPostgreSQLDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZPostgreSQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZPostgreSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -431,9 +430,7 @@ end;
 }
 function TZPostgreSQLDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZPostgreSQLStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZPostgreSQLStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZPostgreSQLConnection }
@@ -467,7 +464,7 @@ begin
 
   FUndefinedVarcharAsStringLength := StrToIntDef(Info.Values['Undefined_Varchar_AsString_Length'], 0);
   FCheckFieldVisibility := StrToBoolEx(Info.Values['CheckFieldVisibility']);
-
+  FNoTableInfoCache := StrToBoolEx(Info.Values['NoTableInfoCache']);
   OnPropertiesChange(nil);
 
   FNoticeProcessor := DefaultNoticeProcessor;
@@ -481,7 +478,10 @@ end;
 
 function TZPostgreSQLConnection.GetTableInfo(const TblOid: Oid; CurrentFieldCount: Integer): PZPGTableInfo;
 begin
-  Result := FTableInfoCache.GetTableInfo(TblOid, CurrentFieldCount);
+  if FNoTableInfoCache then
+    Result := nil
+  else
+    Result := FTableInfoCache.GetTableInfo(TblOid, CurrentFieldCount);
 end;
 
 {**

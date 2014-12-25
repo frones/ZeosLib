@@ -55,8 +55,8 @@ interface
 
 {$I ZDbc.inc}
 
-uses Windows, Classes, SysUtils, ActiveX,
-  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant, ZDbcStatement;
+uses Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  ZDbcIntfs, ZCompatibility, ZPlainAdo, ZDbcAdo, ZVariant;
 
 type
   PDirectionTypes = ^TDirectionTypes;
@@ -152,8 +152,9 @@ var
 implementation
 
 uses
-  ComObj, OleDB, Variants,
-  ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZEncoding;
+  ComObj, {$IFDEF FPC}ZOleDB{$ELSE}OleDB{$ENDIF}, Variants, Types, Math,
+  ZSysUtils, ZDbcAdoResultSet, ZDbcCachedResultSet, ZDbcResultSet, ZDbcUtils,
+  ZMessages, ZEncoding;
 
 {**
   Converts an ADO native types into string related.
@@ -244,7 +245,7 @@ begin
     adEmpty, adError, AdArray, adChapter, adIDispatch, adIUnknown,
     adPropVariant, adUserDefined, adVariant: Result := stString;
   else
-    Result := stString;
+    {adIDispatch, adIUnknown: reserved, nut used tpyes}Result := stUnknown
   end;
   if UseCtrsCPType then
     case CtrlsCPType of
@@ -483,7 +484,7 @@ procedure ADOSetInParam(AdoCommand: ZPlainAdo.Command; Connection: IZConnection;
 var
   S: Integer;
   B: IZBlob;
-  V: Variant;
+  V: OleVariant;
   T: Integer;
   P: ZPlainAdo.Parameter;
   RetValue: TZVariant;
@@ -528,7 +529,14 @@ begin
     vtNull: V := Null;
     vtBoolean: V := SoftVarManager.GetAsBoolean(RetValue);
     vtBytes: V := SoftVarManager.GetAsBytes(RetValue);
-    vtInteger: V := Integer(SoftVarManager.GetAsInteger(RetValue));
+    vtInteger: //V := SoftVarManager.GetAsInteger(RetValue);
+      begin //Hacking the IDE variant: Not all IDE's support
+        P := AdoCommand.Parameters.Item[ParameterIndex - 1];
+        P.Value := SoftVarManager.GetAsInteger(RetValue);
+        P.Type_ :=  adBigInt;
+        P.Direction := ParamDirection;
+        Exit;
+      end;
     vtFloat: V := SoftVarManager.GetAsFloat(RetValue);
     vtString:
       {$IFDEF UNICODE}

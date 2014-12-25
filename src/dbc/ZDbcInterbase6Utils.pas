@@ -414,28 +414,35 @@ const
   );
 
   { count transaction parameters }
-  MAX_TPB_PARAMS = 16;
+  MAX_TPB_PARAMS = 24;
   { prefix transaction parameters names it used in paramters scann procedure }
   TPBPrefix = 'isc_tpb_';
   { list transaction parameters and their apropriate numbers }
-  TransactionParams: array [0..MAX_TPB_PARAMS]of TZIbParam = (
+  TransactionParams: array [0..MAX_TPB_PARAMS-1]of TZIbParam = (
     (Name:'isc_tpb_version1';         Number: isc_tpb_version1),
     (Name:'isc_tpb_version3';         Number: isc_tpb_version3),
     (Name:'isc_tpb_consistency';      Number: isc_tpb_consistency),
     (Name:'isc_tpb_concurrency';      Number: isc_tpb_concurrency),
-    (Name:'isc_tpb_exclusive';        Number: isc_tpb_exclusive),
     (Name:'isc_tpb_shared';           Number: isc_tpb_shared),
     (Name:'isc_tpb_protected';        Number: isc_tpb_protected),
+    (Name:'isc_tpb_exclusive';        Number: isc_tpb_exclusive),
     (Name:'isc_tpb_wait';             Number: isc_tpb_wait),
     (Name:'isc_tpb_nowait';           Number: isc_tpb_nowait),
     (Name:'isc_tpb_read';             Number: isc_tpb_read),
     (Name:'isc_tpb_write';            Number: isc_tpb_write),
+    (Name:'isc_tpb_lock_read';        Number: isc_tpb_lock_read),
+    (Name:'isc_tpb_lock_write';       Number: isc_tpb_lock_write),
+    (Name:'isc_tpb_verb_time';        Number: isc_tpb_verb_time),
+    (Name:'isc_tpb_commit_time';      Number: isc_tpb_commit_time),
     (Name:'isc_tpb_ignore_limbo';     Number: isc_tpb_ignore_limbo),
     (Name:'isc_tpb_read_committed';   Number: isc_tpb_read_committed),
+    (Name:'isc_tpb_autocommit';       Number: isc_tpb_autocommit),
     (Name:'isc_tpb_rec_version';      Number: isc_tpb_rec_version),
     (Name:'isc_tpb_no_rec_version';   Number: isc_tpb_no_rec_version),
-    (Name:'isc_tpb_lock_read';        Number: isc_tpb_lock_read),
-    (Name:'isc_tpb_lock_write';       Number: isc_tpb_lock_write)
+    (Name:'isc_tpb_restart_requests'; Number: isc_tpb_restart_requests),
+    (Name:'isc_tpb_no_auto_undo';     Number: isc_tpb_no_auto_undo),
+    (Name:'isc_tpb_no_savepoint';     Number: isc_tpb_no_savepoint),// Since IB75+
+    (Name:'isc_tpb_lock_timeout';     Number: isc_tpb_lock_timeout) // Since FB20+
     );
 
 implementation

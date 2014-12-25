@@ -78,6 +78,8 @@ type
     FUseResult: Boolean;
     FIgnoreUseResult: Boolean;
     TempStr: String;
+    FRawTemp: RawByteString;
+    FMySQLTypes: array of TMysqlFieldTypes;
   protected
     procedure Open; override;
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
@@ -193,7 +195,7 @@ uses
   @return SQL type from java.sql.Types
 }
 function TZMySQLResultSetMetadata.GetColumnType(Column: Integer): TZSQLType;
-begin
+begin {EH: does anyone know why the LoadColumns was made? Note the column-types are perfect determinable on MySQL}
   if not Loaded then
      LoadColumns;
   Result := TZColumnInfo(ResultSet.ColumnsInfo[Column - 1]).ColumnType;
@@ -269,10 +271,12 @@ begin
 
   { Fills the column info. }
   ColumnsInfo.Clear;
+  SetLength(FMySQLTypes, FPlainDriver.GetFieldCount(FQueryHandle));
   for I := 0 to FPlainDriver.GetFieldCount(FQueryHandle) - 1 do
   begin
     FPlainDriver.SeekField(FQueryHandle, I);
     FieldHandle := FPlainDriver.FetchField(FQueryHandle);
+    FMySQLTypes[i] := PMYSQL_FIELD(FieldHandle)^._type;
     if FieldHandle = nil then
       Break;
 
@@ -441,7 +445,20 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stByte);
 {$ENDIF}
-  Result := Byte(StrToIntDef(String(InternalGetString(ColumnIndex)), 0));
+  FRawTemp := InternalGetString(ColumnIndex);
+  if LastWasNull then
+    Result := 0
+  else
+    if FMySQLTypes[ColumnIndex -1] = FIELD_TYPE_BIT then
+      case Length(FRawTemp) of
+        1: Result := PByte(Pointer(FRawTemp))^;
+        2: Result := ReverseWordBytes(Pointer(FRawTemp));
+        3, 4: Result := ReverseLongWordBytes(Pointer(FRawTemp), Length(FRawTemp));
+        else //5..8: makes compiler happy
+          Result := ReverseQuadWordBytes(Pointer(FRawTemp), Length(FRawTemp));
+      end
+      else
+        Result := StrToIntDef(String(FRawTemp), 0);
 end;
 
 {**
@@ -987,7 +1004,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckColumnConvertion(ColumnIndex, stBoolean);
 {$ENDIF}
-   Temp := UpperCase(String(InternalGetString(ColumnIndex)));
+  Temp := UpperCase(String(InternalGetString(ColumnIndex)));
   Result := (Temp = 'Y') or (Temp = 'YES') or (Temp = 'T') or
     (Temp = 'TRUE') or (StrToIntDef(Temp, 0) <> 0);
 end;
@@ -1359,6 +1376,7 @@ begin
       FIELD_TYPE_TIMESTAMP: Result := 0;
       FIELD_TYPE_LONGLONG:  Result := PULongLong(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_INT24:     Result := PCardinal(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_BIT:       Result := PByte(FColumnArray[ColumnIndex-1].buffer)^;
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
       FIELD_TYPE_DATETIME  = 12,*)
@@ -1390,13 +1408,13 @@ begin
       FIELD_TYPE_TIMESTAMP: Result := 0;
       FIELD_TYPE_LONGLONG:  Result := PInt64(FColumnArray[ColumnIndex-1].buffer)^;
       FIELD_TYPE_INT24:     Result := PInteger(FColumnArray[ColumnIndex-1].buffer)^;
+      FIELD_TYPE_BIT:       Result := PShortInt(FColumnArray[ColumnIndex-1].buffer)^;
       (*FIELD_TYPE_DATE      = 10,
       FIELD_TYPE_TIME      = 11,
       FIELD_TYPE_DATETIME  = 12, *)
       FIELD_TYPE_YEAR:      Result := PSmallInt(FColumnArray[ColumnIndex-1].buffer)^;
       (*FIELD_TYPE_NEWDATE   = 14,
       FIELD_TYPE_VARCHAR   = 15, //<--ADDED by fduenas 20-06-2006
-      FIELD_TYPE_BIT: ;
       FIELD_TYPE_NEWDECIMAL = 246, //<--ADDED by fduenas 20-06-2006
       FIELD_TYPE_ENUM      = 247,
       FIELD_TYPE_SET       = 248,
@@ -1688,3 +1706,4 @@ begin
 end;
 
 end.
+

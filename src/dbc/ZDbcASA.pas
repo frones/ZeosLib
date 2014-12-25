@@ -199,9 +199,7 @@ end;
 }
 function TZASADriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZSybaseTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZSybaseTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -210,9 +208,7 @@ end;
 }
 function TZASADriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZSybaseStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZSybaseStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZASAConnection }

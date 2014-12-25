@@ -63,12 +63,22 @@ type
 
   // technobot 2008-06-25 - methods moved as is from TZInterbase6DatabaseMetadata:
   {** Implements Interbase6 Database Information. }
-  TZInterbase6DatabaseInfo = class(TZAbstractDatabaseInfo)
+  IZInterbaseDatabaseInfo = Interface(IZDatabaseInfo)
+    ['{F2895A2A-C427-4984-9356-79349EAAD44F}']
+    function HostIsFireBird: Boolean;
+    procedure CollectServerInformations;
+  End;
+
+  TZInterbase6DatabaseInfo = class(TZAbstractDatabaseInfo, IZInterbaseDatabaseInfo)
   private
+    FIsFireBird: Boolean;
     FServerVersion: string;
+    FProductVersion: String;
 //    function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
 //      const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
   public
+    procedure CollectServerInformations;
+    function HostIsFireBird: Boolean;
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
@@ -76,7 +86,7 @@ type
 //    function GetDriverVersion: string; override; -> Same as parent
     function GetDriverMajorVersion: Integer; override;
     function GetDriverMinorVersion: Integer; override;
-    function GetServerVersion: string;
+    function GetServerVersion: string; override;
 
     // capabilities (what it can/cannot do):
 //    function AllProceduresAreCallable: Boolean; override; -> Not implemented
@@ -254,12 +264,35 @@ type
 
 implementation
 
-uses ZMessages, ZDbcInterbase6Utils, ZDbcUtils;
+uses ZMessages, ZDbcInterbase6Utils, ZPlainFirebirdInterbaseConstants;
+
+const
+  DBProvider: array[Boolean] of String = ('Interbase', 'Firebird');
 
 { TZInterbase6DatabaseInfo }
 
 //----------------------------------------------------------------------
 // First, a variety of minor information about the target database.
+
+procedure TZInterbase6DatabaseInfo.CollectServerInformations;
+var
+  FIBConnection: IZInterbase6Connection;
+begin
+  if FServerVersion = '' then
+  begin
+    FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
+    FServerVersion := String(GetVersion(FIBConnection.GetPlainDriver,
+      FIBConnection.GetDBHandle));
+    FIsFireBird := Pos('Firebird', FServerVersion) > 0;
+    FProductVersion := Copy(FServerVersion, Pos(DBProvider[FIsFireBird],
+      FServerVersion)+8+Ord(not FIsFireBird)+1, Length(FServerVersion));
+  end;
+end;
+
+function TZInterbase6DatabaseInfo.HostIsFireBird: Boolean;
+begin
+  Result := FIsFireBird;
+end;
 
 {**
   What's the name of this database product?
@@ -267,7 +300,7 @@ uses ZMessages, ZDbcInterbase6Utils, ZDbcUtils;
 }
 function TZInterbase6DatabaseInfo.GetDatabaseProductName: string;
 begin
-  Result := 'Interbase/Firebird';
+  Result := DBProvider[FIsFireBird];
 end;
 
 {**
@@ -276,7 +309,7 @@ end;
 }
 function TZInterbase6DatabaseInfo.GetDatabaseProductVersion: string;
 begin
-  Result := '6.0+';
+  Result := FProductVersion;
 end;
 
 {**
@@ -311,14 +344,11 @@ end;
   @returns the version of the server.
 }
 function TZInterbase6DatabaseInfo.GetServerVersion: string;
-var
-  FIBConnection: IZInterbase6Connection;
 begin
   if FServerVersion = '' then
   begin
-    FIBConnection := Metadata.GetConnection as IZInterbase6Connection;
-    FServerVersion := String(GetVersion(FIBConnection.GetPlainDriver,
-      FIBConnection.GetDBHandle));
+    FServerVersion := String(GetVersion((Metadata.GetConnection as IZInterbase6Connection).GetPlainDriver,
+      (Metadata.GetConnection as IZInterbase6Connection).GetDBHandle));
   end;
   Result := FServerVersion;
 end;
@@ -1180,7 +1210,12 @@ end;
 function TZInterbase6DatabaseMetadata.ConstructNameCondition(Pattern: string;
   Column: string): string;
 begin
-  Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')');
+  if (GetDatabaseInfo as IZInterbaseDatabaseInfo).HostIsFireBird and
+      (GetConnection.GetHostVersion < 2000000) then
+    //Old FireBird do NOT support 'trim'
+    Result := Inherited ConstructnameCondition(Pattern,Column)
+  else
+    Result := Inherited ConstructnameCondition(Pattern,'trim('+Column+')')
 end;
 
 function TZInterbase6DatabaseMetadata.UncachedGetTriggers(const Catalog: string;

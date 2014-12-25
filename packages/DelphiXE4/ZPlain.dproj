@@ -76,7 +76,7 @@
         <DCC_OutputNeverBuildDcps>true</DCC_OutputNeverBuildDcps>
         <GenDll>true</GenDll>
         <GenPackage>true</GenPackage>
-        <DllSuffix>170</DllSuffix>
+        <DllSuffix>180</DllSuffix>
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">

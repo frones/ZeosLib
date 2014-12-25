@@ -75,9 +75,8 @@ type
   @param FieldFlags field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
+function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 
 {**
   Convert string mysql field type to SQLType
@@ -144,12 +143,16 @@ function getMySQLFieldSize (field_type: TMysqlFieldTypes; field_size: LongWord):
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
-  const FieldHandle: PZMySQLField; ConSettings: PZConSettings;
-  const bUseResult:boolean): TZColumnInfo;
+  FieldHandle: PZMySQLField; ConSettings: PZConSettings;
+  bUseResult:boolean): TZColumnInfo;
 
 procedure ConvertMySQLColumnInfoFromString(const TypeInfo: String;
   ConSettings: PZConSettings; out TypeName, TypeInfoSecond: String;
   out FieldType: TZSQLType; out ColumnSize: Integer; out Precision: Integer);
+
+function ReverseWordBytes(Src: Pointer): Word;
+function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
+function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
 
 implementation
 
@@ -175,42 +178,37 @@ end;
   @param FieldFlags a field flags.
   @return a SQL undepended type.
 }
-function ConvertMySQLHandleToSQLType(PlainDriver: IZMySQLPlainDriver;
-  FieldHandle: PZMySQLField; FieldFlags: Integer;
-  const CtrlsCPType: TZControlsCodePage): TZSQLType;
-
-  function Signed: Boolean;
-  begin
-    Result := (UNSIGNED_FLAG and FieldFlags) = 0;
-  end;
-
+function ConvertMySQLHandleToSQLType(FieldHandle: PZMySQLField;
+  CtrlsCPType: TZControlsCodePage): TZSQLType;
 begin
-    case PlainDriver.GetFieldType(FieldHandle) of
+  case PMYSQL_FIELD(FieldHandle)^._type of
     FIELD_TYPE_TINY:
-      if not Signed and (PlainDriver.GetFieldLength(FieldHandle)=1) then
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
          Result := stByte
       else
          Result := stShort;
-    FIELD_TYPE_YEAR, FIELD_TYPE_SHORT:
-      if Signed then
-         Result := stShort
+    FIELD_TYPE_YEAR: //word value
+      Result := stShort;
+    FIELD_TYPE_SHORT:
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
+         Result := stInteger
       else
-         Result := stInteger;
+         Result := stShort;
     FIELD_TYPE_INT24, FIELD_TYPE_LONG:
-      if Signed then
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
          Result := stInteger
       else
          Result := stLong;
     FIELD_TYPE_LONGLONG:
-      if Signed then
+      if PMYSQL_FIELD(FieldHandle)^.flags and UNSIGNED_FLAG = 0 then
          Result := stLong
       else
          Result := stBigDecimal;
     FIELD_TYPE_FLOAT:
       Result := stDouble;
     FIELD_TYPE_DECIMAL, FIELD_TYPE_NEWDECIMAL: {ADDED FIELD_TYPE_NEWDECIMAL by fduenas 20-06-2006}
-      if PlainDriver.GetFieldDecimals(FieldHandle) = 0 then
-        if PlainDriver.GetFieldLength(FieldHandle) < 11 then
+      if PMYSQL_FIELD(FieldHandle)^.decimals = 0 then
+        if PMYSQL_FIELD(FieldHandle)^.length < 11 then
           Result := stInteger
         else
           Result := stLong
@@ -226,19 +224,24 @@ begin
       Result := stTimestamp;
     FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB,
     FIELD_TYPE_LONG_BLOB, FIELD_TYPE_BLOB:
-      if (FieldFlags and BINARY_FLAG) = 0 then
+      if (PMYSQL_FIELD(FieldHandle)^.flags and BINARY_FLAG) = 0 then
         If ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeStream
         else
           Result := stAsciiStream
       else
         Result := stBinaryStream;
-    FIELD_TYPE_BIT:
-      Result := stShort;
+    FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
+      case PMYSQL_FIELD(FieldHandle)^.length of
+        1..8: Result := stByte;
+        9..16: Result := stShort;
+        17..32: Result := stInteger;
+        else Result := stLong;
+      end;
     FIELD_TYPE_VARCHAR,
     FIELD_TYPE_VAR_STRING,
     FIELD_TYPE_STRING:
-      if (FieldFlags and BINARY_FLAG) = 0 then
+      if (PMYSQL_FIELD(FieldHandle)^.flags and BINARY_FLAG) = 0 then
         if ( CtrlsCPType = cCP_UTF16) then
           Result := stUnicodeString
         else
@@ -252,12 +255,12 @@ begin
     FIELD_TYPE_NULL:
       // Example: SELECT NULL FROM DUAL
       Result := stString;
-   FIELD_TYPE_GEOMETRY:
+    FIELD_TYPE_GEOMETRY:
       // Todo: Would be nice to show as WKT.
       Result := stBinaryStream;
-   else
+    else
       raise Exception.Create('Unknown MySQL data type!');
-   end;
+  end;
 end;
 
 {**
@@ -391,9 +394,22 @@ begin
   end
   else if TypeName = 'SET' then
     Result := stString
-  else if TypeName = 'BIT' then
-    Result := stShort
+  else if TypeName = 'BIT' then  //see: http://dev.mysql.com/doc/refman/5.1/en/bit-type.html
+  begin
+    Posi := Pos('(', TypeNameFull);
+    if (Posi > 0) and EndsWith(TypeNameFull, ')') then
+    begin
+      Len := StrToIntDef(Copy(TypeNameFull, Posi+1, Length(TypeNameFull)-Posi-1), 1);
+      case Len of
+        1..8: Result := stByte;
+        9..16: Result := stShort;
+        17..32: Result := stInteger;
+        else Result := stLong;
+      end;
+    end
   else
+      Result := stByte
+  end else
       for i := 0 to Length(GeoTypes) - 1 do
          if GeoTypes[i] = TypeName then
             Result := stBinaryStream;
@@ -537,8 +553,7 @@ end;
   @returns a new TZColumnInfo
 }
 function GetMySQLColumnInfoFromFieldHandle(PlainDriver: IZMySQLPlainDriver;
-  const FieldHandle: PZMySQLField; ConSettings: PZConSettings;
-  const bUseResult:boolean): TZColumnInfo;
+  FieldHandle: PZMySQLField;ConSettings: PZConSettings; bUseResult:boolean): TZColumnInfo;
 var
   FieldFlags: Integer;
   FieldLength: ULong;
@@ -553,12 +568,11 @@ begin
     Result.TableName := PlainDriver.ZDbcString(PlainDriver.GetFieldTable(FieldHandle), ConSettings);
     Result.ReadOnly := (PlainDriver.GetFieldTable(FieldHandle) = '');
     Result.Writable := not Result.ReadOnly;
-    Result.ColumnType := ConvertMySQLHandleToSQLType(PlainDriver,
-        FieldHandle, FieldFlags, ConSettings.CPType);
-    FieldLength:=PlainDriver.GetFieldLength(FieldHandle);
+    Result.ColumnType := ConvertMySQLHandleToSQLType(FieldHandle, ConSettings.CPType);
+    FieldLength := PMYSQL_FIELD(FieldHandle)^.length;
     //EgonHugeist: arrange the MBCS field DisplayWidth to a proper count of Chars
     if Result.ColumnType in [stString, stUnicodeString] then
-       case PlainDriver.GetFieldCharsetNr(FieldHandle) of
+       case PMYSQL_FIELD(FieldHandle)^.charsetnr of
         1, 84, {Big5}
         95, 96, {cp932 japanese}
         19, 85, {euckr}
@@ -598,8 +612,8 @@ begin
     else
       Result.Precision := min(MaxBlobSize,FieldLength);
 
-    if PlainDriver.GetFieldType(FieldHandle) in [FIELD_TYPE_BLOB,FIELD_TYPE_MEDIUM_BLOB,FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING,
-      FIELD_TYPE_VAR_STRING] then
+    if PMYSQL_FIELD(FieldHandle)^._type in [FIELD_TYPE_BLOB, FIELD_TYPE_MEDIUM_BLOB,
+       FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING, FIELD_TYPE_VAR_STRING] then
       begin
       if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
         Result.MaxLenghtBytes:=Result.Precision
@@ -734,6 +748,34 @@ begin
         ConSettings.ClientCodePage.CharWidth, nil);
 
   FreeAndNil(TypeInfoList);
+end;
+
+procedure ReverseBytes(const Src, Dest: Pointer; Len: Byte);
+var b: Byte;
+  P: PAnsiChar;
+begin
+  Len := Len -1;
+  P := PAnsiChar(Src)+Len;
+  for b := Len downto 0 do
+    (PAnsiChar(Dest)+B)^ := (P-B)^;
+end;
+
+function ReverseWordBytes(Src: Pointer): Word;
+begin
+  (PAnsiChar(@Result)+1)^ := PAnsiChar(Src)^;
+  PAnsiChar(@Result)^ := (PAnsiChar(Src)+1)^;
+end;
+
+function ReverseLongWordBytes(Src: Pointer; Len: Byte): LongWord;
+begin
+  Result := 0;
+  ReverseBytes(Src, @Result, Len);
+end;
+
+function ReverseQuadWordBytes(Src: Pointer; Len: Byte): UInt64;
+begin
+  Result := 0;
+  ReverseBytes(Src, @Result, Len);
 end;
 
 end.

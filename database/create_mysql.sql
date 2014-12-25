@@ -223,6 +223,78 @@ primary key (hl_id)
 );
 
 /*==============================================================*/
+/* Tables for testing Bit_Fields                                */
+/*==============================================================*/
+CREATE TABLE TEST_BIT_FIELDS (
+ID int(11) NOT NULL,
+B1 BIT(1),
+B2 BIT(2),
+B3 BIT(3),
+B4 BIT(4),
+B5 BIT(5),
+B6 BIT(6),
+B7 BIT(7),
+B8 BIT(8),
+B9 BIT(9),
+B10 BIT(10),
+B11 BIT(11),
+B12 BIT(12),
+B13 BIT(13),
+B14 BIT(14),
+B15 BIT(15),
+B16 BIT(16),
+B17 BIT(17),
+B18 BIT(18),
+B19 BIT(19),
+B20 BIT(20),
+B21 BIT(21),
+B22 BIT(22),
+B23 BIT(23),
+B24 BIT(24),
+B25 BIT(25),
+B26 BIT(26),
+B27 BIT(27),
+B28 BIT(28),
+B29 BIT(29),
+B30 BIT(30),
+B31 BIT(31),
+B32 BIT(32),
+B33 BIT(33),
+B34 BIT(34),
+B35 BIT(35),
+B36 BIT(36),
+B37 BIT(37),
+B38 BIT(38),
+B39 BIT(39),
+B40 BIT(40),
+B41 BIT(41),
+B42 BIT(42),
+B43 BIT(43),
+B44 BIT(44),
+B45 BIT(45),
+B46 BIT(46),
+B47 BIT(47),
+B48 BIT(48),
+B49 BIT(49),
+B50 BIT(50),
+B51 BIT(51),
+B52 BIT(52),
+B53 BIT(53),
+B54 BIT(54),
+B55 BIT(55),
+B56 BIT(56),
+B57 BIT(57),
+B58 BIT(58),
+B59 BIT(59),
+B60 BIT(60),
+B61 BIT(61),
+B62 BIT(62),
+B63 BIT(63),
+B64 BIT(64),
+PRIMARY KEY (ID)
+);
+
+/*==============================================================*/
 /* Index: cargo_FK                                              */
 /*==============================================================*/
 create index cargo_FK on cargo (c_dep_id);
@@ -406,6 +478,12 @@ END;//
 CREATE FUNCTION SIMPLE_FUNC() RETURNS INTEGER
 BEGIN
   RETURN 10;
+END;//
+
+CREATE PROCEDURE TwoResultSets()
+BEGIN
+  SELECT * FROM PEOPLE;
+  SELECT * FROM string_values;
 END;//
 
 DELIMITER ;

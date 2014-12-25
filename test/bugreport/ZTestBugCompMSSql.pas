@@ -77,6 +77,7 @@ type
     procedure Test907497;
     procedure Mantis54;
     procedure Mantis164;
+    procedure Test_SelectInformation_Schema;
   end;
 
 implementation
@@ -332,6 +333,20 @@ begin
   finally
     Query.SQL.Text := 'delete from Mantis164';
     Query.ExecSQL;
+    Query.Free;
+  end;
+end;
+
+procedure TZTestCompMSSqlBugReport.Test_SelectInformation_Schema;
+var
+  Query: TZQuery;
+begin
+  Query := CreateQuery;
+  try
+    Query.SQL.Text := 'select * from information_schema.tables';
+    Query.Open;
+    Check(Query.Active);
+  finally
     Query.Free;
   end;
 end;

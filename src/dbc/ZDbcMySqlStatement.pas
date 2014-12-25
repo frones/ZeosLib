@@ -603,8 +603,6 @@ begin
 
   FUseResult := StrToBoolEx(DefineStatementParameter(Self, 'useresult', 'false'));
   FUseDefaults := StrToBoolEx(DefineStatementParameter(Self, 'defaults', 'true'));
-
-  Prepare;
 end;
 
 {**
@@ -618,19 +616,22 @@ end;
 
 procedure TZMySQLPreparedStatement.Prepare;
 begin
-  FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
-  if (FStmtHandle = nil) then
-    begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
-      exit;
-    end;
-  if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(ASQL), length(ASQL)) <> 0) then
-    begin
-      CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
-      exit;
-    end;
-  LogPrepStmtMessage(lcPrepStmt, SQL);
-  inherited Prepare;
+  if not Prepared then
+  begin
+    FStmtHandle := FPlainDriver.InitializePrepStmt(FHandle);
+    if (FStmtHandle = nil) then
+      begin
+        CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoInitPrepStmt);
+        exit;
+      end;
+    if (FPlainDriver.PrepareStmt(FStmtHandle, PAnsiChar(ASQL), length(ASQL)) <> 0) then
+      begin
+        CheckMySQLPrepStmtError(FPlainDriver, FStmtHandle, lcPrepStmt, SFailedtoPrepareStmt);
+        exit;
+      end;
+    LogPrepStmtMessage(lcPrepStmt, SQL);
+    inherited Prepare;
+  end;
 end;
 
 {**
@@ -858,6 +859,7 @@ end;
 function TZMySQLPreparedStatement.ExecuteQueryPrepared: IZResultSet;
 begin
   Result := nil;
+  Prepare;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
@@ -889,6 +891,7 @@ end;
 }
 function TZMySQLPreparedStatement.ExecuteUpdatePrepared: Integer;
 begin
+  Prepare;
   BindInParameters;
   if (self.FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try
@@ -932,6 +935,7 @@ end;
 }
 function TZMySQLPreparedStatement.ExecutePrepared: Boolean;
 begin
+  Prepare;
   BindInParameters;
   if (FPlainDriver.ExecuteStmt(FStmtHandle) <> 0) then
     try

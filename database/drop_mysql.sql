@@ -9,6 +9,7 @@ drop procedure IF EXISTS TEST_All_TYPES;
 drop procedure IF EXISTS MultipleVaryingResultSets;
 drop procedure IF EXISTS SingleResultSet;
 drop procedure IF EXISTS ALL_PARAMS_IN;
+drop procedure IF EXISTS TwoResultSets;
 drop function IF EXISTS SIMPLE_FUNC;
 drop function IF EXISTS FuncReturnInteger;
 drop table IF EXISTS blob_values;
@@ -25,4 +26,5 @@ drop table IF EXISTS not_null_values;
 drop table IF EXISTS cargo;
 drop table IF EXISTS high_load;
 drop table IF EXISTS `Spaced Names`;
+drop table IF EXISTS TEST_BIT_FIELDs;
 

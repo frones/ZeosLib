@@ -321,7 +321,7 @@ type
     function GetDriverVersion: string; virtual;
     function GetDriverMajorVersion: Integer; virtual;
     function GetDriverMinorVersion: Integer; virtual;
-    function GetServerVersion: string;
+    function GetServerVersion: string; virtual;
 
     // capabilities (what it can/cannot do):
     function AllProceduresAreCallable: Boolean; virtual;

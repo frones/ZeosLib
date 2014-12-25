@@ -469,7 +469,8 @@ begin
     if GetParamAndValue(Values[i], Param, Value) then
       FProperties.Values[Param] := Value
     else
-      FProperties.Add(Values[i]);
+      if FProperties.IndexOf(Values[i]) = -1 then //add unique params only!
+        FProperties.Add(Values[i]);
 end;
 
 end.

@@ -122,9 +122,7 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    function NativeSQL(const SQL: string): string; override;
-
-    procedure SetAutoCommit(AutoCommit: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Commit; override;
@@ -207,9 +205,7 @@ end;
 }
 function TZDBLibDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZSybaseTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZSybaseTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -218,9 +214,7 @@ end;
 }
 function TZDBLibDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZSybaseStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZSybaseStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZDBLibConnection }
@@ -458,6 +452,7 @@ begin
       ConSettings^.ClientCodePage^.Name := DetermineMSServerCollation;
       ConSettings^.ClientCodePage^.IsStringFieldCPConsistent := True;
       ConSettings^.ClientCodePage^.CP := DetermineMSServerCodePage(ConSettings^.ClientCodePage^.Name);
+      ConSettings^.AutoEncode := True; //Must be set because we can't determine a column-codepage! e.g NCHAR vs. CHAR Fields
       SetConvertFunctions(ConSettings);
     end;
     DetermineMSDateFormat;
@@ -561,21 +556,6 @@ begin
 end;
 
 {**
-  Converts the given SQL statement into the system's native SQL grammar.
-  A driver may convert the JDBC sql grammar into its system's
-  native SQL grammar prior to sending it; this method returns the
-  native form of the statement that the driver would have sent.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders
-  @return the native form of this statement
-}
-function TZDBLibConnection.NativeSQL(const SQL: string): string;
-begin
-  Result := SQL;
-end;
-
-{**
   Sets this connection's auto-commit mode.
   If a connection is in auto-commit mode, then all its SQL
   statements will be executed and committed as individual
@@ -595,10 +575,10 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZDBLibConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZDBLibConnection.SetAutoCommit(Value: Boolean);
 begin
-  if GetAutoCommit = AutoCommit then  Exit;
-  if not Closed and AutoCommit then InternalExecuteStatement('commit');
+  if AutoCommit = Value then  Exit;
+  if not Closed and Value then InternalExecuteStatement('commit');
   inherited;
   ReStartTransactionSupport;
 end;

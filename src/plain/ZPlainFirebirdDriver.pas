@@ -124,7 +124,7 @@ type
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
+      item_list_buffer: PByte; result_buffer_length: Short;
       result_buffer: PAnsiChar): ISC_STATUS;
     function isc_array_gen_sdl(status_vector: PISC_STATUS;
       isc_array_desc: PISC_ARRAY_DESC; isc_arg3: PShort;
@@ -229,6 +229,7 @@ type
     procedure isc_decode_date(ib_date: PISC_QUAD; tm_date: PCTimeStructure);
     procedure isc_encode_date(tm_date: PCTimeStructure; ib_date: PISC_QUAD);
     function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
+    function isc_portable_integer(ptr: pbyte; length: Short): ISC_INT64;
 
     procedure isc_decode_sql_date(ib_date: PISC_DATE; tm_date: PCTimeStructure);
     procedure isc_decode_sql_time(ib_time: PISC_TIME; tm_date: PCTimeStructure);
@@ -273,7 +274,7 @@ type
       db_handle: PISC_DB_HANDLE): ISC_STATUS;
     function isc_database_info(status_vector: PISC_STATUS;
       db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-      item_list_buffer: PAnsiChar; result_buffer_length: Short;
+      item_list_buffer: PByte; result_buffer_length: Short;
       result_buffer: PAnsiChar): ISC_STATUS;
     function isc_transaction_info(status_vector: PISC_STATUS;
       tr_handle: PISC_TR_HANDLE; item_list_buffer_length: Short;
@@ -393,6 +394,7 @@ type
     procedure isc_encode_timestamp(tm_date: PCTimeStructure;
       ib_timestamp: PISC_TIMESTAMP);
     function isc_vax_integer(buffer: PAnsiChar; length: Short): ISC_LONG;
+    function isc_portable_integer(ptr: pbyte; length: Short): ISC_INT64;
   end;
 
   {** Implements a native driver for Interbase6}
@@ -626,6 +628,7 @@ begin
     @FIREBIRD_API.isc_sql_interprete  := GetAddress('isc_sql_interprete');
     @FIREBIRD_API.isc_interprete      := GetAddress('isc_interprete');
     @FIREBIRD_API.isc_vax_integer     := GetAddress('isc_vax_integer');
+    @FIREBIRD_API.isc_portable_integer:= GetAddress('isc_portable_integer');
 
     @FIREBIRD_API.isc_array_gen_sdl   := GetAddress( 'isc_array_gen_sdl');
     @FIREBIRD_API.isc_array_get_slice := GetAddress( 'isc_array_get_slice');
@@ -818,7 +821,7 @@ end;
 
 function TZFirebirdBaseDriver.isc_database_info(status_vector: PISC_STATUS;
   db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-  item_list_buffer: PAnsiChar; result_buffer_length: Short;
+  item_list_buffer: PByte; result_buffer_length: Short;
   result_buffer: PAnsiChar): ISC_STATUS;
 begin
   Result := FIREBIRD_API.isc_database_info(status_vector, db_handle,
@@ -1100,6 +1103,11 @@ begin
   Result := FIREBIRD_API.isc_vax_integer(buffer, length);
 end;
 
+function TZFirebirdBaseDriver.isc_portable_integer(ptr: pbyte;
+  length: Short): ISC_INT64;
+begin
+  Result := FIREBIRD_API.isc_portable_integer(ptr, length);
+end;
 { TZInterbase6PlainDriver }
 function TZInterbase6PlainDriver.Clone: IZPlainDriver;
 begin

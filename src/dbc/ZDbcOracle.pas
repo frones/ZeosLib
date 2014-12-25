@@ -234,9 +234,7 @@ end;
 }
 function TZOracleDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZOracleTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZOracleTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
 {**
@@ -245,9 +243,7 @@ end;
 }
 function TZOracleDriver.GetStatementAnalyser: IZStatementAnalyser;
 begin
-  if Analyser = nil then
-    Analyser := TZOracleStatementAnalyser.Create;
-  Result := Analyser;
+  Result := TZOracleStatementAnalyser.Create; { thread save! Allways return a new Analyser! }
 end;
 
 { TZOracleConnection }

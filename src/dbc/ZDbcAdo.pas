@@ -104,7 +104,7 @@ type
 
     function NativeSQL(const SQL: string): string; override;
 
-    procedure SetAutoCommit(AutoCommit: Boolean); override;
+    procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
     procedure Commit; override;
@@ -177,15 +177,31 @@ end;
 
 function TZAdoDriver.GetTokenizer: IZTokenizer;
 begin
-  if Tokenizer = nil then
-    Tokenizer := TZAdoSQLTokenizer.Create;
-  Result := Tokenizer;
+  Result := TZAdoSQLTokenizer.Create; { thread save! Allways return a new Tokenizer! }
 end;
 
+threadvar
+  AdoCoInitialized: integer;
+
+procedure CoInit;
+begin
+  inc(AdoCoInitialized);
+  if AdoCoInitialized=1 then
+    CoInitialize(nil);
+end;
+
+procedure CoUninit;
+begin
+  assert(AdoCoInitialized>0);
+  dec(AdoCoInitialized);
+  if AdoCoInitialized=0 then
+    CoUninitialize;
+end;
 { TZAdoConnection }
 
 procedure TZAdoConnection.InternalCreate;
 begin
+  CoInit;
   FAdoConnection := CoConnection.Create;
   Self.FMetadata := TZAdoDatabaseMetadata.Create(Self, URL);
   Open;
@@ -199,6 +215,7 @@ begin
   Close;
   FAdoConnection := nil;
   inherited Destroy;
+  CoUninit;
 end;
 
 {**
@@ -307,7 +324,7 @@ end;
 function TZAdoConnection.CreateRegularStatement(Info: TStrings): IZStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoStatement.Create(PlainDriver, Self, '', Info);
+  Result := TZAdoStatement.Create(Self, Info);
 end;
 
 {**
@@ -342,7 +359,7 @@ function TZAdoConnection.CreatePreparedStatement(
   const SQL: string; Info: TStrings): IZPreparedStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoPreparedStatement.Create(PlainDriver, Self, SQL, Info);
+  Result := TZAdoPreparedStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -375,7 +392,7 @@ function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrin
   IZCallableStatement;
 begin
   if IsClosed then Open;
-  Result := TZAdoCallableStatement.Create(PlainDriver, Self, SQL, Info);
+  Result := TZAdoCallableStatement.Create(Self, SQL, Info);
 end;
 
 {**
@@ -413,10 +430,10 @@ end;
 
   @param autoCommit true enables auto-commit; false disables auto-commit.
 }
-procedure TZAdoConnection.SetAutoCommit(AutoCommit: Boolean);
+procedure TZAdoConnection.SetAutoCommit(Value: Boolean);
 begin
-  if GetAutoCommit = AutoCommit then  Exit;
-  if not Closed and AutoCommit then
+  if AutoCommit = Value then  Exit;
+  if not Closed and Value then
   begin
     if (FAdoConnection.State = adStateOpen) and
        (GetTransactionIsolation <> tiNone) then
@@ -636,6 +653,7 @@ begin
 end;
 
 initialization
+  AdoCoInitialized := 0;
   AdoDriver := TZAdoDriver.Create;
   DriverManager.RegisterDriver(AdoDriver);
 finalization

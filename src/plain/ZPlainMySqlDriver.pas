@@ -97,6 +97,7 @@ type
   {** Represents a generic interface to MySQL native API. }
   IZMySQLPlainDriver = interface (IZPlainDriver)
     ['{D1CB3F6C-72A1-4125-873F-791202ACC5F0}']
+    function IsMariaDBDriver: Boolean;
     {ADDED by fduenas 15-06-2006}
     function GetClientVersion: Integer;
     function GetServerVersion(Handle: PZMySQLConnect): Integer;
@@ -183,7 +184,7 @@ type
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     // stmt_attr_get
     function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
-                                  arg: PAnsiChar): Byte;
+                                  arg: Pointer): Byte;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
     function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
     function ClosePrepStmt (PrepStmtHandle: PZMySqlPrepStmt): PZMySqlPrepStmt;
@@ -203,7 +204,7 @@ type
 
     function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult; // stmt_param_metadata
     function PrepareStmt(PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
-    // stmt_reset
+    function stmt_reset(PrepStmtHandle: PZMySqlPrepStmt): Byte;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     // stmt_row_tell
@@ -236,6 +237,8 @@ type
   { TZMySQLBaseDriver }
 
   TZMySQLBaseDriver = class (TZAbstractPlainDriver, IZPlainDriver, IZMySQLPlainDriver)
+  private
+    FIsMariaDBDriver: Boolean;
   protected
     MYSQL_API : TZMYSQL_API;
     ServerArgs: array of PAnsiChar;
@@ -249,6 +252,7 @@ type
     constructor Create(Tokenizer: IZTokenizer);
     destructor Destroy; override;
 
+    function IsMariaDBDriver: Boolean;
     procedure Debug(Debug: PAnsiChar);
     function DumpDebugInfo(Handle: PZMySQLConnect): Integer;
     function GetLastError(Handle: PZMySQLConnect): PAnsiChar;
@@ -285,7 +289,7 @@ type
     function GetSQLState (Handle: PZMySQLConnect): AnsiString;
 
     function StmtAttrSet(stmt: PZMySqlPrepStmt; option: TMysqlStmtAttrType;
-                                  arg: PAnsiChar): Byte;
+                                  arg: Pointer): Byte;
     function GetPreparedAffectedRows (Handle: PZMySqlPrepStmt): Int64;
     function BindParameters (Handle: PZMySqlPrepStmt; bindArray: PZMysqlBindArray): Byte;
     function BindResult (Handle: PZMySqlPrepStmt;  bindArray: PZMysqlBindArray): Byte;
@@ -304,6 +308,7 @@ type
     function GetPreparedBindMarkers (Handle: PZMySqlPrepStmt): Cardinal; // param_count
     function GetStmtParamMetadata(PrepStmtHandle: PZMySqlPrepStmt): PZMySQLResult;
     function PrepareStmt (PrepStmtHandle: PZMySqlPrepStmt; const Query: PAnsiChar; Length: Integer): Integer;
+    function stmt_reset(PrepStmtHandle: PZMySqlPrepStmt): Byte;
     function GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
     function SeekPreparedRow(Handle: PZMySqlPrepStmt; Row: PZMySQLRowOffset): PZMySQLRowOffset;
     function SendPreparedLongData(Handle: PZMySqlPrepStmt; parameter_number: Cardinal; const data: PAnsiChar; length: Cardinal): Byte;
@@ -521,6 +526,7 @@ begin
   @MYSQL_API.mysql_get_server_info        := GetAddress('mysql_get_server_info');
   @MYSQL_API.mysql_info                   := GetAddress('mysql_info');
   @MYSQL_API.mysql_init                   := GetAddress('mysql_init');
+  @MYSQL_API.mysql_library_end            := GetAddress('mysql_library_end');
   @MYSQL_API.mysql_insert_id              := GetAddress('mysql_insert_id');
   @MYSQL_API.mysql_kill                   := GetAddress('mysql_kill');
   @MYSQL_API.mysql_list_dbs               := GetAddress('mysql_list_dbs');
@@ -573,10 +579,10 @@ begin
   @MYSQL_API.mysql_set_server_option      := GetAddress('mysql_set_server_option');
   @MYSQL_API.mysql_sqlstate               := GetAddress('mysql_sqlstate');
   @MYSQL_API.mysql_warning_count          := GetAddress('mysql_warning_count');
-  {API for PREPARED STATEMENTS}
   @MYSQL_API.mysql_stmt_affected_rows     := GetAddress('mysql_stmt_affected_rows');
   @MYSQL_API.mysql_stmt_attr_get          := GetAddress('mysql_stmt_attr_get');
-  @MYSQL_API.mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set');
+  @MYSQL_API.mysql_stmt_attr_set          := GetAddress('mysql_stmt_attr_set'); //uses ulong
+  @MYSQL_API.mysql_stmt_attr_set517UP     := GetAddress('mysql_stmt_attr_set'); //uses mybool
   @MYSQL_API.mysql_stmt_bind_param        := GetAddress('mysql_stmt_bind_param');
   @MYSQL_API.mysql_stmt_bind_result       := GetAddress('mysql_stmt_bind_result');
   @MYSQL_API.mysql_stmt_close             := GetAddress('mysql_stmt_close');
@@ -662,10 +668,18 @@ begin
   for i := 0 to ServerArgsLen - 1 do
     {$IFDEF WITH_STRDISPOSE_DEPRECATED}AnsiStrings.{$ENDIF}StrDispose(ServerArgs[i]);
 
-  if (FLoader.Loaded) and (@MYSQL_API.mysql_server_end <> nil) then
-    MYSQL_API.mysql_server_end;
-
+  if (FLoader.Loaded) then
+    if (@ MYSQL_API.mysql_library_end <> nil) then
+       MYSQL_API.mysql_library_end //since 5.0.3
+    else
+      if (@ MYSQL_API.mysql_server_end <> nil) then
+         MYSQL_API.mysql_server_end; //deprected since 5.0.3
   inherited Destroy;
+end;
+
+function TZMySQLBaseDriver.IsMariaDBDriver: Boolean;
+begin
+  Result := FIsMariaDBDriver;
 end;
 
 procedure TZMySQLBaseDriver.Close(Handle: PZMySQLConnect);
@@ -858,10 +872,16 @@ begin
 end;
 
 function TZMySQLBaseDriver.Init(const Handle: PZMySQLConnect): PZMySQLConnect;
+var
+  ClientInfo: PAnsiChar;
+  L: Integer;
 begin
   if @MYSQL_API.mysql_server_init <> nil then
     MYSQL_API.mysql_server_init(ServerArgsLen, ServerArgs, @SERVER_GROUPS);
   Result := MYSQL_API.mysql_init(Handle);
+  ClientInfo := GetClientInfo;
+  L := {$IFDEF WITH_STRLEN_DEPRECATED}AnsiStrings.{$ENDIF}StrLen(ClientInfo);
+  FIsMariaDBDriver := CompareMem(ClientInfo+L-7, PAnsiChar('MariaDB'), 7);
 end;
 
 function TZMySQLBaseDriver.GetLastInsertID(Handle: PZMySQLConnect): Int64;
@@ -970,9 +990,14 @@ begin
 end;
 
 function TZMySQLBaseDriver.StmtAttrSet(stmt: PZMySqlPrepStmt;
-  option: TMysqlStmtAttrType; arg: PAnsiChar): Byte;
+  option: TMysqlStmtAttrType; arg: Pointer): Byte;
 begin
-  Result :=  MYSQL_API.mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
+  //http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-attr-set.html
+  //http://dev.mysql.com/doc/refman/5.0/en/mysql-stmt-attr-set.html
+  if MYSQL_API.mysql_get_client_version >= 50107 then
+    Result :=  MYSQL_API.mysql_stmt_attr_set517up(PMYSQL_STMT(stmt),option,arg)
+  else //avoid stack crashs !
+    Result := MYSQL_API.mysql_stmt_attr_set(PMYSQL_STMT(stmt),option,arg);
 end;
 
 function TZMySQLBaseDriver.GetPreparedAffectedRows(Handle: PZMySqlPrepStmt): Int64;
@@ -1074,6 +1099,11 @@ begin
     Result := MYSQL_API.mysql_stmt_prepare(PMYSQL_STMT(PrepStmtHandle), Query, Length);
 end;
 
+function TZMySQLBaseDriver.stmt_reset(PrepStmtHandle: PZMySqlPrepStmt): Byte;
+begin
+  Result := MYSQL_API.mysql_stmt_reset(PrepStmtHandle);
+end;
+
 function TZMySQLBaseDriver.GetPreparedMetaData (Handle: PZMySqlPrepStmt): PZMySQLResult;
 begin
     Result := MYSQL_API.mysql_stmt_result_metadata (PMYSQL_STMT(Handle));
@@ -1148,6 +1178,17 @@ begin
                      result.size          := Sizeof(MYSQL_BIND60);
                    end;
   else
+    if FIsMariaDBDriver and (DriverVersion >= 100000) then //MariaDB 10
+    begin
+      result.buffer_type   := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer_type));
+      result.buffer_length := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer_length));
+      result.is_unsigned   := {%H-}NativeUint(@(PMYSQL_BIND60(nil).is_unsigned));
+      result.buffer        := {%H-}NativeUint(@(PMYSQL_BIND60(nil).buffer));
+      result.length        := {%H-}NativeUint(@(PMYSQL_BIND60(nil).length));
+      result.is_null       := {%H-}NativeUint(@(PMYSQL_BIND60(nil).is_null));
+      result.size          := Sizeof(MYSQL_BIND60);
+    end
+    else
     result.buffer_type:=0;
   end;
 end;

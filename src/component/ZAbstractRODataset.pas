@@ -617,9 +617,7 @@ begin
   begin
     if Active then
        Close;
-    if Assigned(Statement) then
-      Statement.Close;
-    Statement := nil;
+    Unprepare;
     if FConnection <> nil then
       FConnection.UnregisterDataSet(Self);
     FConnection := Value;
@@ -913,6 +911,7 @@ end;
 }
 function TZAbstractRODataset.FetchOneRow: Boolean;
 begin
+  if Assigned(ResultSet) then
   repeat
     if (FetchCount = 0) or (ResultSet.GetRow = FetchCount)
       or ResultSet.MoveAbsolute(FetchCount) then
@@ -927,7 +926,9 @@ begin
       else
         Continue;
     end;
-  until True;
+    until True
+  else
+    Result := False;
 end;
 
 {**

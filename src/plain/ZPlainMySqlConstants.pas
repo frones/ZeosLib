@@ -721,8 +721,10 @@ type
   Tmysql_stmt_affected_rows     = function(stmt: PMYSQL_STMT): ULongLong;                                {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_attr_get          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
                                   arg: PAnsiChar): Byte;                                              {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
-  Tmysql_stmt_attr_set          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
+  Tmysql_stmt_attr_set517UP          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
                                   const arg: PAnsiChar): Byte;                                        {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  Tmysql_stmt_attr_set          = function(stmt: PMYSQL_STMT; option: TMysqlStmtAttrType;
+                                  const arg: PAnsiChar): ULong;                                        {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_bind_param        = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte;              {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_bind_result       = function(stmt: PMYSQL_STMT; bind: Pointer{BIND record}): Byte;              {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
   Tmysql_stmt_close             = function(stmt: PMYSQL_STMT): Byte;                                 {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
@@ -784,6 +786,7 @@ TZMYSQL_API = record
   mysql_get_server_info:        Tmysql_get_server_info;         {mysql 3.2}
   mysql_info:                   Tmysql_info;                    {mysql 3.2}
   mysql_init:                   Tmysql_init;                    {mysql 3.2}
+  mysql_library_end:            Tmysql_library_end;
   mysql_insert_id:              Tmysql_insert_id;               {mysql 3.2}
   mysql_kill:                   Tmysql_kill;                    {mysql 3.2}
   mysql_list_dbs:               Tmysql_list_dbs;                {mysql 3.2}
@@ -841,7 +844,8 @@ TZMYSQL_API = record
   {API for PREPARED STATEMENTS}
   mysql_stmt_affected_rows:     Tmysql_stmt_affected_rows;      {mysql 4.1.0}
   mysql_stmt_attr_get:          Tmysql_stmt_attr_get;           {mysql 4.1.2}
-  mysql_stmt_attr_set:          Tmysql_stmt_attr_set;           {mysql 4.1.2} {augmented 5.0.2/6}
+  mysql_stmt_attr_set517UP:     Tmysql_stmt_attr_set517Up;      //uses mybool
+  mysql_stmt_attr_set:          Tmysql_stmt_attr_set;           {mysql 4.1.2} {augmented 5.0.2/6} //uses ulong
   mysql_stmt_bind_param:        Tmysql_stmt_bind_param;         {mysql 4.1.2}
   mysql_stmt_bind_result:       Tmysql_stmt_bind_result;        {mysql 4.1.2}
   mysql_stmt_close:             Tmysql_stmt_close;              {mysql 4.1.0}

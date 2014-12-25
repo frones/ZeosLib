@@ -681,12 +681,17 @@ const
   isc_tpb_commit_time            = 13;
   isc_tpb_ignore_limbo           = 14;
   isc_tpb_read_committed         = 15;
-  isc_tpb_autocommit             = 16;
+  isc_tpb_autocommit             = 16; //EH: Please do not use this JDBC option!
+                                       //It kills the performance. Let Zeos do the Job by settting AutoCommit = True
+                                       //see ZDbcInterbase.pas e.g. StartTransaction
   isc_tpb_rec_version            = 17;
   isc_tpb_no_rec_version         = 18;
   isc_tpb_restart_requests       = 19;
   isc_tpb_no_auto_undo           = 20;
-  isc_tpb_last_tpb_constant      = isc_tpb_no_auto_undo;
+  // Since IB75+
+  isc_tpb_no_savepoint            = 21;
+  // Since FB20
+  isc_tpb_lock_timeout            = 21;
 
   { Blob Parameter Block }
   isc_bpb_version1               = 1;
@@ -821,6 +826,10 @@ const
   isc_info_db_SQL_dialect        =         62;
   isc_info_db_read_only          =         63;
   isc_info_db_size_in_pages      =         64;
+
+  //Interbase 71
+  isc_info_att_charset = 70;
+  isc_info_svr_min_ver = 71;
 
   frb_info_att_charset           = 101;
   isc_info_db_class              = 102;
@@ -1021,7 +1030,7 @@ type
 
   Tisc_database_info = function(status_vector: PISC_STATUS;
     db_handle: PISC_DB_HANDLE; item_list_buffer_length: Short;
-    item_list_buffer: PAnsiChar; result_buffer_length: Short;
+    item_list_buffer: PByte; result_buffer_length: Short;
     result_buffer: PAnsiChar): ISC_STATUS;
     {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
@@ -1251,6 +1260,8 @@ type
 
   Tisc_vax_integer = function(buffer: PAnsiChar; length: Short): ISC_LONG;
     {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
+  Tisc_portable_integer = function(ptr: pbyte; length: Smallint): Int64;
+    {$IFDEF MSWINDOWS} stdcall {$ELSE} cdecl {$ENDIF};
 
 { ************** Collection of Plain API Function types definition ************* }
 TZFirebird_API = record
@@ -1315,6 +1326,7 @@ TZFirebird_API = record
   isc_encode_date:      Tisc_encode_date;
   isc_decode_date:      Tisc_decode_date;
   isc_vax_integer:      Tisc_vax_integer;
+  isc_portable_integer: Tisc_portable_integer;
 
   isc_encode_sql_date:  Tisc_encode_sql_date;
   isc_decode_sql_date:  Tisc_decode_sql_date;
