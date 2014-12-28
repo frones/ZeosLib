@@ -884,6 +884,14 @@ const
 	DBPROP_MARSHALLABLE	= $c5;
 	DBPROP_FILTEROPS	= $d0;
 
+//DBPROPOPTIONSENUM constants
+type
+  DBPROPOPTIONSENUM = TOleEnum;
+const
+  DBPROPOPTIONS_REQUIRED = $00000000;
+  DBPROPOPTIONS_SETIFCHEAP = $00000001;
+  DBPROPOPTIONS_OPTIONAL = DBPROPOPTIONS_SETIFCHEAP;
+
 type
   DBRESULTFLAGENUM = (
     DBRESULTFLAG_DEFAULT	= 0,
@@ -2236,9 +2244,9 @@ type
   ICommandText = interface(ICommand)
     ['{0C733A27-2A1C-11CE-ADE5-00AA0044773D}']
     // GetCommandText :
-    function GetCommandText(var pguidDialect: TGUID;out ppwszCommand: PWideChar): HRESULT;safecall;
+    function GetCommandText(var pguidDialect: TGUID;out ppwszCommand: PWideChar): HRESULT;stdcall;
     // SetCommandText :
-    function SetCommandText(const rguidDialect: TGUID; pwszCommand: PWideChar): HRESULT;safecall;
+    function SetCommandText(const rguidDialect: TGUID; pwszCommand: PWideChar): HRESULT;stdcall;
   end;
 
 
@@ -2638,10 +2646,10 @@ type
   ITransactionLocal = interface(ITransaction)
     ['{0C733A5F-2A1C-11CE-ADE5-00AA0044773D}']
     // GetOptionsObject :
-    procedure GetOptionsObject(out ppOptions: ITransactionOptions);safecall;
+    procedure GetOptionsObject(out ppOptions: ITransactionOptions);stdcall;
     // StartTransaction :
     procedure StartTransaction(isoLevel:ISOLEVEL;isoFlags:ULONG;
-      pOtherOptions:ITransactionOptions;out pulTransactionLevel: PULONG);safecall;
+      pOtherOptions:ITransactionOptions;out pulTransactionLevel: PULONG);stdcall;
   end;
 
 // ITransactionOptions :
@@ -2961,6 +2969,9 @@ type
       var ppwszSelectedFile:POleStr): HResult; stdcall;
   end;
 //end add from msdasc.h
+
+const
+  DB_NULLID: TDBID = (uguid: (guid: (D1: 0; D2: 0; D3:0; D4: (0, 0, 0, 0, 0, 0, 0, 0))); ekind: DBKIND(DBKIND_GUID_PROPID); uname: (ulpropid:0));
 
 //CoClasses
 {$IFDEF MISS_VARIANTCLEAR}
