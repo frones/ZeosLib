@@ -74,6 +74,8 @@ type
   end;
   {$WARNINGS ON}
 
+  TServerProvider = (skUnkown, skMSSQL, skOracle);
+
   {** Defines a PostgreSQL specific connection. }
   IZOleDBConnection = interface(IZConnection)
     ['{35A72582-F758-48B8-BBF7-3267EEBC9750}']
@@ -81,9 +83,9 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMultipleResultSets: Boolean;
+    function GetProvider: TServerProvider;
   end;
 
-  TServerKint = (skUnkown, skMSSQL, skOracle);
   {** Implements a generic OleDB Connection. }
   TZOleDBConnection = class(TZAbstractConnection, IZOleDBConnection)
   private
@@ -95,7 +97,7 @@ type
     FRetaining: Boolean;
     FpulTransactionLevel: PULONG;
     FSupportsMultipleResultSets: Boolean;
-    FServerKind: TServerKint;
+    FServerProvider: TServerProvider;
     procedure StopTransaction;
   protected
     procedure StartTransaction;
@@ -134,6 +136,7 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMultipleResultSets: Boolean;
+    function GetProvider: TServerProvider;
   end;
 
 var
@@ -404,9 +407,38 @@ end;
   Returs the OleSession interface of current connection
 }
 function TZOleDBConnection.CreateCommand: ICommandText;
+const
+  SSPROP_DEFERPREPARE	= 13;
+  DBPROPSET_SQLSERVERROWSET: TGUID 	= '{5cf4ca11-ef21-11d0-97e7-00c04fc2ad98}';
+var
+  FCmdProps: ICommandProperties;
+  rgProperties: TDBProp;
+  rgPropertySets: TDBPROPSET;
 begin
   Result := nil;
   OleDbCheck(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)));
+  FCmdProps := nil; //init
+  if (FServerProvider = skMSSQL) and
+    Succeeded(Result.QueryInterface(IID_ICommandProperties, FCmdProps)) then
+  begin
+    //http://msdn.microsoft.com/de-de/library/ms130779.aspx
+    rgPropertySets.rgProperties := @rgProperties;
+    // initialize common property options
+    rgProperties.dwOptions := DBPROPOPTIONS_REQUIRED;
+    rgProperties.colid     := DB_NULLID;
+    //VariantInit(rgProperties.vValue);
+    // turn off deferred prepare -> raise exception now if command can't be executed!
+    rgProperties.dwPropertyID := SSPROP_DEFERPREPARE;
+    rgProperties.vValue       := False;
+
+    rgPropertySets.guidPropertySet := DBPROPSET_SQLSERVERROWSET;
+    rgPropertySets.cProperties := 1;
+    try
+      OleDBCheck(FCmdProps.SetProperties(1,rgPropertySets));
+    finally
+      FCmdProps := nil;
+    end;
+  end;
 end;
 
 function TZOleDBConnection.GetMalloc: IMalloc;
@@ -417,6 +449,11 @@ end;
 function TZOleDBConnection.SupportsMultipleResultSets: Boolean;
 begin
   Result := FSupportsMultipleResultSets;
+end;
+
+function TZOleDBConnection.GetProvider: TServerProvider;
+begin
+  Result := FServerProvider;
 end;
 
 {**
@@ -509,9 +546,9 @@ begin
     Tmp := OleDbGetDBPropValue([DBPROP_PROVIDERFRIENDLYNAME]);
     { exact name leading to pain -> scan KeyWords instead! }
     if ZFastCode.Pos('Oracle', Tmp) > 0 then
-      FServerKind := skOracle
+      FServerProvider := skOracle
     else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
-      FServerKind := skMSSQL;
+      FServerProvider := skMSSQL;
 
     // check if DB handle transactions
     if Failed(FSession.QueryInterface(IID_ITransactionLocal,fTransaction)) then

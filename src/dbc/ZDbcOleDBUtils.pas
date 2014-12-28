@@ -442,7 +442,7 @@ var
           DBBindingArray[Index].cbMaxLen := (DBCOLUMNINFO^.ulColumnSize+1) shl 1
         else
           DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
-        //8Byte Alignment
+        //8Byte Alignment does NOT work if fixed width fields came to shove!!!!
         //DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3;
         {if (DBCOLUMNINFO^.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0) then //vary
           DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3

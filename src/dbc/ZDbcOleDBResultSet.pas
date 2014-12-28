@@ -225,7 +225,7 @@ begin
     if (MaxRows > 0) and (FRowCount > MaxRows) then
       FRowCount := MaxRows; //fetch only wanted count of rows
 
-    OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED},
+    OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED, 8Byte alignments do NOT work with fixed width fields},
       pcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
       Pointer(FDBBINDSTATUSArray)), FDBBINDSTATUSArray);
 

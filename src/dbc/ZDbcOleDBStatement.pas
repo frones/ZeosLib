@@ -103,6 +103,8 @@ type
     constructor Create(Connection: IZConnection; const Info: TStrings); overload;
     destructor Destroy; override;
 
+    procedure Close; override;
+
     procedure Prepare; override;
     procedure Unprepare; override;
 
@@ -133,7 +135,7 @@ uses
 constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
-  //OleCheck((Connection as IZOleDBConnection).GetIDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(FCommand)));
+  //FCommand := (Connection as IZOleDBConnection).CreateCommand;
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
@@ -177,13 +179,20 @@ begin
   Result := FZBufferSize;
 end;
 
+procedure TZOleDBPreparedStatement.Close;
+begin
+  inherited Close;
+  FCommand := nil;
+end;
+
 procedure TZOleDBPreparedStatement.Prepare;
 var
   FOlePrepareCommand: ICommandPrepare;
 begin
   if Not Prepared then //prevent PrepareInParameters
   begin
-    FCommand := (Connection as IZOleDBConnection).CreateCommand;
+    if not Assigned(FCommand) then
+      FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
@@ -469,7 +478,6 @@ begin
       (FCommand as ICommandPrepare).UnPrepare;
     finally
       FMultipleResults := nil;
-      FCommand := nil;
     end;
   end;
 end;
