@@ -139,6 +139,7 @@ begin
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
+  FMultipleResults := nil;
 end;
 
 constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
@@ -336,14 +337,11 @@ begin
         FDBParams,@FRowsAffected,@FRowSet));
     Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
       FEnhancedColInfo, FOpenResultSet);
-    FRowSet := nil;
     LastUpdateCount := FRowsAffected;
     if not Assigned(Result) then
-    begin
       while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
-      FOpenResultSet := Pointer(Result);
-    end;
   finally
+    FRowSet := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   end;
 end;
@@ -420,6 +418,7 @@ begin
     LastUpdateCount := LastUpdateCount + FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
+    FRowSet := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   end;
 end;

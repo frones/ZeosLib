@@ -1969,7 +1969,7 @@ function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize: Integer;
   EnhancedColInfo: Boolean; var PCurrRS: Pointer): IZResultSet;
 var
-  //CachedResolver: TZOleDBMSSQLCachedResolver;
+  CachedResolver: IZCachedResolver;
   NativeResultSet: IZResultSet;
   CachedResultSet: TZCachedResultSet;
 begin
@@ -1981,8 +1981,11 @@ begin
     if (Statement.GetResultSetConcurrency = rcUpdatable) or
        (Statement.GetResultSetType <> rtForwardOnly) then
     begin
-      //CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData);
-      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, nil{CachedResolver}, ConSettings);
+      if (Statement.GetConnection as IZOleDBConnection).GetProvider = skMSSQL then
+        CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData)
+      else
+        CachedResolver := TZGenericCachedResolver.Create(Statement, NativeResultSet.GetMetaData);
+      CachedResultSet := TZCachedResultSet.Create(NativeResultSet, SQL, CachedResolver, ConSettings);
       CachedResultSet.SetConcurrency(Statement.GetResultSetConcurrency);
       Result := CachedResultSet;
     end
