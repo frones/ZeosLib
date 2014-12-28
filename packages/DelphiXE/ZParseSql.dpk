@@ -36,6 +36,10 @@ contains
   ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
 {$ENDIF}
 
+{$IFDEF ENABLE_OLEDB}
+  ZOleDBToken in '..\..\src\parsesql\ZOleDBToken.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_INTERBASE}
   ZInterbaseAnalyser in '..\..\src\parsesql\ZInterbaseAnalyser.pas',
   ZInterbaseToken in '..\..\src\parsesql\ZInterbaseToken.pas',

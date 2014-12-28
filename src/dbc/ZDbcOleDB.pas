@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{.$IFDEF ENABLE_OLEDB}
+{$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
@@ -74,7 +74,7 @@ type
   end;
   {$WARNINGS ON}
 
-  TServerProvider = (skUnkown, skMSSQL, skOracle);
+  TServerProvider = (spUnkown, spMSSQL, spOracle);
 
   {** Defines a PostgreSQL specific connection. }
   IZOleDBConnection = interface(IZConnection)
@@ -143,9 +143,7 @@ var
   {** The common driver manager object. }
   OleDBDriver: IZDriver;
 
-{.$ENDIF ENABLE_OLEDB}
 implementation
-{.$IFDEF ENABLE_OLEDB}
 
 uses ZDbcOleDBMetadata, ZDbcOleDBUtils, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
   ZMessages, ZFastCode;
@@ -418,7 +416,7 @@ begin
   Result := nil;
   OleDbCheck(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)));
   FCmdProps := nil; //init
-  if (FServerProvider = skMSSQL) and
+  if (FServerProvider = spMSSQL) and
     Succeeded(Result.QueryInterface(IID_ICommandProperties, FCmdProps)) then
   begin
     //http://msdn.microsoft.com/de-de/library/ms130779.aspx
@@ -546,9 +544,9 @@ begin
     Tmp := OleDbGetDBPropValue([DBPROP_PROVIDERFRIENDLYNAME]);
     { exact name leading to pain -> scan KeyWords instead! }
     if ZFastCode.Pos('Oracle', Tmp) > 0 then
-      FServerProvider := skOracle
+      FServerProvider := spOracle
     else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
-      FServerProvider := skMSSQL;
+      FServerProvider := spMSSQL;
 
     // check if DB handle transactions
     if Failed(FSession.QueryInterface(IID_ITransactionLocal,fTransaction)) then
@@ -604,6 +602,9 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
-{.$ENDIF ENABLE_OLEDB}
+
+{$ELSE !ENABLE_OLEDB}
+implementation
+{$ENDIF ENABLE_OLEDB}
 
 end.

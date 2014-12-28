@@ -54,7 +54,7 @@ unit ZDbcOleDBStatement;
 interface
 
 {$I ZDbc.inc}
-{.$IFDEF ENABLE_OLEDB}
+{$IFDEF ENABLE_OLEDB}
 {$IFDEF WIN64}
 {$ALIGN 8}
 {$ELSE}
@@ -65,7 +65,7 @@ interface
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   ZCompatibility, {$IFDEF OLD_FPC}ZClasses, {$ENDIF} ZSysUtils, ZOleDB,
-  ZDbcOleDBUtils, ZDbcIntfs, ZDbcStatement, ZDbcAdo, ZPlainAdo, ZVariant;
+  ZDbcOleDBUtils, ZDbcIntfs, ZDbcStatement, ZVariant;
 
 type
   IZOleDBPreparedStatement = Interface(IZPreparedStatement)
@@ -120,22 +120,18 @@ type
   end;
   TZOleDBStatement = class(TZOleDBPreparedStatement);
 
-{.$ENDIF ENABLE_OLEDB}
 implementation
-{.$IFDEF ENABLE_OLEDB}
 
 uses
   Variants, ComObj, Math,
-  {$IFDEF WITH_TOBJECTLIST_INLINE} System.Contnrs{$ELSE} Contnrs{$ENDIF},
-  ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcLogging, ZDbcCachedResultSet,
-  ZDbcResultSet, ZFastCode, ZDbcMetadata, ZDbcResultSetMetadata, ZDbcUtils, ZMessages;
+  ZDbcOleDB, ZDbcOleDBResultSet, ZEncoding, ZDbcLogging,
+  ZFastCode, ZDbcMetadata, ZDbcUtils, ZMessages;
 
 { TZOleDBPreparedStatement }
 
 constructor TZOleDBPreparedStatement.Create(Connection: IZConnection;
   const SQL: string; const Info: TStrings);
 begin
-  //FCommand := (Connection as IZOleDBConnection).CreateCommand;
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
@@ -492,7 +488,9 @@ begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
 end;
 
-{.$ENDIF ENABLE_OLEDB}
+{$ELSE !ENABLE_OLEDB}
+implementation
+{$ENDIF ENABLE_OLEDB}
 end.
 
 

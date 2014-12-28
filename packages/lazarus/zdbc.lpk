@@ -17,10 +17,13 @@
           <UseAnsiStrings Value="False"/>
         </SyntaxOptions>
       </Parsing>
+      <Other>
+        <CompilerPath Value="$(CompPath)"/>
+      </Other>
     </CompilerOptions>
     <Description Value="Zeos Low Level Database API"/>
     <Version Major="7" Minor="3"/>
-    <Files Count="11">
+    <Files Count="12">
       <Item1>
         <Filename Value="..\..\src\dbc\ZDbcDbLib.pas"/>
         <UnitName Value="ZDbcDbLib"/>
@@ -65,6 +68,10 @@
         <Filename Value="..\..\src\dbc\ZDbcAdo.pas"/>
         <UnitName Value="ZDbcAdo"/>
       </Item11>
+      <Item12>
+        <Filename Value="..\..\src\dbc\ZDbcOleDB.pas"/>
+        <UnitName Value="ZDbcOleDB"/>
+      </Item12>
     </Files>
     <RequiredPkgs Count="5">
       <Item1>

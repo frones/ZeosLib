@@ -86,6 +86,9 @@ uses
 {$IFDEF ENABLE_POOLED}
   ZDbcPooled,
 {$ENDIF}
+{$IFDEF ENABLE_OLEDB}
+  ZDbcOleDB,
+{$ENDIF}
 
   SysUtils, Classes, {$IFDEF MSEgui}mclasses, mdb{$ELSE}DB{$ENDIF},
   ZDbcIntfs, ZCompatibility, ZURL;

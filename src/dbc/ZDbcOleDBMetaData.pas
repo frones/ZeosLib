@@ -54,11 +54,11 @@ unit ZDbcOleDBMetadata;
 interface
 
 {$I ZDbc.inc}
-{.$IFDEF ENABLE_OLEDB}
+{$IFDEF ENABLE_OLEDB}
 
 uses
   Types, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
-  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZDbcResultSet, ZURL,
+  ZSysUtils, {%H-}ZClasses, ZDbcIntfs, ZDbcMetadata, ZURL,
   ZCompatibility, ZDbcConnection, ZOleDB;
 
 type
@@ -262,11 +262,10 @@ type
     procedure ReleaseDBSchemaRowSet;
   end;
 
-{.$ENDIF ENABLE_OLEDB}
 implementation
-{.$IFDEF ENABLE_OLEDB}
+
 uses
-  Variants, Math, ZGenericSqlToken,
+  Variants, ZGenericSqlToken,
   ZDbcOleDB, ZDbcOleDBUtils, ZDbcOleDBResultSet, ZDbcOleDBStatement;
 
 { TZOleDBDatabaseInfo }
@@ -299,7 +298,7 @@ end;
 }
 function TZOleDBDatabaseInfo.GetDatabaseProductVersion: string;
 begin
-  //Result := String((Metadata.GetConnection as IZOleDBConnection). GetAdoConnection.Version);
+  Result := '';
 end;
 
 {**
@@ -2415,29 +2414,7 @@ end;
 function TOleDBDatabaseMetadata.UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
   const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet;
 begin
-
   Result:=inherited UncachedGetUDTs(Catalog, SchemaPattern, TypeNamePattern, Types);
-
-//  AdoRecordSet := AdoOpenSchema(adSchemaIndexes, Restrictions);
-//  if Assigned(AdoRecordSet) then
-//  with GetStatement.ExecuteQuery(
-//    Format('select TYPE_CAT = db_name(), TYPE_SCHEM = user_name(uid),'
-//      + ' TYPE_NAME = st.name, DATA_TYPE from master.dbo.spt_datatype_info'
-//      + ' sti left outer join systypes st on (sti.ss_dtype = st.xtype)'
-//      + ' where st.xusertype > 255 and user_name(uid) like %s and st.name'
-//      + ' like %s', [SchemaPattern, TypeNamePattern])) do
-//    while Next do
-//    begin
-//      Result.MoveToInsertRow;
-//      Result.UpdatePWideChar(CatalogNameIndex, GetPWideChar('TYPE_CAT', Len), @Len);
-//      Result.UpdatePWideChar(SchemaNameIndex, GetPWideChar('TYPE_SCHEM', Len), @Len);
-//      Result.UpdatePWideChar(UDTColTypeNameIndex, GetPWideChar('TYPE_NAME', Len), @Len);
-//      Result.UpdateNull(UDTColClassNameIndex);
-//      Result.UpdateSmall(UDTColDataTypeIndex, GetSmall('DATA_TYPE'));
-//      Result.UpdateNull(UDTColRemarksIndex);
-//      Result.InsertRow;
-//    end;
-
 end;
 
 {**
@@ -2529,7 +2506,9 @@ begin
     end;
 end;
 
-{.$ENDIF ENABLE_OLEDB}
+{$ELSE !ENABLE_OLEDB}
+implementation
+{$ENDIF ENABLE_OLEDB}
 end.
 
 

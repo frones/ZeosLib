@@ -54,14 +54,14 @@ unit ZDbcOleDBResultSet;
 interface
 
 {$I ZDbc.inc}
-{.$IFDEF ENABLE_OLEDB}
+{$IFDEF ENABLE_OLEDB}
 
 uses
 {$IFNDEF FPC}
   DateUtils,
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
+  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
   {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZOleDB, ZDbcOleDBUtils,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
@@ -128,10 +128,7 @@ type
   TZOleDBMSSQLCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
   private
     FAutoColumnIndex: Integer;
-    //FDBParams: TDBParams;
-    //FAffectedRows: DBROWCOUNT;
     FResultSet: IZOleDBResultSet;
-    //FCommandText: ICommandText;
   public
     constructor Create(Statement: IZStatement; Metadata: IZResultSetMetadata);
     destructor Destroy; override;
@@ -154,9 +151,7 @@ function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize: Integer;
   EnhancedColInfo: Boolean; var PCurrRS: Pointer): IZResultSet;
 
-{.$ENDIF ENABLE_OLEDB}
 implementation
-{.$IFDEF ENABLE_OLEDB}
 
 uses
   Variants, Math, ComObj,
@@ -208,8 +203,6 @@ var
   I: Integer;
   FieldSize: Integer;
   ColumnInfo: TZColumnInfo;
-  //HasAutoIncProp: Boolean;
-  S: string;
 begin
 //Check if the current statement can return rows
   if not Assigned(FRowSet) then
@@ -232,15 +225,6 @@ begin
 
     { Fills the column info }
     ColumnsInfo.Clear;
-    {HasAutoIncProp := False;
-    if AdoColumnCount > 0 then
-      for I := 0 to FAdoRecordSet.Fields.Item[0].Properties.Count - 1 do
-        if FAdoRecordSet.Fields.Item[0].Properties.Item[I].Name = 'ISAUTOINCREMENT' then
-        begin
-          HasAutoIncProp := True;
-          Break;
-        end;}
-
     if Assigned(prgInfo) then
       if prgInfo.iOrdinal = 0 then // skip possible bookmark column
         Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));
@@ -265,14 +249,9 @@ begin
         ColumnInfo.ColumnDisplaySize := FieldSize;
       ColumnInfo.Precision := FieldSize;
       ColumnInfo.Currency := ColumnInfo.ColumnType = stCurrency;
-      S := '';
-      {for J := 0 to F.Properties.Count - 1 do
-        S := S+F.Properties.Item[J].Name + '=' + VarToStr(F.Properties.Item[J].Value) + ', ';
-      if HasAutoIncProp then
-        ColumnInfo.AutoIncrement := F.Properties.Item['ISAUTOINCREMENT'].Value;}
-
+      //ColumnInfo.AutoIncrement := prgInfo.dwFlags and DBCOLUMNFLAGS_ISROWID <> 0;
       ColumnInfo.Signed := ColumnInfo.ColumnType in [stShort, stSmall, stInteger, stLong, stFloat, stDouble, stBigDecimal];
-      ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);// and (F.Properties.Item['BASECOLUMNNAME'].Value <> null) and not ColumnInfo.AutoIncrement;
+      ColumnInfo.Writable := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) <> 0);// and not ColumnInfo.AutoIncrement;
       ColumnInfo.ReadOnly := (prgInfo.dwFlags and (DBCOLUMNFLAGS_WRITE or DBCOLUMNFLAGS_WRITEUNKNOWN) = 0);// or ColumnInfo.AutoIncrement;
       ColumnInfo.Searchable := (prgInfo.dwFlags and DBCOLUMNFLAGS_ISLONG) = 0;
       ColumnsInfo.Add(ColumnInfo);
@@ -1981,7 +1960,7 @@ begin
     if (Statement.GetResultSetConcurrency = rcUpdatable) or
        (Statement.GetResultSetType <> rtForwardOnly) then
     begin
-      if (Statement.GetConnection as IZOleDBConnection).GetProvider = skMSSQL then
+      if (Statement.GetConnection as IZOleDBConnection).GetProvider = spMSSQL then
         CachedResolver := TZOleDBMSSQLCachedResolver.Create(Statement, NativeResultSet.GetMetaData)
       else
         CachedResolver := TZGenericCachedResolver.Create(Statement, NativeResultSet.GetMetaData);
@@ -1994,7 +1973,10 @@ begin
   end;
   PCurrRS := Pointer(Result);
 end;
-{.$ENDIF ENABLE_OLEDB}
+
+{$ELSE !ENABLE_OLEDB}
+implementation
+{$ENDIF ENABLE_OLEDB}
 end.
 
 

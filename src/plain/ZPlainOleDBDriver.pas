@@ -54,6 +54,7 @@ unit ZPlainOleDBDriver;
 interface
 
 {$I ZPlain.inc}
+{$IFDEF ENABLE_OLEDB}
 
 uses ZPlainDriver;
 
@@ -65,7 +66,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize(const Location: String = ''); override;
+    procedure Initialize(const {%H-}Location: String = ''); override;
     function Clone: IZPlainDriver; override;
   end;
 
@@ -102,5 +103,8 @@ begin
   Result := Self;
 end;
 
+{$ELSE !ENABLE_OLEDB}
+implementation
+{$ENDIF ENABLE_OLEDB}
 end.
 

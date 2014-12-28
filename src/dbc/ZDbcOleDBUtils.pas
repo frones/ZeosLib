@@ -98,9 +98,8 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   const InParamValues: TZVariantDynArray; const TempLobs: TInterfacesDynArray;
   const SupportsMilliseconds: Boolean = True);
 
-{$IFEND}
 implementation
-{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+
 uses
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
   ActiveX, Windows, Math, TypInfo,
@@ -305,9 +304,6 @@ begin
     DBTYPE_STR: Result := DBTYPE_WSTR;  //if we would know the server-codepage ... we could decrease mem
     DBTYPE_NUMERIC: Result := DBTYPE_R8;
     //DBTYPE_UDT	= 132;
-    {DBTYPE_DBDATE: Result := DBTYPE_DATE;
-    DBTYPE_DBTIME: Result := DBTYPE_DATE;
-    DBTYPE_DBTIMESTAMP: Result := DBTYPE_DATE;}
     //DBTYPE_HCHAPTER	= 136;
     DBTYPE_FILETIME: Result := DBTYPE_DATE;
     //DBTYPE_PROPVARIANT	= 138;
@@ -1873,5 +1869,7 @@ begin
 end;
 {$HINTS ON}
 
+{$ELSE}
+implementation
 {$IFEND}
 end.

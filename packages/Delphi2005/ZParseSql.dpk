@@ -32,6 +32,10 @@ requires
 
 contains
 
+{$IFDEF ENABLE_OLEDB}
+  ZOleDBToken in '..\..\src\parsesql\ZOleDBToken.pas',
+{$ENDIF}
+
 {$IFDEF ENABLE_ADO}
   ZAdoToken in '..\..\src\parsesql\ZAdoToken.pas',
 {$ENDIF}

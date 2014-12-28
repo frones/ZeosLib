@@ -52,8 +52,9 @@
 unit ZOleDBToken;
 
 interface
+
 {$I ZParseSql.inc}
-{.$IFDEF ENABLE_OLEDB}
+{$IFDEF ENABLE_OLEDB}
 
 uses
   Classes, SysUtils, ZTokenizer, ZGenericSqlToken, ZCompatibility;
@@ -63,7 +64,7 @@ type
   TZOleDBQuoteState = class (TZQuoteState)
   public
     function NextToken(Stream: TStream; FirstChar: Char;
-      Tokenizer: TZTokenizer): TZToken; override;
+      {%H-}Tokenizer: TZTokenizer): TZToken; override;
 
     function EncodeString(const Value: string; QuoteChar: Char): string; override;
     function DecodeString(const Value: string; QuoteChar: Char): string; override;
@@ -75,11 +76,9 @@ type
     procedure CreateTokenStates; override;
   end;
 
-{.$ENDIF ENABLE_OLEDB}
 implementation
-{.$IFDEF ENABLE_OLEDB}
 
-{ TZAdoSQLQuoteState }
+{ TZOleDBSQLQuoteState }
 
 {**
   Return a quoted string token from a reader. This method
@@ -96,7 +95,7 @@ var
 begin
   Result.Value := FirstChar;
   LastChar := #0;
-  while Stream.Read(ReadChar, SizeOf(Char)) > 0 do
+  while Stream.Read(ReadChar{%H-}, SizeOf(Char)) > 0 do
   begin
     if ((LastChar = FirstChar) and (ReadChar <> FirstChar)
       and (FirstChar <> '[')) or ((FirstChar = '[') and (LastChar = ']')) then
@@ -192,5 +191,7 @@ begin
   SetCharacterState('/', '/', CommentState);
 end;
 
-{.$ENDIF ENABLE_OLEDB}
+{$ELSE !ENABLE_OLEDB}
+implementation
+{$ENDIF ENABLE_OLEDB}
 end.

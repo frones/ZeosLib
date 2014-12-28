@@ -56,7 +56,7 @@ interface
 {$I ZPlain.inc}
 {$IFDEF ENABLE_ADO}
 
-uses ZClasses, ZPlainDriver;
+uses {$IFDEF OLDFPC}ZClasses,{$ENDIF} ZPlainDriver;
 
 type
   TZAdoPlainDriver = class (TZAbstractPlainDriver, IZPlainDriver)
@@ -66,7 +66,7 @@ type
     procedure LoadCodePages; override;
     function GetProtocol: string; override;
     function GetDescription: string; override;
-    procedure Initialize(const Location: String = ''); override;
+    procedure Initialize(const {%H-}Location: String = ''); override;
     function Clone: IZPlainDriver; override;
   end;
 
