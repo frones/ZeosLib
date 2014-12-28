@@ -204,6 +204,7 @@ end;
 procedure TZTestDbcMySQLBugReport.Test768163;
 const
   fld1_Index = {$IFDEF GENERIC_INDEX}0{$ELSE}1{$ENDIF};
+  //fld2_Index = {$IFDEF GENERIC_INDEX}1{$ELSE}2{$ENDIF};
 var
   ResultSet: IZResultSet;
   Statement: IZStatement;

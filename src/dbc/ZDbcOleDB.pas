@@ -222,6 +222,7 @@ begin
   OleCheck(CoGetMalloc(1,fMalloc));
   FMetadata := TOleDBDatabaseMetadata.Create(Self, URL);
   FRetaining := False; //not StrToBoolEx(URL.Properties.Values['hard_commit']);
+  CheckCharEncoding('CP_UTF16');
   Open;
 end;
 

@@ -151,7 +151,7 @@ end;
 
 procedure TZTestConnectionCase.TestLibrary;
 begin
-  if not ( Connection.Protocol = 'ado' ) then
+  if not ((Connection.Protocol = 'ado') or (Connection.Protocol = 'OleDB')) then
   begin
     Connection.Disconnect;
     Connection.LibraryLocation:='dummy.dll';

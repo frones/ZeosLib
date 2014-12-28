@@ -1075,6 +1075,10 @@ type
   DBCOLUMNFLAGS = DWORD;
   DBPARAMFLAGS = DWORD;
 
+  {$IF not declared(USHORT)}
+  USHORT = Word;
+  {$IFEND}
+
 //end from oledb.h
 
 //records, unions, aliases
@@ -1311,6 +1315,31 @@ type
     rgPropertyInfos : PDBPROPINFOArray;
     cPropertyInfos : ULONG;
     guidPropertySet : TGUID;
+  end;
+
+  PDBDate = ^TDBDate;
+  TDBDATE = record
+    year: SHORT;
+    month: USHORT;
+    day: USHORT;
+  end;
+
+  PDBTime = ^TDBTime;
+  TDBTIME = record
+    hour: USHORT;
+    minute: USHORT;
+    second: USHORT;
+  end;
+
+  PDBTimeStamp = ^TDBTimeStamp;
+  TDBTIMESTAMP = record
+    year: SHORT;
+    month: USHORT;
+    day: USHORT;
+    hour: USHORT;
+    minute: USHORT;
+    second: USHORT;
+    fraction: ULONG;
   end;
 {end:-----------------------used by zeos---------------------------------------}
 (*

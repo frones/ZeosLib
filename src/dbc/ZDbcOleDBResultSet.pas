@@ -88,6 +88,9 @@ type
     FColBuffer: TByteDynArray;
     FRowStates: TDBROWSTATUSDynArray;
     FByRefColsIndex: TIntegerDynArray;
+  private
+    FData: Pointer;
+    FLength: DBLENGTH;
     procedure ReleaseFetchedRows;
   protected
     procedure Open; override;
@@ -222,7 +225,7 @@ begin
     if (MaxRows > 0) and (FRowCount > MaxRows) then
       FRowCount := MaxRows; //fetch only wanted count of rows
 
-    OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA or DBACCESSOR_OPTIMIZED,
+    OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA{ or DBACCESSOR_OPTIMIZED},
       pcColumns, Pointer(FDBBindingArray), FRowSize, @FAccessor,
       Pointer(FDBBINDSTATUSArray)), FDBBINDSTATUSArray);
 
@@ -416,6 +419,18 @@ begin
   ColumnIndex := ColumnIndex-1;
   {$ENDIF}
   Result := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(FRowSize*FCurrentBufRowNo)])^ = DBSTATUS_S_ISNULL;
+  LastWasNull := Result;
+  if Result then
+  begin
+    FData := nil;
+    FLength := 0;
+  end
+  else
+  begin
+    //note FLength is valid only if DBPART_LENGTH was set in Bindings.dwFlags!!!
+    FData := @FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)];
+    FLength := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+  end;
 end;
 
 {**
@@ -428,141 +443,121 @@ end;
     value returned is <code>null</code>
 }
 function TZOleDBResultSet.GetString(ColumnIndex: Integer): String;
-var I: Integer;
+var
+  I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if LastWasNull then
-    Result := ''
-  else
-    case FDBBindingArray[ColumnIndex].wType of
+  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_EMPTY:     Result := '';
       DBTYPE_NULL:      Result := '';
-      DBTYPE_I2:        Result := ZFastCode.IntToStr(PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I4:        Result := ZFastCode.IntToStr(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R4:        Result := FloatToSQLStr(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := FloatToSQLStr(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := CurrToStr(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_I2:        Result := ZFastCode.IntToStr(PSmallInt(FData)^);
+      DBTYPE_I4:        Result := ZFastCode.IntToStr(PLongInt(FData)^);
+      DBTYPE_R4:        Result := FloatToSQLStr(PSingle(FData)^);
+      DBTYPE_R8:        Result := FloatToSQLStr(PDouble(FData)^);
+      DBTYPE_CY:        Result := CurrToStr(PCurrency(FData)^);
       DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLTime{$ELSE}DateTimeToRawSQLTime{$ENDIF}(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          stDate: Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLDate{$ELSE}DateTimeToRawSQLDate{$ENDIF}(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          else
-            Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLTimeStamp{$ELSE}DateTimeToRawSQLTimeStamp{$ENDIF}(
-              PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-                ConSettings.ReadFormatSettings, False);
-        end;
+        Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLTimeStamp{$ELSE}DateTimeToRawSQLTimeStamp{$ENDIF}(
+          PDateTime(FData)^, ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           {$IFDEF UNICODE}
-          System.SetString(Result, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1)
+          System.SetString(Result, PWideChar(FData),FLength shr 1)
           {$ELSE}
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.Ctrl_CP)
+          Result := PUnicodeToRaw(PWideChar(FData),FLength shr 1, ConSettings^.Ctrl_CP)
           {$ENDIF}
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
           {$IFDEF UNICODE}
-          System.SetString(Result, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I)
+          System.SetString(Result, PWideChar(FData), I)
           {$ELSE}
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I, ConSettings^.Ctrl_CP)
+          Result := PUnicodeToRaw(PWideChar(FData), I, ConSettings^.Ctrl_CP)
           {$ENDIF}
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
         {$IFDEF UNICODE}
-        System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1);
+        System.SetString(Result, ZPPWideChar(FData)^, FLength shr 1);
         {$ELSE}
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.Ctrl_CP);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.Ctrl_CP);
         {$ENDIF}
       DBTYPE_IDISPATCH: Result := '';
-      DBTYPE_ERROR:     Result := ZFastCode.IntToStr(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_BOOL:      Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_ERROR:     Result := ZFastCode.IntToStr(PLongInt(FData)^);
+      DBTYPE_BOOL:      Result := {$IFDEF UNICODE}BoolToUnicodeEx{$ELSE}BoolToRawEx{$ENDIF}(PWordBool(FData)^);
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := ZFastCode.IntToStr(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I1:        Result := ZFastCode.IntToStr(PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI2:       Result := ZFastCode.IntToStr(PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI4:       Result := ZFastCode.IntToStr(PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I8:        Result := ZFastCode.IntToStr(PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI8:       Result := ZFastCode.IntToStr(PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_GUID:      Result := {$IFDEF UNICODE}GuidToUnicode{$ELSE}GuidToRaw{$ENDIF}(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_UI1:       Result := ZFastCode.IntToStr(PByte(FData)^);
+      DBTYPE_I1:        Result := ZFastCode.IntToStr(PShortInt(FData)^);
+      DBTYPE_UI2:       Result := ZFastCode.IntToStr(PWord(FData)^);
+      DBTYPE_UI4:       Result := ZFastCode.IntToStr(PLongWord(FData)^);
+      DBTYPE_I8:        Result := ZFastCode.IntToStr(PInt64(FData)^);
+      DBTYPE_UI8:       Result := ZFastCode.IntToStr(PUInt64(FData)^);
+      DBTYPE_GUID:      Result := {$IFDEF UNICODE}GuidToUnicode{$ELSE}GuidToRaw{$ENDIF}(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           {$IFDEF UNICODE}
-            Result := PRawToUnicode(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-              PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP)
+            Result := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
           {$ELSE}
-            System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-              PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^)
+            System.SetString(Result, PAnsiChar(FData), FLength)
           {$ENDIF}
         else
         begin
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
+          I := FLength shr 1;
+          while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
           {$IFDEF UNICODE}
-            Result := PRawToUnicode(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-              I, ConSettings^.ClientCodePage^.CP);
+            Result := PRawToUnicode(PAnsiChar(FData), I, ConSettings^.ClientCodePage^.CP);
           {$ELSE}
-            System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),I);
+            System.SetString(Result, PAnsiChar(FData), I);
           {$ENDIF}
         end;
       DBTYPE_STR or DBTYPE_BYREF:
         {$IFDEF UNICODE}
-          Result := PRawToUnicode(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP);
+          Result := PRawToUnicode(PPAnsiChar(FData)^, FLength, ConSettings^.ClientCodePage^.CP);
         {$ELSE}
-          System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+          System.SetString(Result, PPAnsiChar(FData)^, FLength);
         {$ENDIF}
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           {$IFDEF UNICODE}
-          System.SetString(Result, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1)
+          System.SetString(Result, PWideChar(FData), FLength shr 1)
           {$ELSE}
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.Ctrl_CP)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, ConSettings^.Ctrl_CP)
           {$ENDIF}
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
           {$IFDEF UNICODE}
-          System.SetString(Result, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I)
+          System.SetString(Result, PWideChar(FData), I)
           {$ELSE}
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I, ConSettings^.Ctrl_CP)
+          Result := PUnicodeToRaw(PWideChar(FData), I, ConSettings^.Ctrl_CP)
           {$ENDIF}
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
         {$IFDEF UNICODE}
-        System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1);
+        System.SetString(Result, ZPPWideChar(FData)^, FLength shr 1);
         {$ELSE}
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.Ctrl_CP);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.Ctrl_CP);
         {$ENDIF}
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToStr(PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_DBDATE:
+        Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLDate{$ELSE}DateTimeToRawSQLDate{$ENDIF}(
+          EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIME:
+        Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLTime{$ELSE}DateTimeToRawSQLTime{$ENDIF}(
+          EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIMESTAMP:
+        Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLTimeStamp{$ELSE}DateTimeToRawSQLTimeStamp{$ENDIF}(
+          EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
+          PDBTimeStamp(FData)^.day)+ EncodeTime(PDBTimeStamp(FData)^.hour,
+          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+          PDBTimeStamp(FData)^.fraction div 1000000), ConSettings.ReadFormatSettings, False);
+      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToStr(PCHAPTER(FData)^);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -582,98 +577,81 @@ end;
 function TZOleDBResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if LastWasNull then
-    Result := ''
-  else
-    case FDBBindingArray[ColumnIndex].wType of
+  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_EMPTY:     Result := '';
       //DBTYPE_NULL:      Result := '';
-      DBTYPE_I2:        Result := ZFastCode.IntToRaw(PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I4:        Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R4:        Result := FloatToSQLRaw(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := FloatToSQLRaw(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := AnsiString(CurrToStr(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := DateTimeToRawSQLTime(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          stDate: Result := DateTimeToRawSQLDate(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          else
-            Result := DateTimeToRawSQLTimeStamp(
-              PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-                ConSettings.ReadFormatSettings, False);
-        end;
+      DBTYPE_I2:        Result := ZFastCode.IntToRaw(PSmallInt(FData)^);
+      DBTYPE_I4:        Result := ZFastCode.IntToRaw(PLongInt(FData)^);
+      DBTYPE_R4:        Result := FloatToSQLRaw(PSingle(FData)^);
+      DBTYPE_R8:        Result := FloatToSQLRaw(PDouble(FData)^);
+      DBTYPE_CY:        Result := AnsiString(CurrToStr(PCurrency(FData)^));
+      DBTYPE_DATE:      Result := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
+                          ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, GetACP)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, GetACP)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            I, GetACP)
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+          Result := PUnicodeToRaw(PWideChar(FData), I, GetACP)
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, GetACP);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, GetACP);
       DBTYPE_IDISPATCH: Result := '';
-      DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := AnsiString(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(FData)^);
+      DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(FData)^);
+      DBTYPE_VARIANT:   Result := AnsiString(POleVariant(FData)^);
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I1:        Result := ZFastCode.IntToRaw(PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI2:       Result := ZFastCode.IntToRaw(PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI4:       Result := ZFastCode.IntToRaw(PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I8:        Result := ZFastCode.IntToRaw(PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI8:       Result := ZFastCode.IntToRaw(PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_GUID:      Result := GUIDToRaw(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(FData)^);
+      DBTYPE_I1:        Result := ZFastCode.IntToRaw(PShortInt(FData)^);
+      DBTYPE_UI2:       Result := ZFastCode.IntToRaw(PWord(FData)^);
+      DBTYPE_UI4:       Result := ZFastCode.IntToRaw(PLongWord(FData)^);
+      DBTYPE_I8:        Result := ZFastCode.IntToRaw(PInt64(FData)^);
+      DBTYPE_UI8:       Result := ZFastCode.IntToRaw(PUInt64(FData)^);
+      DBTYPE_GUID:      Result := GUIDToRaw(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result)
+          ZSetString(PAnsiChar(FData), FLength, Result)
         else
         begin
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I, Result);
+          I := FLength shr 1;
+          while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
+          ZSetString(PAnsiChar(FData), I, Result);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PPAnsiChar(FData)^, FLength);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, GetACP)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, GetACP)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            I, GetACP)
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+          Result := PUnicodeToRaw(PWideChar(FData), I, GetACP)
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, GetACP);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, GetACP);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToRaw(PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_DBDATE:
+        Result := DateTimeToRawSQLDate(
+          EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIME:
+        Result := DateTimeToRawSQLTime(
+          EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIMESTAMP:
+        Result := DateTimeToRawSQLTimeStamp(
+          EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
+          PDBTimeStamp(FData)^.day)+ EncodeTime(PDBTimeStamp(FData)^.hour,
+          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+          PDBTimeStamp(FData)^.fraction div 1000000), ConSettings.ReadFormatSettings, False);
+      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToRaw(PCHAPTER(FData)^);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -693,98 +671,81 @@ end;
 function TZOleDBResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if LastWasNull then
-    Result := ''
-  else
-    case FDBBindingArray[ColumnIndex].wType of
+  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_EMPTY:     Result := '';
       //DBTYPE_NULL:      Result := '';
-      DBTYPE_I2:        Result := ZFastCode.IntToRaw(PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I4:        Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R4:        Result := FloatToSQLRaw(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := FloatToSQLRaw(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := UTF8String(CurrToStr(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := DateTimeToRawSQLTime(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          stDate: Result := DateTimeToRawSQLDate(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          else
-            Result := DateTimeToRawSQLTimeStamp(
-              PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-                ConSettings.ReadFormatSettings, False);
-        end;
+      DBTYPE_I2:        Result := ZFastCode.IntToRaw(PSmallInt(FData)^);
+      DBTYPE_I4:        Result := ZFastCode.IntToRaw(PLongInt(FData)^);
+      DBTYPE_R4:        Result := FloatToSQLRaw(PSingle(FData)^);
+      DBTYPE_R8:        Result := FloatToSQLRaw(PDouble(FData)^);
+      DBTYPE_CY:        Result := UTF8String(CurrToStr(PCurrency(FData)^));
+      DBTYPE_DATE:      Result := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
+                          ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, zCP_UTF8)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, zCP_UTF8)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            I, zCP_UTF8)
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+          Result := PUnicodeToRaw(PWideChar(FData), I, zCP_UTF8)
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(PPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, zCP_UTF8);
+        Result := PUnicodeToRaw(PPWideChar(FData)^, FLength shr 1, zCP_UTF8);
       DBTYPE_IDISPATCH: Result := '';
-      DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := UTF8String(ZWideString(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
+      DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(FData)^);
+      DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(FData)^);
+      DBTYPE_VARIANT:   Result := UTF8String(ZWideString(POleVariant(FData)^));
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I1:        Result := ZFastCode.IntToRaw(PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI2:       Result := ZFastCode.IntToRaw(PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI4:       Result := ZFastCode.IntToRaw(PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I8:        Result := ZFastCode.IntToRaw(PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI8:       Result := ZFastCode.IntToRaw(PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_GUID:      Result := GUIDToRaw(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(FData)^);
+      DBTYPE_I1:        Result := ZFastCode.IntToRaw(PShortInt(FData)^);
+      DBTYPE_UI2:       Result := ZFastCode.IntToRaw(PWord(FData)^);
+      DBTYPE_UI4:       Result := ZFastCode.IntToRaw(PLongWord(FData)^);
+      DBTYPE_I8:        Result := ZFastCode.IntToRaw(PInt64(FData)^);
+      DBTYPE_UI8:       Result := ZFastCode.IntToRaw(PUInt64(FData)^);
+      DBTYPE_GUID:      Result := GUIDToRaw(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result)
+          ZSetString(PAnsiChar(FData), FLength, Result)
         else
         begin
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I, Result);
+          I := FLength shr 1;
+          while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
+          ZSetString(PAnsiChar(FData), I, Result);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        ZSetString(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result);
+        ZSetString(PPAnsiChar(FData)^, FLength, Result);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, zCP_UTF8)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, zCP_UTF8)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            I, zCP_UTF8)
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+          Result := PUnicodeToRaw(PWideChar(FData), I, zCP_UTF8)
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, zCP_UTF8);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, zCP_UTF8);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToRaw(PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_DBDATE:
+        Result := DateTimeToRawSQLDate(
+          EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIME:
+        Result := DateTimeToRawSQLTime(
+          EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIMESTAMP:
+        Result := DateTimeToRawSQLTimeStamp(
+          EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
+          PDBTimeStamp(FData)^.day)+ EncodeTime(PDBTimeStamp(FData)^.hour,
+          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+          PDBTimeStamp(FData)^.fraction div 1000000), ConSettings.ReadFormatSettings, False);
+      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToRaw(PCHAPTER(FData)^);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -804,98 +765,81 @@ end;
 function TZOleDBResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
 var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if LastWasNull then
-    Result := ''
-  else
-    case FDBBindingArray[ColumnIndex].wType of
+  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_EMPTY:     Result := '';
       //DBTYPE_NULL:      Result := '';
-      DBTYPE_I2:        Result := ZFastCode.IntToRaw(PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I4:        Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R4:        Result := FloatToSQLRaw(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := FloatToSQLRaw(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := RawByteString(CurrToStr(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := DateTimeToRawSQLTime(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          stDate: Result := DateTimeToRawSQLDate(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          else
-            Result := DateTimeToRawSQLTimeStamp(
-              PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-                ConSettings.ReadFormatSettings, False);
-        end;
+      DBTYPE_I2:        Result := ZFastCode.IntToRaw(PSmallInt(FData)^);
+      DBTYPE_I4:        Result := ZFastCode.IntToRaw(PLongInt(FData)^);
+      DBTYPE_R4:        Result := FloatToSQLRaw(PSingle(FData)^);
+      DBTYPE_R8:        Result := FloatToSQLRaw(PDouble(FData)^);
+      DBTYPE_CY:        Result := RawByteString(CurrToStr(PCurrency(FData)^));
+      DBTYPE_DATE:      Result := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
+                          ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, ConSettings^.ClientCodePage^.CP)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            I, ConSettings^.ClientCodePage^.CP)
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+          Result := PUnicodeToRaw(PWideChar(FData), I, ConSettings^.ClientCodePage^.CP)
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_IDISPATCH: Result := '';
-      DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := RawByteString(ZWideString(POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^));
+      DBTYPE_ERROR:     Result := ZFastCode.IntToRaw(PLongInt(FData)^);
+      DBTYPE_BOOL:      Result := BoolToRawEx(PWordBool(FData)^);
+      DBTYPE_VARIANT:   Result := RawByteString(ZWideString(POleVariant(FData)^));
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I1:        Result := ZFastCode.IntToRaw(PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI2:       Result := ZFastCode.IntToRaw(PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI4:       Result := ZFastCode.IntToRaw(PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I8:        Result := ZFastCode.IntToRaw(PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI8:       Result := ZFastCode.IntToRaw(PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_GUID:      Result := GUIDToRaw(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_UI1:       Result := ZFastCode.IntToRaw(PByte(FData)^);
+      DBTYPE_I1:        Result := ZFastCode.IntToRaw(PShortInt(FData)^);
+      DBTYPE_UI2:       Result := ZFastCode.IntToRaw(PWord(FData)^);
+      DBTYPE_UI4:       Result := ZFastCode.IntToRaw(PLongWord(FData)^);
+      DBTYPE_I8:        Result := ZFastCode.IntToRaw(PInt64(FData)^);
+      DBTYPE_UI8:       Result := ZFastCode.IntToRaw(PUInt64(FData)^);
+      DBTYPE_GUID:      Result := GUIDToRaw(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Result)
+          ZSetString(PAnsiChar(FData), FLength, Result)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), I, Result);
+          I := FLength shr 1;
+          while (PAnsiChar(FData)+I-1)^ = ' ' do Dec(I);
+          ZSetString(PAnsiChar(FData), I, Result);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        ZSetString(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^,Result);
+        ZSetString(PPAnsiChar(FData)^, FLength,Result);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP)
+          Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, ConSettings^.ClientCodePage^.CP)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            I, ConSettings^.ClientCodePage^.CP)
+          I := FLength shr 1;
+          while (PWideChar(FData)+I-1)^ = ' ' do Dec(I);
+          Result := PUnicodeToRaw(PWideChar(FData), I, ConSettings^.ClientCodePage^.CP)
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^, FLength shr 1, ConSettings^.ClientCodePage^.CP);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToRaw(PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_DBDATE:
+        Result := DateTimeToRawSQLDate(
+          EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIME:
+        Result := DateTimeToRawSQLTime(
+          EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIMESTAMP:
+        Result := DateTimeToRawSQLTimeStamp(
+          EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
+          PDBTimeStamp(FData)^.day)+ EncodeTime(PDBTimeStamp(FData)^.hour,
+          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+          PDBTimeStamp(FData)^.fraction div 1000000), ConSettings.ReadFormatSettings, False);
+      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToRaw(PCHAPTER(FData)^);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -915,101 +859,85 @@ end;
 }
 function TZOleDBResultSet.GetPWideChar(ColumnIndex: Integer; out Len: NativeUInt): PWideChar;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
   Len := 0;
-  if LastWasNull then
+  if IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     Result := nil
   else
   begin
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        FUniTemp := ZFastCode.IntToUnicode(PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I4:        FUniTemp := ZFastCode.IntToUnicode(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R4:        FUniTemp := FloatToSQLUnicode(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        FUniTemp := FloatToSQLUnicode(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        FUniTemp := CurrToStr(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: FUniTemp := DateTimeToUnicodeSQLTime(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          stDate: FUniTemp := DateTimeToUnicodeSQLDate(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          else
-            FUniTemp := DateTimeToUnicodeSQLTimeStamp(
-              PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-                ConSettings.ReadFormatSettings, False);
-        end;
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        FUniTemp := ZFastCode.IntToUnicode(PSmallInt(FData)^);
+      DBTYPE_I4:        FUniTemp := ZFastCode.IntToUnicode(PLongInt(FData)^);
+      DBTYPE_R4:        FUniTemp := FloatToSQLUnicode(PSingle(FData)^);
+      DBTYPE_R8:        FUniTemp := FloatToSQLUnicode(PDouble(FData)^);
+      DBTYPE_CY:        FUniTemp := CurrToStr(PCurrency(FData)^);
+      DBTYPE_DATE:      FUniTemp := DateTimeToUnicodeSQLTimeStamp(PDateTime(FData)^,
+                          ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
         begin
-          Result := PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]);
-          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1
-          else
-          begin //Fixed width
-            Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-            while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+Len-1)^ = ' ' do
-              Dec(Len);
-          end;
+          Result := PWideChar(FData);
+          Len := FLength shr 1;
+          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+            while (Result+Len-1)^ = ' ' do Dec(Len);
           Exit;
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
         begin
-          Result := ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1
-          else
-          begin //Fixed width
-            Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-            while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+Len-1)^ = ' ' do
-              Dec(Len);
-          end;
+          Result := ZPPWideChar(FData)^;
+          Len := FLength shr 1;
           Exit;
         end;
-      DBTYPE_ERROR:     FUniTemp := ZFastCode.IntToUnicode(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_BOOL:      FUniTemp := BoolToUnicodeEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   FUniTemp := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI1:       FUniTemp := ZFastCode.IntToUnicode(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I1:        FUniTemp := ZFastCode.IntToUnicode(PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI2:       FUniTemp := ZFastCode.IntToUnicode(PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI4:       FUniTemp := ZFastCode.IntToUnicode(PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I8:        FUniTemp := ZFastCode.IntToUnicode(PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI8:       FUniTemp := ZFastCode.IntToUnicode(PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_GUID:      FUniTemp := GuidToUnicode(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_ERROR:     FUniTemp := ZFastCode.IntToUnicode(PLongInt(FData)^);
+      DBTYPE_BOOL:      FUniTemp := BoolToUnicodeEx(PWordBool(FData)^);
+      DBTYPE_VARIANT:   FUniTemp := POleVariant(FData)^;
+      DBTYPE_UI1:       FUniTemp := ZFastCode.IntToUnicode(PByte(FData)^);
+      DBTYPE_I1:        FUniTemp := ZFastCode.IntToUnicode(PShortInt(FData)^);
+      DBTYPE_UI2:       FUniTemp := ZFastCode.IntToUnicode(PWord(FData)^);
+      DBTYPE_UI4:       FUniTemp := ZFastCode.IntToUnicode(PLongWord(FData)^);
+      DBTYPE_I8:        FUniTemp := ZFastCode.IntToUnicode(PInt64(FData)^);
+      DBTYPE_UI8:       FUniTemp := ZFastCode.IntToUnicode(PUInt64(FData)^);
+      DBTYPE_GUID:      FUniTemp := GuidToUnicode(PGUID(FData)^);
       DBTYPE_STR:
-          FUniTemp := PRawToUnicode(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP);
+        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+          FUniTemp := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
+        else
+        begin
+          Len := FLength;
+          while (PAnsiChar(FData)+Len-1)^ = ' ' do Dec(Len);
+          FUniTemp := PRawToUnicode(PAnsiChar(FData), Len, ConSettings^.ClientCodePage^.CP);
+        end;
       DBTYPE_STR or DBTYPE_BYREF:
-          FUniTemp := PRawToUnicode(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP);
+          FUniTemp := PRawToUnicode(PPAnsiChar(FData)^, FLength, ConSettings^.ClientCodePage^.CP);
       DBTYPE_WSTR:
         begin
-          Result := PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]);
-          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-            Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1
-          else
-          begin //Fixed width
-            Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-            while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+Len-1)^ = ' ' do
-              Dec(Len);
-          end;
+          Result := PWideChar(FData);
+          Len := FLength shr 1;
+          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+            while (PWideChar(FData)+Len-1)^ = ' ' do Dec(Len);
           Exit;
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
         begin
-          Result := ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          Len := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
+          Result := ZPPWideChar(FData)^;
+          Len := FLength shr 1;
           Exit;
         end;
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  FUniTemp := ZFastCode.IntToUnicode(PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_DBDATE:
+        FUniTemp := DateTimeToUnicodeSQLDate(
+          EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIME:
+        FUniTemp := DateTimeToUnicodeSQLTime(
+          EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIMESTAMP:
+        FUniTemp := DateTimeToUnicodeSQLTimeStamp(
+          EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
+          PDBTimeStamp(FData)^.day)+ EncodeTime(PDBTimeStamp(FData)^.hour,
+          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+          PDBTimeStamp(FData)^.fraction div 1000000), ConSettings.ReadFormatSettings, False);
+      DBTYPE_HCHAPTER:  FUniTemp := ZFastCode.IntToUnicode(PCHAPTER(FData)^);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1020,7 +948,6 @@ begin
       Result := PEmptyUnicodeString
     else
       Result := Pointer(FUniTemp);
-
   end;
 end;
 
@@ -1034,101 +961,85 @@ end;
     value returned is <code>null</code>
 }
 function TZOleDBResultSet.GetUnicodeString(ColumnIndex: Integer): ZWideString;
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if LastWasNull then
+  if IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
     Result := ''
   else
-    case FDBBindingArray[ColumnIndex].wType of
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_EMPTY:     Result := '';
       DBTYPE_NULL:      Result := '';
-      DBTYPE_I2:        Result := ZFastCode.IntToUnicode(PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I4:        Result := ZFastCode.IntToUnicode(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R4:        Result := FloatToSQLUnicode(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := FloatToSQLUnicode(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := CurrToStr(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := DateTimeToUnicodeSQLTime(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          stDate: Result := DateTimeToUnicodeSQLDate(
-            PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-              ConSettings.ReadFormatSettings, False);
-          else
-            Result := DateTimeToUnicodeSQLTimeStamp(
-              PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-                ConSettings.ReadFormatSettings, False);
-        end;
+      DBTYPE_I2:        Result := ZFastCode.IntToUnicode(PSmallInt(FData)^);
+      DBTYPE_I4:        Result := ZFastCode.IntToUnicode(PLongInt(FData)^);
+      DBTYPE_R4:        Result := FloatToSQLUnicode(PSingle(FData)^);
+      DBTYPE_R8:        Result := FloatToSQLUnicode(PDouble(FData)^);
+      DBTYPE_CY:        Result := CurrToStr(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(FData)^,
+                          ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1)
+          System.SetString(Result, ZPPWideChar(FData)^, FLength shr 1)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          System.SetString(Result, ZPPWideChar(FData)^, FLength);
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1);
+        System.SetString(Result, ZPPWideChar(FData)^, FLength shr 1);
       DBTYPE_IDISPATCH: Result := '';
-      DBTYPE_ERROR:     Result := ZFastCode.IntToUnicode(PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_BOOL:      Result := BoolToUnicodeEx(PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_ERROR:     Result := ZFastCode.IntToUnicode(PLongInt(FData)^);
+      DBTYPE_BOOL:      Result := BoolToUnicodeEx(PWordBool(FData)^);
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       DBTYPE_IUNKNOWN:  Result := '';
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := ZFastCode.IntToUnicode(PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I1:        Result := ZFastCode.IntToUnicode(PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI2:       Result := ZFastCode.IntToUnicode(PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI4:       Result := ZFastCode.IntToUnicode(PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_I8:        Result := ZFastCode.IntToUnicode(PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_UI8:       Result := ZFastCode.IntToUnicode(PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_GUID:      Result := GuidToUnicode(PGUID(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_UI1:       Result := ZFastCode.IntToUnicode(PByte(FData)^);
+      DBTYPE_I1:        Result := ZFastCode.IntToUnicode(PShortInt(FData)^);
+      DBTYPE_UI2:       Result := ZFastCode.IntToUnicode(PWord(FData)^);
+      DBTYPE_UI4:       Result := ZFastCode.IntToUnicode(PLongWord(FData)^);
+      DBTYPE_I8:        Result := ZFastCode.IntToUnicode(PInt64(FData)^);
+      DBTYPE_UI8:       Result := ZFastCode.IntToUnicode(PUInt64(FData)^);
+      DBTYPE_GUID:      Result := GuidToUnicode(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := PRawToUnicode(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP)
+          Result := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          Result := PRawToUnicode(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP);
+          while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          Result := PRawToUnicode(PAnsiChar(FData),
+            FLength, ConSettings^.ClientCodePage^.CP);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-          Result := PRawToUnicode(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP);
+        Result := PRawToUnicode(PPAnsiChar(FData)^, FLength, ConSettings^.ClientCodePage^.CP);
       DBTYPE_WSTR:
-        System.SetString(Result, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1);
-      DBTYPE_WSTR or DBTYPE_BYREF:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1)
+          System.SetString(Result, PWideChar(FData), FLength shr 1)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          System.SetString(Result, ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          Result := PRawToUnicode(PAnsiChar(FData),
+            FLength, ConSettings^.ClientCodePage^.CP);
         end;
+      DBTYPE_WSTR or DBTYPE_BYREF:
+        System.SetString(Result, ZPPWideChar(FData)^, FLength shr 1);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
-      //DBTYPE_DBDATE	= 133;
-      //DBTYPE_DBTIME	= 134;
-      //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToUnicode(PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+      DBTYPE_DBDATE:
+        Result := DateTimeToUnicodeSQLDate(
+          EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIME:
+        Result := DateTimeToUnicodeSQLTime(
+          EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0), ConSettings.ReadFormatSettings, False);
+      DBTYPE_DBTIMESTAMP:
+        Result := DateTimeToUnicodeSQLTimeStamp(
+          EncodeDate(Abs(PDBTimeStamp(FData)^.year), PDBTimeStamp(FData)^.month,
+          PDBTimeStamp(FData)^.day)+ EncodeTime(PDBTimeStamp(FData)^.hour,
+          PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+          PDBTimeStamp(FData)^.fraction div 1000000), ConSettings.ReadFormatSettings, False);
+      DBTYPE_HCHAPTER:  Result := ZFastCode.IntToUnicode(PCHAPTER(FData)^);
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1147,45 +1058,41 @@ end;
 }
 function TZOleDBResultSet.GetBoolean(ColumnIndex: Integer): Boolean;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := False;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_R4:        Result := PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^  <> 0;
-      DBTYPE_R8:        Result := PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_CY:        Result := PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_DATE:      Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^ <> 0;
+      DBTYPE_I4:        Result := PLongInt(FData)^ <> 0;
+      DBTYPE_R4:        Result := PSingle(FData)^  <> 0;
+      DBTYPE_R8:        Result := PDouble(FData)^ <> 0;
+      DBTYPE_CY:        Result := PCurrency(FData)^ <> 0;
+      DBTYPE_DATE:      Result := PDateTime(FData)^ <> 0;
       DBTYPE_BSTR:
-        Result := StrToBoolEx(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
+        Result := StrToBoolEx(PWideChar(FData),
           True, FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := StrToBoolEx(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_BOOL:      Result := PWordBool(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := StrToBoolEx(ZPPWideChar(FData)^);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^ <> 0;
+      DBTYPE_BOOL:      Result := PWordBool(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
+      DBTYPE_UI1:       Result := PByte(FData)^ <> 0;
+      DBTYPE_I1:        Result := PShortInt(FData)^ <> 0;
+      DBTYPE_UI2:       Result := PWord(FData)^ <> 0;
+      DBTYPE_UI4:       Result := PLongWord(FData)^ <> 0;
+      DBTYPE_I8:        Result := PInt64(FData)^ <> 0;
+      DBTYPE_UI8:       Result := PUInt64(FData)^ <> 0;
       DBTYPE_STR:
-        Result := StrToBoolEx(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
+        Result := StrToBoolEx(PAnsiChar(FData),
           True, FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := StrToBoolEx(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        Result := StrToBoolEx(PPAnsiChar(FData)^);
       DBTYPE_WSTR:
-        Result := StrToBoolEx(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
+        Result := StrToBoolEx(PWideChar(FData),
           True, FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := StrToBoolEx(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^ <> 0;
+        Result := StrToBoolEx(ZPPWideChar(FData)^);
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^ <> 0;
     end;
 end;
 
@@ -1199,76 +1106,67 @@ end;
     value returned is <code>0</code>
 }
 function TZOleDBResultSet.GetByte(ColumnIndex: Integer): Byte;
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := Trunc(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := Trunc(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := Trunc(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:      Result := Trunc(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := Trunc(PSingle(FData)^);
+      DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
+      DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToIntDef(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToIntDef(FUniTemp,0);
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := RawToIntDef(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := RawToIntDef(PAnsiChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i, FRawTemp);
+          while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          ZSetString(PAnsiChar(FData), FLength, FRawTemp);
           Result := RawToIntDef(FRawTemp,0);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToIntDef(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
+        Result := RawToIntDef(PPAnsiChar(FData)^, 0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := UnicodeToIntDef(PWideChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToIntDef(FUniTemp,0);
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
+        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1285,76 +1183,67 @@ end;
     value returned is <code>0</code>
 }
 function TZOleDBResultSet.GetSmall(ColumnIndex: Integer): SmallInt;
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := Trunc(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := Trunc(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := Trunc(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:      Result := Trunc(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := Trunc(PSingle(FData)^);
+      DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
+      DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToIntDef(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToIntDef(FUniTemp,0);
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := RawToIntDef(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := RawToIntDef(PAnsiChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^-1;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i, FRawTemp);
+          while (PAnsiChar(FData)+FLength -1)^ = ' ' do Dec(FLength);
+          ZSetString(PAnsiChar(FData), FLength, FRawTemp);
           Result := RawToIntDef(FRawTemp,0);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToIntDef(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
+        Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := UnicodeToIntDef(PWideChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToIntDef(FUniTemp,0);
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
+        Result := UnicodeToIntDef(ZPPWideChar(FData)^, 0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1371,76 +1260,68 @@ end;
     value returned is <code>0</code>
 }
 function TZOleDBResultSet.GetInt(ColumnIndex: Integer): Integer;
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := Trunc(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := Trunc(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := Trunc(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:      Result := Trunc(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := Trunc(PSingle(FData)^);
+      DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
+      DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToIntDef(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToIntDef(FUniTemp,0);
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := RawToIntDef(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := RawToIntDef(PAnsiChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i, FRawTemp);
+          while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          ZSetString(PAnsiChar(FData), FLength, FRawTemp);
           Result := RawToIntDef(FRawTemp,0);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToIntDef(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
+        Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToIntDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := UnicodeToIntDef(PWideChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do
+            Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToIntDef(FUniTemp,0);
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToIntDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,0);
+        Result := UnicodeToIntDef(ZPPWideChar(FData)^,0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1457,76 +1338,67 @@ end;
     value returned is <code>0</code>
 }
 function TZOleDBResultSet.GetLong(ColumnIndex: Integer): Int64;
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := Trunc(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := Trunc(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := Trunc(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:      Result := Trunc(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := Trunc(PSingle(FData)^);
+      DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
+      DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToInt64Def(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToInt64Def(FUniTemp,0);
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToInt64Def(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        Result := RawToInt64Def(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0);
+        Result := RawToInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := RawToInt64Def(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := RawToInt64Def(PAnsiChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i, FRawTemp);
+          while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          ZSetString(PAnsiChar(FData), FLength, FRawTemp);
           Result := RawToInt64Def(FRawTemp,0);
         end;
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToInt64Def(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToInt64Def(FUniTemp,0);
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToInt64Def(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
+        Result := UnicodeToInt64Def(ZPPWideChar(FData)^, 0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1543,76 +1415,67 @@ end;
     value returned is <code>0</code>
 }
 function TZOleDBResultSet.GetULong(ColumnIndex: Integer): UInt64;
-var I: Integer;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := Trunc(PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_R8:        Result := Trunc(PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_CY:        Result := Trunc(PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-      DBTYPE_DATE:      Result := Trunc(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := Trunc(PSingle(FData)^);
+      DBTYPE_R8:        Result := Trunc(PDouble(FData)^);
+      DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
+      DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToUInt64Def(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToUInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToUInt64Def(FUniTemp,0);
         end;
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToUInt64Def(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := RawToUInt64Def(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),0)
+          Result := RawToUInt64Def(PAnsiChar(FData),0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          while (PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          ZSetString(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i, FRawTemp);
+          while (PAnsiChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          ZSetString(PAnsiChar(FData), FLength, FRawTemp);
           Result := RawToUInt64Def(FRawTemp,0);
         end;
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToUInt64Def(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
+        Result := RawToUInt64Def(PPAnsiChar(FData)^, 0);
       DBTYPE_WSTR:
         if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
-          Result := UnicodeToUInt64Def(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 0)
+          Result := UnicodeToUInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
-          I := PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1;
-          while (PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])+I-1)^ = ' ' do
-            Dec(I);
-          SetString(FUniTemp, PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), i);
+          FLength := FLength shr 1;
+          while (PWideChar(FData)+FLength-1)^ = ' ' do Dec(FLength);
+          SetString(FUniTemp, PWideChar(FData), FLength);
           Result := UnicodeToUInt64Def(FUniTemp,0);
         end;
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToUInt64Def(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 0);
+        Result := UnicodeToUInt64Def(ZPPWideChar(FData)^, 0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1630,47 +1493,43 @@ end;
 }
 function TZOleDBResultSet.GetFloat(ColumnIndex: Integer): Single;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R8:        Result := PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_CY:        Result := PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_DATE:      Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := PSingle(FData)^;
+      DBTYPE_R8:        Result := PDouble(FData)^;
+      DBTYPE_CY:        Result := PCurrency(FData)^;
+      DBTYPE_DATE:      Result := PDateTime(FData)^;
       DBTYPE_BSTR:
-        Result := UnicodeToFloatDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), WideChar('.'), 0);
+        Result := UnicodeToFloatDef(PWideChar(FData), WideChar('.'), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,WideChar('.'), 0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'), 0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        Result := RawToFloatDef(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),'.', 0);
+        Result := RawToFloatDef(PAnsiChar(FData),'.', 0);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToFloatDef(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,'.', 0);
+        Result := RawToFloatDef(PPAnsiChar(FData)^,'.', 0);
       DBTYPE_WSTR:
-        Result := UnicodeToFloatDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),WideChar('.'),0 );
+        Result := UnicodeToFloatDef(PWideChar(FData),WideChar('.'),0 );
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,WideChar('.'),0);
+        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'),0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1688,47 +1547,43 @@ end;
 }
 function TZOleDBResultSet.GetDouble(ColumnIndex: Integer): Double;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R8:        Result := PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_CY:        Result := PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_DATE:      Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := PSingle(FData)^;
+      DBTYPE_R8:        Result := PDouble(FData)^;
+      DBTYPE_CY:        Result := PCurrency(FData)^;
+      DBTYPE_DATE:      Result := PDateTime(FData)^;
       DBTYPE_BSTR:
-        Result := UnicodeToFloatDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), WideChar('.'), 0);
+        Result := UnicodeToFloatDef(PWideChar(FData), WideChar('.'), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,WideChar('.'), 0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'), 0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        Result := RawToFloatDef(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),'.', 0);
+        Result := RawToFloatDef(PAnsiChar(FData),'.', 0);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToFloatDef(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,'.', 0);
+        Result := RawToFloatDef(PPAnsiChar(FData)^,'.', 0);
       DBTYPE_WSTR:
-        Result := UnicodeToFloatDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),WideChar('.'),0 );
+        Result := UnicodeToFloatDef(PWideChar(FData),WideChar('.'),0 );
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,WideChar('.'),0);
+        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'),0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1747,47 +1602,43 @@ end;
 }
 function TZOleDBResultSet.GetBigDecimal(ColumnIndex: Integer): Extended;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_I2:        Result := PSmallInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I4:        Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R4:        Result := PSingle(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_R8:        Result := PDouble(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_CY:        Result := PCurrency(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_DATE:      Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_I2:        Result := PSmallInt(FData)^;
+      DBTYPE_I4:        Result := PLongInt(FData)^;
+      DBTYPE_R4:        Result := PSingle(FData)^;
+      DBTYPE_R8:        Result := PDouble(FData)^;
+      DBTYPE_CY:        Result := PCurrency(FData)^;
+      DBTYPE_DATE:      Result := PDateTime(FData)^;
       DBTYPE_BSTR:
-        Result := UnicodeToFloatDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), WideChar('.'), 0);
+        Result := UnicodeToFloatDef(PWideChar(FData), WideChar('.'), 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,WideChar('.'), 0);
-      DBTYPE_ERROR:     Result := PLongInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_BOOL:      Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'), 0);
+      DBTYPE_ERROR:     Result := PLongInt(FData)^;
+      DBTYPE_BOOL:      Result := PWord(FData)^;
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       //DBTYPE_DECIMAL	= 14;
-      DBTYPE_UI1:       Result := PByte(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I1:        Result := PShortInt(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI2:       Result := PWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI4:       Result := PLongWord(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_I8:        Result := PInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-      DBTYPE_UI8:       Result := PUInt64(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_UI1:       Result := PByte(FData)^;
+      DBTYPE_I1:        Result := PShortInt(FData)^;
+      DBTYPE_UI2:       Result := PWord(FData)^;
+      DBTYPE_UI4:       Result := PLongWord(FData)^;
+      DBTYPE_I8:        Result := PInt64(FData)^;
+      DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        Result := RawToFloatDef(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),'.', 0);
+        Result := RawToFloatDef(PAnsiChar(FData),'.', 0);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := RawToFloatDef(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,'.', 0);
+        Result := RawToFloatDef(PPAnsiChar(FData)^,'.', 0);
       DBTYPE_WSTR:
-        Result := UnicodeToFloatDef(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),WideChar('.'),0 );
+        Result := UnicodeToFloatDef(PWideChar(FData),WideChar('.'),0 );
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := UnicodeToFloatDef(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,WideChar('.'),0);
+        Result := UnicodeToFloatDef(ZPPWideChar(FData)^,WideChar('.'),0);
       //DBTYPE_NUMERIC	= 131;
       //DBTYPE_UDT	= 132;
       //DBTYPE_DBDATE	= 133;
       //DBTYPE_DBTIME	= 134;
       //DBTYPE_DBTIMESTAMP	= 135;
-      DBTYPE_HCHAPTER:  Result := PCHAPTER(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+      DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^;
       //DBTYPE_FILETIME	= 64;
       //DBTYPE_PROPVARIANT	= 138;
       //DBTYPE_VARNUMERIC	= 139;
@@ -1806,34 +1657,30 @@ end;
 }
 function TZOleDBResultSet.GetBytes(ColumnIndex: Integer): TBytes;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := nil;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_GUID:
         begin
           SetLength(Result, 16);
-          System.Move(Pointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, Pointer(Result)^, 16);
+          System.Move(Pointer(FData)^, Pointer(Result)^, 16);
         end;
       DBTYPE_GUID or DBTYPE_BYREF:
         begin
           SetLength(Result, 16);
-          System.Move(PPointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^^, Pointer(Result)^, 16);
+          System.Move(PPointer(FData)^^, Pointer(Result)^, 16);
         end;
       DBTYPE_BYTES:
         begin
-          SetLength(Result, PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-          System.Move(Pointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-            Pointer(Result)^, PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+          SetLength(Result, FLength);
+          System.Move(Pointer(FData)^,
+            Pointer(Result)^, FLength);
         end;
       DBTYPE_BYTES or DBTYPE_BYREF:
         begin
-          SetLength(Result, PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-          System.Move(PPointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^^,
-            Pointer(Result)^, PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+          SetLength(Result, FLength);
+          System.Move(PPointer(FData)^^,
+            Pointer(Result)^, FLength);
         end;
       else LastWasNull := True;
     end;
@@ -1850,40 +1697,38 @@ end;
 }
 function TZOleDBResultSet.GetDate(ColumnIndex: Integer): TDateTime;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
-      DBTYPE_DATE:
-        case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := 0;
-          stDate: Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
-          else
-            Result := Trunc(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
-        end;
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
+      DBTYPE_DATE: Result := Trunc(PDateTime(FData)^);
 (*      DBTYPE_BSTR:
-        Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(PWideChar(FData),
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PAnsiChar(FData),
+          FLength);
       DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PPAnsiChar(FData)^,
+          FLength);
       DBTYPE_WSTR:
-        Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(PWideChar(FData),
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
-*)      else LastWasNull := True;
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
+*)
+      DBTYPE_DBDATE:
+        Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day);
+      DBTYPE_DBTIME: Result := 0;
+      DBTYPE_DBTIMESTAMP:
+        Result := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
+          PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day);
+      else LastWasNull := True;
     end;
 end;
 
@@ -1898,40 +1743,47 @@ end;
 }
 function TZOleDBResultSet.GetTime(ColumnIndex: Integer): TDateTime;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_DATE:
         case TZColumnInfo(ColumnsInfo[ColumnIndex]).ColumnType of
-          stTime: Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+          stTime: Result := PDateTime(FData)^;
           stDate: Result := 0;
           else
-            Result := Frac(PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+            Result := Frac(PDateTime(FData)^);
         end;
 (*      DBTYPE_BSTR:
-        Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(PWideChar(FData),
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PAnsiChar(FData),
+          FLength);
       DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PPAnsiChar(FData)^,
+          FLength);
       DBTYPE_WSTR:
-        Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(PWideChar(FData),
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
-*)      else LastWasNull := True;
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
+*)
+      DBTYPE_DBDATE: Result := 0;
+      DBTYPE_DBTIME:
+        Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0);
+      DBTYPE_DBTIMESTAMP:
+        Result := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
+                    PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
+                  EncodeTime(PDBTimeStamp(FData)^.hour,
+                    PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+                    PDBTimeStamp(FData)^.fraction div 1000000);
+      else LastWasNull := True;
     end;
 end;
 
@@ -1947,35 +1799,44 @@ end;
 }
 function TZOleDBResultSet.GetTimestamp(ColumnIndex: Integer): TDateTime;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := 0;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_DATE:
-        Result := PDateTime(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := PDateTime(FData)^;
 (*      DBTYPE_BSTR:
-        Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(PWideChar(FData),
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
-      DBTYPE_VARIANT:   Result := POleVariant(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^;
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
+      DBTYPE_VARIANT:   Result := POleVariant(FData)^;
       DBTYPE_STR:
-        System.SetString(Result, PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PAnsiChar(FData),
+          FLength);
       DBTYPE_STR or DBTYPE_BYREF:
-        System.SetString(Result, PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        System.SetString(Result, PPAnsiChar(FData)^,
+          FLength);
       DBTYPE_WSTR:
-        Result := PUnicodeToRaw(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
+        Result := PUnicodeToRaw(PWideChar(FData),
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := PUnicodeToRaw(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings^.ClientCodePage^.CP);
-*)      else LastWasNull := True;
+        Result := PUnicodeToRaw(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings^.ClientCodePage^.CP);
+*)
+      DBTYPE_DBDATE:
+        Result := EncodeDate(Abs(PDBDate(FData)^.year), PDBDate(FData)^.month,
+          PDBDate(FData)^.day);
+      DBTYPE_DBTIME:
+        Result := EncodeTime(PDBTime(FData)^.hour, PDBTime(FData)^.minute,
+            PDBTime(FData)^.second,0);
+      DBTYPE_DBTIMESTAMP:
+        Result := EncodeDate(Abs(PDBTimeStamp(FData)^.year),
+                    PDBTimeStamp(FData)^.month, PDBTimeStamp(FData)^.day)+
+                  EncodeTime(PDBTimeStamp(FData)^.hour,
+                    PDBTimeStamp(FData)^.minute, PDBTimeStamp(FData)^.second,
+                    PDBTimeStamp(FData)^.fraction div 1000000);
+      else LastWasNull := True;
     end;
 end;
 
@@ -1990,41 +1851,37 @@ end;
 }
 function TZOleDBResultSet.GetBlob(ColumnIndex: Integer): IZBlob;
 begin
-  {$IFNDEF GENERIC_INDEX}
-  ColumnIndex := ColumnIndex-1;
-  {$ENDIF}
   Result := nil;
-  LastWasNull := PDBSTATUS(@FColBuffer[FDBBindingArray[ColumnIndex].obStatus+NativeUInt(NativeUInt(FRowSize*FCurrentBufRowNo))])^ = DBSTATUS_S_ISNULL;
-  if not LastWasNull then
-    case FDBBindingArray[ColumnIndex].wType of
+  if not IsNull(ColumnIndex) then //Sets LastWasNull, FData, FLength!!
+    case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_GUID:
-        Result := TZAbstractBlob.CreateWithData(Pointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]), 16);
+        Result := TZAbstractBlob.CreateWithData(Pointer(FData), 16);
       DBTYPE_GUID or DBTYPE_BYREF:
-        Result := TZAbstractBlob.CreateWithData(PPointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^, 16);
+        Result := TZAbstractBlob.CreateWithData(PPointer(FData)^, 16);
       DBTYPE_BYTES:
-        Result := TZAbstractBlob.CreateWithData(Pointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        Result := TZAbstractBlob.CreateWithData(Pointer(FData),
+          FLength);
       DBTYPE_BYTES or DBTYPE_BYREF:
-        Result := TZAbstractBlob.CreateWithData(PPointer(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^);
+        Result := TZAbstractBlob.CreateWithData(PPointer(FData)^,
+          FLength);
       DBTYPE_BSTR:
-        Result := TZAbstractClob.CreateWithData(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings);
+        Result := TZAbstractClob.CreateWithData(PWideChar(FData),
+          FLength shr 1, ConSettings);
       DBTYPE_BSTR or DBTYPE_BYREF:
-        Result := TZAbstractClob.CreateWithData(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings);
+        Result := TZAbstractClob.CreateWithData(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings);
       DBTYPE_STR:
-        Result := TZAbstractClob.CreateWithData(PAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP, ConSettings);
+        Result := TZAbstractClob.CreateWithData(PAnsiChar(FData),
+          FLength, ConSettings^.ClientCodePage^.CP, ConSettings);
       DBTYPE_STR or DBTYPE_BYREF:
-        Result := TZAbstractClob.CreateWithData(PPAnsiChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^, ConSettings^.ClientCodePage^.CP, ConSettings);
+        Result := TZAbstractClob.CreateWithData(PPAnsiChar(FData)^,
+          FLength, ConSettings^.ClientCodePage^.CP, ConSettings);
       DBTYPE_WSTR:
-        Result := TZAbstractClob.CreateWithData(PWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)]),
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings);
+        Result := TZAbstractClob.CreateWithData(PWideChar(FData),
+          FLength shr 1, ConSettings);
       DBTYPE_WSTR or DBTYPE_BYREF:
-        Result := TZAbstractClob.CreateWithData(ZPPWideChar(@FColBuffer[FDBBindingArray[ColumnIndex].obValue+NativeUInt(FRowSize*FCurrentBufRowNo)])^,
-          PDBLENGTH(@FColBuffer[FDBBindingArray[ColumnIndex].obLength+NativeUInt(FRowSize*FCurrentBufRowNo)])^ shr 1, ConSettings);
+        Result := TZAbstractClob.CreateWithData(ZPPWideChar(FData)^,
+          FLength shr 1, ConSettings);
       else LastWasNull := True;
     end;
 end;

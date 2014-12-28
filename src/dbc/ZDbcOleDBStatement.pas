@@ -183,8 +183,8 @@ var
 begin
   if Not Prepared then //prevent PrepareInParameters
   begin
+    FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
-      FCommand := (Connection as IZOleDBConnection).CreateCommand;
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
       OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
@@ -194,10 +194,13 @@ begin
     inherited Prepare;
   end
   else
+  begin
+    FMultipleResults := nil; //release this interface! else we can't free the command in some tests
     if Assigned(FParameterAccessor) and ((ArrayCount > 0) and
        (FDBParams.cParamSets = 0)) or //new arrays have been set
        ((ArrayCount = 0) and (FDBParams.cParamSets > 1)) then //or single exec follows
       CalcParamSetsAndBufferSize;
+  end;
 end;
 
 procedure TZOleDBPreparedStatement.PrepareInParameters;
@@ -373,7 +376,16 @@ function TZOleDBPreparedStatement.ExecutePrepared: Boolean;
 var
   FRowSet: IRowSet;
 begin
-  LastResultSet := nil;
+  if Assigned(FOpenResultSet) then
+  begin
+    IZResultSet(FOpenResultSet).Close;
+    FOpenResultSet := nil;
+  end;
+  if Assigned(LastResultSet) then
+  begin
+    LastResultSet.Close;
+    LastResultSet := nil;
+  end;
   LastUpdateCount := -1;
 
   Prepare;
