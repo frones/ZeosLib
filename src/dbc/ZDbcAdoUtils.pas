@@ -114,11 +114,6 @@ function ConvertResultSetConcurrencyToAdo(ResultSetConcurrency: TZResultSetConcu
 }
 function ConvertOleDBToAdoSchema(OleDBSchema: TGUID): Integer;
 
-{**
-  Brings up the ADO connection string builder dialog.
-}
-function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
-
 function GetCurrentResultSet(AdoRecordSet: ZPlainAdo.RecordSet;
   Connection: IZAdoConnection; Statement: IZStatement; Const SQL: String;
   ConSettings: PZConSettings;
@@ -413,31 +408,6 @@ begin
   if IsEqualGuid(OleDBSchema, MDSCHEMA_PROPERTIES) then Result := 37;
   if IsEqualGuid(OleDBSchema, MDSCHEMA_MEMBERS) then Result := 38;
   if IsEqualGuid(OleDBSchema, DBPROPSET_TRUSTEE) then Result := 39;
-end;
-
-{**
-  Brings up the ADO connection string builder dialog.
-}
-function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
-var
-  DataInit: IDataInitialize;
-  DBPrompt: IDBPromptInitialize;
-  DataSource: IUnknown;
-  InitStr: PWideChar;
-begin
-  Result := InitialString;
-  DataInit := CreateComObject(CLSID_DataLinks) as IDataInitialize;
-  if InitialString <> '' then
-    DataInit.GetDataSource(nil, CLSCTX_INPROC_SERVER,
-      PWideChar(InitialString), IUnknown, DataSource{%H-});
-  DBPrompt := CreateComObject(CLSID_DataLinks) as IDBPromptInitialize;
-  if Succeeded(DBPrompt.PromptDataSource(nil, Handle,
-    DBPROMPTOPTIONS_PROPERTYSHEET, 0, nil, nil, IUnknown, DataSource)) then
-  begin
-    InitStr := nil;
-    DataInit.GetInitializationString(DataSource, True, InitStr);
-    Result := InitStr;
-  end;
 end;
 
 function GetCurrentResultSet(AdoRecordSet: ZPlainAdo.RecordSet;

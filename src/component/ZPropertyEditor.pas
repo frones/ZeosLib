@@ -229,13 +229,9 @@ uses SysUtils, Forms, Dialogs, Controls, DB, TypInfo, ZSysUtils, ZSelectSchema
 {$IFDEF USE_METADATA}
   , ZSqlMetadata
 {$ENDIF}
-{$IFNDEF UNIX}
-  {$IFNDEF FPC}
-  {$IFDEF ENABLE_ADO}
-, ZDbcAdoUtils
-  {$ENDIF}
-  {$ENDIF}
-{$ENDIF}
+  {$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
+, ZDbcOleDBUtils
+  {$IFEND}
 {$IFDEF SHOW_WARNING}
 ,ZMessages
 {$ENDIF SHOW_WARNING}
@@ -784,16 +780,13 @@ begin
     if ((GetZComponent as TZAbstractConnection).Protocol = 'mssql') or
     ((GetZComponent as TZAbstractConnection).Protocol = 'sybase') then
       inherited
-{$IFNDEF UNIX}
-{$IFNDEF FPC}
-{$IFDEF ENABLE_ADO}
+{$IF defined(ENABLE_ADO) or defined(ENABLE_OLEDB)}
     else
-    if ((GetZComponent as TZAbstractConnection).Protocol = 'ado') then
+    if ((GetZComponent as TZAbstractConnection).Protocol = 'ado') or
+       ((GetZComponent as TZAbstractConnection).Protocol = 'OleDB') then
       (GetZComponent as TZAbstractConnection).Database := PromptDataSource(Application.Handle,
         (GetZComponent as TZAbstractConnection).Database)
-{$ENDIF}
-{$ENDIF}
-{$ENDIF}
+{$IFEND}
     else
     begin
       OD := TOpenDialog.Create(nil);

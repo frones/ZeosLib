@@ -79,6 +79,11 @@ function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
 
 procedure OleDBCheck(aResult: HRESULT; const aStatus: TDBBINDSTATUSDynArray = nil);
 
+{**
+  Brings up the ADO or better OleDB connection string builder dialog.
+}
+function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
+
 function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
@@ -284,6 +289,31 @@ begin
     // raise exception
     DriverManager.LogMessage(lcExecute, 'OleDB', RawByteString(OleDBErrorMessage));
     raise EZSQLException.Create(OleDBErrorMessage);
+  end;
+end;
+
+{**
+  Brings up the ADO or better OleDB connection string builder dialog.
+}
+function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
+var
+  DataInit: IDataInitialize;
+  DBPrompt: IDBPromptInitialize;
+  DataSource: IUnknown;
+  InitStr: PWideChar;
+begin
+  Result := InitialString;
+  DataInit := CreateComObject(CLSID_DataLinks) as IDataInitialize;
+  if InitialString <> '' then
+    DataInit.GetDataSource(nil, CLSCTX_INPROC_SERVER,
+      PWideChar(InitialString), IUnknown, DataSource{%H-});
+  DBPrompt := CreateComObject(CLSID_DataLinks) as IDBPromptInitialize;
+  if Succeeded(DBPrompt.PromptDataSource(nil, Handle,
+    DBPROMPTOPTIONS_PROPERTYSHEET, 0, nil, nil, IUnknown, DataSource)) then
+  begin
+    InitStr := nil;
+    DataInit.GetInitializationString(DataSource, True, InitStr);
+    Result := InitStr;
   end;
 end;
 
