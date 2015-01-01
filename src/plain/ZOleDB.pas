@@ -2236,7 +2236,7 @@ type
     function GetProperties(cPropertyIDSets: ULONG; const rgPropertyIDSets: PDBPropIDSetArray;
       var pcPropertySets:ULONG;out prgPropertySets:PDBPROPSET):HRESULT;stdcall;
     // SetProperties :
-    function SetProperties(cPropertySets:ULONG;var rgPropertySets:TDBPROPSET):HRESULT;stdcall;
+    function SetProperties(cPropertySets:ULONG; rgPropertySets:PDBPropSetArray):HRESULT;stdcall;
   end;
 
 // ICommandText :
