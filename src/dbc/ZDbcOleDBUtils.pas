@@ -1920,7 +1920,7 @@ var
   procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
     //initialize common property options
-    VariantInit(PropSet.rgProperties^[PropSet.cProperties].vValue);
+    //VariantInit(PropSet.rgProperties^[PropSet.cProperties].vValue);
     PropSet.rgProperties^[PropSet.cProperties].dwPropertyID := PropertyID;
     PropSet.rgProperties^[PropSet.cProperties].dwOptions    := DBPROPOPTIONS_REQUIRED;
     PropSet.rgProperties^[PropSet.cProperties].dwStatus     := 0;

@@ -188,8 +188,7 @@ var
 begin
   if Not Prepared then //prevent PrepareInParameters
   begin
-    if not Assigned(FCommand) then
-      FCommand := (Connection as IZOleDBConnection).CreateCommand;
+    FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
       SetOleCommandProperties(FCommand, 0, ResultSetType, (Connection as IZOleDBConnection).GetProvider);
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
@@ -473,6 +472,7 @@ begin
       FMultipleResults := nil;
       inherited Unprepare;
       (FCommand as ICommandPrepare).UnPrepare;
+      FCommand := nil;
     finally
       FMultipleResults := nil;
     end;
@@ -490,9 +490,11 @@ begin
   inherited SetDataArray(ParameterIndex, Value, SQLType, VariantType);
 end;
 
+//(*
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
+//*)
 end.
 
 
