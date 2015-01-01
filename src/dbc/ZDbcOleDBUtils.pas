@@ -70,6 +70,11 @@ type
     DBBINDSTATUS_UNSUPPORTEDCONVERSION, DBBINDSTATUS_BADBINDINFO,
     DBBINDSTATUS_BADSTORAGEFLAGS, DBBINDSTATUS_NOINTERFACE,
     DBBINDSTATUS_MULTIPLESTORAGE);
+  TServerProvider = (spUnkown, spMSSQL, spOracle);
+
+const
+  VARIANT_TRUE = Smallint(-1);
+  VARIANT_FALSE = Smallint(0);
 
 function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM; IsLong: Boolean;
   CtrlsCPType: TZControlsCodePage): TZSQLType; overload;
@@ -102,6 +107,9 @@ procedure OleBindArrayParams(const DBParams: TDBParams; ArrayOffSet: DB_UPARAMS;
   const DBBindingArray: TDBBindingDynArray; ClientVarManager: IZClientVariantManager;
   const InParamValues: TZVariantDynArray; const TempLobs: TInterfacesDynArray;
   const SupportsMilliseconds: Boolean = True);
+
+procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
+  ResultSetType: TZResultSetType; Provider: TServerProvider);
 
 implementation
 
@@ -293,7 +301,7 @@ begin
 end;
 
 {**
-  Brings up the ADO or better OleDB connection string builder dialog.
+  Brings up the OleDB connection string builder dialog.
 }
 function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
 var
@@ -1898,6 +1906,73 @@ begin
   end;
 end;
 {$HINTS ON}
+
+procedure SetOleCommandProperties(Command: ICommandText; TimeOut: SmallInt;
+  ResultSetType: TZResultSetType; Provider: TServerProvider);
+const
+  SSPROP_DEFERPREPARE	= 13;
+  DBPROPSET_SQLSERVERROWSET: TGUID 	= '{5cf4ca11-ef21-11d0-97e7-00c04fc2ad98}';
+var
+  FCmdProps: ICommandProperties;
+  rgCommonProperties: array[0..10] of TDBProp;
+  rgMSSQLProperties: TDBProp;
+  rgPropertySets: array[0..1] of TDBPROPSET;
+  procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
+  begin
+    //initialize common property options
+    VariantInit(PropSet.rgProperties^[PropSet.cProperties].vValue);
+    PropSet.rgProperties^[PropSet.cProperties].dwPropertyID := PropertyID;
+    PropSet.rgProperties^[PropSet.cProperties].dwOptions    := DBPROPOPTIONS_REQUIRED;
+    PropSet.rgProperties^[PropSet.cProperties].dwStatus     := 0;
+    PropSet.rgProperties^[PropSet.cProperties].colid        := DB_NULLID;
+    PropSet.rgProperties^[PropSet.cProperties].vValue       := Value;
+    Inc(PropSet.cProperties);
+  end;
+begin
+  FCmdProps := nil; //init
+  if Succeeded(Command.QueryInterface(IID_ICommandProperties, FCmdProps)) then
+  begin
+    //http://msdn.microsoft.com/en-us/library/windows/desktop/ms723066%28v=vs.85%29.aspx
+    rgPropertySets[0].cProperties     := 0; //init
+    rgPropertySets[0].guidPropertySet := DBPROPSET_ROWSET;
+    rgPropertySets[0].rgProperties    := @rgCommonProperties[0];
+    rgPropertySets[1].cProperties     := 0;
+    rgPropertySets[1].guidPropertySet := DBPROPSET_SQLSERVERROWSET;
+    rgPropertySets[1].rgProperties    := @rgMSSQLProperties;
+    //to avoid http://support.microsoft.com/kb/272358/de we need a
+    //FAST_FORWARD(RO) server cursor
+    {common sets which are NOT default: according the cursor models of
+    http://msdn.microsoft.com/de-de/library/ms130840.aspx }
+    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
+    SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(1, TimeOut)); //Set command time_out static!
+    SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
+    SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);
+    SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);
+    SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
+    SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
+    if ResultSetType = rtForwardOnly then
+    begin
+      SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,         VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANFETCHBACKWARDS,  VARIANT_FALSE);
+      SetProp(rgPropertySets[0], DBPROP_CANSCROLLBACKWARDS, VARIANT_FALSE);
+    end
+    else
+    begin
+      SetProp(rgPropertySets[0], DBPROP_REMOVEDELETED,      VARIANT_TRUE);//??
+    end;
+    if (Provider = spMSSQL) then
+    begin
+      //turn off deferred prepare -> raise exception on Prepare if command can't be executed!
+      //http://msdn.microsoft.com/de-de/library/ms130779.aspx
+      SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
+    end;
+    try
+      OleDBCheck(2,@rgPropertySets[0]);
+    finally
+      FCmdProps := nil;
+    end;
+  end;
+end;
 
 {$ELSE}
 implementation

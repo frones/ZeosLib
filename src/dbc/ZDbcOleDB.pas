@@ -60,7 +60,7 @@ uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
   ZDbcIntfs, ZDbcConnection, ZDbcLogging, ZTokenizer,
-  ZGenericSqlAnalyser, ZURL, ZCompatibility,
+  ZGenericSqlAnalyser, ZURL, ZCompatibility, ZDbcOleDBUtils,
   ZOleDB, ZPlainOleDBDriver, ZOleDBToken;
 
 type
@@ -73,8 +73,6 @@ type
     function GetTokenizer: IZTokenizer; override;
   end;
   {$WARNINGS ON}
-
-  TServerProvider = (spUnkown, spMSSQL, spOracle);
 
   {** Defines a PostgreSQL specific connection. }
   IZOleDBConnection = interface(IZConnection)
@@ -99,6 +97,7 @@ type
     FSupportsMultipleResultSets: Boolean;
     FServerProvider: TServerProvider;
     procedure StopTransaction;
+    procedure SetProviderProps(DBinit: Boolean);
   protected
     procedure StartTransaction;
     procedure InternalCreate; override;
@@ -145,7 +144,7 @@ var
 
 implementation
 
-uses ZDbcOleDBMetadata, ZDbcOleDBUtils, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
+uses ZDbcOleDBMetadata, ZDbcOleDBStatement, ZSysUtils, ZDbcUtils,
   ZMessages, ZFastCode;
 
 { TZOleDBDriver }
@@ -247,6 +246,76 @@ begin
       OleDbCheck(fTransaction.Commit(False,XACTTC_SYNC,0))
     else
       OleDbCheck(fTransaction.Abort(nil, False, False));
+end;
+
+procedure TZOleDBConnection.SetProviderProps(DBinit: Boolean);
+const
+  DBPROPSET_SQLSERVERDBINIT: TGUID = '{5cf4ca10-ef21-11d0-97e7-00c04fc2ad98}';
+  SSPROP_INIT_PACKETSIZE	       = 9;
+var
+  DBProps: IDBProperties;
+  rgDBPROPSET_DBINIT: array[0..10] of TDBProp;
+  rgDBPROPSET_SQLSERVERDBINIT: TDBProp;
+  rgDBPROPSET_DATASOURCE: TDBProp;
+  PropertySets: array[0..2] of TDBPROPSET;
+  rgPropertySets: PDBPropSetArray;
+  cPropertySets: ULONG;
+  procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: Integer);
+  begin
+    //initialize common property options
+    //VariantInit(PropSet.rgProperties^[PropSet.cProperties].vValue);
+    PropSet.rgProperties^[PropSet.cProperties].dwPropertyID := PropertyID;
+    PropSet.rgProperties^[PropSet.cProperties].dwOptions    := DBPROPOPTIONS_REQUIRED;
+    PropSet.rgProperties^[PropSet.cProperties].dwStatus     := 0;
+    PropSet.rgProperties^[PropSet.cProperties].colid        := DB_NULLID;
+    PropSet.rgProperties^[PropSet.cProperties].vValue       := Value;
+    Inc(PropSet.cProperties);
+  end;
+begin
+  DBProps := nil; //init
+  if Succeeded(FDBInitialize.QueryInterface(IID_IDBProperties, DBProps)) then
+  begin
+    rgPropertySets := nil;
+    if DBinit then
+    begin
+      cPropertySets := 1;
+      PropertySets[0].cProperties     := 0; //init
+      PropertySets[0].guidPropertySet := DBPROPSET_DBINIT;
+      PropertySets[0].rgProperties    := @rgDBPROPSET_DBINIT[0];
+      PropertySets[1].cProperties     := 0; //init
+      PropertySets[1].guidPropertySet := DBPROPSET_SQLSERVERDBINIT;
+      PropertySets[1].rgProperties    := @rgDBPROPSET_SQLSERVERDBINIT;
+      //http://msdn.microsoft.com/en-us/library/windows/desktop/ms723066%28v=vs.85%29.aspx
+      //Indicates the number of seconds before the source initialization times out
+      SetProp(PropertySets[0], DBPROP_INIT_TIMEOUT,       StrToIntDef(Info.Values['timeout'], 0));
+      //Indicates the number of seconds before a request and command execution, times out
+      SetProp(PropertySets[0], DBPROP_INIT_GENERALTIMEOUT,StrToIntDef(Info.Values['timeout'], 0));
+      //supported for MSSQL only!!!
+      if (Info.Values['tds_packed_size'] <> '') then
+      begin
+        SetProp(PropertySets[1], SSPROP_INIT_PACKETSIZE, StrToIntDef(Info.Values['tds_packed_size'], 0));
+        cPropertySets := 2;
+      end;
+      rgPropertySets := @PropertySets[0];
+    end
+    else
+      if (FServerProvider = spMSSQL) then
+      begin
+        PropertySets[2].cProperties     := 0; //init
+        PropertySets[2].guidPropertySet := DBPROPSET_DATASOURCE;
+        PropertySets[2].rgProperties    := @rgDBPROPSET_DATASOURCE;
+        SetProp(PropertySets[2], DBPROP_MULTIPLECONNECTIONS,VARIANT_FALSE);
+        rgPropertySets := @PropertySets[2];
+        cPropertySets := 1;
+      end
+      else
+        cPropertySets := 0;
+    try
+      OleDBCheck(DBProps.SetProperties(cPropertySets,rgPropertySets));
+    finally
+      DBProps := nil;
+    end;
+  end;
 end;
 
 const
@@ -402,41 +471,12 @@ begin
 end;
 
 {**
-  Returs the OleSession interface of current connection
+  Returs the Ole-ICommandText interface of current connection
 }
 function TZOleDBConnection.CreateCommand: ICommandText;
-const
-  SSPROP_DEFERPREPARE	= 13;
-  DBPROPSET_SQLSERVERROWSET: TGUID 	= '{5cf4ca11-ef21-11d0-97e7-00c04fc2ad98}';
-var
-  FCmdProps: ICommandProperties;
-  rgProperties: TDBProp;
-  rgPropertySets: TDBPROPSET;
 begin
   Result := nil;
   OleDbCheck(FDBCreateCommand.CreateCommand(nil, IID_ICommandText,IUnknown(Result)));
-  FCmdProps := nil; //init
-  if (FServerProvider = spMSSQL) and
-    Succeeded(Result.QueryInterface(IID_ICommandProperties, FCmdProps)) then
-  begin
-    //http://msdn.microsoft.com/de-de/library/ms130779.aspx
-    rgPropertySets.rgProperties := @rgProperties;
-    // initialize common property options
-    rgProperties.dwOptions := DBPROPOPTIONS_REQUIRED;
-    rgProperties.colid     := DB_NULLID;
-    //VariantInit(rgProperties.vValue);
-    // turn off deferred prepare -> raise exception now if command can't be executed!
-    rgProperties.dwPropertyID := SSPROP_DEFERPREPARE;
-    rgProperties.vValue       := False;
-
-    rgPropertySets.guidPropertySet := DBPROPSET_SQLSERVERROWSET;
-    rgPropertySets.cProperties := 1;
-    try
-      OleDBCheck(FCmdProps.SetProperties(1,rgPropertySets));
-    finally
-      FCmdProps := nil;
-    end;
-  end;
 end;
 
 function TZOleDBConnection.GetMalloc: IMalloc;
@@ -533,6 +573,7 @@ begin
     // open the connection to the DB
     OleDBCheck(fDBInitialize.Initialize);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
+    //SetProviderProps(True); //set's timeout values
     OleDBCheck(FDBCreateSession.CreateSession(nil, IID_IOpenRowset, FSession));
     FDBCreateSession := nil; //no longer required!
     //some Providers do NOT support commands, so let's check if we can use it
@@ -546,7 +587,10 @@ begin
     if ZFastCode.Pos('Oracle', Tmp) > 0 then
       FServerProvider := spOracle
     else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
+    begin
       FServerProvider := spMSSQL;
+      //SetProviderProps(False); //provider properties
+    end;
 
     // check if DB handle transactions
     if Failed(FSession.QueryInterface(IID_ITransactionLocal,fTransaction)) then

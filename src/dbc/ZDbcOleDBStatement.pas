@@ -91,7 +91,7 @@ type
     FParamsBuffer: TByteDynArray;
     FTempLobs: TInterfacesDynArray; //Temporary storage for LOB's if a conversion from different Types than IZLob's is required. May be dropped if someone know how to play with IPersistStream
     procedure CalcParamSetsAndBufferSize;
-  protected
+  protected //interface based!
     function GetInternalBufferSize: Integer;
   protected //overrides
     procedure PrepareInParameters; override;
@@ -191,6 +191,7 @@ begin
     if not Assigned(FCommand) then
       FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
+      SetOleCommandProperties(FCommand, 0, ResultSetType, (Connection as IZOleDBConnection).GetProvider);
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
       OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
@@ -415,6 +416,7 @@ begin
     Result := Assigned(LastResultSet);
   finally
     FRowSet := nil;
+    if LastResultSet = nil then FMultipleResults := nil;
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
   end;
 end;
