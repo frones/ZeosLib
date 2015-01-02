@@ -2649,7 +2649,7 @@ type
     procedure GetOptionsObject(out ppOptions: ITransactionOptions);stdcall;
     // StartTransaction :
     procedure StartTransaction(isoLevel:ISOLEVEL;isoFlags:ULONG;
-      pOtherOptions:ITransactionOptions;out pulTransactionLevel: PULONG);stdcall;
+      pOtherOptions:ITransactionOptions; pulTransactionLevel: PULONG);stdcall;
   end;
 
 // ITransactionOptions :

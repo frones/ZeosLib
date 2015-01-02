@@ -93,7 +93,7 @@ type
     FDBCreateCommand: IDBCreateCommand;
     FTransaction: ITransactionLocal;
     FRetaining: Boolean;
-    FpulTransactionLevel: PULONG;
+    FpulTransactionLevel: ULONG;
     FSupportsMultipleResultSets: Boolean;
     FServerProvider: TServerProvider;
     procedure StopTransaction;
@@ -254,13 +254,12 @@ const
   SSPROP_INIT_PACKETSIZE	       = 9;
 var
   DBProps: IDBProperties;
-  rgDBPROPSET_DBINIT: array[0..10] of TDBProp;
+  rgDBPROPSET: array[0..10] of TDBProp;
   rgDBPROPSET_SQLSERVERDBINIT: TDBProp;
-  rgDBPROPSET_DATASOURCE: TDBProp;
-  PropertySets: array[0..2] of TDBPROPSET;
+  PropertySets: array[0..1] of TDBPROPSET;
   rgPropertySets: PDBPropSetArray;
   cPropertySets: ULONG;
-  procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: Integer);
+  procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
     //initialize common property options
     //VariantInit(PropSet.rgProperties^[PropSet.cProperties].vValue);
@@ -281,7 +280,7 @@ begin
       cPropertySets := 1;
       PropertySets[0].cProperties     := 0; //init
       PropertySets[0].guidPropertySet := DBPROPSET_DBINIT;
-      PropertySets[0].rgProperties    := @rgDBPROPSET_DBINIT[0];
+      PropertySets[0].rgProperties    := @rgDBPROPSET[0];
       PropertySets[1].cProperties     := 0; //init
       PropertySets[1].guidPropertySet := DBPROPSET_SQLSERVERDBINIT;
       PropertySets[1].rgProperties    := @rgDBPROPSET_SQLSERVERDBINIT;
@@ -299,16 +298,17 @@ begin
       rgPropertySets := @PropertySets[0];
     end
     else
+      { don't work? Bad sequence when to call?
       if (FServerProvider = spMSSQL) then
       begin
-        PropertySets[2].cProperties     := 0; //init
-        PropertySets[2].guidPropertySet := DBPROPSET_DATASOURCE;
-        PropertySets[2].rgProperties    := @rgDBPROPSET_DATASOURCE;
-        SetProp(PropertySets[2], DBPROP_MULTIPLECONNECTIONS,VARIANT_FALSE);
-        rgPropertySets := @PropertySets[2];
+        PropertySets[0].cProperties     := 0; //init
+        PropertySets[0].guidPropertySet := DBPROPSET_DATASOURCE;
+        PropertySets[0].rgProperties    := @rgDBPROPSET;
+        SetProp(PropertySets[0], DBPROP_MULTIPLECONNECTIONS,VARIANT_FALSE);
+        rgPropertySets := @PropertySets[0];
         cPropertySets := 1;
       end
-      else
+      else}
         cPropertySets := 0;
     try
       OleDBCheck(DBProps.SetProperties(cPropertySets,rgPropertySets));
@@ -330,7 +330,7 @@ procedure TZOleDBConnection.StartTransaction;
 begin
   if (FTransaction <> nil) and (TransactIsolationLevel <> tiNone) then
   begin
-    fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,FpulTransactionLevel);
+    fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
   end;
 end;
@@ -569,11 +569,11 @@ begin
     OleCheck(DataInitialize.GetDataSource(nil,CLSCTX_INPROC_SERVER,
       Pointer(ConnectString), IID_IDBInitialize,IUnknown(fDBInitialize)));
     DataInitialize := nil; //no longer required!
+    SetProviderProps(True); //set's timeout values
 
     // open the connection to the DB
     OleDBCheck(fDBInitialize.Initialize);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
-    //SetProviderProps(True); //set's timeout values
     OleDBCheck(FDBCreateSession.CreateSession(nil, IID_IOpenRowset, FSession));
     FDBCreateSession := nil; //no longer required!
     //some Providers do NOT support commands, so let's check if we can use it
