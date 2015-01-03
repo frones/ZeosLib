@@ -93,7 +93,7 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
-function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
+function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; LobDBObj: PDBOBJECT;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
   var DBBYREFColIndexArray: TIntegerDynArray): DBROWOFFSET;
 
@@ -434,7 +434,7 @@ begin
   SetLength(TempLobs, LobBufCount);
 end;
 
-function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS;
+function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; LobDBObj: PDBOBJECT;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
   var DBBYREFColIndexArray: TIntegerDynArray): DBROWOFFSET;
 var
@@ -448,6 +448,14 @@ var
     DBBindingArray[Index].wType := MapOleTypesToZeos(DBCOLUMNINFO^.wType);
     if (DBCOLUMNINFO^.dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //lob's/referenced
     begin
+      (* starting ISeqentialStream approach
+      DBBindingArray[Index].cbMaxLen  := SizeOf(IInterface);
+      DBBindingArray[Index].pObject   := LobDBObj;
+      DBBindingArray[Index].dwPart    := DBPART_VALUE or DBPART_STATUS;
+      DBBindingArray[Index].wType     := DBTYPE_IUNKNOWN;
+      DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
+      DBBindingArray[Index].dwPart    := DBPART_VALUE or DBPART_STATUS;
+      *)
       { cbMaxLen returns max allowed bytes for Lob's which depends to server settings.
        So rowsize could have a overflow. In all cases we need to use references
        OR introduce DBTYPE_IUNKNOWN by using a IPersistStream/ISequentialStream/IStream see:
@@ -458,10 +466,9 @@ var
       DBBindingArray[Index].obValue := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
       DBBindingArray[Index].wType := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
       DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
-      DBBindingArray[Index].dwMemOwner := DBMEMOWNER_PROVIDEROWNED;
       SetLength(DBBYREFColIndexArray, Length(DBBYREFColIndexArray)+1);
       DBBYREFColIndexArray[High(DBBYREFColIndexArray)] := Index;
-     // DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISLONG; //indicate long values!
+      //DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
     end
     else
     begin
@@ -481,6 +488,7 @@ var
         {if (DBCOLUMNINFO^.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0) then //vary
           DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3
         else}
+        if (DBCOLUMNINFO^.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0) then //fixed length ' ' padded?
           DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISFIXEDLENGTH;//keep this flag alive!
       end
       else

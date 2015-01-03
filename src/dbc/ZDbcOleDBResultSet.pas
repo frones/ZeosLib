@@ -61,7 +61,7 @@ uses
   DateUtils,
 {$ENDIF}
   {$IFDEF WITH_TOBJECTLIST_INLINE}System.Types, System.Contnrs{$ELSE}Types{$ENDIF},
-  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils,
+  Windows, Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$IFDEF OLD_FPC}ZClasses, {$ENDIF}ZSysUtils, ZDbcIntfs, ZDbcGenericResolver,
   ZOleDB, ZDbcOleDBUtils,
   ZDbcCachedResultSet, ZDbcCache, ZDbcResultSet, ZDbcResultsetMetadata, ZCompatibility;
@@ -137,16 +137,6 @@ type
       OldRowAccessor, NewRowAccessor: TZRowAccessor); override;
   end;
 
-  {TZOleDBBLob = class(TZAbstractClob, ISequentialStream)
-    function Read(pv: Pointer; cb: Longint; pcbRead: PLongint): HResult;
-    function Write(pv: Pointer; cb: Longint; pcbWritten: PLongint): HResult;
-  end;
-
-  TZOleDBCLob = class(TZAbstractClob, ISequentialStream)
-    function Read(pv: Pointer; cb: Longint; pcbRead: PLongint): HResult;
-    function Write(pv: Pointer; cb: Longint; pcbWritten: PLongint): HResult;
-  end;}
-
 function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
   Const SQL: String; ConSettings: PZConSettings; BuffSize: Integer;
   EnhancedColInfo: Boolean; var PCurrRS: Pointer): IZResultSet;
@@ -156,6 +146,10 @@ implementation
 uses
   Variants, Math, ComObj,
   ZDbcOleDB, ZMessages, ZEncoding, ZFastCode;
+
+var
+  FLobReadObj: TDBObject;
+
 
 {**
   Creates this object and assignes the main properties.
@@ -213,7 +207,8 @@ begin
   OriginalprgInfo := prgInfo; //save pointer for Malloc.Free
   try
     SetLength(FDBBINDSTATUSArray, pcColumns);
-    FRowSize := PrepareOleColumnDBBindings(pcColumns, FDBBindingArray, prgInfo,FByRefColsIndex);
+    FRowSize := PrepareOleColumnDBBindings(pcColumns, @FLobReadObj,
+      FDBBindingArray, prgInfo,FByRefColsIndex);
     FRowCount := Max(1, FZBufferSize div NativeInt(FRowSize));
     if (MaxRows > 0) and (FRowCount > MaxRows) then
       FRowCount := MaxRows; //fetch only wanted count of rows
@@ -438,7 +433,7 @@ begin
         Result := {$IFDEF UNICODE}DateTimeToUnicodeSQLTimeStamp{$ELSE}DateTimeToRawSQLTimeStamp{$ENDIF}(
           PDateTime(FData)^, ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           {$IFDEF UNICODE}
           System.SetString(Result, PWideChar(FData),FLength shr 1)
           {$ELSE}
@@ -475,7 +470,7 @@ begin
       DBTYPE_GUID:      Result := {$IFDEF UNICODE}GuidToUnicode{$ELSE}GuidToRaw{$ENDIF}(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           {$IFDEF UNICODE}
             Result := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
           {$ELSE}
@@ -498,7 +493,7 @@ begin
           System.SetString(Result, PPAnsiChar(FData)^, FLength);
         {$ENDIF}
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           {$IFDEF UNICODE}
           System.SetString(Result, PWideChar(FData), FLength shr 1)
           {$ELSE}
@@ -568,7 +563,7 @@ begin
       DBTYPE_DATE:      Result := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
                           ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, GetACP)
         else
         begin //Fixed width
@@ -593,7 +588,7 @@ begin
       DBTYPE_GUID:      Result := GUIDToRaw(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           ZSetString(PAnsiChar(FData), FLength, Result)
         else
         begin
@@ -604,7 +599,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         System.SetString(Result, PPAnsiChar(FData)^, FLength);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, GetACP)
         else
         begin //Fixed width
@@ -662,7 +657,7 @@ begin
       DBTYPE_DATE:      Result := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
                           ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, zCP_UTF8)
         else
         begin //Fixed width
@@ -687,7 +682,7 @@ begin
       DBTYPE_GUID:      Result := GUIDToRaw(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           ZSetString(PAnsiChar(FData), FLength, Result)
         else
         begin
@@ -698,7 +693,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         ZSetString(PPAnsiChar(FData)^, FLength, Result);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, zCP_UTF8)
         else
         begin //Fixed width
@@ -756,7 +751,7 @@ begin
       DBTYPE_DATE:      Result := DateTimeToRawSQLTimeStamp(PDateTime(FData)^,
                           ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, ConSettings^.ClientCodePage^.CP)
         else
         begin //Fixed width
@@ -781,7 +776,7 @@ begin
       DBTYPE_GUID:      Result := GUIDToRaw(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           ZSetString(PAnsiChar(FData), FLength, Result)
         else
         begin //Fixed width
@@ -792,7 +787,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         ZSetString(PPAnsiChar(FData)^, FLength,Result);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PUnicodeToRaw(PWideChar(FData), FLength shr 1, ConSettings^.ClientCodePage^.CP)
         else
         begin //Fixed width
@@ -855,7 +850,7 @@ begin
         begin
           Result := PWideChar(FData);
           Len := FLength shr 1;
-          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
             while (Result+Len-1)^ = ' ' do Dec(Len);
           Exit;
         end;
@@ -876,7 +871,7 @@ begin
       DBTYPE_UI8:       FUniTemp := ZFastCode.IntToUnicode(PUInt64(FData)^);
       DBTYPE_GUID:      FUniTemp := GuidToUnicode(PGUID(FData)^);
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           FUniTemp := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
         else
         begin
@@ -890,7 +885,7 @@ begin
         begin
           Result := PWideChar(FData);
           Len := FLength shr 1;
-          if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
+          if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0 then
             while (PWideChar(FData)+Len-1)^ = ' ' do Dec(Len);
           Exit;
         end;
@@ -955,7 +950,7 @@ begin
       DBTYPE_DATE:      Result := DateTimeToUnicodeSQLTimeStamp(PDateTime(FData)^,
                           ConSettings.ReadFormatSettings, False);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           System.SetString(Result, ZPPWideChar(FData)^, FLength shr 1)
         else
         begin //Fixed width
@@ -980,7 +975,7 @@ begin
       DBTYPE_GUID:      Result := GuidToUnicode(PGUID(FData)^);
       DBTYPE_BYTES, DBTYPE_BYTES or DBTYPE_BYREF:   Result := '';
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := PRawToUnicode(PAnsiChar(FData), FLength, ConSettings^.ClientCodePage^.CP)
         else
         begin //Fixed width
@@ -991,7 +986,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := PRawToUnicode(PPAnsiChar(FData)^, FLength, ConSettings^.ClientCodePage^.CP);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           System.SetString(Result, PWideChar(FData), FLength shr 1)
         else
         begin //Fixed width
@@ -1048,7 +1043,7 @@ begin
       DBTYPE_DATE:      Result := PDateTime(FData)^ <> 0;
       DBTYPE_BSTR:
         Result := StrToBoolEx(PWideChar(FData),
-          True, FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
+          True, FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_BSTR or DBTYPE_BYREF:
         Result := StrToBoolEx(ZPPWideChar(FData)^);
       DBTYPE_ERROR:     Result := PLongInt(FData)^ <> 0;
@@ -1063,12 +1058,12 @@ begin
       DBTYPE_UI8:       Result := PUInt64(FData)^ <> 0;
       DBTYPE_STR:
         Result := StrToBoolEx(PAnsiChar(FData),
-          True, FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
+          True, FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_STR or DBTYPE_BYREF:
         Result := StrToBoolEx(PPAnsiChar(FData)^);
       DBTYPE_WSTR:
         Result := StrToBoolEx(PWideChar(FData),
-          True, FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
+          True, FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0);
       DBTYPE_WSTR or DBTYPE_BYREF:
         Result := StrToBoolEx(ZPPWideChar(FData)^);
       DBTYPE_HCHAPTER:  Result := PCHAPTER(FData)^ <> 0;
@@ -1096,7 +1091,7 @@ begin
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
-       if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToIntDef(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1118,7 +1113,7 @@ begin
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := RawToIntDef(PAnsiChar(FData),0)
         else
         begin //Fixed width
@@ -1129,7 +1124,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^, 0);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToIntDef(PWideChar(FData),0)
         else
         begin //Fixed width
@@ -1173,7 +1168,7 @@ begin
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
-       if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+       if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToIntDef(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1195,7 +1190,7 @@ begin
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := RawToIntDef(PAnsiChar(FData),0)
         else
         begin //Fixed width
@@ -1206,7 +1201,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToIntDef(PWideChar(FData),0)
         else
         begin //Fixed width
@@ -1250,7 +1245,7 @@ begin
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToIntDef(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1272,7 +1267,7 @@ begin
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := RawToIntDef(PAnsiChar(FData),0)
         else
         begin //Fixed width
@@ -1283,7 +1278,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToIntDef(PPAnsiChar(FData)^,0);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToIntDef(PWideChar(FData),0)
         else
         begin //Fixed width
@@ -1328,7 +1323,7 @@ begin
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1352,7 +1347,7 @@ begin
       DBTYPE_STR:
         Result := RawToInt64Def(PAnsiChar(FData),0);
       DBTYPE_STR or DBTYPE_BYREF:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := RawToInt64Def(PAnsiChar(FData),0)
         else
         begin //Fixed width
@@ -1361,7 +1356,7 @@ begin
           Result := RawToInt64Def(FRawTemp,0);
         end;
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1405,7 +1400,7 @@ begin
       DBTYPE_CY:        Result := Trunc(PCurrency(FData)^);
       DBTYPE_DATE:      Result := Trunc(PDateTime(FData)^);
       DBTYPE_BSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToUInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1427,7 +1422,7 @@ begin
       DBTYPE_I8:        Result := PInt64(FData)^;
       DBTYPE_UI8:       Result := PUInt64(FData)^;
       DBTYPE_STR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := RawToUInt64Def(PAnsiChar(FData),0)
         else
         begin //Fixed width
@@ -1438,7 +1433,7 @@ begin
       DBTYPE_STR or DBTYPE_BYREF:
         Result := RawToUInt64Def(PPAnsiChar(FData)^, 0);
       DBTYPE_WSTR:
-        if FDBBindingArray[ColumnIndex].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
+        if FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0 then
           Result := UnicodeToUInt64Def(PWideChar(FData), 0)
         else
         begin //Fixed width
@@ -1974,9 +1969,14 @@ begin
   PCurrRS := Pointer(Result);
 end;
 
+initialization
+  FLobReadObj.dwFlags := STGM_READ;
+  FLobReadObj.iid := IID_ISequentialStream;
+
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
+
 end.
 
 
