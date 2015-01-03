@@ -81,6 +81,7 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMultipleResultSets: Boolean;
+    function SupportsMultipleStorageObjects: Boolean;
     function GetProvider: TServerProvider;
   end;
 
@@ -95,6 +96,7 @@ type
     FRetaining: Boolean;
     FpulTransactionLevel: ULONG;
     FSupportsMultipleResultSets: Boolean;
+    FSupportsMultipleStorageObjects: Boolean;
     FServerProvider: TServerProvider;
     procedure StopTransaction;
     procedure SetProviderProps(DBinit: Boolean);
@@ -135,6 +137,7 @@ type
     function CreateCommand: ICommandText;
     function GetMalloc: IMalloc;
     function SupportsMultipleResultSets: Boolean;
+    function SupportsMultipleStorageObjects: Boolean;
     function GetProvider: TServerProvider;
   end;
 
@@ -489,6 +492,11 @@ begin
   Result := FSupportsMultipleResultSets;
 end;
 
+function TZOleDBConnection.SupportsMultipleStorageObjects: Boolean;
+begin
+  Result := FSupportsMultipleStorageObjects;
+end;
+
 function TZOleDBConnection.GetProvider: TServerProvider;
 begin
   Result := FServerProvider;
@@ -581,6 +589,7 @@ begin
     // Now let's find out what current server supports:
     // Is IMultipleResults supported??
     FSupportsMultipleResultSets := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLERESULTS]), 0 ) <> 0;
+    FSupportsMultipleStorageObjects := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLESTORAGEOBJECTS]), 0 ) <> 0;
     // Now let's find which Server is used for optimal stms/parameters etc.
     Tmp := OleDbGetDBPropValue([DBPROP_PROVIDERFRIENDLYNAME]);
     { exact name leading to pain -> scan KeyWords instead! }
@@ -610,7 +619,6 @@ begin
       raise;
     end;
   end;
-
 end;
 
 {**
