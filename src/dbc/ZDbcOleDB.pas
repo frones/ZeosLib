@@ -638,7 +638,6 @@ begin
     fTransaction := nil;
     FSession := nil;
     FDBCreateCommand := nil;
-    (FMetadata as TOleDBDatabaseMetadata).ReleaseDBSchemaRowSet; //flush IDBSchemaRowSet
     OleDBCheck(fDBInitialize.Uninitialize);
     fDBInitialize := nil;
     DriverManager.LogMessage(lcDisconnect, ConSettings^.Protocol,

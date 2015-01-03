@@ -71,7 +71,6 @@ type
   TZOleDBDatabaseInfo = class(TZAbstractDatabaseInfo)
   public
     constructor Create(const Metadata: TZAbstractDatabaseMetadata);
-
     // database/driver/server info:
     function GetDatabaseProductName: string; override;
     function GetDatabaseProductVersion: string; override;
@@ -213,8 +212,6 @@ type
   TOleDBDatabaseMetadata = class(TZAbstractDatabaseMetadata)
   private
     FSupportedSchemas: array of TSuppSchemaRec;
-    FSchemaRS: IDBSchemaRowset;
-    FSupportedSchemasInitialized: Boolean;
     function OleDBOpenSchema(Schema: TGUID; const Args: array of String): IZResultSet;
     procedure InitializeSchemas;
     function FindSchema(SchemaId: TGUID): Integer;
@@ -256,10 +253,6 @@ type
     function UncachedGetTypeInfo: IZResultSet; override;
     function UncachedGetUDTs(const Catalog: string; const SchemaPattern: string;
       const TypeNamePattern: string; const Types: TIntegerDynArray): IZResultSet; override;
-  public
-    constructor Create(Connection: TZAbstractConnection; const Url: TZURL); override;
-
-    procedure ReleaseDBSchemaRowSet;
   end;
 
 implementation
@@ -1199,26 +1192,6 @@ end;
 
 
 { TOleDBDatabaseMetadata }
-
-
-{**
-  Constructs this object and assignes the main properties.
-  @param Connection a database connection object.
-  @param Url a database connection url string.
-  @param Info an extra connection properties.
-}
-constructor TOleDBDatabaseMetadata.Create(Connection: TZAbstractConnection;
-  const Url: TZURL);
-begin
-  inherited Create(Connection, Url);
-  FSchemaRS := nil;
-end;
-
-procedure TOleDBDatabaseMetadata.ReleaseDBSchemaRowSet;
-begin
-  FSchemaRS := nil;
-  FSupportedSchemasInitialized := False;
-end;
 
 {**
   Constructs a database information object and returns the interface to it. Used
@@ -2431,13 +2404,14 @@ var
   OleArgs: Array of OleVariant;
   I: Integer;
   Stmt: IZStatement;
+  FSchemaRS: IDBSchemaRowset;
 begin
   Result := nil;
-  if not FSupportedSchemasInitialized then
-    InitializeSchemas;
+  InitializeSchemas;
   SchemaID := FindSchema(Schema);
   if SchemaID = -1 then Exit;
   try
+    (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IDBSchemaRowset, FSchemaRS);
     SetLength(OleArgs, Length(Args));
     for I := 0 to High(Args) do
       if (FSupportedSchemas[SchemaID].SupportedRestrictions and (1 shl I)) <> 0 then
@@ -2451,8 +2425,9 @@ begin
       Stmt := GetStatement;
       Result := TZOleDBResultSet.Create(Stmt, '', RowSet, (Stmt as IZOleDBPreparedStatement).GetInternalBufferSize, False);
     end;
-  except
-    Result := nil;
+  finally
+    FSchemaRS := nil;
+    RowSet := nil;
   end;
 end;
 
@@ -2465,13 +2440,14 @@ var
   IA: PULONG_Array;
   Nr: ULONG;
   I: Integer;
+  SchemaRS: IDBSchemaRowset;
 begin
-  if not FSupportedSchemasInitialized then
+  if Length(FSupportedSchemas) = 0 then
   begin
-    (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IDBSchemaRowset, FSchemaRS);
-    if Assigned(FSchemaRS) then
+    OleDBCheck((GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, SchemaRS));
+    if Assigned(SchemaRS) then
     begin
-      FSchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, IA);
+      SchemaRS.GetSchemas(Nr{%H-}, PG{%H-}, IA);
       OriginalPG := PG;
       SetLength(FSupportedSchemas, Nr);
       for I := 0 to Nr - 1 do
@@ -2480,10 +2456,10 @@ begin
         FSupportedSchemas[I].SupportedRestrictions := IA^[I];
         Inc({%H-}NativeInt(PG), SizeOf(TGuid));  //M.A. Inc(Integer(PG), SizeOf(TGuid));
       end;
-      FSupportedSchemasInitialized := True;
       if Assigned(OriginalPG) then (GetConnection as IZOleDBConnection).GetMalloc.Free(OriginalPG);
       if Assigned(IA) then (GetConnection as IZOleDBConnection).GetMalloc.Free(IA);
     end;
+    SchemaRS := nil;
   end;
 end;
 
