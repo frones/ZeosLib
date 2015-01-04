@@ -79,6 +79,7 @@ type
     FMultipleResults: IMultipleResults;
     FZBufferSize: Integer;
     FEnhancedColInfo: Boolean;
+    FInMemoryDataLobs: Boolean;
     FCommand: ICommandText;
     FParameterAccessor: IAccessor;
     FDBBindingArray: TDBBindingDynArray;
@@ -135,6 +136,7 @@ begin
   inherited Create(Connection, SQL, Info);
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
+  FInMemoryDataLobs := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'InMemoryDataLobs', 'False'));
   FMultipleResults := nil;
 end;
 
@@ -332,7 +334,7 @@ begin
       OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet));
     Result := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      FEnhancedColInfo, FOpenResultSet);
+      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
     LastUpdateCount := FRowsAffected;
     if not Assigned(Result) then
       while (not GetMoreResults(Result)) and (LastUpdateCount > -1) do ;
@@ -409,8 +411,8 @@ begin
       OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
         FDBParams,@FRowsAffected,@FRowSet));
 
-    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      FEnhancedColInfo, FOpenResultSet);
+    LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings,
+      FZBufferSize, ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
     LastUpdateCount := LastUpdateCount + FRowsAffected;
     Result := Assigned(LastResultSet);
   finally
@@ -432,7 +434,7 @@ begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
     LastResultSet := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings,
-      FZBufferSize, FEnhancedColInfo, FOpenResultSet);
+      FZBufferSize, ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
     Result := Assigned(LastResultSet);
     LastUpdateCount := FRowsAffected;
   end;
@@ -447,7 +449,7 @@ begin
     FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
       IID_IRowset, @FRowsAffected, @FRowSet);
     RS := GetCurrentResultSet(FRowSet, Self, SQL, ConSettings, FZBufferSize,
-      FEnhancedColInfo, FOpenResultSet);
+      ChunkSize, FEnhancedColInfo, FInMemoryDataLobs, FOpenResultSet);
     Result := Assigned(RS);
     LastUpdateCount := FRowsAffected;
   end

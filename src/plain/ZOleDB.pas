@@ -140,9 +140,9 @@ Const
   IID_ITransactionLocal : TGUID = '{0C733A5F-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITransaction : TGUID = '{0FB15084-AF41-11CE-BD2B-204C4F4F5020}';
   IID_ITransactionOptions : TGUID = '{3A6AD9E0-23B9-11CF-AD60-00AA00A74CCD}';
-  (*IID_ITransactionJoin : TGUID = '{0C733A5E-2A1C-11CE-ADE5-00AA0044773D}';
+  //IID_ITransactionJoin : TGUID = '{0C733A5E-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITransactionObject : TGUID = '{0C733A60-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_ITrusteeAdmin : TGUID = '{0C733AA1-2A1C-11CE-ADE5-00AA0044773D}';
+  (*IID_ITrusteeAdmin : TGUID = '{0C733AA1-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITrusteeGroupAdmin : TGUID = '{0C733AA2-2A1C-11CE-ADE5-00AA0044773D}';
   IID_IObjectAccessControl : TGUID = '{0C733AA3-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ISecurityInfo : TGUID = '{0C733AA4-2A1C-11CE-ADE5-00AA0044773D}';
@@ -994,9 +994,9 @@ type
  ITransactionLocal = interface;
  ITransaction = interface;
  ITransactionOptions = interface;
- (*ITransactionJoin = interface;
+ //ITransactionJoin = interface;
  ITransactionObject = interface;
- ITrusteeAdmin = interface;
+ (*ITrusteeAdmin = interface;
  ITrusteeGroupAdmin = interface;
  IObjectAccessControl = interface;
  ISecurityInfo = interface;
@@ -1476,28 +1476,6 @@ type
      wLibFlags : Word;
  end;
  PDBPROPIDSET = ^TDBPROPIDSET;
-
- P__MIDL_DBStructureDefinitions_0001 = ^__MIDL_DBStructureDefinitions_0001;
-
- __MIDL_DBStructureDefinitions_0001 =  record
-    case Integer of
-     0: (guid : TGUID);
-     1: (pguid : PGUID);
- end;
- P__MIDL_DBStructureDefinitions_0002 = ^__MIDL_DBStructureDefinitions_0002;
-
- __MIDL_DBStructureDefinitions_0002 =  record
-    case Integer of
-     0: (pwszName : PWideChar);
-     1: (ulPropid : LongWord);
- end;
- TDBID = packed record
-     uGuid : __MIDL_DBStructureDefinitions_0001;
-     eKind : LongWord;
-     uName : __MIDL_DBStructureDefinitions_0002;
- end;
-
- PDBID = ^TDBID;
 
  PDBINDEXCOLUMNDESC = ^DBINDEXCOLUMNDESC;
 
@@ -2673,15 +2651,15 @@ type
    function JoinTransaction(punkTransactionCoord:IUnknown;isoLevel:Integer;isoFlags:LongWord;pOtherOptions:ITransactionOptions):HRESULT;stdcall;
   end;
 
-
+*)
 // ITransactionObject :
 
  ITransactionObject = interface(IUnknown)
    ['{0C733A60-2A1C-11CE-ADE5-00AA0044773D}']
     // GetTransactionObject :
-   function GetTransactionObject(ulTransactionLevel:LongWord;out ppTransactionObject:ITransaction):HRESULT;stdcall;
+   function GetTransactionObject(ulTransactionLevel:ULONG;out ppTransactionObject:ITransaction):HRESULT;stdcall;
   end;
-
+(*
 
 // ITrusteeAdmin :
 

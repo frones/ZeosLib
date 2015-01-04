@@ -2423,7 +2423,7 @@ begin
     if Assigned(RowSet) then
     begin
       Stmt := GetStatement;
-      Result := TZOleDBResultSet.Create(Stmt, '', RowSet, (Stmt as IZOleDBPreparedStatement).GetInternalBufferSize, False);
+      Result := TZOleDBResultSet.Create(Stmt, '', RowSet, (Stmt as IZOleDBPreparedStatement).GetInternalBufferSize, 0, True, False);
     end;
   finally
     FSchemaRS := nil;

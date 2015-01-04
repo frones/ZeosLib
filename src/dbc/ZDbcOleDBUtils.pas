@@ -85,7 +85,7 @@ function ConvertOleDBTypeToSQLType(OleDBType: DBTYPEENUM;
 procedure OleDBCheck(aResult: HRESULT; const aStatus: TDBBINDSTATUSDynArray = nil);
 
 {**
-  Brings up the ADO or better OleDB connection string builder dialog.
+  Brings up the OleDB connection string builder dialog.
 }
 function PromptDataSource(Handle: THandle; InitialString: WideString): WideString;
 
@@ -93,9 +93,9 @@ function PrepareOleParamDBBindings(DBUPARAMS: DB_UPARAMS;
   var DBBindingArray: TDBBindingDynArray; const InParamTypes: TZSQLTypeArray;
   ParamInfoArray: PDBParamInfoArray; var TempLobs: TInterfacesDynArray): DBROWOFFSET;
 
-function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; LobDBObj: PDBOBJECT;
+function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
-  var DBBYREFColIndexArray: TIntegerDynArray): DBROWOFFSET;
+  var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
 
 procedure OleBindParams(const DBParams: TDBParams; ConSettings: PZConSettings;
   const DBBindingArray: TDBBindingDynArray; const InParamValues: TZVariantDynArray;
@@ -434,12 +434,12 @@ begin
   SetLength(TempLobs, LobBufCount);
 end;
 
-function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; LobDBObj: PDBOBJECT;
+function PrepareOleColumnDBBindings(DBUPARAMS: DB_UPARAMS; InMemoryData: Boolean;
   var DBBindingArray: TDBBindingDynArray; DBCOLUMNINFO: PDBCOLUMNINFO;
-  var DBBYREFColIndexArray: TIntegerDynArray): DBROWOFFSET;
+  var LobColIndexArray: TIntegerDynArray): DBROWOFFSET;
 var
   I: Integer;
-  Procedure SetDBBindingProps(Index: Integer);
+  procedure SetDBBindingProps(Index: Integer);
   begin
     //type indicators
     //http://msdn.microsoft.com/en-us/library/windows/desktop/ms711251%28v=vs.85%29.aspx
@@ -448,27 +448,27 @@ var
     DBBindingArray[Index].wType := MapOleTypesToZeos(DBCOLUMNINFO^.wType);
     if (DBCOLUMNINFO^.dwFlags and DBPARAMFLAGS_ISLONG <> 0) then //lob's/referenced
     begin
-      (* starting ISeqentialStream approach
-      DBBindingArray[Index].cbMaxLen  := SizeOf(IInterface);
-      DBBindingArray[Index].pObject   := LobDBObj;
-      DBBindingArray[Index].dwPart    := DBPART_VALUE or DBPART_STATUS;
-      DBBindingArray[Index].wType     := DBTYPE_IUNKNOWN;
-      DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
-      DBBindingArray[Index].dwPart    := DBPART_VALUE or DBPART_STATUS;
-      *)
-      { cbMaxLen returns max allowed bytes for Lob's which depends to server settings.
-       So rowsize could have a overflow. In all cases we need to use references
-       OR introduce DBTYPE_IUNKNOWN by using a IPersistStream/ISequentialStream/IStream see:
-       http://msdn.microsoft.com/en-us/library/windows/desktop/ms709690%28v=vs.85%29.aspx }
-      DBBindingArray[Index].cbMaxLen := SizeOf(Pointer);
-      { now let's decide if we can use direct references or need space in buffer
-        and a reference or if we need a external object for lob's}
-      DBBindingArray[Index].obValue := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
-      DBBindingArray[Index].wType := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
-      DBBindingArray[Index].dwPart := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
-      SetLength(DBBYREFColIndexArray, Length(DBBYREFColIndexArray)+1);
-      DBBYREFColIndexArray[High(DBBYREFColIndexArray)] := Index;
-      //DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
+      if InMemoryData then //BLOBs as In-Memory Data version
+      begin
+        //(need to release mem on freeing the rows!):
+        DBBindingArray[Index].cbMaxLen  := SizeOf(Pointer);
+        DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength + SizeOf(DBLENGTH);
+        DBBindingArray[Index].wType     := DBBindingArray[Index].wType or DBTYPE_BYREF; //indicate we address a buffer
+        DBBindingArray[Index].dwPart    := DBPART_VALUE or DBPART_LENGTH or DBPART_STATUS; //we need a length indicator for vary data only
+        //DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG; //indicate long values! <- trouble with SQLNCLI11 provider!
+      end
+      else
+      begin //using ISeqentialStream -> Retrieve data directly from Provider
+        DBBindingArray[Index].cbMaxLen  := 0;
+        DBBindingArray[Index].dwPart    := DBPART_STATUS; //we only need a NULL indicator!
+        DBBindingArray[Index].wType     := DBCOLUMNINFO^.wType; //Save the wType to know Binary/Ansi/Unicode-Lob's later on
+        DBBindingArray[Index].obValue   := DBBindingArray[Index].obLength;
+        DBBindingArray[Index].dwFlags   := DBCOLUMNFLAGS_ISLONG;
+        //dirty improvements!
+        DBBindingArray[Index].obLength  := Length(LobColIndexArray); //Save the HACCESSOR lookup index -> avoid loops!
+      end;
+      SetLength(LobColIndexArray, Length(LobColIndexArray)+1);
+      LobColIndexArray[High(LobColIndexArray)] := Index;
     end
     else
     begin
@@ -483,13 +483,14 @@ var
           DBBindingArray[Index].cbMaxLen := (DBCOLUMNINFO^.ulColumnSize+1) shl 1
         else
           DBBindingArray[Index].cbMaxLen := DBCOLUMNINFO^.ulColumnSize;
-        //8Byte Alignment does NOT work if fixed width fields came to shove!!!!
+        //8Byte Alignment and optimzed Accessor(fetch) does NOT  work if:
+        //fixed width fields came to shove!!!!
         //DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3;
         {if (DBCOLUMNINFO^.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH = 0) then //vary
           DBBindingArray[Index].cbMaxLen := ((DBBindingArray[Index].cbMaxLen-1) shr 3+1) shl 3
         else}
         if (DBCOLUMNINFO^.dwFlags and DBCOLUMNFLAGS_ISFIXEDLENGTH <> 0) then //fixed length ' ' padded?
-          DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISFIXEDLENGTH;//keep this flag alive!
+          DBBindingArray[Index].dwFlags := DBCOLUMNFLAGS_ISFIXEDLENGTH;//keep this flag alive! We need it for conversions of the RS's
       end
       else
       begin { fixed types do not need a length indicator }
@@ -503,7 +504,7 @@ var
     //makes trouble !!DBBindingArray[Index].dwFlags :=  DBCOLUMNINFO^.dwFlags; //set found flags to indicate long types too
   end;
 begin
-  SetLength(DBBYREFColIndexArray, 0);
+  SetLength(LobColIndexArray, 0);
   SetLength(DBBindingArray, DBUPARAMS);
 
   DBBindingArray[0].obStatus := 0;
@@ -1985,4 +1986,5 @@ end;
 {$ELSE}
 implementation
 {$IFEND}
+
 end.
