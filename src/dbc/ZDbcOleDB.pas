@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{$IFDEF ENABLE_OLEDB}
+{.$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
@@ -90,7 +90,6 @@ type
   private
     FMalloc: IMalloc;
     FDBInitialize: IDBInitialize;
-    FSession: IUnknown;
     FDBCreateCommand: IDBCreateCommand;
     FTransaction: ITransactionLocal;
     FRetaining: Boolean;
@@ -244,23 +243,26 @@ end;
 
 procedure TZOleDBConnection.StopTransaction;
 begin
-  if (FTransaction <> nil) and (TransactIsolationLevel <> tiNone) then
+  if (FpulTransactionLevel > 0) and assigned(fTransaction) then
+  begin
     if AutoCommit then
       OleDbCheck(fTransaction.Commit(False,XACTTC_SYNC,0))
     else
       OleDbCheck(fTransaction.Abort(nil, False, False));
+    Dec(FpulTransactionLevel);
+  end;
 end;
 
 procedure TZOleDBConnection.SetProviderProps(DBinit: Boolean);
 const
-  DBPROPSET_SQLSERVERDBINIT: TGUID = '{5cf4ca10-ef21-11d0-97e7-00c04fc2ad98}';
+  DBPROPSET_SQLSERVERDBINIT:      TGUID = '{5cf4ca10-ef21-11d0-97e7-00c04fc2ad98}';
+  DBPROPSET_SQLSERVERDATASOURCE:  TGUID = '{28efaee4-2d2c-11d1-9807-00c04fc2ad98}';
   SSPROP_INIT_PACKETSIZE	       = 9;
 var
   DBProps: IDBProperties;
   rgDBPROPSET: array[0..10] of TDBProp;
   rgDBPROPSET_SQLSERVERDBINIT: TDBProp;
   PropertySets: array[0..1] of TDBPROPSET;
-  rgPropertySets: PDBPropSetArray;
   cPropertySets: ULONG;
   procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
@@ -277,7 +279,6 @@ begin
   DBProps := nil; //init
   if Succeeded(FDBInitialize.QueryInterface(IID_IDBProperties, DBProps)) then
   begin
-    rgPropertySets := nil;
     if DBinit then
     begin
       cPropertySets := 1;
@@ -298,23 +299,21 @@ begin
         SetProp(PropertySets[1], SSPROP_INIT_PACKETSIZE, StrToIntDef(Info.Values['tds_packed_size'], 0));
         cPropertySets := 2;
       end;
-      rgPropertySets := @PropertySets[0];
     end
     else
-      { don't work? Bad sequence when to call?
+      // don't work? Bad sequence when to call?
       if (FServerProvider = spMSSQL) then
       begin
         PropertySets[0].cProperties     := 0; //init
         PropertySets[0].guidPropertySet := DBPROPSET_DATASOURCE;
-        PropertySets[0].rgProperties    := @rgDBPROPSET;
+        PropertySets[0].rgProperties    := @rgDBPROPSET[0];
         SetProp(PropertySets[0], DBPROP_MULTIPLECONNECTIONS,VARIANT_FALSE);
-        rgPropertySets := @PropertySets[0];
         cPropertySets := 1;
       end
-      else}
+      else
         cPropertySets := 0;
     try
-      OleDBCheck(DBProps.SetProperties(cPropertySets,rgPropertySets));
+      OleDBCheck(DBProps.SetProperties(cPropertySets,@PropertySets[0]));
     finally
       DBProps := nil;
     end;
@@ -470,7 +469,7 @@ end;
 }
 function TZOleDBConnection.GetSession: IUnknown;
 begin
-  Result := FSession;
+  Result := FDBCreateCommand;
 end;
 
 {**
@@ -582,10 +581,9 @@ begin
     // open the connection to the DB
     OleDBCheck(fDBInitialize.Initialize);
     OleCheck(fDBInitialize.QueryInterface(IID_IDBCreateSession, FDBCreateSession));
-    OleDBCheck(FDBCreateSession.CreateSession(nil, IID_IOpenRowset, FSession));
-    FDBCreateSession := nil; //no longer required!
     //some Providers do NOT support commands, so let's check if we can use it
-    OleDBCheck(FSession.QueryInterface(IID_IDBCreateCommand, FDBCreateCommand));
+    OleCheck(FDBCreateSession.CreateSession(nil, IID_IDBCreateCommand, IUnknown(FDBCreateCommand)));
+    FDBCreateSession := nil; //no longer required!
     // Now let's find out what current server supports:
     // Is IMultipleResults supported??
     FSupportsMultipleResultSets := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(OleDbGetDBPropValue([DBPROP_MULTIPLERESULTS]), 0 ) <> 0;
@@ -600,9 +598,8 @@ begin
       FServerProvider := spMSSQL;
       //SetProviderProps(False); //provider properties
     end;
-
     // check if DB handle transactions
-    if Failed(FSession.QueryInterface(IID_ITransactionLocal,fTransaction)) then
+    if Failed(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then
       fTransaction := nil;
     inherited Open;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
@@ -613,7 +610,6 @@ begin
     begin
       FDBCreateSession := nil; // mark not connected
       FDBCreateCommand := nil; // mark not connected
-      FSession := nil;
       fDBInitialize := nil;
       DataInitialize := nil;
       raise;
@@ -636,7 +632,6 @@ begin
   begin
     StopTransaction;
     fTransaction := nil;
-    FSession := nil;
     FDBCreateCommand := nil;
     OleDBCheck(fDBInitialize.Uninitialize);
     fDBInitialize := nil;
@@ -653,9 +648,9 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
-
+(*
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
-
+*)
 end.
