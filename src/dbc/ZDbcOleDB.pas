@@ -55,7 +55,7 @@ interface
 
 {$I ZDbc.inc}
 
-{.$IFDEF ENABLE_OLEDB}
+{$IFDEF ENABLE_OLEDB}
 uses
   Classes, {$IFDEF MSEgui}mclasses,{$ENDIF} SysUtils, ActiveX,
   {$ifdef WITH_SYSTEM_PREFIX}System.Win.ComObj,{$else}ComObj,{$endif}
@@ -91,7 +91,6 @@ type
     FMalloc: IMalloc;
     FDBInitialize: IDBInitialize;
     FDBCreateCommand: IDBCreateCommand;
-    FTransaction: ITransactionLocal;
     FRetaining: Boolean;
     FpulTransactionLevel: ULONG;
     FSupportsMultipleResultSets: Boolean;
@@ -242,13 +241,15 @@ begin
 end;
 
 procedure TZOleDBConnection.StopTransaction;
+var Transaction: ITransAction;
 begin
-  if (FpulTransactionLevel > 0) and assigned(fTransaction) then
+  if (FpulTransactionLevel > 0) and assigned(FDBCreateCommand) and
+    Succeeded(FDBCreateCommand.QueryInterface(IID_ITransaction,Transaction)) then
   begin
     if AutoCommit then
-      OleDbCheck(fTransaction.Commit(False,XACTTC_SYNC,0))
+      OleDbCheck(Transaction.Commit(False,XACTTC_SYNC,0))
     else
-      OleDbCheck(fTransaction.Abort(nil, False, False));
+      OleDbCheck(Transaction.Abort(nil, False, False));
     Dec(FpulTransactionLevel);
   end;
 end;
@@ -262,7 +263,8 @@ var
   DBProps: IDBProperties;
   rgDBPROPSET: array[0..10] of TDBProp;
   rgDBPROPSET_SQLSERVERDBINIT: TDBProp;
-  PropertySets: array[0..1] of TDBPROPSET;
+  rgDBPROPSET_DATASOURCE: TDBProp;
+  PropertySets: array[0..2] of TDBPROPSET;
   cPropertySets: ULONG;
   procedure SetProp(var PropSet: TDBPROPSET; PropertyID: DBPROPID; Value: SmallInt);
   begin
@@ -281,23 +283,29 @@ begin
   begin
     if DBinit then
     begin
-      cPropertySets := 1;
+      cPropertySets := 2;
       PropertySets[0].cProperties     := 0; //init
       PropertySets[0].guidPropertySet := DBPROPSET_DBINIT;
       PropertySets[0].rgProperties    := @rgDBPROPSET[0];
       PropertySets[1].cProperties     := 0; //init
-      PropertySets[1].guidPropertySet := DBPROPSET_SQLSERVERDBINIT;
-      PropertySets[1].rgProperties    := @rgDBPROPSET_SQLSERVERDBINIT;
+      PropertySets[1].guidPropertySet := DBPROPSET_DATASOURCE;
+      PropertySets[1].rgProperties    := @rgDBPROPSET_DATASOURCE;
+      PropertySets[2].cProperties     := 0; //init
+      PropertySets[2].guidPropertySet := DBPROPSET_SQLSERVERDBINIT;
+      PropertySets[2].rgProperties    := @rgDBPROPSET_SQLSERVERDBINIT;
       //http://msdn.microsoft.com/en-us/library/windows/desktop/ms723066%28v=vs.85%29.aspx
       //Indicates the number of seconds before the source initialization times out
       SetProp(PropertySets[0], DBPROP_INIT_TIMEOUT,       StrToIntDef(Info.Values['timeout'], 0));
       //Indicates the number of seconds before a request and command execution, times out
       SetProp(PropertySets[0], DBPROP_INIT_GENERALTIMEOUT,StrToIntDef(Info.Values['timeout'], 0));
+      //Force Multiple connections -> prevent transactional issues with IDBSchemaRowSet etc
+      //http://support2.microsoft.com/default.aspx?scid=kb;en-us;272358
+      SetProp(PropertySets[1], DBPROP_MULTIPLECONNECTIONS,VARIANT_TRUE);
       //supported for MSSQL only!!!
       if (Info.Values['tds_packed_size'] <> '') then
       begin
-        SetProp(PropertySets[1], SSPROP_INIT_PACKETSIZE, StrToIntDef(Info.Values['tds_packed_size'], 0));
-        cPropertySets := 2;
+        SetProp(PropertySets[2], SSPROP_INIT_PACKETSIZE, StrToIntDef(Info.Values['tds_packed_size'], 0));
+        cPropertySets := 3;
       end;
     end
     else
@@ -329,10 +337,13 @@ const
      ISOLATIONLEVEL_SERIALIZABLE);
 
 procedure TZOleDBConnection.StartTransaction;
+var
+  Transaction: ITransactionLocal;
 begin
-  if (FTransaction <> nil) and (TransactIsolationLevel <> tiNone) then
+  if (TransactIsolationLevel <> tiNone) and Assigned(FDBCreateCommand) and
+     Succeeded(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,Transaction)) then
   begin
-    fTransaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
+    Transaction.StartTransaction(TIL[TransactIsolationLevel],0,nil,@FpulTransactionLevel);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'Restart Transaction support');
   end;
 end;
@@ -521,11 +532,17 @@ end;
   @see #setAutoCommit
 }
 procedure TZOleDBConnection.Commit;
+var Transaction: ITransAction;
 begin
-  if assigned(fTransaction) and (TransactIsolationLevel <> tiNone) then
+  if (FpulTransactionLevel > 0) and assigned(FDBCreateCommand) and
+    Succeeded(FDBCreateCommand.QueryInterface(IID_ITransaction,Transaction)) then
   begin
-    OleDbCheck(fTransaction.Commit(FRetaining,XACTTC_SYNC,0));
-    if not FRetaining then StartTransaction;
+    OleDbCheck(Transaction.Commit(FRetaining,XACTTC_SYNC,0));
+    if not FRetaining then
+    begin
+      Dec(FpulTransactionLevel);
+      StartTransaction;
+    end;
   end;
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'COMMIT');
 end;
@@ -538,11 +555,17 @@ end;
   @see #setAutoCommit
 }
 procedure TZOleDBConnection.Rollback;
+var Transaction: ITransaction;
 begin
-  if assigned(fTransaction) and (TransactIsolationLevel <> tiNone) then
+  if (FpulTransactionLevel > 0) and assigned(FDBCreateCommand) and
+    Succeeded(FDBCreateCommand.QueryInterface(IID_ITransaction,Transaction)) then
   begin
-    OleDbCheck(fTransaction.Abort(nil, FRetaining, False));
-    if not FRetaining then StartTransaction;
+    OleDbCheck(Transaction.Abort(nil, FRetaining, False));
+    if not FRetaining then
+    begin
+      Dec(FpulTransactionLevel);
+      StartTransaction;
+    end;
   end;
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, 'ROLLBACK');
 end;
@@ -596,11 +619,8 @@ begin
     else if (ZFastCode.Pos('Microsoft', Tmp) > 0 ) and (ZFastCode.Pos('SQL Server', Tmp) > 0 ) then
     begin
       FServerProvider := spMSSQL;
-      //SetProviderProps(False); //provider properties
+      //SetProviderProps(False); //provider properties -> don't work??
     end;
-    // check if DB handle transactions
-    if Failed(FDBCreateCommand.QueryInterface(IID_ITransactionLocal,fTransaction)) then
-      fTransaction := nil;
     inherited Open;
     DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
       'CONNECT TO "'+ConSettings^.Database+'" AS USER "'+ConSettings^.User+'"');
@@ -631,7 +651,6 @@ begin
   if not Closed then
   begin
     StopTransaction;
-    fTransaction := nil;
     FDBCreateCommand := nil;
     OleDBCheck(fDBInitialize.Uninitialize);
     fDBInitialize := nil;
@@ -648,9 +667,9 @@ finalization
   if DriverManager <> nil then
     DriverManager.DeregisterDriver(OleDBDriver);
   OleDBDriver := nil;
-(*
+
 {$ELSE !ENABLE_OLEDB}
 implementation
 {$ENDIF ENABLE_OLEDB}
-*)
+
 end.

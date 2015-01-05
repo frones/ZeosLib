@@ -129,7 +129,7 @@ type
     function GetBlob(ColumnIndex: Integer): IZBlob; override;
   end;
 
-  {** Implements a cached resolver with Ado specific functionality. }
+  {** Implements a cached resolver with MSSQL specific functionality. }
   TZOleDBMSSQLCachedResolver = class (TZGenericCachedResolver, IZCachedResolver)
   private
     FAutoColumnIndex: Integer;
@@ -150,8 +150,8 @@ type
 
   TZOleDBBLOB = class(TZAbstractBlob)
   public
-    constructor Create(RowSet: IRowSet; Accessor: HACCESSOR; CurrentRow: HROW;
-      ChunkSize: Integer);
+    constructor Create(RowSet: IRowSet; Accessor: HACCESSOR;
+      CurrentRow: HROW; ChunkSize: Integer);
   end;
 
 function GetCurrentResultSet(RowSet: IRowSet; Statement: IZStatement;
@@ -226,6 +226,14 @@ begin
   OleDBColumnsInfo.GetColumnInfo(pcColumns{%H-}, prgInfo, ppStringsBuffer);
   OriginalprgInfo := prgInfo; //save pointer for Malloc.Free
   try
+    { Fills the column info }
+    ColumnsInfo.Clear;
+    if Assigned(prgInfo) then
+      if prgInfo.iOrdinal = 0 then // skip possible bookmark column
+      begin
+        Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));
+        Dec(pcColumns);
+      end;
     SetLength(FDBBINDSTATUSArray, pcColumns);
     FRowSize := PrepareOleColumnDBBindings(pcColumns, FInMemoryDataLobs,
       FDBBindingArray, prgInfo, FLobColsIndex);
@@ -244,12 +252,6 @@ begin
       OleDBCheck((FRowSet as IAccessor).CreateAccessor(DBACCESSOR_ROWDATA, 1,
         @LobDBBinding, 0, @FLobAccessors[i], nil), nil);
     end;
-
-    { Fills the column info }
-    ColumnsInfo.Clear;
-    if Assigned(prgInfo) then
-      if prgInfo.iOrdinal = 0 then // skip possible bookmark column
-        Inc({%H-}NativeUInt(prgInfo), SizeOf(TDBColumnInfo));
 
     for I := prgInfo.iOrdinal-1 to pcColumns-1 do
     begin
@@ -315,11 +317,12 @@ var
 begin
   try
     ReleaseFetchedRows;
-    if FAccessor > 0 then
-      OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
-    for i := 0 to Length(FLobAccessors)-1 do
+    {first release Accessor rows}
+    for i := Length(FLobAccessors)-1 downto 0 do
       OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
     SetLength(FLobAccessors, 0);
+    if FAccessor > 0 then
+      OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
   finally
     FRowSet := nil;
     FAccessor := 0;
@@ -2096,14 +2099,14 @@ var
 begin
   inherited Create;
   FConSettings := ConSettings;
-  GetMem(FBlobData, ChunkSize);
 
   if wType = DBTYPE_STR then
     FCurrentCodePage := GetACP
   else
     FCurrentCodePage := zCP_UTF16;
+  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
   try
-    RowSet.GetData(CurrentRow, Accessor, @IStream);
+    GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;
     repeat
       IStream.Read(PAnsiChar(FBlobData)+FBlobSize-ChunkSize, ChunkSize, @pcbRead); //move chunks to buffer
@@ -2119,6 +2122,7 @@ begin
       (PWideChar(FBlobData)+(FBlobSize shr 1)-1)^ := #0
   finally
     IStream := nil;
+    RowSet := nil;
   end;
 end;
 
@@ -2130,10 +2134,9 @@ var
   pcbRead: LongInt;
 begin
   inherited Create;
-  GetMem(FBlobData, ChunkSize);
-
+  OleDBCheck(RowSet.GetData(CurrentRow, Accessor, @IStream));
   try
-    RowSet.GetData(CurrentRow, Accessor, @IStream);
+    GetMem(FBlobData, ChunkSize);
     FBlobSize := ChunkSize;
     repeat
       IStream.Read(PAnsiChar(FBlobData)+FBlobSize-ChunkSize, ChunkSize, @pcbRead); //move chunks to buffer
@@ -2145,6 +2148,7 @@ begin
     until pcbRead < ChunkSize;
   finally
     IStream := nil;
+    RowSet := nil;
   end;
 end;
 

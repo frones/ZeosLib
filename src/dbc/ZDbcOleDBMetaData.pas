@@ -2411,7 +2411,7 @@ begin
   SchemaID := FindSchema(Schema);
   if SchemaID = -1 then Exit;
   try
-    (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IDBSchemaRowset, FSchemaRS);
+    (GetConnection as IZOleDBConnection).GetSession.QueryInterface(IID_IDBSchemaRowset, FSchemaRS);
     SetLength(OleArgs, Length(Args));
     for I := 0 to High(Args) do
       if (FSupportedSchemas[SchemaID].SupportedRestrictions and (1 shl I)) <> 0 then
