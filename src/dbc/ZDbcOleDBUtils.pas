@@ -1976,7 +1976,7 @@ begin
       SetProp(rgPropertySets[1], SSPROP_DEFERPREPARE, VARIANT_FALSE);
     end;
     try
-      OleDBCheck(2,@rgPropertySets[0]);
+      OleDBCheck(FCmdProps.SetProperties( 2,@rgPropertySets[0]));
     finally
       FCmdProps := nil;
     end;
