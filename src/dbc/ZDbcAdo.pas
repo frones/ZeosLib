@@ -623,7 +623,8 @@ begin
 
   LogMessage := 'SET CATALOG '+ConSettings^.ConvFuncs.ZStringToRaw(Catalog, ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP);
   try
-    FAdoConnection.DefaultDatabase := WideString(Catalog);
+    if Catalog <> '' then //see https://sourceforge.net/p/zeoslib/tickets/117/
+      FAdoConnection.DefaultDatabase := WideString(Catalog);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, LogMessage);
   except
     on E: Exception do
