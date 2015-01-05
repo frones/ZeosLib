@@ -1952,11 +1952,11 @@ begin
     //FAST_FORWARD(RO) server cursor
     {common sets which are NOT default: according the cursor models of
     http://msdn.microsoft.com/de-de/library/ms130840.aspx }
-    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
     SetProp(rgPropertySets[0], DBPROP_COMMANDTIMEOUT,    Max(1, TimeOut)); //Set command time_out static!
+    SetProp(rgPropertySets[0], DBPROP_SERVERCURSOR,      VARIANT_TRUE); //force a server side cursor
     SetProp(rgPropertySets[0], DBPROP_UNIQUEROWS,        VARIANT_FALSE);
-    SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);
-    SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);
+    //SetProp(rgPropertySets[0], DBPROP_OWNINSERT,         VARIANT_TRUE);  //slow down by 20%
+    //SetProp(rgPropertySets[0], DBPROP_OWNUPDATEDELETE,   VARIANT_TRUE);  //slow down by 20%
     SetProp(rgPropertySets[0], DBPROP_OTHERINSERT,       VARIANT_TRUE);
     SetProp(rgPropertySets[0], DBPROP_OTHERUPDATEDELETE, VARIANT_TRUE);
     if ResultSetType = rtForwardOnly then
