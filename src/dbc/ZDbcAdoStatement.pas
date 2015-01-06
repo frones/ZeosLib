@@ -142,9 +142,7 @@ type
     procedure Unprepare; override;
   end;
 
-{$ENDIF ENABLE_ADO}
 implementation
-{$IFDEF ENABLE_ADO}
 
 uses
   Variants, ComObj, Math,
@@ -247,15 +245,20 @@ begin
         IID_ICommandPrepare, FOlePrepareCommand) and
        Supports(FOleParamCommand, IID_IAccessor, FParameterAccessor) then
     begin
-      FOlePrepareCommand.Prepare(0); //0 indicates a non known count of execution
-      {check out the Parameter informations -> sadly the Delphi OleDB unit seems to be buggy ): }
-      FNamesBuffer := nil;
-      FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer);
-      Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
-      SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
-      FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
-        InParamTypes, FParamInfoArray, FTempLobs);
-      CalcParamSetsAndBufferSize;
+      OleDBCheck(FOlePrepareCommand.Prepare(0)); //0 indicates a non known count of execution
+      {check out the Parameter informations}
+      FNamesBuffer := nil; FParamInfoArray := nil;
+      try
+        OleDBCheck(FOleParamCommand.GetParameterInfo(FDBUPARAMS, PDBPARAMINFO(FParamInfoArray), FNamesBuffer));
+        Assert(FDBUPARAMS = Cardinal(InParamCount), SInvalidInputParameterCount);
+        SetLength(FDBBINDSTATUSArray, FDBUPARAMS);
+        FRowSize := PrepareOleParamDBBindings(FDBUPARAMS, FDBBindingArray,
+          InParamTypes, FParamInfoArray, FTempLobs);
+        CalcParamSetsAndBufferSize;
+      finally
+        if Assigned(FParamInfoArray) then ZAdoMalloc.Free(FParamInfoArray);
+        if Assigned(FNamesBuffer) then ZAdoMalloc.Free(FNamesBuffer);
+      end;
       Assert(FDBParams.hAccessor = 1, 'Accessor handle should be unique!');
     end
     else
@@ -502,8 +505,8 @@ begin
     if Assigned(FParameterAccessor) then
     begin
       LastUpdateCount := FRowCount; //store tempory possible array bound update-counts
-      ((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
-        nil, DB_NULLGUID,FDBParams,@FRowCount,nil);
+      OleDBCheck(((FAdoCommand as ADOCommandConstruction).OLEDBCommand as ICommand).Execute(
+        nil, DB_NULLGUID,FDBParams,@FRowCount,nil));
       LastUpdateCount := LastUpdateCount + FrowCount;
     end
     else
@@ -959,7 +962,10 @@ begin
         ADOSetInParam(FAdoCommand, FAdoConnection, InParamCount, I+1, InParamTypes[i], NullVariant, FDirectionTypes[i]);
 end;
 
+{$ELSE}
+implementation
 {$ENDIF ENABLE_ADO}
+
 end.
 
 
