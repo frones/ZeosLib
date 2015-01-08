@@ -455,7 +455,9 @@ function TZOleDBResultSet.GetString(ColumnIndex: Integer): String;
 var
   I: Integer;
 begin
-  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+  if (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    Result := ''
+  else
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       DBTYPE_EMPTY:     Result := '';
       DBTYPE_NULL:      Result := '';
@@ -609,7 +611,9 @@ end;
 function TZOleDBResultSet.GetAnsiString(ColumnIndex: Integer): AnsiString;
 var I: Integer;
 begin
-  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+  if (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    Result := ''
+  else
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_EMPTY:     Result := '';
       //DBTYPE_NULL:      Result := '';
@@ -709,7 +713,9 @@ end;
 function TZOleDBResultSet.GetUTF8String(ColumnIndex: Integer): UTF8String;
 var I: Integer;
 begin
-  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+  if (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    Result := ''
+  else
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_EMPTY:     Result := '';
       //DBTYPE_NULL:      Result := '';
@@ -809,7 +815,9 @@ end;
 function TZOleDBResultSet.GetRawByteString(ColumnIndex: Integer): RawByteString;
 var I: Integer;
 begin
-  if not (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+  if (IsNull(ColumnIndex)) then //Sets LastWasNull, FData, FLength!!
+    Result := ''
+  else
     case FDBBindingArray[ColumnIndex{$IFNDEF GENERIC_INDEX}-1{$ENDIF}].wType of
       //DBTYPE_EMPTY:     Result := '';
       //DBTYPE_NULL:      Result := '';
