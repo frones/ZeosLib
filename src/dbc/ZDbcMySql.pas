@@ -465,7 +465,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     if (FClientCodePage <> sMy_client_Char_Set) then
     begin
       SQL := 'SET NAMES '+{$IFDEF UNICODE}UnicodeStringToAscii7{$ENDIF}(FClientCodePage);
-      GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+      GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;
@@ -475,7 +475,7 @@ setuint:      UIntOpt := StrToIntDef(Info.Values[sMyOpt], 0);
     if FMaxLobSize <> 0 then
     begin
       SQL := 'SET GLOBAL max_allowed_packet='+IntToRaw(FMaxLobSize);
-      GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+      GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
       CheckMySQLError(GetPlainDriver, FHandle, lcExecute, SQL, ConSettings);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end
@@ -732,22 +732,22 @@ begin
         tiNone, tiReadUncommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED';
-            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
           end;
         tiReadCommitted:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED';
-            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
           end;
         tiRepeatableRead:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ';
-            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
           end;
         tiSerializable:
           begin
             SQL := 'SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE';
-            testResult := GetPlainDriver.ExecQuery(FHandle, Pointer(SQL));
+            testResult := GetPlainDriver.ExecRealQuery(FHandle, Pointer(SQL), Length(SQL));
           end;
         else
           SQL := '';
