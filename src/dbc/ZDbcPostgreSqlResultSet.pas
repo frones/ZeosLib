@@ -75,6 +75,7 @@ type
     FFixedCharFields: TBooleanDynArray;
     FBinaryFields: TBooleanDynArray;
     function GetBuffer(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    procedure ClearPGResult;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
@@ -169,6 +170,15 @@ begin
   FCachedLob := CachedLob;
 
   Open;
+end;
+
+procedure TZPostgreSQLResultSet.ClearPGResult;
+begin
+  if FQueryHandle <> nil then
+  begin
+    FPlainDriver.PQclear(FQueryHandle);
+    FQueryHandle := nil;
+  end;
 end;
 
 {**
@@ -316,11 +326,7 @@ end;
 }
 procedure TZPostgreSQLResultSet.ResetCursor;
 begin
-  if FQueryHandle <> nil then
-  begin
-    FPlainDriver.Clear(FQueryHandle);
-    FQueryHandle := nil;
-  end;
+  ClearPGResult;
   inherited ResetCursor;
 end;
 {**
@@ -858,7 +864,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-  if (FQueryHandle = nil) and (not Closed) then
+  if (FQueryHandle = nil) and (not Closed) and (RowNo=0)then
   begin
     FQueryHandle := (Statement as IZPGSQLPreparedStatement).GetLastQueryHandle;
     LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
@@ -866,7 +872,11 @@ begin
   { Checks for maximum row. }
   Result := False;
   if (MaxRows > 0) and (Row > MaxRows) then
+  begin
+    if (ResultSetType = rtForwardOnly) then
+      ClearPGResult;
     Exit;
+  end;
 
   { Processes negative rows. }
   if Row < 0 then
@@ -885,6 +895,8 @@ begin
     end
     else
       Result := False;
+    if not Result and (ResultSetType = rtForwardOnly) then
+      ClearPGResult;
   end
   else
     RaiseForwardOnlyException;

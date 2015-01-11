@@ -3332,9 +3332,9 @@ begin
     { Creates an SQL statement and resultsets }
     if not FUseCurrentStatment then
       if FSQL.StatementCount> 0 then
-        ResultSet := CreateResultSet(FSQL.Statements[0].SQL, -1)
+        ResultSet := CreateResultSet(FSQL.Statements[0].SQL, FFetchRow)
       else
-        ResultSet := CreateResultSet('', -1);
+        ResultSet := CreateResultSet('', FFetchRow);
       if not Assigned(ResultSet) then
       begin
         if not (doSmartOpen in FOptions) then

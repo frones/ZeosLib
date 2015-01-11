@@ -200,7 +200,7 @@ begin
     (Connection as IZPostgreSQLConnection).IsOidAsBlob;
   FPostgreSQLConnection := Connection;
   FPlainDriver := PlainDriver;
-  ResultSetType := rtScrollInsensitive;
+  //ResultSetType := rtScrollInsensitive;
   FConnectionHandle := Connection.GetConnectionHandle;
   Findeterminate_datatype := False;
   FUndefinedVarcharAsStringLength := StrToInt(ZDbcUtils.DefineStatementParameter(Self, 'Undefined_Varchar_AsString_Length' , '0'));
@@ -331,7 +331,7 @@ begin
   if QueryHandle <> nil then
   begin
     Result := RawToIntDef(FPlainDriver.GetCommandTuples(QueryHandle), 0);
-    FPlainDriver.Clear(QueryHandle);
+    FPlainDriver.PQclear(QueryHandle);
   end;
 
   { Autocommit statement. }
@@ -367,7 +367,7 @@ begin
     QueryHandle := ExecuteInternal(ASQL, eicExecute);
 
   { Process queries with result sets }
-  ResultStatus := FPlainDriver.GetResultStatus(QueryHandle);
+  ResultStatus := FPlainDriver.PQresultStatus(QueryHandle);
   case ResultStatus of
     PGRES_TUPLES_OK:
       begin
@@ -380,14 +380,14 @@ begin
         Result := False;
         LastUpdateCount := RawToIntDef(
           FPlainDriver.GetCommandTuples(QueryHandle), 0);
-        FPlainDriver.Clear(QueryHandle);
+        FPlainDriver.PQclear(QueryHandle);
       end;
     else
       begin
         Result := False;
         LastUpdateCount := RawToIntDef(
           FPlainDriver.GetCommandTuples(QueryHandle), 0);
-        FPlainDriver.Clear(QueryHandle);
+        FPlainDriver.PQclear(QueryHandle);
       end;
   end;
 
@@ -438,7 +438,7 @@ begin
     if not Findeterminate_datatype then
     begin
       QueryHandle := ExecuteInternal(GetDeallocateSQL, eicUnprepStmt);
-      FPlainDriver.Clear(QueryHandle);
+      FPlainDriver.PQclear(QueryHandle);
       FPostgreSQLConnection.UnregisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
     end;
   end;
@@ -480,7 +480,7 @@ begin
         end;
         if not Findeterminate_datatype then
         begin
-          FPlainDriver.Clear(Result);
+          FPlainDriver.PQclear(Result);
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
         end;
       end;
@@ -573,7 +573,7 @@ begin
         if not Findeterminate_datatype then
         begin
           FPostgreSQLConnection.RegisterPreparedStmtName({$IFDEF UNICODE}ASCII7ToUnicodeString{$ENDIF}(FRawPlanName));
-          FPlainDriver.Clear(Result);
+          FPlainDriver.PQclear(Result);
         end;
       end;
     eicExecPrepStmt:
