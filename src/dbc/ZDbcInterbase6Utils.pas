@@ -742,6 +742,8 @@ begin
         isc_blob_tra: Result := stAsciiStream;
         isc_blob_extfile: Result := stAsciiStream;
         isc_blob_debug_info: Result := stBinaryStream;
+        else //http://sourceforge.net/p/zeoslib/tickets/111/
+          Result := stBinaryStream;
       end;
     else
       Result := ZDbcIntfs.stUnknown;

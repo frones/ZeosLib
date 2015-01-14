@@ -630,7 +630,7 @@ begin
   Self.AddCodePage('NEXT', CS_NEXT);  {apple NeXTSTEP encoding}
   Self.AddCodePage('NONE', CS_NONE, ceAnsi, ZDefaultSystemCodePage, '', 1, False); {Codepage-neutral. Uppercasing limited to ASCII codes 97-122}
   Self.AddCodePage('OCTETS', CS_BINARY, ceAnsi, $fffd); {Binary character}
-  Self.AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_EUC_JP, '', 2); {Japanese}
+  Self.AddCodePage('SJIS_0208', CS_SJIS_0208, ceAnsi, zCP_SHIFTJS, '', 2); {Japanese} //fixed: https://sourceforge.net/p/zeoslib/tickets/115/
   Self.AddCodePage('UNICODE_FSS', CS_UNICODE_FSS, ceUTF8, zCP_UTF8, '', 3); {UNICODE}
   Self.AddCodePage('WIN1250', CS_WIN1250, ceAnsi, zCP_WIN1250); {ANSI — Central European}
   Self.AddCodePage('WIN1251', CS_WIN1251, ceAnsi, zCP_WIN1251); {ANSI — Cyrillic}
