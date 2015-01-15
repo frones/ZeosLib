@@ -191,7 +191,7 @@ type
     function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
     function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
     function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
-    // stmt_fetch_column
+    function stmt_fetch_column(stmt: PMYSQL_STMT; bind: Pointer{BIND record}; column: UInt; offset: ULong): Integer;
     function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
     function FreePreparedResult (Handle: PZMySqlPrepStmt): Byte;
     function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
@@ -402,6 +402,8 @@ type
     function GetLastPreparedError(Handle: PZMySqlPrepStmt): AnsiString;
     function ExecuteStmt (Handle: PZMySqlPrepStmt): Integer;
     function FetchBoundResults (Handle: PZMySqlPrepStmt): Integer;
+    function stmt_fetch_column(stmt: PMYSQL_STMT; bind: Pointer{BIND record};
+      column: UInt; offset: ULong): Integer;
     function GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
     function FreePreparedResult (Handle: PZMySqlPrepStmt): Byte;
     function InitializePrepStmt (Handle: PZMySQLConnect): PZMySqlPrepStmt;
@@ -1142,6 +1144,15 @@ end;
 function TZMySQLBaseDriver.FetchBoundResults(Handle: PZMySqlPrepStmt): Integer;
 begin
     Result := mysql_stmt_fetch (PMYSQL_STMT(Handle));
+end;
+
+function TZMySQLBaseDriver.stmt_fetch_column(stmt: PZMySqlPrepStmt;
+  bind: Pointer{BIND record}; column: UInt; offset: ULong): Integer;
+begin
+  if (@mysql_stmt_fetch_column <> nil) then
+    Result := mysql_stmt_fetch_column(stmt, bind, column, offset)
+  else
+    Result := -1; //indicate an error: http://dev.mysql.com/doc/refman/4.1/en/mysql-stmt-fetch-column.html
 end;
 
 function TZMySQLBaseDriver.GetPreparedFieldCount(Handle: PZMySqlPrepStmt): Integer;
