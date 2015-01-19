@@ -480,7 +480,7 @@ var
   ErrorMessage: RawByteString;
   ErrorCode: Integer;
 begin
-  ErrorCode := PlainDriver.GetLastPreparedErrorCode(Handle);
+  ErrorCode := PlainDriver.stmt_errno(Handle);
   if Assigned(ErrorIsIgnored) then
     if (IgnoreErrorCode = ErrorCode) then
     begin
@@ -489,7 +489,7 @@ begin
     end
     else
       ErrorIsIgnored^ := False;
-  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.GetLastPreparedError(Handle));
+  ErrorMessage := {$IFDEF WITH_UNITANSISTRINGS}AnsiStrings.{$ENDIF}Trim(PlainDriver.stmt_error(Handle));
   if (ErrorCode <> 0) and (ErrorMessage <> '') then
   begin
     if SilentMySQLError > 0 then
@@ -661,16 +661,8 @@ begin
         end;
       end
     else
-      Result.Precision := min(MaxBlobSize,FieldLength);
-
-    if PMYSQL_FIELD(FieldHandle)^._type in [FIELD_TYPE_BLOB, FIELD_TYPE_MEDIUM_BLOB,
-       FIELD_TYPE_LONG_BLOB,FIELD_TYPE_STRING, FIELD_TYPE_VAR_STRING] then
-      if bUseResult then  //PMYSQL_FIELD(Field)^.max_length not valid
-        Result.MaxLenghtBytes := Result.Precision
-      else
-        Result.MaxLenghtBytes := PMYSQL_FIELD(FieldHandle)^.max_length
-    else
-      Result.MaxLenghtBytes := FieldLength;
+      Result.Precision := Integer(FieldLength)*Ord(not (PMYSQL_FIELD(FieldHandle)^._type in
+        [FIELD_TYPE_BLOB, FIELD_TYPE_TINY_BLOB, FIELD_TYPE_MEDIUM_BLOB, FIELD_TYPE_LONG_BLOB]));
     Result.Scale := PMYSQL_FIELD(FieldHandle)^.decimals;
     Result.AutoIncrement := (AUTO_INCREMENT_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0) or
       (TIMESTAMP_FLAG and PMYSQL_FIELD(FieldHandle)^.flags <> 0);

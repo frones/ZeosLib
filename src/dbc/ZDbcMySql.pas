@@ -87,7 +87,6 @@ type
 
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
-    function GetMaxLobSize: ULong;
   end;
 
   {** Implements MySQL Database Connection. }
@@ -125,7 +124,6 @@ type
     function GetClientVersion: Integer; override;
     function GetHostVersion: Integer; override;
     {END ADDED by fduenas 15-06-2006}
-    function GetMaxLobSize: ULong;
     function GetPlainDriver: IZMySQLPlainDriver;
     function GetConnectionHandle: PZMySQLConnect;
     function GetEscapeString(const Value: ZWideString): ZWideString; override;
@@ -831,10 +829,6 @@ begin
   Result := FHandle;
 end;
 
-function TZMySQLConnection.GetMaxLobSize: ULong;
-begin
-  Result := FMaxLobSize;
-end;
 {**
   Gets a MySQL plain driver interface.
   @return a MySQL plain driver interface.
