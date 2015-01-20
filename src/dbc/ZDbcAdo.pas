@@ -104,8 +104,6 @@ type
     function CreateCallableStatement(const SQL: string; Info: TStrings):
       IZCallableStatement; override;
 
-    function NativeSQL(const SQL: string): string; override;
-
     procedure SetAutoCommit(Value: Boolean); override;
     procedure SetTransactionIsolation(Level: TZTransactIsolationLevel); override;
 
@@ -400,21 +398,6 @@ function TZAdoConnection.CreateCallableStatement(const SQL: string; Info: TStrin
 begin
   if IsClosed then Open;
   Result := TZAdoCallableStatement.Create(Self, SQL, Info);
-end;
-
-{**
-  Converts the given SQL statement into the system's native SQL grammar.
-  A driver may convert the JDBC sql grammar into its system's
-  native SQL grammar prior to sending it; this method returns the
-  native form of the statement that the driver would have sent.
-
-  @param sql a SQL statement that may contain one or more '?'
-    parameter placeholders
-  @return the native form of this statement
-}
-function TZAdoConnection.NativeSQL(const SQL: string): string;
-begin
-  Result := SQL;
 end;
 
 {**

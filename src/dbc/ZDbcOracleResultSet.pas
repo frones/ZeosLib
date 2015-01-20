@@ -477,7 +477,7 @@ begin
           // attention : this code handles all timestamps on 01/01/0001 as a pure time value
           // reason : oracle doesn't have a pure time datatype so all time comparisons compare
           //          TDateTime values on 30 Dec 1899 against oracle timestamps on 01 januari 0001 (negative TDateTime)
-            if (Status = OCI_SUCCESS) and (not (Year and Month and Day = 1)) then
+            if (Status = OCI_SUCCESS) and (not ((Year=1) and (Month=1) and (Day=1))) then
               Result := EncodeDate(Year, Month, Day)
             else Result := 0;
           end

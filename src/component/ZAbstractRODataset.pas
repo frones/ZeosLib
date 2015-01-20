@@ -2922,12 +2922,23 @@ begin
       Result := not Result;
     end
     else
-    begin
       if Field.DataType in [ftBlob, ftMemo, ftGraphic, ftFmtMemo {$IFDEF WITH_WIDEMEMO},ftWideMemo{$ENDIF}] then
         Result := not RowAccessor.GetBlob(ColumnIndex, Result).IsEmpty
       else
-        Result := not RowAccessor.IsNull(ColumnIndex);
-    end;
+      // added by KestasL
+      begin
+        {$IFDEF WITH_TVALUEBUFFER}
+        //See: http://sourceforge.net/p/zeoslib/tickets/118/
+        if Field.DataType = ftExtended then
+        begin
+          SetLength(Buffer, SizeOf(Extended));
+          PExtended(Buffer)^ := RowAccessor.GetBigDecimal(ColumnIndex, Result);
+          Result := not Result;
+        end
+        else
+        {$ENDIF WITH_TVALUEBUFFER}
+          Result := not RowAccessor.IsNull(ColumnIndex);
+      end;
   end
   else
     Result := False;

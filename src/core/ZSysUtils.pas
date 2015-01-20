@@ -854,7 +854,7 @@ begin
   begin
     Result := ValRawExt(Buffer, '.', InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
-      if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
+      if ((Buffer+InvalidPos-1)^ = ',') and ((Buffer+Len*Ord(Len>0)-1)^ in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         Result := RawToFloatDef(Buffer, ',', Def)
       else
       begin
@@ -871,7 +871,7 @@ begin
                 Inc(ValidCount);
               end;
             ',':
-              if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
+              if ((I-InvalidPos-DotPos-1) = 3) or ((DotPos=0) and (ValidCount > 0)) then //all others are invalid!
               begin
                 CommaPos := I;
                 if DotPos = 0 then
@@ -911,8 +911,11 @@ begin
                 DotPos := ValidCount;
               end;
             else
-              if ValidCount > 0 then
-                Exit
+              if (ValidCount > 0) then
+                if (Buffer+i)^ = ' ' then //641,22 $ f.e.
+                  Break
+                else
+                  Exit
               else
                 InvalidPos := i;
           end;
@@ -939,7 +942,7 @@ begin
   begin
     Result := ValUnicodeExt(Buffer, WideChar('.'), InvalidPos{%H-});
     if InvalidPos <> 0 then //posible MoneyType
-      if (Buffer+InvalidPos-1)^ = ',' then  //nope no money. Just a comma instead of dot.
+      if ((Buffer+InvalidPos-1)^ = ',') and (AnsiChar((Buffer+Len*Ord(Len>0)-1)^) in ['0'..'9']) then  //nope no money. Just a comma instead of dot.
         Result := UnicodeToFloatDef(Buffer, WideChar(','), Def)
       else
       begin
@@ -961,7 +964,7 @@ begin
                 Inc(ValidCount);
               end;
             ',':
-              if (I-InvalidPos-DotPos-1) = 3 then //all others are invalid!
+              if ((I-InvalidPos-DotPos-1) = 3) or ((DotPos=0) and (ValidCount > 0)) then //all others are invalid!
               begin
                 CommaPos := I;
                 if DotPos = 0 then
@@ -1003,8 +1006,11 @@ begin
                 DotPos := ValidCount;
               end;
             else
-              if ValidCount > 0 then
-                Exit
+              if (ValidCount > 0) then
+                if (Buffer+i)^ = ' ' then //641,22 $ f.e.
+                  Break
+                else
+                  Exit
               else
                 InvalidPos := i;
           end;

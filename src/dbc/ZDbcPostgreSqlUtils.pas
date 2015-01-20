@@ -697,7 +697,7 @@ begin
         0, ErrorMessage);
     end;
 
-    if ResultHandle <> nil then PlainDriver.Clear(ResultHandle);
+    if ResultHandle <> nil then PlainDriver.PQclear(ResultHandle);
 
     if not ( ConnectionLost and ( LogCategory = lcUnprepStmt ) ) then
       if not (Result = '42P18') then
