@@ -104,17 +104,18 @@ type
 
   TZPostgreSQLExecStatusType = (
     PGRES_EMPTY_QUERY,
-    PGRES_COMMAND_OK,		{ a query command that doesn't return anything
-				  was executed properly by the backend }
-    PGRES_TUPLES_OK,		{ a query command that returns tuples
-				  was executed properly by the backend,
-				  PGresult contains the result tuples }
-    PGRES_COPY_OUT,		{ Copy Out data transfer in progress }
-    PGRES_COPY_IN,		{ Copy In data transfer in progress }
-    PGRES_BAD_RESPONSE,		{ an unexpected response was recv'd from
-				  the backend }
-    PGRES_NONFATAL_ERROR,
-    PGRES_FATAL_ERROR
+    PGRES_COMMAND_OK,		  { a query command that doesn't return
+                            anything was executed properly by the backend }
+    PGRES_TUPLES_OK,		  { a query command that returns tuples
+				                    was executed properly by the backend,
+				                    PGresult contains the result tuples }
+    PGRES_COPY_OUT,		    { Copy Out data transfer in progress }
+    PGRES_COPY_IN,		    { Copy In data transfer in progress }
+    PGRES_BAD_RESPONSE,	  { an unexpected response was recv'd from the backend }
+    PGRES_NONFATAL_ERROR, { notice or warning message }
+    PGRES_FATAL_ERROR,    { query failed }
+    PGRES_COPY_BOTH,		  { Copy In/Out data transfer in progress }
+    PGRES_SINGLE_TUPLE    { since 9.2 single tuple from larger resultset }
   );
 
 { PGnotify represents the occurrence of a NOTIFY message.
@@ -386,6 +387,7 @@ type
          {%H-}paramLengths: TPQparamLengths; {%H-}paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer; cdecl;
   TPQgetResult     = function(Handle: PPGconn): PPGresult;  cdecl;
+  TPQsetSingleRowMode = function(Handle: PPGconn): Integer; cdecl;
 //* Describe prepared statements and portals */
   TPQdescribePrepared = function(Handle: PPGconn; const stmt: PAnsiChar): PPGresult; cdecl;
   TPQdescribePortal = function(Handle: PPGconn; const portal: PAnsiChar): PPGresult; cdecl;
@@ -488,6 +490,7 @@ TZPOSTGRESQL_API = record
   PQsendPrepare:   TPQsendPrepare;
   PQsendQueryPrepared: TPQsendQueryPrepared;
   PQgetResult:     TPQgetResult;
+  PQsetSingleRowMode: TPQsetSingleRowMode;
   //* Describe prepared statements and portals */
   PQdescribePrepared:     TPQdescribePrepared;
   PQdescribePortal:       TPQdescribePortal;
@@ -617,7 +620,7 @@ type
          nParams: Integer; paramValues: TPQparamValues;
          paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer;
-    function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+    function PGGetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     //* Describe prepared statements and portals */
     function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
     function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
@@ -643,7 +646,7 @@ type
     function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
       result_buf, result_len: PInteger; result_is_int: Integer;
       args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
-    function GetResultStatus(Res: PZPostgreSQLResult):
+    function PQresultStatus(Res: PZPostgreSQLResult):
       TZPostgreSQLExecStatusType;
 
     function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
@@ -668,7 +671,7 @@ type
     function GetValue(Res: PZPostgreSQLResult;  TupNum, FieldNum: Integer): PAnsiChar;
     function GetLength(Res: PZPostgreSQLResult; TupNum, FieldNum: Integer): Integer;
     function GetIsNull(Res: PZPostgreSQLResult; TupNum, FieldNum: Integer): Integer;
-    procedure Clear(Res: PZPostgreSQLResult);
+    procedure PQclear(Res: PZPostgreSQLResult);
 
     function MakeEmptyResult(Handle: PZPostgreSQLConnect;
       Status: TZPostgreSQLExecStatusType): PZPostgreSQLResult;
@@ -694,6 +697,8 @@ type
     function ExportLargeObject(Handle: PZPostgreSQLConnect; ObjId: Oid;
       FileName: PAnsiChar): Integer;
     function GetPlainFunc:PAPI;
+
+    function PQsetSingleRowMode(Handle: PZPostgreSQLConnect): Integer; //PG9+
   end;
 
   {** Implements a base driver for PostgreSQL}
@@ -768,7 +773,7 @@ type
          nParams: Integer; paramValues: TPQparamValues;
          paramLengths: TPQparamLengths; paramFormats: TPQparamFormats;
          resultFormat: Integer): Integer;
-    function GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+    function PGGetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
     function DescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): PPGresult;
     function DescribePortal(Handle: PPGconn; const portal: PAnsiChar): PPGresult;
     function SendDescribePrepared(Handle: PPGconn; const stmt: PAnsiChar): Integer;
@@ -794,7 +799,7 @@ type
     function ExecuteFunction(Handle: PZPostgreSQLConnect; fnid: Integer;
       result_buf, result_len: PInteger; result_is_int: Integer;
       args: PZPostgreSQLArgBlock; nargs: Integer): PZPostgreSQLResult;
-    function GetResultStatus(Res: PZPostgreSQLResult): TZPostgreSQLExecStatusType;
+    function PQresultStatus(Res: PZPostgreSQLResult): TZPostgreSQLExecStatusType;
     function GetResultErrorMessage(Res: PZPostgreSQLResult): PAnsiChar;
     function GetResultErrorField(Res: PZPostgreSQLResult;FieldCode:TZPostgreSQLFieldCode):PAnsiChar;
 
@@ -825,7 +830,7 @@ type
       TupNum, FieldNum: Integer): Integer;
     function GetIsNull(Res: PZPostgreSQLResult;
       TupNum, FieldNum: Integer): Integer;
-    procedure Clear(Res: PZPostgreSQLResult);
+    procedure PQclear(Res: PZPostgreSQLResult);
 
     function MakeEmptyResult(Handle: PZPostgreSQLConnect;
       Status: TZPostgreSQLExecStatusType): PZPostgreSQLResult;
@@ -853,6 +858,7 @@ type
     function GetPlainFunc:PAPI;
     function EscapeString(Handle: Pointer; const Value: RawByteString;
       ConSettings: PZConSettings; WasEncoded: Boolean = False): RawByteString; override;
+    function PQsetSingleRowMode(Handle: PZPostgreSQLConnect): Integer; //PG9+
   end;
 
   {** Implements a driver for PostgreSQL 7.4 }
@@ -982,6 +988,7 @@ begin
     @POSTGRESQL_API.PQsendPrepare  := GetAddress('PQsendPrepare');
     @POSTGRESQL_API.PQsendQueryPrepared := GetAddress('PQsendQueryPrepared');
     @POSTGRESQL_API.PQgetResult    := GetAddress('PQgetResult');
+    @POSTGRESQL_API.PQsetSingleRowMode := GetAddress('PQsetSingleRowMode'); //9+ http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
 
     @POSTGRESQL_API.PQnotifies     := GetAddress('PQnotifies');
     @POSTGRESQL_API.PQfreeNotify   := GetAddress('PQfreeNotify');
@@ -1056,7 +1063,7 @@ begin
   LoadCodePages;
 end;
 
-procedure TZPostgreSQLBaseDriver.Clear(Res: PZPostgreSQLResult);
+procedure TZPostgreSQLBaseDriver.PQclear(Res: PZPostgreSQLResult);
 begin
   POSTGRESQL_API.PQclear(Res);
 end;
@@ -1310,7 +1317,7 @@ begin
     Result := -1;
 end;
 
-function TZPostgreSQLBaseDriver.GetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
+function TZPostgreSQLBaseDriver.PGGetResult(Handle: PZPostgreSQLConnect): PZPostgreSQLResult;
 begin
   Result := POSTGRESQL_API.PQgetResult(Handle);
 end;
@@ -1530,7 +1537,7 @@ begin
   Result := POSTGRESQL_API.PQresultErrorMessage(Res);
 end;
 
-function TZPostgreSQLBaseDriver.GetResultStatus(
+function TZPostgreSQLBaseDriver.PQresultStatus(
   Res: PZPostgreSQLResult): TZPostgreSQLExecStatusType;
 begin
   Result := TZPostgreSQLExecStatusType(POSTGRESQL_API.PQresultStatus(Res));
@@ -1735,6 +1742,15 @@ begin
   else
     Result := Value;
   Result := #39+Result+#39;
+end;
+
+function TZPostgreSQLBaseDriver.PQsetSingleRowMode(Handle: PZPostgreSQLConnect): Integer; //PG9+
+begin
+  //http://www.postgresql.org/docs/9.2/static/libpq-single-row-mode.html
+  if Assigned(POSTGRESQL_API.PQsetSingleRowMode) then
+    Result := POSTGRESQL_API.PQsetSingleRowMode(Handle)
+  else
+    Result := 0;
 end;
 
 { TZPostgreSQL7PlainDriver }

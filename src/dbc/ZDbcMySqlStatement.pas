@@ -310,7 +310,7 @@ end;
 function TZMySQLStatement.ExecuteQuery(const SQL: RawByteString): IZResultSet;
 begin
   Result := inherited ExecuteQuery(SQL);
-  if FPlainDriver.ExecQuery(FHandle, Pointer(ASQL)) = 0 then
+  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     if not FPlainDriver.ResultSetExists(FHandle) then
       raise EZSQLException.Create(SCanNotOpenResultSet);
@@ -337,7 +337,7 @@ var
   HasResultset : Boolean;
 begin
   Result := Inherited ExecuteUpdate(SQL);
-  if FPlainDriver.ExecQuery(FHandle, Pointer(ASQL)) = 0 then
+  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
@@ -394,7 +394,7 @@ var
   HasResultset : Boolean;
 begin
   Result := inherited Execute(SQL);
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);
     { Process queries with result sets }
@@ -1327,7 +1327,7 @@ begin
       Inc(i);
     end;
   if not (ExecQuery = '') then
-    if FPlainDriver.ExecQuery(Self.FHandle, Pointer(ExecQuery)) = 0 then
+    if FPlainDriver.ExecRealQuery(Self.FHandle, Pointer(ExecQuery), Length(ExecQuery)) = 0 then
       DriverManager.LogMessage(lcBindPrepStmt, ConSettings^.Protocol, ExecQuery)
     else
       CheckMySQLError(FPlainDriver, FHandle, lcExecute, ExecQuery, ConSettings);
@@ -1419,7 +1419,7 @@ function TZMySQLCallableStatement.ExecuteQuery(const SQL: RawByteString): IZResu
 begin
   Result := nil;
   ASQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, Pointer(SQL)) = 0 then
+  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     if not FPlainDriver.ResultSetExists(FHandle) then
@@ -1457,7 +1457,7 @@ function TZMySQLCallableStatement.ExecuteUpdate(const SQL: RawByteString): Integ
 begin
   Result := -1;
   ASQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, PAnsiChar(ASQL)) = 0 then
+  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     { Process queries with result sets }
     if FPlainDriver.ResultSetExists(FHandle) then
@@ -1516,7 +1516,7 @@ var
 begin
   Result := False;
   ASQL := SQL;
-  if FPlainDriver.ExecQuery(FHandle, Pointer(ASQL)) = 0 then
+  if FPlainDriver.ExecRealQuery(FHandle, Pointer(ASQL), Length(ASQL)) = 0 then
   begin
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, ASQL);
     HasResultSet := FPlainDriver.ResultSetExists(FHandle);

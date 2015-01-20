@@ -296,7 +296,7 @@ begin
 
     for I := 0 to TblInfo^.ColCount - 1 do
       TblInfo^.ColNames[GetInt(I, 2)-1] := GetString(i, 3);
-    IZPostgreSQLPlainDriver(FPlainDriver).Clear(QueryHandle);
+    IZPostgreSQLPlainDriver(FPlainDriver).PQclear(QueryHandle);
   end
   else
     Index := -1;
@@ -597,7 +597,7 @@ begin
       SQL := 'BEGIN';
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-      GetPlainDriver.Clear(QueryHandle);
+      GetPlainDriver.PQclear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end;
 
@@ -606,7 +606,7 @@ begin
       SQL := 'SET TRANSACTION ISOLATION LEVEL READ COMMITTED';
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-      GetPlainDriver.Clear(QueryHandle);
+      GetPlainDriver.PQclear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end
     else if TransactIsolationLevel = tiSerializable then
@@ -614,7 +614,7 @@ begin
       SQL := 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE';
       QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
       CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-      GetPlainDriver.Clear(QueryHandle);
+      GetPlainDriver.PQclear(QueryHandle);
       DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     end
     else
@@ -745,7 +745,7 @@ begin
       ConSettings^.CTRL_CP, ConSettings^.ClientCodePage^.CP),1,200)+'''';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, PAnsiChar(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     StartTransactionSupport;
   end;
@@ -884,7 +884,7 @@ begin
     SQL := 'COMMIT';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
     StartTransactionSupport;
@@ -901,7 +901,7 @@ begin
     SQL := 'COMMIT PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     StartTransactionSupport;
   end;
@@ -924,7 +924,7 @@ begin
     SQL := 'ROLLBACK';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
     StartTransactionSupport;
@@ -941,7 +941,7 @@ begin
     SQL := 'ROLLBACK PREPARED '''+copy(RawByteString(transactionid),1,200)+'''';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL,QueryHandle);
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
     StartTransactionSupport;
   end;
@@ -997,7 +997,7 @@ begin
     SQL := 'END';
     QueryHandle := GetPlainDriver.ExecuteQuery(FHandle, Pointer(SQL));
     CheckPostgreSQLError(nil, GetPlainDriver, FHandle, lcExecute, SQL ,QueryHandle);
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
     DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
   end;
 
@@ -1088,7 +1088,7 @@ begin
       end;
       FTypeList.AddObject(TypeName, TObject(TypeCode));
     end;
-    GetPlainDriver.Clear(QueryHandle);
+    GetPlainDriver.PQclear(QueryHandle);
   end;
 
   I := FTypeList.IndexOfObject(TObject(Id));
@@ -1162,7 +1162,7 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
   Temp := String(GetPlainDriver.GetValue(QueryHandle, 0, 0));
-  GetPlainDriver.Clear(QueryHandle);
+  GetPlainDriver.PQclear(QueryHandle);
 
   List := TStringList.Create;
   try
@@ -1206,7 +1206,7 @@ begin
   begin
     res := GetPlainDriver.ExecuteQuery(FHandle,'');
     isset := assigned(res);
-    GetPlainDriver.Clear(res);
+    GetPlainDriver.PQclear(res);
     if isset and (GetPlainDriver.GetStatus(FHandle) = CONNECTION_OK) then
       Result := 0
     else
@@ -1214,7 +1214,7 @@ begin
         GetPlainDriver.Reset(FHandle);
         res := GetPlainDriver.ExecuteQuery(FHandle,'');
         isset := assigned(res);
-        GetPlainDriver.Clear(res);
+        GetPlainDriver.PQclear(res);
         if isset and (GetPlainDriver.GetStatus(FHandle) = CONNECTION_OK) then
           Result := 0;
       except
@@ -1313,7 +1313,7 @@ begin
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
   Result := String(GetPlainDriver.GetValue(QueryHandle, 0, 0));
-  GetPlainDriver.Clear(QueryHandle);
+  GetPlainDriver.PQclear(QueryHandle);
 end;
 
 procedure TZPostgreSQLConnection.OnPropertiesChange(Sender: TObject);
@@ -1347,7 +1347,7 @@ begin
   CheckPostgreSQLError(Self, GetPlainDriver, FHandle, lcExecute, SQL, QueryHandle);
   DriverManager.LogMessage(lcExecute, ConSettings^.Protocol, SQL);
 
-  GetPlainDriver.Clear(QueryHandle);
+  GetPlainDriver.PQclear(QueryHandle);
 end;
 
 {$IFDEF ZEOS_TEST_ONLY}

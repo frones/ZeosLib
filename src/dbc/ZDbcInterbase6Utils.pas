@@ -673,6 +673,7 @@ end;
 }
 function ConvertInterbase6ToSqlType(const SqlType, SqlSubType, Scale: Integer;
   const CtrlsCPType: TZControlsCodePage): TZSQLType;
+label numeric;
 begin
   Result := ZDbcIntfs.stUnknown;
 
@@ -693,7 +694,13 @@ begin
     blr_blob_id, blr_quad: Result := stLong;
     blr_int64:
       case SqlSubType of
-        RDB_NUMBERS_NONE: Result := stLong;
+        RDB_NUMBERS_NONE:
+          { weired bug! We need to check scale too!
+            see: http://sourceforge.net/p/zeoslib/tickets/106/ }
+          if Scale = 0 then
+            Result := stLong
+          else
+            goto numeric;
         RDB_NUMBERS_NUMERIC: Result := stDouble;
         RDB_NUMBERS_DECIMAL:
           if Scale = 0 then
@@ -712,7 +719,7 @@ begin
           if Scale = 0 then
             Result := stInteger
           else
-            if Abs(Scale) <= 4 then
+numeric:    if Abs(Scale) <= 4 then
               Result := stCurrency
             else
               Result := stBigDecimal;

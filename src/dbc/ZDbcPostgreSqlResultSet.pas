@@ -75,6 +75,7 @@ type
     FFixedCharFields: TBooleanDynArray;
     FBinaryFields: TBooleanDynArray;
     function GetBuffer(ColumnIndex: Integer; var Len: NativeUInt): PAnsiChar; {$IFDEF WITHINLINE}inline;{$ENDIF}
+    procedure ClearPGResult;
   protected
     function InternalGetString(ColumnIndex: Integer): RawByteString; override;
     procedure Open; override;
@@ -171,6 +172,15 @@ begin
   Open;
 end;
 
+procedure TZPostgreSQLResultSet.ClearPGResult;
+begin
+  if FQueryHandle <> nil then
+  begin
+    FPlainDriver.PQclear(FQueryHandle);
+    FQueryHandle := nil;
+  end;
+end;
+
 {**
   Converts a PostgreSQL native types into ZDBC SQL types.
   @param ColumnIndex a column index.
@@ -225,6 +235,7 @@ var
   FieldMode, FieldSize, FieldType, FieldCount: Integer;
   TableInfo: PZPGTableInfo;
   Connection: IZPostgreSQLConnection;
+  ColIdx: Integer;
 begin
   if ResultSetConcurrency = rcUpdatable then
     raise EZSQLException.Create(SLiveResultSetsAreNotSupported);
@@ -260,7 +271,23 @@ begin
       begin
         SchemaName := TableInfo^.Schema;
         TableName := TableInfo^.Name;
-        ColumnName := TableInfo^.ColNames[FplainDriver.GetFieldTableColIdx(FQueryHandle, I) - 1];
+        //See: http://zeoslib.sourceforge.net/viewtopic.php?f=38&t=20797
+        ColIdx := FplainDriver.GetFieldTableColIdx(FQueryHandle, I);
+        if ColIdx < 1 then
+          // these fields have fixed numbers in the PostgreSQL source code, they seem to not use 0
+          case ColIdx of
+            0: ColumnName := '';
+            -1: ColumnName := 'ctid';
+            -2: ColumnName := 'oid';
+            -3: ColumnName := 'xmin';
+            -4: ColumnName := 'cmin';
+            -5: ColumnName := 'xmax';
+            -6: ColumnName := 'cmax';
+            -7: ColumnName := 'tableoid';
+            else ColumnName := '';
+          end
+        else
+          ColumnName := TableInfo^.ColNames[ColIdx - 1];
       end;
       ColumnLabel := ConSettings^.ConvFuncs.ZRawToString(FPlainDriver.GetFieldName(FQueryHandle, I), ConSettings^.ClientCodePage^.CP, ConSettings^.CTRL_CP);
       ColumnDisplaySize := 0;
@@ -316,11 +343,7 @@ end;
 }
 procedure TZPostgreSQLResultSet.ResetCursor;
 begin
-  if FQueryHandle <> nil then
-  begin
-    FPlainDriver.Clear(FQueryHandle);
-    FQueryHandle := nil;
-  end;
+  ClearPGResult;
   inherited ResetCursor;
 end;
 {**
@@ -858,7 +881,7 @@ begin
 {$IFNDEF DISABLE_CHECKING}
   CheckClosed;
 {$ENDIF}
-  if (FQueryHandle = nil) and (not Closed) then
+  if (FQueryHandle = nil) and (not Closed) and (RowNo=0)then
   begin
     FQueryHandle := (Statement as IZPGSQLPreparedStatement).GetLastQueryHandle;
     LastRowNo := FPlainDriver.GetRowCount(FQueryHandle);
@@ -866,7 +889,11 @@ begin
   { Checks for maximum row. }
   Result := False;
   if (MaxRows > 0) and (Row > MaxRows) then
+  begin
+    if (ResultSetType = rtForwardOnly) then
+      ClearPGResult;
     Exit;
+  end;
 
   { Processes negative rows. }
   if Row < 0 then
@@ -885,6 +912,8 @@ begin
     end
     else
       Result := False;
+    if not Result and (ResultSetType = rtForwardOnly) then
+      ClearPGResult;
   end
   else
     RaiseForwardOnlyException;
