@@ -128,7 +128,7 @@ type
   TZMySQLParamBindBuffer = class(TZMySQLAbstractBindBuffer)
   public
     procedure AddColumn(buffertype: TMysqlFieldTypes; const field_length: integer;
-      const Signed: Boolean);
+      const is_signed: Boolean);
   end;
   {** Implements Prepared SQL Statement. }
 
@@ -799,22 +799,22 @@ begin
       Bind^.buffer_length_address^ := Length(Bind^.buffer); //reset Buffer_Length
       case Bind^.buffer_type of
         FIELD_TYPE_TINY:
-          if Bind^.signed then
+          if Bind^.is_signed then
             PShortInt(PBuffer)^ := ShortInt(ClientVarManager.GetAsUInteger(InParamValues[i]))
           else
             PByte(PBuffer)^ := Byte(ClientVarManager.GetAsInteger(InParamValues[i]));
         FIELD_TYPE_SHORT:
-          if Bind^.signed then
+          if Bind^.is_signed then
             PSmallInt(PBuffer)^ := SmallInt(ClientVarManager.GetAsInteger(InParamValues[i]))
           else
             PWord(PBuffer)^ := Word(ClientVarManager.GetAsUInteger(InParamValues[i]));
         FIELD_TYPE_LONG:
-          if Bind^.signed then
+          if Bind^.is_signed then
             PLongInt(PBuffer)^ := LongInt(ClientVarManager.GetAsInteger(InParamValues[i]))
           else
             PLongWord(PBuffer)^ := LongWord(ClientVarManager.GetAsUInteger(InParamValues[i]));
         FIELD_TYPE_LONGLONG:
-          if Bind^.signed then
+          if Bind^.is_signed then
             PInt64(PBuffer)^ := ClientVarManager.GetAsInteger(InParamValues[i])
           else
             PUInt64(PBuffer)^ := ClientVarManager.GetAsUInteger(InParamValues[i]);
@@ -1800,11 +1800,11 @@ begin
   bind^.buffer_address := @FbindArray[ColOffset+FBindOffsets.buffer]; //save address
   Bind^.buffer_Length_address := @FbindArray[ColOffset+FBindOffsets.buffer_length]; //save address
   Bind^.buffer_type_address := @FbindArray[ColOffset+FBindOffsets.buffer_type];
-  Bind^.signed := MYSQL_FIELD.flags and UNSIGNED_FLAG = 0;
+  Bind^.is_signed := MYSQL_FIELD.flags and UNSIGNED_FLAG = 0;
   Bind^.buffer_type_address^ := bind^.buffer_type;
 
   PULong(Bind^.buffer_Length_address)^ := Bind^.length;
-  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= Ord(not Bind^.Signed);
+  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^:= Ord(not Bind^.is_signed);
   PPointer(@FbindArray[ColOffset+FBindOffsets.buffer])^:= Pointer(Bind^.buffer);
   PPointer(@FbindArray[ColOffset+FBindOffsets.length])^:= @Bind^.length;
   PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^:= @Bind^.is_null;
@@ -1814,7 +1814,7 @@ end;
 { TZMySQLParamBindBuffer }
 
 procedure TZMySQLParamBindBuffer.AddColumn(buffertype: TMysqlFieldTypes;
-  const field_length: integer; const Signed: Boolean);
+  const field_length: integer; const is_signed: Boolean);
 var
   ColOffset:NativeUInt;
   Bind: PDOBindRecord2;
@@ -1826,7 +1826,7 @@ begin
   bind^.buffer_address := @FbindArray[ColOffset+FBindOffsets.buffer]; //save address
   Bind^.buffer_Length_address := @FbindArray[ColOffset+FBindOffsets.buffer_length]; //save address
   Bind^.buffer_type := buffertype; //save initial type
-  Bind^.signed := Signed;
+  Bind^.is_signed := is_signed;
   Bind^.buffer_type_address := @FbindArray[ColOffset+FBindOffsets.buffer_type];
 
   //ludob: mysql adds terminating #0 on top of data. Avoid buffer overrun.
@@ -1838,7 +1838,7 @@ begin
   Bind^.is_null := Ord(buffertype = FIELD_TYPE_NULL);
   Bind^.buffer_type_address^ := buffertype;
   PULong(Bind^.buffer_Length_address)^ := Bind^.length;
-  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^ := Ord(not Signed);
+  PByte(@FbindArray[ColOffset+FBindOffsets.is_unsigned])^ := Ord(not is_signed);
   bind^.buffer_address^ := Pointer(Bind^.buffer);
   PPointer(@FbindArray[ColOffset+FBindOffsets.length])^ := @Bind^.length;
   PPointer(@FbindArray[ColOffset+FBindOffsets.is_null])^ := @Bind^.is_null;

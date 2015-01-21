@@ -539,7 +539,7 @@ TMYSQL_CLIENT_OPTIONS =
     length:                 ULong; //current length of our or retrieved data
     is_null:                Byte; //null indicator
     binary:                 Boolean; //binary field or not? Just for reading!
-    signed:                 Boolean; //signed ordinals or not? Just for reading!
+    is_signed:              Boolean; //signed ordinals or not? Just for reading!
     mysql_bind:             Pointer; //Save exact address of bind for lob reading
   end;
 

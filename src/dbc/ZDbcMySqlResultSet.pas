@@ -1069,17 +1069,17 @@ begin
   begin
     case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           FRawTemp := IntToRaw(PShortInt(FColBind^.buffer)^)
         else
           FRawTemp := IntToRaw(PByte(FColBind^.buffer)^);
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           FRawTemp := IntToRaw(PSmallInt(FColBind^.buffer)^)
         else
           FRawTemp := IntToRaw(PWord(FColBind^.buffer)^);
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           FRawTemp := IntToRaw(PLongInt(FColBind^.buffer)^)
         else
           FRawTemp := IntToRaw(PLongWord(FColBind^.buffer)^);
@@ -1105,7 +1105,7 @@ begin
           FRawTemp := DateTimeToRawSQLTimeStamp(TmpDateTime+TmpDateTime2, ConSettings^.ReadFormatSettings, False);
         end;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           FRawTemp := IntToRaw(PInt64(FColBind^.buffer)^)
         else
           FRawTemp := IntToRaw(PUInt64(FColBind^.buffer)^);
@@ -1191,17 +1191,17 @@ begin
   begin
     case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.signed then
+        if FColBind^.is_signed then
           Result := IntToRaw(PShortInt(FColBind^.buffer)^)
         else
           Result := IntToRaw(PByte(FColBind^.buffer)^);
       FIELD_TYPE_SHORT:
-        if FColBind^.signed then
+        if FColBind^.is_signed then
           Result := IntToRaw(PSmallInt(FColBind^.buffer)^)
         else
           Result := IntToRaw(PWord(FColBind^.buffer)^);
       FIELD_TYPE_LONG:
-        if FColBind^.signed then
+        if FColBind^.is_signed then
           Result := IntToRaw(PLongInt(FColBind^.buffer)^)
         else
           Result := IntToRaw(PLongWord(FColBind^.buffer)^);
@@ -1227,7 +1227,7 @@ begin
           Result := DateTimeToRawSQLTimeStamp(TmpDateTime+TmpDateTime2, ConSettings^.ReadFormatSettings, False);
         end;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.signed then
+        if FColBind^.is_signed then
           Result := IntToRaw(PInt64(FColBind^.buffer)^)
         else
           Result := IntToRaw(PUInt64(FColBind^.buffer)^);
@@ -1290,17 +1290,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^ <> 0
         else
           Result := PByte(FColBind^.buffer)^ <> 0;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^ <> 0
         else
           Result := PWord(FColBind^.buffer)^ <> 0;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^ <> 0
         else
           Result := PLongWord(FColBind^.buffer)^ <> 0;
@@ -1310,7 +1310,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := False;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^ <> 0
         else
           Result := PUInt64(FColBind^.buffer)^ <> 0;
@@ -1369,17 +1369,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1389,7 +1389,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1451,17 +1451,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1471,7 +1471,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1532,17 +1532,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1552,7 +1552,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1613,17 +1613,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1633,7 +1633,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1694,17 +1694,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1714,7 +1714,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1775,17 +1775,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1795,7 +1795,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1856,17 +1856,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1876,7 +1876,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -1937,17 +1937,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -1957,7 +1957,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -2018,17 +2018,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -2038,7 +2038,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -2092,17 +2092,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -2112,7 +2112,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -2167,17 +2167,17 @@ begin
     //http://dev.mysql.com/doc/refman/5.1/de/numeric-types.html
     Case FColBind^.buffer_type of
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -2187,7 +2187,7 @@ begin
       FIELD_TYPE_TIMESTAMP, FIELD_TYPE_DATE, FIELD_TYPE_TIME, FIELD_TYPE_DATETIME,
       FIELD_TYPE_NEWDATE:   Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -2299,17 +2299,17 @@ begin
       FIELD_TYPE_BIT: //http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         Result := 0;
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -2325,7 +2325,7 @@ begin
           Result := encodeDate(1900, 1, 1);
       FIELD_TYPE_TIME: Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -2381,17 +2381,17 @@ begin
       FIELD_TYPE_BIT://http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         Result := 0;
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -2407,7 +2407,7 @@ begin
             0{PMYSQL_TIME(FColBind^.buffer)^.second_part}, Result) then
           Result := 0;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
@@ -2464,17 +2464,17 @@ begin
       FIELD_TYPE_BIT://http://dev.mysql.com/doc/refman/5.0/en/bit-type.html
         Result := 0;
       FIELD_TYPE_TINY:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PShortInt(FColBind^.buffer)^
         else
           Result := PByte(FColBind^.buffer)^;
       FIELD_TYPE_SHORT:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PSmallInt(FColBind^.buffer)^
         else
           Result := PWord(FColBind^.buffer)^;
       FIELD_TYPE_LONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PLongInt(FColBind^.buffer)^
         else
           Result := PLongWord(FColBind^.buffer)^;
@@ -2510,7 +2510,7 @@ begin
           Result := Result + tmp;
         end;
       FIELD_TYPE_LONGLONG:
-        if FColBind^.Signed then
+        if FColBind^.is_signed then
           Result := PInt64(FColBind^.buffer)^
         else
           Result := PUInt64(FColBind^.buffer)^;
