@@ -2231,6 +2231,8 @@ begin
           Result.VDateTime := 0;
         vtDateTime:
           Result.VDateTime := Value.VDateTime;
+        vtFloat:
+          Result.VDateTime := Value.VFloat;
         vtString:
           begin
             CharRec.P := Pointer(Value.VString);
