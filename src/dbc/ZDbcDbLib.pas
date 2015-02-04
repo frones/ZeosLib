@@ -693,7 +693,7 @@ begin
   else
   begin
     ZSetString(PAnsiChar(GetPlainDriver.dbdata(FHandle, 1)), GetPlainDriver.dbDatLen(FHandle, 1), Tmp);
-    Result := RawToInt(Tmp);
+    Result := RawToIntDef(Tmp, High(Word)); //see: http://sourceforge.net/p/zeoslib/tickets/119/
   end;
   GetPlainDriver.dbCancel(FHandle);
 end;
