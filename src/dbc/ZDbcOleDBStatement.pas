@@ -327,8 +327,8 @@ begin
       OleDbCheck((FCommand as ICommand).Execute(nil, IID_IMultipleResults,
         FDBParams,@FRowsAffected,@FMultipleResults));
       if Assigned(FMultipleResults) then
-        FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
-          IID_IRowset, @FRowsAffected, @FRowSet);
+        OleCheck(FMultipleResults.GetResult(nil, DBRESULTFLAG(DBRESULTFLAG_ROWSET),
+          IID_IRowset, @FRowsAffected, @FRowSet));
     end
     else
       OleDbCheck((FCommand as ICommand).Execute(nil, IID_IRowset,
