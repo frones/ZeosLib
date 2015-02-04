@@ -1861,7 +1861,6 @@ begin
 
         if FieldSqlType in [stString, stUnicodeString] then
         begin
-          MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
           CP := GetIbSqlSubType(I);
           if (CP = ConSettings^.ClientCodePage^.ID) or //avoid the loops if we allready have the info's we need
              (CP > High(FCodePageArray)) then //spezial case for collations like PXW_INTL850 which are nowhere to find in docs
@@ -1871,7 +1870,7 @@ begin
             //see: http://sourceforge.net/p/zeoslib/tickets/97/
             ZCodePageInfo := FPlainDriver.ValidateCharEncoding(CP); //get column CodePage info
           ColumnCodePage := ZCodePageInfo^.CP;
-          Precision := GetFieldSize(ColumnType, ConSettings, MaxLenghtBytes,
+          Precision := GetFieldSize(ColumnType, ConSettings, FIZSQLDA.GetIbSqlLen(I),
             ZCodePageInfo^.CharWidth, @ColumnDisplaySize, True);
         end
         else
@@ -1881,10 +1880,7 @@ begin
           begin
             ColumnCodePage := zCP_NONE;
             if FieldSQLType = stBytes then
-            begin
-              MaxLenghtBytes := FIZSQLDA.GetIbSqlLen(I);
-              Precision := MaxLenghtBytes;
-            end
+              Precision := FIZSQLDA.GetIbSqlLen(I)
             else
               Signed := FieldSqlType in [stShort, stSmall, stInteger, stLong];
           end;
