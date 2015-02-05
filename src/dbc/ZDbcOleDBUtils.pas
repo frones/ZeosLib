@@ -243,10 +243,11 @@ procedure OleDBCheck(aResult: HRESULT; const aStatus: TDBBINDSTATUSDynArray = ni
 var
   OleDBErrorMessage: String;
   ErrorInfo, ErrorInfoDetails: IErrorInfo;
+  SQLErrorInfo: ISQLErrorInfo;
   ErrorRecords: IErrorRecords;
-  i: Integer;
+  i, ErrorCode: Integer;
   ErrorCount: ULONG;
-  Desc: WideString;
+  Desc, SQLState: WideString;
   s: string;
 begin
   OleDBErrorMessage := '';
@@ -260,7 +261,18 @@ begin
       OleDBErrorMessage := '';
       for i := 0 to ErrorCount-1 do
       begin
-        // retrieve generic error info
+        SQLErrorInfo := nil;
+        if Succeeded(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo)) ) and
+           Assigned(SQLErrorInfo) then
+          try   // use a common error interface
+            SQLErrorInfo.GetSQLInfo( SqlState, ErrorCode );
+            if OleDBErrorMessage = '' then
+              OleDBErrorMessage := SqlState + ' '+ZFastCode.IntToStr(ErrorCode)
+            else
+              OleDBErrorMessage := OleDBErrorMessage+' '+ SqlState + ' '+ZFastCode.IntToStr(ErrorCode);
+          finally
+            SQLErrorInfo := nil;
+          end;        // retrieve generic error info
         OleCheck(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails));
         OleCheck(ErrorInfoDetails.GetDescription(Desc));
         if OleDBErrorMessage<>'' then

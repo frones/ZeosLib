@@ -134,9 +134,9 @@ Const
   IID_IParentRowset : TGUID = '{0C733AAA-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_IErrorRecords : TGUID = '{0C733A67-2A1C-11CE-ADE5-00AA0044773D}';
   (*IID_IErrorInfo : TGUID = '{1CF2B120-547D-101B-8E65-08002B2BD119}';
-  IID_IErrorLookup : TGUID = '{0C733A66-2A1C-11CE-ADE5-00AA0044773D}';
+  IID_IErrorLookup : TGUID = '{0C733A66-2A1C-11CE-ADE5-00AA0044773D}';*)
   IID_ISQLErrorInfo : TGUID = '{0C733A74-2A1C-11CE-ADE5-00AA0044773D}';
-  IID_IGetDataSource : TGUID = '{0C733A75-2A1C-11CE-ADE5-00AA0044773D}'; *)
+  (*IID_IGetDataSource : TGUID = '{0C733A75-2A1C-11CE-ADE5-00AA0044773D}'; *)
   IID_ITransactionLocal : TGUID = '{0C733A5F-2A1C-11CE-ADE5-00AA0044773D}';
   IID_ITransaction : TGUID = '{0FB15084-AF41-11CE-BD2B-204C4F4F5020}';
   IID_ITransactionOptions : TGUID = '{3A6AD9E0-23B9-11CF-AD60-00AA00A74CCD}';
@@ -171,6 +171,7 @@ Const
   IID_IStorage:         TGUID = '{0000000B-0000-0000-C000-000000000046}';
   IID_ILockBytes:       TGUID = '{0000000A-0000-0000-C000-000000000046}';
 
+  IID_ISQLServerErrorInfo: TGUID= '{5CF4CA12-EF21-11D0-97E7-00C04FC2AD98}';
 //start from oledb.h
   DB_NULLGUID: TGuid = '{00000000-0000-0000-0000-000000000000}';
 
@@ -988,9 +989,9 @@ type
  IParentRowset = interface;*)
  IErrorRecords = interface;
  (*IErrorInfo = interface;
- IErrorLookup = interface;
+ IErrorLookup = interface;*)
  ISQLErrorInfo = interface;
- IGetDataSource = interface;*)
+ (*IGetDataSource = interface;*)
  ITransactionLocal = interface;
  ITransaction = interface;
  ITransactionOptions = interface;
@@ -2547,8 +2548,7 @@ type
     // GetBasicErrorInfo :
     function GetBasicErrorInfo(ulRecordNum:ULONG;out pErrorInfo:PERRORINFO):HRESULT;stdcall;
     // GetCustomErrorObject :
-    function GetCustomErrorObject(ulRecordNum:ULONG;var riid:TGUID;
-      out ppObject:IUnknown):HRESULT;stdcall;
+    function GetCustomErrorObject(ulRecordNum:ULONG;const riid:TGUID; out ppObject:IUnknown):HRESULT;stdcall;
     // GetErrorInfo :
     function GetErrorInfo(ulRecordNum:ULONG;lcid:LCID;out ppErrorInfo:IErrorInfo):HRESULT;stdcall;
     // GetErrorParameters :
@@ -2587,15 +2587,15 @@ type
    function ReleaseErrors(dwDynamicErrorID:LongWord):HRESULT;stdcall;
   end;
 
-
-// ISQLErrorInfo :
+*)
+//ISQLErrorInfo :
 
  ISQLErrorInfo = interface(IUnknown)
    ['{0C733A74-2A1C-11CE-ADE5-00AA0044773D}']
     // GetSQLInfo :
    function GetSQLInfo(out pbstrSQLState:WideString;out plNativeError:Integer):HRESULT;stdcall;
   end;
-
+(*
 
 // IGetDataSource :
 
@@ -2947,6 +2947,27 @@ type
       var ppwszSelectedFile:POleStr): HResult; stdcall;
   end;
 //end add from msdasc.h
+
+  PMSErrorInfo  = ^TMSErrorInfo;
+  TMSErrorInfo  = record
+    pwszMessage: PWideChar; //equals to IErrorInfo.GetDescription
+    pwszServer: PWideChar;
+    pwszProcedure: PWideChar;
+    lNative: UINT;
+    bState: Byte;
+    bClass: Byte;
+    wLineNumber: Word;
+  end;
+// *********************************************************************//
+// Interface: ISQLServerErrorInfo
+// GUID:      {5CF4CA12-EF21-11d0-97E7-00C04FC2AD98}
+// *********************************************************************//
+  ISQLServerErrorInfo = interface(IUnknown)
+    ['{5CF4CA12-EF21-11d0-97E7-00C04FC2AD98}']
+    function GetErrorInfo(
+            out ppErrorInfo: PMSErrorInfo;
+            out ppStringsBuffer: PWideChar): HResult; stdcall;
+  end;
 
 const
   DB_NULLID: TDBID = (uguid: (guid: (D1: 0; D2: 0; D3:0; D4: (0, 0, 0, 0, 0, 0, 0, 0))); ekind: DBKIND(DBKIND_GUID_PROPID); uname: (ulpropid:0));
