@@ -973,7 +973,7 @@ begin
     begin
       ZData := InParamValues[I].VArray.VIsNullArray;
       if (ZData = nil) then
-        IsNull := True
+        IsNull := False
       else
         IsNull := IsNullFromIndicator;
       ZData := InParamValues[I].VArray.VArray;
