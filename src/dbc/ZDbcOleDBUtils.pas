@@ -244,10 +244,13 @@ var
   OleDBErrorMessage: String;
   ErrorInfo, ErrorInfoDetails: IErrorInfo;
   SQLErrorInfo: ISQLErrorInfo;
+  MSSQLErrorInfo: ISQLServerErrorInfo;
   ErrorRecords: IErrorRecords;
+  SSErrorPtr: PMSErrorInfo;
   i, ErrorCode: Integer;
   ErrorCount: ULONG;
   Desc, SQLState: WideString;
+  StringsBufferPtr: PWideChar;
   s: string;
 begin
   OleDBErrorMessage := '';
@@ -262,17 +265,36 @@ begin
       for i := 0 to ErrorCount-1 do
       begin
         SQLErrorInfo := nil;
-        if Succeeded(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo)) ) and
-           Assigned(SQLErrorInfo) then
-          try   // use a common error interface
-            SQLErrorInfo.GetSQLInfo( SqlState, ErrorCode );
-            if OleDBErrorMessage = '' then
-              OleDBErrorMessage := SqlState + ' '+ZFastCode.IntToStr(ErrorCode)
-            else
-              OleDBErrorMessage := OleDBErrorMessage+' '+ SqlState + ' '+ZFastCode.IntToStr(ErrorCode);
+        if Succeeded(ErrorRecords.GetCustomErrorObject(i, IID_ISQLServerErrorInfo, IUnknown(MSSQLErrorInfo)) ) and
+          Assigned(MSSQLErrorInfo) then
+        begin
+          SSErrorPtr := nil;
+          StringsBufferPtr:= nil;
+          try //try use a SQL Server error interface
+            if Succeeded(MSSQLErrorInfo.GetErrorInfo(SSErrorPtr, StringsBufferPtr)) and
+              Assigned(SSErrorPtr) then
+            begin
+              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + ' ';
+              OleDBErrorMessage := OleDBErrorMessage + 'SQLState: '+ String(SSErrorPtr^.pwszMessage) +
+                ' ErrorCode: '+ ZFastCode.IntToStr(SSErrorPtr^.lNative) +
+                ' Line: '+ZFastCode.IntToStr(SSErrorPtr^.wLineNumber);
+            end;
           finally
-            SQLErrorInfo := nil;
-          end;        // retrieve generic error info
+            if Assigned(SSErrorPtr) then CoTaskMemFree(SSErrorPtr);
+            if Assigned(StringsBufferPtr) then CoTaskMemFree(StringsBufferPtr);
+            MSSQLErrorInfo := nil;
+          end
+        end
+        else //try use a common error interface
+          if Succeeded(ErrorRecords.GetCustomErrorObject(i, IID_ISQLErrorInfo, IUnknown(SQLErrorInfo)) ) and
+             Assigned(SQLErrorInfo) then
+            try
+              SQLErrorInfo.GetSQLInfo( SqlState, ErrorCode );
+              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + ' ';
+              OleDBErrorMessage := OleDBErrorMessage+'SQLState: '+ String(SqlState) + ' ErrorCode: '+ZFastCode.IntToStr(ErrorCode);
+            finally
+              SQLErrorInfo := nil;
+            end;        // retrieve generic error info
         OleCheck(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails));
         OleCheck(ErrorInfoDetails.GetDescription(Desc));
         if OleDBErrorMessage<>'' then
@@ -285,7 +307,6 @@ begin
       end;
     end;
     ErrorRecords := nil;
-    //OleCheck(SetErrorInfo(0,  ErrorInfo));
     ErrorInfo := nil;
     // get generic HRESULT error
     if not Succeeded(aResult) or (OleDBErrorMessage<>'') then begin
