@@ -782,7 +782,7 @@ procedure TZMySQLConnection.SetAutoCommit(Value: Boolean);
 begin
   if AutoCommit <> Value then
   begin
-    inherited SetAutoCommit(AutoCommit);
+    inherited SetAutoCommit(Value);
 
     if not Closed then
     begin
