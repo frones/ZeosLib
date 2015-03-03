@@ -49,7 +49,6 @@
       <Unit1>
         <Filename Value="../../test/component/ZTestComponents.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="ZTestComponents"/>
       </Unit1>
       <Unit2>
         <Filename Value="../../test/dbc/ZTestDbc.pas"/>
