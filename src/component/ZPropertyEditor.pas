@@ -784,7 +784,7 @@ begin
     else
     if ((GetZComponent as TZAbstractConnection).Protocol = 'ado') or
        ((GetZComponent as TZAbstractConnection).Protocol = 'OleDB') then
-      (GetZComponent as TZAbstractConnection).Database := PromptDataSource(Application.Handle,
+      (GetZComponent as TZAbstractConnection).Database := PromptDataSource({$IFDEF FPC}Application.MainFormHandle{$ELSE}Application.Handle{$ENDIF},
         (GetZComponent as TZAbstractConnection).Database)
 {$IFEND}
     else
