@@ -274,7 +274,7 @@ begin
             if Succeeded(MSSQLErrorInfo.GetErrorInfo(SSErrorPtr, StringsBufferPtr)) and
               Assigned(SSErrorPtr) then
             begin
-              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + ' ';
+              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + LineEnding;
               OleDBErrorMessage := OleDBErrorMessage + 'SQLState: '+ String(SSErrorPtr^.pwszMessage) +
                 ' ErrorCode: '+ ZFastCode.IntToStr(SSErrorPtr^.lNative) +
                 ' Line: '+ZFastCode.IntToStr(SSErrorPtr^.wLineNumber);
@@ -290,7 +290,7 @@ begin
              Assigned(SQLErrorInfo) then
             try
               SQLErrorInfo.GetSQLInfo( SqlState, ErrorCode );
-              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + ' ';
+              if OleDBErrorMessage <> '' then OleDBErrorMessage := OleDBErrorMessage + LineEnding;
               OleDBErrorMessage := OleDBErrorMessage+'SQLState: '+ String(SqlState) + ' ErrorCode: '+ZFastCode.IntToStr(ErrorCode);
             finally
               SQLErrorInfo := nil;
@@ -298,7 +298,7 @@ begin
         OleCheck(ErrorRecords.GetErrorInfo(i,GetSystemDefaultLCID,ErrorInfoDetails));
         OleCheck(ErrorInfoDetails.GetDescription(Desc));
         if OleDBErrorMessage<>'' then
-          OleDBErrorMessage := OleDBErrorMessage+'  ';
+          OleDBErrorMessage := OleDBErrorMessage+LineEnding;
         OleCheck(SetErrorInfo(0, ErrorInfoDetails));
         OleDBErrorMessage := OleDBErrorMessage+String(Desc);
         Desc := '';
