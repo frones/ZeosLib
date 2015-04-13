@@ -279,7 +279,7 @@ begin
         begin
           OleBindArrayParams(FDBParams, FArrayOffSet, FRowSize, ConSettings,
             FDBBindingArray, ClientVarManager, InParamValues, FTempLobs);
-          (FCommand as ICommand).Execute(nil,DB_NULLGUID,FDBParams,@FRowsAffected,nil);
+          OleDbCheck((FCommand as ICommand).Execute(nil,DB_NULLGUID,FDBParams,@FRowsAffected,nil));
           Inc(FArrayOffSet, FDBParams.cParamSets);
           LastUpdateCount := LastUpdateCount + FRowsAffected;
         end
