@@ -315,19 +315,20 @@ var
   FAccessorRefCount: DBREFCOUNT;
   i: Integer;
 begin
-  try
-    ReleaseFetchedRows;
-    {first release Accessor rows}
-    for i := Length(FLobAccessors)-1 downto 0 do
-      OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
-    SetLength(FLobAccessors, 0);
-    if FAccessor > 0 then
-      OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
-  finally
-    FRowSet := nil;
-    FAccessor := 0;
-    inherited Close;
-  end;
+  if not Closed then
+    try
+      ReleaseFetchedRows;
+      {first release Accessor rows}
+      for i := Length(FLobAccessors)-1 downto 0 do
+        OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FLobAccessors[i], @FAccessorRefCount));
+      SetLength(FLobAccessors, 0);
+      if FAccessor > 0 then
+        OleDBCheck((fRowSet As IAccessor).ReleaseAccessor(FAccessor, @FAccessorRefCount));
+    finally
+      FRowSet := nil;
+      FAccessor := 0;
+      inherited Close;
+    end;
 end;
 
 procedure TZOleDBResultSet.ResetCursor;
