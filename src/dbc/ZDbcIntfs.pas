@@ -301,6 +301,7 @@ type
     function GetEncoding: TZCharEncoding;
     function GetConSettings: PZConSettings;
     function GetClientVariantManager: IZClientVariantManager;
+    function GetURL: String;
 
     {$IFDEF ZEOS_TEST_ONLY}
     function GetTestMode : Byte;

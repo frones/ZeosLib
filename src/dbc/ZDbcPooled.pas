@@ -172,6 +172,8 @@ type
     procedure ClearWarnings;
     function UseMetadata: boolean;
     procedure SetUseMetadata(Value: Boolean);
+    function GetURL: String;
+
   public
     constructor Create(const ConnectionPool: TConnectionPool);
     destructor Destroy; override;
@@ -457,6 +459,16 @@ end;
 procedure TZDbcPooledConnection.SetUseMetadata(Value: Boolean);
 begin
   FUseMetadata := Value;
+end;
+
+{**
+  get current connection URL from TZURL. Nice to clone the connection by using
+  the IZDriverManager
+  @return true if connection is read-only and false otherwise
+}
+function TZDbcPooledConnection.GetURL: String;
+begin
+  Result := GetConnection.GetURL
 end;
 
 procedure TZDbcPooledConnection.Close;
