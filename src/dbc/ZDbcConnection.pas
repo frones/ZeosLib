@@ -225,6 +225,7 @@ type
     function GetDescription: AnsiString;
     procedure SetReadOnly(ReadOnly: Boolean); virtual;
     function IsReadOnly: Boolean; virtual;
+    function GetURL: String;
 
     procedure SetCatalog(const {%H-}Catalog: string); virtual;
     function GetCatalog: string; virtual;
@@ -1321,6 +1322,16 @@ end;
 function TZAbstractConnection.IsReadOnly: Boolean;
 begin
   Result := FReadOnly;
+end;
+
+{**
+  get current connection URL from TZURL. Nice to clone the connection by using
+  the IZDriverManager
+  @return true if connection is read-only and false otherwise
+}
+function TZAbstractConnection.GetURL: String;
+begin
+  Result := FURL.URL
 end;
 
 {**
