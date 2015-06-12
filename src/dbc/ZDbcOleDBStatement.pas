@@ -77,7 +77,7 @@ type
     IZOleDBPreparedStatement)
   private
     FMultipleResults: IMultipleResults;
-    FZBufferSize: Integer;
+    FZBufferSize, fStmtTimeOut: Integer;
     FEnhancedColInfo: Boolean;
     FInMemoryDataLobs: Boolean;
     FCommand: ICommandText;
@@ -137,6 +137,7 @@ begin
   FZBufferSize := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'internal_buffer_size', ''), 131072); //by default 128KB
   FEnhancedColInfo := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'enhanced_column_info', 'True'));
   FInMemoryDataLobs := StrToBoolEx(ZDbcUtils.DefineStatementParameter(Self, 'InMemoryDataLobs', 'False'));
+  fStmtTimeOut := {$IFDEF UNICODE}UnicodeToIntDef{$ELSE}RawToIntDef{$ENDIF}(ZDbcUtils.DefineStatementParameter(Self, 'StatementTimeOut', ''), 1); //execution timeout in seconds by default 1
   FMultipleResults := nil;
 end;
 
@@ -192,7 +193,7 @@ begin
   begin
     FCommand := (Connection as IZOleDBConnection).CreateCommand;
     try
-      SetOleCommandProperties(FCommand, 0, ResultSetType, (Connection as IZOleDBConnection).GetProvider);
+      SetOleCommandProperties(FCommand, fStmtTimeOut, ResultSetType, (Connection as IZOleDBConnection).GetProvider);
       OleDBCheck(fCommand.SetCommandText(DBGUID_DEFAULT, Pointer(WSQL)));
       OleCheck(fCommand.QueryInterface(IID_ICommandPrepare, FOlePrepareCommand));
       OleDBCheck(FOlePrepareCommand.Prepare(0)); //unknown count of executions
