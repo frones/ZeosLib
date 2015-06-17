@@ -2492,7 +2492,7 @@ DateTimeFromUnicode:
         vtAnsiString:
           Result.VUnicodeString := ZWideString(Value.VAnsiString);
         vtUTF8String:
-          Result.VUnicodeString := ZRawToUnicode(Pointer(Value.VUTF8String), Length(Value.VUTF8String), zCP_UTF8);
+          Result.VUnicodeString := PRawToUnicode(Pointer(Value.VUTF8String), Length(Value.VUTF8String), zCP_UTF8);
         vtRawByteString:
           Result.VUnicodeString := FConSettings^.ConvFuncs.ZRawToUnicode(Value.VRawByteString, FConSettings^.ClientCodePage^.CP);
         vtUnicodeString:
