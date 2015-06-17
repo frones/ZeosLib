@@ -2094,9 +2094,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
-
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2148,8 +2146,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2203,8 +2200,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
     case SQLCode of
       SQL_TEXT      : EncodePData(SQL_TEXT, Index, Pointer(Value), Length(Value));
@@ -2269,8 +2265,7 @@ begin
     TmpDate.tm_yday := 0;
     TmpDate.tm_isdst := 0;
 
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     case SQLCode of
@@ -2310,8 +2305,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2365,8 +2359,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2420,8 +2413,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2473,8 +2465,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
@@ -2545,8 +2536,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-         Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
     case SQLCode of
       SQL_TEXT      :
@@ -2723,8 +2713,7 @@ begin
   begin
     if not FDecribedTypeArray[Index] = sqltype then
       SetFieldType(Index, FDecribedLengthArray[Index], FDecribedTypeArray[Index], FDecribedScaleArray[Index]);
-    if (sqlind <> nil) and (sqlind^ = -1) then
-       Exit;
+    {if (sqlind <> nil) and (sqlind^ = -1) then Exit;}
     SQLCode := (sqltype and not(1));
 
     if (sqlscale < 0)  then
