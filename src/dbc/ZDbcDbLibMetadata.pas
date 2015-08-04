@@ -1835,6 +1835,7 @@ function TZMsSqlDatabaseMetadata.UncachedGetColumns(const Catalog: string;
 var
   SQLType: TZSQLType;
   default_val: String;
+  TableName: String;
 begin
   Result:=inherited UncachedGetColumns(Catalog, SchemaPattern, TableNamePattern, ColumnNamePattern);
 
@@ -1897,11 +1898,13 @@ begin
     Close;
   end;
 
+  TableName := Result.GetString(TableNameIndex);
+
   Result.BeforeFirst;
   with GetStatement.ExecuteQuery('select c.colid, c.name, c.type, c.prec, '+
     'c.scale, c.colstat, c.status, c.iscomputed from syscolumns c inner join'
     + ' sysobjects o on (o.id = c.id) where o.name COLLATE Latin1_General_CS_AS = '+
-    DeComposeObjectString(TableNamePattern)+' and c.number=0 order by colid') do
+    DeComposeObjectString(TableName)+' and c.number=0 order by colid') do
     // hint http://blog.sqlauthority.com/2007/04/30/case-sensitive-sql-query-search/ for the collation setting to get a case sensitive behavior
   begin
     while Next do
