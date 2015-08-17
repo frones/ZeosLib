@@ -824,7 +824,7 @@ begin
   //disconnect from the newly created database because the connection character set is NONE,
   //which usually nobody wants
   GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
-  CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);  
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
