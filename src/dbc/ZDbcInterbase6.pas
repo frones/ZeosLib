@@ -508,19 +508,17 @@ begin
       DriverManager.LogMessage(lcConnect, ConSettings^.Protocol,
         'CREATE DATABASE "'+NewDB+'" AS USER "'+ ConSettings^.User+'"');
       URL.Properties.Values['createNewDatabase'] := '';
-      //Allready Connected now if successfully created
-    end
-    else
-    begin
-      FHandle := 0;
-      { Connect to Interbase6 database. }
-      GetPlainDriver.isc_attach_database(@FStatusVector,
-        ZFastCode.StrLen(DBName), DBName,
-          @FHandle, FDPBLength, DPB);
-
-      { Check connection error }
-      CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
     end;
+    
+    FHandle := 0;
+    { Connect to Interbase6 database. }
+    GetPlainDriver.isc_attach_database(@FStatusVector,
+      ZFastCode.StrLen(DBName), DBName,
+        @FHandle, FDPBLength, DPB);
+
+    { Check connection error }
+    CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcConnect);
+
     (GetMetadata.GetDatabaseInfo as IZInterbaseDatabaseInfo).CollectServerInformations; //keep this one first!
     tmp := GetMetadata.GetDatabaseInfo.GetDatabaseProductVersion;
     I := ZFastCode.Pos('.', tmp);
@@ -823,6 +821,10 @@ begin
   GetPlainDriver.isc_dsql_execute_immediate(@FStatusVector, @FHandle, @TrHandle,
     0, PAnsiChar(sql), FDialect, nil);
   CheckInterbase6Error(GetPlainDriver, FStatusVector, ConSettings, lcExecute, SQL);
+  //disconnect from the newly created database because the connection character set is NONE,
+  //which usually nobody wants
+  GetPlainDriver.isc_detach_database(@FStatusVector, @FHandle);
+  CheckInterbase6Error(GetPlainDriver, FStatusVector, lcExecute, SQL);  
 end;
 
 function TZInterbase6Connection.GetBinaryEscapeString(const Value: RawByteString): String;
