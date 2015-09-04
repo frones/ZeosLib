@@ -289,6 +289,24 @@
   {$DEFINE BDS5_UP} // Used in code
 {$ENDIF}
 
+// Compilation directives for Delphi 10 Seattle by miab3
+{$IFDEF VER300}
+  {$DEFINE VER200BELOW} // Used in code
+  {$DEFINE DELPHI12_UP} // Used in code
+  {$DEFINE DELPHI14_UP} // used in tests only
+  {$DEFINE DELPHI15_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI16_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI17_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI18_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI19_UP} // Used in zeos.inc only
+  {$DEFINE DELPHI20_UP} //By dieletro Used in zeos.inc only
+  {$DEFINE DELPHI21_UP} //Used in zeos.inc only
+  {$DEFINE DELPHI22_UP} //By miab3 Used in zeos.inc only
+  {$DEFINE DELPHI23_UP} //By miab3 Used in zeos.inc only
+  {$DEFINE BDS4_UP} // Used in code
+  {$DEFINE BDS5_UP} // Used in code
+{$ENDIF}
+
 // END of per Delphi version defines
 
 {$IFDEF BDS4_UP}
