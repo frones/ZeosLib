@@ -94,6 +94,7 @@ type
     ['{D84055AC-BCD5-40CD-B408-6F11AF000C96}']
     procedure SetType(Value: TZResultSetType);
     procedure SetConcurrency(Value: TZResultSetConcurrency);
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
 
   {** Implements Virtual ResultSet. }
@@ -107,6 +108,8 @@ type
       ConSettings: PZConSettings);
     constructor CreateWithColumns(ColumnsInfo: TObjectList; const SQL: string;
       ConSettings: PZConSettings);
+  public
+    procedure ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
   end;
 
   {** Implements Abstract Database Metadata. }
@@ -2306,29 +2309,49 @@ var
   Metadata: IZResultSetMetadata;
   ColumnInfo: TZColumnInfo;
   ColumnsInfo: TObjectList;
+  ConSettings: PZConSettings;
 begin
   Result := nil;
   Metadata := ResultSet.GetMetadata;
   ColumnsInfo := TObjectList.Create(True);
+  ConSettings := IZConnection(FConnection).GetConSettings;
   try
     for I := {$IFNDEF GENERIC_INDEX}1{$ELSE}0{$ENDIF} to Metadata.GetColumnCount{$IFDEF GENERIC_INDEX}-1{$ENDIF} do
     begin
       ColumnInfo := TZColumnInfo.Create;
       with ColumnInfo do
       begin
-        ColumnLabel := Metadata.GetColumnLabel(I);
-        ColumnType := Metadata.GetColumnType(I);
-        ColumnDisplaySize := Metadata.GetPrecision(I);
-        Precision := Metadata.GetPrecision(I);
+        AutoIncrement := Metadata.IsAutoIncrement(i);
+        CaseSensitive := Metadata.IsCaseSensitive(i);
+        Searchable := Metadata.IsSearchable(i);
+        Currency := Metadata.IsCurrency(i);
+        Nullable := Metadata.IsNullable(i);
+        Signed := Metadata.IsSigned(i);
+        ColumnDisplaySize := Metadata.GetPrecision(I); //GetColumnDisplaySize(i); ??
+        //MaxLenghtBytes := Metadata.GetPrecision(i) * ConSettings^.ClientCodePage^.CharWidth;
+        ColumnLabel := Metadata.GetColumnLabel(i);
+        ColumnName := Metadata.GetColumnName(i);
+        SchemaName := Metadata.GetSchemaName(i);
+        Precision := Metadata.GetPrecision(i);
+        Scale := Metadata.GetScale(i);
+        TableName := Metadata.GetTableName(i);
+        CatalogName := Metadata.GetCatalogName(i);
+        ColumnType := Metadata.GetColumnType(i);
+        ReadOnly := Metadata.IsReadOnly(i);
+        Writable := Metadata.IsWritable(i);
+        DefinitelyWritable := Metadata.IsDefinitelyWritable(i);
+        DefaultValue := Metadata.GetDefaultValue(i);
+        ColumnCodePage := Metadata.GetColumnCodePage(i);
       end;
       ColumnsInfo.Add(ColumnInfo);
     end;
 
-    ResultSet.BeforeFirst;
+    if ResultSet.GetType <> rtForwardOnly then
+      ResultSet.BeforeFirst;
     Result := CopyToVirtualResultSet(ResultSet,
-      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '',
-        IZConnection(Self.FConnection).GetConSettings));
-    ResultSet.BeforeFirst;
+      TZVirtualResultSet.CreateWithColumns(ColumnsInfo, '', ConSettings));
+    if ResultSet.GetType <> rtForwardOnly then
+      ResultSet.BeforeFirst;
   finally
     ColumnsInfo.Free;
   end;
@@ -4829,6 +4852,25 @@ constructor TZVirtualResultSet.CreateWithStatement(const SQL: string;
    Statement: IZStatement; ConSettings: PZConSettings);
 begin
   inherited CreateWithStatement(SQL, Statement, ConSettings);
+end;
+
+{**
+  Change Order of one Rows in Resultset
+  Note: First Row = 1, to get RowNo use IZResultSet.GetRow
+  @param CurrentRowNo the curren number of row
+  @param NewRowNo the new number of row
+}
+procedure TZVirtualResultSet.ChangeRowNo(CurrentRowNo, NewRowNo: NativeInt);
+var P: Pointer;
+begin
+  CurrentRowNo := CurrentRowNo -1;
+  NewRowNo := NewRowNo -1;
+  P := RowsList[CurrentRowNo];
+  RowsList.Delete(CurrentRowNo);
+  RowsList.Insert(NewRowNo, P);
+  P := InitialRowsList[CurrentRowNo];
+  InitialRowsList.Delete(CurrentRowNo);
+  InitialRowsList.Insert(NewRowNo, P);
 end;
 
 {**

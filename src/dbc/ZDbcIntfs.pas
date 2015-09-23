@@ -367,11 +367,12 @@ type
     function GetConnection: IZConnection;
     function GetIdentifierConvertor: IZIdentifierConvertor;
 
-    procedure ClearCache;overload;
-		procedure ClearCache(const Key: string);overload;
+    procedure ClearCache;overload; 
+    procedure ClearCache(const Key: string);overload;
 
     function AddEscapeCharToWildcards(const Pattern:string): string;
     function NormalizePatternCase(Pattern:String): string;
+    function CloneCachedResultSet(ResultSet: IZResultSet): IZResultSet;
   end;
 
   {**
